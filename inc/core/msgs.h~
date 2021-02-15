@@ -1,0 +1,11 @@
+#ifndef MSG_H
+#define MSG_H
+
+class msg_c
+{
+	protected:
+
+	public:
+};
+
+#endif
