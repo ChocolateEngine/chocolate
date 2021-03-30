@@ -3,7 +3,22 @@
 void system_c::read_msg
 	(  )
 {
-	
+	int msg;
+	for ( ; ; )
+	{
+		if ( ( msg = msgs->fetch_msg( systemType ) ) < 0 )
+		{
+			return;
+		}
+		for ( auto cmd : engineCommands )
+		{
+			if ( cmd.msg == msg )
+			{
+				cmd.func(  );
+			}
+			msgs->remove( msgs->lastMsgIndex );
+		}
+	}
 }
 
 void system_c::read_console
@@ -17,4 +32,10 @@ void system_c::update
 {
 	read_msg(  );
 	read_console(  );
+}
+
+system_c::system_c
+	(  )
+{
+
 }

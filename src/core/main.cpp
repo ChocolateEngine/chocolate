@@ -11,5 +11,12 @@ int main
 	engine.console = &console;
 
 	engine.init_systems(  );
+
+	msgs.add( { ENGINE_C, ENGI_PING, NULL } );
+	
+	for ( ; engine.active; )
+	{
+		engine.update_systems(  );
+	}
 	return 0;
 }

@@ -12,10 +12,17 @@ class msgs_c
 
 	public:
 
+	int lastMsgIndex;
+
 	std::vector< msg_s > queue;
 
 	int fetch_msg
 		( system_class_e type );
+
+	void add
+		( msg_s msg );
+	void remove
+		( int index );
 };
 
 #endif

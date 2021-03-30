@@ -7,4 +7,9 @@ typedef enum
 	RENDERER_C,
 }system_class_e;
 
+typedef enum
+{
+	ENGI_PING
+}engine_command_e;
+
 #endif
