@@ -9,7 +9,8 @@ typedef enum
 
 typedef enum
 {
-	ENGI_PING
+	ENGI_PING,
+	ENGI_EXIT
 }engine_command_e;
 
 #endif

@@ -16,8 +16,8 @@ void system_c::read_msg
 			{
 				cmd.func(  );
 			}
-			msgs->remove( msgs->lastMsgIndex );
 		}
+		msgs->remove( msgs->lastMsgIndex );
 	}
 }
 

@@ -3,12 +3,14 @@
 
 #include "system.h"
 #include "renderer.h"
+#include "input.h"
 
 class engine_c : public system_c
 {
 	protected:
 
 	renderer_c rend;
+	input_c input;
 	
 	void init_commands
 		(  );
