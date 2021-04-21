@@ -1,5 +1,5 @@
 cc		:=	g++
-cflags		:=	-Wall -Wextra -g
+cflags		:=	-Wall -Wextra -g -std=c++17
 
 src		:=	src
 lib		:=	lib

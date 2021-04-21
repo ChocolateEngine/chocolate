@@ -1,5 +1,7 @@
 #include "../../inc/core/renderer.h"
 
+#include <set>
+
 void renderer_c::init_vulkan
 	(  )
 {
@@ -126,6 +128,115 @@ bool renderer_c::check_validation_layer_support
 		}
 	}
 	return true;
+}
+
+void renderer_c::pick_physical_device
+	(  )
+{
+	physicalDevice 		= VK_NULL_HANDLE;
+	uint32_t deviceCount 	= 0;
+	
+	vkEnumeratePhysicalDevices( inst, &deviceCount, NULL );
+	if ( deviceCount == 0 ) {
+		throw std::runtime_error( "Failed to find GPUs with Vulkan support!" );
+	}
+	std::vector< VkPhysicalDevice > devices( deviceCount );
+	vkEnumeratePhysicalDevices( inst, &deviceCount, devices.data(  ) );
+
+	for ( const auto& device : devices ) {
+		if ( is_suitable_device( device ) ) {
+			physicalDevice = device;
+			break;
+		}
+	}
+
+	if ( physicalDevice == VK_NULL_HANDLE ) {
+		throw std::runtime_error( "Failed to find a suitable GPU!" );
+	}	
+}
+
+bool renderer_c::is_suitable_device
+	( VkPhysicalDevice d )
+{
+	queue_family_indices_t indices 	= find_queue_families( d );
+	bool extensionsSupported 	= check_device_extension_support( d );
+	bool swapChainAdequate 		= false;
+	if ( extensionsSupported )
+	{
+		swap_chain_support_info_t swapChainSupport = check_swap_chain_support( d );
+		swapChainAdequate = !swapChainSupport.f.empty(  ) && !swapChainSupport.p.empty(  );
+	}
+	return indices.complete(  ) && extensionsSupported && swapChainAdequate;
+}
+
+bool renderer_c::check_device_extension_support
+	( VkPhysicalDevice d )
+{
+	unsigned int extensionCount;
+	vkEnumerateDeviceExtensionProperties( d, NULL, &extensionCount, NULL );
+
+	std::vector< VkExtensionProperties > availableExtensions( extensionCount );
+	vkEnumerateDeviceExtensionProperties( d, NULL, &extensionCount, availableExtensions.data(  ) );
+
+	std::set< std::string > requiredExtensions(  deviceExtensions.begin(  ), deviceExtensions.end(  ) );
+
+	for ( const auto& extension : availableExtensions )
+	{
+		requiredExtensions.erase( extension.extensionName  );
+	}
+	return requiredExtensions.empty(  );
+}
+
+queue_family_indices_t renderer_c::find_queue_families
+	( VkPhysicalDevice d )
+{
+	queue_family_indices_t indices;
+	uint32_t queueFamilyCount = 0;
+	vkGetPhysicalDeviceQueueFamilyProperties( d, &queueFamilyCount, nullptr );
+
+	std::vector< VkQueueFamilyProperties > queueFamilies( queueFamilyCount );
+	vkGetPhysicalDeviceQueueFamilyProperties( d, &queueFamilyCount, queueFamilies.data(  ) );// Logic to find queue family indices to populate struct with
+	int i = 0;
+	for ( const auto& queueFamily : queueFamilies ) {
+		if ( queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT ) {
+			VkBool32 presentSupport = false;
+			vkGetPhysicalDeviceSurfaceSupportKHR( d, i, surf, &presentSupport );
+			if ( presentSupport ) {
+				indices.presentFamily = i;
+			}
+			indices.graphicsFamily = i;
+		}
+		if ( indices.complete(  ) ) {
+			break;
+		}
+		i++;
+	}
+	return indices;
+}
+
+swap_chain_support_info_t renderer_c::check_swap_chain_support
+	( VkPhysicalDevice d )
+{
+	swap_chain_support_info_t details;
+	vkGetPhysicalDeviceSurfaceCapabilitiesKHR( d, surf, &details.c );
+
+	uint32_t formatCount;
+	vkGetPhysicalDeviceSurfaceFormatsKHR( d, surf, &formatCount, NULL );
+
+	if ( formatCount != 0 )
+	{
+		details.f.resize( formatCount );
+		vkGetPhysicalDeviceSurfaceFormatsKHR( d, surf, &formatCount, details.f.data(  ) );
+	}
+	uint32_t presentModeCount;
+	vkGetPhysicalDeviceSurfacePresentModesKHR( d, surf, &presentModeCount, NULL );
+
+	if ( presentModeCount != 0 )
+	{
+		details.p.resize( presentModeCount );
+		vkGetPhysicalDeviceSurfacePresentModesKHR( d, surf, &presentModeCount, details.p.data(  ) );
+	}
+	return details;
 }
 
 void renderer_c::cleanup
