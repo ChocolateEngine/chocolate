@@ -36,7 +36,7 @@ void renderer_c::init_window
 		SDL_WINDOWPOS_CENTERED,
 		width,
 		height,
-		SDL_WINDOW_VULKAN | SDL_WINDOW_SHOWN
+		SDL_WINDOW_VULKAN | SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE
                 );
 }
 
@@ -845,14 +845,59 @@ void renderer_c::init_sync
 	}
 }
 
+void renderer_c::reinit_swap_chain
+	(  )
+{
+	vkDeviceWaitIdle( device );
+
+	destroy_swap_chain(  );
+	
+	init_swap_chain(  );
+	init_image_views(  );
+	init_render_pass(  );
+	init_graphics_pipeline(  );
+	init_frame_buffer(  );
+	init_command_buffers(  );
+}
+
+void renderer_c::destroy_swap_chain
+	(  )
+{
+        for ( auto framebuffer : swapChainFramebuffers )
+	{
+		vkDestroyFramebuffer( device, framebuffer, NULL );
+        }
+	vkFreeCommandBuffers( device, commandPool, ( uint32_t )commandBuffers.size(  ), commandBuffers.data(  ) );
+
+	vkDestroyPipeline( device, graphicsPipeline, NULL );
+        vkDestroyPipelineLayout( device, pipelineLayout, NULL );
+        vkDestroyRenderPass( device, renderPass, NULL );
+
+        for ( auto imageView : swapChainImageViews )
+	{
+		vkDestroyImageView( device, imageView, NULL );
+        }
+
+        vkDestroySwapchainKHR( device, swapChain, NULL );
+}
+
 void renderer_c::draw_frame
 	(  )
 {
 	vkWaitForFences( device, 1, &inFlightFences[ currentFrame ], VK_TRUE, UINT64_MAX );
 	
 	uint32_t imageIndex;
-	vkAcquireNextImageKHR( device, swapChain, UINT64_MAX, imageAvailableSemaphores[ currentFrame ], VK_NULL_HANDLE, &imageIndex );
+	VkResult res =  vkAcquireNextImageKHR( device, swapChain, UINT64_MAX, imageAvailableSemaphores[ currentFrame ], VK_NULL_HANDLE, &imageIndex );
 
+	if ( res == VK_ERROR_OUT_OF_DATE_KHR )
+	{
+		reinit_swap_chain(  );
+		return;
+	}
+	else if ( res != VK_SUCCESS && res != VK_SUBOPTIMAL_KHR )
+	{
+		throw std::runtime_error( "Failed ot acquire swap chain image!" );
+	}
 	if ( imagesInFlight[ imageIndex ] != VK_NULL_HANDLE )
 	{
 		vkWaitForFences( device, 1, &imagesInFlight[ imageIndex ], VK_TRUE, UINT64_MAX );
@@ -890,7 +935,17 @@ void renderer_c::draw_frame
 	presentInfo.pImageIndices 		= &imageIndex;
 	presentInfo.pResults 			= NULL; // Optional
 
-	vkQueuePresentKHR( presentQueue, &presentInfo );
+	res = vkQueuePresentKHR( presentQueue, &presentInfo );
+
+	if ( res == VK_ERROR_OUT_OF_DATE_KHR )
+	{
+		reinit_swap_chain(  );
+	}
+	else if ( res != VK_SUCCESS && res != VK_SUBOPTIMAL_KHR )
+	{
+		throw std::runtime_error( "Failed ot present swap chain image!" );
+	}
+	
 	vkQueueWaitIdle( presentQueue );
 
 	currentFrame = ( currentFrame + 1 ) % MAX_FRAMES_PROCESSING;
@@ -913,6 +968,7 @@ void renderer_c::destroy_debug_messenger
 void renderer_c::cleanup
 	(  )
 {
+	destroy_swap_chain(  );
 	for ( int i = 0; i < MAX_FRAMES_PROCESSING; i++ )
 	{
 		vkDestroySemaphore( device, renderFinishedSemaphores[ i ], NULL );
@@ -922,21 +978,6 @@ void renderer_c::cleanup
 
         vkDestroyCommandPool( device, commandPool, NULL );
 
-        for ( auto framebuffer : swapChainFramebuffers )
-	{
-		vkDestroyFramebuffer( device, framebuffer, NULL );
-        }
-
-        vkDestroyPipeline( device, graphicsPipeline, NULL );
-        vkDestroyPipelineLayout( device, pipelineLayout, NULL );
-        vkDestroyRenderPass( device, renderPass, NULL );
-
-        for ( auto imageView : swapChainImageViews )
-	{
-		vkDestroyImageView( device, imageView, NULL );
-        }
-
-        vkDestroySwapchainKHR( device, swapChain, NULL );
         vkDestroyDevice( device, NULL );
 
         if ( enableValidationLayers ) {

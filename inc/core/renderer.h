@@ -107,6 +107,10 @@ class renderer_c : public system_c
 		(  );
 	void init_sync
 		(  );
+	void reinit_swap_chain
+		(  );
+	void destroy_swap_chain
+		(  );
 
 	bool check_validation_layer_support
 		(  );
