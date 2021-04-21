@@ -31,6 +31,7 @@ void engine_c::update_systems
 	update(  );
 
 	rend.update(  );
+	rend.draw_frame(  );
 
 	input.update(  );
 	input.parse_input(  );

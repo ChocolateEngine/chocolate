@@ -2,12 +2,14 @@
 
 #include <set>
 #include <fstream>
+#include <iostream>
 
 void renderer_c::init_vulkan
 	(  )
 {
 	init_window(  );
 	init_instance(  );
+	init_validation_layers(  );
 	init_surface(  );
 	pick_physical_device(  );
 	init_logical_device(  );
@@ -15,6 +17,10 @@ void renderer_c::init_vulkan
 	init_image_views(  );
 	init_render_pass(  );
 	init_graphics_pipeline(  );
+	init_frame_buffer(  );
+	init_command_pool(  );
+	init_command_buffers(  );
+	init_sync(  );
 }
 
 void renderer_c::init_window
@@ -32,6 +38,33 @@ void renderer_c::init_window
 		height,
 		SDL_WINDOW_VULKAN | SDL_WINDOW_SHOWN
                 );
+}
+
+std::vector< const char* > renderer_c::init_required_extensions
+	(  )
+{
+	unsigned int extensionCount = 0;
+	if ( !SDL_Vulkan_GetInstanceExtensions( win, &extensionCount, NULL ) )
+	{
+		throw std::runtime_error( "Unable to query the number of Vulkan instance extensions\n" );
+	}
+	
+	// Use the amount of extensions queried before to retrieve the names of the extensions
+	std::vector< const char* > extensions( extensionCount );
+	if (!SDL_Vulkan_GetInstanceExtensions( win, &extensionCount, extensions.data(  ) ) )
+	{
+		throw std::runtime_error( "Unable to query the number of Vulkan instance extension names\n" );
+	}
+	// Display names
+	printf( "Found %d Vulkan extensions:\n", extensionCount );
+	for ( int i = 0; i < extensionCount; ++i )
+	{
+	        printf( "%i : %s\n", i, extensions[ i ] );
+	}
+
+	// Add debug display extension, we need this to relay debug messages
+	extensions.push_back( VK_EXT_DEBUG_UTILS_EXTENSION_NAME );
+	return extensions;
 }
 
 void renderer_c::init_instance
@@ -53,40 +86,24 @@ void renderer_c::init_instance
 	createInfo.sType 		= VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
 	createInfo.pApplicationInfo 	= &appInfo;
 
+	VkDebugUtilsMessengerCreateInfoEXT debugCreateInfo;
 	if ( enableValidationLayers )
 	{
 		createInfo.enabledLayerCount 	= ( unsigned int )validationLayers.size(  );
 		createInfo.ppEnabledLayerNames 	= validationLayers.data(  );
+		init_debug_messenger_info( debugCreateInfo );
+		createInfo.pNext 		= ( VkDebugUtilsMessengerCreateInfoEXT* )&debugCreateInfo;
 	}
 	else
 	{
 		createInfo.enabledLayerCount 	= 0;
+		createInfo.pNext	        = NULL;
 	}
 
-	unsigned int SDLExtensionCount = 0;
+	auto SDLExtensions = init_required_extensions(  );
 	
-	if ( !SDL_Vulkan_GetInstanceExtensions( win, &SDLExtensionCount, NULL ) )
-	{
-		throw std::runtime_error( "Unable to get number of Vulkan instance extensions!" );
-	}
-	
-	std::vector< const char* > SDLExtensions( SDLExtensionCount );
-	
-	if ( !SDL_Vulkan_GetInstanceExtensions( win, &SDLExtensionCount, SDLExtensions.data(  ) ) )
-	{
-		throw std::runtime_error( "Unable to get Vulkan instance extension names!" );
-	}
-	
-	printf( "%d SDL extensions available:\n", SDLExtensionCount );
-	
-	for ( int i = 0; i < SDLExtensionCount; ++i )
-	{
-		printf( "\t%s\n", SDLExtensions[ i ] );
-	}
-
-	createInfo.enabledExtensionCount 	= SDLExtensionCount;
+	createInfo.enabledExtensionCount 	= ( uint32_t )SDLExtensions.size(  );
 	createInfo.ppEnabledExtensionNames 	= SDLExtensions.data(  );
-	createInfo.enabledLayerCount 		= 0;
 
 	if ( vkCreateInstance( &createInfo, NULL, &inst ) )
 	{
@@ -105,6 +122,58 @@ void renderer_c::init_instance
 	{
 		printf( "\t%s\n", extension.extensionName );
 	}
+}
+
+VKAPI_ATTR VkBool32 VKAPI_CALL renderer_c::debug_callback
+	( VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
+	  VkDebugUtilsMessageTypeFlagsEXT messageType,
+	  const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
+	  void* pUserData )
+{
+	std::cerr << "validation layer: " << pCallbackData->pMessage << std::endl;
+
+        return VK_FALSE;
+}
+
+void renderer_c::init_debug_messenger_info
+	( VkDebugUtilsMessengerCreateInfoEXT& c )
+{
+	c = {  };
+	c.sType 	   = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
+        c.messageSeverity  = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
+        c.messageType 	   = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
+        c.pfnUserCallback  = debug_callback;
+}
+
+VkResult renderer_c::init_debug_messenger
+	( VkInstance instance,
+	  const VkDebugUtilsMessengerCreateInfoEXT* pCreateInfo,
+	  const VkAllocationCallbacks* pAllocator,
+	  VkDebugUtilsMessengerEXT* pDebugMessenger )
+{
+	auto func = ( PFN_vkCreateDebugUtilsMessengerEXT )vkGetInstanceProcAddr( inst, "vkCreateDebugUtilsMessengerEXT" );
+	if ( func != NULL )
+	{
+		return func( inst, pCreateInfo, pAllocator, pDebugMessenger );
+	}
+	else
+	{
+		return VK_ERROR_EXTENSION_NOT_PRESENT;
+	}
+}
+
+void renderer_c::init_validation_layers
+	(  )
+{
+	if ( !enableValidationLayers ) return;
+
+        VkDebugUtilsMessengerCreateInfoEXT createInfo{  };
+	init_debug_messenger_info( createInfo );
+
+        if ( init_debug_messenger( inst, &createInfo, NULL, &debugMessenger ) != VK_SUCCESS )
+	{
+		throw std::runtime_error( "Failed to set up debug messenger!" );
+        }
 }
 
 void renderer_c::init_surface
@@ -660,10 +729,222 @@ void renderer_c::init_graphics_pipeline
 	vkDestroyShaderModule( device, vertShaderModule, NULL );
 }
 
+void renderer_c::init_frame_buffer
+	(  )
+{
+	swapChainFramebuffers.resize( swapChainImageViews.size(  ) );
+	for ( int i = 0; i < swapChainImageViews.size(  ); i++ )
+	{
+		VkImageView attachments[  ] = {
+			swapChainImageViews[ i ]
+		};
+
+		VkFramebufferCreateInfo framebufferInfo{  };
+		framebufferInfo.sType 		= VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+		framebufferInfo.renderPass 	= renderPass;
+		framebufferInfo.attachmentCount = 1;
+		framebufferInfo.pAttachments 	= attachments;
+		framebufferInfo.width 		= swapChainExtent.width;
+		framebufferInfo.height 		= swapChainExtent.height;
+		framebufferInfo.layers 		= 1;
+
+		if ( vkCreateFramebuffer(device, &framebufferInfo, NULL, &swapChainFramebuffers[ i ] ) != VK_SUCCESS )
+		{
+			throw std::runtime_error( "Failed to create framebuffer!" );
+		}
+	}
+}
+
+void renderer_c::init_command_pool
+	(  )
+{
+        queue_family_indices_t indices = find_queue_families( physicalDevice );
+
+	VkCommandPoolCreateInfo poolInfo{  };
+	poolInfo.sType 			= VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+	poolInfo.queueFamilyIndex 	= indices.graphicsFamily.value();
+	poolInfo.flags 			= 0; // Optional
+
+	if ( vkCreateCommandPool( device, &poolInfo, NULL, &commandPool ) != VK_SUCCESS )
+	{
+		throw std::runtime_error( "Failed to create command pool!" );
+	}
+}
+
+void renderer_c::init_command_buffers
+	(  )
+{
+	commandBuffers.resize( swapChainFramebuffers.size(  ) );
+	VkCommandBufferAllocateInfo allocInfo{  };
+	allocInfo.sType 		= VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+	allocInfo.commandPool 		= commandPool;
+	allocInfo.level 		= VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+	allocInfo.commandBufferCount	= ( uint32_t )commandBuffers.size(  );
+
+	if ( vkAllocateCommandBuffers( device, &allocInfo, commandBuffers.data(  ) ) != VK_SUCCESS )
+	{
+		throw std::runtime_error( "Failed to allocate command buffers!" );
+	}
+	for ( int i = 0; i < commandBuffers.size(  ); i++ )
+	{
+		VkCommandBufferBeginInfo beginInfo{  };
+		beginInfo.sType 		= VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+		beginInfo.flags 		= 0; // Optional
+		beginInfo.pInheritanceInfo 	= NULL; // Optional
+
+		if ( vkBeginCommandBuffer( commandBuffers[ i ], &beginInfo ) != VK_SUCCESS )
+		{
+			throw std::runtime_error( "Failed to begin recording command buffer!" );
+		}
+		VkRenderPassBeginInfo renderPassInfo{  };
+		renderPassInfo.sType 		 = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+		renderPassInfo.renderPass 	 = renderPass;
+		renderPassInfo.framebuffer 	 = swapChainFramebuffers[ i ];
+		renderPassInfo.renderArea.offset = { 0, 0 };
+		renderPassInfo.renderArea.extent = swapChainExtent;
+
+		VkClearValue clearColor 	 = { 0.0f, 0.0f, 0.0f, 1.0f };
+		renderPassInfo.clearValueCount 	 = 1;
+		renderPassInfo.pClearValues 	 = &clearColor;
+
+		vkCmdBeginRenderPass( commandBuffers[ i ], &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE );
+		vkCmdBindPipeline( commandBuffers[ i ], VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline );
+		vkCmdDraw( commandBuffers[ i ], 3, 1, 0, 0 );
+		vkCmdEndRenderPass( commandBuffers[ i ] );
+
+		if ( vkEndCommandBuffer( commandBuffers[ i ] ) != VK_SUCCESS )
+		{
+			throw std::runtime_error( "Failed to record command buffer!" );
+		}
+	}
+}
+
+void renderer_c::init_sync
+	(  )
+{
+	imageAvailableSemaphores.resize( MAX_FRAMES_PROCESSING );
+	renderFinishedSemaphores.resize( MAX_FRAMES_PROCESSING );
+	inFlightFences.resize( MAX_FRAMES_PROCESSING );
+	imagesInFlight.resize( swapChainImages.size(  ), VK_NULL_HANDLE );
+	
+	VkSemaphoreCreateInfo semaphoreInfo{  };
+	semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+
+	VkFenceCreateInfo fenceInfo{  };
+	fenceInfo.sType	    = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+	fenceInfo.flags	    = VK_FENCE_CREATE_SIGNALED_BIT;
+
+	for ( int i = 0 ; i < MAX_FRAMES_PROCESSING; ++i )
+	{
+		if ( vkCreateSemaphore( device, &semaphoreInfo, NULL, &imageAvailableSemaphores[ i ] ) != VK_SUCCESS ||
+		     vkCreateSemaphore( device, &semaphoreInfo, NULL, &renderFinishedSemaphores[ i ] ) != VK_SUCCESS ||
+		     vkCreateFence( device, &fenceInfo, NULL, &inFlightFences[ i ] ) != VK_SUCCESS )
+		{
+			throw std::runtime_error( "Failed to create sync objects!" );
+		}
+	}
+}
+
+void renderer_c::draw_frame
+	(  )
+{
+	vkWaitForFences( device, 1, &inFlightFences[ currentFrame ], VK_TRUE, UINT64_MAX );
+	
+	uint32_t imageIndex;
+	vkAcquireNextImageKHR( device, swapChain, UINT64_MAX, imageAvailableSemaphores[ currentFrame ], VK_NULL_HANDLE, &imageIndex );
+
+	if ( imagesInFlight[ imageIndex ] != VK_NULL_HANDLE )
+	{
+		vkWaitForFences( device, 1, &imagesInFlight[ imageIndex ], VK_TRUE, UINT64_MAX );
+	}
+	imagesInFlight[ imageIndex ] = inFlightFences[ currentFrame ];
+
+	VkSubmitInfo submitInfo{  };
+	submitInfo.sType 			= VK_STRUCTURE_TYPE_SUBMIT_INFO;
+
+	VkSemaphore waitSemaphores[  ] 		= { imageAvailableSemaphores[ currentFrame ] };
+	VkPipelineStageFlags waitStages[  ] 	= { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
+	submitInfo.waitSemaphoreCount 		= 1;
+	submitInfo.pWaitSemaphores 		= waitSemaphores;
+	submitInfo.pWaitDstStageMask 		= waitStages;
+	submitInfo.commandBufferCount 		= 1;
+	submitInfo.pCommandBuffers 		= &commandBuffers[imageIndex];
+	VkSemaphore signalSemaphores[  ] 	= { renderFinishedSemaphores[ currentFrame ] };
+	submitInfo.signalSemaphoreCount 	= 1;
+	submitInfo.pSignalSemaphores 		= signalSemaphores;
+
+	vkResetFences( device, 1, &inFlightFences[ currentFrame ] );
+	if ( vkQueueSubmit( graphicsQueue, 1, &submitInfo, inFlightFences[ currentFrame ] ) != VK_SUCCESS )
+	{
+		throw std::runtime_error( "Failed to submit draw command buffer!" );
+	}
+	VkPresentInfoKHR presentInfo{  };
+	presentInfo.sType 			= VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+
+	presentInfo.waitSemaphoreCount 		= 1;
+	presentInfo.pWaitSemaphores 		= signalSemaphores;
+
+	VkSwapchainKHR swapChains[  ] 		= { swapChain };
+	presentInfo.swapchainCount 		= 1;
+	presentInfo.pSwapchains 		= swapChains;
+	presentInfo.pImageIndices 		= &imageIndex;
+	presentInfo.pResults 			= NULL; // Optional
+
+	vkQueuePresentKHR( presentQueue, &presentInfo );
+	vkQueueWaitIdle( presentQueue );
+
+	currentFrame = ( currentFrame + 1 ) % MAX_FRAMES_PROCESSING;
+	
+	SDL_Delay( 1000 / 144 );
+}
+
+void renderer_c::destroy_debug_messenger
+	( VkInstance instance,
+	  VkDebugUtilsMessengerEXT debugMessenger,
+	  const VkAllocationCallbacks* pAllocator )
+{
+	auto func = ( PFN_vkDestroyDebugUtilsMessengerEXT )vkGetInstanceProcAddr( inst, "vkDestroyDebugUtilsMessengerEXT" );
+	if ( func != NULL )
+	{
+		func( instance, debugMessenger, pAllocator );
+	}
+}
+
 void renderer_c::cleanup
 	(  )
 {
-	vkDestroyInstance( inst, NULL );
+	for ( int i = 0; i < MAX_FRAMES_PROCESSING; i++ )
+	{
+		vkDestroySemaphore( device, renderFinishedSemaphores[ i ], NULL );
+		vkDestroySemaphore( device, imageAvailableSemaphores[ i ], NULL );
+		vkDestroyFence( device, inFlightFences[ i ], NULL);
+        }
+
+        vkDestroyCommandPool( device, commandPool, NULL );
+
+        for ( auto framebuffer : swapChainFramebuffers )
+	{
+		vkDestroyFramebuffer( device, framebuffer, NULL );
+        }
+
+        vkDestroyPipeline( device, graphicsPipeline, NULL );
+        vkDestroyPipelineLayout( device, pipelineLayout, NULL );
+        vkDestroyRenderPass( device, renderPass, NULL );
+
+        for ( auto imageView : swapChainImageViews )
+	{
+		vkDestroyImageView( device, imageView, NULL );
+        }
+
+        vkDestroySwapchainKHR( device, swapChain, NULL );
+        vkDestroyDevice( device, NULL );
+
+        if ( enableValidationLayers ) {
+		destroy_debug_messenger( inst, debugMessenger, NULL );
+        }
+
+        vkDestroySurfaceKHR( inst, surf, NULL );
+        vkDestroyInstance( inst, NULL );
 	
 	SDL_DestroyWindow( win );
 	SDL_Quit(  );
