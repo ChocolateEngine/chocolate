@@ -74,7 +74,19 @@ class renderer_c : public system_c
 		(  );
 	void init_instance
 		(  );
+	void init_surface
+		(  );
 	void pick_physical_device
+		(  );
+	void init_logical_device
+		(  );
+	void init_swap_chain
+		(  );
+	void init_image_views
+		(  );
+	void init_render_pass
+		(  );
+	void init_graphics_pipeline
 		(  );
 
 	bool check_validation_layer_support
@@ -83,6 +95,18 @@ class renderer_c : public system_c
 		( VkPhysicalDevice d );
 	bool check_device_extension_support
 		( VkPhysicalDevice d );
+
+	VkSurfaceFormatKHR choose_swap_surface_format
+		( const std::vector< VkSurfaceFormatKHR >& availableFormats );
+	VkPresentModeKHR choose_swap_present_mode
+		( const std::vector< VkPresentModeKHR >& availablePresentModes );
+	VkExtent2D choose_swap_extent
+		( const VkSurfaceCapabilitiesKHR& capabilities );
+	VkShaderModule create_shader_module
+		( const std::vector< char >& code );
+
+	static std::vector< char > read_file
+		( const std::string& filePath );
 
 	queue_family_indices_t find_queue_families
 		( VkPhysicalDevice d );
