@@ -9,5 +9,15 @@ void input_c::parse_input
 		{
 			msgs->add( { ENGINE_C, ENGI_EXIT, NULL } );
 		}
+		if ( event.type == SDL_KEYDOWN )
+		{
+			switch ( event.key.keysym.sym )
+			{
+				case SDLK_UP:
+				{
+					msgs->add( { RENDERER_C, REND_UP, NULL } );
+				}
+			}
+		}
 	}
 }

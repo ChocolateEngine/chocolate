@@ -13,4 +13,12 @@ typedef enum
 	ENGI_EXIT
 }engine_command_e;
 
+typedef enum
+{
+	REND_UP,
+	REND_RIGHT,
+	REND_DOWN,
+	REND_LEFT
+}rend_command_e;
+
 #endif

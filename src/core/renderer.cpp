@@ -4,6 +4,17 @@
 #include <fstream>
 #include <iostream>
 
+void renderer_c::init_commands
+	(  )
+{
+	msg_s msg;
+	msg.type = RENDERER_C;
+
+	msg.msg = REND_UP;
+	//msg.func = [ & ](  ){ vertices[ 0 ].pos.x += 0.05f; };
+	//engineCommands.push_back( msg );
+}
+
 void renderer_c::init_vulkan
 	(  )
 {
@@ -19,6 +30,8 @@ void renderer_c::init_vulkan
 	init_graphics_pipeline(  );
 	init_frame_buffer(  );
 	init_command_pool(  );
+	init_vertex_buffer(  );
+	init_index_buffer(  );
 	init_command_buffers(  );
 	init_sync(  );
 }
@@ -606,13 +619,15 @@ void renderer_c::init_graphics_pipeline
 	fragShaderStageInfo.pName  = "main";
 
 	VkPipelineShaderStageCreateInfo shaderStages[  ] = { vertShaderStageInfo, fragShaderStageInfo };
+	auto bindingDescription 	= vertex_t::get_binding_desc(  );
+	auto attributeDescriptions 	= vertex_t::get_attribute_desc(  );
 
 	VkPipelineVertexInputStateCreateInfo vertexInputInfo{  };
 	vertexInputInfo.sType 				= VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-	vertexInputInfo.vertexBindingDescriptionCount 	= 0;
-	vertexInputInfo.pVertexBindingDescriptions 	= NULL; // Optional
-	vertexInputInfo.vertexAttributeDescriptionCount = 0;
-	vertexInputInfo.pVertexAttributeDescriptions 	= NULL; // Optional
+	vertexInputInfo.vertexBindingDescriptionCount 	= 1;
+	vertexInputInfo.pVertexBindingDescriptions 	= &bindingDescription; // Optional
+	vertexInputInfo.vertexAttributeDescriptionCount = ( uint32_t )( attributeDescriptions.size(  ) );
+	vertexInputInfo.pVertexAttributeDescriptions 	= attributeDescriptions.data(  ); // Optional
 
 	VkPipelineInputAssemblyStateCreateInfo inputAssembly{  };
 	inputAssembly.sType 			= VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
@@ -809,7 +824,12 @@ void renderer_c::init_command_buffers
 
 		vkCmdBeginRenderPass( commandBuffers[ i ], &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE );
 		vkCmdBindPipeline( commandBuffers[ i ], VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline );
-		vkCmdDraw( commandBuffers[ i ], 3, 1, 0, 0 );
+		VkBuffer vertexBuffers[  ] = { vertexBuffer };
+		VkDeviceSize offsets[  ] = { 0 };
+		vkCmdBindVertexBuffers( commandBuffers[ i ], 0, 1, vertexBuffers, offsets );
+		vkCmdBindIndexBuffer( commandBuffers[ i ], indexBuffer, 0, VK_INDEX_TYPE_UINT16 );
+
+	        vkCmdDrawIndexed( commandBuffers[ i ], ( uint32_t )( indicesVector.size(  ) ), 1, 0, 0, 0 );
 		vkCmdEndRenderPass( commandBuffers[ i ] );
 
 		if ( vkEndCommandBuffer( commandBuffers[ i ] ) != VK_SUCCESS )
@@ -843,6 +863,82 @@ void renderer_c::init_sync
 			throw std::runtime_error( "Failed to create sync objects!" );
 		}
 	}
+}
+
+uint32_t renderer_c::find_memory_type
+	( uint32_t typeFilter, VkMemoryPropertyFlags properties )
+{
+	VkPhysicalDeviceMemoryProperties memProperties;
+	vkGetPhysicalDeviceMemoryProperties( physicalDevice, &memProperties );
+
+	for ( uint32_t i = 0; i < memProperties.memoryTypeCount; ++i )
+	{
+		if ( ( typeFilter & ( 1 << i ) ) && ( memProperties.memoryTypes[ i ].propertyFlags & properties ) == properties )
+		{
+			return i;
+		}
+	}
+
+	throw std::runtime_error( "Failed to find suitable memory type!" );
+}
+
+void renderer_c::init_vertex_buffer
+	(  )
+{
+	VkDeviceSize bufferSize = sizeof( vertices[ 0 ] ) * vertices.size(  );
+	
+	VkBuffer stagingBuffer;
+	VkDeviceMemory stagingBufferMemory;
+	init_buffer( bufferSize,
+		     VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+		     VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+		     stagingBuffer,
+		     stagingBufferMemory );
+	
+      	void* data;
+	vkMapMemory( device, stagingBufferMemory, 0, bufferSize, 0, &data );
+	memcpy( data, vertices.data(  ), ( size_t )bufferSize );
+	vkUnmapMemory( device, stagingBufferMemory );
+
+	init_buffer( bufferSize,
+		     VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+		     VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+		     vertexBuffer,
+		     vertexBufferMemory );
+
+	buf_copy( stagingBuffer, vertexBuffer, bufferSize );
+
+	vkDestroyBuffer( device, stagingBuffer, NULL );
+        vkFreeMemory( device, stagingBufferMemory, NULL );
+}
+
+void renderer_c::init_index_buffer
+	(  )
+{
+	VkDeviceSize bufferSize = sizeof( indicesVector[ 0 ] ) * indicesVector.size(  );
+
+	VkBuffer stagingBuffer;
+	VkDeviceMemory stagingBufferMemory;
+	init_buffer( bufferSize,
+		     VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+		     VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+		     stagingBuffer, stagingBufferMemory );
+
+	void* data;
+	vkMapMemory( device, stagingBufferMemory, 0, bufferSize, 0, &data );
+	memcpy( data, indicesVector.data(  ), ( size_t )bufferSize );
+	vkUnmapMemory( device, stagingBufferMemory );
+
+	init_buffer( bufferSize,
+		     VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
+		     VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+		     indexBuffer,
+		     indexBufferMemory );
+
+	buf_copy( stagingBuffer, indexBuffer, bufferSize );
+
+	vkDestroyBuffer( device, stagingBuffer, NULL );
+	vkFreeMemory( device, stagingBufferMemory, NULL );
 }
 
 void renderer_c::reinit_swap_chain
@@ -879,6 +975,76 @@ void renderer_c::destroy_swap_chain
         }
 
         vkDestroySwapchainKHR( device, swapChain, NULL );
+}
+
+void renderer_c::init_buffer
+		( VkDeviceSize size,
+		  VkBufferUsageFlags usage,
+		  VkMemoryPropertyFlags properties,
+		  VkBuffer& buffer,
+		  VkDeviceMemory& bufferMemory )
+{
+	VkBufferCreateInfo bufferInfo{  };
+	bufferInfo.sType 	= VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+	bufferInfo.size 	= size;
+	bufferInfo.usage 	= usage;
+	bufferInfo.sharingMode  = VK_SHARING_MODE_EXCLUSIVE;
+
+	if ( vkCreateBuffer( device, &bufferInfo, NULL, &buffer ) != VK_SUCCESS )
+	{
+		throw std::runtime_error( "Failed to create buffer!" );
+	}
+
+	VkMemoryRequirements memRequirements;
+	vkGetBufferMemoryRequirements( device, buffer, &memRequirements );
+
+	VkMemoryAllocateInfo allocInfo{  };
+	allocInfo.sType 		= VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+	allocInfo.allocationSize 	= memRequirements.size;
+	allocInfo.memoryTypeIndex 	= find_memory_type( memRequirements.memoryTypeBits, properties );
+
+	if ( vkAllocateMemory( device, &allocInfo, nullptr, &bufferMemory ) != VK_SUCCESS )
+	{
+		throw std::runtime_error( "Failed to allocate buffer memory!" );
+	}
+
+	vkBindBufferMemory( device, buffer, bufferMemory, 0 );
+}
+
+void renderer_c::buf_copy
+	( VkBuffer src, VkBuffer dst, VkDeviceSize size )
+{
+	VkCommandBufferAllocateInfo allocInfo{  };
+	allocInfo.sType 		= VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+	allocInfo.level 		= VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+	allocInfo.commandPool 		= commandPool;
+	allocInfo.commandBufferCount 	= 1;
+	
+	VkCommandBuffer commandBuffer;
+	vkAllocateCommandBuffers( device, &allocInfo, &commandBuffer );
+
+	VkCommandBufferBeginInfo beginInfo{  };
+	beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+	beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+
+	vkBeginCommandBuffer( commandBuffer, &beginInfo );
+
+	VkBufferCopy copyRegion{  };
+	copyRegion.srcOffset 	= 0; // Optional
+	copyRegion.dstOffset 	= 0; // Optional
+	copyRegion.size 	= size;
+	vkCmdCopyBuffer( commandBuffer, src, dst, 1, &copyRegion );
+	vkEndCommandBuffer( commandBuffer );
+
+	VkSubmitInfo submitInfo{  };
+	submitInfo.sType 		= VK_STRUCTURE_TYPE_SUBMIT_INFO;
+	submitInfo.commandBufferCount 	= 1;
+	submitInfo.pCommandBuffers 	= &commandBuffer;
+
+	vkQueueSubmit( graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE );
+	vkQueueWaitIdle( graphicsQueue );
+
+	vkFreeCommandBuffers( device, commandPool, 1, &commandBuffer );
 }
 
 void renderer_c::draw_frame
@@ -969,6 +1135,10 @@ void renderer_c::cleanup
 	(  )
 {
 	destroy_swap_chain(  );
+	vkDestroyBuffer( device, indexBuffer, NULL );
+        vkFreeMemory( device, indexBufferMemory, NULL );
+	vkDestroyBuffer( device, vertexBuffer, NULL );
+	vkFreeMemory( device, vertexBufferMemory, NULL );
 	for ( int i = 0; i < MAX_FRAMES_PROCESSING; i++ )
 	{
 		vkDestroySemaphore( device, renderFinishedSemaphores[ i ], NULL );
@@ -995,7 +1165,9 @@ renderer_c::renderer_c
 	(  )
 {
 	init_vulkan(  );
-	
+
+	systemType = RENDERER_C;
+	init_commands(  );
 }
 
 renderer_c::~renderer_c
