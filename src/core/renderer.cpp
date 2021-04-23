@@ -37,6 +37,7 @@ void renderer_c::init_vulkan
 }
 
 void renderer_c::init_window
+
 	(  )
 {
 	if ( SDL_Init( SDL_INIT_VIDEO | SDL_INIT_EVENTS ) != 0 )

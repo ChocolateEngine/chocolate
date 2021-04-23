@@ -77,7 +77,7 @@ const std::vector< const char* > deviceExtensions = {
 };
 
 const std::vector< vertex_t > vertices = {
-	{ { -0.5f, -0.5f }, { 1.0f, 1.0f, 0.5f } },
+	{ { -0.9f, -0.5f }, { 0.5f, 0.0f, 1.0f } },
 	{ { 0.5f, -0.5f }, { 0.0f, 1.0f, 0.0f } },
 	{ { 0.5f, 0.5f }, { 0.0f, 0.0f, 1.0f } },
 	{ { -0.5f, 0.5f }, { 1.0f, 1.0f, 1.0f } }
