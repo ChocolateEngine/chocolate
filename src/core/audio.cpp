@@ -12,7 +12,7 @@ audio_c::audio_c
 {
 	mus = NULL;
 	Mix_OpenAudio( RATE, MIX_DEFAULT_FORMAT, 2, 2048 );
-	play_mus( "audio/music/polish_dota.ogg" );
+	play_mus( "audio/music/neon02.ogg" );
 }
 
 audio_c::~audio_c

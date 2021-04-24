@@ -1,6 +1,8 @@
 #ifndef RENDERER_H
 #define RENDERER_H
 
+#define GLM_ENABLE_EXPERIMENTAL
+
 #include "system.h"
 #include "../types/enums.h"
 
@@ -8,6 +10,7 @@
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_vulkan.h>
 #include <glm/glm.hpp>
+#include <glm/gtx/hash.hpp>
 #include <array>
 
 #include <optional>
@@ -27,7 +30,7 @@ typedef struct
 
 typedef struct vertex_s
 {
-	glm::vec2 pos;
+	glm::vec3 pos;
 	glm::vec3 color;
 	glm::vec2 texCoord;
 
@@ -48,7 +51,7 @@ typedef struct vertex_s
 		std::array< VkVertexInputAttributeDescription, 3 >attributeDescriptions{  };
 		attributeDescriptions[ 0 ].binding  = 0;
 		attributeDescriptions[ 0 ].location = 0;
-		attributeDescriptions[ 0 ].format   = VK_FORMAT_R32G32_SFLOAT;
+		attributeDescriptions[ 0 ].format   = VK_FORMAT_R32G32B32_SFLOAT;
 		attributeDescriptions[ 0 ].offset   = offsetof( vertex_s, pos );
 
 		attributeDescriptions[ 1 ].binding  = 0;
@@ -63,7 +66,24 @@ typedef struct vertex_s
 
 		return attributeDescriptions;
 	}
+	bool operator==( const vertex_s& other ) const
+	{
+		return pos == other.pos && color == other.color && texCoord == other.texCoord;
+	}
 }vertex_t;
+
+namespace std
+{
+	template<  > struct hash< vertex_t >
+	{
+		size_t operator(  )( vertex_t const& vertex ) const
+		{
+			return  ( ( hash< glm::vec3 >(  )( vertex.pos ) ^
+                   		( hash< glm::vec3 >(  )( vertex.color ) << 1 ) ) >> 1 ) ^
+				( hash< glm::vec2 >(  )( vertex.texCoord ) << 1 );
+		}
+	};
+}
 
 typedef struct
 {
@@ -86,40 +106,35 @@ const std::vector< const char* > deviceExtensions = {
     VK_KHR_SWAPCHAIN_EXTENSION_NAME
 };
 
-const std::vector< vertex_t > vertices = {
-	{ { -0.5f, -0.5f }, { 0.5f, 0.0f, 1.0f }, { 1.0f, 0.0f } },
-	{ { 0.5f, -0.5f }, { 0.0f, 1.0f, 0.0f }, { 0.0f, 0.0f } },
-	{ { 0.5f, 0.5f }, { 0.0f, 0.0f, 1.0f }, { 0.0f, 1.0f } },
-	{ { -0.5f, 0.5f }, { 1.0f, 1.0f, 1.0f }, { 1.0f, 1.0f } }
-};
+const std::string MODELPATH = "materials/models/protogen_wip_5_plus_protodal.obj";
+const std::string TEXTUREPATH = "materials/textures/blank_mat.png";
 
-const std::vector< uint16_t > indicesVector = {
-	0, 1, 2, 2, 3, 0
-};
-
-class renderer_c : public system_c
+class renderer_c : public system_c	//	Most of these objects are used to make new objects by initializing them with certain parameters, then creating and storing them
 {
 	protected:
 	
 	int width = 1280, height = 720;
 	int currentFrame = 0;
 
-	SDL_Window* win;
-	VkSurfaceKHR surf;
-	VkSwapchainKHR swapChain;
+	std::vector< vertex_t > vertices;
+	std::vector< uint32_t > indicesVector;
+
+	SDL_Window* win;						//	Window to display stuff
+	VkSurfaceKHR surf;						//	Allows window to display stuff
+	VkSwapchainKHR swapChain;					//	Queue for stuff to be rendered, does some processing before drawn to screen
 	
-	VkInstance inst;
-	VkDebugUtilsMessengerEXT debugMessenger;
+	VkInstance inst;						//	Foundation for graphics API, stores application data
+	VkDebugUtilsMessengerEXT debugMessenger;			//	Validation layers
 	
-	VkPhysicalDevice physicalDevice;
-	VkDevice device;
+	VkPhysicalDevice physicalDevice;				//	GPU, we'll only be needing one of these
+	VkDevice device;						//	Stores features and is used to create other objects
 	
-	VkQueue graphicsQueue, presentQueue;
+	VkQueue graphicsQueue, presentQueue;				//	
 	
-	std::vector<VkImageView> swapChainImageViews;
-	std::vector<VkImage> swapChainImages;
-	std::vector<VkFramebuffer> swapChainFramebuffers;
-	std::vector<VkCommandBuffer> commandBuffers;
+	std::vector<VkImageView> swapChainImageViews;			//	View into an image, describing which part to access, one needed for each image
+	std::vector<VkImage> swapChainImages;				//	Stores images to be rendered, can have many
+	std::vector<VkFramebuffer> swapChainFramebuffers;		//	
+	std::vector<VkCommandBuffer> commandBuffers;			//	Send commands to these to be executed later, better for concurrency, so many are nice
 	
 	VkFormat swapChainImageFormat;
 	VkExtent2D swapChainExtent;
@@ -133,10 +148,14 @@ class renderer_c : public system_c
 	VkDeviceMemory textureImageMemory;
 	VkImageView textureImageView;
 	VkSampler textureSampler;
+
+	VkImage depthImage;
+	VkDeviceMemory depthImageMemory;
+	VkImageView depthImageView;
 	
 	VkPipelineLayout pipelineLayout;
 	VkPipeline graphicsPipeline;
-	VkCommandPool commandPool;
+	VkCommandPool commandPool;					//	Manage memory related to command buffers
 
 	VkBuffer vertexBuffer, indexBuffer;
 	VkDeviceMemory vertexBufferMemory, indexBufferMemory;
@@ -181,6 +200,8 @@ class renderer_c : public system_c
 		(  );
 	void init_command_pool
 		(  );
+	void init_depth_resources
+		(  );
 	void init_command_buffers
 		(  );
 	void init_sync
@@ -191,6 +212,8 @@ class renderer_c : public system_c
 		(  );
 	void init_texture_sampler
 		(  );
+	void init_model
+	(  );
 	void init_image
 		( uint32_t width,
 		  uint32_t height,
@@ -216,7 +239,7 @@ class renderer_c : public system_c
 		(  );
 
 	VkImageView init_image_view
-		( VkImage image, VkFormat format );
+		( VkImage image, VkFormat format, VkImageAspectFlags aspectFlags );
 	void transition_image_layout
 		( VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout );
 	VkCommandBuffer begin_single_time_commands
@@ -240,6 +263,14 @@ class renderer_c : public system_c
 		( VkPhysicalDevice d );
 	bool check_device_extension_support
 		( VkPhysicalDevice d );
+	VkFormat find_supported_fmt
+		( const std::vector< VkFormat >& candidates,
+		  VkImageTiling tiling,
+		  VkFormatFeatureFlags features );
+	VkFormat find_depth_format
+		(  );
+	bool has_stencil_component
+		( VkFormat fmt );
 
 	uint32_t find_memory_type
 		( uint32_t typeFilter, VkMemoryPropertyFlags properties );
