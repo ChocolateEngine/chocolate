@@ -23,6 +23,9 @@ void engine_c::init_systems
 
 	input.msgs = msgs;
 	input.console = console;
+
+	audio.msgs = msgs;
+	audio.console = console;
 }
 
 void engine_c::update_systems
@@ -35,6 +38,8 @@ void engine_c::update_systems
 
 	input.update(  );
 	input.parse_input(  );
+
+	audio.update(  );
 }
 
 engine_c::engine_c

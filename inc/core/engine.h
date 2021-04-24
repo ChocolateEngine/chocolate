@@ -4,6 +4,7 @@
 #include "system.h"
 #include "renderer.h"
 #include "input.h"
+#include "audio.h"
 
 class engine_c : public system_c
 {
@@ -11,6 +12,7 @@ class engine_c : public system_c
 
 	renderer_c rend;
 	input_c input;
+	audio_c audio;
 	
 	void init_commands
 		(  );

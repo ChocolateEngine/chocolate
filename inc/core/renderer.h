@@ -29,6 +29,7 @@ typedef struct vertex_s
 {
 	glm::vec2 pos;
 	glm::vec3 color;
+	glm::vec2 texCoord;
 
 	static VkVertexInputBindingDescription get_binding_desc
 		(  )
@@ -41,24 +42,33 @@ typedef struct vertex_s
 		return bindingDescription;
 	}
 
-	static std::array< VkVertexInputAttributeDescription, 2 > get_attribute_desc
+	static std::array< VkVertexInputAttributeDescription, 3 > get_attribute_desc
 		(  )
 	{
-		std::array< VkVertexInputAttributeDescription, 2 >attributeDescriptions{  };
-		attributeDescriptions[ 0 ].binding = 0;
+		std::array< VkVertexInputAttributeDescription, 3 >attributeDescriptions{  };
+		attributeDescriptions[ 0 ].binding  = 0;
 		attributeDescriptions[ 0 ].location = 0;
-		attributeDescriptions[ 0 ].format = VK_FORMAT_R32G32_SFLOAT;
-		attributeDescriptions[ 0 ].offset = offsetof( vertex_s, pos );
+		attributeDescriptions[ 0 ].format   = VK_FORMAT_R32G32_SFLOAT;
+		attributeDescriptions[ 0 ].offset   = offsetof( vertex_s, pos );
 
-		attributeDescriptions[ 1 ].binding = 0;
+		attributeDescriptions[ 1 ].binding  = 0;
 		attributeDescriptions[ 1 ].location = 1;
-		attributeDescriptions[ 1 ].format = VK_FORMAT_R32G32B32_SFLOAT;
-		attributeDescriptions[ 1 ].offset = offsetof( vertex_s, color );
+		attributeDescriptions[ 1 ].format   = VK_FORMAT_R32G32B32_SFLOAT;
+		attributeDescriptions[ 1 ].offset   = offsetof( vertex_s, color );
+
+		attributeDescriptions[ 2 ].binding  = 0;
+		attributeDescriptions[ 2 ].location = 2;
+		attributeDescriptions[ 2 ].format   = VK_FORMAT_R32G32_SFLOAT;
+		attributeDescriptions[ 2 ].offset   = offsetof( vertex_s, texCoord );
 
 		return attributeDescriptions;
 	}
 }vertex_t;
 
+typedef struct
+{
+	glm::mat4 model, view, proj;
+}ubo_t;
 
 #ifdef NDEBUG
     const bool enableValidationLayers = false;
@@ -77,10 +87,10 @@ const std::vector< const char* > deviceExtensions = {
 };
 
 const std::vector< vertex_t > vertices = {
-	{ { -0.9f, -0.5f }, { 0.5f, 0.0f, 1.0f } },
-	{ { 0.5f, -0.5f }, { 0.0f, 1.0f, 0.0f } },
-	{ { 0.5f, 0.5f }, { 0.0f, 0.0f, 1.0f } },
-	{ { -0.5f, 0.5f }, { 1.0f, 1.0f, 1.0f } }
+	{ { -0.5f, -0.5f }, { 0.5f, 0.0f, 1.0f }, { 1.0f, 0.0f } },
+	{ { 0.5f, -0.5f }, { 0.0f, 1.0f, 0.0f }, { 0.0f, 0.0f } },
+	{ { 0.5f, 0.5f }, { 0.0f, 0.0f, 1.0f }, { 0.0f, 1.0f } },
+	{ { -0.5f, 0.5f }, { 1.0f, 1.0f, 1.0f }, { 1.0f, 1.0f } }
 };
 
 const std::vector< uint16_t > indicesVector = {
@@ -114,6 +124,15 @@ class renderer_c : public system_c
 	VkFormat swapChainImageFormat;
 	VkExtent2D swapChainExtent;
 	VkRenderPass renderPass;
+
+	VkDescriptorSetLayout descSetLayout;
+	VkDescriptorPool descPool;
+	std::vector< VkDescriptorSet > descSets;
+
+	VkImage textureImage;
+	VkDeviceMemory textureImageMemory;
+	VkImageView textureImageView;
+	VkSampler textureSampler;
 	
 	VkPipelineLayout pipelineLayout;
 	VkPipeline graphicsPipeline;
@@ -121,6 +140,8 @@ class renderer_c : public system_c
 
 	VkBuffer vertexBuffer, indexBuffer;
 	VkDeviceMemory vertexBufferMemory, indexBufferMemory;
+	std::vector< VkBuffer > uniformBuffers;
+	std::vector< VkDeviceMemory > uniformBuffersMemory;
 	
 	std::vector< VkSemaphore > imageAvailableSemaphores, renderFinishedSemaphores;
 	std::vector< VkFence > inFlightFences, imagesInFlight;
@@ -152,6 +173,8 @@ class renderer_c : public system_c
 		(  );
 	void init_render_pass
 		(  );
+	void init_desc_set_layout
+		(  );
 	void init_graphics_pipeline
 		(  );
 	void init_frame_buffer
@@ -162,15 +185,44 @@ class renderer_c : public system_c
 		(  );
 	void init_sync
 		(  );
+	void init_texture_image
+		(  );
+	void init_texture_image_view
+		(  );
+	void init_texture_sampler
+		(  );
+	void init_image
+		( uint32_t width,
+		  uint32_t height,
+		  VkFormat format,
+		  VkImageTiling tiling,
+		  VkImageUsageFlags usage,
+		  VkMemoryPropertyFlags properties,
+		  VkImage& image,
+		  VkDeviceMemory& imageMemory );
 	void init_vertex_buffer
 		(  );
 	void init_index_buffer
+		(  );
+	void init_uniform_buffers
+		(  );
+	void init_desc_pool
+		(  );
+	void init_desc_sets
 		(  );
 	void reinit_swap_chain
 		(  );
 	void destroy_swap_chain
 		(  );
-	
+
+	VkImageView init_image_view
+		( VkImage image, VkFormat format );
+	void transition_image_layout
+		( VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout );
+	VkCommandBuffer begin_single_time_commands
+		(  );
+	void end_single_time_commands
+		( VkCommandBuffer c );
 	void init_buffer
 		( VkDeviceSize size,
 		  VkBufferUsageFlags usage,
@@ -179,6 +231,8 @@ class renderer_c : public system_c
 		  VkDeviceMemory& bufferMemory );
 	void buf_copy
 		( VkBuffer src, VkBuffer dst, VkDeviceSize size );
+	void copy_buffer_to_img
+		( VkBuffer buffer, VkImage image, uint32_t width, uint32_t height );
 
 	bool check_validation_layer_support
 		(  );
@@ -221,6 +275,9 @@ class renderer_c : public system_c
 		( VkPhysicalDevice d );
 	swap_chain_support_info_t check_swap_chain_support
 		( VkPhysicalDevice d );
+
+	void update_uniform_buffers
+		( uint32_t currentImage );
 	
 	void cleanup
 		(  );

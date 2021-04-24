@@ -8,7 +8,7 @@ bin		:=	bin
 
 out		:=	game
 
-libraries	:=	-lSDL2 -lvulkan -ldl -lpthread -lX11 -lXxf86vm -lXrandr -lXi
+libraries	:=	-lSDL2 -lvulkan -ldl -lpthread -lX11 -lXxf86vm -lXrandr -lXi -lSDL2_mixer
 
 sources		:= 	$(shell find $(src) -name "*.cpp")
 objects		:=	$(sources:.cpp=.o)
