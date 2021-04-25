@@ -138,7 +138,7 @@ class renderer_c : public system_c	//	Most of these objects are used to make new
 	
 	VkFormat swapChainImageFormat;
 	VkExtent2D swapChainExtent;
-	VkRenderPass renderPass;
+	VkRenderPass renderPass;					//	Stores framebuffer attachments that will be used for rendering
 
 	VkDescriptorSetLayout descSetLayout;
 	VkDescriptorPool descPool;
@@ -154,7 +154,7 @@ class renderer_c : public system_c	//	Most of these objects are used to make new
 	VkImageView depthImageView;
 	
 	VkPipelineLayout pipelineLayout;
-	VkPipeline graphicsPipeline;
+	VkPipeline graphicsPipeline;					//	Colossal object that handles most stages of rendering. Seems to need multiple to render multiple things.
 	VkCommandPool commandPool;					//	Manage memory related to command buffers
 
 	VkBuffer vertexBuffer, indexBuffer;
@@ -190,12 +190,12 @@ class renderer_c : public system_c	//	Most of these objects are used to make new
 		(  );
 	void init_image_views
 		(  );
-	void init_render_pass
+	void init_render_pass				//	
 		(  );
 	void init_desc_set_layout
 		(  );
-	void init_graphics_pipeline
-		(  );
+	void init_graphics_pipeline			//	Initialize the graphics pipeline to load a shader and various other tools for rendering
+		(  );					//	TODO: create parameters to specify a shader, as the rest done in this function doesn't need to be changed for multiple pipelines
 	void init_frame_buffer
 		(  );
 	void init_command_pool
