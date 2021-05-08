@@ -45,9 +45,8 @@ void renderer_c::init_vulkan
 	init_texture_image(  );
 	init_texture_image_view(  );
 	init_texture_sampler(  );
-	init_model(  );
-	update_vertex_buffer(  );
-	update_index_buffer(  );
+	init_model( "materials/models/protogen_wip_5_plus_protodal.obj" );
+	init_model( "materials/models/protogen_wip_4.obj" );
 	init_uniform_buffers(  );
 	init_desc_pool(  );
 	init_desc_sets(  );
@@ -942,13 +941,14 @@ void renderer_c::init_command_buffers
 
 		vkCmdBeginRenderPass( commandBuffers[ i ], &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE );
 		vkCmdBindPipeline( commandBuffers[ i ], VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline );
-		VkBuffer vertexBuffers[  ] = { vertexBuffer };
-		VkDeviceSize offsets[  ] = { 0 };
-		vkCmdBindVertexBuffers( commandBuffers[ i ], 0, 1, vertexBuffers, offsets );
-		vkCmdBindIndexBuffer( commandBuffers[ i ], indexBuffer, 0, VK_INDEX_TYPE_UINT32 );
-		vkCmdBindDescriptorSets( commandBuffers[ i ], VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, 1, &descSets[ i ], 0, NULL );
+
+		for ( auto& model : models )
+		{
+			model.bind( commandBuffers[ i ] );
+			vkCmdBindDescriptorSets( commandBuffers[ i ], VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, 1, &descSets[ i ], 0, NULL );
+			model.draw( commandBuffers[ i ] );
+		}
 		
-	        vkCmdDrawIndexed( commandBuffers[ i ], ( uint32_t )( indicesVector.size(  ) ), 1, 0, 0, 0 );
 		vkCmdEndRenderPass( commandBuffers[ i ] );
 
 		if ( vkEndCommandBuffer( commandBuffers[ i ] ) != VK_SUCCESS )
@@ -1002,14 +1002,16 @@ uint32_t renderer_c::find_memory_type
 }
 
 void renderer_c::init_model
-	(  )
+	( const std::string& modelPath )
 {
 	tinyobj::attrib_t attrib;
 	std::vector< tinyobj::shape_t > shapes;
 	std::vector< tinyobj::material_t > materials;
+	std::vector< vertex_t > vertices;
+	std::vector< uint32_t > indices;
 	std::string warn, err;
 
-	if ( !tinyobj::LoadObj( &attrib, &shapes, &materials, &warn, &err, MODELPATH.c_str(  ) ) )
+	if ( !tinyobj::LoadObj( &attrib, &shapes, &materials, &warn, &err, modelPath.c_str(  ) ) )
 	{
 		throw std::runtime_error( warn + err );
 	}
@@ -1040,9 +1042,15 @@ void renderer_c::init_model
 				vertices.push_back( vertex );
 			}
 			
-			indicesVector.push_back( uniqueVertices[ vertex ] );
+			indices.push_back( uniqueVertices[ vertex ] );
 		}
 	}
+	model_data_t model{  };
+	model.vCount = ( uint32_t )vertices.size(  );
+	model.iCount = ( uint32_t )indices.size(  );
+	update_vertex_buffer( vertices, model.vBuffer, model.vBufferMem );
+	update_index_buffer( indices, model.iBuffer, model.iBufferMem );
+	models.push_back( model );
 	printf( "%d vertices loaded!\n", vertices.size(  ) );
 }
 
@@ -1181,9 +1189,9 @@ void renderer_c::init_texture_sampler
 }
 
 void renderer_c::update_vertex_buffer
-	(  )
+	( const std::vector< vertex_t >& v, VkBuffer& vBuffer, VkDeviceMemory& vBufferMem )
 {
-	VkDeviceSize bufferSize = sizeof( vertices[ 0 ] ) * vertices.size(  );
+	VkDeviceSize bufferSize = sizeof( v[ 0 ] ) * v.size(  );
 	
 	VkBuffer stagingBuffer;
 	VkDeviceMemory stagingBufferMemory;
@@ -1193,24 +1201,24 @@ void renderer_c::update_vertex_buffer
 		     stagingBuffer,
 		     stagingBufferMemory );
 	
-	map_memory( stagingBufferMemory, bufferSize, vertices.data(  ) );
+	map_memory( stagingBufferMemory, bufferSize, v.data(  ) );
 
 	init_buffer( bufferSize,
 		     VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
 		     VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-		     vertexBuffer,
-		     vertexBufferMemory );
+		     vBuffer,
+		     vBufferMem );
 
-	buf_copy( stagingBuffer, vertexBuffer, bufferSize );
+	buf_copy( stagingBuffer, vBuffer, bufferSize );
 
 	vkDestroyBuffer( device, stagingBuffer, NULL );
         vkFreeMemory( device, stagingBufferMemory, NULL );
 }
 
 void renderer_c::update_index_buffer
-	(  )
+	( std::vector< uint32_t >& i, VkBuffer& iBuffer, VkDeviceMemory& iBufferMem )	//	pls nuke this in the future, it is a copy of the above function
 {
-	VkDeviceSize bufferSize = sizeof( indicesVector[ 0 ] ) * indicesVector.size(  );
+	VkDeviceSize bufferSize = sizeof( i[ 0 ] ) * i.size(  );
 
 	VkBuffer stagingBuffer;
 	VkDeviceMemory stagingBufferMemory;
@@ -1219,15 +1227,15 @@ void renderer_c::update_index_buffer
 		     VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
 		     stagingBuffer, stagingBufferMemory );
 
-	map_memory( stagingBufferMemory, bufferSize, indicesVector.data(  ) );
+	map_memory( stagingBufferMemory, bufferSize, i.data(  ) );
 
 	init_buffer( bufferSize,
 		     VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
 		     VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-		     indexBuffer,
-		     indexBufferMemory );
+		     iBuffer,
+		     iBufferMem );
 
-	buf_copy( stagingBuffer, indexBuffer, bufferSize );
+	buf_copy( stagingBuffer, iBuffer, bufferSize );
 
 	vkDestroyBuffer( device, stagingBuffer, NULL );
 	vkFreeMemory( device, stagingBufferMemory, NULL );
@@ -1697,10 +1705,13 @@ void renderer_c::cleanup
 	vkDestroyImage( device, textureImage, NULL );
 	vkFreeMemory( device, textureImageMemory, NULL );
 	vkDestroyDescriptorSetLayout( device, descSetLayout, NULL );
-	vkDestroyBuffer( device, indexBuffer, NULL );
-        vkFreeMemory( device, indexBufferMemory, NULL );
-	vkDestroyBuffer( device, vertexBuffer, NULL );
-	vkFreeMemory( device, vertexBufferMemory, NULL );
+	for ( auto& model : models )
+	{
+		vkDestroyBuffer( device, model.iBuffer, NULL );
+		vkFreeMemory( device, model.iBufferMem, NULL );
+		vkDestroyBuffer( device, model.vBuffer, NULL );
+		vkFreeMemory( device, model.vBufferMem, NULL );
+	}
 	for ( int i = 0; i < MAX_FRAMES_PROCESSING; i++ )
 	{
 		vkDestroySemaphore( device, renderFinishedSemaphores[ i ], NULL );
