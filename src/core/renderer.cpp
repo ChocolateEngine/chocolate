@@ -46,8 +46,8 @@ void renderer_c::init_vulkan
 	init_texture_image_view(  );
 	init_texture_sampler(  );
 	init_model(  );
-	init_vertex_buffer(  );
-	init_index_buffer(  );
+	update_vertex_buffer(  );
+	update_index_buffer(  );
 	init_uniform_buffers(  );
 	init_desc_pool(  );
 	init_desc_sets(  );
@@ -1180,7 +1180,7 @@ void renderer_c::init_texture_sampler
 	}
 }
 
-void renderer_c::init_vertex_buffer
+void renderer_c::update_vertex_buffer
 	(  )
 {
 	VkDeviceSize bufferSize = sizeof( vertices[ 0 ] ) * vertices.size(  );
@@ -1193,10 +1193,7 @@ void renderer_c::init_vertex_buffer
 		     stagingBuffer,
 		     stagingBufferMemory );
 	
-      	void* data;
-	vkMapMemory( device, stagingBufferMemory, 0, bufferSize, 0, &data );
-	memcpy( data, vertices.data(  ), ( size_t )bufferSize );
-	vkUnmapMemory( device, stagingBufferMemory );
+	map_memory( stagingBufferMemory, bufferSize, vertices.data(  ) );
 
 	init_buffer( bufferSize,
 		     VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
@@ -1210,7 +1207,7 @@ void renderer_c::init_vertex_buffer
         vkFreeMemory( device, stagingBufferMemory, NULL );
 }
 
-void renderer_c::init_index_buffer
+void renderer_c::update_index_buffer
 	(  )
 {
 	VkDeviceSize bufferSize = sizeof( indicesVector[ 0 ] ) * indicesVector.size(  );
@@ -1222,10 +1219,7 @@ void renderer_c::init_index_buffer
 		     VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
 		     stagingBuffer, stagingBufferMemory );
 
-	void* data;
-	vkMapMemory( device, stagingBufferMemory, 0, bufferSize, 0, &data );
-	memcpy( data, indicesVector.data(  ), ( size_t )bufferSize );
-	vkUnmapMemory( device, stagingBufferMemory );
+	map_memory( stagingBufferMemory, bufferSize, indicesVector.data(  ) );
 
 	init_buffer( bufferSize,
 		     VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
@@ -1529,6 +1523,15 @@ void renderer_c::init_buffer
 	}
 
 	vkBindBufferMemory( device, buffer, bufferMemory, 0 );
+}
+
+void renderer_c::map_memory
+	( VkDeviceMemory bufMem, VkDeviceSize size, const void* in )
+{
+	void* data;
+	vkMapMemory( device, bufMem, 0, size, 0, &data );
+	memcpy( data, in, ( size_t )size );
+	vkUnmapMemory( device, bufMem );
 }
 
 void renderer_c::buf_copy

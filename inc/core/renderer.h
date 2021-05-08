@@ -223,11 +223,11 @@ class renderer_c : public system_c	//	Most of these objects are used to make new
 		  VkMemoryPropertyFlags properties,
 		  VkImage& image,
 		  VkDeviceMemory& imageMemory );
-	void init_vertex_buffer
+	void update_vertex_buffer			//	Initialize device memory with vertex data, may need to be called each time new vertices are loaded
 		(  );
-	void init_index_buffer
+	void update_index_buffer			//	Initialize device memory with index data, may need to be called each time new vertices are loaded
 		(  );
-	void init_uniform_buffers
+	void init_uniform_buffers			//	Pass arbitrary attributes to vertex shader for each vertex, allows vertex positioning without remapping memory
 		(  );
 	void init_desc_pool
 		(  );
@@ -252,6 +252,8 @@ class renderer_c : public system_c	//	Most of these objects are used to make new
 		  VkMemoryPropertyFlags properties,
 		  VkBuffer& buffer,
 		  VkDeviceMemory& bufferMemory );
+	void map_memory
+		( VkDeviceMemory bufMem, VkDeviceSize size, const void* in );
 	void buf_copy
 		( VkBuffer src, VkBuffer dst, VkDeviceSize size );
 	void copy_buffer_to_img
