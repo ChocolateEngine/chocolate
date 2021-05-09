@@ -38,7 +38,8 @@ void renderer_c::init_vulkan
 	init_image_views(  );
 	init_render_pass(  );
 	init_desc_set_layout(  );
-	init_graphics_pipeline(  );
+	init_graphics_pipeline( modelPipeline, modelLayout, "materials/shaders/3dvert.spv", "materials/shaders/3dfrag.spv" );
+	init_graphics_pipeline( spritePipeline, spriteLayout, "materials/shaders/2dvert.spv", "materials/shaders/2dfrag.spv" );
 	init_command_pool(  );
 	init_depth_resources(  );
 	init_frame_buffer(  );
@@ -640,10 +641,10 @@ void renderer_c::init_desc_set_layout
 }
 
 void renderer_c::init_graphics_pipeline
-	(  )
+	( VkPipeline& pipeline, VkPipelineLayout& layout, const std::string& vertShader, const std::string& fragShader )
 {
-	auto vertShaderCode = read_file( "materials/shaders/vert.spv" );
-	auto fragShaderCode = read_file( "materials/shaders/frag.spv" );
+	auto vertShaderCode = read_file( vertShader );
+	auto fragShaderCode = read_file( fragShader );
 		
 	VkShaderModule vertShaderModule = create_shader_module( vertShaderCode );	//	Processes incoming verticies, taking world position, color, and texture coordinates as an input
 	VkShaderModule fragShaderModule = create_shader_module( fragShaderCode );	//	Fills verticies with fragments to produce color, and depth
@@ -765,7 +766,7 @@ void renderer_c::init_graphics_pipeline
 	pipelineLayoutInfo.setLayoutCount 		= 1; // Optional
 	pipelineLayoutInfo.pSetLayouts 			= &descSetLayout; // Optional
 
-	if ( vkCreatePipelineLayout( device, &pipelineLayoutInfo, NULL, &pipelineLayout ) != VK_SUCCESS )
+	if ( vkCreatePipelineLayout( device, &pipelineLayoutInfo, NULL, &layout ) != VK_SUCCESS )
 	{
 		throw std::runtime_error( "Failed to create pipeline layout!" );
 	}
@@ -781,13 +782,13 @@ void renderer_c::init_graphics_pipeline
 	pipelineInfo.pDepthStencilState 	= &depthStencil;
 	pipelineInfo.pColorBlendState 		= &colorBlending;
 	pipelineInfo.pDynamicState 		= NULL; // Optional
-	pipelineInfo.layout 			= pipelineLayout;
+	pipelineInfo.layout 			= layout;
 	pipelineInfo.renderPass 		= renderPass;
 	pipelineInfo.subpass 			= 0;
 	pipelineInfo.basePipelineHandle 	= VK_NULL_HANDLE; // Optional, very important for later when making new pipelines. It is less expensive to reference an existing similar pipeline
 	pipelineInfo.basePipelineIndex 		= -1; // Optional
 
-	if ( vkCreateGraphicsPipelines( device, VK_NULL_HANDLE, 1, &pipelineInfo, NULL, &graphicsPipeline ) != VK_SUCCESS )
+	if ( vkCreateGraphicsPipelines( device, VK_NULL_HANDLE, 1, &pipelineInfo, NULL, &pipeline ) != VK_SUCCESS )
 	{
 		throw std::runtime_error( "Failed to create graphics pipeline!" );
 	}
@@ -934,12 +935,18 @@ void renderer_c::init_command_buffers
 		renderPassInfo.pClearValues 	 = clearValues.data(  );
 
 		vkCmdBeginRenderPass( commandBuffers[ i ], &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE );
-		vkCmdBindPipeline( commandBuffers[ i ], VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline );
+		vkCmdBindPipeline( commandBuffers[ i ], VK_PIPELINE_BIND_POINT_GRAPHICS, modelPipeline );
 
 		for ( auto& model : *models )
 		{
-			model.bind( commandBuffers[ i ], pipelineLayout, i );
+			model.bind( commandBuffers[ i ], modelLayout, i );
 			model.draw( commandBuffers[ i ] );
+		}
+		vkCmdBindPipeline( commandBuffers[ i ], VK_PIPELINE_BIND_POINT_GRAPHICS, modelPipeline );
+		for ( auto& sprite : *sprites )
+		{
+			sprite.bind( commandBuffers[ i ], spriteLayout, i );
+			sprite.draw( commandBuffers[ i ] );
 		}
 		
 		vkCmdEndRenderPass( commandBuffers[ i ] );
@@ -1045,6 +1052,26 @@ void renderer_c::init_model_vertices
 	printf( "%d vertices loaded!\n", vertices.size(  ) );
 }
 
+void renderer_c::init_sprite_vertices
+	( const std::string& spritePath, sprite_data_t& sprite )
+{
+	std::vector< vertex_t > vertices =
+	{
+		{{-0.5f, -0.5f, 0.0f}, {1.0f, 0.0f, 0.0f}, {1.0f, 0.0f}},
+    		{{0.5f, -0.5f, 0.0f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f}},
+    		{{0.5f, 0.5f, 0.0f}, {0.0f, 0.0f, 1.0f}, {0.0f, 1.0f}},
+    		{{-0.5f, 0.5f, 0.0f}, {1.0f, 1.0f, 1.0f}, {1.0f, 1.0f}}
+	};
+	std::vector< uint32_t > indices =
+	{
+		0, 1, 2, 2, 3, 0	
+	};
+	sprite.vCount = ( uint32_t )vertices.size(  );
+	sprite.iCount = ( uint32_t )indices.size(  );
+	update_vertex_buffer( vertices, sprite.vBuffer, sprite.vBufferMem );
+	update_index_buffer( indices, sprite.iBuffer, sprite.iBufferMem );
+}
+
 void renderer_c::init_image
 	( uint32_t width,
 	  uint32_t height,
@@ -1095,7 +1122,7 @@ void renderer_c::init_texture_image
 	( const std::string& imagePath, VkImage& tImage, VkDeviceMemory& tImageMem )
 {
 	int texWidth, texHeight, texChannels;
-	stbi_uc* pixels = stbi_load( TEXTUREPATH.c_str(  ), &texWidth, &texHeight, &texChannels, STBI_rgb_alpha );
+	stbi_uc* pixels = stbi_load( imagePath.c_str(  ), &texWidth, &texHeight, &texChannels, STBI_rgb_alpha );
 	VkDeviceSize imageSize = texWidth * texHeight * 4;
 
 	if ( !pixels ) {
@@ -1329,17 +1356,26 @@ void renderer_c::reinit_swap_chain
 	init_swap_chain(  );
 	init_image_views(  );
 	init_render_pass(  );
-	init_graphics_pipeline(  );
+	init_graphics_pipeline( modelPipeline, modelLayout, "materials/shaders/3dvert.spv", "materials/shaders/3dfrag.spv" );
+	init_graphics_pipeline( spritePipeline, spriteLayout, "materials/shaders/2dvert.spv", "materials/shaders/2dfrag.spv" );
 	init_depth_resources(  );
 	init_frame_buffer(  );
 	for ( auto& model : *models )
 	{
 		init_uniform_buffers( model.uBuffers, model.uBuffersMem );	
 	}
+	for ( auto& sprite : *sprites )
+	{
+		init_uniform_buffers( sprite.uBuffers, sprite.uBuffersMem );	
+	}
 	init_desc_pool(  );
 	for ( auto& model : *models )
 	{
 		init_desc_sets( model.descSets, model.uBuffers, model.tImageView );	
+	}
+	for ( auto& sprite : *sprites )
+	{
+		init_desc_sets( sprite.descSets, sprite.uBuffers, sprite.tImageView );	
 	}
 	init_command_buffers(  );
 }
@@ -1365,8 +1401,10 @@ void renderer_c::destroy_swap_chain
         }
 	vkFreeCommandBuffers( device, commandPool, ( uint32_t )commandBuffers.size(  ), commandBuffers.data(  ) );
 
-	vkDestroyPipeline( device, graphicsPipeline, NULL );
-        vkDestroyPipelineLayout( device, pipelineLayout, NULL );
+	vkDestroyPipeline( device, modelPipeline, NULL );
+        vkDestroyPipelineLayout( device, modelLayout, NULL );
+	vkDestroyPipeline( device, spritePipeline, NULL );
+        vkDestroyPipelineLayout( device, spriteLayout, NULL );
         vkDestroyRenderPass( device, renderPass, NULL );
 
         for ( auto imageView : swapChainImageViews )
@@ -1591,7 +1629,7 @@ void renderer_c::copy_buffer_to_img
 }
 
 void renderer_c::update_uniform_buffers
-	( uint32_t currentImage, std::vector< VkDeviceMemory >& uBuffersMem )
+	( uint32_t currentImage, model_data_t& modelData )
 {
 	static auto startTime 	= std::chrono::high_resolution_clock::now(  );
 
@@ -1599,16 +1637,32 @@ void renderer_c::update_uniform_buffers
 	float time 		= std::chrono::duration< float, std::chrono::seconds::period >( currentTime - startTime ).count(  );
 
 	ubo_t ubo{  };
-	ubo.model = glm::rotate( glm::mat4( 1.0f ), time * glm::radians( 45.0f ), glm::vec3( 0.0f, 0.0f, 1.0f ) );
+	ubo.model = glm::translate( glm::mat4( 1.0f ), glm::vec3( modelData.posX, modelData.posY, modelData.posZ ) ) * glm::rotate( glm::mat4( 1.0f ), time * glm::radians( 45.0f ), glm::vec3( 0.0f, 0.0f, 1.0f ) );
 	ubo.view  = glm::lookAt( glm::vec3( 0.1f, 10.0f, 25.0f ), glm::vec3( 0.0f, 0.0f, 0.0f ), glm::vec3( 0.0f, 0.0f, 1.0f ) );
 	ubo.proj  = glm::perspective( glm::radians( 90.0f ), swapChainExtent.width / ( float ) swapChainExtent.height, 0.1f, 256.0f );
 
 	ubo.proj[ 1 ][ 1 ] *= -1;
 
 	void* data;
-	vkMapMemory( device, uBuffersMem[ currentImage ], 0, sizeof( ubo ), 0, &data );
+	vkMapMemory( device, modelData.uBuffersMem[ currentImage ], 0, sizeof( ubo ), 0, &data );
 	memcpy( data, &ubo, sizeof( ubo ) );
-	vkUnmapMemory( device, uBuffersMem[ currentImage ] );
+	vkUnmapMemory( device, modelData.uBuffersMem[ currentImage ] );
+}
+
+void renderer_c::update_sprite_uniform_buffers
+	( uint32_t currentImage, sprite_data_t& spriteData )
+{
+	ubo_t ubo{  };
+	ubo.model = glm::translate( glm::mat4( 1.0f ), glm::vec3( spriteData.posX, spriteData.posY, 0.0f ) ) * glm::rotate( glm::mat4( 1.0f ), glm::radians( 180.0f ), glm::vec3( 0.0f, 0.0f, 1.0f ) );
+	ubo.view = glm::mat4( 1.0f );
+	ubo.proj = glm::mat4( 1.0f );
+
+	ubo.proj[ 1 ][ 1 ] *= -1;
+	
+	void* data;
+	vkMapMemory( device, spriteData.uBuffersMem[ currentImage ], 0, sizeof( ubo ), 0, &data );
+	memcpy( data, &ubo, sizeof( ubo ) );
+	vkUnmapMemory( device, spriteData.uBuffersMem[ currentImage ] );
 }
 
 void renderer_c::init_model
@@ -1623,6 +1677,17 @@ void renderer_c::init_model
 	init_command_buffers(  );
 }
 
+void renderer_c::init_sprite
+	( sprite_data_t& spriteData, const std::string& spritePath )
+{
+	init_sprite_vertices( spritePath, spriteData );
+	init_texture_image( spritePath, spriteData.tImage, spriteData.tImageMem );
+	init_texture_image_view( spriteData.tImageView, spriteData.tImage );
+	init_uniform_buffers( spriteData.uBuffers, spriteData.uBuffersMem );
+	init_desc_sets( spriteData.descSets, spriteData.uBuffers, spriteData.tImageView );
+	sprites->push_back( spriteData );
+	init_command_buffers(  );
+}
 
 void renderer_c::draw_frame
 	(  )
@@ -1649,7 +1714,11 @@ void renderer_c::draw_frame
 
 	for ( auto& model : *models )
 	{
-		update_uniform_buffers( imageIndex, model.uBuffersMem );
+		update_uniform_buffers( imageIndex, model );
+	}
+	for ( auto& sprite : *sprites )
+	{
+		update_sprite_uniform_buffers( imageIndex, sprite );
 	}
 
 	VkSubmitInfo submitInfo{  };

@@ -92,20 +92,37 @@ typedef struct
 
 typedef struct
 {
-	VkBuffer vBuffer;
-	VkDeviceMemory vBufferMem;
-	uint32_t vCount;
+	glm::vec2 offset;
+	alignas( 16 ) glm::vec3 color;
+}push_t;
+
+typedef struct
+{
+	VkBuffer vBuffer, iBuffer;
+	VkDeviceMemory vBufferMem, iBufferMem, tImageMem;
+	VkImage tImage;
+	VkImageView tImageView;
+	std::vector< VkBuffer > uBuffers;
+	std::vector< VkDeviceMemory > uBuffersMem;
+	std::vector< VkDescriptorSet > descSets;
+	uint32_t vCount, iCount;
+
+	float posX, posY;
 
 	void bind
-		( VkCommandBuffer c )
+		( VkCommandBuffer c, VkPipelineLayout p, uint32_t i )
 		{
-			
+			VkBuffer vBuffers[  ] 		= { vBuffer };
+			VkDeviceSize offsets[  ] 	= { 0 };
+			vkCmdBindVertexBuffers( c, 0, 1, vBuffers, offsets );
+			vkCmdBindIndexBuffer( c, iBuffer, 0, VK_INDEX_TYPE_UINT32 );
+			vkCmdBindDescriptorSets( c, VK_PIPELINE_BIND_POINT_GRAPHICS, p, 0, 1, &descSets[ i ], 0, NULL );
 		}
 	void draw
 		( VkCommandBuffer c )
 		{
-			
-		}
+			vkCmdDrawIndexed( c, iCount, 1, 0, 0, 0 );
+		}	
 }sprite_data_t;
 
 typedef struct
@@ -118,6 +135,8 @@ typedef struct
 	std::vector< VkDeviceMemory > uBuffersMem;
 	std::vector< VkDescriptorSet > descSets;
 	uint32_t vCount, iCount;
+
+	float posX, posY, posZ;
 
 	void bind
 		( VkCommandBuffer c, VkPipelineLayout p, uint32_t i )
@@ -200,8 +219,10 @@ class renderer_c : public system_c	//	Most of these objects are used to make new
 	VkDeviceMemory depthImageMemory;
 	VkImageView depthImageView;
 	
-	VkPipelineLayout pipelineLayout;
-	VkPipeline graphicsPipeline;					//	Colossal object that handles most stages of rendering. Seems to need multiple to render multiple things.
+	VkPipelineLayout modelLayout;
+	VkPipelineLayout spriteLayout;
+	VkPipeline modelPipeline;					//	Colossal object that handles most stages of rendering. Seems to need multiple to render multiple things.
+	VkPipeline spritePipeline;
 	VkCommandPool commandPool;					//	Manage memory related to command buffers
 
 	VkBuffer vertexBuffer, indexBuffer;
@@ -240,7 +261,7 @@ class renderer_c : public system_c	//	Most of these objects are used to make new
 	void init_desc_set_layout
 		(  );
 	void init_graphics_pipeline			//	Initialize the graphics pipeline to load a shader and various other tools for rendering
-		(  );					//	TODO: create parameters to specify a shader, as the rest done in this function doesn't need to be changed for multiple pipelines
+		( VkPipeline& pipeline, VkPipelineLayout& layout, const std::string& vertShader, const std::string& fragShader );					//	TODO: create parameters to specify a shader, as the rest done in this function doesn't need to be changed for multiple pipelines
 	void init_frame_buffer
 		(  );
 	void init_command_pool
@@ -259,6 +280,8 @@ class renderer_c : public system_c	//	Most of these objects are used to make new
 		(  );
 	void init_model_vertices
 		( const std::string& modelPath, model_data_t& model );
+	void init_sprite_vertices
+		( const std::string& spritePath, sprite_data_t& sprite );
 	void init_image
 		( uint32_t width,
 		  uint32_t height,
@@ -355,7 +378,9 @@ class renderer_c : public system_c	//	Most of these objects are used to make new
 		( VkPhysicalDevice d );
 
 	void update_uniform_buffers
-		( uint32_t currentImage, std::vector< VkDeviceMemory >& uBuffersMem );
+		( uint32_t currentImage, model_data_t& modelData );
+	void update_sprite_uniform_buffers
+		( uint32_t currentImage, sprite_data_t& spriteData );
 	
 	void cleanup
 		(  );
@@ -366,11 +391,14 @@ class renderer_c : public system_c	//	Most of these objects are used to make new
 		(  );
 	void init_model
 		( model_data_t& modelData, const std::string& modelPath, const std::string& texturePath );
+	void init_sprite
+		( sprite_data_t& spriteData, const std::string& spritePath );
 
 	void draw_frame
 		(  );
 
 	std::vector< model_data_t >* models;
+	std::vector< sprite_data_t >* sprites;
 	
 	renderer_c
 		(  );
