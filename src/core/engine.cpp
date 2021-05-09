@@ -7,11 +7,11 @@ void engine_c::init_commands
 	msg.type = ENGINE_C;
 	
 	msg.msg = ENGI_PING;
-	msg.func = [ & ](  ){ printf( "Engine: Ping!\n" ); };
+	msg.func = [ & ]( void** args, int argsLen ){ printf( "Engine: Ping!\n" ); };
 	engineCommands.push_back( msg );
 
 	msg.msg = ENGI_EXIT;
-	msg.func = [ & ](  ){ active = false; };
+	msg.func = [ & ]( void** args, int argsLen ){ active = false; };
 	engineCommands.push_back( msg );
 }
 

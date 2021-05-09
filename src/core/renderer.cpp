@@ -1249,7 +1249,7 @@ void renderer_c::init_uniform_buffers
 	}
 }
 
-void renderer_c::init_desc_pool
+void renderer_c::init_desc_pool	//	please for the love of god, change this
 	(  )
 {
 	std::array< VkDescriptorPoolSize, 2 > poolSizes{  };

@@ -15,7 +15,13 @@ void input_c::parse_input
 			{
 				case SDLK_UP:
 				{
-					msgs->add( { GRAPHICS_C, GFIX_LOAD_MODEL, NULL } );
+					void* args[  ] = { ( void* )"materials/models/protogen_wip_5_plus_protodal.obj", ( void* )"materials/textures/blank_mat.png" };
+					msgs->add( { GRAPHICS_C,
+						     GFIX_LOAD_MODEL,
+						     NULL,
+						     args,
+						     2
+						} );
 				}
 			}
 		}

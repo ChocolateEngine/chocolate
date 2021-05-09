@@ -4,6 +4,18 @@
 #include "system.h"
 #include "renderer.h"
 
+typedef struct
+{
+	uint32_t posX, posY, resX, resY;
+	sprite_data_t spriteData;
+}sprite_t;
+
+typedef struct
+{
+	uint32_t posX, posY, posZ;
+	model_data_t modelData;
+}model_t;
+
 class graphics_c : public system_c
 {
 	protected:

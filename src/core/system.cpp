@@ -3,18 +3,18 @@
 void system_c::read_msg
 	(  )
 {
-	int msg;
+	msg_s* msg;
 	for ( ; ; )
 	{
-		if ( ( msg = msgs->fetch_msg( systemType ) ) < 0 )
+		if ( !( msg = msgs->fetch_msg( systemType ) ) )
 		{
 			return;
 		}
 		for ( auto cmd : engineCommands )
 		{
-			if ( cmd.msg == msg )
+			if ( cmd.msg == msg->msg )
 			{
-				cmd.func(  );
+				cmd.func( msg->args, msg->argsLen );
 			}
 		}
 		msgs->remove( msgs->lastMsgIndex );

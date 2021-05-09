@@ -16,7 +16,7 @@ class msgs_c
 
 	std::vector< msg_s > queue;
 
-	int fetch_msg
+	msg_s* fetch_msg
 		( system_class_e type );
 
 	void add

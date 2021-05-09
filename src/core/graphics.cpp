@@ -9,7 +9,15 @@ void graphics_c::init_commands
 	msg.type = GRAPHICS_C;
 
 	msg.msg = GFIX_LOAD_MODEL;
-	msg.func = [ & ](  ){ load_model( "materials/models/protogen_wip_5_plus_protodal.obj", "materials/textures/blank_mat.png" ); };
+	msg.func = [ & ]( void** args, int argsLen )
+		{
+			if ( argsLen < 2 )
+			{
+				printf( "Invalid parameters for GFIX_LOAD_MODEL\n" );
+				return;
+			}
+			load_model( ( char* )args[ 0 ], ( char* )args[ 1 ] );
+		};
 	engineCommands.push_back( msg );
 }
 
@@ -49,8 +57,8 @@ graphics_c::graphics_c
 	renderer.models = &modelData;
 	renderer.init_vulkan(  );
 	
-	load_model( "materials/models/protogen_wip_5_plus_protodal.obj", "materials/textures/blank_mat.png"  );
-	load_model( "materials/models/protogen_wip_4.obj", "materials/textures/blank_mat.png" );
+	//load_model( "materials/models/protogen_wip_5_plus_protodal.obj", "materials/textures/blank_mat.png"  );
+	//load_model( "materials/models/protogen_wip_4.obj", "materials/textures/blank_mat.png" );
 }
 
 graphics_c::~graphics_c

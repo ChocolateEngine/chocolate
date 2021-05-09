@@ -1,6 +1,6 @@
 #include "../../inc/core/msgs.h"
 
-int msgs_c::fetch_msg
+msg_s* msgs_c::fetch_msg
 	( system_class_e type )
 {
 	for ( int i = 0; i < queue.size(  ); ++i )
@@ -8,11 +8,11 @@ int msgs_c::fetch_msg
 		if ( queue[ i ].type == type )
 		{
 			lastMsgIndex = i;
-			return queue[ i ].msg;
+			return &queue[ i ];
 		}
 	}
 	lastMsgIndex = -1;
-	return -1;
+	return 0x0;
 }
 
 void msgs_c::add

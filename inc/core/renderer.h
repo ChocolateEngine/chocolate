@@ -135,18 +135,6 @@ typedef struct
 		}
 }model_data_t;
 
-typedef struct
-{
-	uint32_t posX, posY, resX, resY;
-	sprite_data_t spriteData;
-}sprite_t;
-
-typedef struct
-{
-	uint32_t posX, posY, posZ;
-	model_data_t modelData;
-}model_t;
-
 #ifdef NDEBUG
     const bool enableValidationLayers = false;
 #else
