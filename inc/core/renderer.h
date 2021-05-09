@@ -111,16 +111,22 @@ typedef struct
 typedef struct
 {
 	VkBuffer vBuffer, iBuffer;
-	VkDeviceMemory vBufferMem, iBufferMem;
+	VkDeviceMemory vBufferMem, iBufferMem, tImageMem;
+	VkImage tImage;
+	VkImageView tImageView;
+	std::vector< VkBuffer > uBuffers;
+	std::vector< VkDeviceMemory > uBuffersMem;
+	std::vector< VkDescriptorSet > descSets;
 	uint32_t vCount, iCount;
 
 	void bind
-		( VkCommandBuffer c )
+		( VkCommandBuffer c, VkPipelineLayout p, uint32_t i )
 		{
 			VkBuffer vBuffers[  ] 		= { vBuffer };
 			VkDeviceSize offsets[  ] 	= { 0 };
 			vkCmdBindVertexBuffers( c, 0, 1, vBuffers, offsets );
 			vkCmdBindIndexBuffer( c, iBuffer, 0, VK_INDEX_TYPE_UINT32 );
+			vkCmdBindDescriptorSets( c, VK_PIPELINE_BIND_POINT_GRAPHICS, p, 0, 1, &descSets[ i ], 0, NULL );
 		}
 	void draw
 		( VkCommandBuffer c )
@@ -128,6 +134,18 @@ typedef struct
 			vkCmdDrawIndexed( c, iCount, 1, 0, 0, 0 );
 		}
 }model_data_t;
+
+typedef struct
+{
+	uint32_t posX, posY, resX, resY;
+	sprite_data_t spriteData;
+}sprite_t;
+
+typedef struct
+{
+	uint32_t posX, posY, posZ;
+	model_data_t modelData;
+}model_t;
 
 #ifdef NDEBUG
     const bool enableValidationLayers = false;
@@ -158,7 +176,7 @@ class renderer_c : public system_c	//	Most of these objects are used to make new
 	//std::vector< vertex_t > vertices;
 	//std::vector< uint32_t > indicesVector;
 
-	std::vector< model_data_t > models;
+	//std::vector< model_data_t > models;
 
 	SDL_Window* win;						//	Window to display stuff
 	VkSurfaceKHR surf;						//	Allows window to display stuff
@@ -183,7 +201,7 @@ class renderer_c : public system_c	//	Most of these objects are used to make new
 
 	VkDescriptorSetLayout descSetLayout;
 	VkDescriptorPool descPool;
-	std::vector< VkDescriptorSet > descSets;
+	std::vector< VkDescriptorSet > descriptionSets;
 
 	VkImage textureImage;
 	VkDeviceMemory textureImageMemory;
@@ -209,8 +227,6 @@ class renderer_c : public system_c	//	Most of these objects are used to make new
 	void init_commands
 		(  );
 	
-	void init_vulkan
-		(  );
 	void init_window
 		(  );
 	std::vector< const char* > init_required_extensions
@@ -248,13 +264,13 @@ class renderer_c : public system_c	//	Most of these objects are used to make new
 	void init_sync
 		(  );
 	void init_texture_image
-		(  );
+		( const std::string& imagePath, VkImage& tImage, VkDeviceMemory& tImageMem );
 	void init_texture_image_view
-		(  );
+		( VkImageView& tImageView, VkImage tImage );
 	void init_texture_sampler
 		(  );
-	void init_model
-		( const std::string& modelPath );
+	void init_model_vertices
+		( const std::string& modelPath, model_data_t& model );
 	void init_image
 		( uint32_t width,
 		  uint32_t height,
@@ -269,11 +285,11 @@ class renderer_c : public system_c	//	Most of these objects are used to make new
 	void update_index_buffer			//	Initialize device memory with index data, may need to be called each time new vertices are loaded
 		( std::vector< uint32_t >&i, VkBuffer& iBuffer, VkDeviceMemory& iBufferMem );
 	void init_uniform_buffers			//	Pass arbitrary attributes to vertex shader for each vertex, allows vertex positioning without remapping memory
-		(  );
+		( std::vector< VkBuffer >& uBuffers, std::vector< VkDeviceMemory >& uBuffersMem );
 	void init_desc_pool
 		(  );
 	void init_desc_sets
-		(  );
+		( std::vector< VkDescriptorSet >& descSets, std::vector< VkBuffer >& uBuffers, VkImageView tImageView );
 	void reinit_swap_chain
 		(  );
 	void destroy_swap_chain
@@ -351,15 +367,22 @@ class renderer_c : public system_c	//	Most of these objects are used to make new
 		( VkPhysicalDevice d );
 
 	void update_uniform_buffers
-		( uint32_t currentImage );
+		( uint32_t currentImage, std::vector< VkDeviceMemory >& uBuffersMem );
 	
 	void cleanup
 		(  );
 	
 	public:
 
+	void init_vulkan
+		(  );
+	void init_model
+		( model_data_t& modelData, const std::string& modelPath, const std::string& texturePath );
+
 	void draw_frame
 		(  );
+
+	std::vector< model_data_t >* models;
 	
 	renderer_c
 		(  );

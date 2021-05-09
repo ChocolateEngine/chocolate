@@ -18,8 +18,8 @@ void engine_c::init_commands
 void engine_c::init_systems
 	(  )
 {
-	rend.msgs = msgs;
-	rend.console = console;
+	graphics.msgs = msgs;
+	graphics.console = console;
 
 	input.msgs = msgs;
 	input.console = console;
@@ -33,8 +33,8 @@ void engine_c::update_systems
 {
 	update(  );
 
-	rend.update(  );
-	rend.draw_frame(  );
+	graphics.update(  );
+	graphics.draw_frame(  );
 
 	input.update(  );
 	input.parse_input(  );

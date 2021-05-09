@@ -2,7 +2,7 @@
 #define ENGINE_H
 
 #include "system.h"
-#include "renderer.h"
+#include "graphics.h"
 #include "input.h"
 #include "audio.h"
 
@@ -10,7 +10,7 @@ class engine_c : public system_c
 {
 	protected:
 
-	renderer_c rend;
+	graphics_c graphics;
 	input_c input;
 	audio_c audio;
 	

@@ -42,14 +42,8 @@ void renderer_c::init_vulkan
 	init_command_pool(  );
 	init_depth_resources(  );
 	init_frame_buffer(  );
-	init_texture_image(  );
-	init_texture_image_view(  );
 	init_texture_sampler(  );
-	init_model( "materials/models/protogen_wip_5_plus_protodal.obj" );
-	init_model( "materials/models/protogen_wip_4.obj" );
-	init_uniform_buffers(  );
 	init_desc_pool(  );
-	init_desc_sets(  );
 	init_command_buffers(  );
 	init_sync(  );
 }
@@ -942,10 +936,9 @@ void renderer_c::init_command_buffers
 		vkCmdBeginRenderPass( commandBuffers[ i ], &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE );
 		vkCmdBindPipeline( commandBuffers[ i ], VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline );
 
-		for ( auto& model : models )
+		for ( auto& model : *models )
 		{
-			model.bind( commandBuffers[ i ] );
-			vkCmdBindDescriptorSets( commandBuffers[ i ], VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, 1, &descSets[ i ], 0, NULL );
+			model.bind( commandBuffers[ i ], pipelineLayout, i );
 			model.draw( commandBuffers[ i ] );
 		}
 		
@@ -1001,8 +994,8 @@ uint32_t renderer_c::find_memory_type
 	throw std::runtime_error( "Failed to find suitable memory type!" );
 }
 
-void renderer_c::init_model
-	( const std::string& modelPath )
+void renderer_c::init_model_vertices
+	( const std::string& modelPath, model_data_t& model )
 {
 	tinyobj::attrib_t attrib;
 	std::vector< tinyobj::shape_t > shapes;
@@ -1016,7 +1009,7 @@ void renderer_c::init_model
 		throw std::runtime_error( warn + err );
 	}
 
-	std::unordered_map< vertex_t, uint32_t > uniqueVertices{  };
+	std::unordered_map< vertex_t, uint32_t  >uniqueVertices{  };
 	
 	for ( const auto& shape : shapes )
 	{
@@ -1045,12 +1038,10 @@ void renderer_c::init_model
 			indices.push_back( uniqueVertices[ vertex ] );
 		}
 	}
-	model_data_t model{  };
 	model.vCount = ( uint32_t )vertices.size(  );
 	model.iCount = ( uint32_t )indices.size(  );
 	update_vertex_buffer( vertices, model.vBuffer, model.vBufferMem );
 	update_index_buffer( indices, model.iBuffer, model.iBufferMem );
-	models.push_back( model );
 	printf( "%d vertices loaded!\n", vertices.size(  ) );
 }
 
@@ -1101,7 +1092,7 @@ void renderer_c::init_image
 }
 
 void renderer_c::init_texture_image
-	(  )
+	( const std::string& imagePath, VkImage& tImage, VkDeviceMemory& tImageMem )
 {
 	int texWidth, texHeight, texChannels;
 	stbi_uc* pixels = stbi_load( TEXTUREPATH.c_str(  ), &texWidth, &texHeight, &texChannels, STBI_rgb_alpha );
@@ -1132,17 +1123,17 @@ void renderer_c::init_texture_image
 		    VK_IMAGE_TILING_OPTIMAL,
 		    VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
 		    VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-		    textureImage,
-		    textureImageMemory );
-	transition_image_layout( textureImage,
+		    tImage,
+		    tImageMem );
+	transition_image_layout( tImage,
 				 VK_FORMAT_R8G8B8A8_SRGB,
 				 VK_IMAGE_LAYOUT_UNDEFINED,
 				 VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL );
 	copy_buffer_to_img( stagingBuffer,
-			    textureImage,
+			    tImage,
 			    ( uint32_t )texWidth,
 			    ( uint32_t )texHeight );
-	transition_image_layout( textureImage,
+	transition_image_layout( tImage,
 				 VK_FORMAT_R8G8B8A8_SRGB,
 				 VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
 				 VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
@@ -1152,9 +1143,9 @@ void renderer_c::init_texture_image
 }
 
 void renderer_c::init_texture_image_view
-	(  )
+	( VkImageView& tImageView, VkImage tImage )
 {
-	textureImageView = init_image_view( textureImage, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT );
+	tImageView = init_image_view( tImage, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT );
 }
 
 void renderer_c::init_texture_sampler
@@ -1242,19 +1233,19 @@ void renderer_c::update_index_buffer
 }
 
 void renderer_c::init_uniform_buffers
-	(  )
+	( std::vector< VkBuffer >& uBuffers, std::vector< VkDeviceMemory >& uBuffersMem )
 {
 	VkDeviceSize bufferSize = sizeof( ubo_t );
 
-	uniformBuffers.resize( swapChainImages.size(  ) );
-	uniformBuffersMemory.resize( swapChainImages.size(  ) );
+	uBuffers.resize( swapChainImages.size(  ) );
+	uBuffersMem.resize( swapChainImages.size(  ) );
 
 	for ( int i = 0; i < swapChainImages.size(  ); i++ ) {
 		init_buffer( bufferSize,
 			     VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
 			     VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-			     uniformBuffers[ i ],
-			     uniformBuffersMemory[ i ] );
+			     uBuffers[ i ],
+			     uBuffersMem[ i ] );
 	}
 }
 
@@ -1263,15 +1254,15 @@ void renderer_c::init_desc_pool
 {
 	std::array< VkDescriptorPoolSize, 2 > poolSizes{  };
 	poolSizes[ 0 ].type 		 = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-	poolSizes[ 0 ].descriptorCount 	 = ( uint32_t )swapChainImages.size(  );
+	poolSizes[ 0 ].descriptorCount 	 = 2000;//( uint32_t )swapChainImages.size(  );
 	poolSizes[ 1 ].type 		 = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-	poolSizes[ 1 ].descriptorCount 	 = ( uint32_t )swapChainImages.size(  );
+	poolSizes[ 1 ].descriptorCount 	 = 2000;//( uint32_t )swapChainImages.size(  );
 
 	VkDescriptorPoolCreateInfo poolInfo{  };
 	poolInfo.sType 		= VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
 	poolInfo.poolSizeCount  = ( uint32_t )poolSizes.size(  );
 	poolInfo.pPoolSizes 	= poolSizes.data(  );
-	poolInfo.maxSets 	= ( uint32_t )swapChainImages.size(  );
+	poolInfo.maxSets 	= 2000;//( uint32_t )swapChainImages.size(  );
 
 	if ( vkCreateDescriptorPool( device, &poolInfo, NULL, &descPool ) != VK_SUCCESS )
 	{
@@ -1280,7 +1271,7 @@ void renderer_c::init_desc_pool
 }
 
 void renderer_c::init_desc_sets
-	(  )
+	( std::vector< VkDescriptorSet >& descSets, std::vector< VkBuffer >& uBuffers, VkImageView tImageView )
 {
 	std::vector< VkDescriptorSetLayout > layouts( swapChainImages.size(  ), descSetLayout );
 	VkDescriptorSetAllocateInfo allocInfo{  };
@@ -1298,13 +1289,13 @@ void renderer_c::init_desc_sets
 	for ( int i = 0; i < swapChainImages.size(  ); i++ )
 	{
 		VkDescriptorBufferInfo bufferInfo{  };
-		bufferInfo.buffer = uniformBuffers[ i ];
+		bufferInfo.buffer = uBuffers[ i ];
 		bufferInfo.offset = 0;
 		bufferInfo.range  = sizeof( ubo_t );
 
 		VkDescriptorImageInfo imageInfo{  };
 		imageInfo.imageLayout   = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-		imageInfo.imageView 	= textureImageView;
+		imageInfo.imageView 	= tImageView;
 		imageInfo.sampler 	= textureSampler;
 
 		std::array< VkWriteDescriptorSet, 2 > descriptorWrites{  };
@@ -1341,9 +1332,15 @@ void renderer_c::reinit_swap_chain
 	init_graphics_pipeline(  );
 	init_depth_resources(  );
 	init_frame_buffer(  );
-	init_uniform_buffers(  );
+	for ( auto& model : *models )
+	{
+		init_uniform_buffers( model.uBuffers, model.uBuffersMem );	
+	}
 	init_desc_pool(  );
-	init_desc_sets(  );
+	for ( auto& model : *models )
+	{
+		init_desc_sets( model.descSets, model.uBuffers, model.tImageView );	
+	}
 	init_command_buffers(  );
 }
 
@@ -1353,9 +1350,13 @@ void renderer_c::destroy_swap_chain
 	vkDestroyImageView( device, depthImageView, nullptr );
 	vkDestroyImage( device, depthImage, nullptr );
 	vkFreeMemory( device, depthImageMemory, nullptr );
-	for ( int i = 0; i < swapChainImages.size(  ); i++ ) {
-		vkDestroyBuffer( device, uniformBuffers[ i ], NULL );
-		vkFreeMemory( device, uniformBuffersMemory[ i ], NULL );
+	for ( auto& model : *models )
+	{
+		for ( int i = 0; i < swapChainImages.size(  ); i++ )
+		{
+			vkDestroyBuffer( device, model.uBuffers[ i ], NULL );
+			vkFreeMemory( device, model.uBuffersMem[ i ], NULL );
+		}
 	}
 	vkDestroyDescriptorPool( device, descPool, NULL );
         for ( auto framebuffer : swapChainFramebuffers )
@@ -1590,7 +1591,7 @@ void renderer_c::copy_buffer_to_img
 }
 
 void renderer_c::update_uniform_buffers
-	( uint32_t currentImage )
+	( uint32_t currentImage, std::vector< VkDeviceMemory >& uBuffersMem )
 {
 	static auto startTime 	= std::chrono::high_resolution_clock::now(  );
 
@@ -1605,10 +1606,23 @@ void renderer_c::update_uniform_buffers
 	ubo.proj[ 1 ][ 1 ] *= -1;
 
 	void* data;
-	vkMapMemory( device, uniformBuffersMemory[ currentImage ], 0, sizeof( ubo ), 0, &data );
+	vkMapMemory( device, uBuffersMem[ currentImage ], 0, sizeof( ubo ), 0, &data );
 	memcpy( data, &ubo, sizeof( ubo ) );
-	vkUnmapMemory( device, uniformBuffersMemory[ currentImage ] );
+	vkUnmapMemory( device, uBuffersMem[ currentImage ] );
 }
+
+void renderer_c::init_model
+	( model_data_t& modelData, const std::string& modelPath, const std::string& texturePath )
+{
+	init_model_vertices( modelPath, modelData );
+	init_texture_image( texturePath, modelData.tImage, modelData.tImageMem );
+	init_texture_image_view( modelData.tImageView, modelData.tImage );
+	init_uniform_buffers( modelData.uBuffers, modelData.uBuffersMem );
+	init_desc_sets( modelData.descSets, modelData.uBuffers, modelData.tImageView );
+	models->push_back( modelData );
+	init_command_buffers(  );
+}
+
 
 void renderer_c::draw_frame
 	(  )
@@ -1633,7 +1647,10 @@ void renderer_c::draw_frame
 	}
 	imagesInFlight[ imageIndex ] = inFlightFences[ currentFrame ];
 
-	update_uniform_buffers( imageIndex );
+	for ( auto& model : *models )
+	{
+		update_uniform_buffers( imageIndex, model.uBuffersMem );
+	}
 
 	VkSubmitInfo submitInfo{  };
 	submitInfo.sType 			= VK_STRUCTURE_TYPE_SUBMIT_INFO;
@@ -1701,12 +1718,12 @@ void renderer_c::cleanup
 {
 	destroy_swap_chain(  );
 	vkDestroySampler( device, textureSampler, NULL );
-	vkDestroyImageView( device, textureImageView, NULL );
-	vkDestroyImage( device, textureImage, NULL );
-	vkFreeMemory( device, textureImageMemory, NULL );
 	vkDestroyDescriptorSetLayout( device, descSetLayout, NULL );
-	for ( auto& model : models )
+	for ( auto& model : *models )
 	{
+		vkDestroyImageView( device, model.tImageView, NULL );
+		vkDestroyImage( device, model.tImage, NULL );
+		vkFreeMemory( device, model.tImageMem, NULL );
 		vkDestroyBuffer( device, model.iBuffer, NULL );
 		vkFreeMemory( device, model.iBufferMem, NULL );
 		vkDestroyBuffer( device, model.vBuffer, NULL );
@@ -1737,8 +1754,6 @@ void renderer_c::cleanup
 renderer_c::renderer_c
 	(  )
 {
-	init_vulkan(  );
-
 	systemType = RENDERER_C;
 	init_commands(  );
 }

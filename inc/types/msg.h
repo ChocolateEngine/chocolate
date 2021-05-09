@@ -7,6 +7,7 @@ typedef struct
 {
 	int type, msg;
 	std::function< void(  ) > func;
+	
 }msg_s;
 
 #endif

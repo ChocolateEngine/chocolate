@@ -5,6 +5,7 @@ typedef enum
 {
 	ENGINE_C,
 	RENDERER_C,
+	GRAPHICS_C,
 }system_class_e;
 
 typedef enum
@@ -20,5 +21,11 @@ typedef enum
 	REND_DOWN,
 	REND_LEFT
 }rend_command_e;
+
+typedef enum
+{
+	GFIX_LOAD_SPRITE,
+	GFIX_LOAD_MODEL,
+}gfx_command_e;
 
 #endif

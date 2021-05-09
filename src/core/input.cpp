@@ -15,7 +15,7 @@ void input_c::parse_input
 			{
 				case SDLK_UP:
 				{
-					msgs->add( { RENDERER_C, REND_UP, NULL } );
+					msgs->add( { GRAPHICS_C, GFIX_LOAD_MODEL, NULL } );
 				}
 			}
 		}
