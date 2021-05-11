@@ -15,6 +15,9 @@
 
 #include <optional>
 
+#define USE_3D_VERTEX 1 << 0
+#define USE_2D_VERTEX 1 << 1
+
 typedef struct
 {
 	std::optional< int > presentFamily, graphicsFamily; // make this not use optional pls
@@ -28,7 +31,7 @@ typedef struct
 	std::vector< VkPresentModeKHR > 	p;	//	present modes
 }swap_chain_support_info_t;
 
-typedef struct vertex_s
+typedef struct vertex_3d_s
 {
 	glm::vec3 pos;
 	glm::vec3 color;
@@ -39,7 +42,7 @@ typedef struct vertex_s
 	{
 		VkVertexInputBindingDescription bindingDescription{};
 		bindingDescription.binding = 0;
-		bindingDescription.stride = sizeof( vertex_s );
+		bindingDescription.stride = sizeof( vertex_3d_s );
 		bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
 
 		return bindingDescription;
@@ -52,33 +55,86 @@ typedef struct vertex_s
 		attributeDescriptions[ 0 ].binding  = 0;
 		attributeDescriptions[ 0 ].location = 0;
 		attributeDescriptions[ 0 ].format   = VK_FORMAT_R32G32B32_SFLOAT;
-		attributeDescriptions[ 0 ].offset   = offsetof( vertex_s, pos );
+		attributeDescriptions[ 0 ].offset   = offsetof( vertex_3d_s, pos );
 
 		attributeDescriptions[ 1 ].binding  = 0;
 		attributeDescriptions[ 1 ].location = 1;
 		attributeDescriptions[ 1 ].format   = VK_FORMAT_R32G32B32_SFLOAT;
-		attributeDescriptions[ 1 ].offset   = offsetof( vertex_s, color );
+		attributeDescriptions[ 1 ].offset   = offsetof( vertex_3d_s, color );
 
 		attributeDescriptions[ 2 ].binding  = 0;
 		attributeDescriptions[ 2 ].location = 2;
 		attributeDescriptions[ 2 ].format   = VK_FORMAT_R32G32_SFLOAT;
-		attributeDescriptions[ 2 ].offset   = offsetof( vertex_s, texCoord );
+		attributeDescriptions[ 2 ].offset   = offsetof( vertex_3d_s, texCoord );
 
 		return attributeDescriptions;
 	}
-	bool operator==( const vertex_s& other ) const
+	bool operator==( const vertex_3d_s& other ) const
 	{
 		return pos == other.pos && color == other.color && texCoord == other.texCoord;
 	}
-}vertex_t;
+}vertex_3d_t;
+
+typedef struct vertex_2d_s
+{
+	glm::vec2 pos;
+	glm::vec3 color;
+	glm::vec2 texCoord;
+
+	static VkVertexInputBindingDescription get_binding_desc
+		(  )
+	{
+		VkVertexInputBindingDescription bindingDescription{};
+		bindingDescription.binding = 0;
+		bindingDescription.stride = sizeof( vertex_2d_s );
+		bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+
+		return bindingDescription;
+	}
+
+	static std::array< VkVertexInputAttributeDescription, 3 > get_attribute_desc
+		(  )
+	{
+		std::array< VkVertexInputAttributeDescription, 3 >attributeDescriptions{  };
+		attributeDescriptions[ 0 ].binding  = 0;
+		attributeDescriptions[ 0 ].location = 0;
+		attributeDescriptions[ 0 ].format   = VK_FORMAT_R32G32B32_SFLOAT;
+		attributeDescriptions[ 0 ].offset   = offsetof( vertex_2d_s, pos );
+
+		attributeDescriptions[ 1 ].binding  = 0;
+		attributeDescriptions[ 1 ].location = 1;
+		attributeDescriptions[ 1 ].format   = VK_FORMAT_R32G32B32_SFLOAT;
+		attributeDescriptions[ 1 ].offset   = offsetof( vertex_2d_s, color );
+
+		attributeDescriptions[ 2 ].binding  = 0;
+		attributeDescriptions[ 2 ].location = 2;
+		attributeDescriptions[ 2 ].format   = VK_FORMAT_R32G32_SFLOAT;
+		attributeDescriptions[ 2 ].offset   = offsetof( vertex_2d_s, texCoord );
+
+		return attributeDescriptions;
+	}
+	bool operator==( const vertex_2d_s& other ) const
+	{
+		return pos == other.pos && color == other.color && texCoord == other.texCoord;
+	}
+}vertex_2d_t;
 
 namespace std
 {
-	template<  > struct hash< vertex_t >
+	template<  > struct hash< vertex_3d_t >
 	{
-		size_t operator(  )( vertex_t const& vertex ) const
+		size_t operator(  )( vertex_3d_t const& vertex ) const
 		{
 			return  ( ( hash< glm::vec3 >(  )( vertex.pos ) ^
+                   		( hash< glm::vec3 >(  )( vertex.color ) << 1 ) ) >> 1 ) ^
+				( hash< glm::vec2 >(  )( vertex.texCoord ) << 1 );
+		}
+	};
+	template<  > struct hash< vertex_2d_t >
+	{
+		size_t operator(  )( vertex_2d_t const& vertex ) const
+		{
+			return  ( ( hash< glm::vec2 >(  )( vertex.pos ) ^
                    		( hash< glm::vec3 >(  )( vertex.color ) << 1 ) ) >> 1 ) ^
 				( hash< glm::vec2 >(  )( vertex.texCoord ) << 1 );
 		}
@@ -88,7 +144,12 @@ namespace std
 typedef struct
 {
 	glm::mat4 model, view, proj;
-}ubo_t;
+}ubo_3d_t;
+
+typedef struct
+{
+	glm::mat4 pos;
+}ubo_2d_t;
 
 typedef struct
 {
@@ -260,6 +321,7 @@ class renderer_c : public system_c	//	Most of these objects are used to make new
 		(  );
 	void init_desc_set_layout
 		(  );
+	template< typename T >
 	void init_graphics_pipeline			//	Initialize the graphics pipeline to load a shader and various other tools for rendering
 		( VkPipeline& pipeline, VkPipelineLayout& layout, const std::string& vertShader, const std::string& fragShader );					//	TODO: create parameters to specify a shader, as the rest done in this function doesn't need to be changed for multiple pipelines
 	void init_frame_buffer
@@ -291,14 +353,17 @@ class renderer_c : public system_c	//	Most of these objects are used to make new
 		  VkMemoryPropertyFlags properties,
 		  VkImage& image,
 		  VkDeviceMemory& imageMemory );
+	template< typename T >
 	void update_vertex_buffer			//	Initialize device memory with vertex data, may need to be called each time new vertices are loaded
-		( const std::vector< vertex_t >& v, VkBuffer& vBuffer, VkDeviceMemory& vBufferMem );
+		( const std::vector< T >& v, VkBuffer& vBuffer, VkDeviceMemory& vBufferMem );
 	void update_index_buffer			//	Initialize device memory with index data, may need to be called each time new vertices are loaded
 		( std::vector< uint32_t >&i, VkBuffer& iBuffer, VkDeviceMemory& iBufferMem );
+	template< typename T >
 	void init_uniform_buffers			//	Pass arbitrary attributes to vertex shader for each vertex, allows vertex positioning without remapping memory
 		( std::vector< VkBuffer >& uBuffers, std::vector< VkDeviceMemory >& uBuffersMem );
 	void init_desc_pool
 		(  );
+	template< typename T >
 	void init_desc_sets
 		( std::vector< VkDescriptorSet >& descSets, std::vector< VkBuffer >& uBuffers, VkImageView tImageView );
 	void reinit_swap_chain

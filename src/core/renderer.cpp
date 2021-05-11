@@ -38,8 +38,8 @@ void renderer_c::init_vulkan
 	init_image_views(  );
 	init_render_pass(  );
 	init_desc_set_layout(  );
-	init_graphics_pipeline( modelPipeline, modelLayout, "materials/shaders/3dvert.spv", "materials/shaders/3dfrag.spv" );
-	init_graphics_pipeline( spritePipeline, spriteLayout, "materials/shaders/2dvert.spv", "materials/shaders/2dfrag.spv" );
+	init_graphics_pipeline< vertex_3d_t >( modelPipeline, modelLayout, "materials/shaders/3dvert.spv", "materials/shaders/3dfrag.spv" );
+	init_graphics_pipeline< vertex_2d_t >( spritePipeline, spriteLayout, "materials/shaders/2dvert.spv", "materials/shaders/2dfrag.spv" );
 	init_command_pool(  );
 	init_depth_resources(  );
 	init_frame_buffer(  );
@@ -640,6 +640,7 @@ void renderer_c::init_desc_set_layout
 	}
 }
 
+template< typename T >
 void renderer_c::init_graphics_pipeline
 	( VkPipeline& pipeline, VkPipelineLayout& layout, const std::string& vertShader, const std::string& fragShader )
 {
@@ -662,8 +663,9 @@ void renderer_c::init_graphics_pipeline
 	fragShaderStageInfo.pName  = "main";
 
 	VkPipelineShaderStageCreateInfo shaderStages[  ] = { vertShaderStageInfo, fragShaderStageInfo };
-	auto bindingDescription 	= vertex_t::get_binding_desc(  );
-	auto attributeDescriptions 	= vertex_t::get_attribute_desc(  );
+
+	auto attributeDescriptions 	= T::get_attribute_desc(  );
+	auto bindingDescription 	= T::get_binding_desc(  );      
 
 	VkPipelineVertexInputStateCreateInfo vertexInputInfo{  };	//	Format of vertex data
 	vertexInputInfo.sType 				= VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
@@ -942,7 +944,7 @@ void renderer_c::init_command_buffers
 			model.bind( commandBuffers[ i ], modelLayout, i );
 			model.draw( commandBuffers[ i ] );
 		}
-		vkCmdBindPipeline( commandBuffers[ i ], VK_PIPELINE_BIND_POINT_GRAPHICS, modelPipeline );
+		vkCmdBindPipeline( commandBuffers[ i ], VK_PIPELINE_BIND_POINT_GRAPHICS, spritePipeline );
 		for ( auto& sprite : *sprites )
 		{
 			sprite.bind( commandBuffers[ i ], spriteLayout, i );
@@ -1007,7 +1009,7 @@ void renderer_c::init_model_vertices
 	tinyobj::attrib_t attrib;
 	std::vector< tinyobj::shape_t > shapes;
 	std::vector< tinyobj::material_t > materials;
-	std::vector< vertex_t > vertices;
+	std::vector< vertex_3d_t > vertices;
 	std::vector< uint32_t > indices;
 	std::string warn, err;
 
@@ -1016,13 +1018,13 @@ void renderer_c::init_model_vertices
 		throw std::runtime_error( warn + err );
 	}
 
-	std::unordered_map< vertex_t, uint32_t  >uniqueVertices{  };
+	std::unordered_map< vertex_3d_t, uint32_t  >uniqueVertices{  };
 	
 	for ( const auto& shape : shapes )
 	{
 		for ( const auto& index : shape.mesh.indices )
 		{
-			vertex_t vertex{  };
+			vertex_3d_t vertex{  };
 
 			vertex.pos = {
 				attrib.vertices[ 3 * index.vertex_index + 0 ],
@@ -1055,12 +1057,12 @@ void renderer_c::init_model_vertices
 void renderer_c::init_sprite_vertices
 	( const std::string& spritePath, sprite_data_t& sprite )
 {
-	std::vector< vertex_t > vertices =
+	std::vector< vertex_2d_t > vertices =
 	{
-		{{-0.5f, -0.5f, 0.0f}, {1.0f, 0.0f, 0.0f}, {1.0f, 0.0f}},
-    		{{0.5f, -0.5f, 0.0f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f}},
-    		{{0.5f, 0.5f, 0.0f}, {0.0f, 0.0f, 1.0f}, {0.0f, 1.0f}},
-    		{{-0.5f, 0.5f, 0.0f}, {1.0f, 1.0f, 1.0f}, {1.0f, 1.0f}}
+		{{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}, {1.0f, 0.0f}},
+    		{{0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f}},
+    		{{0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}, {0.0f, 1.0f}},
+    		{{-0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}, {1.0f, 1.0f}}
 	};
 	std::vector< uint32_t > indices =
 	{
@@ -1206,8 +1208,9 @@ void renderer_c::init_texture_sampler
 	}
 }
 
+template< typename T >
 void renderer_c::update_vertex_buffer
-	( const std::vector< vertex_t >& v, VkBuffer& vBuffer, VkDeviceMemory& vBufferMem )
+	( const std::vector< T >& v, VkBuffer& vBuffer, VkDeviceMemory& vBufferMem )
 {
 	VkDeviceSize bufferSize = sizeof( v[ 0 ] ) * v.size(  );
 	
@@ -1259,10 +1262,11 @@ void renderer_c::update_index_buffer
 	vkFreeMemory( device, stagingBufferMemory, NULL );
 }
 
+template< typename T >
 void renderer_c::init_uniform_buffers
 	( std::vector< VkBuffer >& uBuffers, std::vector< VkDeviceMemory >& uBuffersMem )
 {
-	VkDeviceSize bufferSize = sizeof( ubo_t );
+	VkDeviceSize bufferSize = sizeof( T );
 
 	uBuffers.resize( swapChainImages.size(  ) );
 	uBuffersMem.resize( swapChainImages.size(  ) );
@@ -1297,6 +1301,7 @@ void renderer_c::init_desc_pool	//	please for the love of god, change this
 	}
 }
 
+template< typename T >
 void renderer_c::init_desc_sets
 	( std::vector< VkDescriptorSet >& descSets, std::vector< VkBuffer >& uBuffers, VkImageView tImageView )
 {
@@ -1318,7 +1323,7 @@ void renderer_c::init_desc_sets
 		VkDescriptorBufferInfo bufferInfo{  };
 		bufferInfo.buffer = uBuffers[ i ];
 		bufferInfo.offset = 0;
-		bufferInfo.range  = sizeof( ubo_t );
+	        bufferInfo.range  = sizeof( T );
 
 		VkDescriptorImageInfo imageInfo{  };
 		imageInfo.imageLayout   = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
@@ -1356,26 +1361,26 @@ void renderer_c::reinit_swap_chain
 	init_swap_chain(  );
 	init_image_views(  );
 	init_render_pass(  );
-	init_graphics_pipeline( modelPipeline, modelLayout, "materials/shaders/3dvert.spv", "materials/shaders/3dfrag.spv" );
-	init_graphics_pipeline( spritePipeline, spriteLayout, "materials/shaders/2dvert.spv", "materials/shaders/2dfrag.spv" );
+	init_graphics_pipeline< vertex_3d_t >( modelPipeline, modelLayout, "materials/shaders/3dvert.spv", "materials/shaders/3dfrag.spv" );
+	init_graphics_pipeline< vertex_2d_t >( spritePipeline, spriteLayout, "materials/shaders/2dvert.spv", "materials/shaders/2dfrag.spv" );
 	init_depth_resources(  );
 	init_frame_buffer(  );
 	for ( auto& model : *models )
 	{
-		init_uniform_buffers( model.uBuffers, model.uBuffersMem );	
+		init_uniform_buffers< vertex_3d_t >( model.uBuffers, model.uBuffersMem );	
 	}
 	for ( auto& sprite : *sprites )
 	{
-		init_uniform_buffers( sprite.uBuffers, sprite.uBuffersMem );	
+		init_uniform_buffers< vertex_2d_t >( sprite.uBuffers, sprite.uBuffersMem );	
 	}
 	init_desc_pool(  );
 	for ( auto& model : *models )
 	{
-		init_desc_sets( model.descSets, model.uBuffers, model.tImageView );	
+		init_desc_sets< vertex_3d_t >( model.descSets, model.uBuffers, model.tImageView );	
 	}
 	for ( auto& sprite : *sprites )
 	{
-		init_desc_sets( sprite.descSets, sprite.uBuffers, sprite.tImageView );	
+		init_desc_sets< vertex_2d_t >( sprite.descSets, sprite.uBuffers, sprite.tImageView );	
 	}
 	init_command_buffers(  );
 }
@@ -1636,7 +1641,7 @@ void renderer_c::update_uniform_buffers
 	auto currentTime 	= std::chrono::high_resolution_clock::now();
 	float time 		= std::chrono::duration< float, std::chrono::seconds::period >( currentTime - startTime ).count(  );
 
-	ubo_t ubo{  };
+	ubo_3d_t ubo{  };
 	ubo.model = glm::translate( glm::mat4( 1.0f ), glm::vec3( modelData.posX, modelData.posY, modelData.posZ ) ) * glm::rotate( glm::mat4( 1.0f ), time * glm::radians( 45.0f ), glm::vec3( 0.0f, 0.0f, 1.0f ) );
 	ubo.view  = glm::lookAt( glm::vec3( 0.1f, 10.0f, 25.0f ), glm::vec3( 0.0f, 0.0f, 0.0f ), glm::vec3( 0.0f, 0.0f, 1.0f ) );
 	ubo.proj  = glm::perspective( glm::radians( 90.0f ), swapChainExtent.width / ( float ) swapChainExtent.height, 0.1f, 256.0f );
@@ -1652,9 +1657,9 @@ void renderer_c::update_uniform_buffers
 void renderer_c::update_sprite_uniform_buffers
 	( uint32_t currentImage, sprite_data_t& spriteData )
 {
-	ubo_t ubo{  };
+	ubo_3d_t ubo{  };
 	ubo.model = glm::translate( glm::mat4( 1.0f ), glm::vec3( spriteData.posX, spriteData.posY, 0.0f ) ) * glm::rotate( glm::mat4( 1.0f ), glm::radians( 180.0f ), glm::vec3( 0.0f, 0.0f, 1.0f ) );
-	ubo.view = glm::mat4( 1.0f );
+        ubo.view = glm::mat4( 1.0f );
 	ubo.proj = glm::mat4( 1.0f );
 
 	ubo.proj[ 1 ][ 1 ] *= -1;
@@ -1671,8 +1676,8 @@ void renderer_c::init_model
 	init_model_vertices( modelPath, modelData );
 	init_texture_image( texturePath, modelData.tImage, modelData.tImageMem );
 	init_texture_image_view( modelData.tImageView, modelData.tImage );
-	init_uniform_buffers( modelData.uBuffers, modelData.uBuffersMem );
-	init_desc_sets( modelData.descSets, modelData.uBuffers, modelData.tImageView );
+	init_uniform_buffers< ubo_3d_t >( modelData.uBuffers, modelData.uBuffersMem );
+	init_desc_sets< ubo_3d_t >( modelData.descSets, modelData.uBuffers, modelData.tImageView );
 	models->push_back( modelData );
 	init_command_buffers(  );
 }
@@ -1683,8 +1688,8 @@ void renderer_c::init_sprite
 	init_sprite_vertices( spritePath, spriteData );
 	init_texture_image( spritePath, spriteData.tImage, spriteData.tImageMem );
 	init_texture_image_view( spriteData.tImageView, spriteData.tImage );
-	init_uniform_buffers( spriteData.uBuffers, spriteData.uBuffersMem );
-	init_desc_sets( spriteData.descSets, spriteData.uBuffers, spriteData.tImageView );
+	init_uniform_buffers< ubo_2d_t >( spriteData.uBuffers, spriteData.uBuffersMem );
+	init_desc_sets< ubo_2d_t >( spriteData.descSets, spriteData.uBuffers, spriteData.tImageView );
 	sprites->push_back( spriteData );
 	init_command_buffers(  );
 }
