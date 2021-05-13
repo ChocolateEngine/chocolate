@@ -1,0 +1,15 @@
+#ifndef ALLOCATOR_H
+#define ALLOCATOR_H
+
+#include "device.h"
+
+class allocator_c
+{
+	private:
+
+	public:
+
+	device_c dev;
+};
+
+#endif

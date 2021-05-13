@@ -2,7 +2,7 @@
 #define GRAPHICS_H
 
 #include "system.h"
-#include "renderer.h"
+#include "renderer/renderer.h"
 
 typedef struct
 {
