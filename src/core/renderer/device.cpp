@@ -252,6 +252,22 @@ void device_c::init_logical_device
 	vkGetDeviceQueue( device, indices.presentFamily, 0, &presentQueue );
 }
 
+void device_c::init_command_pool
+	(  )
+{
+        queue_family_indices_t2 indices = find_queue_families( physicalDevice );
+
+	VkCommandPoolCreateInfo poolInfo{  };
+	poolInfo.sType 			= VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+	poolInfo.queueFamilyIndex 	= indices.graphicsFamily;
+	poolInfo.flags 			= 0; // Optional
+
+	if ( vkCreateCommandPool( device, &poolInfo, NULL, &commandPool ) != VK_SUCCESS )
+	{
+		throw std::runtime_error( "Failed to create command pool!" );
+	}
+}
+
 bool device_c::check_validation_layer_support
 	(  )
 {
@@ -301,10 +317,8 @@ queue_family_indices_t2 device_c::find_queue_families
 			vkGetPhysicalDeviceSurfaceSupportKHR( d, i, surf, &presentSupport );
 			if ( presentSupport )
 			{
-				indices.hasPresent = true;
 				indices.presentFamily = i;
 			}
-			indices.hasGraphics = true;
 			indices.graphicsFamily = i;
 		}
 		if ( indices.complete(  ) )
@@ -481,6 +495,74 @@ void device_c::init_swap_chain
 	swapChainExtent 	= extent;
 }
 
+void device_c::init_texture_sampler
+	( VkSampler& textureSampler )
+{
+	VkSamplerCreateInfo samplerInfo{  };
+	samplerInfo.sType  	 = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+	samplerInfo.magFilter    = VK_FILTER_LINEAR;
+	samplerInfo.minFilter    = VK_FILTER_LINEAR;
+	samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+	samplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+	samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+
+	VkPhysicalDeviceProperties properties{  };
+	vkGetPhysicalDeviceProperties( physicalDevice, &properties );
+
+	samplerInfo.anisotropyEnable 		= VK_TRUE;
+	samplerInfo.maxAnisotropy 		= properties.limits.maxSamplerAnisotropy;
+	samplerInfo.borderColor 		= VK_BORDER_COLOR_INT_OPAQUE_BLACK;
+	samplerInfo.unnormalizedCoordinates 	= VK_FALSE;
+	samplerInfo.compareEnable 		= VK_FALSE;
+	samplerInfo.compareOp 			= VK_COMPARE_OP_ALWAYS;
+	samplerInfo.mipmapMode 			= VK_SAMPLER_MIPMAP_MODE_LINEAR;
+	samplerInfo.mipLodBias 			= 0.0f;
+	samplerInfo.minLod 			= 0.0f;
+	samplerInfo.maxLod 			= 0.0f;
+
+	if ( vkCreateSampler( device, &samplerInfo, NULL, &textureSampler ) != VK_SUCCESS )
+	{
+		throw std::runtime_error( "Failed to create texture sampler!" );
+	}
+}
+
+VkCommandBuffer device_c::begin_single_time_commands
+	(  )
+{
+	VkCommandBufferAllocateInfo allocInfo{  };
+	allocInfo.sType 		= VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+	allocInfo.level 		= VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+	allocInfo.commandPool 		= commandPool;
+	allocInfo.commandBufferCount 	= 1;
+
+	VkCommandBuffer commandBuffer;
+	vkAllocateCommandBuffers( device, &allocInfo, &commandBuffer );
+
+	VkCommandBufferBeginInfo beginInfo{  };
+	beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+	beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+
+	vkBeginCommandBuffer( commandBuffer, &beginInfo );
+
+	return commandBuffer;
+}
+
+void device_c::end_single_time_commands
+	( VkCommandBuffer c )
+{
+	vkEndCommandBuffer( c );
+
+	VkSubmitInfo submitInfo{  };
+	submitInfo.sType 		= VK_STRUCTURE_TYPE_SUBMIT_INFO;
+	submitInfo.commandBufferCount 	= 1;
+	submitInfo.pCommandBuffers 	= &c;
+
+	vkQueueSubmit( graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE );
+	vkQueueWaitIdle( graphicsQueue );
+
+	vkFreeCommandBuffers( device, commandPool, 1, &c );
+}
+
 VkFormat device_c::find_supported_fmt
 	( const std::vector< VkFormat >& candidates,
 	  VkImageTiling tiling,
@@ -500,6 +582,32 @@ VkFormat device_c::find_supported_fmt
 		}
 	}
 	throw std::runtime_error( "Failed to find supported format!" );
+}
+
+VkFormat device_c::find_depth_format
+	(  )
+{
+	return find_supported_fmt(
+		{ VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT },
+		VK_IMAGE_TILING_OPTIMAL,
+        	VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT );
+}
+
+uint32_t device_c::find_memory_type
+	( uint32_t typeFilter, VkMemoryPropertyFlags properties )
+{
+	VkPhysicalDeviceMemoryProperties memProperties;
+	vkGetPhysicalDeviceMemoryProperties( physicalDevice, &memProperties );
+
+	for ( uint32_t i = 0; i < memProperties.memoryTypeCount; ++i )
+	{
+		if ( ( typeFilter & ( 1 << i ) ) && ( memProperties.memoryTypes[ i ].propertyFlags & properties ) == properties )
+		{
+			return i;
+		}
+	}
+
+	throw std::runtime_error( "Failed to find suitable memory type!" );
 }
 
 device_c::device_c

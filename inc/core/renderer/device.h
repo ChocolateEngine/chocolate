@@ -1,6 +1,8 @@
 #ifndef DEVICE_H
 #define DEVICE_H
 
+#include "../../../inc/types/renderertypes.h"
+
 #include <vulkan/vulkan.h>
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_vulkan.h>
@@ -13,20 +15,6 @@
 #else
     const bool enableValidationLayers = true;
 #endif
-
-typedef struct
-{
-	bool hasPresent, hasGraphics;
-        int presentFamily, graphicsFamily; // make this not use optional pls
-	bool complete (  ) { return hasPresent && hasGraphics; }
-}queue_family_indices_t2;
-
-typedef struct
-{
-	VkSurfaceCapabilitiesKHR 		c;	//	capabilities
-	std::vector< VkSurfaceFormatKHR > 	f;	//	formats
-	std::vector< VkPresentModeKHR > 	p;	//	present modes
-}swap_chain_support_info_t;
 
 const std::vector< const char* > validationLayers = {
     "VK_LAYER_KHRONOS_validation"
@@ -48,6 +36,7 @@ class device_c
 	VkPhysicalDevice physicalDevice;				//	GPU, we'll only be needing one of these
 	VkDevice device;						//	Stores features and is used to create other objects
 	VkQueue graphicsQueue, presentQueue;
+	VkCommandPool commandPool;
 
 	static VKAPI_ATTR VkBool32 VKAPI_CALL debug_callback
 		( VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
@@ -78,6 +67,8 @@ class device_c
 		(  );
 	void init_logical_device
 		(  );
+	void init_command_pool
+		(  );
 
 	bool check_validation_layer_support
 		(  );
@@ -101,16 +92,32 @@ class device_c
 
 	void init_swap_chain
 		( VkSwapchainKHR& swapChain, std::vector< VkImage >& swapChainImages, VkFormat& swapChainImageFormat, VkExtent2D& swapChainExtent );
+	void init_texture_sampler
+		( VkSampler& textureSampler );
+
+	VkCommandBuffer begin_single_time_commands
+		(  );
+	void end_single_time_commands
+		( VkCommandBuffer c );
 
 	VkFormat find_supported_fmt
 		( const std::vector< VkFormat >& candidates,
 	  	  VkImageTiling tiling,
 	  	  VkFormatFeatureFlags features );
+	VkFormat find_depth_format
+		(  );
+	uint32_t find_memory_type
+		( uint32_t typeFilter, VkMemoryPropertyFlags properties );
 	
-	VkDevice get
+	VkDevice dev
 		(  )
 	{
 		return device;
+	}
+	VkCommandPool c_pool
+		(  )
+	{
+		return commandPool;
 	}
 
 	device_c

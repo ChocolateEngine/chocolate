@@ -1202,7 +1202,7 @@ void renderer_c::init_texture_sampler
 	samplerInfo.minLod 			= 0.0f;
 	samplerInfo.maxLod 			= 0.0f;
 
-	if ( vkCreateSampler( device, &samplerInfo, NULL, &textureSampler) != VK_SUCCESS )
+	if ( vkCreateSampler( device, &samplerInfo, NULL, &textureSampler ) != VK_SUCCESS )
 	{
 		throw std::runtime_error( "Failed to create texture sampler!" );
 	}
