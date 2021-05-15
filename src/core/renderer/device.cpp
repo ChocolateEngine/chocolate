@@ -22,6 +22,7 @@ void device_c::init_device
 	init_surface(  );
 	init_physical_device(  );
 	init_logical_device(  );
+	init_command_pool(  );
 }
 
 void device_c::init_window
@@ -204,7 +205,7 @@ void device_c::init_physical_device
 void device_c::init_logical_device
 	(  )
 {
-	queue_family_indices_t2 indices = find_queue_families( physicalDevice );
+	queue_family_indices_t indices = find_queue_families( physicalDevice );
 
 	std::vector< VkDeviceQueueCreateInfo > queueCreateInfos;
 	std::set< uint32_t > uniqueQueueFamilies = { indices.graphicsFamily, indices.presentFamily };
@@ -255,7 +256,7 @@ void device_c::init_logical_device
 void device_c::init_command_pool
 	(  )
 {
-        queue_family_indices_t2 indices = find_queue_families( physicalDevice );
+        queue_family_indices_t indices = find_queue_families( physicalDevice );
 
 	VkCommandPoolCreateInfo poolInfo{  };
 	poolInfo.sType 			= VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
@@ -299,10 +300,10 @@ bool device_c::check_validation_layer_support
 	return true;
 }
 
-queue_family_indices_t2 device_c::find_queue_families
+queue_family_indices_t device_c::find_queue_families
 	( VkPhysicalDevice d )
 {
-	queue_family_indices_t2 indices;
+	queue_family_indices_t indices;
 	uint32_t queueFamilyCount = 0;
 	vkGetPhysicalDeviceQueueFamilyProperties( d, &queueFamilyCount, nullptr );
 
@@ -376,7 +377,7 @@ swap_chain_support_info_t device_c::check_swap_chain_support
 bool device_c::is_suitable_device
 	( VkPhysicalDevice d )
 {
-	queue_family_indices_t2 indices 	= find_queue_families( d );
+	queue_family_indices_t indices 		= find_queue_families( d );
 	bool extensionsSupported 		= check_device_extension_support( d );
 	bool swapChainAdequate 			= false;
 	if ( extensionsSupported )
@@ -428,11 +429,37 @@ VkExtent2D device_c::choose_swap_extent
 			( unsigned int )height
 		};
 
-	       size.width = std::max(capabilities.minImageExtent.width, std::min(capabilities.maxImageExtent.width, size.width));
-	       size.height = std::max(capabilities.minImageExtent.height, std::min(capabilities.maxImageExtent.height, size.height));
+	       size.width = std::max( capabilities.minImageExtent.width, std::min( capabilities.maxImageExtent.width, size.width ) );
+	       size.height = std::max( capabilities.minImageExtent.height, std::min( capabilities.maxImageExtent.height, size.height ) );
 
 		return size;
 	}
+}
+
+void device_c::destroy_debug_messenger
+	( const VkAllocationCallbacks* pAllocator )
+{
+	auto func = ( PFN_vkDestroyDebugUtilsMessengerEXT )vkGetInstanceProcAddr( inst, "vkDestroyDebugUtilsMessengerEXT" );
+	if ( func != NULL )
+	{
+		func( inst, debugMessenger, pAllocator );
+	}
+}
+
+void device_c::cleanup
+	(  )
+{
+	vkDestroyCommandPool( device, commandPool, NULL );
+	vkDestroyDevice( device, NULL );
+	if ( enableValidationLayers )
+	{
+		destroy_debug_messenger( NULL );
+	}
+	vkDestroySurfaceKHR( inst, surf, NULL );
+        vkDestroyInstance( inst, NULL );
+		
+	SDL_DestroyWindow( win );
+	SDL_Quit(  );
 }
 
 void device_c::init_swap_chain
@@ -461,7 +488,7 @@ void device_c::init_swap_chain
 	createInfo.imageArrayLayers	= 1;
 	createInfo.imageUsage		= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 
-        queue_family_indices_t2 indices 	= find_queue_families( physicalDevice );
+        queue_family_indices_t indices 	= find_queue_families( physicalDevice );
 	uint32_t queueFamilyIndices[  ] = { indices.graphicsFamily, indices.presentFamily };
 
 	if ( indices.graphicsFamily != indices.presentFamily )
@@ -619,5 +646,5 @@ device_c::device_c
 device_c::~device_c
 	(  )
 {
-	
+	cleanup(  );
 }

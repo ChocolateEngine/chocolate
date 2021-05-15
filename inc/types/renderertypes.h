@@ -12,15 +12,9 @@
 
 typedef struct
 {
-	std::optional< int > presentFamily, graphicsFamily; // make this not use optional pls
-	bool complete (  ) { return presentFamily.has_value(  ) && graphicsFamily.has_value(  ); }
-}queue_family_indices_t;
-
-typedef struct
-{
         int presentFamily = -1, graphicsFamily = -1; // make this not use optional pls
 	bool complete (  ) { return ( presentFamily > -1 ) && ( graphicsFamily > -1 ); }
-}queue_family_indices_t2;
+}queue_family_indices_t;
 
 typedef struct
 {

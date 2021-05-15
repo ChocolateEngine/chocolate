@@ -46,6 +46,28 @@ class allocator_c
 		  VkMemoryPropertyFlags properties,
 		  VkImage& image,
 		  VkDeviceMemory& imageMemory );
+	void init_texture_image
+		( const std::string& imagePath, VkImage& tImage, VkDeviceMemory& tImageMem );
+	void init_texture_image_view
+		( VkImageView& tImageView, VkImage tImage );
+
+	template< typename T >
+	void init_vertex_buffer
+		( const std::vector< T >& v, VkBuffer& vBuffer, VkDeviceMemory& vBufferMem );
+	void init_index_buffer
+		( std::vector< uint32_t >& i, VkBuffer& iBuffer, VkDeviceMemory& iBufferMem );
+	template< typename T >
+        void init_uniform_buffers
+		( std::vector< VkBuffer >& uBuffers, std::vector< VkDeviceMemory >& uBuffersMem, std::vector< VkImage >& swapChainImages );
+	template< typename T >
+	void init_desc_sets
+		( std::vector< VkDescriptorSet >& descSets,
+		  std::vector< VkBuffer >& uBuffers,
+		  VkImageView tImageView,
+		  std::vector< VkImage >& swapChainImages,
+		  VkDescriptorSetLayout& descSetLayout,
+		  VkDescriptorPool descPool,
+		  VkSampler textureSampler );
 	
 	void init_image_views
 		( std::vector< VkImage >& swapChainImages, std::vector< VkImageView >& swapChainImageViews, VkFormat& swapChainImageFormat );
@@ -61,7 +83,7 @@ class allocator_c
 	  	  VkDescriptorSetLayout& descSetLayout,
 	  	  VkRenderPass& renderPass,
 	  	  const std::string& vertShader,
-	  	  const std::string& fragShader);
+	  	  const std::string& fragShader );
 	void init_depth_resources
 		( VkImage& depthImage, VkDeviceMemory& depthImageMemory, VkImageView& depthImageView, VkExtent2D& swapChainExtent );
 	void init_frame_buffer
@@ -79,7 +101,7 @@ class allocator_c
 		  std::vector< VkFence >& imagesInFlight,
 		  std::vector<VkImage>& swapChainImages );
 
-	device_c dev;
+	device_c* dev;
 };
 
 #endif

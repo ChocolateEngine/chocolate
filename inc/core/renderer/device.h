@@ -72,7 +72,7 @@ class device_c
 
 	bool check_validation_layer_support
 		(  );
-	queue_family_indices_t2 find_queue_families
+	queue_family_indices_t find_queue_families
 		( VkPhysicalDevice d );
 	bool check_device_extension_support
 		( VkPhysicalDevice d );
@@ -87,6 +87,11 @@ class device_c
 		( const std::vector< VkPresentModeKHR >& availablePresentModes );
 	VkExtent2D choose_swap_extent
 		( const VkSurfaceCapabilitiesKHR& capabilities );
+
+	void destroy_debug_messenger
+		( const VkAllocationCallbacks* pAllocator );
+	void cleanup
+		(  );
 	
 	public:
 
@@ -118,6 +123,16 @@ class device_c
 		(  )
 	{
 		return commandPool;
+	}
+	VkQueue g_queue
+		(  )
+	{
+		return graphicsQueue;
+	}
+	VkQueue p_queue
+		(  )
+	{
+		return presentQueue;
 	}
 
 	device_c
