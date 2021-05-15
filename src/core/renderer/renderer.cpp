@@ -299,6 +299,19 @@ void renderer_c::destroy_swap_chain
         vkDestroySwapchainKHR( device.dev(  ), swapChain, NULL );
 }
 
+template< typename T >
+void renderer_c::destroy_renderable
+	( T& renderable )
+{
+	vkDestroyImageView( device.dev(  ), renderable.tImageView, NULL );
+	vkDestroyImage( device.dev(  ), renderable.tImage, NULL );
+	vkFreeMemory( device.dev(  ), renderable.tImageMem, NULL );
+	vkDestroyBuffer( device.dev(  ), renderable.iBuffer, NULL );
+	vkFreeMemory( device.dev(  ), renderable.iBufferMem, NULL );
+	vkDestroyBuffer( device.dev(  ), renderable.vBuffer, NULL );
+	vkFreeMemory( device.dev(  ), renderable.vBufferMem, NULL );
+}
+
 void renderer_c::update_uniform_buffers
 	( uint32_t currentImage, model_data_t& modelData )
 {
@@ -461,13 +474,11 @@ void renderer_c::cleanup
 	vkDestroyDescriptorSetLayout( device.dev(  ), descSetLayout, NULL );
 	for ( auto& model : *models )
 	{
-		vkDestroyImageView( device.dev(  ), model.tImageView, NULL );
-		vkDestroyImage( device.dev(  ), model.tImage, NULL );
-		vkFreeMemory( device.dev(  ), model.tImageMem, NULL );
-		vkDestroyBuffer( device.dev(  ), model.iBuffer, NULL );
-		vkFreeMemory( device.dev(  ), model.iBufferMem, NULL );
-		vkDestroyBuffer( device.dev(  ), model.vBuffer, NULL );
-		vkFreeMemory( device.dev(  ), model.vBufferMem, NULL );
+		destroy_renderable< model_data_t >( model );
+	}
+	for ( auto& sprite : *sprites )
+	{
+		destroy_renderable< sprite_data_t >( sprite );
 	}
 	for ( int i = 0; i < MAX_FRAMES_PROCESSING; i++ )
 	{

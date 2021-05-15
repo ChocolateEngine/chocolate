@@ -15,10 +15,17 @@ void system_c::read_msg
 			if ( cmd.msg == msg->msg )
 			{
 				cmd.func( msg->args, msg->argsLen );
+				delete_msg( *msg );
 			}
 		}
 		msgs->remove( msgs->lastMsgIndex );
 	}
+}
+
+void system_c::delete_msg
+	( msg_s& msg )
+{
+	free( msg.args );
 }
 
 void system_c::read_console

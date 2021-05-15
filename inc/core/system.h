@@ -18,6 +18,8 @@ class system_c
 
 	void read_msg
 		(  );
+	void delete_msg
+		( msg_s& msg );
 	void read_console
 		(  );
 	

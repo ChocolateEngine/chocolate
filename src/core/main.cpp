@@ -12,7 +12,7 @@ int main
 
 	engine.init_systems(  );
 
-	msgs.add( { ENGINE_C, ENGI_PING, NULL } );
+	msgs.add( ENGINE_C, ENGI_PING );
 	
 	for ( ; engine.active; )
 	{

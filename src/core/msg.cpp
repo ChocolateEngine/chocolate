@@ -16,8 +16,17 @@ msg_s* msgs_c::fetch_msg
 }
 
 void msgs_c::add
-	( msg_s msg )
+	( int type, int cmd, int argsLen, void** args )
 {
+	msg_s msg;
+	msg.type 	= type;
+	msg.msg 	= cmd;
+	msg.argsLen 	= argsLen;
+	msg.args 	= ( void** )malloc( argsLen * sizeof( void* ) );
+	for ( int i = 0; i < argsLen; ++i )
+	{
+		msg.args[ i ] = args[ i ];
+	}
         queue.push_back( msg );
 }
 

@@ -7,7 +7,7 @@ void input_c::parse_input
 	{
 		if ( event.type == SDL_QUIT )
 		{
-			msgs->add( { ENGINE_C, ENGI_EXIT, NULL } );
+			msgs->add( ENGINE_C, ENGI_EXIT );
 		}
 		if ( event.type == SDL_KEYDOWN )
 		{
@@ -16,12 +16,10 @@ void input_c::parse_input
 				case SDLK_UP:
 				{
 					void* args[  ] = { ( void* )"materials/models/protogen_wip_5_plus_protodal.obj", ( void* )"materials/textures/blue_mat.png" };
-					msgs->add( { GRAPHICS_C,
-						     GFIX_LOAD_MODEL,
-						     NULL,
-						     args,
-						     2
-						} );
+					msgs->add( GRAPHICS_C,
+						   GFIX_LOAD_MODEL,
+						   2,
+						   args );
 				}
 			}
 		}

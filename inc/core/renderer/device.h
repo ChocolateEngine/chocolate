@@ -28,7 +28,7 @@ class device_c
 {
 	protected:
 
-	int width = 1280, height = 720;
+	int width = 800, height = 800;
 	SDL_Window* win;						//	Window to display stuff
 	VkSurfaceKHR surf;						//	Allows window to display stuff	
 	VkInstance inst;						//	Foundation for graphics API, stores application data

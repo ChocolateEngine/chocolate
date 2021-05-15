@@ -25,7 +25,6 @@ class renderer_c : public system_c	//	Most of these objects are used to make new
 	device_c device;
 	allocator_c allocator;
 	
-	int width = 1280, height = 720;
 	int currentFrame = 0;
 
 	VkSwapchainKHR swapChain;					//	Queue for stuff to be rendered, does some processing before drawn to screen
@@ -80,11 +79,10 @@ class renderer_c : public system_c	//	Most of these objects are used to make new
 
 	bool has_stencil_component
 		( VkFormat fmt );
-
-	void destroy_debug_messenger
-		( VkInstance instance,
-		  VkDebugUtilsMessengerEXT debugMessenger,
-		  const VkAllocationCallbacks* pAllocator );
+	
+	template< typename T >
+	void destroy_renderable
+		( T& renderable );
 	
 	void update_uniform_buffers
 		( uint32_t currentImage, model_data_t& modelData );

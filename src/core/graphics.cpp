@@ -45,9 +45,9 @@ void graphics_c::load_sprite
 {
 	sprite_t sprite{  };
 	srand( ( unsigned int )time( 0 ) );
-	float r = ( float )( rand(  ) / ( float )( RAND_MAX / 10.0f ) );
-        sprite.spriteData.posX = 0;
-	sprite.spriteData.posY = 0;
+	float r = ( float )( rand(  ) / ( float )( RAND_MAX / 1.0f ) );
+        sprite.spriteData.posX = r;
+	sprite.spriteData.posY = r;
 	renderer.init_sprite( sprite.spriteData, spritePath );
 	
 	sprites.push_back( sprite );
@@ -79,6 +79,7 @@ graphics_c::graphics_c
 	//load_model( "materials/models/protogen_wip_5_plus_protodal.obj", "materials/textures/red_mat.png"  );
 	load_model( "materials/models/protogen_wip_9.obj", "materials/textures/blue_mat.png" );
 	load_sprite( "materials/textures/hilde_sprite_upscale.png" );
+	load_sprite( "materials/textures/blue_mat.png" );
 }
 
 graphics_c::~graphics_c

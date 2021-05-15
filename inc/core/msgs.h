@@ -20,7 +20,7 @@ class msgs_c
 		( system_class_e type );
 
 	void add
-		( msg_s msg );
+		( int type, int cmd, int argsLen = 0, void** args = NULL );
 	void remove
 		( int index );
 };
