@@ -224,7 +224,7 @@ void device_c::init_logical_device
 	}
 
 	VkPhysicalDeviceFeatures deviceFeatures{  };
-	deviceFeatures.samplerAnisotropy = VK_TRUE;
+	deviceFeatures.samplerAnisotropy = VK_FALSE;	//	Temporarily disabled for PBP builds
 
 	VkDeviceCreateInfo createInfo{  };
 	createInfo.sType 			= VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
