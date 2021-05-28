@@ -1,5 +1,5 @@
 cc		:=	g++
-cflags		:=	-Wall -Wextra -g -std=c++17
+cflags		:=	-Wall -Wextra -std=c++17
 
 src		:=	src
 lib		:=	lib
@@ -12,6 +12,11 @@ libraries	:=	-lSDL2 -lvulkan -ldl -lpthread -lX11 -lXxf86vm -lXrandr -lXi -lSDL2
 
 sources		:= 	$(shell find $(src) -name "*.cpp")
 objects		:=	$(sources:.cpp=.o)
+
+release: cflags += -DNDEBUG -O2
+release: $(bin)/$(out)
+debug: cflags += -g
+debug: $(bin)/$(out)
 
 all:	$(bin)/$(out)
 
