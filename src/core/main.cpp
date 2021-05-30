@@ -1,22 +1,14 @@
 #include "../../inc/core/engine.h"
 
-int main
-	(  )
+extern "C"
 {
-	engine_c engine;
-	static msgs_c msgs;
-	static console_c console;
-
-	engine.msgs = &msgs;
-	engine.console = &console;
-
-	engine.init_systems(  );
-
-	msgs.add( ENGINE_C, ENGI_PING );
-	
-	for ( ; engine.active; )
+	void engine_start
+		(  )
 	{
-		engine.update_systems(  );
+		engine_c engine;
+
+		engine.engine_main(  );
+
+		return;
 	}
-	return 0;
 }

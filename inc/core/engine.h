@@ -13,6 +13,8 @@ class engine_c : public system_c
 	graphics_c graphics;
 	input_c input;
 	audio_c audio;
+
+	void ( *game_update )(  ) = NULL;
 	
 	void init_commands
 		(  );
@@ -20,6 +22,12 @@ class engine_c : public system_c
 	public:
 
 	bool active;
+
+	void load_object
+		( const std::string& dlPath, const std::string& entry );
+
+	void engine_main
+		(  );
 
 	void init_systems
 		(  );
