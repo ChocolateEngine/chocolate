@@ -5,6 +5,9 @@
 #include "graphics.h"
 #include "input.h"
 #include "audio.h"
+#include "../shared/entity.h"
+
+#include <vector>
 
 class engine_c : public system_c
 {
@@ -14,6 +17,9 @@ class engine_c : public system_c
 	input_c input;
 	audio_c audio;
 
+	std::vector< entity_c* > entities;
+	
+	void ( *game_init )(  ) = NULL;
 	void ( *game_update )(  ) = NULL;
 	
 	void init_commands
@@ -24,7 +30,7 @@ class engine_c : public system_c
 	bool active;
 
 	void load_object
-		( const std::string& dlPath, const std::string& entry );
+		( void ( *func ), const std::string& dlPath, const std::string& entry );
 
 	void engine_main
 		(  );

@@ -28,4 +28,10 @@ typedef enum
 	GFIX_LOAD_MODEL,
 }gfx_command_e;
 
+typedef enum
+{
+	SPRITE,
+	MODEL,
+}entity_type_e;
+
 #endif

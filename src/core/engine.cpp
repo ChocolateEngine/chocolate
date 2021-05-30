@@ -18,7 +18,7 @@ void engine_c::init_commands
 }
 
 void engine_c::load_object
-	( const std::string& dlPath, const std::string& entry )
+	( void ( *func ), const std::string& dlPath, const std::string& entry )
 {
 	void* handle;
 
@@ -28,8 +28,8 @@ void engine_c::load_object
 		throw std::runtime_error( "Unable to load shared librarys!" );
 	}
 
-	*( void** )( &game_update ) = dlsym( handle, entry.c_str(  ) );
-	if ( !game_update )
+	*( void** )( &func ) = dlsym( handle, entry.c_str(  ) );
+	if ( !func )
 	{
 		dlclose( handle );
 		throw std::runtime_error( "Unable to link library's entry point!" );
