@@ -1,8 +1,8 @@
 #ifndef SYSTEM_H
 #define SYSTEM_H
 
-#include "../shared/console.h"
-#include "../shared/msgs.h"
+#include "console.h"
+#include "msgs.h"
 
 #include "../types/enums.h"
 #include "../types/msg.h"

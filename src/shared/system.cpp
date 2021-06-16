@@ -1,4 +1,4 @@
-#include "../../inc/core/system.h"
+#include "../../inc/shared/system.h"
 
 void system_c::read_msg
 	(  )

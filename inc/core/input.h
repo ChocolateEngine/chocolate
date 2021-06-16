@@ -1,7 +1,7 @@
 #ifndef INPUT_H
 #define INPUT_H
 
-#include "system.h"
+#include "../shared/system.h"
 
 #include <SDL2/SDL.h>
 

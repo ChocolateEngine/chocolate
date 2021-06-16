@@ -9,6 +9,16 @@ void engine_c::add_system
 	systems.push_back( ( system_c* )s );
 }
 
+void engine_c::add_game_systems
+	(  )
+{
+	std::vector< system_c* > gameSystems = game_init(  );
+	for ( const auto& sys : gameSystems )
+	{
+		systems.push_back( sys );
+	}
+}
+
 void engine_c::init_commands
 	(  )
 {
@@ -25,9 +35,9 @@ void engine_c::init_commands
 }
 
 void engine_c::load_object
-	( void ( *func ), const std::string& dlPath, const std::string& entry )
+	( const std::string& dlPath, const std::string& entry )
 {
-	void* handle;
+	void* handle = NULL;
 
 	handle = dlopen( dlPath.c_str(  ), RTLD_LAZY );
 	if ( !handle )
@@ -35,13 +45,14 @@ void engine_c::load_object
 		throw std::runtime_error( "Unable to load shared librarys!" );
 	}
 
-	*( void** )( &func ) = dlsym( handle, entry.c_str(  ) );
-	if ( !func )
+	*( void** )( &game_init ) = dlsym( handle, entry.c_str(  ) );
+	if ( !game_init )
 	{
+		printf( "%s\n", dlerror() );
 		dlclose( handle );
 		throw std::runtime_error( "Unable to link library's entry point!" );
 	}
-
+	
 	dlclose( handle );
 }
 
@@ -54,7 +65,9 @@ void engine_c::engine_main
 	this->msgs = &msgs;
 	this->console = &console;
 
+	load_object( "bin/client.so", "game_init" );	//	fix please or else i will yell at myself later for this being shit
 	init_systems(  );
+	add_game_systems(  );
 
 	this->msgs->add( ENGINE_C, ENGI_PING );
 	

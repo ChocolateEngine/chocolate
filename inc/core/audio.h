@@ -1,7 +1,7 @@
 #ifndef AUDIO_H
 #define AUDIO_H
 
-#include "system.h"
+#include "../shared/system.h"
 #include <SDL2/SDL_mixer.h>
 
 const int RATE = 44100;

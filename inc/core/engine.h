@@ -1,7 +1,7 @@
 #ifndef ENGINE_H
 #define ENGINE_H
 
-#include "system.h"
+#include "../shared/system.h"
 #include "graphics.h"
 #include "input.h"
 #include "audio.h"
@@ -14,11 +14,13 @@ class engine_c : public system_c
 
 	std::vector< system_c* > systems;
 	
-	void ( *game_init )(  ) = NULL;
+	std::vector< system_c* > ( *game_init )(  ) = NULL;
 
 	template< typename T >
 	void add_system
 		( const T* s );
+	void add_game_systems
+		(  );
 	
 	void init_commands
 		(  );
@@ -28,7 +30,7 @@ class engine_c : public system_c
 	bool active;
 
 	void load_object
-		( void ( *func ), const std::string& dlPath, const std::string& entry );
+		( const std::string& dlPath, const std::string& entry );
 
 	void engine_main
 		(  );

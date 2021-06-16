@@ -1,7 +1,7 @@
 #ifndef GRAPHICS_H
 #define GRAPHICS_H
 
-#include "system.h"
+#include "../shared/system.h"
 #include "renderer/renderer.h"
 
 typedef struct

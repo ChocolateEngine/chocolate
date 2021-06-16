@@ -1,0 +1,6 @@
+#ignore objects
+*.o
+*.so
+
+#ignore emacs files
+*~
