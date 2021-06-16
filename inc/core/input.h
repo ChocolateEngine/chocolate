@@ -15,6 +15,9 @@ class input_c : public system_c
 
 	void parse_input
 		(  );
+
+	input_c
+		(  );
 };
 
 #endif

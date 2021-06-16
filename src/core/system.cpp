@@ -34,15 +34,37 @@ void system_c::read_console
 
 }
 
+void system_c::add_func
+	( std::function< void(  ) > func )
+{
+	funcList.push_back( func );
+}
+
+void system_c::exec_funcs
+	(  )
+{
+	for ( const auto& func : funcList )
+	{
+		func(  );
+	}
+}
+
 void system_c::update
 	(  )
 {
 	read_msg(  );
 	read_console(  );
+	exec_funcs(  );
 }
 
 system_c::system_c
 	(  )
 {
 
+}
+
+system_c::~system_c
+	(  )
+{
+	
 }

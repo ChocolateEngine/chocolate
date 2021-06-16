@@ -5,7 +5,6 @@
 #include "graphics.h"
 #include "input.h"
 #include "audio.h"
-#include "../shared/entity.h"
 
 #include <vector>
 
@@ -13,14 +12,13 @@ class engine_c : public system_c
 {
 	protected:
 
-	graphics_c graphics;
-	input_c input;
-	audio_c audio;
-
-	std::vector< entity_c* > entities;
+	std::vector< system_c* > systems;
 	
 	void ( *game_init )(  ) = NULL;
-	void ( *game_update )(  ) = NULL;
+
+	template< typename T >
+	void add_system
+		( const T* s );
 	
 	void init_commands
 		(  );

@@ -8,6 +8,8 @@
 #include "../types/msg.h"
 #include "../types/command.h"
 
+#include <functional>
+
 class system_c
 {
 	protected:
@@ -15,12 +17,17 @@ class system_c
 	system_class_e systemType;
 	std::vector< msg_s > engineCommands;
 	std::vector< command_s > userCommands;
+	std::vector< std::function< void(  ) > > funcList;
 
 	void read_msg
 		(  );
 	void delete_msg
 		( msg_s& msg );
 	void read_console
+		(  );
+	void add_func
+		( std::function< void(  ) > func );
+	void exec_funcs
 		(  );
 	
 	public:
@@ -32,6 +39,8 @@ class system_c
 		(  );
 
 	system_c
+		(  );
+	virtual ~system_c
 		(  );
 };
 

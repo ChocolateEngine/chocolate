@@ -6,6 +6,7 @@ typedef enum
 	ENGINE_C,
 	RENDERER_C,
 	GRAPHICS_C,
+	AUDIO_C,
 }system_class_e;
 
 typedef enum

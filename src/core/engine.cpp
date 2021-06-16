@@ -2,6 +2,13 @@
 
 #include <dlfcn.h>
 
+template< typename T >
+void engine_c::add_system
+	( const T* s )
+{
+	systems.push_back( ( system_c* )s );
+}
+
 void engine_c::init_commands
 	(  )
 {
@@ -60,14 +67,15 @@ void engine_c::engine_main
 void engine_c::init_systems
 	(  )
 {
-	graphics.msgs = msgs;
-	graphics.console = console;
-
-	input.msgs = msgs;
-	input.console = console;
-
-	audio.msgs = msgs;
-	audio.console = console;
+	add_system( new graphics_c );
+	add_system( new input_c );
+	add_system( new audio_c );
+	
+	for ( const auto& sys : systems )
+	{
+		sys->msgs = msgs;
+		sys->console = console;
+	}
 }
 
 void engine_c::update_systems
@@ -75,13 +83,10 @@ void engine_c::update_systems
 {
 	update(  );
 
-	graphics.update(  );
-	graphics.draw_frame(  );
-
-	input.update(  );
-	input.parse_input(  );
-
-	audio.update(  );
+	for ( const auto& sys : systems )
+	{
+		sys->update(  );
+	}
 }
 
 engine_c::engine_c
@@ -90,12 +95,14 @@ engine_c::engine_c
 	active = true;
 	systemType = ENGINE_C;
 
-	init_systems(  );
 	init_commands(  );
 }
 
 engine_c::~engine_c
 	(  )
 {
-
+	for ( const auto& sys : systems )
+	{
+		sys->~system_c(  );
+	}
 }

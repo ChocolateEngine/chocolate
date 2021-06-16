@@ -10,6 +10,7 @@ void audio_c::play_mus
 audio_c::audio_c
 	(  )
 {
+	systemType = AUDIO_C;
 	mus = NULL;
 	Mix_OpenAudio( RATE, MIX_DEFAULT_FORMAT, 2, 2048 );
 	play_mus( "audio/music/neon02.ogg" );

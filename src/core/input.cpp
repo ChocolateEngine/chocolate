@@ -25,3 +25,9 @@ void input_c::parse_input
 		}
 	}
 }
+
+input_c::input_c
+	(  )
+{
+	add_func( [ & ](  ){ parse_input(  ); } );
+}

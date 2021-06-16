@@ -71,6 +71,7 @@ graphics_c::graphics_c
 {
 	systemType = GRAPHICS_C;
 	init_commands(  );
+	add_func( [ & ](  ){ draw_frame(  ); } );
 	
 	renderer.models = &modelData;
 	renderer.sprites = &spriteData;
@@ -85,5 +86,5 @@ graphics_c::graphics_c
 graphics_c::~graphics_c
 	(  )
 {
-	
+	renderer.~renderer_c(  );
 }
