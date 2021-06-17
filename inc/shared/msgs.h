@@ -10,6 +10,9 @@ class msgs_c
 {
 	protected:
 
+	bool shares_flag
+		( int x, int y, int in );
+
 	public:
 
 	int lastMsgIndex;
@@ -17,10 +20,10 @@ class msgs_c
 	std::vector< msg_s > queue;
 
 	msg_s* fetch_msg
-		( system_class_e type );
+		( int type, int flags = 0 );
 
 	void add
-		( int type, int cmd, int argsLen = 0, void** args = NULL );
+		( int type, int cmd, int flags = 0, int argsLen = 0, void** args = NULL );
 	void remove
 		( int index );
 };

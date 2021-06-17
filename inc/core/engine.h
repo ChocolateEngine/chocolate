@@ -13,6 +13,7 @@ class engine_c : public system_c
 	protected:
 
 	std::vector< system_c* > systems;
+	std::vector< void* > dlHandles;
 	
 	std::vector< system_c* > ( *game_init )(  ) = NULL;
 

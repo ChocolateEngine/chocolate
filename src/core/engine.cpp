@@ -15,6 +15,9 @@ void engine_c::add_game_systems
 	std::vector< system_c* > gameSystems = game_init(  );
 	for ( const auto& sys : gameSystems )
 	{
+		sys->add_flag( EXTERNAL_SYSTEM );
+		sys->msgs = msgs;
+		sys->console = console;
 		systems.push_back( sys );
 	}
 }
@@ -52,8 +55,7 @@ void engine_c::load_object
 		dlclose( handle );
 		throw std::runtime_error( "Unable to link library's entry point!" );
 	}
-	
-	dlclose( handle );
+	dlHandles.push_back( handle );	//	ew
 }
 
 void engine_c::engine_main
@@ -70,6 +72,8 @@ void engine_c::engine_main
 	add_game_systems(  );
 
 	this->msgs->add( ENGINE_C, ENGI_PING );
+	void* args[  ] = { ( void** )"materials/textures/hilde_sprite_upscale.png" };
+	this->msgs->add( GRAPHICS_C, GFIX_LOAD_SPRITE, 0, 1, args );
 	
 	for ( ; active; )
 	{
@@ -117,5 +121,9 @@ engine_c::~engine_c
 	for ( const auto& sys : systems )
 	{
 		sys->~system_c(  );
+	}
+	for ( const auto& handle : dlHandles )
+	{
+		dlclose( handle );
 	}
 }

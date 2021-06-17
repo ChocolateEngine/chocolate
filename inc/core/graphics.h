@@ -20,8 +20,8 @@ class graphics_c : public system_c
 {
 	protected:
 
-	std::vector< sprite_t > sprites;
-	std::vector< model_t > models;
+	std::vector< sprite_t* > sprites;
+	std::vector< model_t* > models;
 	static std::vector< model_data_t > modelData;
 	static std::vector< sprite_data_t > spriteData;
 	
@@ -31,9 +31,9 @@ class graphics_c : public system_c
 		(  );
 
 	void load_model
-		( const std::string& modelPath, const std::string& texturePath );
+		( const std::string& modelPath, const std::string& texturePath, model_t* model = NULL );
 	void load_sprite
-		( const std::string& spritePath );
+		( const std::string& spritePath, sprite_t* sprite = NULL );
 	
 	public:
 

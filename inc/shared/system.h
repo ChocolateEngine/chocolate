@@ -1,6 +1,8 @@
 #ifndef SYSTEM_H
 #define SYSTEM_H
 
+#define EXTERNAL_SYSTEM 1 << 0
+
 #include "console.h"
 #include "msgs.h"
 
@@ -14,11 +16,13 @@ class system_c
 {
 	protected:
 
-	system_class_e systemType;
+	int systemType;
 	std::vector< msg_s > engineCommands;
 	std::vector< command_s > userCommands;
 	std::vector< std::function< void(  ) > > funcList;
 
+	int flags = 0;
+	
 	void read_msg
 		(  );
 	void delete_msg
@@ -37,6 +41,11 @@ class system_c
 	
 	void update
 		(  );
+
+	void add_flag
+		( int flagsIn );
+	void rm_flag
+		( int flagsIn );
 
 	system_c
 		(  );
