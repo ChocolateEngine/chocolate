@@ -29,11 +29,11 @@ void engine_c::init_commands
 	msg.type = ENGINE_C;
 	
 	msg.msg = ENGI_PING;
-	msg.func = [ & ]( void** args, int argsLen ){ printf( "Engine: Ping!\n" ); };
+	msg.func = [ & ]( std::vector< std::any > args ){ printf( "Engine: Ping!\n" ); };
 	engineCommands.push_back( msg );
 
 	msg.msg = ENGI_EXIT;
-	msg.func = [ & ]( void** args, int argsLen ){ active = false; };
+	msg.func = [ & ]( std::vector< std::any > args ){ active = false; };
 	engineCommands.push_back( msg );
 }
 
@@ -45,6 +45,7 @@ void engine_c::load_object
 	handle = dlopen( dlPath.c_str(  ), RTLD_LAZY );
 	if ( !handle )
 	{
+		fprintf( stderr, "Error: %s\n", dlerror(  ) );
 		throw std::runtime_error( "Unable to load shared librarys!" );
 	}
 
@@ -72,8 +73,7 @@ void engine_c::engine_main
 	add_game_systems(  );
 
 	this->msgs->add( ENGINE_C, ENGI_PING );
-	void* args[  ] = { ( void** )"materials/textures/hilde_sprite_upscale.png" };
-	this->msgs->add( GRAPHICS_C, GFIX_LOAD_SPRITE, 0, 1, args );
+	this->msgs->add( GRAPHICS_C, GFIX_LOAD_SPRITE, 0, { "materials/textures/hilde_sprite_upscale.png" } );
 	
 	for ( ; active; )
 	{
@@ -87,11 +87,13 @@ void engine_c::init_systems
 	add_system( new graphics_c );
 	add_system( new input_c );
 	add_system( new audio_c );
+	add_system( new gui_c );
 	
 	for ( const auto& sys : systems )
 	{
 		sys->msgs = msgs;
 		sys->console = console;
+		sys->init_subsystems(  );
 	}
 }
 

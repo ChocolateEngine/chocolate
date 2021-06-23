@@ -6,10 +6,13 @@
 #include "device.h"
 
 #include <vector>
+#include <functional>
 
 class allocator_c
 {
 	private:
+
+	std::vector< std::function< void(  ) > > freeQueue;
 
 	VkFormat find_depth_format
 		(  );
@@ -32,6 +35,9 @@ class allocator_c
 		( VkBuffer src, VkBuffer dst, VkDeviceSize size );
 	void copy_buffer_to_img
 		( VkBuffer buffer, VkImage image, uint32_t width, uint32_t height );
+
+	void submit
+		( const auto&& func );
 
 	public:
 
@@ -94,12 +100,17 @@ class allocator_c
 		  VkExtent2D& swapChainExtent );
 	void init_desc_pool	//	please for the love of god, change this
 		( VkDescriptorPool& descPool );
+	void init_imgui_pool
+		( SDL_Window* window, VkRenderPass& renderPass );
 	void init_sync
 		( std::vector< VkSemaphore >& imageAvailableSemaphores,
 		  std::vector< VkSemaphore >& renderFinishedSemaphores,
 		  std::vector< VkFence >& inFlightFences,
 		  std::vector< VkFence >& imagesInFlight,
 		  std::vector<VkImage>& swapChainImages );
+
+	~allocator_c
+		(  );
 
 	device_c* dev;
 };

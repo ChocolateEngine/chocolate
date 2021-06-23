@@ -13,30 +13,30 @@ void graphics_c::init_commands
 	msg.type = GRAPHICS_C;
 
 	msg.msg = GFIX_LOAD_SPRITE;
-	msg.func = [ & ]( void** args, int argsLen )
+	msg.func = [ & ]( std::vector< std::any > args )
 		{
-			if ( argsLen < 1 )
+			if ( args.size(  ) < 1 )
 			{
 				printf( "Invalid parameters for GFIX_LOAD_SPRITE\n" );
 				return;
 			}
-			if ( argsLen == 1 )
+			if ( args.size(  ) == 1 )
 			{
-				load_sprite( ( char* )args[ 0 ] );
+				load_sprite( std::any_cast< const char* >( args[ 0 ] ) );
 				return;
 			}
-			load_sprite( ( char* )args[ 0 ], ( sprite_t* )args[ 1 ] );
+			load_sprite( std::any_cast< const char* >( args[ 0 ] ), std::any_cast< sprite_t* >( args[ 1 ] ) );
 		};
 	engineCommands.push_back( msg );
 	msg.msg = GFIX_LOAD_MODEL;
-	msg.func = [ & ]( void** args, int argsLen )
+	msg.func = [ & ]( std::vector< std::any > args )
 		{
-			if ( argsLen < 2 )
+			if ( args.size(  ) < 2 )
 			{
 				printf( "Invalid parameters for GFIX_LOAD_MODEL\n" );
 				return;
 			}
-			load_model( ( char* )args[ 0 ], ( char* )args[ 1 ] );
+			load_model( std::any_cast< const char * >( args[ 0 ] ), std::any_cast< const std::string& >( args[ 1 ] ) );
 		};
 	engineCommands.push_back( msg );
 }
@@ -92,6 +92,7 @@ graphics_c::graphics_c
 {
 	systemType = GRAPHICS_C;
 	init_commands(  );
+	add_func( [ & ](  ){ renderer.update(  ); } );
 	add_func( [ & ](  ){ draw_frame(  ); } );
 	
 	renderer.models = &modelData;
@@ -99,9 +100,16 @@ graphics_c::graphics_c
 	renderer.init_vulkan(  );
 
 	//load_model( "materials/models/protogen_wip_5_plus_protodal.obj", "materials/textures/red_mat.png"  );
-	//load_model( "materials/models/protogen_wip_9.obj", "materials/textures/blue_mat.png" );
+	load_model( "materials/models/protogen_wip_9.obj", "materials/textures/blue_mat.png" );
 	//load_sprite( "materials/textures/hilde_sprite_upscale.png" );
 	//load_sprite( "materials/textures/blue_mat.png" );
+}
+
+void graphics_c::init_subsystems
+	(  )
+{
+	sync_renderer(  );
+	renderer.send_messages(  );
 }
 
 graphics_c::~graphics_c

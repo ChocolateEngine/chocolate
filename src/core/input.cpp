@@ -1,10 +1,13 @@
 #include "../../inc/core/input.h"
+#include "../../inc/imgui/imgui.h"
+#include "../../inc/imgui/imgui_impl_sdl.h"
 
 void input_c::parse_input
 	(  )
 {
 	for ( ; SDL_PollEvent( &event ) ; )
 	{
+		ImGui_ImplSDL2_ProcessEvent( &event );
 		if ( event.type == SDL_QUIT )
 		{
 			msgs->add( ENGINE_C, ENGI_EXIT );
@@ -22,6 +25,11 @@ void input_c::parse_input
 						   2,
 						   args );*/
 					msgs->add( 0, 0, FLAGS_EXTERNAL_SYSTEM );
+					break;
+				}
+				case SDLK_BACKQUOTE:
+				{
+					msgs->add( GUI_C, LOAD_IMGUI_DEMO );
 				}
 			}
 		}

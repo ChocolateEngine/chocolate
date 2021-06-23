@@ -2,6 +2,7 @@
 #define MSGS_H
 
 #include <vector>
+#include <any>
 
 #include "../types/msg.h"
 #include "../types/enums.h"
@@ -23,7 +24,7 @@ class msgs_c
 		( int type, int flags = 0 );
 
 	void add
-		( int type, int cmd, int flags = 0, int argsLen = 0, void** args = NULL );
+		( int type, int cmd, int flags = 0, const std::vector< std::any >& args = std::vector< std::any >(  ) );
 	void remove
 		( int index );
 };

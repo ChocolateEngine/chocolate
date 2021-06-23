@@ -44,6 +44,8 @@ class graphics_c : public system_c
 
 	graphics_c
 		(  );
+	void init_subsystems
+		(  );
 	~graphics_c
 		(  );
 };

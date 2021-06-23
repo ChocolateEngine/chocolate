@@ -6,6 +6,7 @@
 #include "../../shared/system.h"
 #include "../../types/enums.h"
 #include "../../types/renderertypes.h"
+#include "../gui.h"
 
 #include "allocator.h"
 
@@ -21,6 +22,8 @@
 class renderer_c : public system_c	//	Most of these objects are used to make new objects by initializing them with certain parameters, then creating and storing them
 {
 	protected:
+
+	bool imGuiInitialized = false;
 
 	device_c device;
 	allocator_c allocator;
@@ -65,6 +68,10 @@ class renderer_c : public system_c	//	Most of these objects are used to make new
 		( const std::string& imagePath, VkImage& tImage, VkDeviceMemory& tImageMem );
 	void init_texture_image_view
 		( VkImageView& tImageView, VkImage tImage );
+	void load_obj
+		( const std::string& objPath, model_data_t& model );
+	void load_gltf
+		( const std::string& gltfPath, model_data_t& model );
 	void init_model_vertices
 		( const std::string& modelPath, model_data_t& model );
 	void init_sprite_vertices
@@ -101,6 +108,7 @@ class renderer_c : public system_c	//	Most of these objects are used to make new
 	void init_sprite
 		( sprite_data_t& spriteData, const std::string& spritePath );
 
+
 	void draw_frame
 		(  );
 
@@ -108,6 +116,8 @@ class renderer_c : public system_c	//	Most of these objects are used to make new
 	std::vector< sprite_data_t >* sprites;
 	
 	renderer_c
+		(  );
+	void send_messages
 		(  );
 	~renderer_c
 		(  );

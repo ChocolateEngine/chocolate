@@ -28,18 +28,13 @@ msg_s* msgs_c::fetch_msg
 }
 
 void msgs_c::add
-	( int type, int cmd, int flags, int argsLen, void** args )
+	( int type, int cmd, int flags, const std::vector< std::any >& args  )
 {
 	msg_s msg;
 	msg.type 	= type;
 	msg.msg 	= cmd;
 	msg.flags 	= flags;
-	msg.argsLen 	= argsLen;
-	msg.args 	= ( void** )malloc( argsLen * sizeof( void* ) );
-	for ( int i = 0; i < argsLen; ++i )
-	{
-		msg.args[ i ] = args[ i ];
-	}
+	msg.args	= args;
         queue.push_back( msg );
 }
 

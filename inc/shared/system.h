@@ -36,8 +36,8 @@ class system_c
 	
 	public:
 
-	msgs_c* msgs;
-	console_c* console;
+	msgs_c* msgs = NULL;
+	console_c* console = NULL;
 	
 	void update
 		(  );
@@ -48,6 +48,10 @@ class system_c
 		( int flagsIn );
 
 	system_c
+		(  );
+	virtual void send_messages
+		(  );
+	virtual void init_subsystems
 		(  );
 	virtual ~system_c
 		(  );

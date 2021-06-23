@@ -10,6 +10,7 @@ bin		:=	bin
 out		:=	engine.so
 
 libraries	:=	-lSDL2 -lvulkan -ldl -lpthread -lX11 -lXxf86vm -lXrandr -lXi -lSDL2_mixer
+includepaths	:=	-I $(inc)/imgui/ -I /usr/include/SDL2
 
 sources		:= 	$(shell find $(src) -name "*.cpp")
 objects		:=	$(sources:.cpp=.o)
@@ -24,7 +25,7 @@ debug: $(bin)/$(out)
 all:	$(bin)/$(out)
 
 %.o : %.cpp
-	$(cc) -c $< -o $@ $(cflags)
+	$(cc) -c $< -o $@ $(cflags) $(includepaths)
 
 .PHONY:	clean
 clean:
@@ -38,7 +39,7 @@ run:	all
 	./$(bin)/$(out)
 
 $(bin)/$(out):	$(objects)
-	$(cc) $(lflags) $^ -o $@ $(libraries)
+	$(cc) $(lflags) $^ -o $@ $(libraries) $(includepaths)
 
 
 list: $(shell find src -name "*.cpp")

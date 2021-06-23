@@ -113,11 +113,26 @@ class device_c
 		(  );
 	uint32_t find_memory_type
 		( uint32_t typeFilter, VkMemoryPropertyFlags properties );
-	
+
+	SDL_Window* window
+		(  )
+		{
+			return win;
+		}
+	VkInstance instance
+		(  )
+	{
+		return inst;
+	}
 	VkDevice dev
 		(  )
 	{
 		return device;
+	}
+	VkPhysicalDevice p_dev
+		(  )
+	{
+		return physicalDevice;
 	}
 	VkCommandPool c_pool
 		(  )

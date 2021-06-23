@@ -3,6 +3,10 @@
 void system_c::read_msg
 	(  )
 {
+	if ( !msgs )
+	{
+		return;
+	}
 	msg_s* msg;
 	for ( ; ; )
 	{
@@ -14,7 +18,7 @@ void system_c::read_msg
 		{	
 			if ( cmd.msg == msg->msg )
 			{
-				cmd.func( msg->args, msg->argsLen );
+				cmd.func( msg->args );
 				delete_msg( *msg );
 			}
 		}
@@ -25,7 +29,7 @@ void system_c::read_msg
 void system_c::delete_msg
 	( msg_s& msg )
 {
-	free( msg.args );
+	
 }
 
 void system_c::read_console
@@ -73,6 +77,18 @@ system_c::system_c
 	(  )
 {
 
+}
+
+void system_c::send_messages
+	(  )
+{
+	
+}
+
+void system_c::init_subsystems
+	(  )
+{
+	
 }
 
 system_c::~system_c

@@ -5,14 +5,14 @@
 
 #include <functional>
 #include <malloc.h>
+#include <any>
 
 typedef struct msg_s
 {
 	int flags;
 	int type, msg;
-	std::function< void( void**, int argsLen ) > func;
-	int argsLen;
-	void** args;
+	std::function< void( std::vector< std::any > args ) > func;
+	std::vector< std::any > args;
 }msg_t;
 
 #endif

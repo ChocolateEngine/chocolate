@@ -2,7 +2,11 @@
 
 #define GLM_FORCE_RADIANS
 #define STB_IMAGE_IMPLEMENTATION
+#define STB_IMAGE_WRITE_IMPLEMENTATION
 #define TINYOBJLOADER_IMPLEMENTATION
+#define TINYGLTF_IMPLEMENTATION
+#define TINYGLTF_NO_INCLUDE_STB_IMAGE
+#define TINYGLTF_NO_INCLUDE_STB_IMAGE_WRITE
 
 #include <set>
 #include <fstream>
@@ -13,15 +17,19 @@
 
 #include "../../../lib/io/tiny_obj_loader.h"
 
+#include "../../../inc/imgui/imgui.h"
+#include "../../../inc/imgui/imgui_impl_vulkan.h"
+#include "../../../inc/imgui/imgui_impl_sdl.h"
+
 void renderer_c::init_commands
 	(  )
 {
 	msg_s msg;
 	msg.type = RENDERER_C;
 
-	msg.msg = REND_UP;
-	//msg.func = [ & ](  ){ vertices[ 0 ].pos.x += 0.05f; };
-	//engineCommands.push_back( msg );
+	msg.msg = IMGUI_INITIALIZED;
+	msg.func = [ & ]( std::vector< std::any > args ){ imGuiInitialized = true; };
+	engineCommands.push_back( msg );
 }
 
 void renderer_c::init_vulkan
@@ -53,6 +61,7 @@ void renderer_c::init_vulkan
 				     swapChainExtent );
 	device.init_texture_sampler( textureSampler );
 	allocator.init_desc_pool( descPool );
+	allocator.init_imgui_pool( device.window(  ), renderPass );
 	init_command_buffers(  );
 	allocator.init_sync( imageAvailableSemaphores,
 			     renderFinishedSemaphores,
@@ -130,8 +139,8 @@ void renderer_c::init_command_buffers
 	}
 }
 
-void renderer_c::init_model_vertices
-	( const std::string& modelPath, model_data_t& model )
+void renderer_c::load_obj
+	( const std::string& objPath, model_data_t& model )
 {
 	tinyobj::attrib_t attrib;
 	std::vector< tinyobj::shape_t > shapes;
@@ -140,7 +149,7 @@ void renderer_c::init_model_vertices
 	std::vector< uint32_t > indices;
 	std::string warn, err;
 
-	if ( !tinyobj::LoadObj( &attrib, &shapes, &materials, &warn, &err, modelPath.c_str(  ) ) )
+	if ( !tinyobj::LoadObj( &attrib, &shapes, &materials, &warn, &err, objPath.c_str(  ) ) )
 	{
 		throw std::runtime_error( warn + err );
 	}
@@ -179,6 +188,66 @@ void renderer_c::init_model_vertices
 	allocator.init_vertex_buffer( vertices, model.vBuffer, model.vBufferMem );
 	allocator.init_index_buffer( indices, model.iBuffer, model.iBufferMem );
 	printf( "%d vertices loaded!\n", vertices.size(  ) );
+}
+void renderer_c::load_gltf
+	( const std::string& gltfPath, model_data_t& model )
+{
+	/*tinygltf::Model glModel;
+	tinygltf::TinyGLTF loader;
+	std::string err;
+	std::string warn;
+	tinygltf::Accessor& accessor;
+	tinygltf::BufferView& bufferView;
+	tinygltf::Buffer& buffer;
+	float* positions;
+	std::vector< vertex_3d_t > vertices;
+	std::vector< uint32_t > indices;
+
+	if ( !loader.LoadASCIIFromFile( &glModel, &err, &warn, gltfPath.c_str(  ) ) )
+	{
+		fprintf( stderr, "Failed to parse GLTF: %s", gltfPath.c_str(  ) );
+	}
+	if ( !warn.empty(  ) )
+	{
+		printf( "Warning: %s", warn.c_str(  ) );
+	}
+	if ( !err.empty(  ) )
+	{
+		printf( "Error: %s", err.c_str(  ) );
+	}
+
+	accessor = glModel.accessors[ primitive.attributes[ "POSITION" ] ];
+	bufferView = glModel.bufferViews[ accessor.bufferView ];
+	buffer = glModel.buffers[ bufferView.buffer ];
+	positions = ( float* )( &buffer.data[ bufferView.byteOffset + accessor.byteOffset ] );
+
+	std::unordered_map< vertex_3d_t, uint32_t > uniqueVertices{  };
+	
+	for ( int i = 0; i < accessor.count; ++i )
+	{
+		vertex_3d_t vertex{  };
+
+		vertex.pos = {
+			positions[ i * 3 + 0 ];
+			positions[ i * 3 + 1 ];
+			positions[ i * 3 + 2 ];
+		};
+		}*/
+}
+
+void renderer_c::init_model_vertices
+	( const std::string& modelPath, model_data_t& model )
+{
+	if ( modelPath.substr( modelPath.size(  ) - 4 ) == ".obj" )
+	{
+		load_obj( modelPath, model );
+		return;
+	}
+	if ( modelPath.substr( modelPath.size(  ) - 4 ) == ".glb" )
+	{
+		load_gltf( modelPath, model );
+		return;
+	}
 }
 
 void renderer_c::init_sprite_vertices
@@ -388,6 +457,15 @@ void renderer_c::init_sprite
 void renderer_c::draw_frame
 	(  )
 {
+	if ( imGuiInitialized )
+	{
+		ImGui::Render(  );
+		VkCommandBuffer c = device.begin_single_time_commands(  );
+	
+		ImGui_ImplVulkan_RenderDrawData( ImGui::GetDrawData(  ), c );
+		device.end_single_time_commands( c );
+	}
+	
 	vkWaitForFences( device.dev(  ), 1, &inFlightFences[ currentFrame ], VK_TRUE, UINT64_MAX );
 	
 	uint32_t imageIndex;
@@ -426,7 +504,7 @@ void renderer_c::draw_frame
 	submitInfo.pWaitSemaphores 		= waitSemaphores;
 	submitInfo.pWaitDstStageMask 		= waitStages;
 	submitInfo.commandBufferCount 		= 1;
-	submitInfo.pCommandBuffers 		= &commandBuffers[imageIndex];
+	submitInfo.pCommandBuffers 		= &commandBuffers[ imageIndex ];
 	VkSemaphore signalSemaphores[  ] 	= { renderFinishedSemaphores[ currentFrame ] };
 	submitInfo.signalSemaphoreCount 	= 1;
 	submitInfo.pSignalSemaphores 		= signalSemaphores;
@@ -436,6 +514,7 @@ void renderer_c::draw_frame
 	{
 		throw std::runtime_error( "Failed to submit draw command buffer!" );
 	}
+	
 	VkPresentInfoKHR presentInfo{  };
 	presentInfo.sType 			= VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
 
@@ -494,6 +573,12 @@ renderer_c::renderer_c
 	systemType = RENDERER_C;
 	allocator.dev = &device;
 	init_commands(  );
+}
+
+void renderer_c::send_messages
+	(  )
+{
+	msgs->add( GUI_C, ASSIGN_WIN, 0, { device.window(  ) } );
 }
 
 renderer_c::~renderer_c

@@ -8,6 +8,10 @@
 
 #include "../../../lib/io/stb_image.h"
 
+#include "../../../inc/imgui/imgui.h"
+#include "../../../inc/imgui/imgui_impl_sdl.h"
+#include "../../../inc/imgui/imgui_impl_vulkan.h"
+
 VkFormat allocator_c::find_depth_format
 	(  )
 {
@@ -51,8 +55,6 @@ VkShaderModule allocator_c::create_shader_module	//	Wraps shader bytecode into o
 void allocator_c::transition_image_layout
 	( VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout )
 {
-	VkCommandBuffer c = dev->begin_single_time_commands(  );
-
 	VkImageMemoryBarrier barrier{  };
         barrier.sType 				= VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
         barrier.oldLayout 			= oldLayout;
@@ -98,17 +100,7 @@ void allocator_c::transition_image_layout
 		throw std::invalid_argument( "Unsupported layout transition!" );
 	}
 
-	vkCmdPipelineBarrier(
-		c,
-		sourceStage, destinationStage,
-		0,
-		0,
-		NULL,
-		0,
-		NULL,
-		1, &barrier );
-
-	dev->end_single_time_commands( c );
+	submit( [ & ]( VkCommandBuffer c ){ vkCmdPipelineBarrier( c, sourceStage, destinationStage, 0, 0, NULL, 0, NULL, 1, &barrier ); } );
 }
 
 void allocator_c::init_buffer
@@ -157,21 +149,17 @@ void allocator_c::map_memory
 void allocator_c::buf_copy
 	( VkBuffer src, VkBuffer dst, VkDeviceSize size )
 {
-	VkCommandBuffer commandBuffer = dev->begin_single_time_commands(  );
-	
 	VkBufferCopy copyRegion{  };
 	copyRegion.srcOffset 	= 0; // Optional
 	copyRegion.dstOffset 	= 0; // Optional
 	copyRegion.size 	= size;
-	vkCmdCopyBuffer( commandBuffer, src, dst, 1, &copyRegion );
-	dev->end_single_time_commands( commandBuffer );
+	
+	submit( [ & ]( VkCommandBuffer c ){ vkCmdCopyBuffer( c, src, dst, 1, &copyRegion ); } );
 }
 
 void allocator_c::copy_buffer_to_img
 	( VkBuffer buffer, VkImage image, uint32_t width, uint32_t height )
 {
-	VkCommandBuffer c = dev->begin_single_time_commands(  );
-
 	VkBufferImageCopy region{  };
 	region.bufferOffset 		= 0;
 	region.bufferRowLength 		= 0;
@@ -189,15 +177,14 @@ void allocator_c::copy_buffer_to_img
 		1
 	};
 
-	vkCmdCopyBufferToImage(
-		c,
-		buffer,
-		image,
-		VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-		1,
-		&region
-		);
+	submit( [ & ]( VkCommandBuffer c ){ vkCmdCopyBufferToImage( c, buffer, image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region ); } );
+}
 
+void allocator_c::submit
+	( const auto&& func )
+{
+	VkCommandBuffer c = dev->begin_single_time_commands(  );
+	func( c );
 	dev->end_single_time_commands( c );
 }
 
@@ -788,6 +775,63 @@ void allocator_c::init_desc_pool	//	please for the love of god, change this
 	}
 }
 
+void allocator_c::init_imgui_pool
+	( SDL_Window* window, VkRenderPass& renderPass )
+{
+	std::array< VkDescriptorPoolSize, 11 > poolSizes
+	{
+		{
+			{ VK_DESCRIPTOR_TYPE_SAMPLER, 1000 },
+			{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1000 },
+			{ VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1000 },
+			{ VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1000 },
+			{ VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER, 1000 },
+			{ VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, 1000 },
+			{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1000 },
+			{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1000 },
+			{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 1000 },
+			{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, 1000 },
+			{ VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 1000 },
+		}
+	};
+	
+	VkDescriptorPoolCreateInfo poolInfo{  };
+	poolInfo.sType 	= VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+	poolInfo.flags 	= VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
+	poolInfo.maxSets 	= 1000;
+	poolInfo.poolSizeCount = ( uint32_t )poolSizes.size(  );;
+	poolInfo.pPoolSizes 	= poolSizes.data(  );
+
+	VkDescriptorPool imguiPool;
+
+	if ( vkCreateDescriptorPool( dev->dev(  ), &poolInfo, NULL, &imguiPool ) != VK_SUCCESS )
+	{
+		throw std::runtime_error( "Failed to create imgui pool!" );
+	}
+	
+	ImGui::CreateContext(  );
+
+	ImGui_ImplSDL2_InitForVulkan( window );
+
+	ImGui_ImplVulkan_InitInfo initInfo{  };
+	initInfo.Instance 	= dev->instance(  );
+	initInfo.PhysicalDevice = dev->p_dev(  );
+	initInfo.Device 	= dev->dev(  );
+	initInfo.Queue 		= dev->g_queue(  );
+	initInfo.DescriptorPool = imguiPool;
+	initInfo.MinImageCount 	= 3;
+	initInfo.ImageCount 	= 3;
+	initInfo.MSAASamples 	= VK_SAMPLE_COUNT_1_BIT;
+
+	ImGui_ImplVulkan_Init( &initInfo, renderPass );
+
+	submit( [ & ]( VkCommandBuffer c ){ ImGui_ImplVulkan_CreateFontsTexture( c ); } );
+
+	ImGui_ImplVulkan_DestroyFontUploadObjects(  );
+
+	freeQueue.push_back( [ = ](  ){ vkDestroyDescriptorPool( dev->dev(  ), imguiPool, NULL ); ImGui_ImplVulkan_Shutdown(  ); } );
+}
+
 void allocator_c::init_sync
 	( std::vector< VkSemaphore >& imageAvailableSemaphores,
 	  std::vector< VkSemaphore >& renderFinishedSemaphores,
@@ -815,6 +859,15 @@ void allocator_c::init_sync
 		{
 			throw std::runtime_error( "Failed to create sync objects!" );
 		}
+	}
+}
+
+allocator_c::~allocator_c
+	(  )
+{
+	for ( const auto& func : freeQueue )
+	{
+		func(  );
 	}
 }
 

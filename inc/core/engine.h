@@ -5,6 +5,7 @@
 #include "graphics.h"
 #include "input.h"
 #include "audio.h"
+#include "gui.h"
 
 #include <vector>
 
