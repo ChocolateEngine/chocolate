@@ -116,6 +116,7 @@ void renderer_c::init_command_buffers
 		renderPassInfo.pClearValues 	 = clearValues.data(  );
 
 		vkCmdBeginRenderPass( commandBuffers[ i ], &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE );
+		
 		vkCmdBindPipeline( commandBuffers[ i ], VK_PIPELINE_BIND_POINT_GRAPHICS, modelPipeline );
 
 		for ( auto& model : *models )
@@ -347,7 +348,16 @@ void renderer_c::destroy_swap_chain
 			vkFreeMemory( device.dev(  ), model.uBuffersMem[ i ], NULL );
 		}
 	}
+	for ( auto& sprite : *sprites  )
+	{
+		for ( int i = 0; i < swapChainImages.size(  ); i++ )
+		{
+			vkDestroyBuffer( device.dev(  ), sprite.uBuffers[ i ], NULL );
+			vkFreeMemory( device.dev(  ), sprite.uBuffersMem[ i ], NULL );
+		}
+	}
 	vkDestroyDescriptorPool( device.dev(  ), descPool, NULL );
+	vkDestroyDescriptorSetLayout( device.dev(  ), descSetLayout, NULL );
         for ( auto framebuffer : swapChainFramebuffers )
 	{
 		vkDestroyFramebuffer( device.dev(  ), framebuffer, NULL );
@@ -452,6 +462,7 @@ void renderer_c::init_sprite
 					      textureSampler );
 	sprites->push_back( spriteData );
 	init_command_buffers(  );
+
 }
 
 void renderer_c::draw_frame

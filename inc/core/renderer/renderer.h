@@ -76,8 +76,6 @@ class renderer_c : public system_c	//	Most of these objects are used to make new
 		( const std::string& modelPath, model_data_t& model );
 	void init_sprite_vertices
 		( const std::string& spritePath, sprite_data_t& sprite );
-	void init_desc_pool
-		(  );
 	
 	void reinit_swap_chain
 		(  );

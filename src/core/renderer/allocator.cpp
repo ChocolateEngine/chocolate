@@ -320,7 +320,7 @@ void allocator_c::init_vertex_buffer
 	VkBuffer stagingBuffer;
 	VkDeviceMemory stagingBufferMemory;
 	init_buffer( bufferSize,
-		     VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+		     VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
 		     VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
 		     stagingBuffer,
 		     stagingBufferMemory );

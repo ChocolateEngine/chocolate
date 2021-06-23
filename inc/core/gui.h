@@ -10,7 +10,7 @@ class gui_c : public system_c
 	protected:
 
 	SDL_Window* win = NULL;
-	bool shown = false;
+	bool consoleShown = false;
 
 	void init_commands
 		(  );

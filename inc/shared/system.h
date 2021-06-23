@@ -18,7 +18,7 @@ class system_c
 
 	int systemType;
 	std::vector< msg_s > engineCommands;
-	std::vector< command_s > userCommands;
+	std::vector< command_t > consoleCommands;
 	std::vector< std::function< void(  ) > > funcList;
 
 	int flags = 0;
@@ -32,6 +32,11 @@ class system_c
 	void add_func
 		( std::function< void(  ) > func );
 	void exec_funcs
+		(  );
+
+	virtual void init_commands
+		(  );
+	virtual void init_console_commands
 		(  );
 	
 	public:

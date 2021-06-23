@@ -11,7 +11,7 @@ void gui_c::init_commands
 	msg.type = GUI_C;
 
 	msg.msg = LOAD_IMGUI_DEMO;
-	msg.func = [ & ]( std::vector< std::any > args ){ shown = !shown; };
+	msg.func = [ & ]( std::vector< std::any > args ){ consoleShown = !consoleShown; };
 	engineCommands.push_back( msg );
 
 	msg.msg = ASSIGN_WIN;
@@ -38,9 +38,15 @@ void gui_c::draw_gui
 	ImGui_ImplVulkan_NewFrame(  );
 	ImGui_ImplSDL2_NewFrame( win );
 	ImGui::NewFrame(  );
-	if ( shown )
+	if ( consoleShown )
 	{
-		ImGui::ShowDemoWindow(  );
+		ImGui::Begin( "Developer Console" );
+		static char buf[ 256 ] = "";
+		if ( ImGui::InputText( "send", buf, 256, ImGuiInputTextFlags_EnterReturnsTrue ) )
+		{
+			console->add( buf );
+		}
+		ImGui::End(  );
 	}
 }
 

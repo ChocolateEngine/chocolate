@@ -73,7 +73,8 @@ void engine_c::engine_main
 	add_game_systems(  );
 
 	this->msgs->add( ENGINE_C, ENGI_PING );
-	this->msgs->add( GRAPHICS_C, GFIX_LOAD_SPRITE, 0, { "materials/textures/hilde_sprite_upscale.png" } );
+	//this->msgs->add( GRAPHICS_C, GFIX_LOAD_SPRITE, 0, { "materials/textures/hilde_sprite_upscale.png" } );
+	this->console->add( "ent_create" );
 	
 	for ( ; active; )
 	{

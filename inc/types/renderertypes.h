@@ -175,7 +175,7 @@ typedef struct
 		( VkCommandBuffer c )
 		{
 			vkCmdDrawIndexed( c, iCount, 1, 0, 0, 0 );
-		}	
+		}
 }sprite_data_t;
 
 typedef struct

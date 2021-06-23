@@ -1,30 +1,38 @@
 #include "../../inc/shared/console.h"
 
-void console_c::init_commands
+bool console_c::empty
 	(  )
 {
-	command_t cmd;
-
-	cmd.str = "+right";
-	cmd.msg = {  };
+        return queue.empty(  ) ? true : false;
 }
 
 void console_c::add
-	( std::string& cmd )
+	( const std::string& cmd )
 {
-	
+	queue.push_back( cmd );
 }
 
-void console_c::update
+void console_c::delete_command
 	(  )
 {
+	queue.erase( queue.begin(  ) + cmdIndex );
+}
 
+std::string console_c::fetch_cmd
+	(  )
+{
+	if ( empty(  ) )
+	{
+		cmdIndex = 0;
+		return "";
+	}
+	return queue[ cmdIndex ];
 }
 
 console_c::console_c
 	(  )
 {
-	init_commands(  );
+
 }
 
 console_c::~console_c

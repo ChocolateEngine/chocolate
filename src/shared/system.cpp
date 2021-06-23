@@ -35,7 +35,37 @@ void system_c::delete_msg
 void system_c::read_console
 	(  )
 {
-
+	std::string command;
+	if ( !console || consoleCommands.empty(  ) )
+	{
+		return;
+	}
+	for ( ; ; )
+	{
+		if ( console->empty(  ) )
+		{
+			return;
+		}
+		for ( command = console->fetch_cmd(  ); command != ""; )
+		{
+			command = console->fetch_cmd(  );
+			for ( const auto& cmd : consoleCommands )
+			{
+				if ( cmd.str == command )
+				{
+					std::vector< std::string > args;
+					int start, end = 0;
+					for ( ; ( start = command.find_first_not_of( ' ', end ) ) != std::string::npos ; )
+					{
+						end = command.find( ' ', start );
+						args.push_back( command.substr( start, end - start ) );
+					}
+					cmd.func( args );
+					console->delete_command(  );
+				}
+			}
+		}
+	}
 }
 
 void system_c::add_func
@@ -51,6 +81,18 @@ void system_c::exec_funcs
 	{
 		func(  );
 	}
+}
+
+void system_c::init_commands
+	(  )
+{
+	
+}
+
+void system_c::init_console_commands
+	(  )
+{
+	
 }
 
 void system_c::update
@@ -76,7 +118,8 @@ void system_c::rm_flag
 system_c::system_c
 	(  )
 {
-
+	init_commands(  );
+	init_console_commands(  );
 }
 
 void system_c::send_messages

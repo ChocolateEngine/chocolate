@@ -3,30 +3,33 @@
 
 #include <string>
 #include <vector>
+#include <functional>
 
 #include "../types/msg.h"
 
-typedef struct
+typedef struct command_s
 {
 	std::string str;
-	msg_t msg;
+	std::function< void( std::vector< std::string > args ) > func;
 }command_t;
 
 class console_c
 {
 	protected:
 
-	std::vector< command_t > commands;
+	int cmdIndex = 0;
 	std::vector< std::string > queue;
-
-	void init_commands
-		(  );
 
 	public:
 
+	bool empty
+		(  );
+
 	void add
-		( std::string& cmd );
-	void update
+		( const std::string& cmd );
+	void delete_command
+		(  );
+        std::string fetch_cmd
 		(  );
 
 	console_c
