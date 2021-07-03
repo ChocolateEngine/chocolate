@@ -1,3 +1,4 @@
+
 #include "../../../inc/core/renderer/renderer.h"
 
 #define GLM_FORCE_RADIANS
@@ -304,11 +305,11 @@ void renderer_c::reinit_swap_chain
 				     swapChainExtent );
 	for ( auto& model : *models )
 	{
-		allocator.init_uniform_buffers< ubo_3d_t >( model.uBuffers, model.uBuffersMem, swapChainImages );	
+		allocator.init_uniform_buffers< ubo_3d_t >( model.uBuffers, model.uBuffersMem, swapChainImages );	//	Please fix this ubo_2d_t shit, I just want easy sprites
 	}
 	for ( auto& sprite : *sprites )
 	{
-		allocator.init_uniform_buffers< ubo_2d_t >( sprite.uBuffers, sprite.uBuffersMem, swapChainImages );	
+		allocator.init_uniform_buffers< ubo_3d_t >( sprite.uBuffers, sprite.uBuffersMem, swapChainImages );	
 	}
 	allocator.init_desc_pool( descPool );
 	for ( auto& model : *models )
@@ -423,7 +424,7 @@ void renderer_c::update_sprite_uniform_buffers
 	ubo.proj[ 1 ][ 1 ] *= -1;
 	
 	void* data;
-	vkMapMemory( device.dev(  ), spriteData.uBuffersMem[ currentImage ], 0, sizeof( ubo ), 0, &data );
+	vkMapMemory( device.dev(  ), spriteData.uBuffersMem[ currentImage ], 0, sizeof( ubo ), 0, &data );	//	Validation vkMapMemory-size-00681 resolved... fix ubo sizes when 2d ubos work
 	memcpy( data, &ubo, sizeof( ubo ) );
 	vkUnmapMemory( device.dev(  ), spriteData.uBuffersMem[ currentImage ] );
 }
@@ -452,7 +453,7 @@ void renderer_c::init_sprite
 	init_sprite_vertices( spritePath, spriteData );
 	allocator.init_texture_image( spritePath, spriteData.tImage, spriteData.tImageMem );
 	allocator.init_texture_image_view( spriteData.tImageView, spriteData.tImage );
-	allocator.init_uniform_buffers< ubo_2d_t >( spriteData.uBuffers, spriteData.uBuffersMem, swapChainImages );
+	allocator.init_uniform_buffers< ubo_3d_t >( spriteData.uBuffers, spriteData.uBuffersMem, swapChainImages );	//	Fix ubo_2d_t
 	allocator.init_desc_sets< ubo_2d_t >( spriteData.descSets,
 					      spriteData.uBuffers,
 					      spriteData.tImageView,
