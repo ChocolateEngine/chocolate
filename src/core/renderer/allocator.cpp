@@ -53,7 +53,7 @@ VkShaderModule allocator_c::create_shader_module	//	Wraps shader bytecode into o
 }
 
 void allocator_c::transition_image_layout
-	( VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout )
+	( VkImage image, VkImageLayout oldLayout, VkImageLayout newLayout )
 {
 	VkImageMemoryBarrier barrier{  };
         barrier.sType 				= VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
@@ -254,6 +254,21 @@ void allocator_c::init_image
 	vkBindImageMemory( dev->dev(  ), image, imageMemory, 0 );
 }
 
+void allocator_c::init_font_image
+	( VkImage& fImage, unsigned char* fontMem, int width, int height )
+{
+	VkBuffer stagingBuffer;
+	VkDeviceMemory stagingBufferMem;
+	VkDeviceSize fontSize = width * height * 4;
+	init_buffer( fontSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer, stagingBufferMem );
+	map_memory( stagingBufferMem, fontSize, fontMem );
+	transition_image_layout( fImage, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL );
+	copy_buffer_to_img( stagingBuffer, fImage, width, height );
+	transition_image_layout( fImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
+	vkDestroyBuffer( dev->dev(  ), stagingBuffer, NULL );
+	vkFreeMemory( dev->dev(  ), stagingBufferMem, NULL );
+}
+
 void allocator_c::init_texture_image
 	( const std::string& imagePath, VkImage& tImage, VkDeviceMemory& tImageMem )
 {
@@ -289,7 +304,6 @@ void allocator_c::init_texture_image
 		    tImage,
 		    tImageMem );
 	transition_image_layout( tImage,
-				 VK_FORMAT_R8G8B8A8_SRGB,
 				 VK_IMAGE_LAYOUT_UNDEFINED,
 				 VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL );
 	copy_buffer_to_img( stagingBuffer,
@@ -297,7 +311,6 @@ void allocator_c::init_texture_image
 			    ( uint32_t )texWidth,
 			    ( uint32_t )texHeight );
 	transition_image_layout( tImage,
-				 VK_FORMAT_R8G8B8A8_SRGB,
 				 VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
 				 VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
 
@@ -718,7 +731,6 @@ void allocator_c::init_depth_resources
 		    depthImageMemory );
 	init_image_view( depthImageView, depthImage, depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT );
 	transition_image_layout( depthImage,
-				 depthFormat,
 				 VK_IMAGE_LAYOUT_UNDEFINED,
 				 VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL );
 }
@@ -755,14 +767,8 @@ void allocator_c::init_frame_buffer
 }
 
 void allocator_c::init_desc_pool	//	please for the love of god, change this
-	( VkDescriptorPool& descPool )
+	( VkDescriptorPool& descPool, std::vector< VkDescriptorPoolSize > poolSizes )
 {
-	std::array< VkDescriptorPoolSize, 2 > poolSizes{  };
-	poolSizes[ 0 ].type 		 = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-	poolSizes[ 0 ].descriptorCount 	 = 2000;//( uint32_t )swapChainImages.size(  );
-	poolSizes[ 1 ].type 		 = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-	poolSizes[ 1 ].descriptorCount 	 = 2000;//( uint32_t )swapChainImages.size(  );
-
 	VkDescriptorPoolCreateInfo poolInfo{  };
 	poolInfo.sType 		= VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
 	poolInfo.poolSizeCount  = ( uint32_t )poolSizes.size(  );
@@ -859,6 +865,15 @@ void allocator_c::init_sync
 		{
 			throw std::runtime_error( "Failed to create sync objects!" );
 		}
+	}
+}
+
+void allocator_c::free_resources
+	(  )
+{
+	for ( const auto& func : freeQueue )
+	{
+		func(  );
 	}
 }
 

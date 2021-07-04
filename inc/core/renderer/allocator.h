@@ -21,7 +21,7 @@ class allocator_c
 	VkShaderModule create_shader_module	//	Wraps shader bytecode into objects for pipeline to work
 		( const std::vector< char >& code );
 	void transition_image_layout
-		( VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout );
+		( VkImage image, VkImageLayout oldLayout, VkImageLayout newLayout );
 
 	void init_buffer
 		( VkDeviceSize size,
@@ -52,6 +52,8 @@ class allocator_c
 		  VkMemoryPropertyFlags properties,
 		  VkImage& image,
 		  VkDeviceMemory& imageMemory );
+	void init_font_image
+		( VkImage& fImage, unsigned char* fontMem, int width, int height );
 	void init_texture_image
 		( const std::string& imagePath, VkImage& tImage, VkDeviceMemory& tImageMem );
 	void init_texture_image_view
@@ -99,7 +101,7 @@ class allocator_c
 		  VkRenderPass& renderPass,
 		  VkExtent2D& swapChainExtent );
 	void init_desc_pool	//	please for the love of god, change this
-		( VkDescriptorPool& descPool );
+		( VkDescriptorPool& descPool, std::vector< VkDescriptorPoolSize > poolSizes );
 	void init_imgui_pool
 		( SDL_Window* window, VkRenderPass& renderPass );
 	void init_sync
@@ -108,6 +110,9 @@ class allocator_c
 		  std::vector< VkFence >& inFlightFences,
 		  std::vector< VkFence >& imagesInFlight,
 		  std::vector<VkImage>& swapChainImages );
+
+	void free_resources
+		(  );
 
 	~allocator_c
 		(  );

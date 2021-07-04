@@ -60,8 +60,8 @@ void renderer_c::init_vulkan
 				     depthImageView,
 				     renderPass,
 				     swapChainExtent );
-	device.init_texture_sampler( textureSampler );
-	allocator.init_desc_pool( descPool );
+	device.init_texture_sampler( textureSampler, VK_SAMPLER_ADDRESS_MODE_REPEAT );
+	allocator.init_desc_pool( descPool, { { { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 2000 }, { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 2000 } } } );
 	allocator.init_imgui_pool( device.window(  ), renderPass );
 	init_command_buffers(  );
 	allocator.init_sync( imageAvailableSemaphores,
@@ -311,7 +311,7 @@ void renderer_c::reinit_swap_chain
 	{
 		allocator.init_uniform_buffers< ubo_3d_t >( sprite.uBuffers, sprite.uBuffersMem, swapChainImages );	
 	}
-	allocator.init_desc_pool( descPool );
+	allocator.init_desc_pool( descPool, { { { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 2000 }, { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 2000 } } } );
 	for ( auto& model : *models )
 	{
 		allocator.init_desc_sets< ubo_3d_t >( model.descSets,
@@ -584,6 +584,9 @@ renderer_c::renderer_c
 {
 	systemType = RENDERER_C;
 	allocator.dev = &device;
+	gui.device = &device;
+	gui.allocator.dev = &device;
+	gui.init(  );
 	init_commands(  );
 }
 

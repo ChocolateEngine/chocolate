@@ -23,6 +23,11 @@ typedef struct
 	std::vector< VkPresentModeKHR > 	p;	//	present modes
 }swap_chain_support_info_t;
 
+typedef struct
+{
+	glm::vec2 scale, translate;
+}push_constant_t;
+
 typedef struct vertex_3d_s
 {
 	glm::vec3 pos;

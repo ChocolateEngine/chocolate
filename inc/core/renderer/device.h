@@ -98,7 +98,7 @@ class device_c
 	void init_swap_chain
 		( VkSwapchainKHR& swapChain, std::vector< VkImage >& swapChainImages, VkFormat& swapChainImageFormat, VkExtent2D& swapChainExtent );
 	void init_texture_sampler
-		( VkSampler& textureSampler );
+		( VkSampler& textureSampler, VkSamplerAddressMode mode );
 
 	VkCommandBuffer begin_single_time_commands
 		(  );
