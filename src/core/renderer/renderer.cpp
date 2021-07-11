@@ -63,7 +63,7 @@ void renderer_c::init_vulkan
 	device.init_texture_sampler( textureSampler, VK_SAMPLER_ADDRESS_MODE_REPEAT );
 	allocator.init_desc_pool( descPool, { { { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 2000 }, { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 2000 } } } );
 	allocator.init_imgui_pool( device.window(  ), renderPass );
-	init_command_buffers(  );
+	 ;
 	allocator.init_sync( imageAvailableSemaphores,
 			     renderFinishedSemaphores,
 			     inFlightFences,
@@ -130,6 +130,12 @@ void renderer_c::init_command_buffers
 		{
 			sprite.bind( commandBuffers[ i ], spriteLayout, i );
 			sprite.draw( commandBuffers[ i ] );
+		}
+
+		if ( imGuiInitialized )
+		{
+			ImGui::Render(  );
+			ImGui_ImplVulkan_RenderDrawData( ImGui::GetDrawData(  ), commandBuffers[ i ] );
 		}
 		
 		vkCmdEndRenderPass( commandBuffers[ i ] );
@@ -332,7 +338,7 @@ void renderer_c::reinit_swap_chain
 						      descPool,
 						      textureSampler );	
 	}
-	init_command_buffers(  );
+	 ;
 }
 
 void renderer_c::destroy_swap_chain
@@ -444,7 +450,7 @@ void renderer_c::init_model
 					      descPool,
 					      textureSampler );
 	models->push_back( modelData );
-	init_command_buffers(  );
+	 ;
 }
 
 void renderer_c::init_sprite
@@ -462,21 +468,14 @@ void renderer_c::init_sprite
 					      descPool,
 					      textureSampler );
 	sprites->push_back( spriteData );
-	init_command_buffers(  );
+	 ;
 
 }
 
 void renderer_c::draw_frame
 	(  )
 {
-	if ( imGuiInitialized )
-	{
-		ImGui::Render(  );
-		VkCommandBuffer c = device.begin_single_time_commands(  );
-	
-		ImGui_ImplVulkan_RenderDrawData( ImGui::GetDrawData(  ), c );
-		device.end_single_time_commands( c );
-	}
+	init_command_buffers(  );	//	Fucky wucky!!
 	
 	vkWaitForFences( device.dev(  ), 1, &inFlightFences[ currentFrame ], VK_TRUE, UINT64_MAX );
 	
