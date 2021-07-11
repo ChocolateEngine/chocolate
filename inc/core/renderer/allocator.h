@@ -41,6 +41,29 @@ class allocator_c
 
 	public:
 
+	VkDescriptorSetLayoutBinding layout_binding
+		( VkDescriptorType type,
+		  VkShaderStageFlags stageFlags,
+		  uint32_t binding,
+		  uint32_t descriptorCount = 1 );
+	
+	VkDescriptorSetAllocateInfo allocate_info
+		( VkDescriptorPool descPool,
+		  const VkDescriptorSetLayout* layouts,
+		  const uint32_t setCount );
+
+	VkDescriptorImageInfo image_info
+		( VkSampler sampler,
+		  VkImageView imageView,
+		  VkImageLayout imageLayout );
+
+	VkWriteDescriptorSet write_descriptor
+		( VkDescriptorSet dstSet,
+		  VkDescriptorType type,
+		  uint32_t binding,
+		  VkDescriptorImageInfo* imageInfo,
+		  uint32_t descriptorCount = 1 );
+
 	void init_image_view
 		( VkImageView& imageView, VkImage image, VkFormat format, VkImageAspectFlags aspectFlags );
 	void init_image
@@ -67,6 +90,8 @@ class allocator_c
 	template< typename T >
         void init_uniform_buffers
 		( std::vector< VkBuffer >& uBuffers, std::vector< VkDeviceMemory >& uBuffersMem, std::vector< VkImage >& swapChainImages );
+	void init_desc_set
+		( VkDescriptorSetAllocateInfo allocInfo, VkDescriptorImageInfo descriptor, VkDescriptorSet descriptorSet );
 	template< typename T >
 	void init_desc_sets
 		( std::vector< VkDescriptorSet >& descSets,
@@ -82,7 +107,7 @@ class allocator_c
 	void init_render_pass
 		( VkRenderPass& renderPass, VkFormat& swapChainImageFormat );
 	void init_desc_set_layout
-		( VkDescriptorSetLayout& descSetLayout );
+		( VkDescriptorSetLayout& descSetLayout, const std::vector< VkDescriptorSetLayoutBinding > bindings );
 	template< typename T >
 	void init_graphics_pipeline
 		( VkPipeline& pipeline,

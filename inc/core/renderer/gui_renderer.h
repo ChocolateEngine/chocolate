@@ -22,6 +22,9 @@ class gui_renderer_c
 	VkDescriptorSetLayout descriptorSetLayout;
 	VkDescriptorSet descriptorSet;
 
+	void init_pipeline
+		(  );
+
   public:
 	
 	device_c* device;

@@ -188,6 +188,55 @@ void allocator_c::submit
 	dev->end_single_time_commands( c );
 }
 
+
+VkDescriptorSetAllocateInfo allocator_c::allocate_info
+	( VkDescriptorPool descPool,
+	  const VkDescriptorSetLayout* layouts,
+	  const uint32_t setCount )
+{
+	VkDescriptorSetAllocateInfo info{  };
+
+	info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+	info.descriptorPool = descPool;
+	info.pSetLayouts = layouts;
+	info.descriptorSetCount = setCount;
+
+	return info;
+}
+
+VkDescriptorImageInfo allocator_c::image_info
+	( VkSampler sampler,
+	  VkImageView imageView,
+	  VkImageLayout imageLayout )
+{
+	VkDescriptorImageInfo info{  };
+		
+	info.sampler = sampler;
+	info.imageView = imageView;
+	info.imageLayout = imageLayout;
+
+	return info;
+}
+
+VkWriteDescriptorSet allocator_c::write_descriptor
+	( VkDescriptorSet dstSet,
+	  VkDescriptorType type,
+	  uint32_t binding,
+	  VkDescriptorImageInfo* imageInfo,
+	  uint32_t descriptorCount )
+{
+	VkWriteDescriptorSet writeDescriptor{  };
+	
+	writeDescriptor.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+	writeDescriptor.dstSet = dstSet;
+	writeDescriptor.descriptorType = type;
+	writeDescriptor.dstBinding = binding;
+	writeDescriptor.pImageInfo = imageInfo;
+	writeDescriptor.descriptorCount = descriptorCount;
+
+	return writeDescriptor;
+}
+
 void allocator_c::init_image_view
 	( VkImageView& imageView, VkImage image, VkFormat format, VkImageAspectFlags aspectFlags )
 {
@@ -396,6 +445,20 @@ void allocator_c::init_uniform_buffers
 	}
 }
 
+void allocator_c::init_desc_set
+	( VkDescriptorSetAllocateInfo allocInfo, VkDescriptorImageInfo descriptor, VkDescriptorSet descriptorSet )
+{
+	if ( vkAllocateDescriptorSets( dev->dev(  ), &allocInfo, &descriptorSet ) != VK_SUCCESS )
+	{
+		throw std::runtime_error( "Failed to allocate descriptor set!" );
+	}
+	std::vector< VkWriteDescriptorSet > writeDescriptors =
+	{
+		write_descriptor( descriptorSet, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 0, &descriptor )
+	};
+	vkUpdateDescriptorSets( dev->dev(  ), ( uint32_t )writeDescriptors.size(  ), writeDescriptors.data(  ), 0, NULL );
+}
+
 template< typename T >
 void allocator_c::init_desc_sets
 	( std::vector< VkDescriptorSet >& descSets,
@@ -404,7 +467,7 @@ void allocator_c::init_desc_sets
 	  std::vector< VkImage >& swapChainImages,
 	  VkDescriptorSetLayout& descSetLayout,
 	  VkDescriptorPool descPool,
-	  VkSampler textureSampler )
+	  VkSampler textureSampler )	//	Should probably be broken into two functions, allocate and update
 {
 	std::vector< VkDescriptorSetLayout > layouts( swapChainImages.size(  ), descSetLayout );
 	VkDescriptorSetAllocateInfo allocInfo{  };
@@ -523,24 +586,24 @@ void allocator_c::init_render_pass
 	}
 }
 
-void allocator_c::init_desc_set_layout
-	( VkDescriptorSetLayout& descSetLayout )
+VkDescriptorSetLayoutBinding allocator_c::layout_binding
+	( VkDescriptorType type,
+	  VkShaderStageFlags stageFlags,
+	  uint32_t binding,
+	  uint32_t descriptorCount )
 {
-	VkDescriptorSetLayoutBinding uboLayoutBinding{  };
-	uboLayoutBinding.binding 		= 0;
-	uboLayoutBinding.descriptorType 	= VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-	uboLayoutBinding.descriptorCount 	= 1;
-	uboLayoutBinding.stageFlags 		= VK_SHADER_STAGE_VERTEX_BIT;
-	uboLayoutBinding.pImmutableSamplers 	= NULL; // Optional
+	VkDescriptorSetLayoutBinding layoutBinding{  };
+	layoutBinding.descriptorType = type;
+	layoutBinding.stageFlags = stageFlags;
+	layoutBinding.binding = binding;
+	layoutBinding.descriptorCount = descriptorCount;
 
-	VkDescriptorSetLayoutBinding samplerLayoutBinding{  };
-	samplerLayoutBinding.binding 		= 1;
-	samplerLayoutBinding.descriptorCount 	= 1;
-	samplerLayoutBinding.descriptorType 	= VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-	samplerLayoutBinding.pImmutableSamplers = NULL;
-	samplerLayoutBinding.stageFlags 	= VK_SHADER_STAGE_FRAGMENT_BIT;
+	return layoutBinding;
+}
 
-	std::array< VkDescriptorSetLayoutBinding, 2 > bindings = { uboLayoutBinding, samplerLayoutBinding };
+void allocator_c::init_desc_set_layout
+	( VkDescriptorSetLayout& descSetLayout, const std::vector< VkDescriptorSetLayoutBinding > bindings )
+{
 	VkDescriptorSetLayoutCreateInfo layoutInfo{  };
 	layoutInfo.sType 			= VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
 	layoutInfo.bindingCount 		= ( uint32_t )bindings.size(  );

@@ -39,7 +39,7 @@ void renderer_c::init_vulkan
 	device.init_swap_chain( swapChain, swapChainImages, swapChainImageFormat, swapChainExtent );
 	allocator.init_image_views( swapChainImages, swapChainImageViews, swapChainImageFormat );
 	allocator.init_render_pass( renderPass, swapChainImageFormat );
-	allocator.init_desc_set_layout( descSetLayout );
+	allocator.init_desc_set_layout( descSetLayout, { { allocator.layout_binding( VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT, 0 ), allocator.layout_binding( VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 1 ) } } );
 	allocator.init_graphics_pipeline< vertex_3d_t >( modelPipeline,
 							 modelLayout,
 							 swapChainExtent,
@@ -282,7 +282,7 @@ void renderer_c::reinit_swap_chain
 	device.init_swap_chain( swapChain, swapChainImages, swapChainImageFormat, swapChainExtent );
 	allocator.init_image_views( swapChainImages, swapChainImageViews, swapChainImageFormat );
 	allocator.init_render_pass( renderPass, swapChainImageFormat );
-	allocator.init_desc_set_layout( descSetLayout );
+	allocator.init_desc_set_layout( descSetLayout, { { allocator.layout_binding( VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT, 0 ), allocator.layout_binding( VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 1 ) } } );
 	allocator.init_graphics_pipeline< vertex_3d_t >( modelPipeline,
 							 modelLayout,
 							 swapChainExtent,
