@@ -583,9 +583,6 @@ renderer_c::renderer_c
 {
 	systemType = RENDERER_C;
 	allocator.dev = &device;
-	gui.device = &device;
-	gui.allocator.dev = &device;
-	gui.init(  );
 	init_commands(  );
 }
 

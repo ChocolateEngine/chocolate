@@ -46,23 +46,24 @@ void system_c::read_console
 		{
 			return;
 		}
-		for ( command = console->fetch_cmd(  ); command != ""; )
+		command = console->fetch_cmd(  );
+		if ( command == "" )
 		{
-			command = console->fetch_cmd(  );
-			for ( const auto& cmd : consoleCommands )
+			return;
+		}
+		for ( const auto& cmd : consoleCommands )
+		{
+			if ( cmd.str == command )
 			{
-				if ( cmd.str == command )
+				std::vector< std::string > args;
+				int start, end = 0;
+				for ( ; ( start = command.find_first_not_of( ' ', end ) ) != std::string::npos ; )
 				{
-					std::vector< std::string > args;
-					int start, end = 0;
-					for ( ; ( start = command.find_first_not_of( ' ', end ) ) != std::string::npos ; )
-					{
-						end = command.find( ' ', start );
-						args.push_back( command.substr( start, end - start ) );
-					}
-					cmd.func( args );
-					console->delete_command(  );
+					end = command.find( ' ', start );
+					args.push_back( command.substr( start, end - start ) );
 				}
+				cmd.func( args );
+				console->delete_command(  );
 			}
 		}
 	}

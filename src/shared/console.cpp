@@ -18,15 +18,22 @@ void console_c::delete_command
 	queue.erase( queue.begin(  ) + cmdIndex );
 }
 
+void console_c::clear
+	(  )
+{
+	queue.clear(  );
+}
+
 std::string console_c::fetch_cmd
 	(  )
 {
-	if ( empty(  ) )
+	if ( empty(  ) || cmdIndex >= queue.size(  ) )
 	{
 		cmdIndex = 0;
 		return "";
 	}
-	return queue[ cmdIndex ];
+	cmdIndex++;
+	return queue[ cmdIndex - 1 ];
 }
 
 console_c::console_c

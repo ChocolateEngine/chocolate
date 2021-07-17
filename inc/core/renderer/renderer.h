@@ -9,7 +9,6 @@
 #include "../gui.h"
 
 #include "allocator.h"
-#include "gui_renderer.h"
 
 #include <vulkan/vulkan.h>
 #include <SDL2/SDL.h>
@@ -28,7 +27,6 @@ class renderer_c : public system_c	//	Most of these objects are used to make new
 
 	device_c device;
 	allocator_c allocator;
-	gui_renderer_c gui;
 	
 	int currentFrame = 0;
 

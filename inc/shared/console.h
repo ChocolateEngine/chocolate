@@ -29,6 +29,8 @@ class console_c
 		( const std::string& cmd );
 	void delete_command
 		(  );
+	void clear
+		(  );
         std::string fetch_cmd
 		(  );
 

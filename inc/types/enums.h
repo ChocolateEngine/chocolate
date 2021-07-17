@@ -8,6 +8,7 @@ typedef enum
 	GRAPHICS_C,
 	AUDIO_C,
 	GUI_C,
+	INPUT_C,
 }system_class_e;
 
 typedef enum
