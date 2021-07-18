@@ -31,6 +31,8 @@ class console_c
 		(  );
 	void clear
 		(  );
+	void move_commands
+		(  );
         std::string fetch_cmd
 		(  );
 

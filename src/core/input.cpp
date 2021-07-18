@@ -67,8 +67,10 @@ void input_c::bind
 			keyBinds.push_back( bind );
 
 			std::cout << cmd << " bound to " << key << std::endl;
+			return;
 		}
 	}
+	std::cout << key << " is not a valid key alias" << std::endl;
 }
 
 void input_c::parse_input
@@ -115,10 +117,14 @@ void input_c::init_console_commands
 	cmd.str = "bind";
 	cmd.func = [ & ]( std::vector< std::string > args )
 		{
-			bind( args[ 0 ], args[ 1 ] );
+			if ( args.size(  ) < 3 )
+			{
+				printf( "Insufficient arguments for bind\n" );
+				return;
+			}
+			bind( args[ 1 ], args[ 2 ] );
 		};
 	consoleCommands.push_back( cmd );
-	printf( "added function bitch\n" );
 }
 
 input_c::input_c

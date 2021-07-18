@@ -53,7 +53,7 @@ void system_c::read_console
 		}
 		for ( const auto& cmd : consoleCommands )
 		{
-			if ( cmd.str == command )
+			if ( cmd.str == command.substr( 0, cmd.str.length(  ) ) && ( command.size(  ) == cmd.str.size(  ) || command[ cmd.str.size(  ) ] == ' ' ) )	//	Makes sure compound commands are parsed correctly .e.g bind in "bind up ent_create" could not be triggered by "bindyourmomlol"
 			{
 				std::vector< std::string > args;
 				int start, end = 0;
