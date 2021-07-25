@@ -122,14 +122,14 @@ void renderer_c::init_command_buffers
 
 		for ( auto& model : *models )
 		{
-			model.bind( commandBuffers[ i ], modelLayout, i );
-			model.draw( commandBuffers[ i ] );
+			model->bind( commandBuffers[ i ], modelLayout, i );
+			model->draw( commandBuffers[ i ] );
 		}
 		vkCmdBindPipeline( commandBuffers[ i ], VK_PIPELINE_BIND_POINT_GRAPHICS, spritePipeline );
 		for ( auto& sprite : *sprites )
 		{
-			sprite.bind( commandBuffers[ i ], spriteLayout, i );
-			sprite.draw( commandBuffers[ i ] );
+			sprite->bind( commandBuffers[ i ], spriteLayout, i );
+			sprite->draw( commandBuffers[ i ] );
 		}
 
 		if ( imGuiInitialized )
@@ -311,18 +311,18 @@ void renderer_c::reinit_swap_chain
 				     swapChainExtent );
 	for ( auto& model : *models )
 	{
-		allocator.init_uniform_buffers< ubo_3d_t >( model.uBuffers, model.uBuffersMem, swapChainImages );	//	Please fix this ubo_2d_t shit, I just want easy sprites
+		allocator.init_uniform_buffers< ubo_3d_t >( model->uBuffers, model->uBuffersMem, swapChainImages );	//	Please fix this ubo_2d_t shit, I just want easy sprites
 	}
 	for ( auto& sprite : *sprites )
 	{
-		allocator.init_uniform_buffers< ubo_3d_t >( sprite.uBuffers, sprite.uBuffersMem, swapChainImages );	
+		allocator.init_uniform_buffers< ubo_3d_t >( sprite->uBuffers, sprite->uBuffersMem, swapChainImages );	
 	}
 	allocator.init_desc_pool( descPool, { { { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 2000 }, { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 2000 } } } );
 	for ( auto& model : *models )
 	{
-		allocator.init_desc_sets< ubo_3d_t >( model.descSets,
-						      model.uBuffers,
-						      model.tImageView,
+		allocator.init_desc_sets< ubo_3d_t >( model->descSets,
+						      model->uBuffers,
+						      model->tImageView,
 						      swapChainImages,
 						      descSetLayout,
 						      descPool,
@@ -330,9 +330,9 @@ void renderer_c::reinit_swap_chain
 	}
 	for ( auto& sprite : *sprites )
 	{
-		allocator.init_desc_sets< ubo_2d_t >( sprite.descSets,
-						      sprite.uBuffers,
-						      sprite.tImageView,
+		allocator.init_desc_sets< ubo_2d_t >( sprite->descSets,
+						      sprite->uBuffers,
+						      sprite->tImageView,
 						      swapChainImages,
 						      descSetLayout,
 						      descPool,
@@ -351,16 +351,16 @@ void renderer_c::destroy_swap_chain
 	{
 		for ( int i = 0; i < swapChainImages.size(  ); i++ )
 		{
-			vkDestroyBuffer( device.dev(  ), model.uBuffers[ i ], NULL );
-			vkFreeMemory( device.dev(  ), model.uBuffersMem[ i ], NULL );
+			vkDestroyBuffer( device.dev(  ), model->uBuffers[ i ], NULL );
+			vkFreeMemory( device.dev(  ), model->uBuffersMem[ i ], NULL );
 		}
 	}
 	for ( auto& sprite : *sprites  )
 	{
 		for ( int i = 0; i < swapChainImages.size(  ); i++ )
 		{
-			vkDestroyBuffer( device.dev(  ), sprite.uBuffers[ i ], NULL );
-			vkFreeMemory( device.dev(  ), sprite.uBuffersMem[ i ], NULL );
+			vkDestroyBuffer( device.dev(  ), sprite->uBuffers[ i ], NULL );
+			vkFreeMemory( device.dev(  ), sprite->uBuffersMem[ i ], NULL );
 		}
 	}
 	vkDestroyDescriptorPool( device.dev(  ), descPool, NULL );
@@ -449,7 +449,7 @@ void renderer_c::init_model
 					      descSetLayout,
 					      descPool,
 					      textureSampler );
-	models->push_back( modelData );
+	models->push_back( &modelData );
 	 ;
 }
 
@@ -467,7 +467,7 @@ void renderer_c::init_sprite
 					      descSetLayout,
 					      descPool,
 					      textureSampler );
-	sprites->push_back( spriteData );
+	sprites->push_back( &spriteData );
 	 ;
 
 }
@@ -499,11 +499,11 @@ void renderer_c::draw_frame
 
 	for ( auto& model : *models )
 	{
-		update_uniform_buffers( imageIndex, model );
+		update_uniform_buffers( imageIndex, *model );
 	}
 	for ( auto& sprite : *sprites )
 	{
-		update_sprite_uniform_buffers( imageIndex, sprite );
+		update_sprite_uniform_buffers( imageIndex, *sprite );
 	}
 
 	VkSubmitInfo submitInfo{  };
@@ -564,11 +564,11 @@ void renderer_c::cleanup
 	vkDestroyDescriptorSetLayout( device.dev(  ), descSetLayout, NULL );
 	for ( auto& model : *models )
 	{
-		destroy_renderable< model_data_t >( model );
+		destroy_renderable< model_data_t >( *model );
 	}
 	for ( auto& sprite : *sprites )
 	{
-		destroy_renderable< sprite_data_t >( sprite );
+		destroy_renderable< sprite_data_t >( *sprite );
 	}
 	for ( int i = 0; i < MAX_FRAMES_PROCESSING; i++ )
 	{

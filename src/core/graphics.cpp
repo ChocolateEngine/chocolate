@@ -3,8 +3,8 @@
 #include <cstdlib>
 #include <ctime>
 
-std::vector< model_data_t > graphics_c::modelData;
-std::vector< sprite_data_t > graphics_c::spriteData;
+std::vector< model_data_t* > graphics_c::modelData;
+std::vector< sprite_data_t* > graphics_c::spriteData;
 
 void graphics_c::init_commands
 	(  )

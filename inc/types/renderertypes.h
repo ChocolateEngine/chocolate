@@ -154,7 +154,7 @@ typedef struct
 	alignas( 16 ) glm::vec3 color;
 }push_t;
 
-typedef struct
+typedef struct sprite_data_s
 {
 	VkBuffer vBuffer, iBuffer;
 	VkDeviceMemory vBufferMem, iBufferMem, tImageMem;
@@ -166,7 +166,6 @@ typedef struct
 	uint32_t vCount, iCount;
 
 	float posX, posY;
-
 	void bind
 		( VkCommandBuffer c, VkPipelineLayout p, uint32_t i )
 		{

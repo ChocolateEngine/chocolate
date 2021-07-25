@@ -110,8 +110,8 @@ class renderer_c : public system_c	//	Most of these objects are used to make new
 	void draw_frame
 		(  );
 
-	std::vector< model_data_t >* models;
-	std::vector< sprite_data_t >* sprites;
+	std::vector< model_data_t* >* models;
+	std::vector< sprite_data_t* >* sprites;
 	
 	renderer_c
 		(  );

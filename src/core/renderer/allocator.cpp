@@ -383,7 +383,7 @@ void allocator_c::init_uniform_buffers
 	( std::vector< VkBuffer >& uBuffers, std::vector< VkDeviceMemory >& uBuffersMem, std::vector< VkImage >& swapChainImages )
 {
 	VkDeviceSize bufferSize = sizeof( T );
-
+		
 	uBuffers.resize( swapChainImages.size(  ) );
 	uBuffersMem.resize( swapChainImages.size(  ) );
 

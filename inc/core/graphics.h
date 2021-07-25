@@ -6,13 +6,17 @@
 
 typedef struct
 {
-	uint32_t posX, posY, resX, resY;
+	void translate
+		( float x, float y )
+		{
+			spriteData.posX += x;
+			spriteData.posY += y;
+		}
 	sprite_data_t spriteData;
 }sprite_t;
 
 typedef struct
 {
-	uint32_t posX, posY, posZ;
 	model_data_t modelData;
 }model_t;
 
@@ -22,8 +26,8 @@ class graphics_c : public system_c
 
 	std::vector< sprite_t* > sprites;
 	std::vector< model_t* > models;
-	static std::vector< model_data_t > modelData;
-	static std::vector< sprite_data_t > spriteData;
+	static std::vector< model_data_t* > modelData;
+	static std::vector< sprite_data_t* > spriteData;
 	
 	renderer_c renderer;
 
