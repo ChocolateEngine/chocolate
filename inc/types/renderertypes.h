@@ -164,6 +164,7 @@ typedef struct sprite_data_s
 	std::vector< VkDeviceMemory > uBuffersMem;
 	std::vector< VkDescriptorSet > descSets;
 	uint32_t vCount, iCount;
+	bool noDraw = false;
 
 	float posX, posY;
 	void bind

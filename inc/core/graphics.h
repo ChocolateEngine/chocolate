@@ -6,11 +6,22 @@
 
 typedef struct
 {
+	void set_pos
+		( float x, float y )
+		{
+			spriteData.posX = x;
+			spriteData.posY = y;			
+		}
 	void translate
 		( float x, float y )
 		{
 			spriteData.posX += x;
 			spriteData.posY += y;
+		}
+	void set_visibility
+		( bool visible )
+		{
+			spriteData.noDraw = !visible;
 		}
 	sprite_data_t spriteData;
 }sprite_t;

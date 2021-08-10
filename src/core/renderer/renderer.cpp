@@ -128,8 +128,11 @@ void renderer_c::init_command_buffers
 		vkCmdBindPipeline( commandBuffers[ i ], VK_PIPELINE_BIND_POINT_GRAPHICS, spritePipeline );
 		for ( auto& sprite : *sprites )
 		{
-			sprite->bind( commandBuffers[ i ], spriteLayout, i );
-			sprite->draw( commandBuffers[ i ] );
+			if ( !sprite->noDraw )
+			{
+				sprite->bind( commandBuffers[ i ], spriteLayout, i );
+				sprite->draw( commandBuffers[ i ] );
+			}
 		}
 
 		if ( imGuiInitialized )
