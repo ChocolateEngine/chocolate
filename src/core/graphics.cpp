@@ -100,7 +100,7 @@ graphics_c::graphics_c
 	renderer.init_vulkan(  );
 
 	//load_model( "materials/models/protogen_wip_5_plus_protodal.obj", "materials/textures/red_mat.png"  );
-	load_model( "materials/models/protogen_wip_9.obj", "materials/textures/blue_mat.png" );
+	//load_model( "materials/models/protogen_wip_22/protogen_wip_22.obj", "materials/textures/blue_mat.png" );
 	//load_sprite( "materials/textures/hilde_sprite_upscale.png" );
 	//load_sprite( "materials/textures/blue_mat.png" );
 }
