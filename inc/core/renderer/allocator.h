@@ -41,6 +41,12 @@ class allocator_c
 
 	public:
 
+	std::vector< VkImage >* swapChainImages = NULL;
+	VkRenderPass* renderPass = NULL;
+
+	void init_allocator
+		( std::vector< VkImage >& swapChainImagesIn );
+
 	void init_image_view
 		( VkImageView& imageView, VkImage image, VkFormat format, VkImageAspectFlags aspectFlags );
 	void init_image
@@ -52,8 +58,6 @@ class allocator_c
 		  VkMemoryPropertyFlags properties,
 		  VkImage& image,
 		  VkDeviceMemory& imageMemory );
-	void init_font_image
-		( VkImage& fImage, unsigned char* fontMem, int width, int height );
 	void init_texture_image
 		( const std::string& imagePath, VkImage& tImage, VkDeviceMemory& tImageMem );
 	void init_texture_image_view
@@ -66,30 +70,26 @@ class allocator_c
 		( std::vector< uint32_t >& i, VkBuffer& iBuffer, VkDeviceMemory& iBufferMem );
 	template< typename T >
         void init_uniform_buffers
-		( std::vector< VkBuffer >& uBuffers, std::vector< VkDeviceMemory >& uBuffersMem, std::vector< VkImage >& swapChainImages );
-	template< typename T >
+		( std::vector< VkBuffer >& uBuffers, std::vector< VkDeviceMemory >& uBuffersMem );
 	void init_desc_sets
 		( std::vector< VkDescriptorSet >& descSets,
-		  std::vector< VkBuffer >& uBuffers,
-		  VkImageView tImageView,
-		  std::vector< VkImage >& swapChainImages,
 		  VkDescriptorSetLayout& descSetLayout,
-		  VkDescriptorPool descPool,
-		  VkSampler textureSampler );
+		  VkDescriptorPool& descPool,
+		  const std::vector< combined_image_info_t >& descImageInfos   = std::vector< combined_image_info_t >(  ),
+		  const std::vector< combined_buffer_info_t >& descBufferInfos = std::vector< combined_buffer_info_t >(  ) );
 	
 	void init_image_views
-		( std::vector< VkImage >& swapChainImages, std::vector< VkImageView >& swapChainImageViews, VkFormat& swapChainImageFormat );
+		( std::vector< VkImageView >& swapChainImageViews, VkFormat& swapChainImageFormat );
 	void init_render_pass
 		( VkRenderPass& renderPass, VkFormat& swapChainImageFormat );
 	void init_desc_set_layout
-		( VkDescriptorSetLayout& descSetLayout );
+		( VkDescriptorSetLayout& descSetLayout, const std::vector< desc_set_layout_t >& bindings = std::vector< desc_set_layout_t >(  ) );
 	template< typename T >
 	void init_graphics_pipeline
 		( VkPipeline& pipeline,
 	  	  VkPipelineLayout& layout,
 	  	  VkExtent2D& swapChainExtent,
 	  	  VkDescriptorSetLayout& descSetLayout,
-	  	  VkRenderPass& renderPass,
 	  	  const std::string& vertShader,
 	  	  const std::string& fragShader );
 	void init_depth_resources
@@ -98,18 +98,16 @@ class allocator_c
 		( std::vector<VkFramebuffer>& swapChainFramebuffers,
 		  std::vector<VkImageView>& swapChainImageViews,
 		  VkImageView& depthImageView,
-		  VkRenderPass& renderPass,
 		  VkExtent2D& swapChainExtent );
 	void init_desc_pool	//	please for the love of god, change this
 		( VkDescriptorPool& descPool, std::vector< VkDescriptorPoolSize > poolSizes );
 	void init_imgui_pool
-		( SDL_Window* window, VkRenderPass& renderPass );
+		( SDL_Window* window );
 	void init_sync
 		( std::vector< VkSemaphore >& imageAvailableSemaphores,
 		  std::vector< VkSemaphore >& renderFinishedSemaphores,
 		  std::vector< VkFence >& inFlightFences,
-		  std::vector< VkFence >& imagesInFlight,
-		  std::vector<VkImage>& swapChainImages );
+		  std::vector< VkFence >& imagesInFlight );
 
 	void free_resources
 		(  );
