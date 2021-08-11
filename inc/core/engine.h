@@ -16,7 +16,8 @@ class engine_c : public system_c
 	std::vector< system_c* > systems;
 	std::vector< void* > dlHandles;
 	
-	std::vector< system_c* > ( *game_init )(  ) = NULL;
+	// std::vector< system_c* > ( *game_init )(  ) = NULL;
+	void ( *game_init )( std::vector< system_c* > & ) = NULL;
 
 	template< typename T >
 	void add_system

@@ -1,0 +1,4 @@
+[submodule "qpc"]
+	path = qpc
+	url = https://github.com/quiverteam/QuiverProjectCreator.git
+	branch = rename

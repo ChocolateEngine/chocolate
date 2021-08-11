@@ -10,46 +10,46 @@
 #include <optional>
 #include <vector>
 
-typedef struct
+struct queue_family_indices_t
 {
-        int presentFamily = -1, graphicsFamily = -1; // make this not use optional pls
+	int presentFamily = -1, graphicsFamily = -1; // make this not use optional pls
 	bool complete (  ) { return ( presentFamily > -1 ) && ( graphicsFamily > -1 ); }
-}queue_family_indices_t;
+};
 
-typedef struct
+struct swap_chain_support_info_t
 {
 	VkSurfaceCapabilitiesKHR 		c;	//	capabilities
 	std::vector< VkSurfaceFormatKHR > 	f;	//	formats
 	std::vector< VkPresentModeKHR > 	p;	//	present modes
-}swap_chain_support_info_t;
+};
 
-typedef struct
+struct combined_buffer_info_t
 {
 	VkDescriptorType type;
 	std::vector< VkBuffer >& buffer;
 	unsigned int range;
-}combined_buffer_info_t;
+};
 
-typedef struct
+struct combined_image_info_t
 {
 	VkDescriptorImageInfo imageInfo;
 	VkDescriptorType type;
-}combined_image_info_t;
+};
 
-typedef struct
+struct desc_set_layout_t
 {
 	VkDescriptorType descriptorType;
 	unsigned int descriptorCount;
 	VkShaderStageFlags stageFlags;
 	const VkSampler* pImmutableSamplers;
-}desc_set_layout_t;
+};
 
-typedef struct
+struct push_constant_t
 {
 	glm::vec2 scale, translate;
-}push_constant_t;
+};
 
-typedef struct vertex_3d_s
+struct vertex_3d_t
 {
 	glm::vec3 pos;
 	glm::vec3 color;
@@ -60,7 +60,7 @@ typedef struct vertex_3d_s
 	{
 		VkVertexInputBindingDescription bindingDescription{};
 		bindingDescription.binding = 0;
-		bindingDescription.stride = sizeof( vertex_3d_s );
+		bindingDescription.stride = sizeof( vertex_3d_t );
 		bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
 
 		return bindingDescription;
@@ -73,27 +73,27 @@ typedef struct vertex_3d_s
 		attributeDescriptions[ 0 ].binding  = 0;
 		attributeDescriptions[ 0 ].location = 0;
 		attributeDescriptions[ 0 ].format   = VK_FORMAT_R32G32B32_SFLOAT;
-		attributeDescriptions[ 0 ].offset   = offsetof( vertex_3d_s, pos );
+		attributeDescriptions[ 0 ].offset   = offsetof( vertex_3d_t, pos );
 
 		attributeDescriptions[ 1 ].binding  = 0;
 		attributeDescriptions[ 1 ].location = 1;
 		attributeDescriptions[ 1 ].format   = VK_FORMAT_R32G32B32_SFLOAT;
-		attributeDescriptions[ 1 ].offset   = offsetof( vertex_3d_s, color );
+		attributeDescriptions[ 1 ].offset   = offsetof( vertex_3d_t, color );
 
 		attributeDescriptions[ 2 ].binding  = 0;
 		attributeDescriptions[ 2 ].location = 2;
 		attributeDescriptions[ 2 ].format   = VK_FORMAT_R32G32_SFLOAT;
-		attributeDescriptions[ 2 ].offset   = offsetof( vertex_3d_s, texCoord );
+		attributeDescriptions[ 2 ].offset   = offsetof( vertex_3d_t, texCoord );
 
 		return attributeDescriptions;
 	}
-	bool operator==( const vertex_3d_s& other ) const
+	bool operator==( const vertex_3d_t& other ) const
 	{
 		return pos == other.pos && color == other.color && texCoord == other.texCoord;
 	}
-}vertex_3d_t;
+};
 
-typedef struct vertex_2d_s
+struct vertex_2d_t
 {
 	glm::vec2 pos;
 	glm::vec3 color;
@@ -104,7 +104,7 @@ typedef struct vertex_2d_s
 	{
 		VkVertexInputBindingDescription bindingDescription{};
 		bindingDescription.binding = 0;
-		bindingDescription.stride = sizeof( vertex_2d_s );
+		bindingDescription.stride = sizeof( vertex_2d_t );
 		bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
 
 		return bindingDescription;
@@ -117,25 +117,25 @@ typedef struct vertex_2d_s
 		attributeDescriptions[ 0 ].binding  = 0;
 		attributeDescriptions[ 0 ].location = 0;
 		attributeDescriptions[ 0 ].format   = VK_FORMAT_R32G32B32_SFLOAT;
-		attributeDescriptions[ 0 ].offset   = offsetof( vertex_2d_s, pos );
+		attributeDescriptions[ 0 ].offset   = offsetof( vertex_2d_t, pos );
 
 		attributeDescriptions[ 1 ].binding  = 0;
 		attributeDescriptions[ 1 ].location = 1;
 		attributeDescriptions[ 1 ].format   = VK_FORMAT_R32G32B32_SFLOAT;
-		attributeDescriptions[ 1 ].offset   = offsetof( vertex_2d_s, color );
+		attributeDescriptions[ 1 ].offset   = offsetof( vertex_2d_t, color );
 
 		attributeDescriptions[ 2 ].binding  = 0;
 		attributeDescriptions[ 2 ].location = 2;
 		attributeDescriptions[ 2 ].format   = VK_FORMAT_R32G32_SFLOAT;
-		attributeDescriptions[ 2 ].offset   = offsetof( vertex_2d_s, texCoord );
+		attributeDescriptions[ 2 ].offset   = offsetof( vertex_2d_t, texCoord );
 
 		return attributeDescriptions;
 	}
-	bool operator==( const vertex_2d_s& other ) const
+	bool operator==( const vertex_2d_t& other ) const
 	{
 		return pos == other.pos && color == other.color && texCoord == other.texCoord;
 	}
-}vertex_2d_t;
+};
 
 namespace std
 {
@@ -159,17 +159,17 @@ namespace std
 	};
 }
 
-typedef struct
+struct ubo_3d_t
 {
 	glm::mat4 model, view, proj;
-}ubo_3d_t;
+};
 
-typedef struct
+struct ubo_2d_t
 {
 	glm::vec2 extent;
-}ubo_2d_t;
+};
 
-typedef struct sprite_data_s
+struct sprite_data_t
 {
 	VkBuffer vBuffer, iBuffer;
 	VkDeviceMemory vBufferMem, iBufferMem, tImageMem;
@@ -196,9 +196,9 @@ typedef struct sprite_data_s
 		{
 			vkCmdDrawIndexed( c, iCount, 1, 0, 0, 0 );
 		}
-}sprite_data_t;
+};
 
-typedef struct
+struct model_data_t
 {
 	VkBuffer vBuffer, iBuffer;
 	VkDeviceMemory vBufferMem, iBufferMem, tImageMem;
@@ -225,6 +225,6 @@ typedef struct
 		{
 			vkCmdDrawIndexed( c, iCount, 1, 0, 0, 0 );
 		}
-}model_data_t;
+};
 
 #endif

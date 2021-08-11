@@ -4,7 +4,7 @@
 #include "../shared/system.h"
 #include "renderer/renderer.h"
 
-typedef struct
+struct sprite_t
 {
 	void set_pos
 		( float x, float y )
@@ -24,12 +24,12 @@ typedef struct
 			spriteData.noDraw = !visible;
 		}
 	sprite_data_t spriteData;
-}sprite_t;
+};
 
-typedef struct
+struct model_t
 {
 	model_data_t modelData;
-}model_t;
+};
 
 class graphics_c : public system_c
 {
