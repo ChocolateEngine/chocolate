@@ -1,4 +1,5 @@
 #include "../../../inc/core/renderer/allocator.h"
+#include "../../../inc/core/renderer/initializers.h"
 
 #define STB_IMAGE_IMPLEMENTATION
 
@@ -254,21 +255,6 @@ void allocator_c::init_image
 	vkBindImageMemory( dev->dev(  ), image, imageMemory, 0 );
 }
 
-void allocator_c::init_font_image
-	( VkImage& fImage, unsigned char* fontMem, int width, int height )
-{
-	VkBuffer stagingBuffer;
-	VkDeviceMemory stagingBufferMem;
-	VkDeviceSize fontSize = width * height * 4;
-	init_buffer( fontSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer, stagingBufferMem );
-	map_memory( stagingBufferMem, fontSize, fontMem );
-	transition_image_layout( fImage, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL );
-	copy_buffer_to_img( stagingBuffer, fImage, width, height );
-	transition_image_layout( fImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
-	vkDestroyBuffer( dev->dev(  ), stagingBuffer, NULL );
-	vkFreeMemory( dev->dev(  ), stagingBufferMem, NULL );
-}
-
 void allocator_c::init_texture_image
 	( const std::string& imagePath, VkImage& tImage, VkDeviceMemory& tImageMem )
 {
@@ -380,14 +366,14 @@ void allocator_c::init_index_buffer
 
 template< typename T >
 void allocator_c::init_uniform_buffers
-	( std::vector< VkBuffer >& uBuffers, std::vector< VkDeviceMemory >& uBuffersMem, std::vector< VkImage >& swapChainImages )
+	( std::vector< VkBuffer >& uBuffers, std::vector< VkDeviceMemory >& uBuffersMem )
 {
 	VkDeviceSize bufferSize = sizeof( T );
 		
-	uBuffers.resize( swapChainImages.size(  ) );
-	uBuffersMem.resize( swapChainImages.size(  ) );
+	uBuffers.resize( swapChainImages->size(  ) );
+	uBuffersMem.resize( swapChainImages->size(  ) );
 
-	for ( int i = 0; i < swapChainImages.size(  ); i++ ) {
+	for ( int i = 0; i < swapChainImages->size(  ); i++ ) {
 		init_buffer( bufferSize,
 			     VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
 			     VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
@@ -396,69 +382,67 @@ void allocator_c::init_uniform_buffers
 	}
 }
 
-template< typename T >
 void allocator_c::init_desc_sets
 	( std::vector< VkDescriptorSet >& descSets,
-	  std::vector< VkBuffer >& uBuffers,
-	  VkImageView tImageView,
-	  std::vector< VkImage >& swapChainImages,
 	  VkDescriptorSetLayout& descSetLayout,
-	  VkDescriptorPool descPool,
-	  VkSampler textureSampler )
+	  VkDescriptorPool& descPool,
+	  const std::vector< combined_image_info_t >& descImageInfos,
+	  const std::vector< combined_buffer_info_t >& descBufferInfos )
 {
-	std::vector< VkDescriptorSetLayout > layouts( swapChainImages.size(  ), descSetLayout );
+	std::vector< VkDescriptorSetLayout > layouts( swapChainImages->size(  ), descSetLayout );
 	VkDescriptorSetAllocateInfo allocInfo{  };
 	allocInfo.sType 		= VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
 	allocInfo.descriptorPool 	= descPool;
-	allocInfo.descriptorSetCount 	= ( uint32_t )swapChainImages.size(  );
+	allocInfo.descriptorSetCount 	= ( uint32_t )swapChainImages->size(  );
 	allocInfo.pSetLayouts 		= layouts.data(  );
 
-	descSets.resize( swapChainImages.size(  ) );
+	descSets.resize( swapChainImages->size(  ) );
 	if ( vkAllocateDescriptorSets( dev->dev(  ), &allocInfo, descSets.data(  ) ) != VK_SUCCESS )
 	{
 		throw std::runtime_error( "Failed to allocate descriptor sets!" );
 	}
 
-	for ( int i = 0; i < swapChainImages.size(  ); i++ )
+	for ( int i = 0; i < swapChainImages->size(  ); i++ )
 	{
-		VkDescriptorBufferInfo bufferInfo{  };
-		bufferInfo.buffer = uBuffers[ i ];
-		bufferInfo.offset = 0;
-	        bufferInfo.range  = sizeof( T );
-
-		VkDescriptorImageInfo imageInfo{  };
-		imageInfo.imageLayout   = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-		imageInfo.imageView 	= tImageView;
-		imageInfo.sampler 	= textureSampler;
-
-		std::array< VkWriteDescriptorSet, 2 > descriptorWrites{  };
-		descriptorWrites[ 0 ].sType 		 = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-		descriptorWrites[ 0 ].dstSet 		 = descSets[ i ];
-		descriptorWrites[ 0 ].dstBinding 	 = 0;
-		descriptorWrites[ 0 ].dstArrayElement  	 = 0;
-		descriptorWrites[ 0 ].descriptorType   	 = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-		descriptorWrites[ 0 ].descriptorCount  	 = 1;
-		descriptorWrites[ 0 ].pBufferInfo 	 = &bufferInfo;
-
-		descriptorWrites[ 1 ].sType 		= VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-		descriptorWrites[ 1 ].dstSet 		= descSets[ i ];
-		descriptorWrites[ 1 ].dstBinding 	= 1;
-		descriptorWrites[ 1 ].dstArrayElement 	= 0;
-		descriptorWrites[ 1 ].descriptorType 	= VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		descriptorWrites[ 1 ].descriptorCount	= 1;
-		descriptorWrites[ 1 ].pImageInfo 	= &imageInfo;
-
+		std::vector< VkWriteDescriptorSet > descriptorWrites{  };
+		int j = 0;
+		for ( ; j < descBufferInfos.size(  ); ++j )
+		{
+			auto buffer = desc_buffer( descBufferInfos[ j ].buffer, descBufferInfos[ j ].range, 0, i );
+			
+			VkWriteDescriptorSet descriptorWrite{  };
+			descriptorWrite.sType		= VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+			descriptorWrite.dstSet		= descSets[ i ];
+			descriptorWrite.dstBinding	= j;
+			descriptorWrite.dstArrayElement = 0;
+			descriptorWrite.descriptorType  = descBufferInfos[ j ].type;
+			descriptorWrite.descriptorCount = 1;
+			descriptorWrite.pBufferInfo	= &buffer;
+			descriptorWrites.push_back( descriptorWrite );
+		}
+		for ( int k = j; k < descImageInfos.size(  ) + j; ++k )
+		{
+			VkWriteDescriptorSet descriptorWrite{  };
+			descriptorWrite.sType		= VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+			descriptorWrite.dstSet		= descSets[ i ];
+			descriptorWrite.dstBinding	= k;
+			descriptorWrite.dstArrayElement = 0;
+			descriptorWrite.descriptorType  = descImageInfos[ k ].type;
+			descriptorWrite.descriptorCount = 1;
+			descriptorWrite.pImageInfo	= &descImageInfos[ k ].imageInfo;
+			descriptorWrites.push_back( descriptorWrite );
+		}
 		vkUpdateDescriptorSets( dev->dev(  ), ( uint32_t )descriptorWrites.size(  ), descriptorWrites.data(  ), 0, NULL );
 	}
 }
 
 void allocator_c::init_image_views
-	( std::vector< VkImage >& swapChainImages, std::vector< VkImageView >& swapChainImageViews, VkFormat& swapChainImageFormat )
+	( std::vector< VkImageView >& swapChainImageViews, VkFormat& swapChainImageFormat )
 {
-	swapChainImageViews.resize( swapChainImages.size(  ) );
-	for ( int i = 0; i < swapChainImages.size(  ); i++ )
+	swapChainImageViews.resize( swapChainImages->size(  ) );
+	for ( int i = 0; i < swapChainImages->size(  ); i++ )
 	{
-		init_image_view( swapChainImageViews[ i ], swapChainImages[ i ], swapChainImageFormat, VK_IMAGE_ASPECT_COLOR_BIT );
+		init_image_view( swapChainImageViews[ i ], swapChainImages->at( i ), swapChainImageFormat, VK_IMAGE_ASPECT_COLOR_BIT );
 	}
 }
 
@@ -524,27 +508,24 @@ void allocator_c::init_render_pass
 }
 
 void allocator_c::init_desc_set_layout
-	( VkDescriptorSetLayout& descSetLayout )
+	( VkDescriptorSetLayout& descSetLayout, const std::vector< desc_set_layout_t >& bindings )
 {
-	VkDescriptorSetLayoutBinding uboLayoutBinding{  };
-	uboLayoutBinding.binding 		= 0;
-	uboLayoutBinding.descriptorType 	= VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-	uboLayoutBinding.descriptorCount 	= 1;
-	uboLayoutBinding.stageFlags 		= VK_SHADER_STAGE_VERTEX_BIT;
-	uboLayoutBinding.pImmutableSamplers 	= NULL; // Optional
+	int i = -1;
+	std::vector< VkDescriptorSetLayoutBinding > layoutBindings;
+	for ( auto&& binding : bindings )
+	{
+		auto layoutBinding = layout_binding( binding.descriptorType,
+					  binding.descriptorCount,
+					  binding.stageFlags,
+					  binding.pImmutableSamplers );
+	        layoutBinding.binding = ++i;
+		layoutBindings.push_back( layoutBinding );
+	}
 
-	VkDescriptorSetLayoutBinding samplerLayoutBinding{  };
-	samplerLayoutBinding.binding 		= 1;
-	samplerLayoutBinding.descriptorCount 	= 1;
-	samplerLayoutBinding.descriptorType 	= VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-	samplerLayoutBinding.pImmutableSamplers = NULL;
-	samplerLayoutBinding.stageFlags 	= VK_SHADER_STAGE_FRAGMENT_BIT;
-
-	std::array< VkDescriptorSetLayoutBinding, 2 > bindings = { uboLayoutBinding, samplerLayoutBinding };
 	VkDescriptorSetLayoutCreateInfo layoutInfo{  };
 	layoutInfo.sType 			= VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-	layoutInfo.bindingCount 		= ( uint32_t )bindings.size(  );
-	layoutInfo.pBindings 			= bindings.data(  );
+	layoutInfo.bindingCount 		= ( uint32_t )layoutBindings.size(  );
+	layoutInfo.pBindings 			= layoutBindings.data(  );
 
 	if ( vkCreateDescriptorSetLayout( dev->dev(  ), &layoutInfo, NULL, &descSetLayout ) != VK_SUCCESS )
 	{
@@ -558,7 +539,6 @@ void allocator_c::init_graphics_pipeline
 	  VkPipelineLayout& layout,
 	  VkExtent2D& swapChainExtent,
 	  VkDescriptorSetLayout& descSetLayout,
-	  VkRenderPass& renderPass,
 	  const std::string& vertShader,
 	  const std::string& fragShader )
 {
@@ -591,6 +571,12 @@ void allocator_c::init_graphics_pipeline
 	vertexInputInfo.pVertexBindingDescriptions 	= &bindingDescription;			//	Contains details for loading vertex data
 	vertexInputInfo.vertexAttributeDescriptionCount = ( uint32_t )( attributeDescriptions.size(  ) );
 	vertexInputInfo.pVertexAttributeDescriptions 	= attributeDescriptions.data(  );	//	Same as above
+
+	VkPushConstantRange pushConstantRange{  };
+	pushConstantRange.stageFlags 	= VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
+	pushConstantRange.offset     	= 0;
+	pushConstantRange.size 		= sizeof( push_constant_t );
+	
 
 	VkPipelineInputAssemblyStateCreateInfo inputAssembly{  };	//	Collects raw vertex data from buffers
 	inputAssembly.sType 			= VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
@@ -685,6 +671,8 @@ void allocator_c::init_graphics_pipeline
 	pipelineLayoutInfo.sType 			= VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
 	pipelineLayoutInfo.setLayoutCount 		= 1; // Optional
 	pipelineLayoutInfo.pSetLayouts 			= &descSetLayout; // Optional
+	pipelineLayoutInfo.pushConstantRangeCount 	= 1;
+	pipelineLayoutInfo.pPushConstantRanges		= &pushConstantRange;
 
 	if ( vkCreatePipelineLayout( dev->dev(  ), &pipelineLayoutInfo, NULL, &layout ) != VK_SUCCESS )
 	{
@@ -703,7 +691,7 @@ void allocator_c::init_graphics_pipeline
 	pipelineInfo.pColorBlendState 		= &colorBlending;
 	pipelineInfo.pDynamicState 		= NULL; // Optional
 	pipelineInfo.layout 			= layout;
-	pipelineInfo.renderPass 		= renderPass;
+	pipelineInfo.renderPass 		= *renderPass;
 	pipelineInfo.subpass 			= 0;
 	pipelineInfo.basePipelineHandle 	= VK_NULL_HANDLE; // Optional, very important for later when making new pipelines. It is less expensive to reference an existing similar pipeline
 	pipelineInfo.basePipelineIndex 		= -1; // Optional
@@ -736,10 +724,9 @@ void allocator_c::init_depth_resources
 }
 
 void allocator_c::init_frame_buffer
-	( std::vector<VkFramebuffer>& swapChainFramebuffers,
-	  std::vector<VkImageView>& swapChainImageViews,
+	( std::vector< VkFramebuffer >& swapChainFramebuffers,
+	  std::vector< VkImageView >& swapChainImageViews,
 	  VkImageView& depthImageView,
-	  VkRenderPass& renderPass,
 	  VkExtent2D& swapChainExtent )
 {
 	swapChainFramebuffers.resize( swapChainImageViews.size(  ) );
@@ -752,7 +739,7 @@ void allocator_c::init_frame_buffer
 
 		VkFramebufferCreateInfo framebufferInfo{  };
 		framebufferInfo.sType 		= VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-		framebufferInfo.renderPass 	= renderPass;
+		framebufferInfo.renderPass 	= *renderPass;
 		framebufferInfo.attachmentCount = ( uint32_t )attachments.size(  );
 		framebufferInfo.pAttachments 	= attachments.data(  );
 		framebufferInfo.width 		= swapChainExtent.width;
@@ -782,7 +769,7 @@ void allocator_c::init_desc_pool	//	please for the love of god, change this
 }
 
 void allocator_c::init_imgui_pool
-	( SDL_Window* window, VkRenderPass& renderPass )
+	( SDL_Window* window )
 {
 	std::array< VkDescriptorPoolSize, 11 > poolSizes
 	{
@@ -829,7 +816,7 @@ void allocator_c::init_imgui_pool
 	initInfo.ImageCount 	= 3;
 	initInfo.MSAASamples 	= VK_SAMPLE_COUNT_1_BIT;
 
-	ImGui_ImplVulkan_Init( &initInfo, renderPass );
+	ImGui_ImplVulkan_Init( &initInfo, *renderPass );
 
 	submit( [ & ]( VkCommandBuffer c ){ ImGui_ImplVulkan_CreateFontsTexture( c ); } );
 
@@ -842,13 +829,12 @@ void allocator_c::init_sync
 	( std::vector< VkSemaphore >& imageAvailableSemaphores,
 	  std::vector< VkSemaphore >& renderFinishedSemaphores,
 	  std::vector< VkFence >& inFlightFences,
-	  std::vector< VkFence >& imagesInFlight,
-	  std::vector<VkImage>& swapChainImages  )
+	  std::vector< VkFence >& imagesInFlight )
 {
 	imageAvailableSemaphores.resize( MAX_FRAMES_PROCESSING );
 	renderFinishedSemaphores.resize( MAX_FRAMES_PROCESSING );
 	inFlightFences.resize( MAX_FRAMES_PROCESSING );
-	imagesInFlight.resize( swapChainImages.size(  ), VK_NULL_HANDLE );
+	imagesInFlight.resize( swapChainImages->size(  ), VK_NULL_HANDLE );
 	
 	VkSemaphoreCreateInfo semaphoreInfo{  };
 	semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
@@ -888,33 +874,17 @@ allocator_c::~allocator_c
 
 template void allocator_c::init_vertex_buffer< vertex_2d_t >( const std::vector< vertex_2d_t >&, VkBuffer&, VkDeviceMemory& );
 template void allocator_c::init_vertex_buffer< vertex_3d_t >( const std::vector< vertex_3d_t >&, VkBuffer&, VkDeviceMemory& );
-template void allocator_c::init_uniform_buffers< ubo_2d_t >( std::vector< VkBuffer >&, std::vector< VkDeviceMemory >&, std::vector< VkImage >& );
-template void allocator_c::init_uniform_buffers< ubo_3d_t >( std::vector< VkBuffer >&, std::vector< VkDeviceMemory >&, std::vector< VkImage >& );
-template void allocator_c::init_desc_sets< ubo_2d_t >( std::vector< VkDescriptorSet >&,
-						       std::vector< VkBuffer >&,
-						       VkImageView tImageView,
-						       std::vector< VkImage >&,
-						       VkDescriptorSetLayout&,
-						       VkDescriptorPool,
-						       VkSampler );
-template void allocator_c::init_desc_sets< ubo_3d_t >( std::vector< VkDescriptorSet >&,
-						       std::vector< VkBuffer >&,
-						       VkImageView tImageView,
-						       std::vector< VkImage >&,
-						       VkDescriptorSetLayout&,
-						       VkDescriptorPool,
-						       VkSampler );
+template void allocator_c::init_uniform_buffers< ubo_2d_t >( std::vector< VkBuffer >&, std::vector< VkDeviceMemory >& );
+template void allocator_c::init_uniform_buffers< ubo_3d_t >( std::vector< VkBuffer >&, std::vector< VkDeviceMemory >& );
 template void allocator_c::init_graphics_pipeline< vertex_2d_t >( VkPipeline&,
 								  VkPipelineLayout&,
 								  VkExtent2D&,
 								  VkDescriptorSetLayout&,
-								  VkRenderPass&,
 								  const std::string&,
 								  const std::string&  );
 template void allocator_c::init_graphics_pipeline< vertex_3d_t >( VkPipeline&,
 								  VkPipelineLayout&,
 								  VkExtent2D&,
 								  VkDescriptorSetLayout&,
-								  VkRenderPass&,
 								  const std::string&,
 								  const std::string&  );

@@ -41,7 +41,8 @@ class renderer_c : public system_c	//	Most of these objects are used to make new
 	VkExtent2D swapChainExtent;
 	VkRenderPass renderPass;					//	Stores framebuffer attachments that will be used for rendering
 
-	VkDescriptorSetLayout descSetLayout;
+	VkDescriptorSetLayout modelSetLayout;
+	VkDescriptorSetLayout spriteSetLayout;
 	VkDescriptorPool descPool;
 
 	VkImageView textureImageView;

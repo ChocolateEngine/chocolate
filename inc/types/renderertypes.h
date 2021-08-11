@@ -25,6 +25,27 @@ typedef struct
 
 typedef struct
 {
+	VkDescriptorType type;
+	std::vector< VkBuffer >& buffer;
+	unsigned int range;
+}combined_buffer_info_t;
+
+typedef struct
+{
+	VkDescriptorImageInfo imageInfo;
+	VkDescriptorType type;
+}combined_image_info_t;
+
+typedef struct
+{
+	VkDescriptorType descriptorType;
+	unsigned int descriptorCount;
+	VkShaderStageFlags stageFlags;
+	const VkSampler* pImmutableSamplers;
+}desc_set_layout_t;
+
+typedef struct
+{
 	glm::vec2 scale, translate;
 }push_constant_t;
 
@@ -145,14 +166,8 @@ typedef struct
 
 typedef struct
 {
-	glm::mat4 pos;
+	glm::vec2 extent;
 }ubo_2d_t;
-
-typedef struct
-{
-	glm::vec2 offset;
-	alignas( 16 ) glm::vec3 color;
-}push_t;
 
 typedef struct sprite_data_s
 {
