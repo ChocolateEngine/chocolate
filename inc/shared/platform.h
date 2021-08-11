@@ -24,6 +24,7 @@
 	#include <dlfcn.h>
 
 	#define LOAD_LIBRARY(path) dlopen(path, RTLD_LAZY)
+	#define CLOSE_LIBRARY(handle) dlclose(handle)
 	#define GET_ERROR() dlerror()
 	#define LOAD_FUNC dlsym
 	#define EXT_DLL ".so"
