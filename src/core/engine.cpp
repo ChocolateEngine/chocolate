@@ -1,6 +1,6 @@
 #include "../../inc/core/engine.h"
+#include "../../inc/shared/platform.h"
 
-#include <dlfcn.h>
 
 template< typename T >
 void engine_c::add_system
@@ -12,7 +12,9 @@ void engine_c::add_system
 void engine_c::add_game_systems
 	(  )
 {
-	std::vector< system_c* > gameSystems = game_init(  );
+	// std::vector< system_c* > gameSystems = game_init(  );
+	std::vector< system_c* > gameSystems;
+	game_init( gameSystems );
 	for ( const auto& sys : gameSystems )
 	{
 		sys->add_flag( EXTERNAL_SYSTEM );
@@ -40,20 +42,20 @@ void engine_c::init_commands
 void engine_c::load_object
 	( const std::string& dlPath, const std::string& entry )
 {
-	void* handle = NULL;
+	Module handle = NULL;
 
-	handle = dlopen( dlPath.c_str(  ), RTLD_LAZY );
+	handle = LOAD_LIBRARY( dlPath.c_str(  ) );
 	if ( !handle )
 	{
-		fprintf( stderr, "Error: %s\n", dlerror(  ) );
+		fprintf( stderr, "Error: %s\n", GET_ERROR() );
 		throw std::runtime_error( "Unable to load shared librarys!" );
 	}
 
-	*( void** )( &game_init ) = dlsym( handle, entry.c_str(  ) );
+	*( void** )( &game_init ) = LOAD_FUNC( handle, entry.c_str(  ) );
 	if ( !game_init )
 	{
-		printf( "%s\n", dlerror() );
-		dlclose( handle );
+		printf( "%s\n", GET_ERROR() );
+		CLOSE_LIBRARY( handle );
 		throw std::runtime_error( "Unable to link library's entry point!" );
 	}
 	dlHandles.push_back( handle );	//	ew
@@ -68,7 +70,7 @@ void engine_c::engine_main
 	this->msgs = &msgs;
 	this->console = &console;
 
-	load_object( "bin/client.so", "game_init" );	//	fix please or else i will yell at myself later for this being shit
+	load_object( "bin/client" EXT_DLL, "game_init" );	//	fix please or else i will yell at myself later for this being shit
 	init_systems(  );
 	add_game_systems(  );
 
@@ -127,6 +129,6 @@ engine_c::~engine_c
 	}
 	for ( const auto& handle : dlHandles )
 	{
-		dlclose( handle );
+		CLOSE_LIBRARY( (Module)handle );
 	}
 }

@@ -1,0 +1,76 @@
+// ---------------------------------------------------------------
+// Project Script for Quiver Project Creator C++
+// ---------------------------------------------------------------
+
+// i probably need to split this into a dll, idk
+	
+macro PROJECT_NAME "Chocolate"
+macro OUT_NAME "engine"
+
+include "base/core.qpc"
+
+config
+{
+	general
+	{
+		config_type "dynamic_lib"
+	}
+	
+	compile
+	{
+		inc_dirs
+		{
+			"../lib/io"
+			"../inc"
+			"../inc/core"
+			"../inc/imgui"
+			"../inc/shared"
+			"../inc/types"
+			
+			"../inc/SDL2"
+			// "../inc/steamaudio"
+		}
+		
+		defines
+		{
+			// "SDL_MIXER=1"
+		}
+	}
+
+	link
+	{
+		// import_lib "$BUILD_DIR$/qpc$EXT_LIB$"
+		lib_dirs
+		{
+			"$VK_DIR$/Lib"
+			"../lib"
+		}
+		
+		libs
+		{
+			"SDL2" "vulkan-1" [$WINDOWS$]
+			
+			// -lSDL2 -lvulkan -ldl -lpthread -lX11 -lXxf86vm -lXrandr -lXi -lSDL2_mixer [$LINUX$]
+			SDL2 vulkan dl pthread X11 Xxf86vm Xrandr Xi [$LINUX$]
+			
+			// "dl" [$LINUX$]
+			// "stdc++fs" [$LINUX$]
+		}
+	}
+}
+
+
+files
+{
+	"../src/shared/*.cpp"
+	"../src/imgui/*.cpp"
+	"../src/core/*.cpp"
+	"../src/core/renderer/*.cpp"
+	
+	"../inc/types/*.h"
+	"../inc/shared/*.h"
+	"../inc/imgui/*.h"
+	"../inc/core/*.h"
+	"../inc/core/renderer/*.h"
+}
+

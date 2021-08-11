@@ -208,7 +208,7 @@ void device_c::init_logical_device
 	queue_family_indices_t indices = find_queue_families( physicalDevice );
 
 	std::vector< VkDeviceQueueCreateInfo > queueCreateInfos;
-	std::set< uint32_t > uniqueQueueFamilies = { indices.graphicsFamily, indices.presentFamily };
+	std::set< uint32_t > uniqueQueueFamilies = { (uint32_t)indices.graphicsFamily, (uint32_t)indices.presentFamily };
 
 	float queuePriority = 1.0f;
 	for ( uint32_t queueFamily : uniqueQueueFamilies )
@@ -489,7 +489,7 @@ void device_c::init_swap_chain
 	createInfo.imageUsage		= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 
         queue_family_indices_t indices 	= find_queue_families( physicalDevice );
-	uint32_t queueFamilyIndices[  ] = { indices.graphicsFamily, indices.presentFamily };
+	uint32_t queueFamilyIndices[  ] = { (uint32_t)indices.graphicsFamily, (uint32_t)indices.presentFamily };
 
 	if ( indices.graphicsFamily != indices.presentFamily )
 	{
