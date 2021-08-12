@@ -8,6 +8,9 @@
 #include <vector>
 #include <functional>
 
+#define NO_CULLING 1 << 0
+#define NO_DEPTH   1 << 1
+
 class allocator_c
 {
 	private:
@@ -91,7 +94,8 @@ class allocator_c
 	  	  VkExtent2D& swapChainExtent,
 	  	  VkDescriptorSetLayout& descSetLayout,
 	  	  const std::string& vertShader,
-	  	  const std::string& fragShader );
+	  	  const std::string& fragShader,
+		  int flags );
 	void init_depth_resources
 		( VkImage& depthImage, VkDeviceMemory& depthImageMemory, VkImageView& depthImageView, VkExtent2D& swapChainExtent );
 	void init_frame_buffer

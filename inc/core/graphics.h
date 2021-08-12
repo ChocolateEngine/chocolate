@@ -35,6 +35,7 @@ class graphics_c : public system_c
 {
 	protected:
 
+	int random = time( 0 );
 	std::vector< sprite_t* > sprites;
 	std::vector< model_t* > models;
 	static std::vector< model_data_t* > modelData;
