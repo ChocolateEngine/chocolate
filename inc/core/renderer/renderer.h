@@ -92,8 +92,6 @@ class renderer_c : public system_c	//	Most of these objects are used to make new
 	
 	void update_uniform_buffers
 		( uint32_t currentImage, model_data_t& modelData );
-	void update_sprite_uniform_buffers
-		( uint32_t currentImage, sprite_data_t& spriteData );
 	
 	void cleanup
 		(  );

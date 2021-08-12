@@ -392,21 +392,21 @@ void allocator_c::init_desc_sets
 	std::vector< VkDescriptorSetLayout > layouts( swapChainImages->size(  ), descSetLayout );
 	VkDescriptorSetAllocateInfo allocInfo{  };
 	allocInfo.sType 		= VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-	allocInfo.descriptorPool 	= descPool;
+	allocInfo.descriptorPool 	= descPool;							//	Pool where descriptors are allocated
 	allocInfo.descriptorSetCount 	= ( uint32_t )swapChainImages->size(  );
 	allocInfo.pSetLayouts 		= layouts.data(  );
 
 	descSets.resize( swapChainImages->size(  ) );
-	if ( vkAllocateDescriptorSets( dev->dev(  ), &allocInfo, descSets.data(  ) ) != VK_SUCCESS )
+	if ( vkAllocateDescriptorSets( dev->dev(  ), &allocInfo, descSets.data(  ) ) != VK_SUCCESS )	//	Allocate descriptor sets
 	{
 		throw std::runtime_error( "Failed to allocate descriptor sets!" );
 	}
 
-	for ( int i = 0; i < swapChainImages->size(  ); i++ )
+	for ( int i = 0; i < swapChainImages->size(  ); i++ )					        //	For each of the rendered frames
 	{
 		std::vector< VkWriteDescriptorSet > descriptorWrites{  };
 		int j = 0;
-		for ( ; j < descBufferInfos.size(  ); ++j )
+		for ( ; j < descBufferInfos.size(  ); ++j )						//	Iterate through the descriptor buffer infos and make descriptor writes for them
 		{
 			auto buffer = desc_buffer( descBufferInfos[ j ].buffer, descBufferInfos[ j ].range, 0, i );
 			
@@ -420,16 +420,20 @@ void allocator_c::init_desc_sets
 			descriptorWrite.pBufferInfo	= &buffer;
 			descriptorWrites.push_back( descriptorWrite );
 		}
-		for ( int k = j; k < descImageInfos.size(  ) + j; ++k )
+		for ( int k = j; k < descImageInfos.size(  ) + j; ++k )					//	Do the same for the descriptor image infos
 		{
+			auto image = desc_image(
+				descImageInfos[ k - descBufferInfos.size(  ) ].imageLayout,		//	k - descBufferInos.size(  ) ensures dstBinding iterates by one for each binding added
+				descImageInfos[ k - descBufferInfos.size(  ) ].imageView,
+				descImageInfos[ k - descBufferInfos.size(  ) ].textureSampler );
 			VkWriteDescriptorSet descriptorWrite{  };
 			descriptorWrite.sType		= VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 			descriptorWrite.dstSet		= descSets[ i ];
 			descriptorWrite.dstBinding	= k;
 			descriptorWrite.dstArrayElement = 0;
-			descriptorWrite.descriptorType  = descImageInfos[ k ].type;
+			descriptorWrite.descriptorType  = descImageInfos[ k - descBufferInfos.size(  ) ].type;
 			descriptorWrite.descriptorCount = 1;
-			descriptorWrite.pImageInfo	= &descImageInfos[ k ].imageInfo;
+			descriptorWrite.pImageInfo	= &image;
 			descriptorWrites.push_back( descriptorWrite );
 		}
 		vkUpdateDescriptorSets( dev->dev(  ), ( uint32_t )descriptorWrites.size(  ), descriptorWrites.data(  ), 0, NULL );
@@ -540,7 +544,8 @@ void allocator_c::init_graphics_pipeline
 	  VkExtent2D& swapChainExtent,
 	  VkDescriptorSetLayout& descSetLayout,
 	  const std::string& vertShader,
-	  const std::string& fragShader )
+	  const std::string& fragShader,
+	  int flags )
 {
 	auto vertShaderCode = read_file( vertShader );
 	auto fragShaderCode = read_file( fragShader );
@@ -608,7 +613,7 @@ void allocator_c::init_graphics_pipeline
 	rasterizer.rasterizerDiscardEnable 	= VK_FALSE;
 	rasterizer.polygonMode 			= VK_POLYGON_MODE_FILL;		//	Fill with fragments, can optionally use VK_POLYGON_MODE_LINE for a wireframe
 	rasterizer.lineWidth 			= 1.0f;
-	rasterizer.cullMode 			= VK_CULL_MODE_BACK_BIT;
+	rasterizer.cullMode 			= ( flags & NO_CULLING ) ? VK_CULL_MODE_NONE : VK_CULL_MODE_BACK_BIT;	//	FIX FOR MAKING 2D SPRITES WORK!!! WOOOOO!!!!
 	rasterizer.frontFace 			= VK_FRONT_FACE_COUNTER_CLOCKWISE;
 	rasterizer.depthBiasEnable 		= VK_FALSE;
 	rasterizer.depthBiasConstantFactor 	= 0.0f; // Optional
@@ -636,8 +641,8 @@ void allocator_c::init_graphics_pipeline
 
 	VkPipelineDepthStencilStateCreateInfo depthStencil{  };
 	depthStencil.sType 			= VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
-	depthStencil.depthTestEnable 		= VK_TRUE;
-	depthStencil.depthWriteEnable		= VK_TRUE;
+	depthStencil.depthTestEnable 		= ( flags & NO_DEPTH ) ? VK_FALSE : VK_TRUE;
+	depthStencil.depthWriteEnable		= ( flags & NO_DEPTH ) ? VK_FALSE : VK_TRUE;
 	depthStencil.depthCompareOp 		= VK_COMPARE_OP_LESS;
 	depthStencil.depthBoundsTestEnable 	= VK_FALSE;
 	depthStencil.minDepthBounds 		= 0.0f; // Optional
@@ -876,15 +881,19 @@ template void allocator_c::init_vertex_buffer< vertex_2d_t >( const std::vector<
 template void allocator_c::init_vertex_buffer< vertex_3d_t >( const std::vector< vertex_3d_t >&, VkBuffer&, VkDeviceMemory& );
 template void allocator_c::init_uniform_buffers< ubo_2d_t >( std::vector< VkBuffer >&, std::vector< VkDeviceMemory >& );
 template void allocator_c::init_uniform_buffers< ubo_3d_t >( std::vector< VkBuffer >&, std::vector< VkDeviceMemory >& );
-template void allocator_c::init_graphics_pipeline< vertex_2d_t >( VkPipeline&,
-								  VkPipelineLayout&,
-								  VkExtent2D&,
-								  VkDescriptorSetLayout&,
-								  const std::string&,
-								  const std::string&  );
-template void allocator_c::init_graphics_pipeline< vertex_3d_t >( VkPipeline&,
-								  VkPipelineLayout&,
-								  VkExtent2D&,
-								  VkDescriptorSetLayout&,
-								  const std::string&,
-								  const std::string&  );
+template void allocator_c::init_graphics_pipeline< vertex_2d_t >(
+	VkPipeline&,
+        VkPipelineLayout&,
+	VkExtent2D&,
+	VkDescriptorSetLayout&,
+	const std::string&,
+	const std::string&,
+	int );
+template void allocator_c::init_graphics_pipeline< vertex_3d_t >(
+	VkPipeline&,
+	VkPipelineLayout&,
+	VkExtent2D&,
+	VkDescriptorSetLayout&,
+	const std::string&,
+	const std::string&,
+	int );

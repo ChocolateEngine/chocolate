@@ -48,11 +48,11 @@ void graphics_c::load_model
 	{
 		model = new model_t;
 	}
-        srand( ( unsigned int )time( 0 ) );
+        srand( ++random );
 	float r = ( float )( rand(  ) / ( float )( RAND_MAX / 10.0f ) );
 	model->modelData.posX = r;
-	model->modelData.posY = r;
-	model->modelData.posZ = r;
+	model->modelData.posY = 10.f;
+	model->modelData.posZ = 10.f;
 	renderer.init_model( model->modelData, modelPath, texturePath );
 	
 	models.push_back( model );
@@ -65,10 +65,12 @@ void graphics_c::load_sprite
 	{
 		sprite = new sprite_t;
 	}
-	srand( ( unsigned int )time( 0 ) );
-	float r = ( float )( rand(  ) / ( float )( RAND_MAX / 1.0f ) );
-        sprite->spriteData.posX = r;
-	sprite->spriteData.posY = r;
+	srand( ++random );
+	float rx = 1.0f - ( float )( rand(  ) / ( float )( RAND_MAX / 2.0f ) );
+	srand( ++random );
+	float ry = 1.0f - ( float )( rand(  ) / ( float )( RAND_MAX / 2.0f ) );
+        sprite->spriteData.posX = rx;
+	sprite->spriteData.posY = ry;
 	renderer.init_sprite( sprite->spriteData, spritePath );
 	
 	sprites.push_back( sprite );
@@ -100,7 +102,7 @@ graphics_c::graphics_c
 	renderer.init_vulkan(  );
 
 	//load_model( "materials/models/protogen_wip_5_plus_protodal.obj", "materials/textures/red_mat.png"  );
-	//load_model( "materials/models/protogen_wip_22/protogen_wip_22.obj", "materials/textures/blue_mat.png" );
+	load_model( "materials/models/protogen_wip_22/protogen_wip_22.obj", "materials/textures/blue_mat.png" );
 	//load_sprite( "materials/textures/hilde_sprite_upscale.png" );
 	//load_sprite( "materials/textures/blue_mat.png" );
 }

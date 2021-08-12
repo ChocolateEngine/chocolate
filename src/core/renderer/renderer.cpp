@@ -78,14 +78,16 @@ void renderer_c::init_vulkan
 		swapChainExtent,
 		modelSetLayout,
 		"materials/shaders/3dvert.spv",
-		"materials/shaders/3dfrag.spv" );
+		"materials/shaders/3dfrag.spv",
+		0 );
 	allocator.init_graphics_pipeline< vertex_2d_t >(
 		spritePipeline,
 		spriteLayout,
 		swapChainExtent,
 		spriteSetLayout,
 		"materials/shaders/2dvert.spv",
-		"materials/shaders/2dfrag.spv" );
+		"materials/shaders/2dfrag.spv",
+		NO_CULLING | NO_DEPTH );
 	allocator.init_depth_resources( depthImage, depthImageMemory, depthImageView, swapChainExtent );
 	allocator.init_frame_buffer( swapChainFramebuffers, swapChainImageViews, depthImageView, swapChainExtent );
 	device.init_texture_sampler( textureSampler, VK_SAMPLER_ADDRESS_MODE_REPEAT );
@@ -154,23 +156,20 @@ void renderer_c::init_command_buffers
 			if ( !sprite->noDraw )
 			{
 				sprite->bind( commandBuffers[ i ], spriteLayout, i );
-				for ( int j = 0; j < 4; ++j )
-				{
-					push_constant_t push{  };
-					push.scale	= { j, j };
-					push.translate  = { 0.0f, -0.4f + j * 0.25f };
+				push_constant_t push{  };
+				push.scale	= { 1, 1 };
+				push.translate  = { sprite->posX, sprite->posY };
 
-					vkCmdPushConstants
-						(
-							commandBuffers[ i ],
-							spriteLayout,
-							VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
-							0,
-							sizeof( push_constant_t ),
-							&push
-							);
-					sprite->draw( commandBuffers[ i ] );
-				}
+				vkCmdPushConstants
+					(
+						commandBuffers[ i ],
+						spriteLayout,
+						VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
+						0,
+						sizeof( push_constant_t ),
+						&push
+						);
+				sprite->draw( commandBuffers[ i ] );
 			}
 		}
 
@@ -368,23 +367,21 @@ void renderer_c::reinit_swap_chain
 		swapChainExtent,
 		modelSetLayout,
 		"materials/shaders/3dvert.spv",
-		"materials/shaders/3dfrag.spv" );
+		"materials/shaders/3dfrag.spv",
+		0 );
 	allocator.init_graphics_pipeline< vertex_2d_t >(
 		spritePipeline,
 		spriteLayout,
 		swapChainExtent,
 		spriteSetLayout,
 		"materials/shaders/2dvert.spv",
-		"materials/shaders/2dfrag.spv" );
+		"materials/shaders/2dfrag.spv",
+		NO_CULLING | NO_DEPTH );
 	allocator.init_depth_resources( depthImage, depthImageMemory, depthImageView, swapChainExtent );
 	allocator.init_frame_buffer( swapChainFramebuffers, swapChainImageViews, depthImageView, swapChainExtent );
 	for ( auto& model : *models )
 	{
 		allocator.init_uniform_buffers< ubo_3d_t >( model->uBuffers, model->uBuffersMem );	//	Please fix this ubo_2d_t shit, I just want easy sprites
-	}
-	for ( auto& sprite : *sprites )
-	{
-		allocator.init_uniform_buffers< ubo_2d_t >( sprite->uBuffers, sprite->uBuffersMem );	
 	}
 	allocator.init_desc_pool( descPool, { { { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 2000 }, { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 2000 } } } );
 	for ( auto& model : *models )
@@ -393,9 +390,12 @@ void renderer_c::reinit_swap_chain
 			model->descSets,
 			modelSetLayout,
 			descPool,
-			{
+		        {
 				{
-					{ desc_image( VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, model->tImageView, textureSampler ), VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER }
+					{ VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+					  model->tImageView,
+					  textureSampler,
+					  VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER }
 				}
 			},
 			{
@@ -412,7 +412,10 @@ void renderer_c::reinit_swap_chain
 			descPool,	
 			{
 				{
-					{ desc_image( VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, sprite->tImageView, textureSampler ), VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER }
+					{ VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+					  sprite->tImageView,
+					  textureSampler,
+					  VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER }
 				}
 			} );	
 	}
@@ -434,11 +437,7 @@ void renderer_c::destroy_swap_chain
 	}
 	for ( auto& sprite : *sprites  )
 	{
-		for ( int i = 0; i < swapChainImages.size(  ); i++ )
-		{
-			vkDestroyBuffer( device.dev(  ), sprite->uBuffers[ i ], NULL );
-			vkFreeMemory( device.dev(  ), sprite->uBuffersMem[ i ], NULL );
-		}
+
 	}
 	vkDestroyDescriptorPool( device.dev(  ), descPool, NULL );
 	vkDestroyDescriptorSetLayout( device.dev(  ), spriteSetLayout, NULL );
@@ -497,19 +496,6 @@ void renderer_c::update_uniform_buffers
 	vkUnmapMemory( device.dev(  ), modelData.uBuffersMem[ currentImage ] );
 }
 
-void renderer_c::update_sprite_uniform_buffers
-	( uint32_t currentImage, sprite_data_t& spriteData )
-{
-	ubo_2d_t ubo{  };
-	ubo.extent.x = spriteData.posX;
-	ubo.extent.y = spriteData.posY;
-	
-	void* data;
-	vkMapMemory( device.dev(  ), spriteData.uBuffersMem[ currentImage ], 0, sizeof( ubo ), 0, &data );	//	Validation vkMapMemory-size-00681 resolved... fix ubo sizes when 2d ubos work
-	memcpy( data, &ubo, sizeof( ubo ) );
-	vkUnmapMemory( device.dev(  ), spriteData.uBuffersMem[ currentImage ] );
-}
-
 void renderer_c::init_model
 	( model_data_t& modelData, const std::string& modelPath, const std::string& texturePath )
 {
@@ -523,12 +509,17 @@ void renderer_c::init_model
 	        descPool,
 	        {
 		        {
-			        { desc_image( VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, modelData.tImageView, textureSampler ), VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER }
+			        { VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,		//	Flag
+				  modelData.tImageView,					//	Texture
+				  textureSampler,					//	Texture Sampler
+				  VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER }		//	Tell the descriptor that this is a texture sampler, initializing a texture
 		        }
 	        },
 	        {
 		        {
-			        { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, modelData.uBuffers, sizeof( ubo_3d_t ) }
+			        { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,			//	Flag, telling dsecriptor that this is a uniform buffer descriptor
+						modelData.uBuffers,			//	Buffers
+						sizeof( ubo_3d_t ) }			//	Size of uniform buffer for range
 		        }
 	        } );
 	models->push_back( &modelData );
@@ -541,14 +532,16 @@ void renderer_c::init_sprite
 	init_sprite_vertices( spritePath, spriteData );
 	allocator.init_texture_image( spritePath, spriteData.tImage, spriteData.tImageMem );
 	allocator.init_texture_image_view( spriteData.tImageView, spriteData.tImage );
-	allocator.init_uniform_buffers< ubo_2d_t >( spriteData.uBuffers, spriteData.uBuffersMem );	//	Fix ubo_2d_t
         allocator.init_desc_sets(	//	Doesn't need uniform buffers, will use push constants instead
 	        spriteData.descSets,
 	        spriteSetLayout,
 	        descPool,	
 	        {
 		        {
-			        { desc_image( VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, spriteData.tImageView, textureSampler ), VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER }
+			        { VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+				  spriteData.tImageView,
+				  textureSampler,
+				  VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER }
 		        }
 	        } );	
 	sprites->push_back( &spriteData );
@@ -583,10 +576,6 @@ void renderer_c::draw_frame
 	for ( auto& model : *models )
 	{
 		update_uniform_buffers( imageIndex, *model );
-	}
-	for ( auto& sprite : *sprites )
-	{
-		update_sprite_uniform_buffers( imageIndex, *sprite );
 	}
 
 	VkSubmitInfo submitInfo{  };

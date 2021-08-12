@@ -32,7 +32,9 @@ struct combined_buffer_info_t
 
 struct combined_image_info_t
 {
-	VkDescriptorImageInfo imageInfo;
+        VkImageLayout imageLayout;
+	VkImageView imageView;
+	VkSampler textureSampler;
 	VkDescriptorType type;
 };
 
@@ -137,7 +139,7 @@ struct vertex_2d_t
 	}
 };
 
-namespace std
+namespace std	//	Black magic!! don't touch!!!!
 {
 	template<  > struct hash< vertex_3d_t >
 	{
@@ -175,8 +177,6 @@ struct sprite_data_t
 	VkDeviceMemory vBufferMem, iBufferMem, tImageMem;
 	VkImage tImage;
 	VkImageView tImageView;
-	std::vector< VkBuffer > uBuffers;
-	std::vector< VkDeviceMemory > uBuffersMem;
 	std::vector< VkDescriptorSet > descSets;
 	uint32_t vCount, iCount;
 	bool noDraw = false;
@@ -187,14 +187,14 @@ struct sprite_data_t
 		{
 			VkBuffer vBuffers[  ] 		= { vBuffer };
 			VkDeviceSize offsets[  ] 	= { 0 };
+		        vkCmdBindDescriptorSets( c, VK_PIPELINE_BIND_POINT_GRAPHICS, p, 0, 1, &descSets[ i ], 0, NULL );
 			vkCmdBindVertexBuffers( c, 0, 1, vBuffers, offsets );
 			vkCmdBindIndexBuffer( c, iBuffer, 0, VK_INDEX_TYPE_UINT32 );
-			vkCmdBindDescriptorSets( c, VK_PIPELINE_BIND_POINT_GRAPHICS, p, 0, 1, &descSets[ i ], 0, NULL );
 		}
 	void draw
 		( VkCommandBuffer c )
 		{
-			vkCmdDrawIndexed( c, iCount, 1, 0, 0, 0 );
+			vkCmdDrawIndexed( c, iCount, 1, 0, 0, 0 );	
 		}
 };
 
