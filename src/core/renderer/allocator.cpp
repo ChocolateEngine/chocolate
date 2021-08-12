@@ -424,7 +424,7 @@ void allocator_c::init_desc_sets
 		{
 			auto image = desc_image(
 				descImageInfos[ k - descBufferInfos.size(  ) ].imageLayout,		//	k - descBufferInos.size(  ) ensures dstBinding iterates by one for each binding added
-				descImageInfos[ k - descBufferInfos.size(  ) ].imageView,
+				descImageInfos[ k - descBufferInfos.size(  ) ].imageView,		//	The texture that is loaded into memory, can have multiple VkDescriptorImageInfo for multiple textures, or rather multiple descriptor sets with different image views, so they can be rebinded before drawing vertices in sprite_t::bind()
 				descImageInfos[ k - descBufferInfos.size(  ) ].textureSampler );
 			VkWriteDescriptorSet descriptorWrite{  };
 			descriptorWrite.sType		= VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
