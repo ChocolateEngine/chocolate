@@ -181,7 +181,8 @@ struct sprite_data_t
 	uint32_t vCount, iCount;
 	bool noDraw = false;
 
-	float posX, posY;
+	float posX = 0.0f, posY = 0.0f;
+	float width = 0.5f, height = 0.5f;
 	void bind
 		( VkCommandBuffer c, VkPipelineLayout p, uint32_t i )
 		{
