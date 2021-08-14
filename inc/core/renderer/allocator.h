@@ -62,7 +62,7 @@ class allocator_c
 		  VkImage& image,
 		  VkDeviceMemory& imageMemory );
 	void init_texture_image
-		( const std::string& imagePath, VkImage& tImage, VkDeviceMemory& tImageMem );
+		( const std::string& imagePath, VkImage& tImage, VkDeviceMemory& tImageMem, float* width, float* height );
 	void init_texture_image_view
 		( VkImageView& tImageView, VkImage tImage );
 

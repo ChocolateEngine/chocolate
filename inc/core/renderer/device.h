@@ -28,7 +28,6 @@ class device_c
 {
 	protected:
 
-	int width = 800, height = 800;
 	SDL_Window* win;						//	Window to display stuff
 	VkSurfaceKHR surf;						//	Allows window to display stuff	
 	VkInstance inst;						//	Foundation for graphics API, stores application data
@@ -95,6 +94,7 @@ class device_c
 	
 	public:
 
+	int width = 1280, height = 720;
 	void init_swap_chain
 		( VkSwapchainKHR& swapChain, std::vector< VkImage >& swapChainImages, VkFormat& swapChainImageFormat, VkExtent2D& swapChainExtent );
 	void init_texture_sampler
@@ -149,6 +149,13 @@ class device_c
 	{
 		return presentQueue;
 	}
+
+	void set_res
+		( int inWidth, int inHeight )
+		{
+			width = inWidth;
+			height = inHeight;
+		}
 
 	device_c
 		(  );

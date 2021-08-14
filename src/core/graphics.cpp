@@ -64,13 +64,15 @@ void graphics_c::load_sprite
 	if ( sprite == NULL )
 	{
 		sprite = new sprite_t;
+
+		srand( ++random );
+		float rx = 1.0f - ( float )( rand(  ) / ( float )( RAND_MAX / 2.0f ) );
+		srand( ++random );
+		float ry = 1.0f - ( float )( rand(  ) / ( float )( RAND_MAX / 2.0f ) );
+	        sprite->spriteData.posX = rx;
+		sprite->spriteData.posY = ry;
 	}
-	srand( ++random );
-	float rx = 1.0f - ( float )( rand(  ) / ( float )( RAND_MAX / 2.0f ) );
-	srand( ++random );
-	float ry = 1.0f - ( float )( rand(  ) / ( float )( RAND_MAX / 2.0f ) );
-        sprite->spriteData.posX = rx;
-	sprite->spriteData.posY = ry;
+	
 	renderer.init_sprite( sprite->spriteData, spritePath );
 	
 	sprites.push_back( sprite );

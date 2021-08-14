@@ -256,7 +256,7 @@ void allocator_c::init_image
 }
 
 void allocator_c::init_texture_image
-	( const std::string& imagePath, VkImage& tImage, VkDeviceMemory& tImageMem )
+	( const std::string& imagePath, VkImage& tImage, VkDeviceMemory& tImageMem, float* width, float* height )
 {
 	int texWidth, texHeight, texChannels;
 	stbi_uc* pixels = stbi_load( imagePath.c_str(  ), &texWidth, &texHeight, &texChannels, STBI_rgb_alpha );
@@ -300,6 +300,12 @@ void allocator_c::init_texture_image
 				 VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
 				 VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
 
+	if ( width && height )
+	{
+		*width 	 = ( float )texWidth / ( float )dev->width * 2.0f;	//	maintain size and aspect ratio
+		*height  = ( float )texHeight / ( float )dev->height * 2.0f;
+	}
+	
 	vkDestroyBuffer( dev->dev(  ), stagingBuffer, NULL );
 	vkFreeMemory( dev->dev(  ), stagingBufferMemory, NULL );
 }

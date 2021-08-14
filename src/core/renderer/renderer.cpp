@@ -23,6 +23,14 @@
 #include "../../../inc/imgui/imgui_impl_vulkan.h"
 #include "../../../inc/imgui/imgui_impl_sdl.h"
 
+#define MODEL_SET_LAYOUT_PARAMETERS { { { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_VERTEX_BIT, NULL }, { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, NULL } } }
+
+#define SPRITE_SET_LAYOUT_PARAMETERS { { { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, NULL, } } }
+
+#define MODEL_SET_PARAMETERS( tImageView, uBuffers ) { { { VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, tImageView, textureSampler, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER } } }, { { { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, uBuffers, sizeof( ubo_3d_t ) } } }
+
+#define SPRITE_SET_PARAMETERS( tImageView ) { { { VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, tImageView, textureSampler, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER } } }
+
 void renderer_c::init_commands
 	(  )
 {
@@ -44,34 +52,10 @@ void renderer_c::init_vulkan
 	allocator.renderPass = &renderPass;
 	allocator.init_desc_set_layout(
 		modelSetLayout,
-		{
-			{
-			        {
-					VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-						1,
-						VK_SHADER_STAGE_VERTEX_BIT,
-						NULL
-						},
-				{
-					VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-					1,
-					VK_SHADER_STAGE_FRAGMENT_BIT,
-					NULL
-					}
-			}
-		} );
+		MODEL_SET_LAYOUT_PARAMETERS );
 	allocator.init_desc_set_layout(
 		spriteSetLayout,
-		{
-			{
-			        {
-					VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-						1,
-						VK_SHADER_STAGE_FRAGMENT_BIT,
-						NULL,
-						}
-			}
-		} );
+		SPRITE_SET_LAYOUT_PARAMETERS );
 	allocator.init_graphics_pipeline< vertex_3d_t >(
 		modelPipeline,
 		modelLayout,
@@ -304,10 +288,10 @@ void renderer_c::init_sprite_vertices
 {
 	std::vector< vertex_2d_t > vertices =
 	{
-		{{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}, {1.0f, 0.0f}},
-    		{{0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f}},
-    		{{0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}, {0.0f, 1.0f}},
-    		{{-0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}, {1.0f, 1.0f}}
+		{{-1 * ( sprite.width / 2.0f ), -1 * ( sprite.height / 2.0f )}, {1.0f, 0.0f, 0.0f}, {1.0f, 0.0f}},
+    		{{( sprite.width / 2.0f ), -1 * ( sprite.height / 2.0f )}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f}},
+    		{{( sprite.width / 2.0f ), ( sprite.height / 2.0f )}, {0.0f, 0.0f, 1.0f}, {0.0f, 1.0f}},
+    		{{-1 * ( sprite.width / 2.0f ), ( sprite.height / 2.0f )}, {1.0f, 1.0f, 1.0f}, {1.0f, 1.0f}}
 	};
 	std::vector< uint32_t > indices =
 	{
@@ -322,6 +306,13 @@ void renderer_c::init_sprite_vertices
 void renderer_c::reinit_swap_chain
 	(  )
 {
+	int width = 0, height = 0;
+	SDL_Vulkan_GetDrawableSize( device.window(  ), &width, &height );
+	for ( ; width == 0 || height == 0; )
+	{
+		SDL_Vulkan_GetDrawableSize( device.window(  ), &width, &height );
+	}
+	device.set_res( width, height );
 	vkDeviceWaitIdle( device.dev(  ) );
 
 	destroy_swap_chain(  );
@@ -333,34 +324,10 @@ void renderer_c::reinit_swap_chain
 	allocator.renderPass = &renderPass;
         allocator.init_desc_set_layout(
 		modelSetLayout,
-		{
-			{
-			        {
-					VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-						1,
-						VK_SHADER_STAGE_VERTEX_BIT,
-						NULL
-						},
-				{
-					VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-					1,
-					VK_SHADER_STAGE_FRAGMENT_BIT,
-					NULL
-					}
-			}
-		} );
+		MODEL_SET_LAYOUT_PARAMETERS );
 	allocator.init_desc_set_layout(
 		spriteSetLayout,
-		{
-			{
-			        {
-					VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-						1,
-						VK_SHADER_STAGE_FRAGMENT_BIT,
-						NULL,
-						}
-			}
-		} );
+		SPRITE_SET_LAYOUT_PARAMETERS );
 	allocator.init_graphics_pipeline< vertex_3d_t >(
 		modelPipeline,
 		modelLayout,
@@ -390,34 +357,15 @@ void renderer_c::reinit_swap_chain
 			model->descSets,
 			modelSetLayout,
 			descPool,
-		        {
-				{
-					{ VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-					  model->tImageView,
-					  textureSampler,
-					  VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER }
-				}
-			},
-			{
-				{
-					{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, model->uBuffers, sizeof( ubo_3d_t ) }
-				}
-			} );	
+		        MODEL_SET_PARAMETERS( model->tImageView, model->uBuffers ) );	
 	}
 	for ( auto& sprite : *sprites )
-	{
+	{	        
 		allocator.init_desc_sets(	//	Doesn't need uniform buffers, will use push constants instead
 			sprite->descSets,
 			spriteSetLayout,
 			descPool,	
-			{
-				{
-					{ VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-					  sprite->tImageView,
-					  textureSampler,
-					  VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER }
-				}
-			} );	
+			SPRITE_SET_PARAMETERS( sprite->tImageView ) );	
 	}
 }
 
@@ -434,7 +382,7 @@ void renderer_c::destroy_swap_chain
 			vkDestroyBuffer( device.dev(  ), model->uBuffers[ i ], NULL );
 			vkFreeMemory( device.dev(  ), model->uBuffersMem[ i ], NULL );
 		}
-	}
+        }
 	for ( auto& sprite : *sprites  )
 	{
 
@@ -500,28 +448,14 @@ void renderer_c::init_model
 	( model_data_t& modelData, const std::string& modelPath, const std::string& texturePath )
 {
 	init_model_vertices( modelPath, modelData );
-	allocator.init_texture_image( texturePath, modelData.tImage, modelData.tImageMem );
+	allocator.init_texture_image( texturePath, modelData.tImage, modelData.tImageMem, NULL, NULL );
 	allocator.init_texture_image_view( modelData.tImageView, modelData.tImage );
 	allocator.init_uniform_buffers< ubo_3d_t >( modelData.uBuffers, modelData.uBuffersMem );
 	allocator.init_desc_sets(
 	        modelData.descSets,
 	        modelSetLayout,
 	        descPool,
-	        {
-		        {
-			        { VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,		//	Flag
-				  modelData.tImageView,					//	Texture
-				  textureSampler,					//	Texture Sampler
-				  VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER }		//	Tell the descriptor that this is a texture sampler, initializing a texture
-		        }
-	        },
-	        {
-		        {
-			        { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,			//	Flag, telling dsecriptor that this is a uniform buffer descriptor
-						modelData.uBuffers,			//	Buffers
-						sizeof( ubo_3d_t ) }			//	Size of uniform buffer for range
-		        }
-	        } );
+		MODEL_SET_PARAMETERS( modelData.tImageView, modelData.uBuffers ) );
 	models->push_back( &modelData );
 }
 
@@ -529,21 +463,14 @@ void renderer_c::init_sprite
 	( sprite_data_t& spriteData, const std::string& spritePath )
 {
 	printf( "loaded sprite\n" );
-	init_sprite_vertices( spritePath, spriteData );
-	allocator.init_texture_image( spritePath, spriteData.tImage, spriteData.tImageMem );
+	allocator.init_texture_image( spritePath, spriteData.tImage, spriteData.tImageMem, &spriteData.width, &spriteData.height );
 	allocator.init_texture_image_view( spriteData.tImageView, spriteData.tImage );
+	init_sprite_vertices( spritePath, spriteData );
         allocator.init_desc_sets(	//	Doesn't need uniform buffers, will use push constants instead
 	        spriteData.descSets,
 	        spriteSetLayout,
 	        descPool,	
-	        {
-		        {
-			        { VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-				  spriteData.tImageView,
-				  textureSampler,
-				  VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER }
-		        }
-	        } );	
+		SPRITE_SET_PARAMETERS( spriteData.tImageView ) );	
 	sprites->push_back( &spriteData );
 
 }
