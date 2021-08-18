@@ -1,5 +1,10 @@
-#ifndef ENGINE_H
-#define ENGINE_H
+/*
+engine.h ( Authored by p0lyh3dron )
+
+Defines the engine structure, with
+various systems and synchronizations
+*/
+#pragma once
 
 #include "../shared/system.h"
 #include "graphics.h"
@@ -9,44 +14,37 @@
 
 #include <vector>
 
-class engine_c : public system_c
+class Engine : public BaseSystem
 {
-	protected:
+	SYSTEM_OBJECT( Engine )
+protected:
+	typedef std::vector< BaseSystem* >      SystemList;
+	typedef std::vector< void* > 	        DataList;
 
-	std::vector< system_c* > systems;
-	std::vector< void* > dlHandles;
-	
-	// std::vector< system_c* > ( *game_init )(  ) = NULL;
-	void ( *game_init )( std::vector< system_c* > & ) = NULL;
+	SystemList	aSystems;
+	DataList	aDlHandles;
 
-	template< typename T >
-	void add_system
-		( const T* s );
-	void add_game_systems
-		(  );
-	
-	void init_commands
-		(  );
-	
-	public:
+	/* Entry for the game code.  */
+	void 		( *game_init )( SystemList& ) = NULL;
 
-	bool active;
+	/* Adds a system to aSystems.  */
+	template< typename T, typename... TArgs >
+        void 		AddSystem( const T *spSystem = NULL, TArgs... sSystems );
+	/* Adds the game systems to aSystems.  */
+	void 		AddGameSystems(  );	
+public:
+	bool 		aActive;
 
-	void load_object
-		( const std::string& dlPath, const std::string& entry );
+	/* Loads a shared object containing the game code.  */
+	void 		LoadObject( const std::string& srDlPath,
+				    const std::string& srEntry );
 
-	void engine_main
-		(  );
-
-	void init_systems
-		(  );
-	void update_systems
-		(  );
-
-	engine_c
-		(  );
-	~engine_c
-		(  );
+	/* The engine update cycle is stored here.  */
+	void 		EngineMain(  );
+	/* Initializes engine systems.  */
+	void 	       	InitSystems(  );
+	/* Updates all systems.  */
+	void 		UpdateSystems(  );
+	/* Initialize the engine, creating systems, etc.  */
+	explicit 	Engine(  );
 };
-
-#endif

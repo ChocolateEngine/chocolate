@@ -1,7 +1,21 @@
-#ifndef SYSTEM_H
-#define SYSTEM_H
+/*
+system.h ( Authored by p0lyh3dron )
+
+Defines the base system that all engine
+systems inherit.
+*/
+#pragma once
 
 #define EXTERNAL_SYSTEM 1 << 0
+
+#define SYSTEM_OBJECT( sClassName )		\
+protected:					\
+	void 	InitCommands(  ); 		\
+	void	InitConsoleCommands(  ); 	\
+public:						\
+	void	InitSubsystems(  );		\
+	        ~sClassName(  );		\
+private:					\
 
 #include "console.h"
 #include "msgs.h"
@@ -12,54 +26,51 @@
 
 #include <functional>
 
-class system_c
+class BaseSystem
 {
-	protected:
+protected:
+	typedef std::vector< msg_s > 				EngineCommands;
+	typedef std::vector< command_t > 			ConsoleCommands;
+	typedef std::vector< std::function< void(  ) > > 	FunctionList;
 
-	int systemType;
-	std::vector< msg_s > engineCommands;
-	std::vector< command_t > consoleCommands;
-	std::vector< std::function< void(  ) > > funcList;
+	int 			aFlags = 0;
+	int 			aSystemType;
+	EngineCommands 		aEngineCommands;
+        ConsoleCommands 	aConsoleCommands;
+        FunctionList 		aFunctionList;
+        FunctionList		aFreeQueue;
 
-	int flags = 0;
+	/* Reads all messages that can be interpreted by the system.  */
+	void 		ReadMessage(  );
+	/* Reads all console commands that can be interpreted by the system.  */
+	void 		ReadConsole(  );
+	/* Adds a function that will be run on every frame.  */
+	void 		AddUpdateFunction( std::function< void(  ) > sFunction );
+	/* Adds a function to be ran on the destructor to free memory.  */
+	void		AddFreeFunction( std::function< void(  ) > sFunction );
+	/* Executes a list of functions.  */
+	void 		ExecuteFunctions( FunctionList& srFunctionList );
+
+	/* Initializes all commands the system can respond to.  */
+	virtual void 	InitCommands(  );
+	/* Initializes all console commands the system can respond to.  */
+	virtual void 	InitConsoleCommands(  );
 	
-	void read_msg
-		(  );
-	void delete_msg
-		( msg_s& msg );
-	void read_console
-		(  );
-	void add_func
-		( std::function< void(  ) > func );
-	void exec_funcs
-		(  );
+public:
+	msgs_c 			*apMsgs 	= NULL;
+	console_c 		*apConsole 	= NULL;
 
-	virtual void init_commands
-		(  );
-	virtual void init_console_commands
-		(  );
-	
-	public:
+	/* Updates the system, performing all neccesary tasks.  */
+	void 		Update(  );
+	/* Adds a flag to the aFlags, e.g update twice  */
+	void 		AddFlag( int sFlags );
+	/* Removes a flag from aFlags e.g no longer needs to update twice.  */
+	void 		RemoveFlag( int sFlags );
 
-	msgs_c* msgs = NULL;
-	console_c* console = NULL;
-	
-	void update
-		(  );
-
-	void add_flag
-		( int flagsIn );
-	void rm_flag
-		( int flagsIn );
-
-	system_c
-		(  );
-	virtual void send_messages
-		(  );
-	virtual void init_subsystems
-		(  );
-	virtual ~system_c
-		(  );
+	/* Constructor which will initialize the needed member variables.  */
+	explicit	BaseSystem(  );
+	/* Initializes any member systems of the base system.  */
+	virtual void    InitSubsystems(  );
+	/* Destructs the system, freeing any used memory.  */
+	virtual 	~BaseSystem(  ) = 0;
 };
-
-#endif

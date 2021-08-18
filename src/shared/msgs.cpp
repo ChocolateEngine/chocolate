@@ -38,6 +38,17 @@ void msgs_c::add
         queue.push_back( msg );
 }
 
+void msgs_c::AddFunction( PublishedFunction &srPublishedFunction )
+{
+	aPublishedFunctions.push_back( srPublishedFunction );
+}
+
+std::any msgs_c::Call( const std::string& srFunctionName,
+		       const std::vector< std::any > sArgs )
+{
+	
+}
+
 void msgs_c::remove
 	( int index )
 {

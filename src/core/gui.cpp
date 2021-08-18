@@ -54,6 +54,16 @@ void gui_c::assign_win
 	( SDL_Window* window )
 {
 	win = window;
+	PublishedFunction function{  };
+	auto pFunctionPointer = std::bind( &gui_c::ShowConsole, this, std::placeholders::_1 );
+	msgs->aCmdManager.Add( "ShowConsole", Command< int >( pFunctionPointer ) );
+	msgs->aCmdManager.Execute( "ShowConsole", 69 );
+}
+
+void gui_c::ShowConsole( int sArgs )
+{
+	consoleShown = !consoleShown;
+	printf( "%d\n", sArgs );
 }
 
 gui_c::gui_c

@@ -1,5 +1,4 @@
-#ifndef AUDIO_H
-#define AUDIO_H
+#pragma once
 
 #include "../shared/system.h"
 
@@ -9,22 +8,16 @@
 
 const int RATE = 44100;
 
-class audio_c : public system_c
+class AudioSystem : public BaseSystem
 {
-	protected:
-
+	SYSTEM_OBJECT( AudioSystem )
+protected:
 #if SDL_MIXER
-	Mix_Music* mus;
+	Mix_Music* apMusic;
 #endif
-
-	void play_mus( const char* musPath );
-
-	public:
-
-	audio_c
-		(  );
-	~audio_c
-		(  );
+	/* Load and play music from a given file path.  */
+	void 		PlayMusic( const char* spMusicPath );
+public:
+	/* Initialize the audio format.  */
+	explicit        AudioSystem(  );
 };
-
-#endif

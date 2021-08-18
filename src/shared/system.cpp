@@ -1,142 +1,113 @@
 #include "../../inc/shared/system.h"
 
-void system_c::read_msg
-	(  )
+void BaseSystem::ReadMessage(  )
 {
-	if ( !msgs )
-	{
+	if ( !apMsgs )
 		return;
-	}
-	msg_s* msg;
-	for ( ; ; )
+	msg_s 	*pMsg;
+	while ( true )
 	{
-		if ( !( msg = msgs->fetch_msg( systemType, flags ) ) )
-		{
+		/* No more messages for this system.  */
+		if ( !( pMsg = apMsgs->fetch_msg( aSystemType, aFlags ) ) )
 			return;
-		}
-		for ( auto cmd : engineCommands )
-		{	
-			if ( cmd.msg == msg->msg )
-			{
-				cmd.func( msg->args );
-				delete_msg( *msg );
-			}
-		}
-		msgs->remove( msgs->lastMsgIndex );
+		for ( auto&& cmd : aEngineCommands )
+			/* If the message is used by the system.  */
+			if ( cmd.msg == pMsg->msg )
+				cmd.func( pMsg->args );
+		/* Get rid of the spent message.  */
+		apMsgs->remove( apMsgs->lastMsgIndex );
 	}
 }
 
-void system_c::delete_msg
-	( msg_s& msg )
+void BaseSystem::ReadConsole(  )
 {
-	
-}
-
-void system_c::read_console
-	(  )
-{
-	std::string command;
-	if ( !console || consoleCommands.empty(  ) )
-	{
+	if ( !apConsole || aConsoleCommands.empty(  ) )
 		return;
-	}
-	for ( ; ; )
+	std::string 	command;
+	while ( true )
 	{
-		if ( console->empty(  ) )
-		{
+		if ( apConsole->empty(  ) )
 			return;
-		}
-		command = console->fetch_cmd(  );
+		command = apConsole->fetch_cmd(  );
+		/* Exhausted all commands in console.  */
 		if ( command == "" )
-		{
 			return;
-		}
-		for ( const auto& cmd : consoleCommands )
+		for ( const auto& cmd : aConsoleCommands )
 		{
-			if ( cmd.str == command.substr( 0, cmd.str.length(  ) ) && ( command.size(  ) == cmd.str.size(  ) || command[ cmd.str.size(  ) ] == ' ' ) )	//	Makes sure compound commands are parsed correctly .e.g bind in "bind up ent_create" could not be triggered by "bindyourmomlol"
+			if ( cmd.str == command.substr( 0, cmd.str.length(  ) )
+			     && ( command.size(  ) == cmd.str.size(  ) || command[ cmd.str.size(  ) ] == ' ' ) )	//	Makes sure compound commands are parsed correctly .e.g bind in "bind up ent_create" could not be triggered by "bindyourmomlol"
 			{
 				std::vector< std::string > args;
 				int start, end = 0;
-				for ( ; ( start = command.find_first_not_of( ' ', end ) ) != std::string::npos ; )
+				/* Break the input into a vector of strings.  */
+				while ( ( start = command.find_first_not_of( ' ', end ) ) != std::string::npos )
 				{
 					end = command.find( ' ', start );
 					args.push_back( command.substr( start, end - start ) );
 				}
 				cmd.func( args );
-				console->delete_command(  );
+				apConsole->delete_command(  );
 			}
 		}
 	}
 }
 
-void system_c::add_func
-	( std::function< void(  ) > func )
+void BaseSystem::AddUpdateFunction( std::function< void(  ) > sFunction )
 {
-	funcList.push_back( func );
+	aFunctionList.push_back( sFunction );
 }
 
-void system_c::exec_funcs
-	(  )
+void BaseSystem::AddFreeFunction( std::function< void(  ) > sFunction )
 {
-	for ( const auto& func : funcList )
-	{
+	aFreeQueue.push_back( sFunction );
+}
+
+void BaseSystem::ExecuteFunctions( FunctionList& srFunctionList )
+{
+	for ( const auto& func : srFunctionList )
 		func(  );
-	}
 }
 
-void system_c::init_commands
-	(  )
+void BaseSystem::InitCommands(  )
 {
 	
 }
 
-void system_c::init_console_commands
-	(  )
+void BaseSystem::InitConsoleCommands(  )
 {
 	
 }
 
-void system_c::update
-	(  )
+void BaseSystem::Update(  )
 {
-	read_msg(  );
-	read_console(  );
-	exec_funcs(  );
+	ReadMessage(  );
+        ReadConsole(  );
+        ExecuteFunctions( aFunctionList );
 }
 
-void system_c::add_flag
-	( int flagsIn )
+void BaseSystem::AddFlag( int sFlags )
 {
-	flags |= flagsIn;
+	aFlags |= sFlags;
 }
 	
-void system_c::rm_flag
-	( int flagsIn )
+void BaseSystem::RemoveFlag( int sFlags )
 {
 	
 }
 
-system_c::system_c
-	(  )
+BaseSystem::BaseSystem(  )
 {
-	init_commands(  );
-	init_console_commands(  );
+        InitCommands(  );
+	InitConsoleCommands(  );
 }
 
-void system_c::send_messages
-	(  )
+void BaseSystem::InitSubsystems(  )
 {
 	
 }
 
-void system_c::init_subsystems
-	(  )
+BaseSystem::~BaseSystem(  )
 {
-	
-}
-
-system_c::~system_c
-	(  )
-{
-	
+	/* Free all memory allocated by the system.  */
+	ExecuteFunctions( aFreeQueue );
 }

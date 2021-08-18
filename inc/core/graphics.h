@@ -1,69 +1,65 @@
-#ifndef GRAPHICS_H
-#define GRAPHICS_H
+/*
+graphics.h ( Authored by p0lyh3dron )
+
+Declares the graphics system along with 
+higher level abstrations of types used
+by the renderer.  
+*/
+#pragma once
 
 #include "../shared/system.h"
 #include "renderer/renderer.h"
 
-struct sprite_t
+class Sprite
 {
-	void set_pos
-		( float x, float y )
-		{
-			spriteData.posX = x;
-			spriteData.posY = y;			
-		}
-	void translate
-		( float x, float y )
-		{
-			spriteData.posX += x;
-			spriteData.posY += y;
-		}
-	void set_visibility
-		( bool visible )
-		{
-			spriteData.noDraw = !visible;
-		}
-	sprite_data_t spriteData;
+private:
+	sprite_data_t aSpriteData;
+public:
+	/* Sets the position of the sprite to a given x and y.  */
+	void 	SetPosition( float sX, float sY ){ aSpriteData.posX = sX;
+						   aSpriteData.posY = sY; }
+	/* Translates the sprite by x and y.  */
+	void 	Translate( float sX, float sY ){ aSpriteData.posX += sX;
+					         aSpriteData.posY += sY; }
+	/* Sets the visibility of the sprite.  */
+	void 	SetVisibility( bool sVisible ){ aSpriteData.noDraw = !sVisible; }
 };
 
-struct model_t
+class Model
 {
-	model_data_t modelData;
+private:
+	model_data_t aModelData;
 };
 
-class graphics_c : public system_c
+class GraphicsSystem : public BaseSystem
 {
-	protected:
+	SYSTEM_OBJECT( GraphicsSystem )
+protected:
+        typedef std::vector< Sprite* > 	SpriteList;
+	typedef std::vector< Model* >	ModelList;
 
-	int random = time( 0 );
-	std::vector< sprite_t* > sprites;
-	std::vector< model_t* > models;
+	int 		random = time( 0 );
+        SpriteList 	aSprites;
+        ModelList 	aModels;
 	static std::vector< model_data_t* > modelData;
 	static std::vector< sprite_data_t* > spriteData;
-	
 	renderer_c renderer;
 
-	void init_commands
-		(  );
+	/* Loads a model given a path for the model and texture, 
+	   spModel is optional for external management.  */
+	void 		LoadModel( const std::string& srModelPath,
+				   const std::string& srTexturePath,
+				   Model *spModel = NULL );
+	/* Loads a sprite given a path to the sprite,
+	   spSprite is optional for external management.  */
+	void 		LoadSprite( const std::string& srSpritePath,
+				    Model *spSprite = NULL );
+public:
+	/* Draws all loaded models and sprites to screen.  */
+	void 		DrawFrame(  );
+	/* Syncronizes communication with renderer.  */
+	void 		SyncRenderer(  );
 
-	void load_model
-		( const std::string& modelPath, const std::string& texturePath, model_t* model = NULL );
-	void load_sprite
-		( const std::string& spritePath, sprite_t* sprite = NULL );
-	
-	public:
-
-	void draw_frame
-		(  );
-	void sync_renderer
-		(  );
-
-	graphics_c
-		(  );
-	void init_subsystems
-		(  );
-	~graphics_c
-		(  );
+	/* Sets some renderer parameters.  */
+	explicit 	GraphicsSystem(  );
 };
-
-#endif
