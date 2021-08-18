@@ -1,134 +1,119 @@
+/*
+engine.cpp ( Authored by p0lyh3dron )
+
+Defines the methods declared in engine.h.  
+*/
 #include "../../inc/core/engine.h"
 #include "../../inc/shared/platform.h"
 
-
-template< typename T >
-void engine_c::add_system
-	( const T* s )
+template< typename T, typename... TArgs >
+void Engine::AddSystem( const T *spSystem, TArgs... sSystems )
 {
-	systems.push_back( ( system_c* )s );
+	if ( !spSystem )
+		return;
+	aSystems.push_back( ( BaseSystem* )spSystem );
+        AddSystem( sSystems... );
 }
 
-void engine_c::add_game_systems
-	(  )
+void Engine::AddGameSystems(  )
 {
-	// std::vector< system_c* > gameSystems = game_init(  );
-	std::vector< system_c* > gameSystems;
+	std::vector< BaseSystem* > gameSystems;
 	game_init( gameSystems );
-	for ( const auto& sys : gameSystems )
+	/* Mark systems external, and synchronize communication.  */
+	for ( const auto& pSys : gameSystems )
 	{
-		sys->add_flag( EXTERNAL_SYSTEM );
-		sys->msgs = msgs;
-		sys->console = console;
-		systems.push_back( sys );
+		pSys->AddFlag( EXTERNAL_SYSTEM );
+		pSys->apMsgs = this->apMsgs;
+		pSys->apConsole = apConsole;
+		aSystems.push_back( pSys );
 	}
 }
 
-void engine_c::init_commands
-	(  )
+void Engine::InitCommands(  )
 {
 	msg_s msg;
-	msg.type = ENGINE_C;
+	msg.type 	= ENGINE_C;
 	
-	msg.msg = ENGI_PING;
-	msg.func = [ & ]( std::vector< std::any > args ){ printf( "Engine: Ping!\n" ); };
-	engineCommands.push_back( msg );
+	msg.msg 	= ENGI_PING;
+	msg.func 	= [ & ]( std::vector< std::any > args ){ printf( "Engine: Ping!\n" ); };
+	aEngineCommands.push_back( msg );
 
-	msg.msg = ENGI_EXIT;
-	msg.func = [ & ]( std::vector< std::any > args ){ active = false; };
-	engineCommands.push_back( msg );
+	msg.msg 	= ENGI_EXIT;
+	msg.func 	= [ & ]( std::vector< std::any > args ){ aActive = false; };
+	aEngineCommands.push_back( msg );
 }
 
-void engine_c::load_object
-	( const std::string& dlPath, const std::string& entry )
+void Engine::LoadObject( const std::string& srDlPath, const std::string& srEntry )
 {
 	Module handle = NULL;
 
-	handle = LOAD_LIBRARY( dlPath.c_str(  ) );
+	handle = LOAD_LIBRARY( srDlPath.c_str(  ) );
 	if ( !handle )
 	{
 		fprintf( stderr, "Error: %s\n", GET_ERROR() );
 		throw std::runtime_error( "Unable to load shared librarys!" );
 	}
 
-	*( void** )( &game_init ) = LOAD_FUNC( handle, entry.c_str(  ) );
+	*( void** )( &game_init ) = LOAD_FUNC( handle, srEntry.c_str(  ) );
 	if ( !game_init )
 	{
-		printf( "%s\n", GET_ERROR() );
+		fprintf( stderr, "Error: %s\n", GET_ERROR() );
 		CLOSE_LIBRARY( handle );
 		throw std::runtime_error( "Unable to link library's entry point!" );
 	}
-	dlHandles.push_back( handle );	//	ew
+	aDlHandles.push_back( handle );
+	AddFreeFunction( [ = ](  ){ CLOSE_LIBRARY( ( Module )handle ); } );
 }
 
-void engine_c::engine_main
-	(  )
+void Engine::EngineMain(  )
 {
-	static msgs_c msgs;
-	static console_c console;
+	static msgs_c 		msgs;
+	static console_c 	console;
 
-	this->msgs = &msgs;
-	this->console = &console;
+	this->apMsgs 		= &msgs;
+	this->apConsole 	= &console;
 
-	load_object( "bin/client" EXT_DLL, "game_init" );	//	fix please or else i will yell at myself later for this being shit
-	init_systems(  );
-	add_game_systems(  );
+        LoadObject( "bin/client" EXT_DLL, "game_init" );
+	InitSystems(  );
+	AddGameSystems(  );
 
-	this->msgs->add( ENGINE_C, ENGI_PING );
-	//this->msgs->add( GRAPHICS_C, GFIX_LOAD_SPRITE, 0, { "materials/textures/hilde_sprite_upscale.png" } );
-	this->console->add( "ent_create" );
+	this->apMsgs->add( ENGINE_C, ENGI_PING );
 	
-	for ( ; active; )
-	{
-		update_systems(  );
-	}
+	while ( aActive )
+	        UpdateSystems(  );
 }
 
-void engine_c::init_systems
-	(  )
+void Engine::InitSystems(  )
 {
-	add_system( new graphics_c );
-	add_system( new input_c );
-	add_system( new audio_c );
-	add_system( new gui_c );
+	AddSystem( new graphics_c,
+		   new input_c,
+		   new AudioSystem,
+		   new gui_c );
 	
-	for ( const auto& sys : systems )
+	for ( const auto& pSys : aSystems )
 	{
-		sys->msgs = msgs;
-		sys->console = console;
-		sys->init_subsystems(  );
+		pSys->apMsgs 		= this->apMsgs;
+		pSys->apConsole 	= this->apConsole;
+		pSys->InitSubsystems(  );
 	}
 }
 
-void engine_c::update_systems
-	(  )
+void Engine::UpdateSystems(  )
 {
-	update(  );
+	/* Update self.  */
+	this->Update(  );
 
-	for ( const auto& sys : systems )
-	{
-		sys->update(  );
-	}
+	for ( const auto& pSys : aSystems )
+		pSys->Update(  );
 }
 
-engine_c::engine_c
-	(  )
+Engine::Engine(  ) : BaseSystem(  )
 {
-	active = true;
-	systemType = ENGINE_C;
-
-	init_commands(  );
+	aSystemType = ENGINE_C;
 }
 
-engine_c::~engine_c
-	(  )
+Engine::~Engine(  )
 {
-	for ( const auto& sys : systems )
-	{
-		sys->~system_c(  );
-	}
-	for ( const auto& handle : dlHandles )
-	{
-		CLOSE_LIBRARY( (Module)handle );
-	}
+	for ( const auto& pSys : aSystems )
+		pSys->~BaseSystem(  );
 }

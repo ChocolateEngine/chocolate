@@ -1,33 +1,29 @@
 #include "../../inc/core/audio.h"
 
-void audio_c::play_mus
-	( const char* musPath )
+void AudioSystem::PlayMusic( const char* spMusicPath )
 {
 #if SDL_MIXER
-	mus = Mix_LoadMUS( musPath );
-	Mix_PlayMusic( mus, -1 );
+	apMusic = Mix_LoadMUS( spMusicPath );
+	Mix_PlayMusic( apMusic, -1 );
 #endif
 }
 
-audio_c::audio_c
-	(  )
+AudioSystem::AudioSystem(  ) : BaseSystem(  )
 {
-	systemType = AUDIO_C;
+	aSystemType = AUDIO_C;
 
 #if SDL_MIXER
-	mus = NULL;
+	apMusic = NULL;
 	Mix_OpenAudio( RATE, MIX_DEFAULT_FORMAT, 2, 2048 );
-	play_mus( "audio/music/neon02.ogg" );
 #endif
 }
 
-audio_c::~audio_c
-	(  )
+AudioSystem::~AudioSystem(  )
 {
 #if SDL_MIXER
-	if ( !mus )
+	if ( !apMusic )
 	{
-		Mix_FreeMusic( mus );
+		Mix_FreeMusic( apMusic );
 	}
 #endif
 }

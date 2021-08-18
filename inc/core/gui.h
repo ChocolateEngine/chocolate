@@ -16,6 +16,7 @@ class gui_c : public system_c
 		(  );
 	void draw_gui
 		(  );
+	void		ShowConsole( int sArgs );
 	
 	public:
 
