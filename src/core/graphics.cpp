@@ -3,128 +3,66 @@
 #include <cstdlib>
 #include <ctime>
 
-std::vector< model_data_t* > graphics_c::modelData;
-std::vector< sprite_data_t* > graphics_c::spriteData;
-
-void graphics_c::init_commands
-	(  )
+void GraphicsSystem::LoadModel( const std::string& srModelPath, const std::string& srTexturePath, Model *spModel )
 {
-	msg_s msg;
-	msg.type = GRAPHICS_C;
-
-	msg.msg = GFIX_LOAD_SPRITE;
-	msg.func = [ & ]( std::vector< std::any > args )
-		{
-			if ( args.size(  ) < 1 )
-			{
-				printf( "Invalid parameters for GFIX_LOAD_SPRITE\n" );
-				return;
-			}
-			if ( args.size(  ) == 1 )
-			{
-				load_sprite( std::any_cast< const char* >( args[ 0 ] ) );
-				return;
-			}
-			load_sprite( std::any_cast< const char* >( args[ 0 ] ), std::any_cast< sprite_t* >( args[ 1 ] ) );
-		};
-	engineCommands.push_back( msg );
-	msg.msg = GFIX_LOAD_MODEL;
-	msg.func = [ & ]( std::vector< std::any > args )
-		{
-			if ( args.size(  ) < 2 )
-			{
-				printf( "Invalid parameters for GFIX_LOAD_MODEL\n" );
-				return;
-			}
-			load_model( std::any_cast< const char * >( args[ 0 ] ), std::any_cast< const std::string& >( args[ 1 ] ) );
-		};
-	engineCommands.push_back( msg );
-}
-
-void graphics_c::load_model
-	( const std::string& modelPath, const std::string& texturePath, model_t* model )
-{
-	if ( model == NULL )
-	{
-		model = new model_t;
-	}
-        srand( ++random );
-	float r = ( float )( rand(  ) / ( float )( RAND_MAX / 10.0f ) );
-	model->modelData.posX = r;
-	model->modelData.posY = 10.f;
-	model->modelData.posZ = 10.f;
-	renderer.init_model( model->modelData, modelPath, texturePath );
+	if ( spModel == NULL )
+	        spModel = new Model;
+	spModel->SetPosition( 0.f, 0.f, 0.f );
+	aRenderer.init_model( spModel->ModelData(  ), srModelPath, srTexturePath );
 	
-	models.push_back( model );
+	aModels.push_back( spModel );
+	AddFreeFunction( [ = ](  ){ delete spModel; } );
 }
 
-void graphics_c::load_sprite
-	( const std::string& spritePath, sprite_t* sprite )
+void GraphicsSystem::LoadSprite( const std::string& srSpritePath, Sprite *spSprite )
 {
-	if ( sprite == NULL )
-	{
-		sprite = new sprite_t;
+	if ( spSprite == NULL )
+		spSprite = new Sprite;
 
-		srand( ++random );
-		float rx = 1.0f - ( float )( rand(  ) / ( float )( RAND_MAX / 2.0f ) );
-		srand( ++random );
-		float ry = 1.0f - ( float )( rand(  ) / ( float )( RAND_MAX / 2.0f ) );
-	        sprite->spriteData.posX = rx;
-		sprite->spriteData.posY = ry;
-	}
+	spSprite->SetPosition( 0.f, 0.f );
+	aRenderer.init_sprite( spSprite->SpriteData(  ), srSpritePath );
 	
-	renderer.init_sprite( sprite->spriteData, spritePath );
+	aSprites.push_back( spSprite );
+	AddFreeFunction( [ = ](  ){ delete spSprite; } );
+}
+
+void GraphicsSystem::InitCommands(  )
+{
+        auto loadSprite = std::bind( &GraphicsSystem::LoadSprite, this, std::placeholders::_1, std::placeholders::_2 );
+	apMsgs->aCmdManager.Add( "_load_sprite", Command< const std::string&, Sprite* >( loadSprite ) );
+	auto loadModel = std::bind( &GraphicsSystem::LoadModel, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3 );
+	apMsgs->aCmdManager.Add( "_load_model", Command< const std::string&, const std::string&, Model* >( loadModel ) );
+}
+
+void GraphicsSystem::DrawFrame(  )
+{
+	aRenderer.draw_frame(  );
+}
+
+void GraphicsSystem::SyncRenderer(  )
+{
+	aRenderer.msgs 		= this->apMsgs;
+	aRenderer.console 	= this->apConsole;
+}
+
+GraphicsSystem::GraphicsSystem(  ) : BaseSystem(  )
+{
+	aSystemType = GRAPHICS_C;
+	AddUpdateFunction( [ & ](  ){ aRenderer.update(  ); } );
+        AddUpdateFunction( [ & ](  ){ DrawFrame(  ); } );
+
+	aRenderer.init_vulkan(  );
+
+	LoadModel( "materials/models/protogen_wip_22/protogen_wip_22.obj", "materials/textures/blue_mat.png" );
+}
+
+void GraphicsSystem::InitSubsystems(  )
+{
+        SyncRenderer(  );
+	aRenderer.send_messages(  );
+}
+
+GraphicsSystem::~GraphicsSystem(  )
+{
 	
-	sprites.push_back( sprite );
-}
-
-void graphics_c::draw_frame
-	(  )
-{
-	renderer.draw_frame(  );
-}
-
-void graphics_c::sync_renderer
-	(  )
-{
-	renderer.msgs = msgs;
-	renderer.console = console;
-}
-
-graphics_c::graphics_c
-	(  )
-{
-	systemType = GRAPHICS_C;
-	init_commands(  );
-	add_func( [ & ](  ){ renderer.update(  ); } );
-	add_func( [ & ](  ){ draw_frame(  ); } );
-	
-	renderer.models = &modelData;
-	renderer.sprites = &spriteData;
-	renderer.init_vulkan(  );
-
-	//load_model( "materials/models/protogen_wip_5_plus_protodal.obj", "materials/textures/red_mat.png"  );
-	load_model( "materials/models/protogen_wip_22/protogen_wip_22.obj", "materials/textures/blue_mat.png" );
-	//load_sprite( "materials/textures/hilde_sprite_upscale.png" );
-	//load_sprite( "materials/textures/blue_mat.png" );
-}
-
-void graphics_c::init_subsystems
-	(  )
-{
-	sync_renderer(  );
-	renderer.send_messages(  );
-}
-
-graphics_c::~graphics_c
-	(  )
-{
-	for ( const auto& model : models )
-	{
-		delete model;
-	}
-	for ( const auto& sprite : sprites )
-	{
-		delete sprite;
-	}
 }

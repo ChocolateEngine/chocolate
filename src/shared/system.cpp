@@ -34,8 +34,9 @@ void BaseSystem::ReadConsole(  )
 			return;
 		for ( const auto& cmd : aConsoleCommands )
 		{
+			/* Makes sure compound commands are parsed correctly .e.g bind in "bind up ent_create" could not be triggered by "bindyourmomlol".  */
 			if ( cmd.str == command.substr( 0, cmd.str.length(  ) )
-			     && ( command.size(  ) == cmd.str.size(  ) || command[ cmd.str.size(  ) ] == ' ' ) )	//	Makes sure compound commands are parsed correctly .e.g bind in "bind up ent_create" could not be triggered by "bindyourmomlol"
+			     && ( command.size(  ) == cmd.str.size(  ) || command[ cmd.str.size(  ) ] == ' ' ) )
 			{
 				std::vector< std::string > args;
 				int start, end = 0;
@@ -99,6 +100,7 @@ BaseSystem::BaseSystem(  )
 {
         InitCommands(  );
 	InitConsoleCommands(  );
+	InitSubsystems(  );
 }
 
 void BaseSystem::InitSubsystems(  )
