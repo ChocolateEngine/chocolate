@@ -1,46 +1,44 @@
-#ifndef INPUT_H
-#define INPUT_H
+#pragma once
 
 #include "../shared/system.h"
 
 #include <SDL2/SDL.h>
 
-typedef struct key_alias_s
+class KeyAlias
 {
-	std::string alias;
-	int code;
-}key_alias_t;
-
-typedef struct keybind_s
-{
-	std::string bind, cmd;
-}keybind_t;
-
-class input_c : public system_c
-{
-	protected:
-
-	SDL_Event event;
-	std::vector< key_alias_t > keyAliases;
-	std::vector< keybind_t > keyBinds;
-
-	void make_aliases
-		(  );
-	void parse_bindings
-		(  );
-	void bind
-		( const std::string& key, const std::string& cmd );
-	
-	public:
-
-	void parse_input
-		(  );
-
-	void init_console_commands
-		(  );
-	
-	input_c
-		(  );
+public:
+	std::string 	aAlias;
+	int 		aCode;
 };
 
-#endif
+class KeyBind
+{
+public:
+	std::string 	aBind;
+	std::string	aCmd;
+};
+
+class InputSystem : public BaseSystem
+{
+	SYSTEM_OBJECT( InputSystem )
+protected:
+	typedef std::vector< KeyAlias > KeyAliases;
+	typedef std::vector< KeyBind >	KeyBinds;
+	
+	SDL_Event 	aEvent;
+	KeyAliases 	aKeyAliases;
+	KeyBinds 	aKeyBinds;
+
+	/* Parse the key aliases that can be bound to.  */
+	void 		MakeAliases(  );
+	/* Parses keybinds located in the config folder.  */
+	void 		ParseBindings(  );
+	/* Binds the console command to the key.  */
+	void 		Bind( const std::string& srKey, const std::string& srCmd );
+public:
+	/* Parses SDL inputs and if there is a valid input, execute the console command.  */
+	void 		ParseInput(  );
+	/* Cosntructor.  */
+	explicit        InputSystem(  );
+};
+

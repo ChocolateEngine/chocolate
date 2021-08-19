@@ -5,134 +5,105 @@
 #include <fstream>
 #include <iostream>
 
-void input_c::make_aliases
-		(  )
+void InputSystem::MakeAliases(  )
 {
-	std::ifstream in( "resource/SDL_Alias_List.txt" );
+	std::ifstream 	in( "resource/SDL_Alias_List.txt" );
 	if ( !in.is_open(  ) )
-	{
 		return;
-	}
-	std::string alias;
-	int scanCode;
-	for ( ; in >> alias >> scanCode; )
+	std::string 	alias;
+        int 		scanCode;
+	while ( in >> alias >> scanCode )
 	{
-		key_alias_t key{  };
-		key.alias 	= alias;
-		key.code 	= SDL_SCANCODE_TO_KEYCODE( scanCode );
-		keyAliases.push_back( key );
+	        KeyAlias 	key{  };
+		key.aAlias 	= alias;
+		key.aCode 	= SDL_SCANCODE_TO_KEYCODE( scanCode );
+		aKeyAliases.push_back( key );
 
 		std::cout << alias << " using scanCode " << scanCode << std::endl;
 		in >> alias;	//	Hack to skip comment
 	}
 }
 
-void input_c::parse_bindings
-		(  )
+void InputSystem::ParseBindings(  )
 {
-	std::ifstream in( "cfg/bindings.cfg" );
+	std::ifstream 	in( "cfg/bindings.cfg" );
 	if ( !in.is_open(  ) )
-	{
 		return;
-	}
-	std::string bind, cmd;
-	for ( ; in >> bind >> cmd; )
+	std::string 	bind;
+	std::string	cmd;
+        while ( in >> bind >> cmd )
 	{
-		keybind_t binding{  };
-		binding.bind 	= bind;
-		binding.cmd 	= cmd;
-		keyBinds.push_back( binding );
+	        KeyBind binding{  };
+		binding.aBind 	= bind;
+		binding.aCmd 	= cmd;
+		aKeyBinds.push_back( binding );
 
 		std::cout << cmd << " bound to " << bind << std::endl;
 	}
 }
 
-void input_c::bind
-	( const std::string& key, const std::string& cmd )
+void InputSystem::Bind( const std::string& srKey, const std::string& srCmd )
 {
-	for ( const auto& alias : keyAliases )
-	{
-		if ( alias.alias == key )
+	for ( const auto& alias : aKeyAliases )
+		if ( alias.aAlias == srKey )
 		{
-			for ( int i = 0; i < keyBinds.size(  ); ++i )
-			{
-				if ( keyBinds[ i ].bind == key )
-				{
-					keyBinds.erase( keyBinds.begin(  ) + i );
-				}
-			}
-			keybind_t bind{  };
-			bind.bind 	= key;
-			bind.cmd 	= cmd;
-			keyBinds.push_back( bind );
+			for ( int i = 0; i < aKeyBinds.size(  ); ++i )
+				if ( aKeyBinds[ i ].aBind == srKey )
+					aKeyBinds.erase( aKeyBinds.begin(  ) + i );
+		        KeyBind bind{  };
+			bind.aBind 	= srKey;
+			bind.aCmd 	= srCmd;
+			aKeyBinds.push_back( bind );
 
-			std::cout << cmd << " bound to " << key << std::endl;
+			std::cout << srCmd << " bound to " << srKey << std::endl;
 			return;
 		}
-	}
-	std::cout << key << " is not a valid key alias" << std::endl;
+	std::cout << srKey << " is not a valid key alias" << std::endl;
 }
 
-void input_c::parse_input
-	(  )
+void InputSystem::ParseInput(  )
 {
-	for ( ; SDL_PollEvent( &event ) ; )
+	for ( ; SDL_PollEvent( &aEvent ) ; )
 	{
-		ImGui_ImplSDL2_ProcessEvent( &event );
-		if ( event.type == SDL_QUIT )
+		ImGui_ImplSDL2_ProcessEvent( &aEvent );
+		if ( aEvent.type == SDL_QUIT )
+			apMsgs->add( ENGINE_C, ENGI_EXIT );
+		if ( aEvent.type == SDL_KEYDOWN )
 		{
-			msgs->add( ENGINE_C, ENGI_EXIT );
-		}
-		if ( event.type == SDL_KEYDOWN )
-		{
-			if ( event.key.keysym.sym == SDLK_BACKQUOTE )
-			{
-				msgs->add( GUI_C, LOAD_IMGUI_DEMO );
-			}
+			if ( aEvent.key.keysym.sym == SDLK_BACKQUOTE )
+				apMsgs->add( GUI_C, LOAD_IMGUI_DEMO );
 			else
-			{
-				for ( const auto& alias : keyAliases )
-				{
-					if ( event.key.keysym.sym == alias.code )
-					{
-						for ( const auto& bind : keyBinds )
-						{
-							if ( bind.bind == alias.alias )
-							{
-								console->add( bind.cmd );
-							}
-						}
-					}
-				}
-			}
+				for ( const auto& alias : aKeyAliases )
+					if ( aEvent.key.keysym.sym == alias.aCode )
+						for ( const auto& bind : aKeyBinds )
+							if ( bind.aBind == alias.aAlias )
+								apConsole->add( bind.aCmd );
 		}
 	}
 }
 
-void input_c::init_console_commands
-	(  )
+void InputSystem::InitConsoleCommands(  )
 {
 	command_t cmd;
 
 	cmd.str = "bind";
-	cmd.func = [ & ]( std::vector< std::string > args )
+	cmd.func = [ & ]( std::vector< std::string > sArgs )
 		{
-			if ( args.size(  ) < 3 )
+			if ( sArgs.size(  ) < 3 )
 			{
 				printf( "Insufficient arguments for bind\n" );
 				return;
 			}
-			bind( args[ 1 ], args[ 2 ] );
+			Bind( sArgs[ 1 ], sArgs[ 2 ] );
 		};
-	consoleCommands.push_back( cmd );
+	aConsoleCommands.push_back( cmd );
 }
 
-input_c::input_c
-	(  )
+InputSystem::InputSystem(  ) : BaseSystem(  )
 {
-	systemType = INPUT_C;
-	add_func( [ & ](  ){ parse_input(  ); } );
-	make_aliases(  );
-	parse_bindings(  );
-	init_console_commands(  );
+	aSystemType = INPUT_C;
+        AddUpdateFunction( [ & ](  ){ ParseInput(  ); } );
+	
+        MakeAliases(  );
+        ParseBindings(  );
 }

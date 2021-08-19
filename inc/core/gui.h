@@ -1,31 +1,24 @@
-#ifndef GUI_H
-#define GUI_H
+#pragma once
 
 #include <SDL2/SDL.h>
 
 #include "../../inc/shared/system.h"
 
-class gui_c : public system_c
+class GuiSystem : public BaseSystem
 {
-	protected:
+	SYSTEM_OBJECT( GuiSystem )
+protected:
+	SDL_Window 	*apWindow 	= NULL;
+	bool 		aConsoleShown 	= false;
 
-	SDL_Window* win = NULL;
-	bool consoleShown = false;
-
-	void init_commands
-		(  );
-	void draw_gui
-		(  );
-	void		ShowConsole( int sArgs );
-	
-	public:
-
-	void assign_win
-		( SDL_Window* window );
-
-	gui_c
-		(  );
+	/* Draw the gui.  */
+	void 		DrawGui(  );
+	/* Shows the console window.  */
+	void		ShowConsole(  );
+public:
+	/* Gets the window pointer from the renderer.  */
+	void 		AssignWindow( SDL_Window* spWindow );
+	/* Constructor.  */
+	explicit	GuiSystem(  );
 
 };
-
-#endif

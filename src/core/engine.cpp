@@ -23,7 +23,7 @@ void Engine::AddGameSystems(  )
 	for ( const auto& pSys : gameSystems )
 	{
 		pSys->AddFlag( EXTERNAL_SYSTEM );
-		pSys->apMsgs = this->apMsgs;
+		pSys->apMsgs 	= this->apMsgs;
 		pSys->apConsole = apConsole;
 		aSystems.push_back( pSys );
 	}
@@ -31,16 +31,8 @@ void Engine::AddGameSystems(  )
 
 void Engine::InitCommands(  )
 {
-	msg_s msg;
-	msg.type 	= ENGINE_C;
-	
-	msg.msg 	= ENGI_PING;
-	msg.func 	= [ & ]( std::vector< std::any > args ){ printf( "Engine: Ping!\n" ); };
-	aEngineCommands.push_back( msg );
-
-	msg.msg 	= ENGI_EXIT;
-	msg.func 	= [ & ]( std::vector< std::any > args ){ aActive = false; };
-	aEngineCommands.push_back( msg );
+	apMsgs->aCmdManager.Add( "_ping", [ & ](  ){ printf( "Ping!\n" ); } );
+	apMsgs->aCmdManager.Add( "_exit", [ & ](  ){ aActive = false; } );
 }
 
 void Engine::LoadObject( const std::string& srDlPath, const std::string& srEntry )
@@ -85,10 +77,10 @@ void Engine::EngineMain(  )
 
 void Engine::InitSystems(  )
 {
-	AddSystem( new graphics_c,
-		   new input_c,
+	AddSystem( new GraphicsSystem,
+		   new InputSystem,
 		   new AudioSystem,
-		   new gui_c );
+		   new GuiSystem );
 	
 	for ( const auto& pSys : aSystems )
 	{

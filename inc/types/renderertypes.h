@@ -1,5 +1,4 @@
-#ifndef RENDERERTYPES_H
-#define RENDERERTYPES_H
+#pragma once
 
 #define GLM_ENABLE_EXPERIMENTAL
 
@@ -10,17 +9,25 @@
 #include <optional>
 #include <vector>
 
-struct queue_family_indices_t
+class QueueFamilyIndices
 {
-	int presentFamily = -1, graphicsFamily = -1; // make this not use optional pls
-	bool complete (  ) { return ( presentFamily > -1 ) && ( graphicsFamily > -1 ); }
+private:
+	int 	aPresentFamily 	= -1;
+	int	aGraphicsFamily = -1;
+public:
+	/* Function that returns true if there is a valid queue family available.  */
+	bool    Complete(  ){ return ( aPresentFamily > -1 ) && ( aGraphicsFamily > -1 ); }
 };
 
-struct swap_chain_support_info_t
+class SwapChainSupportInfo
 {
-	VkSurfaceCapabilitiesKHR 		c;	//	capabilities
-	std::vector< VkSurfaceFormatKHR > 	f;	//	formats
-	std::vector< VkPresentModeKHR > 	p;	//	present modes
+private:
+	typedef std::vector< VkSurfaceFormatKHR > 	SurfaceFormats;
+	typedef std::vector< VkPresentModeKHR >		PresentModes;
+public:
+	VkSurfaceCapabilitiesKHR        aCapabilities;
+        SurfaceFormats 			aFormats;
+	PresentModes 			aPresentModes;
 };
 
 struct combined_buffer_info_t
@@ -171,61 +178,76 @@ struct ubo_2d_t
 	glm::vec2 extent;
 };
 
-struct sprite_data_t
+class SpriteData
 {
-	VkBuffer vBuffer, iBuffer;
-	VkDeviceMemory vBufferMem, iBufferMem, tImageMem;
-	VkImage tImage;
-	VkImageView tImageView;
-	std::vector< VkDescriptorSet > descSets;
-	uint32_t vCount, iCount;
-	bool noDraw = false;
+	typedef std::vector< VkDescriptorSet > DescriptorSetList;
+	
+	VkBuffer 		aVertexBuffer;
+	VkBuffer		aIndexBuffer;
+	VkDeviceMemory 		aVertexBufferMem;
+        VkDeviceMemory		aIndexBufferMem;
+	VkDeviceMemory		aTextureImageMem;
+	VkImage 		aTextureImage;
+	VkImageView 		aTextureImageView;
+	DescriptorSetList 	aDescriptorSets;
+	uint32_t 		aVertexCount;
+	uint32_t		aIndexCount;
+public:
+	bool 			aNoDraw = false;
+	float 			aPosX 	= 0.0f;
+	float			aPosY 	= 0.0f;
+	float 			aWidth 	= 0.5f;
+	float			aHeight = 0.5f;
 
-	float posX = 0.0f, posY = 0.0f;
-	float width = 0.5f, height = 0.5f;
-	void bind
-		( VkCommandBuffer c, VkPipelineLayout p, uint32_t i )
+	/* Binds the sprite data to the GPU to be submitted for rendering.  */
+	void 		Bind( VkCommandBuffer c, VkPipelineLayout p, uint32_t i )
 		{
-			VkBuffer vBuffers[  ] 		= { vBuffer };
-			VkDeviceSize offsets[  ] 	= { 0 };
-		        vkCmdBindDescriptorSets( c, VK_PIPELINE_BIND_POINT_GRAPHICS, p, 0, 1, &descSets[ i ], 0, NULL );
+			VkBuffer 	vBuffers[  ]    = { aVertexBuffer };
+			VkDeviceSize 	offsets[  ] 	= { 0 };
+		        vkCmdBindDescriptorSets( c, VK_PIPELINE_BIND_POINT_GRAPHICS, p, 0, 1, &aDescriptorSets[ i ], 0, NULL );
 			vkCmdBindVertexBuffers( c, 0, 1, vBuffers, offsets );
-			vkCmdBindIndexBuffer( c, iBuffer, 0, VK_INDEX_TYPE_UINT32 );
+			vkCmdBindIndexBuffer( c, aIndexBuffer, 0, VK_INDEX_TYPE_UINT32 );
 		}
-	void draw
-		( VkCommandBuffer c )
-		{
-			vkCmdDrawIndexed( c, iCount, 1, 0, 0, 0 );	
-		}
+	/* Draw the sprite to the screen.  */
+	void 		Draw( VkCommandBuffer c ){ vkCmdDrawIndexed( c, aIndexCount, 1, 0, 0, 0 ); }
 };
 
-struct model_data_t
+struct ModelData
 {
-	VkBuffer vBuffer, iBuffer;
-	VkDeviceMemory vBufferMem, iBufferMem, tImageMem;
-	VkImage tImage;
-	VkImageView tImageView;
-	std::vector< VkBuffer > uBuffers;
-	std::vector< VkDeviceMemory > uBuffersMem;
-	std::vector< VkDescriptorSet > descSets;
-	uint32_t vCount, iCount;
+	typedef std::vector< VkBuffer >		BufferSet;
+	typedef std::vector< VkDeviceMemory >	MemorySet;
+	typedef std::vector< VkDescriptorSet > 	DescriptorSetList;
+	
+        VkBuffer 		aVertexBuffer;
+	VkBuffer		aIndexBuffer;
+	VkDeviceMemory 		aVertexBufferMem;
+        VkDeviceMemory		aIndexBufferMem;
+	VkDeviceMemory		aTextureImageMem;
+	VkImage 		aTextureImage;
+	VkImageView 		aTextureImageView;
+	BufferSet		aUniformBuffers;
+	MemorySet		aUniformBuffersMem;
+	DescriptorSetList 	aDescriptorSets;
+	uint32_t 		aVertexCount;
+	uint32_t		aIndexCount;
+public:
+	bool 			aNoDraw = false;
+	float 			aPosX 	= 0.0f;
+	float			aPosY 	= 0.0f;
+	float			aPosZ	= 0.0f;
+	float 			aWidth 	= 0.5f;
+	float			aHeight = 0.5f;
 
-	float posX, posY, posZ;
-
-	void bind
-		( VkCommandBuffer c, VkPipelineLayout p, uint32_t i )
+	/* Binds the model data to the GPU to be rendered later.  */
+	void 		Bind( VkCommandBuffer c, VkPipelineLayout p, uint32_t i )
 		{
-			VkBuffer vBuffers[  ] 		= { vBuffer };
-			VkDeviceSize offsets[  ] 	= { 0 };
+			VkBuffer 	vBuffers[  ] 	= { aVertexBuffer };
+			VkDeviceSize 	offsets[  ] 	= { 0 };
 			vkCmdBindVertexBuffers( c, 0, 1, vBuffers, offsets );
-			vkCmdBindIndexBuffer( c, iBuffer, 0, VK_INDEX_TYPE_UINT32 );
-			vkCmdBindDescriptorSets( c, VK_PIPELINE_BIND_POINT_GRAPHICS, p, 0, 1, &descSets[ i ], 0, NULL );
+			vkCmdBindIndexBuffer( c, aIndexBuffer, 0, VK_INDEX_TYPE_UINT32 );
+			vkCmdBindDescriptorSets( c, VK_PIPELINE_BIND_POINT_GRAPHICS, p, 0, 1, &aDescriptorSets[ i ], 0, NULL );
 		}
-	void draw
-		( VkCommandBuffer c )
-		{
-			vkCmdDrawIndexed( c, iCount, 1, 0, 0, 0 );
-		}
+	/* Draws the model to the screen.  */
+	void 		Draw( VkCommandBuffer c ){ vkCmdDrawIndexed( c, aIndexCount, 1, 0, 0, 0 ); }
 };
 
-#endif
