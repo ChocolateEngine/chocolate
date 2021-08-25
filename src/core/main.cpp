@@ -6,9 +6,9 @@ extern "C"
 	void DLL_EXPORT engine_start
 		(  )
 	{
-		engine_c engine;
+	        Engine 	engine;
 
-		engine.engine_main(  );
+		engine.EngineMain(  );
 
 		return;
 	}

@@ -1,5 +1,10 @@
-#ifndef ALLOCATOR_H
-#define ALLOCATOR_H
+/*
+allocator.h ( Authored by p0lyh3dron )
+
+Declares some of the allocator functions for
+many of the Vk objects used in the renderer.  
+*/
+#pragma once
 
 #define MAX_FRAMES_PROCESSING 2
 
@@ -11,115 +16,103 @@
 #define NO_CULLING 1 << 0
 #define NO_DEPTH   1 << 1
 
-class allocator_c
+typedef std::vector< char >     ByteArray;
+
+class Allocator
 {
-	private:
-
-	std::vector< std::function< void(  ) > > freeQueue;
-
-	VkFormat find_depth_format
-		(  );
-	std::vector< char > read_file
-		( const std::string& filePath );
-	VkShaderModule create_shader_module	//	Wraps shader bytecode into objects for pipeline to work
-		( const std::vector< char >& code );
-	void transition_image_layout
-		( VkImage image, VkImageLayout oldLayout, VkImageLayout newLayout );
-
-	void init_buffer
-		( VkDeviceSize size,
-		  VkBufferUsageFlags usage,
-		  VkMemoryPropertyFlags properties,
-		  VkBuffer& buffer,
-		  VkDeviceMemory& bufferMemory );
-	void map_memory
-		( VkDeviceMemory bufMem, VkDeviceSize size, const void* in );
-	void buf_copy
-		( VkBuffer src, VkBuffer dst, VkDeviceSize size );
-	void copy_buffer_to_img
-		( VkBuffer buffer, VkImage image, uint32_t width, uint32_t height );
-
-	void submit
-		( const auto&& func );
-
-	public:
-
-	std::vector< VkImage >* swapChainImages = NULL;
-	VkRenderPass* renderPass = NULL;
-
-	void init_allocator
-		( std::vector< VkImage >& swapChainImagesIn );
-
-	void init_image_view
-		( VkImageView& imageView, VkImage image, VkFormat format, VkImageAspectFlags aspectFlags );
-	void init_image
-		( uint32_t width,
-		  uint32_t height,
-		  VkFormat format,
-		  VkImageTiling tiling,
-		  VkImageUsageFlags usage,
-		  VkMemoryPropertyFlags properties,
-		  VkImage& image,
-		  VkDeviceMemory& imageMemory );
-	void init_texture_image
-		( const std::string& imagePath, VkImage& tImage, VkDeviceMemory& tImageMem, float* width, float* height );
-	void init_texture_image_view
-		( VkImageView& tImageView, VkImage tImage );
-
-	template< typename T >
-	void init_vertex_buffer
-		( const std::vector< T >& v, VkBuffer& vBuffer, VkDeviceMemory& vBufferMem );
-	void init_index_buffer
-		( std::vector< uint32_t >& i, VkBuffer& iBuffer, VkDeviceMemory& iBufferMem );
-	template< typename T >
-        void init_uniform_buffers
-		( std::vector< VkBuffer >& uBuffers, std::vector< VkDeviceMemory >& uBuffersMem );
-	void init_desc_sets
-		( std::vector< VkDescriptorSet >& descSets,
-		  VkDescriptorSetLayout& descSetLayout,
-		  VkDescriptorPool& descPool,
-		  const std::vector< combined_image_info_t >& descImageInfos   = std::vector< combined_image_info_t >(  ),
-		  const std::vector< combined_buffer_info_t >& descBufferInfos = std::vector< combined_buffer_info_t >(  ) );
+private:
+	typedef std::string					String;
+	typedef std::vector< std::function< void(  ) > > 	FunctionList;
+	typedef std::vector< VkImage >			        ImageSet;
+	typedef std::vector< uint32_t >				IndexSet;
+	typedef std::vector< VkBuffer >				BufferSet;
+	typedef std::vector< VkDeviceMemory >			MemorySet;
+	typedef std::vector< VkDescriptorSet >			DescriptorSets;
+	typedef std::vector< combined_image_info_t >		ImageInfoSets;
+	typedef std::vector< combined_buffer_info_t >		BufferInfoSets;
+	typedef std::vector< VkImageView >			ImageViews;
+	typedef std::vector< desc_set_layout_t >		DescSetLayouts;
+	typedef std::vector< VkFramebuffer >			FrameBuffers;
+	typedef std::vector< VkSemaphore >			SemaphoreList;
+	typedef std::vector< VkFence >				FenceList;
 	
-	void init_image_views
-		( std::vector< VkImageView >& swapChainImageViews, VkFormat& swapChainImageFormat );
-	void init_render_pass
-		( VkRenderPass& renderPass, VkFormat& swapChainImageFormat );
-	void init_desc_set_layout
-		( VkDescriptorSetLayout& descSetLayout, const std::vector< desc_set_layout_t >& bindings = std::vector< desc_set_layout_t >(  ) );
+	FunctionList 		aFreeQueue;
+
+	/* A.  */
+	VkFormat 		FindDepthFormat(  );
+	/* Reads a file into a byte array.  */
+	ByteArray     		ReadFile( const String &srFilePath );
+	/* Wraps bytecode into objects for the pipeline to use.  */
+	VkShaderModule 		CreateShaderModule( const ByteArray &srCode );
+	/* A.  */
+	void 			TransitionImageLayout( VkImage sImage, VkImageLayout sOldLayout, VkImageLayout sNewLayout );
+
+	/* Creates a buffer and maps the memory.  */
+	void 			InitBuffer( VkDeviceSize sSize, VkBufferUsageFlags sUsage, VkMemoryPropertyFlags sProperties,
+					    VkBuffer &srBuffer, VkDeviceMemory &srBufferMemory );
+	/* Copies the memory into the GPU.  */
+	void 			MapMemory( VkDeviceMemory sBufferMemory, VkDeviceSize sSize, const void *spData );
+	/* Copies the contents of a buffer into another buffer.  */
+	void 			CopyBuffer( VkBuffer sSrc, VkBuffer sDst, VkDeviceSize sSize );
+	/* A.  */
+	void 			CopyBufferToImage( VkBuffer sBuffer, VkImage sImage, uint32_t sWidth, uint32_t sHeight );
+	/* Immediately submits a command to a command buffer.  */
+	void 			Submit( const auto &&sFunction );
+public:
+        ImageSet 		*apSwapChainImages = NULL;
+	VkRenderPass 		*apRenderPass = NULL;
+        device_c 		*apDevice;
+
+	/* A.  */
+	void 			InitAllocator( ImageSet &sSwapChainImages );
+	/* A.  */
+	void 			InitImageView( VkImageView &sImageView, VkImage sImage, VkFormat sFormat, VkImageAspectFlags sAspectFlags );
+	/* A.  */
+	void 			InitImage( VkImageCreateInfo sImageInfo, VkMemoryPropertyFlags sProperties, VkImage &srImage, VkDeviceMemory &srImageMemory );
+	/* A.  */
+	void 			InitTextureImage( const String &srImagePath, VkImage &srTImage, VkDeviceMemory &srTImageMem, float *spWidth, float *spHeight );
+	/* A.  */
+	void 			InitTextureImageView( VkImageView &srTImageView, VkImage sTImage );
+	/* A.  */
 	template< typename T >
-	void init_graphics_pipeline
-		( VkPipeline& pipeline,
-	  	  VkPipelineLayout& layout,
-	  	  VkExtent2D& swapChainExtent,
-	  	  VkDescriptorSetLayout& descSetLayout,
-	  	  const std::string& vertShader,
-	  	  const std::string& fragShader,
-		  int flags );
-	void init_depth_resources
-		( VkImage& depthImage, VkDeviceMemory& depthImageMemory, VkImageView& depthImageView, VkExtent2D& swapChainExtent );
-	void init_frame_buffer
-		( std::vector<VkFramebuffer>& swapChainFramebuffers,
-		  std::vector<VkImageView>& swapChainImageViews,
-		  VkImageView& depthImageView,
-		  VkExtent2D& swapChainExtent );
-	void init_desc_pool	//	please for the love of god, change this
-		( VkDescriptorPool& descPool, std::vector< VkDescriptorPoolSize > poolSizes );
-	void init_imgui_pool
-		( SDL_Window* window );
-	void init_sync
-		( std::vector< VkSemaphore >& imageAvailableSemaphores,
-		  std::vector< VkSemaphore >& renderFinishedSemaphores,
-		  std::vector< VkFence >& inFlightFences,
-		  std::vector< VkFence >& imagesInFlight );
-
-	void free_resources
-		(  );
-
-	~allocator_c
-		(  );
-
-	device_c* dev;
+	void 		        InitVertexBuffer( const std::vector< T > &srVertices, VkBuffer &srVBuffer, VkDeviceMemory &srVBufferMem );
+	/* A.  */
+	void 			InitIndexBuffer( IndexSet &srIndices, VkBuffer &srIBuffer, VkDeviceMemory &srIBufferMem );
+	/* A.  */
+	template< typename T >
+        void 			InitUniformBuffers( BufferSet &srUBuffers, MemorySet &srUBuffersMem );
+	/* A.  */
+	void 			InitDescriptorSets( DescriptorSets &srDescSets, VkDescriptorSetLayout &srDescSetLayout,
+						    VkDescriptorPool &srDescPool,
+						    const ImageInfoSets   &srDescImageInfos  = ImageInfoSets(  ),
+						    const BufferInfoSets  &srDescBufferInfos = BufferInfoSets(  ) );
+	/* A.  */
+	void 			InitImageViews( ImageViews &srSwapChainImageViews, VkFormat &srSwapChainImageFormat );
+	/* A.  */
+	void 			InitRenderPass( VkRenderPass &srRenderPass, VkFormat &srSwapChainImageFormat );
+	/* A.  */
+	void 			InitDescriptorSetLayout( VkDescriptorSetLayout &srDescSetLayout,
+							 const DescSetLayouts &srBindings = DescSetLayouts(  ) );
+	/* A.  */
+	template< typename T >
+        void 			InitGraphicsPipeline( VkPipeline &srPipeline, VkPipelineLayout &srLayout, VkExtent2D &srSwapChainExtent,
+						      VkDescriptorSetLayout &srDescSetLayout, const String &srVertShader,
+						      const String &srFragShader, int sFlags );
+	/* A.  */
+	void 			InitDepthResources( VkImage &srDepthImage, VkDeviceMemory &srDepthImageMemory, VkImageView &srDepthImageView,
+						    VkExtent2D &srSwapChainExtent );
+	/* A.  */
+	void 			InitFrameBuffer( FrameBuffers &srSwapChainFramebuffers, ImageViews &srSwapChainImageViews,
+						 VkImageView &srDepthImageView, VkExtent2D &srSwapChainExtent );
+	/* A.  */
+	void 			InitDescPool( VkDescriptorPool &srDescPool, std::vector< VkDescriptorPoolSize > sPoolSizes );
+	/* A.  */
+	void 			InitImguiPool( SDL_Window *spWindow );
+	/* A.  */
+	void 			InitSync( SemaphoreList &srImageAvailableSemaphores, SemaphoreList &srRenderFinishedSemaphores,
+					  FenceList &srInFlightFences, FenceList &srImagesInFlight );
+	/* A.  */
+	void 			FreeResources(  );
+	/* A.  */
+				~Allocator(  );
 };
-
-#endif
