@@ -16,7 +16,6 @@ various systems and synchronizations
 
 class Engine : public BaseSystem
 {
-	SYSTEM_OBJECT( Engine )
 protected:
 	typedef std::vector< BaseSystem* >      SystemList;
 	typedef std::vector< void* > 	        DataList;
@@ -27,11 +26,16 @@ protected:
 	/* Entry for the game code.  */
 	void 		( *game_init )( SystemList& ) = NULL;
 
+	void		AddSystem(  ){  }
 	/* Adds a system to aSystems.  */
 	template< typename T, typename... TArgs >
         void 		AddSystem( const T *spSystem = NULL, TArgs... sSystems );
 	/* Adds the game systems to aSystems.  */
-	void 		AddGameSystems(  );	
+	void 		AddGameSystems(  );
+	/* Initializes all commands the system can respond to.  */
+	void 		InitCommands(  );
+	/* Initializes all console commands the system can respond to.  */
+	void 		InitConsoleCommands(  );
 public:
 	bool 		aActive;
 
@@ -47,4 +51,5 @@ public:
 	void 		UpdateSystems(  );
 	/* Initialize the engine, creating systems, etc.  */
 	explicit 	Engine(  );
+				~Engine(  );
 };

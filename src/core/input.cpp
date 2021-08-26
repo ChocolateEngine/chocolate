@@ -67,24 +67,24 @@ void InputSystem::ParseInput(  )
 	{
 		ImGui_ImplSDL2_ProcessEvent( &aEvent );
 		if ( aEvent.type == SDL_QUIT )
-			apMsgs->add( ENGINE_C, ENGI_EXIT );
+			apMsgs->Add( ENGINE_C, ENGI_EXIT );
 		if ( aEvent.type == SDL_KEYDOWN )
 		{
 			if ( aEvent.key.keysym.sym == SDLK_BACKQUOTE )
-				apMsgs->add( GUI_C, LOAD_IMGUI_DEMO );
+				apMsgs->Add( GUI_C, LOAD_IMGUI_DEMO );
 			else
 				for ( const auto& alias : aKeyAliases )
 					if ( aEvent.key.keysym.sym == alias.aCode )
 						for ( const auto& bind : aKeyBinds )
 							if ( bind.aBind == alias.aAlias )
-								apConsole->add( bind.aCmd );
+								apConsole->Add( bind.aCmd );
 		}
 	}
 }
 
 void InputSystem::InitConsoleCommands(  )
 {
-	command_t cmd;
+	ConCommand cmd;
 
 	cmd.str = "bind";
 	cmd.func = [ & ]( std::vector< std::string > sArgs )

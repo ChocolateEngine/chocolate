@@ -1,10 +1,9 @@
 #include "../../inc/shared/msgs.h"
 
-bool msgs_c::shares_flag
-	( int x, int y, int in )
+bool SharesFlag( int sX, int sY, int sFlag )
 {
-	int x1 = ( x & in );
-	int y1 = ( y & in );
+	int x1 = ( sX & sFlag );
+	int y1 = ( sY & sFlag );
 	if ( x1 == y1 )
 	{
 		return true;
@@ -12,45 +11,31 @@ bool msgs_c::shares_flag
 	return false;
 }
 
-msg_s* msgs_c::fetch_msg
-	( int type, int flags )
+Message *Messages::FetchMessage( int sType, int sFlags )
 {
-	for ( int i = 0; i < queue.size(  ); ++i )
+	for ( int i = 0; i < aQueue.size(  ); ++i )
 	{
-		if ( queue[ i ].type == type && queue[ i ].flags == flags )
+		if ( aQueue[ i ].type == sType && aQueue[ i ].flags == sFlags )
 		{
-			lastMsgIndex = i;
-			return &queue[ i ];
+			aLastMsgIndex = i;
+			return &aQueue[ i ];
 		}
 	}
-	lastMsgIndex = -1;
+	aLastMsgIndex = -1;
 	return 0x0;
 }
 
-void msgs_c::add
-	( int type, int cmd, int flags, const std::vector< std::any >& args  )
+void Messages::Add( int sType, int sCmd, int sFlags, const Arbitrary &srArgs )
 {
-	msg_s msg;
-	msg.type 	= type;
-	msg.msg 	= cmd;
-	msg.flags 	= flags;
-	msg.args	= args;
-        queue.push_back( msg );
+	Message msg;
+	msg.type 	= sType;
+	msg.msg 	= sCmd;
+	msg.flags 	= sFlags;
+	msg.args	= srArgs;
+        aQueue.push_back( msg );
 }
 
-void msgs_c::AddFunction( PublishedFunction &srPublishedFunction )
+void Messages::Remove( int sIndex )
 {
-	aPublishedFunctions.push_back( srPublishedFunction );
-}
-
-std::any msgs_c::Call( const std::string& srFunctionName,
-		       const std::vector< std::any > sArgs )
-{
-	
-}
-
-void msgs_c::remove
-	( int index )
-{
-	queue.erase( queue.begin(  ) + index );
+	aQueue.erase( aQueue.begin(  ) + sIndex );
 }

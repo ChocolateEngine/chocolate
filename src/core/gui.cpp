@@ -16,7 +16,7 @@ void GuiSystem::DrawGui(  )
 		ImGui::Begin( "Developer Console" );
 		static char buf[ 256 ] = "";
 		if ( ImGui::InputText( "send", buf, 256, ImGuiInputTextFlags_EnterReturnsTrue ) )
-			apConsole->add( buf );
+			apConsole->Add( buf );
 		ImGui::End(  );
 	}
 }
@@ -44,4 +44,8 @@ GuiSystem::GuiSystem(  ) : BaseSystem(  )
 	aSystemType = GUI_C;
         AddUpdateFunction( [ & ](  ){ DrawGui(  ); } );
 }
-	
+
+GuiSystem::~GuiSystem(  )
+{
+
+}

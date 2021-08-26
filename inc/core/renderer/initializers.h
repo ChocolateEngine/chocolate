@@ -9,8 +9,7 @@ structures.
 
 #include <vulkan/vulkan.hpp>
 /* Creates a structure specifying descriptor buffer information.  */
-static inline VkDescriptorBufferInfo DescriptorBuffer
-	( std::vector< VkBuffer > &srBuffers, unsigned int sRange, unsigned int sOffset, unsigned int sIndex )
+static inline VkDescriptorBufferInfo DescriptorBuffer( std::vector< VkBuffer > &srBuffers, unsigned int sRange, unsigned int sOffset, unsigned int sIndex )
 {
 	VkDescriptorBufferInfo 	bufferInfo{  };
 	bufferInfo.buffer = srBuffers[ sIndex ];
@@ -20,8 +19,7 @@ static inline VkDescriptorBufferInfo DescriptorBuffer
 	return bufferInfo;
 }
 /* Creates a structure specifying descriptor image information.  */
-static inline VkDescriptorImageInfo DescriptorImage
-	( VkImageLayout sImageLayout, VkImageView sImageView, VkSampler sTextureSampler )
+static inline VkDescriptorImageInfo DescriptorImage( VkImageLayout sImageLayout, VkImageView sImageView, VkSampler sTextureSampler )
 {
 	VkDescriptorImageInfo 	imageInfo{  };
 	imageInfo.imageLayout   = sImageLayout;
@@ -132,4 +130,48 @@ static inline VkImageCreateInfo Image( uint32_t sWidth, uint32_t sHeight, VkForm
 	imageInfo.usage	 	= sUsage;
 	imageInfo.samples 	= VK_SAMPLE_COUNT_1_BIT;
 	imageInfo.sharingMode 	= VK_SHARING_MODE_EXCLUSIVE;
+
+	return imageInfo;
+}
+/* Creates a structure specifying the parameters of a descriptor set write operation.  */
+static inline VkWriteDescriptorSet WriteDescriptor( VkDescriptorSet sDescSet, uint32_t sDstBinding, VkDescriptorType sDescType,
+						    const VkDescriptorImageInfo *spImageInfo, const VkDescriptorBufferInfo *spBufferInfo )
+{
+	VkWriteDescriptorSet 	descriptorWrite{  };
+	descriptorWrite.sType			= VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+	descriptorWrite.dstSet			= sDescSet;
+	descriptorWrite.dstBinding		= sDstBinding;
+	descriptorWrite.dstArrayElement 	= 0;
+	descriptorWrite.descriptorType  	= sDescType;
+	descriptorWrite.descriptorCount 	= 1;
+	
+	if ( spImageInfo )
+		descriptorWrite.pImageInfo	= spImageInfo;
+	else if ( spBufferInfo )
+		descriptorWrite.pBufferInfo	= spBufferInfo;
+
+	return descriptorWrite;
+}
+/* Creates a structure specifying an attachment description.  */
+static inline VkAttachmentDescription AttachmentDescription( VkFormat sFormat, VkAttachmentStoreOp sStoreOp, VkImageLayout sFinalLayout )
+{
+	VkAttachmentDescription attachment{  };
+	attachment.format 		= sFormat;
+	attachment.samples 		= VK_SAMPLE_COUNT_1_BIT;
+	attachment.loadOp 		= VK_ATTACHMENT_LOAD_OP_CLEAR;
+	attachment.storeOp 		= sStoreOp;
+	attachment.stencilLoadOp 	= VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+	attachment.stencilStoreOp 	= VK_ATTACHMENT_STORE_OP_DONT_CARE;
+	attachment.initialLayout 	= VK_IMAGE_LAYOUT_UNDEFINED;
+	attachment.finalLayout 		= sFinalLayout;
+
+	return attachment;
+}
+/* Creates a structure that is where thing draw.  */
+/* Region of frambuffer to be rendered to, likely will always use 0, 0 and width, height.  */
+static inline VkViewport Viewport( float x, float y, float width, float height, float minDepth, float maxDepth )
+{
+	VkViewport viewport = { x, y, width, height, minDepth, maxDepth };
+
+	return viewport;
 }

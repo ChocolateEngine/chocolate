@@ -29,8 +29,8 @@ private:					\
 class BaseSystem
 {
 protected:
-	typedef std::vector< msg_s > 				EngineCommands;
-	typedef std::vector< command_t > 			ConsoleCommands;
+	typedef std::vector< Message > 				EngineCommands;
+	typedef std::vector< ConCommand > 			ConsoleCommands;
 	typedef std::vector< std::function< void(  ) > > 	FunctionList;
 
 	int 			aFlags = 0;
@@ -55,10 +55,12 @@ protected:
 	virtual void 	InitCommands(  );
 	/* Initializes all console commands the system can respond to.  */
 	virtual void 	InitConsoleCommands(  );
+	/* Initializes any member systems of the base system.  */
+	virtual void    InitSubsystems(  );
 	
 public:
-	msgs_c 			*apMsgs 	= NULL;
-	console_c 		*apConsole 	= NULL;
+	Messages 			*apMsgs 	= NULL;
+	Console 		*apConsole 	= NULL;
 
 	/* Updates the system, performing all neccesary tasks.  */
 	void 		Update(  );
@@ -69,8 +71,8 @@ public:
 
 	/* Constructor which will initialize the needed member variables.  */
 	explicit	BaseSystem(  );
-	/* Initializes any member systems of the base system.  */
-	virtual void    InitSubsystems(  );
+	/* Initialize system.  */
+	virtual void Init(  );
 	/* Destructs the system, freeing any used memory.  */
 	virtual 	~BaseSystem(  ) = 0;
 };

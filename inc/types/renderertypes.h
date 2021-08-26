@@ -11,10 +11,9 @@
 
 class QueueFamilyIndices
 {
-private:
+public:
 	int 	aPresentFamily 	= -1;
 	int	aGraphicsFamily = -1;
-public:
 	/* Function that returns true if there is a valid queue family available.  */
 	bool    Complete(  ){ return ( aPresentFamily > -1 ) && ( aGraphicsFamily > -1 ); }
 };
@@ -181,7 +180,7 @@ struct ubo_2d_t
 class SpriteData
 {
 	typedef std::vector< VkDescriptorSet > DescriptorSetList;
-	
+public:	
 	VkBuffer 		aVertexBuffer;
 	VkBuffer		aIndexBuffer;
 	VkDeviceMemory 		aVertexBufferMem;
@@ -192,7 +191,6 @@ class SpriteData
 	DescriptorSetList 	aDescriptorSets;
 	uint32_t 		aVertexCount;
 	uint32_t		aIndexCount;
-public:
 	bool 			aNoDraw = false;
 	float 			aPosX 	= 0.0f;
 	float			aPosY 	= 0.0f;
@@ -212,13 +210,13 @@ public:
 	void 		Draw( VkCommandBuffer c ){ vkCmdDrawIndexed( c, aIndexCount, 1, 0, 0, 0 ); }
 };
 
-struct ModelData
+class ModelData
 {
 	typedef std::vector< VkBuffer >		BufferSet;
 	typedef std::vector< VkDeviceMemory >	MemorySet;
 	typedef std::vector< VkDescriptorSet > 	DescriptorSetList;
-	
-        VkBuffer 		aVertexBuffer;
+public:
+	VkBuffer 		aVertexBuffer;
 	VkBuffer		aIndexBuffer;
 	VkDeviceMemory 		aVertexBufferMem;
         VkDeviceMemory		aIndexBufferMem;
@@ -230,7 +228,6 @@ struct ModelData
 	DescriptorSetList 	aDescriptorSets;
 	uint32_t 		aVertexCount;
 	uint32_t		aIndexCount;
-public:
 	bool 			aNoDraw = false;
 	float 			aPosX 	= 0.0f;
 	float			aPosY 	= 0.0f;

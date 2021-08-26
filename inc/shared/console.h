@@ -1,5 +1,10 @@
-#ifndef CONSOLE_H
-#define CONSOLE_H
+/*
+console.h ( Authored by p0lyh3dron )
+
+Declares the sdfhuosdfhuiosdfhusdfhuisfhu
+*/
+
+#pragma once
 
 #include <string>
 #include <vector>
@@ -7,39 +12,35 @@
 
 #include "../types/msg.h"
 
-typedef struct command_s
+class ConCommand
 {
+public:
 	std::string str;
 	std::function< void( std::vector< std::string > args ) > func;
-}command_t;
-
-class console_c
-{
-	protected:
-
-	int cmdIndex = 0;
-	std::vector< std::string > queue;
-
-	public:
-
-	bool empty
-		(  );
-
-	void add
-		( const std::string& cmd );
-	void delete_command
-		(  );
-	void clear
-		(  );
-	void move_commands
-		(  );
-        std::string fetch_cmd
-		(  );
-
-	console_c
-		(  );
-	~console_c
-		(  );
 };
 
-#endif
+class Console
+{
+	typedef std::string 			String;
+	typedef std::vector< std::string >	StringList;
+protected:
+	int 				aCmdIndex = 0;
+        StringList 			aQueue;
+public:
+	/* A.  */
+	bool 	Empty(  );
+	/* A.  */
+	void 	Add( const String &srCmd );
+	/* A.  */
+	void 	DeleteCommand(  );
+	/* A.  */
+	void 	Clear(  );
+	/* A.  */
+	void 	MoveCommands(  );
+	/* A.  */
+	String 	FetchCmd(  );
+	/* A.  */
+		Console(  );
+	/* A.  */
+		~Console(  );
+};

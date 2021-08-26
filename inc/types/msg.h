@@ -38,10 +38,11 @@ struct PublishedFunction
 	std::string		     		aCallableString;
 };
 
-typedef struct msg_s
+class Message
 {
+public:
 	int flags;
 	int type, msg;
 	std::function< void( std::vector< std::any > args ) > func;
 	std::vector< std::any > args;
-}msg_t;
+};

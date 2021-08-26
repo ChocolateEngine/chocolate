@@ -27,96 +27,76 @@
 
 #define SPRITE_SET_LAYOUT_PARAMETERS { { { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, NULL, } } }
 
-#define MODEL_SET_PARAMETERS( tImageView, uBuffers ) { { { VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, tImageView, textureSampler, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER } } }, { { { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, uBuffers, sizeof( ubo_3d_t ) } } }
+#define MODEL_SET_PARAMETERS( tImageView, uBuffers ) { { { VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, tImageView, aTextureSampler, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER } } }, { { { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, uBuffers, sizeof( ubo_3d_t ) } } }
 
-#define SPRITE_SET_PARAMETERS( tImageView ) { { { VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, tImageView, textureSampler, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER } } }
+#define SPRITE_SET_PARAMETERS( tImageView ) { { { VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, tImageView, aTextureSampler, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER } } }
 
-void renderer_c::init_commands
-	(  )
+void Renderer::InitCommands(  )
 {
-	msg_s msg;
+	Message msg;
 	msg.type = RENDERER_C;
 
 	msg.msg = IMGUI_INITIALIZED;
-	msg.func = [ & ]( std::vector< std::any > args ){ imGuiInitialized = true; };
-	engineCommands.push_back( msg );
+	msg.func = [ & ]( std::vector< std::any > args ){ aImGuiInitialized = true; };
+	aEngineCommands.push_back( msg );
 }
 
-void renderer_c::init_vulkan
-	(  )
+void Renderer::InitVulkan(  )
 {
-	device.init_swap_chain( swapChain, swapChainImages, swapChainImageFormat, swapChainExtent );
-	allocator.swapChainImages = &swapChainImages;
-	allocator.init_image_views( swapChainImageViews, swapChainImageFormat );
-	allocator.init_render_pass( renderPass, swapChainImageFormat );
-	allocator.renderPass = &renderPass;
-	allocator.init_desc_set_layout(
-		modelSetLayout,
-		MODEL_SET_LAYOUT_PARAMETERS );
-	allocator.init_desc_set_layout(
-		spriteSetLayout,
-		SPRITE_SET_LAYOUT_PARAMETERS );
-	allocator.init_graphics_pipeline< vertex_3d_t >(
-		modelPipeline,
-		modelLayout,
-		swapChainExtent,
-		modelSetLayout,
-		"materials/shaders/3dvert.spv",
-		"materials/shaders/3dfrag.spv",
-		0 );
-	allocator.init_graphics_pipeline< vertex_2d_t >(
-		spritePipeline,
-		spriteLayout,
-		swapChainExtent,
-		spriteSetLayout,
-		"materials/shaders/2dvert.spv",
-		"materials/shaders/2dfrag.spv",
-		NO_CULLING | NO_DEPTH );
-	allocator.init_depth_resources( depthImage, depthImageMemory, depthImageView, swapChainExtent );
-	allocator.init_frame_buffer( swapChainFramebuffers, swapChainImageViews, depthImageView, swapChainExtent );
-	device.init_texture_sampler( textureSampler, VK_SAMPLER_ADDRESS_MODE_REPEAT );
-	allocator.init_desc_pool( descPool, { { { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 2000 }, { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 2000 } } } );
-	allocator.init_imgui_pool( device.window(  ) );
-	allocator.init_sync( imageAvailableSemaphores, renderFinishedSemaphores, inFlightFences, imagesInFlight );
+	aDevice.InitSwapChain( aSwapChain, aSwapChainImages, aSwapChainImageFormat, aSwapChainExtent );
+	aAllocator.apSwapChainImages = &aSwapChainImages;
+	aAllocator.InitImageViews( aSwapChainImageViews, aSwapChainImageFormat );
+	aAllocator.InitRenderPass( aRenderPass, aSwapChainImageFormat );
+	aAllocator.apRenderPass = &aRenderPass;
+	aAllocator.InitDescriptorSetLayout( aModelSetLayout, MODEL_SET_LAYOUT_PARAMETERS );
+	aAllocator.InitDescriptorSetLayout( aSpriteSetLayout, SPRITE_SET_LAYOUT_PARAMETERS );
+	aAllocator.InitGraphicsPipeline< vertex_3d_t >( aModelPipeline, aModelLayout, aSwapChainExtent, aModelSetLayout, "materials/shaders/3dvert.spv",
+							  "materials/shaders/3dfrag.spv", 0 );
+	aAllocator.InitGraphicsPipeline< vertex_2d_t >( aSpritePipeline, aSpriteLayout, aSwapChainExtent, aSpriteSetLayout, "materials/shaders/2dvert.spv",
+							  "materials/shaders/2dfrag.spv", NO_CULLING | NO_DEPTH );
+	aAllocator.InitDepthResources( aDepthImage, aDepthImageMemory, aDepthImageView, aSwapChainExtent );
+	aAllocator.InitFrameBuffer( aSwapChainFramebuffers, aSwapChainImageViews, aDepthImageView, aSwapChainExtent );
+	aDevice.InitTextureSampler( aTextureSampler, VK_SAMPLER_ADDRESS_MODE_REPEAT );
+	aAllocator.InitDescPool( aDescPool, { { { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 2000 }, { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 2000 } } } );
+	aAllocator.InitImguiPool( aDevice.GetWindow(  ) );
+	aAllocator.InitSync( aImageAvailableSemaphores, aRenderFinishedSemaphores, aInFlightFences, aImagesInFlight );
 }
 
-bool renderer_c::has_stencil_component
-	( VkFormat fmt )
+bool Renderer::HasStencilComponent( VkFormat sFmt )
 {
-	return fmt == VK_FORMAT_D32_SFLOAT_S8_UINT || fmt == VK_FORMAT_D24_UNORM_S8_UINT;
+	return sFmt == VK_FORMAT_D32_SFLOAT_S8_UINT || sFmt == VK_FORMAT_D24_UNORM_S8_UINT;
 }
 
-void renderer_c::init_command_buffers
-	(  )
+void Renderer::InitCommandBuffers(  )
 {
-	commandBuffers.resize( swapChainFramebuffers.size(  ) );
+	aCommandBuffers.resize( aSwapChainFramebuffers.size(  ) );
 	VkCommandBufferAllocateInfo allocInfo{  };
 	allocInfo.sType 		= VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-	allocInfo.commandPool 		= device.c_pool(  );
+	allocInfo.commandPool 		= aDevice.GetCommandPool(  );
 	allocInfo.level 		= VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-	allocInfo.commandBufferCount	= ( uint32_t )commandBuffers.size(  );
+	allocInfo.commandBufferCount	= ( uint32_t )aCommandBuffers.size(  );
 
-	if ( vkAllocateCommandBuffers( device.dev(  ), &allocInfo, commandBuffers.data(  ) ) != VK_SUCCESS )
+	if ( vkAllocateCommandBuffers( aDevice.GetDevice(  ), &allocInfo, aCommandBuffers.data(  ) ) != VK_SUCCESS )
 	{
 		throw std::runtime_error( "Failed to allocate command buffers!" );
 	}
-	for ( int i = 0; i < commandBuffers.size(  ); i++ )
+	for ( int i = 0; i < aCommandBuffers.size(  ); i++ )
 	{
 		VkCommandBufferBeginInfo beginInfo{  };
 		beginInfo.sType 		= VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 		beginInfo.flags 		= 0; // Optional
 		beginInfo.pInheritanceInfo 	= NULL; // Optional
 
-		if ( vkBeginCommandBuffer( commandBuffers[ i ], &beginInfo ) != VK_SUCCESS )
+		if ( vkBeginCommandBuffer( aCommandBuffers[ i ], &beginInfo ) != VK_SUCCESS )
 		{
 			throw std::runtime_error( "Failed to begin recording command buffer!" );
 		}
 		VkRenderPassBeginInfo renderPassInfo{  };
 		renderPassInfo.sType 		 = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-		renderPassInfo.renderPass 	 = renderPass;
-		renderPassInfo.framebuffer 	 = swapChainFramebuffers[ i ];
+		renderPassInfo.renderPass 	 = aRenderPass;
+		renderPassInfo.framebuffer 	 = aSwapChainFramebuffers[ i ];
 		renderPassInfo.renderArea.offset = { 0, 0 };
-		renderPassInfo.renderArea.extent = swapChainExtent;
+		renderPassInfo.renderArea.extent = aSwapChainExtent;
 
 		std::array< VkClearValue, 2 > clearValues{  };
 		clearValues[ 0 ].color = { 0.0f, 0.0f, 0.0f, 1.0f };
@@ -125,55 +105,54 @@ void renderer_c::init_command_buffers
 		renderPassInfo.clearValueCount 	 = ( uint32_t )clearValues.size(  );
 		renderPassInfo.pClearValues 	 = clearValues.data(  );
 
-		vkCmdBeginRenderPass( commandBuffers[ i ], &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE );
+		vkCmdBeginRenderPass( aCommandBuffers[ i ], &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE );
 		
-		vkCmdBindPipeline( commandBuffers[ i ], VK_PIPELINE_BIND_POINT_GRAPHICS, modelPipeline );
+		vkCmdBindPipeline( aCommandBuffers[ i ], VK_PIPELINE_BIND_POINT_GRAPHICS, aModelPipeline );
 
-		for ( auto& model : *models )
+		for ( auto& model : aModels )
 		{
-			model->bind( commandBuffers[ i ], modelLayout, i );
-			model->draw( commandBuffers[ i ] );
+			model->Bind( aCommandBuffers[ i ], aModelLayout, i );
+			model->Draw( aCommandBuffers[ i ] );
 		}
-		vkCmdBindPipeline( commandBuffers[ i ], VK_PIPELINE_BIND_POINT_GRAPHICS, spritePipeline );
-		for ( auto& sprite : *sprites )
+		vkCmdBindPipeline( aCommandBuffers[ i ], VK_PIPELINE_BIND_POINT_GRAPHICS, aSpritePipeline );
+		for ( auto& sprite : aSprites )
 		{
-			if ( !sprite->noDraw )
+			if ( !sprite->aNoDraw )
 			{
-				sprite->bind( commandBuffers[ i ], spriteLayout, i );
+				sprite->Bind( aCommandBuffers[ i ], aSpriteLayout, i );
 				push_constant_t push{  };
 				push.scale	= { 1, 1 };
-				push.translate  = { sprite->posX, sprite->posY };
+				push.translate  = { sprite->aPosX, sprite->aPosY };
 
 				vkCmdPushConstants
 					(
-						commandBuffers[ i ],
-						spriteLayout,
+						aCommandBuffers[ i ],
+						aSpriteLayout,
 						VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
 						0,
 						sizeof( push_constant_t ),
 						&push
 						);
-				sprite->draw( commandBuffers[ i ] );
+				sprite->Draw( aCommandBuffers[ i ] );
 			}
 		}
 
-		if ( imGuiInitialized )
+		if ( aImGuiInitialized )
 		{
 			ImGui::Render(  );
-			ImGui_ImplVulkan_RenderDrawData( ImGui::GetDrawData(  ), commandBuffers[ i ] );
+			ImGui_ImplVulkan_RenderDrawData( ImGui::GetDrawData(  ), aCommandBuffers[ i ] );
 		}
 		
-		vkCmdEndRenderPass( commandBuffers[ i ] );
+		vkCmdEndRenderPass( aCommandBuffers[ i ] );
 
-		if ( vkEndCommandBuffer( commandBuffers[ i ] ) != VK_SUCCESS )
+		if ( vkEndCommandBuffer( aCommandBuffers[ i ] ) != VK_SUCCESS )
 		{
 			throw std::runtime_error( "Failed to record command buffer!" );
 		}
 	}
 }
 
-void renderer_c::load_obj
-	( const std::string& objPath, model_data_t& model )
+void Renderer::LoadObj( const String &srObjPath, ModelData &srModel )
 {
 	tinyobj::attrib_t attrib;
 	std::vector< tinyobj::shape_t > shapes;
@@ -182,7 +161,7 @@ void renderer_c::load_obj
 	std::vector< uint32_t > indices;
 	std::string warn, err;
 
-	if ( !tinyobj::LoadObj( &attrib, &shapes, &materials, &warn, &err, objPath.c_str(  ) ) )
+	if ( !tinyobj::LoadObj( &attrib, &shapes, &materials, &warn, &err, srObjPath.c_str(  ) ) )
 	{
 		throw std::runtime_error( warn + err );
 	}
@@ -216,14 +195,13 @@ void renderer_c::load_obj
 			indices.push_back( uniqueVertices[ vertex ] );
 		}
 	}
-	model.vCount = ( uint32_t )vertices.size(  );
-	model.iCount = ( uint32_t )indices.size(  );
-	allocator.init_vertex_buffer( vertices, model.vBuffer, model.vBufferMem );
-	allocator.init_index_buffer( indices, model.iBuffer, model.iBufferMem );
-	printf( "%d vertices loaded!\n", vertices.size(  ) );
+	srModel.aVertexCount 	= ( uint32_t )vertices.size(  );
+	srModel.aIndexCount 	= ( uint32_t )indices.size(  );
+	aAllocator.InitTexBuffer( vertices, srModel.aVertexBuffer, srModel.aVertexBufferMem );
+	aAllocator.InitTexBuffer( indices, srModel.aIndexBuffer, srModel.aIndexBufferMem );
 }
-void renderer_c::load_gltf
-	( const std::string& gltfPath, model_data_t& model )
+
+void Renderer::LoadGltf( const String &srGltfPath, ModelData &srModel )
 {
 	/*tinygltf::Model glModel;
 	tinygltf::TinyGLTF loader;
@@ -268,163 +246,134 @@ void renderer_c::load_gltf
 		}*/
 }
 
-void renderer_c::init_model_vertices
-	( const std::string& modelPath, model_data_t& model )
+void Renderer::InitModelVertices( const String &srModelPath, ModelData &srModel )
 {
-	if ( modelPath.substr( modelPath.size(  ) - 4 ) == ".obj" )
+	if ( srModelPath.substr( srModelPath.size(  ) - 4 ) == ".obj" )
 	{
-		load_obj( modelPath, model );
+	        LoadObj( srModelPath, srModel );
 		return;
 	}
-	if ( modelPath.substr( modelPath.size(  ) - 4 ) == ".glb" )
+	if ( srModelPath.substr( srModelPath.size(  ) - 4 ) == ".glb" )
 	{
-		load_gltf( modelPath, model );
+		LoadGltf( srModelPath, srModel );
 		return;
 	}
 }
 
-void renderer_c::init_sprite_vertices
-	( const std::string& spritePath, sprite_data_t& sprite )
+void Renderer::InitSpriteVertices( const String &srSpritePath, SpriteData &srSprite )
 {
 	std::vector< vertex_2d_t > vertices =
 	{
-		{{-1 * ( sprite.width / 2.0f ), -1 * ( sprite.height / 2.0f )}, {1.0f, 0.0f, 0.0f}, {1.0f, 0.0f}},
-    		{{( sprite.width / 2.0f ), -1 * ( sprite.height / 2.0f )}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f}},
-    		{{( sprite.width / 2.0f ), ( sprite.height / 2.0f )}, {0.0f, 0.0f, 1.0f}, {0.0f, 1.0f}},
-    		{{-1 * ( sprite.width / 2.0f ), ( sprite.height / 2.0f )}, {1.0f, 1.0f, 1.0f}, {1.0f, 1.0f}}
+		{{-1 * ( srSprite.aWidth / 2.0f ), -1 * ( srSprite.aHeight / 2.0f )}, {1.0f, 0.0f, 0.0f}, {1.0f, 0.0f}},
+    		{{( srSprite.aWidth / 2.0f ), -1 * ( srSprite.aHeight / 2.0f )}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f}},
+    		{{( srSprite.aWidth / 2.0f ), ( srSprite.aHeight / 2.0f )}, {0.0f, 0.0f, 1.0f}, {0.0f, 1.0f}},
+    		{{-1 * ( srSprite.aWidth / 2.0f ), ( srSprite.aHeight / 2.0f )}, {1.0f, 1.0f, 1.0f}, {1.0f, 1.0f}}
 	};
 	std::vector< uint32_t > indices =
 	{
 		0, 1, 2, 2, 3, 0	
 	};
-	sprite.vCount = ( uint32_t )vertices.size(  );
-	sprite.iCount = ( uint32_t )indices.size(  );
-        allocator.init_vertex_buffer( vertices, sprite.vBuffer, sprite.vBufferMem );
-	allocator.init_index_buffer( indices, sprite.iBuffer, sprite.iBufferMem );
+	srSprite.aVertexCount = ( uint32_t )vertices.size(  );
+	srSprite.aIndexCount = ( uint32_t )indices.size(  );
+        aAllocator.InitTexBuffer( vertices, srSprite.aVertexBuffer, srSprite.aVertexBufferMem );
+	aAllocator.InitTexBuffer( indices, srSprite.aIndexBuffer, srSprite.aIndexBufferMem );
 }
 
-void renderer_c::reinit_swap_chain
-	(  )
+void Renderer::ReinitSwapChain(  )
 {
 	int width = 0, height = 0;
-	SDL_Vulkan_GetDrawableSize( device.window(  ), &width, &height );
+	SDL_Vulkan_GetDrawableSize( aDevice.GetWindow(  ), &width, &height );
 	for ( ; width == 0 || height == 0; )
 	{
-		SDL_Vulkan_GetDrawableSize( device.window(  ), &width, &height );
+		SDL_Vulkan_GetDrawableSize( aDevice.GetWindow(  ), &width, &height );
 	}
-	device.set_res( width, height );
-	vkDeviceWaitIdle( device.dev(  ) );
+	aDevice.SetResolution( width, height );
+	vkDeviceWaitIdle( aDevice.GetDevice(  ) );
 
-	destroy_swap_chain(  );
+	DestroySwapChain(  );
+
+	aDevice.InitSwapChain( aSwapChain, aSwapChainImages, aSwapChainImageFormat, aSwapChainExtent );
+	aAllocator.apSwapChainImages = &aSwapChainImages;
+	aAllocator.InitImageViews( aSwapChainImageViews, aSwapChainImageFormat );
+	aAllocator.InitRenderPass( aRenderPass, aSwapChainImageFormat );
+	aAllocator.apRenderPass = &aRenderPass;
+	aAllocator.InitDescriptorSetLayout( aModelSetLayout, MODEL_SET_LAYOUT_PARAMETERS );
+	aAllocator.InitDescriptorSetLayout( aSpriteSetLayout, SPRITE_SET_LAYOUT_PARAMETERS );
+	aAllocator.InitGraphicsPipeline< vertex_3d_t >( aModelPipeline, aModelLayout, aSwapChainExtent, aModelSetLayout, "materials/shaders/3dvert.spv",
+							  "materials/shaders/3dfrag.spv", 0 );
+	aAllocator.InitGraphicsPipeline< vertex_2d_t >( aSpritePipeline, aSpriteLayout, aSwapChainExtent, aSpriteSetLayout, "materials/shaders/2dvert.spv",
+							  "materials/shaders/2dfrag.spv", NO_CULLING | NO_DEPTH );
+	aAllocator.InitDepthResources( aDepthImage, aDepthImageMemory, aDepthImageView, aSwapChainExtent );
+	aAllocator.InitFrameBuffer( aSwapChainFramebuffers, aSwapChainImageViews, aDepthImageView, aSwapChainExtent );
 	
-	device.init_swap_chain( swapChain, swapChainImages, swapChainImageFormat, swapChainExtent );
-	allocator.swapChainImages = &swapChainImages;
-	allocator.init_image_views( swapChainImageViews, swapChainImageFormat );
-	allocator.init_render_pass( renderPass, swapChainImageFormat );
-	allocator.renderPass = &renderPass;
-        allocator.init_desc_set_layout(
-		modelSetLayout,
-		MODEL_SET_LAYOUT_PARAMETERS );
-	allocator.init_desc_set_layout(
-		spriteSetLayout,
-		SPRITE_SET_LAYOUT_PARAMETERS );
-	allocator.init_graphics_pipeline< vertex_3d_t >(
-		modelPipeline,
-		modelLayout,
-		swapChainExtent,
-		modelSetLayout,
-		"materials/shaders/3dvert.spv",
-		"materials/shaders/3dfrag.spv",
-		0 );
-	allocator.init_graphics_pipeline< vertex_2d_t >(
-		spritePipeline,
-		spriteLayout,
-		swapChainExtent,
-		spriteSetLayout,
-		"materials/shaders/2dvert.spv",
-		"materials/shaders/2dfrag.spv",
-		NO_CULLING | NO_DEPTH );
-	allocator.init_depth_resources( depthImage, depthImageMemory, depthImageView, swapChainExtent );
-	allocator.init_frame_buffer( swapChainFramebuffers, swapChainImageViews, depthImageView, swapChainExtent );
-	for ( auto& model : *models )
+	for ( auto& model : aModels )
 	{
-		allocator.init_uniform_buffers< ubo_3d_t >( model->uBuffers, model->uBuffersMem );	//	Please fix this ubo_2d_t shit, I just want easy sprites
+		aAllocator.InitUniformBuffers( model->aUniformBuffers, model->aUniformBuffersMem );	//	Please fix this ubo_2d_t shit, I just want easy sprites
 	}
-	allocator.init_desc_pool( descPool, { { { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 2000 }, { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 2000 } } } );
-	for ( auto& model : *models )
+        aAllocator.InitDescPool( aDescPool, { { { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 2000 }, { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 2000 } } } );
+	for ( auto& model : aModels )
 	{
-		allocator.init_desc_sets(
-			model->descSets,
-			modelSetLayout,
-			descPool,
-		        MODEL_SET_PARAMETERS( model->tImageView, model->uBuffers ) );	
+		aAllocator.InitDescriptorSets( model->aDescriptorSets, aModelSetLayout, aDescPool, MODEL_SET_PARAMETERS( model->aTextureImageView, model->aUniformBuffers ) );	
 	}
-	for ( auto& sprite : *sprites )
+	for ( auto& sprite : aSprites )
 	{	        
-		allocator.init_desc_sets(	//	Doesn't need uniform buffers, will use push constants instead
-			sprite->descSets,
-			spriteSetLayout,
-			descPool,	
-			SPRITE_SET_PARAMETERS( sprite->tImageView ) );	
+		aAllocator.InitDescriptorSets( sprite->aDescriptorSets, aSpriteSetLayout, aDescPool, SPRITE_SET_PARAMETERS( sprite->aTextureImageView ) );	
 	}
 }
 
-void renderer_c::destroy_swap_chain
-	(  )
+void Renderer::DestroySwapChain(  )
 {
-	vkDestroyImageView( device.dev(  ), depthImageView, nullptr );
-	vkDestroyImage( device.dev(  ), depthImage, nullptr );
-	vkFreeMemory( device.dev(  ), depthImageMemory, nullptr );
-	for ( auto& model : *models )
+	vkDestroyImageView( aDevice.GetDevice(  ), aDepthImageView, nullptr );
+	vkDestroyImage( aDevice.GetDevice(  ), aDepthImage, nullptr );
+	vkFreeMemory( aDevice.GetDevice(  ), aDepthImageMemory, nullptr );
+	for ( auto& model : aModels )
 	{
-		for ( int i = 0; i < swapChainImages.size(  ); i++ )
+		for ( int i = 0; i < aSwapChainImages.size(  ); i++ )
 		{
-			vkDestroyBuffer( device.dev(  ), model->uBuffers[ i ], NULL );
-			vkFreeMemory( device.dev(  ), model->uBuffersMem[ i ], NULL );
+			vkDestroyBuffer( aDevice.GetDevice(  ), model->aUniformBuffers[ i ], NULL );
+			vkFreeMemory( aDevice.GetDevice(  ), model->aUniformBuffersMem[ i ], NULL );
 		}
         }
-	for ( auto& sprite : *sprites  )
+	for ( auto& sprite : aSprites  )
 	{
 
 	}
-	vkDestroyDescriptorPool( device.dev(  ), descPool, NULL );
-	vkDestroyDescriptorSetLayout( device.dev(  ), spriteSetLayout, NULL );
-	vkDestroyDescriptorSetLayout( device.dev(  ), modelSetLayout, NULL );
-        for ( auto framebuffer : swapChainFramebuffers )
+	vkDestroyDescriptorPool( aDevice.GetDevice(  ), aDescPool, NULL );
+	vkDestroyDescriptorSetLayout( aDevice.GetDevice(  ), aSpriteSetLayout, NULL );
+	vkDestroyDescriptorSetLayout( aDevice.GetDevice(  ), aModelSetLayout, NULL );
+        for ( auto framebuffer : aSwapChainFramebuffers )
 	{
-		vkDestroyFramebuffer( device.dev(  ), framebuffer, NULL );
+		vkDestroyFramebuffer( aDevice.GetDevice(  ), framebuffer, NULL );
         }
-	vkFreeCommandBuffers( device.dev(  ), device.c_pool(  ), ( uint32_t )commandBuffers.size(  ), commandBuffers.data(  ) );
+	vkFreeCommandBuffers( aDevice.GetDevice(  ), aDevice.GetCommandPool(  ), ( uint32_t )aCommandBuffers.size(  ), aCommandBuffers.data(  ) );
 
-	vkDestroyPipeline( device.dev(  ), modelPipeline, NULL );
-        vkDestroyPipelineLayout( device.dev(  ), modelLayout, NULL );
-	vkDestroyPipeline( device.dev(  ), spritePipeline, NULL );
-        vkDestroyPipelineLayout( device.dev(  ), spriteLayout, NULL );
-        vkDestroyRenderPass( device.dev(  ), renderPass, NULL );
+	vkDestroyPipeline( aDevice.GetDevice(  ), aModelPipeline, NULL );
+        vkDestroyPipelineLayout( aDevice.GetDevice(  ), aModelLayout, NULL );
+	vkDestroyPipeline( aDevice.GetDevice(  ), aSpritePipeline, NULL );
+        vkDestroyPipelineLayout( aDevice.GetDevice(  ), aSpriteLayout, NULL );
+        vkDestroyRenderPass( aDevice.GetDevice(  ), aRenderPass, NULL );
 
-        for ( auto imageView : swapChainImageViews )
+        for ( auto imageView : aSwapChainImageViews )
 	{
-		vkDestroyImageView( device.dev(  ), imageView, NULL );
+		vkDestroyImageView( aDevice.GetDevice(  ), imageView, NULL );
         }
 
-        vkDestroySwapchainKHR( device.dev(  ), swapChain, NULL );
+        vkDestroySwapchainKHR( aDevice.GetDevice(  ), aSwapChain, NULL );
 }
 
 template< typename T >
-void renderer_c::destroy_renderable
-	( T& renderable )
+void Renderer::DestroyRenderable( T &srRenderable )
 {
-	vkDestroyImageView( device.dev(  ), renderable.tImageView, NULL );
-	vkDestroyImage( device.dev(  ), renderable.tImage, NULL );
-	vkFreeMemory( device.dev(  ), renderable.tImageMem, NULL );
-	vkDestroyBuffer( device.dev(  ), renderable.iBuffer, NULL );
-	vkFreeMemory( device.dev(  ), renderable.iBufferMem, NULL );
-	vkDestroyBuffer( device.dev(  ), renderable.vBuffer, NULL );
-	vkFreeMemory( device.dev(  ), renderable.vBufferMem, NULL );
+	vkDestroyImageView( aDevice.GetDevice(  ), srRenderable.aTextureImageView, NULL );
+	vkDestroyImage( aDevice.GetDevice(  ), srRenderable.aTextureImage, NULL );
+	vkFreeMemory( aDevice.GetDevice(  ), srRenderable.aTextureImageMem, NULL );
+	vkDestroyBuffer( aDevice.GetDevice(  ), srRenderable.aIndexBuffer, NULL );
+	vkFreeMemory( aDevice.GetDevice(  ), srRenderable.aIndexBufferMem, NULL );
+	vkDestroyBuffer( aDevice.GetDevice(  ), srRenderable.aVertexBuffer, NULL );
+	vkFreeMemory( aDevice.GetDevice(  ), srRenderable.aVertexBufferMem, NULL );
 }
 
-void renderer_c::update_uniform_buffers
-	( uint32_t currentImage, model_data_t& modelData )
+void Renderer::UpdateUniformBuffers( uint32_t sCurrentImage, ModelData &srModelData )
 {
 	static auto startTime 	= std::chrono::high_resolution_clock::now(  );
 
@@ -432,95 +381,83 @@ void renderer_c::update_uniform_buffers
 	float time 		= std::chrono::duration< float, std::chrono::seconds::period >( currentTime - startTime ).count(  );
 
 	ubo_3d_t ubo{  };
-	ubo.model = glm::translate( glm::mat4( 1.0f ), glm::vec3( modelData.posX, modelData.posY, modelData.posZ ) ) * glm::rotate( glm::mat4( 1.0f ), time * glm::radians( 45.0f ), glm::vec3( 0.0f, 0.0f, 1.0f ) );
+	ubo.model = glm::translate( glm::mat4( 1.0f ), glm::vec3( srModelData.aPosX, srModelData.aPosY, srModelData.aPosZ ) ) * glm::rotate( glm::mat4( 1.0f ), time * glm::radians( 45.0f ), glm::vec3( 0.0f, 0.0f, 1.0f ) );
 	ubo.view  = glm::lookAt( glm::vec3( 0.1f, 10.0f, 25.0f ), glm::vec3( 0.0f, 0.0f, 0.0f ), glm::vec3( 0.0f, 0.0f, 1.0f ) );
-	ubo.proj  = glm::perspective( glm::radians( 90.0f ), swapChainExtent.width / ( float ) swapChainExtent.height, 0.1f, 256.0f );
+	ubo.proj  = glm::perspective( glm::radians( 90.0f ), aSwapChainExtent.width / ( float ) aSwapChainExtent.height, 0.1f, 256.0f );
 
 	ubo.proj[ 1 ][ 1 ] *= -1;
 
 	void* data;
-	vkMapMemory( device.dev(  ), modelData.uBuffersMem[ currentImage ], 0, sizeof( ubo ), 0, &data );
+	vkMapMemory( aDevice.GetDevice(  ), srModelData.aUniformBuffersMem[ sCurrentImage ], 0, sizeof( ubo ), 0, &data );
 	memcpy( data, &ubo, sizeof( ubo ) );
-	vkUnmapMemory( device.dev(  ), modelData.uBuffersMem[ currentImage ] );
+	vkUnmapMemory( aDevice.GetDevice(  ), srModelData.aUniformBuffersMem[ sCurrentImage ] );
 }
 
-void renderer_c::init_model
-	( model_data_t& modelData, const std::string& modelPath, const std::string& texturePath )
+void Renderer::InitModel( ModelData &srModelData, const String &srModelPath, const String &srTexturePath )
 {
-	init_model_vertices( modelPath, modelData );
-	allocator.init_texture_image( texturePath, modelData.tImage, modelData.tImageMem, NULL, NULL );
-	allocator.init_texture_image_view( modelData.tImageView, modelData.tImage );
-	allocator.init_uniform_buffers< ubo_3d_t >( modelData.uBuffers, modelData.uBuffersMem );
-	allocator.init_desc_sets(
-	        modelData.descSets,
-	        modelSetLayout,
-	        descPool,
-		MODEL_SET_PARAMETERS( modelData.tImageView, modelData.uBuffers ) );
-	models->push_back( &modelData );
+        InitModelVertices( srModelPath, srModelData );
+	aAllocator.InitTextureImage( srTexturePath, srModelData.aTextureImage, srModelData.aTextureImageMem, NULL, NULL );
+	aAllocator.InitTextureImageView( srModelData.aTextureImageView, srModelData.aTextureImage );
+	aAllocator.InitUniformBuffers( srModelData.aUniformBuffers, srModelData.aUniformBuffersMem );
+	aAllocator.InitDescriptorSets( srModelData.aDescriptorSets, aModelSetLayout, aDescPool, MODEL_SET_PARAMETERS( srModelData.aTextureImageView, srModelData.aUniformBuffers ) );
+	aModels.push_back( &srModelData );
 }
 
-void renderer_c::init_sprite
-	( sprite_data_t& spriteData, const std::string& spritePath )
+void Renderer::InitSprite( SpriteData &srSpriteData, const String &srSpritePath )
 {
-	printf( "loaded sprite\n" );
-	allocator.init_texture_image( spritePath, spriteData.tImage, spriteData.tImageMem, &spriteData.width, &spriteData.height );
-	allocator.init_texture_image_view( spriteData.tImageView, spriteData.tImage );
-	init_sprite_vertices( spritePath, spriteData );
-        allocator.init_desc_sets(	//	Doesn't need uniform buffers, will use push constants instead
-	        spriteData.descSets,
-	        spriteSetLayout,
-	        descPool,	
-		SPRITE_SET_PARAMETERS( spriteData.tImageView ) );	
-	sprites->push_back( &spriteData );
+	aAllocator.InitTextureImage( srSpritePath, srSpriteData.aTextureImage, srSpriteData.aTextureImageMem, NULL, NULL );
+	aAllocator.InitTextureImageView( srSpriteData.aTextureImageView, srSpriteData.aTextureImage );
+	InitSpriteVertices( srSpritePath, srSpriteData );
+	aAllocator.InitDescriptorSets( srSpriteData.aDescriptorSets, aSpriteSetLayout, aDescPool, SPRITE_SET_PARAMETERS( srSpriteData.aTextureImageView ) );
+	aSprites.push_back( &srSpriteData );
 
 }
 
-void renderer_c::draw_frame
-	(  )
+void Renderer::DrawFrame(  )
 {
-	init_command_buffers(  );	//	Fucky wucky!!
+        InitCommandBuffers(  );	//	Fucky wucky!!
 	
-	vkWaitForFences( device.dev(  ), 1, &inFlightFences[ currentFrame ], VK_TRUE, UINT64_MAX );
+	vkWaitForFences( aDevice.GetDevice(  ), 1, &aInFlightFences[ aCurrentFrame ], VK_TRUE, UINT64_MAX );
 	
 	uint32_t imageIndex;
-	VkResult res =  vkAcquireNextImageKHR( device.dev(  ), swapChain, UINT64_MAX, imageAvailableSemaphores[ currentFrame ], VK_NULL_HANDLE, &imageIndex );
+	VkResult res =  vkAcquireNextImageKHR( aDevice.GetDevice(  ), aSwapChain, UINT64_MAX, aImageAvailableSemaphores[ aCurrentFrame ], VK_NULL_HANDLE, &imageIndex );
 
 	if ( res == VK_ERROR_OUT_OF_DATE_KHR )
 	{
-		reinit_swap_chain(  );
+		ReinitSwapChain(  );
 		return;
 	}
 	else if ( res != VK_SUCCESS && res != VK_SUBOPTIMAL_KHR )
 	{
 		throw std::runtime_error( "Failed ot acquire swap chain image!" );
 	}
-	if ( imagesInFlight[ imageIndex ] != VK_NULL_HANDLE )
+	if ( aImagesInFlight[ imageIndex ] != VK_NULL_HANDLE )
 	{
-		vkWaitForFences( device.dev(  ), 1, &imagesInFlight[ imageIndex ], VK_TRUE, UINT64_MAX );
+		vkWaitForFences( aDevice.GetDevice(  ), 1, &aImagesInFlight[ imageIndex ], VK_TRUE, UINT64_MAX );
 	}
-	imagesInFlight[ imageIndex ] = inFlightFences[ currentFrame ];
+	aImagesInFlight[ imageIndex ] = aInFlightFences[ aCurrentFrame ];
 
-	for ( auto& model : *models )
+	for ( auto& model : aModels )
 	{
-		update_uniform_buffers( imageIndex, *model );
+	        UpdateUniformBuffers( imageIndex, *model );
 	}
 
 	VkSubmitInfo submitInfo{  };
 	submitInfo.sType 			= VK_STRUCTURE_TYPE_SUBMIT_INFO;
 
-	VkSemaphore waitSemaphores[  ] 		= { imageAvailableSemaphores[ currentFrame ] };
+	VkSemaphore waitSemaphores[  ] 		= { aImageAvailableSemaphores[ aCurrentFrame ] };
 	VkPipelineStageFlags waitStages[  ] 	= { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
 	submitInfo.waitSemaphoreCount 		= 1;
 	submitInfo.pWaitSemaphores 		= waitSemaphores;
 	submitInfo.pWaitDstStageMask 		= waitStages;
 	submitInfo.commandBufferCount 		= 1;
-	submitInfo.pCommandBuffers 		= &commandBuffers[ imageIndex ];
-	VkSemaphore signalSemaphores[  ] 	= { renderFinishedSemaphores[ currentFrame ] };
+	submitInfo.pCommandBuffers 		= &aCommandBuffers[ imageIndex ];
+	VkSemaphore signalSemaphores[  ] 	= { aRenderFinishedSemaphores[ aCurrentFrame ] };
 	submitInfo.signalSemaphoreCount 	= 1;
 	submitInfo.pSignalSemaphores 		= signalSemaphores;
 
-	vkResetFences( device.dev(  ), 1, &inFlightFences[ currentFrame ] );
-	if ( vkQueueSubmit( device.g_queue(  ), 1, &submitInfo, inFlightFences[ currentFrame ] ) != VK_SUCCESS )
+	vkResetFences( aDevice.GetDevice(  ), 1, &aInFlightFences[ aCurrentFrame ] );
+	if ( vkQueueSubmit( aDevice.GetGraphicsQueue(  ), 1, &submitInfo, aInFlightFences[ aCurrentFrame ] ) != VK_SUCCESS )
 	{
 		throw std::runtime_error( "Failed to submit draw command buffer!" );
 	}
@@ -531,69 +468,65 @@ void renderer_c::draw_frame
 	presentInfo.waitSemaphoreCount 		= 1;
 	presentInfo.pWaitSemaphores 		= signalSemaphores;
 
-	VkSwapchainKHR swapChains[  ] 		= { swapChain };
+	VkSwapchainKHR swapChains[  ] 		= { aSwapChain };
 	presentInfo.swapchainCount 		= 1;
 	presentInfo.pSwapchains 		= swapChains;
 	presentInfo.pImageIndices 		= &imageIndex;
 	presentInfo.pResults 			= NULL; // Optional
 
-	res = vkQueuePresentKHR( device.p_queue(  ), &presentInfo );
+	res = vkQueuePresentKHR( aDevice.GetPresentQueue(  ), &presentInfo );
 
 	if ( res == VK_ERROR_OUT_OF_DATE_KHR )
 	{
-		reinit_swap_chain(  );
+		ReinitSwapChain(  );
 	}
 	else if ( res != VK_SUCCESS && res != VK_SUBOPTIMAL_KHR )
 	{
 		throw std::runtime_error( "Failed ot present swap chain image!" );
 	}
 	
-	vkQueueWaitIdle( device.p_queue(  ) );
+	vkQueueWaitIdle( aDevice.GetPresentQueue(  ) );
 
-	currentFrame = ( currentFrame + 1 ) % MAX_FRAMES_PROCESSING;
+	aCurrentFrame = ( aCurrentFrame + 1 ) % MAX_FRAMES_PROCESSING;
 	
 	//SDL_Delay( 1000 / 144 );
 }
 
-void renderer_c::cleanup
-	(  )
+void Renderer::Cleanup(  )
 {
-	destroy_swap_chain(  );
-	vkDestroySampler( device.dev(  ), textureSampler, NULL );
-	vkDestroyDescriptorSetLayout( device.dev(  ), modelSetLayout, NULL );
-	vkDestroyDescriptorSetLayout( device.dev(  ), spriteSetLayout, NULL );
-	for ( auto& model : *models )
+        DestroySwapChain(  );
+	vkDestroySampler( aDevice.GetDevice(  ), aTextureSampler, NULL );
+	vkDestroyDescriptorSetLayout( aDevice.GetDevice(  ), aModelSetLayout, NULL );
+	vkDestroyDescriptorSetLayout( aDevice.GetDevice(  ), aSpriteSetLayout, NULL );
+	for ( auto& model : aModels )
 	{
-		destroy_renderable< model_data_t >( *model );
+	        DestroyRenderable< ModelData >( *model );
 	}
-	for ( auto& sprite : *sprites )
+	for ( auto& sprite : aSprites )
 	{
-		destroy_renderable< sprite_data_t >( *sprite );
+	        DestroyRenderable< SpriteData >( *sprite );
 	}
 	for ( int i = 0; i < MAX_FRAMES_PROCESSING; i++ )
 	{
-		vkDestroySemaphore( device.dev(  ), renderFinishedSemaphores[ i ], NULL );
-		vkDestroySemaphore( device.dev(  ), imageAvailableSemaphores[ i ], NULL );
-		vkDestroyFence( device.dev(  ), inFlightFences[ i ], NULL);
+		vkDestroySemaphore( aDevice.GetDevice(  ), aRenderFinishedSemaphores[ i ], NULL );
+		vkDestroySemaphore( aDevice.GetDevice(  ), aImageAvailableSemaphores[ i ], NULL );
+		vkDestroyFence( aDevice.GetDevice(  ), aInFlightFences[ i ], NULL);
         }
 }
 
-renderer_c::renderer_c
-	(  )
+Renderer::Renderer(  ) : BaseSystem(  )
 {
-	systemType = RENDERER_C;
-	allocator.dev = &device;
-	init_commands(  );
+	aSystemType = RENDERER_C;
+	aAllocator.apDevice = &aDevice;
 }
 
-void renderer_c::send_messages
-	(  )
+void Renderer::SendMessages(  )
 {
-	msgs->add( GUI_C, ASSIGN_WIN, 0, { device.window(  ) } );
+	apMsgs->Add( GUI_C, ASSIGN_WIN, 0, { aDevice.GetWindow(  ) } );
 }
 
-renderer_c::~renderer_c
+Renderer::~Renderer
 	(  )
 {
-	cleanup(  );
+	Cleanup(  );
 }

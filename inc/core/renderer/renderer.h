@@ -1,5 +1,11 @@
-#ifndef RENDERER_H
-#define RENDERER_H
+/*
+renderer.h ( Authored by p0lyh3dron )
+
+Deckares the renderer class which is a higher
+level abstraction for interfacing with
+Vulkan.  
+*/
+#pragma once
 
 #define GLM_ENABLE_EXPERIMENTAL
 
@@ -19,105 +25,88 @@
 
 #include <optional>
 
-class renderer_c : public system_c	//	Most of these objects are used to make new objects by initializing them with certain parameters, then creating and storing them
+class Renderer : public BaseSystem	//	Most of these objects are used to make new objects by initializing them with certain parameters, then creating and storing them
 {
-	protected:
-
-	bool imGuiInitialized = false;
-
-	device_c device;
-	allocator_c allocator;
+protected:
+	typedef std::vector< VkImageView >		ImageViews;
+	typedef std::vector< VkImage >			ImageSet;
+	typedef std::vector< VkFramebuffer >		Framebuffers;
+	typedef std::vector< VkCommandBuffer >		CommandBuffers;
+	typedef std::vector< VkSemaphore >		SemaphoreList;
+	typedef std::vector< VkFence >			FenceList;
+	typedef std::vector< ModelData* >		ModelDataList;
+	typedef std::vector< SpriteData* >		SpriteDataList;
+	typedef std::string				String;
 	
-	int currentFrame = 0;
+        Device 				aDevice;
+        Allocator 			aAllocator;
+	VkSwapchainKHR 			aSwapChain;		        //	Queue for stuff to be rendered, does some processing before drawn to screen
+        ImageViews 			aSwapChainImageViews;	        //	View into an image, describing which part to access, one needed for each image
+        ImageSet 			aSwapChainImages;	        //	Stores images to be rendered, can have many
+        Framebuffers 			aSwapChainFramebuffers;		//	
+        CommandBuffers 			aCommandBuffers;	        //	Send commands to these to be executed later, better for concurrency, so many are nice
+	VkFormat 			aSwapChainImageFormat;
+	VkExtent2D 			aSwapChainExtent;
+	VkRenderPass 			aRenderPass;		        //	Stores framebuffer attachments that will be used for rendering
+	VkDescriptorSetLayout 		aModelSetLayout;
+	VkDescriptorSetLayout 		aSpriteSetLayout;
+	VkDescriptorPool 		aDescPool;
+	VkImageView 			aTextureImageView;
+	VkSampler 			aTextureSampler;
+	VkImage 			aDepthImage;
+	VkDeviceMemory 			aDepthImageMemory;
+	VkImageView 			aDepthImageView;
+	VkPipelineLayout 		aModelLayout;
+	VkPipelineLayout 		aSpriteLayout;
+	VkPipeline 			aModelPipeline;		        //	Colossal object that handles most stages of rendering. Seems to need multiple to render multiple things.
+	VkPipeline 			aSpritePipeline;
+        SemaphoreList 			aImageAvailableSemaphores;
+	SemaphoreList 			aRenderFinishedSemaphores;
+        FenceList 			aInFlightFences;
+	FenceList 			aImagesInFlight;
+        int 				aCurrentFrame 		= 0;
+        bool 				aImGuiInitialized 	= false;
 
-	VkSwapchainKHR swapChain;					//	Queue for stuff to be rendered, does some processing before drawn to screen
-	
-	std::vector<VkImageView> swapChainImageViews;			//	View into an image, describing which part to access, one needed for each image
-	std::vector<VkImage> swapChainImages;				//	Stores images to be rendered, can have many
-	std::vector<VkFramebuffer> swapChainFramebuffers;		//	
-	std::vector<VkCommandBuffer> commandBuffers;			//	Send commands to these to be executed later, better for concurrency, so many are nice
-	
-	VkFormat swapChainImageFormat;
-	VkExtent2D swapChainExtent;
-	VkRenderPass renderPass;					//	Stores framebuffer attachments that will be used for rendering
-
-	VkDescriptorSetLayout modelSetLayout;
-	VkDescriptorSetLayout spriteSetLayout;
-	VkDescriptorPool descPool;
-
-	VkImageView textureImageView;
-	VkSampler textureSampler;
-
-	VkImage depthImage;
-	VkDeviceMemory depthImageMemory;
-	VkImageView depthImageView;
-	
-	VkPipelineLayout modelLayout;
-	VkPipelineLayout spriteLayout;
-	VkPipeline modelPipeline;					//	Colossal object that handles most stages of rendering. Seems to need multiple to render multiple things.
-	VkPipeline spritePipeline;
-	
-	std::vector< VkSemaphore > imageAvailableSemaphores, renderFinishedSemaphores;
-	std::vector< VkFence > inFlightFences, imagesInFlight;
-
-	void init_commands
-		(  );
-	
-	void init_command_buffers
-		(  );
-	void init_texture_image
-		( const std::string& imagePath, VkImage& tImage, VkDeviceMemory& tImageMem );
-	void init_texture_image_view
-		( VkImageView& tImageView, VkImage tImage );
-	void load_obj
-		( const std::string& objPath, model_data_t& model );
-	void load_gltf
-		( const std::string& gltfPath, model_data_t& model );
-	void init_model_vertices
-		( const std::string& modelPath, model_data_t& model );
-	void init_sprite_vertices
-		( const std::string& spritePath, sprite_data_t& sprite );
-	
-	void reinit_swap_chain
-		(  );
-	void destroy_swap_chain
-		(  );
-
-	bool has_stencil_component
-		( VkFormat fmt );
-	
+	/* A.  */
+	void    InitCommands(  );
+	/* A.  */
+	void    InitCommandBuffers(  );
+	/* A.  */
+	void    LoadObj( const String &srObjPath, ModelData &srModel );
+	/* A.  */
+	void    LoadGltf( const String &srGltfPath, ModelData &srModel );
+	/* A.  */
+	void    InitModelVertices( const String &srModelPath, ModelData &srModel );
+	/* A.  */
+	void    InitSpriteVertices( const String &srSpritePath, SpriteData &srSprite );
+	/* A.  */
+	void    ReinitSwapChain(  );
+	/* A.  */
+	void    DestroySwapChain(  );
+	/* A.  */
+	bool    HasStencilComponent( VkFormat sFmt );
+	/* A.  */
 	template< typename T >
-	void destroy_renderable
-		( T& renderable );
-	
-	void update_uniform_buffers
-		( uint32_t currentImage, model_data_t& modelData );
-	
-	void cleanup
-		(  );
-	
-	public:
-
-	void init_vulkan
-		(  );
-	void init_model
-		( model_data_t& modelData, const std::string& modelPath, const std::string& texturePath );
-	void init_sprite
-		( sprite_data_t& spriteData, const std::string& spritePath );
-
-
-	void draw_frame
-		(  );
-
-	std::vector< model_data_t* >* models;
-	std::vector< sprite_data_t* >* sprites;
-	
-	renderer_c
-		(  );
-	void send_messages
-		(  );
-	~renderer_c
-		(  );
+	void    DestroyRenderable( T &srRenderable );
+	/* A.  */
+	void    UpdateUniformBuffers( uint32_t sCurrentImage, ModelData &srModelData );
+	/* A.  */
+	void 	Cleanup(  );
+public:
+        ModelDataList 	aModels;
+        SpriteDataList 	aSprites;
+	/* A.  */
+	void 	InitVulkan(  );
+	/* A.  */
+	void 	InitModel( ModelData &srModelData, const String &srModelPath, const String &srTexturePath );
+	/* A.  */
+	void 	InitSprite( SpriteData &srSpriteData, const String &srSpritePath );
+	/* A.  */
+	void 	DrawFrame(  );
+	/* A.  */
+		Renderer(  );
+	/* A.  */
+	void 	SendMessages(  );
+	/* A.  */
+		~Renderer(  );
 };
-
-#endif
