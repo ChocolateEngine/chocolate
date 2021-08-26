@@ -1,49 +1,42 @@
 #include "../../inc/shared/console.h"
 
-bool console_c::empty
-	(  )
+bool Console::Empty(  )
 {
-        return queue.empty(  ) ? true : false;
+        return aQueue.empty(  ) ? true : false;
 }
 
-void console_c::add
-	( const std::string& cmd )
+void Console::Add( const String &srCmd )
 {
-	queue.push_back( cmd );
+	aQueue.push_back( srCmd );
 }
 
-void console_c::delete_command
-	(  )
+void Console::DeleteCommand(  )
 {
-	queue.erase( queue.begin(  ) + cmdIndex );
+	aQueue.erase( aQueue.begin(  ) + aCmdIndex );
 }
 
-void console_c::clear
-	(  )
+void Console::Clear(  )
 {
-	queue.clear(  );
+	aQueue.clear(  );
 }
 
-std::string console_c::fetch_cmd
-	(  )
+std::string Console::FetchCmd(  )
 {
-	if ( empty(  ) || cmdIndex >= queue.size(  ) )
+	if ( Empty(  ) || aCmdIndex >= aQueue.size(  ) )
 	{
-		cmdIndex = 0;
+		aCmdIndex = 0;
 		return "";
 	}
-	cmdIndex++;
-	return queue[ cmdIndex - 1 ];
+	aCmdIndex++;
+	return aQueue[ aCmdIndex - 1 ];
 }
 
-console_c::console_c
-	(  )
+Console::Console(  )
 {
 
 }
 
-console_c::~console_c
-	(  )
+Console::~Console(  )
 {
 	
 }

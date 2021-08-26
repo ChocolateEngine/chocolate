@@ -8,7 +8,7 @@ void GraphicsSystem::LoadModel( const std::string& srModelPath, const std::strin
 	if ( spModel == NULL )
 	        spModel = new Model;
 	spModel->SetPosition( 0.f, 0.f, 0.f );
-	aRenderer.init_model( spModel->ModelData(  ), srModelPath, srTexturePath );
+	aRenderer.InitModel( spModel->GetModelData(  ), srModelPath, srTexturePath );
 	
 	aModels.push_back( spModel );
 	AddFreeFunction( [ = ](  ){ delete spModel; } );
@@ -20,7 +20,7 @@ void GraphicsSystem::LoadSprite( const std::string& srSpritePath, Sprite *spSpri
 		spSprite = new Sprite;
 
 	spSprite->SetPosition( 0.f, 0.f );
-	aRenderer.init_sprite( spSprite->SpriteData(  ), srSpritePath );
+	aRenderer.InitSprite( spSprite->GetSpriteData(  ), srSpritePath );
 	
 	aSprites.push_back( spSprite );
 	AddFreeFunction( [ = ](  ){ delete spSprite; } );
@@ -34,24 +34,29 @@ void GraphicsSystem::InitCommands(  )
 	apMsgs->aCmdManager.Add( "_load_model", Command< const std::string&, const std::string&, Model* >( loadModel ) );
 }
 
+void GraphicsSystem::InitConsoleCommands(  )
+{
+	
+}
+
 void GraphicsSystem::DrawFrame(  )
 {
-	aRenderer.draw_frame(  );
+	aRenderer.DrawFrame(  );
 }
 
 void GraphicsSystem::SyncRenderer(  )
 {
-	aRenderer.msgs 		= this->apMsgs;
-	aRenderer.console 	= this->apConsole;
+	aRenderer.apMsgs 		= this->apMsgs;
+	aRenderer.apConsole 	= this->apConsole;
 }
 
 GraphicsSystem::GraphicsSystem(  ) : BaseSystem(  )
 {
 	aSystemType = GRAPHICS_C;
-	AddUpdateFunction( [ & ](  ){ aRenderer.update(  ); } );
+	AddUpdateFunction( [ & ](  ){ aRenderer.Update(  ); } );
         AddUpdateFunction( [ & ](  ){ DrawFrame(  ); } );
 
-	aRenderer.init_vulkan(  );
+	aRenderer.InitVulkan(  );
 
 	LoadModel( "materials/models/protogen_wip_22/protogen_wip_22.obj", "materials/textures/blue_mat.png" );
 }
@@ -59,10 +64,5 @@ GraphicsSystem::GraphicsSystem(  ) : BaseSystem(  )
 void GraphicsSystem::InitSubsystems(  )
 {
         SyncRenderer(  );
-	aRenderer.send_messages(  );
-}
-
-GraphicsSystem::~GraphicsSystem(  )
-{
-	
+	aRenderer.SendMessages(  );
 }

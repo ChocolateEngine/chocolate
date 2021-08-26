@@ -10,7 +10,6 @@ const int RATE = 44100;
 
 class AudioSystem : public BaseSystem
 {
-	SYSTEM_OBJECT( AudioSystem )
 protected:
 #if SDL_MIXER
 	Mix_Music* apMusic;
@@ -20,4 +19,5 @@ protected:
 public:
 	/* Initialize the audio format.  */
 	explicit        AudioSystem(  );
+					~AudioSystem(  );
 };

@@ -20,7 +20,6 @@ public:
 
 class InputSystem : public BaseSystem
 {
-	SYSTEM_OBJECT( InputSystem )
 protected:
 	typedef std::vector< KeyAlias > KeyAliases;
 	typedef std::vector< KeyBind >	KeyBinds;
@@ -35,6 +34,8 @@ protected:
 	void 		ParseBindings(  );
 	/* Binds the console command to the key.  */
 	void 		Bind( const std::string& srKey, const std::string& srCmd );
+	/* Initializes all console commands the system can respond to.  */
+	void 		InitConsoleCommands(  );
 public:
 	/* Parses SDL inputs and if there is a valid input, execute the console command.  */
 	void 		ParseInput(  );

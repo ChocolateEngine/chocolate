@@ -1,5 +1,10 @@
-#ifndef DEVICE_H
-#define DEVICE_H
+/*
+device.h ( Authored by p0lyh3dron )
+
+Declares and defines many of the device
+functions that utilize GPU functionality.
+*/
+#pragma once
 
 #include "../../../inc/types/renderertypes.h"
 
@@ -10,157 +15,115 @@
 #include <iostream>
 #include <optional>
 
+typedef std::vector< const char* > 	StringList;
+
 #ifdef NDEBUG
-    const bool enableValidationLayers = false;
+    const bool 	gEnableValidationLayers = false;
 #else
-    const bool enableValidationLayers = true;
+    const bool 	gEnableValidationLayers = true;
 #endif
 
-const std::vector< const char* > validationLayers = {
-    "VK_LAYER_KHRONOS_validation"
-};
+const 		StringList gValidationLayers = { "VK_LAYER_KHRONOS_validation" };
+const 		StringList gDeviceExtensions = { VK_KHR_SWAPCHAIN_EXTENSION_NAME };
 
-const std::vector< const char* > deviceExtensions = {
-    VK_KHR_SWAPCHAIN_EXTENSION_NAME
-};
-
-class device_c
+class Device
 {
-	protected:
-
-	SDL_Window* win;						//	Window to display stuff
-	VkSurfaceKHR surf;						//	Allows window to display stuff	
-	VkInstance inst;						//	Foundation for graphics API, stores application data
-	VkDebugUtilsMessengerEXT debugMessenger;			//	Validation layers
-	VkPhysicalDevice physicalDevice;				//	GPU, we'll only be needing one of these
-	VkDevice device;						//	Stores features and is used to create other objects
-	VkQueue graphicsQueue, presentQueue;
-	VkCommandPool commandPool;
-
-	static VKAPI_ATTR VkBool32 VKAPI_CALL debug_callback
-		( VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
-	  	  VkDebugUtilsMessageTypeFlagsEXT messageType,
-	  	  const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
-	  	  void* pUserData );
+protected:
+	typedef std::vector< VkSurfaceFormatKHR > 	SurfaceFormats;
+	typedef std::vector< VkPresentModeKHR >		PresentModes;
+	typedef std::vector< VkImage > 			ImageSet;
+	typedef std::vector< VkFormat >			FormatSet;
 	
-	void init_device
-		(  );
-	void init_window
-		(  );
-	std::vector< const char* > init_required_extensions
-		(  );
-	void init_instance
-		(  );
-	void init_debug_messenger_info
-		( VkDebugUtilsMessengerCreateInfoEXT& c );
-	VkResult init_debug_messenger
-		( VkInstance instance,
-	  	  const VkDebugUtilsMessengerCreateInfoEXT* pCreateInfo,
-	  	  const VkAllocationCallbacks* pAllocator,
-	  	  VkDebugUtilsMessengerEXT* pDebugMessenger );
-	void init_validation_layers
-		(  );
-	void init_surface
-		(  );
-	void init_physical_device
-		(  );
-	void init_logical_device
-		(  );
-	void init_command_pool
-		(  );
-
-	bool check_validation_layer_support
-		(  );
-	queue_family_indices_t find_queue_families
-		( VkPhysicalDevice d );
-	bool check_device_extension_support
-		( VkPhysicalDevice d );
-	swap_chain_support_info_t check_swap_chain_support
-		( VkPhysicalDevice d );
-	bool is_suitable_device
-		( VkPhysicalDevice d );
-
-	VkSurfaceFormatKHR choose_swap_surface_format
-		( const std::vector< VkSurfaceFormatKHR >& availableFormats );
-	VkPresentModeKHR choose_swap_present_mode
-		( const std::vector< VkPresentModeKHR >& availablePresentModes );
-	VkExtent2D choose_swap_extent
-		( const VkSurfaceCapabilitiesKHR& capabilities );
-
-	void destroy_debug_messenger
-		( const VkAllocationCallbacks* pAllocator );
-	void cleanup
-		(  );
-	
-	public:
-
-	int width = 1280, height = 720;
-	void init_swap_chain
-		( VkSwapchainKHR& swapChain, std::vector< VkImage >& swapChainImages, VkFormat& swapChainImageFormat, VkExtent2D& swapChainExtent );
-	void init_texture_sampler
-		( VkSampler& textureSampler, VkSamplerAddressMode mode );
-
-	VkCommandBuffer begin_single_time_commands
-		(  );
-	void end_single_time_commands
-		( VkCommandBuffer c );
-
-	VkFormat find_supported_fmt
-		( const std::vector< VkFormat >& candidates,
-	  	  VkImageTiling tiling,
-	  	  VkFormatFeatureFlags features );
-	VkFormat find_depth_format
-		(  );
-	uint32_t find_memory_type
-		( uint32_t typeFilter, VkMemoryPropertyFlags properties );
-
-	SDL_Window* window
-		(  )
-		{
-			return win;
-		}
-	VkInstance instance
-		(  )
-	{
-		return inst;
-	}
-	VkDevice dev
-		(  )
-	{
-		return device;
-	}
-	VkPhysicalDevice p_dev
-		(  )
-	{
-		return physicalDevice;
-	}
-	VkCommandPool c_pool
-		(  )
-	{
-		return commandPool;
-	}
-	VkQueue g_queue
-		(  )
-	{
-		return graphicsQueue;
-	}
-	VkQueue p_queue
-		(  )
-	{
-		return presentQueue;
-	}
-
-	void set_res
-		( int inWidth, int inHeight )
-		{
-			width = inWidth;
-			height = inHeight;
-		}
-
-	device_c
-		(  );
-	~device_c
-		(  );
+	SDL_Window  			*apWindow;		        	//	Window to display stuff
+	VkSurfaceKHR 			aSurface;				//	Allows window to display stuff	
+	VkInstance 			aInstance;				//	Foundation for graphics API, stores application data
+	VkDebugUtilsMessengerEXT 	aDebugMessenger;			//	Validation layers
+	VkPhysicalDevice 		aPhysicalDevice;			//	GPU, we'll only be needing one of these
+	VkDevice 			aDevice;				//	Stores features and is used to create other objects
+	VkQueue 			aGraphicsQueue;
+	VkQueue				aPresentQueue;
+	VkCommandPool 			aCommandPool;
+	/* Debug callback that displays the validation layer errors.  */
+	static VKAPI_ATTR VkBool32 VKAPI_CALL   DebugCallback( VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, VkDebugUtilsMessageTypeFlagsEXT messageType,
+								const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData );
+	/* Creates the main device which essentially preps the GPU.  */
+	void 				        InitDevice(  );
+	/* Create the SDL2 window.  */
+	void 				        InitWindow(  );
+	/* A.  */
+	StringList 				InitRequiredExtensions(  );
+	/* A.  */
+	void 					InitInstance(  );
+	/* A.  */
+	void 					InitDebugMessengerInfo( VkDebugUtilsMessengerCreateInfoEXT &srCreateInfo );
+	/* A.  */
+	VkResult 				InitDebugMessenger( VkInstance sInstance, const VkDebugUtilsMessengerCreateInfoEXT *spCreateInfo,
+								    const VkAllocationCallbacks *spAllocator, VkDebugUtilsMessengerEXT *spDebugMessenger );
+	/* A.  */
+	void 					InitValidationLayers(  );
+	/* A.  */
+	void 					InitSurface(  );
+	/* A.  */
+	void 					InitPhysicalDevice(  );
+	/* A.  */
+	void 					InitLogicalDevice(  );
+	/* A.  */
+	void 					InitCommandPool(  );
+	/* A.  */
+	bool 					CheckValidationLayerSupport(  );
+	/* A.  */
+        QueueFamilyIndices 			FindQueueFamilies( VkPhysicalDevice sDevice );
+	/* A.  */
+	bool 					CheckDeviceExtensionSupport( VkPhysicalDevice sDevice );
+	/* A.  */
+	SwapChainSupportInfo	 		CheckSwapChainSupport( VkPhysicalDevice sDevice );
+	/* A.  */
+	bool 					IsSuitableDevice( VkPhysicalDevice sDevice );
+	/* A.  */
+	VkSurfaceFormatKHR 			ChooseSwapSurfaceFormat( const SurfaceFormats &srAvailableFormats );
+	/* A.  */
+	VkPresentModeKHR 			ChooseSwapPresentMode( const PresentModes &srAvailablePresentModes );
+	/* A.  */
+	VkExtent2D 				ChooseSwapExtent( const VkSurfaceCapabilitiesKHR &srCapabilities );
+	/* A.  */
+	void 					DestroyDebugMessenger( const VkAllocationCallbacks *pAllocator );
+	/* A.  */
+	void 					Cleanup(  );
+public:
+	int 	aWidth 	= 1280;
+	int 	aHeight = 720;
+	/* A.  */
+	void 					InitSwapChain( VkSwapchainKHR &srSwapChain, ImageSet &srSwapChainImages, VkFormat &srSwapChainImageFormat,
+							       VkExtent2D &srSwapChainExtent );
+	/* A.  */
+	void 					InitTextureSampler( VkSampler& textureSampler, VkSamplerAddressMode mode );
+	/* A.  */
+	VkCommandBuffer 			BeginSingleTimeCommands(  );
+	/* A.  */
+	void 					EndSingleTimeCommands( VkCommandBuffer sCommandBuffer );
+	/* A.  */
+	VkFormat				FindSupportedFormat( const FormatSet &srCandidates, VkImageTiling sTiling, VkFormatFeatureFlags sFeatures );
+	/* A.  */
+	VkFormat 				FindDepthFormat(  );
+	uint32_t 				FindMemoryType( uint32_t sTypeFilter, VkMemoryPropertyFlags sProperties );
+	/* A.  */
+	SDL_Window 				*GetWindow(  ){ return apWindow; }
+	/* A.  */
+	VkInstance 				GetInstance(  ){ return aInstance; }
+	/* A.  */
+	VkDevice 				GetDevice(  ){ return aDevice; }
+	/* A.  */
+	VkPhysicalDevice 			GetPhysicalDevice(  ){ return aPhysicalDevice; }
+	/* A.  */
+	VkCommandPool 				GetCommandPool(  ){ return aCommandPool; }
+	/* A.  */
+	VkQueue 				GetGraphicsQueue(  ){ return aGraphicsQueue; }
+	/* A.  */
+	VkQueue 				GetPresentQueue(  ){ return aPresentQueue; }
+	/* A.  */
+	void 					SetResolution( int sWidth, int sHeight ){ aWidth = sWidth; aHeight = sHeight; }
+	/* A.  */
+        					Device(  );
+	/* A.  */
+						~Device(  );
 };
-
-#endif

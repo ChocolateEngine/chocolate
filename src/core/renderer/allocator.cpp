@@ -14,8 +14,8 @@
 
 VkFormat Allocator::FindDepthFormat(  )
 {
-	return apDevice->find_supported_fmt(
-		{ VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT },
+	return apDevice->FindSupportedFormat(
+{ VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT },
 		VK_IMAGE_TILING_OPTIMAL,
         	VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT );
 }
@@ -43,7 +43,7 @@ VkShaderModule Allocator::CreateShaderModule( const ByteArray &srCode )
 	createInfo.sType 	= VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
 	createInfo.codeSize 	= srCode.size(  );
 	createInfo.pCode 	= ( const uint32_t* )srCode.data(  );
-	if ( vkCreateShaderModule( apDevice->dev(  ), &createInfo, NULL, &shaderModule ) != VK_SUCCESS )
+	if ( vkCreateShaderModule( apDevice->GetDevice(  ), &createInfo, NULL, &shaderModule ) != VK_SUCCESS )
 		throw std::runtime_error( "Failed to create shader module!" );
 	return shaderModule;
 }
@@ -88,26 +88,26 @@ void Allocator::InitBuffer( VkDeviceSize sSize, VkBufferUsageFlags sUsage, VkMem
 {
 	VkBufferCreateInfo bufferInfo = BufferCreate( sSize, sUsage );
 
-	if ( vkCreateBuffer( apDevice->dev(  ), &bufferInfo, NULL, &srBuffer ) != VK_SUCCESS )
+	if ( vkCreateBuffer( apDevice->GetDevice(  ), &bufferInfo, NULL, &srBuffer ) != VK_SUCCESS )
 		throw std::runtime_error( "Failed to create buffer!" );
 
 	VkMemoryRequirements memRequirements;
-	vkGetBufferMemoryRequirements( apDevice->dev(  ), srBuffer, &memRequirements );
+	vkGetBufferMemoryRequirements( apDevice->GetDevice(  ), srBuffer, &memRequirements );
 
-	VkMemoryAllocateInfo allocInfo = MemoryAllocate( memRequirements.size, apDevice->find_memory_type( memRequirements.memoryTypeBits, sProperties ) );
+	VkMemoryAllocateInfo allocInfo = MemoryAllocate( memRequirements.size, apDevice->FindMemoryType( memRequirements.memoryTypeBits, sProperties ) );
 
-	if ( vkAllocateMemory( apDevice->dev(  ), &allocInfo, nullptr, &srBufferMemory ) != VK_SUCCESS )
+	if ( vkAllocateMemory( apDevice->GetDevice(  ), &allocInfo, nullptr, &srBufferMemory ) != VK_SUCCESS )
 		throw std::runtime_error( "Failed to allocate buffer memory!" );
 
-	vkBindBufferMemory( apDevice->dev(  ), srBuffer, srBufferMemory, 0 );
+	vkBindBufferMemory( apDevice->GetDevice(  ), srBuffer, srBufferMemory, 0 );
 }
 
 void Allocator::MapMemory( VkDeviceMemory sBufferMemory, VkDeviceSize sSize, const void *spData )
 {
 	void 	*pData;
-	vkMapMemory( apDevice->dev(  ), sBufferMemory, 0, sSize, 0, &spData );
+	vkMapMemory( apDevice->GetDevice(  ), sBufferMemory, 0, sSize, 0, &pData );
 	memcpy( pData, spData, ( size_t )sSize );
-	vkUnmapMemory( apDevice->dev(  ), sBufferMemory );
+	vkUnmapMemory( apDevice->GetDevice(  ), sBufferMemory );
 }
 
 void Allocator::CopyBuffer( VkBuffer sSrc, VkBuffer sDst, VkDeviceSize sSize )
@@ -130,259 +130,157 @@ void Allocator::CopyBufferToImage( VkBuffer sBuffer, VkImage sImage, uint32_t sW
 void Allocator::Submit( const auto&& sFunction )
 {
 	/* Open command buffer.  */
-	VkCommandBuffer c = apDevice->begin_single_time_commands(  );
+	VkCommandBuffer c = apDevice->BeginSingleTimeCommands(  );
 	sFunction( c );
 	/* Complete command recording.  */
-	apDevice->end_single_time_commands( c );
+	apDevice->EndSingleTimeCommands( c );
 }
 
 void Allocator::InitImageView( VkImageView& sImageView, VkImage sImage, VkFormat sFormat, VkImageAspectFlags sAspectFlags )
 {
 	VkImageViewCreateInfo viewInfo = ImageView( sImage, sFormat, sAspectFlags );
 
-	if ( vkCreateImageView( apDevice->dev(  ), &viewInfo, NULL, &sImageView ) != VK_SUCCESS )
+	if ( vkCreateImageView( apDevice->GetDevice(  ), &viewInfo, NULL, &sImageView ) != VK_SUCCESS )
 		throw std::runtime_error( "Failed to create texture image view!" );
 }
 
 void Allocator::InitImage( VkImageCreateInfo sImageInfo, VkMemoryPropertyFlags sProperties, VkImage &srImage, VkDeviceMemory &srImageMemory )
 {
-	if ( vkCreateImage( apDevice->dev(  ), &sImageInfo, NULL, &srImage ) != VK_SUCCESS )
+	if ( vkCreateImage( apDevice->GetDevice(  ), &sImageInfo, NULL, &srImage ) != VK_SUCCESS )
 		throw std::runtime_error( "Failed to create image!" );
 
 	VkMemoryRequirements memRequirements;
-	vkGetImageMemoryRequirements( apDevice->dev(  ), srImage, &memRequirements );
+	vkGetImageMemoryRequirements( apDevice->GetDevice(  ), srImage, &memRequirements );
 
-	VkMemoryAllocateInfo allocInfo = MemoryAllocate( memRequirements.size, apDevice->find_memory_type( memRequirements.memoryTypeBits, sProperties ) );
+	VkMemoryAllocateInfo allocInfo = MemoryAllocate( memRequirements.size, apDevice->FindMemoryType( memRequirements.memoryTypeBits, sProperties ) );
 
-	if ( vkAllocateMemory( apDevice->dev(  ), &allocInfo, NULL, &srImageMemory ) != VK_SUCCESS )
+	if ( vkAllocateMemory( apDevice->GetDevice(  ), &allocInfo, NULL, &srImageMemory ) != VK_SUCCESS )
 		throw std::runtime_error( "Failed to allocate image memory!" );
 
-	vkBindImageMemory( apDevice->dev(  ), srImage, srImageMemory, 0 );
+	vkBindImageMemory( apDevice->GetDevice(  ), srImage, srImageMemory, 0 );
 }
 
-void Allocator::init_texture_image
-	( const std::string& imagePath, VkImage& tImage, VkDeviceMemory& tImageMem, float* width, float* height )
+void Allocator::InitTextureImage( const String &srImagePath, VkImage &srTImage, VkDeviceMemory &srTImageMem, float *spWidth, float *spHeight )
 {
-	int texWidth, texHeight, texChannels;
-	stbi_uc* pixels = stbi_load( imagePath.c_str(  ), &texWidth, &texHeight, &texChannels, STBI_rgb_alpha );
-	VkDeviceSize imageSize = texWidth * texHeight * 4;
+	int 		texWidth;
+	int		texHeight;
+	int		texChannels;
+	VkBuffer 	stagingBuffer;
+	VkDeviceMemory 	stagingBufferMemory;
+	stbi_uc 	*pPixels = stbi_load( srImagePath.c_str(  ), &texWidth, &texHeight, &texChannels, STBI_rgb_alpha );
+	VkDeviceSize 	imageSize = texWidth * texHeight * 4;
 
-	if ( !pixels ) {
+	if ( !pPixels )
 		throw std::runtime_error( "Failed to load texture image!" );
-	}
-
-	VkBuffer stagingBuffer;
-	VkDeviceMemory stagingBufferMemory;
-	init_buffer( imageSize,
-		     VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-		     VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-		     stagingBuffer,
-		     stagingBufferMemory );
-
-	void* data;
-	vkMapMemory( dev->dev(  ), stagingBufferMemory, 0, imageSize, 0, &data );
-	memcpy( data, pixels, ( size_t )imageSize );
-	vkUnmapMemory( dev->dev(  ), stagingBufferMemory );
-
-	stbi_image_free( pixels );
-
-	init_image( texWidth,
-		    texHeight,
-		    VK_FORMAT_R8G8B8A8_SRGB,
-		    VK_IMAGE_TILING_OPTIMAL,
-		    VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
-		    VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-		    tImage,
-		    tImageMem );
-	transition_image_layout( tImage,
-				 VK_IMAGE_LAYOUT_UNDEFINED,
-				 VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL );
-	copy_buffer_to_img( stagingBuffer,
-			    tImage,
-			    ( uint32_t )texWidth,
-			    ( uint32_t )texHeight );
-	transition_image_layout( tImage,
-				 VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-				 VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
-
-	if ( width && height )
+	
+        InitBuffer( imageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+		    stagingBuffer, stagingBufferMemory );
+	
+	MapMemory( stagingBufferMemory, imageSize, pPixels );
+	stbi_image_free( pPixels );
+	
+	InitImage( Image( texWidth, texHeight, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT ),
+		   VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,srTImage,srTImageMem );
+	
+        TransitionImageLayout( srTImage,VK_IMAGE_LAYOUT_UNDEFINED,VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL );
+	
+        CopyBufferToImage( stagingBuffer, srTImage, ( uint32_t )texWidth, ( uint32_t )texHeight );
+        TransitionImageLayout( srTImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
+	/* Store the width and height so sprite on screen is the same resolution as it is as a file.  */
+	if ( spWidth && spHeight )
 	{
-		*width 	 = ( float )texWidth / ( float )dev->width * 2.0f;	//	maintain size and aspect ratio
-		*height  = ( float )texHeight / ( float )dev->height * 2.0f;
+		*spWidth 	= ( float )texWidth  / ( float )apDevice->aWidth  * 2.0f;	//	maintain size and aspect ratio
+		*spHeight  	= ( float )texHeight / ( float )apDevice->aHeight * 2.0f;
 	}
-	
-	vkDestroyBuffer( dev->dev(  ), stagingBuffer, NULL );
-	vkFreeMemory( dev->dev(  ), stagingBufferMemory, NULL );
+	/* Clean memory  */
+	vkDestroyBuffer( apDevice->GetDevice(  ), stagingBuffer, NULL );
+	vkFreeMemory( apDevice->GetDevice(  ), stagingBufferMemory, NULL );
 }
 
-void Allocator::init_texture_image_view
-	( VkImageView& tImageView, VkImage tImage )
+void Allocator::InitTextureImageView( VkImageView &srTImageView, VkImage sTImage )
 {
-	init_image_view( tImageView, tImage, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT );
-}
-
-template< typename T >
-void Allocator::init_vertex_buffer
-	( const std::vector< T >& v, VkBuffer& vBuffer, VkDeviceMemory& vBufferMem )
-{
-	VkDeviceSize bufferSize = sizeof( v[ 0 ] ) * v.size(  );
-	
-	VkBuffer stagingBuffer;
-	VkDeviceMemory stagingBufferMemory;
-	init_buffer( bufferSize,
-		     VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-		     VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-		     stagingBuffer,
-		     stagingBufferMemory );
-	
-	map_memory( stagingBufferMemory, bufferSize, v.data(  ) );
-
-	init_buffer( bufferSize,
-		     VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
-		     VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-		     vBuffer,
-		     vBufferMem );
-
-	buf_copy( stagingBuffer, vBuffer, bufferSize );
-
-	vkDestroyBuffer( dev->dev(  ), stagingBuffer, NULL );
-        vkFreeMemory( dev->dev(  ), stagingBufferMemory, NULL );
-}
-
-void Allocator::init_index_buffer
-	( std::vector< uint32_t >& i, VkBuffer& iBuffer, VkDeviceMemory& iBufferMem )	//	pls nuke this in the future, it is a copy of the above function
-{
-	VkDeviceSize bufferSize = sizeof( i[ 0 ] ) * i.size(  );
-
-	VkBuffer stagingBuffer;
-	VkDeviceMemory stagingBufferMemory;
-	init_buffer( bufferSize,
-		     VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-		     VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-		     stagingBuffer, stagingBufferMemory );
-
-	map_memory( stagingBufferMemory, bufferSize, i.data(  ) );
-
-	init_buffer( bufferSize,
-		     VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
-		     VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-		     iBuffer,
-		     iBufferMem );
-
-	buf_copy( stagingBuffer, iBuffer, bufferSize );
-
-	vkDestroyBuffer( dev->dev(  ), stagingBuffer, NULL );
-	vkFreeMemory( dev->dev(  ), stagingBufferMemory, NULL );
+        InitImageView( srTImageView, sTImage, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT );
 }
 
 template< typename T >
-void Allocator::init_uniform_buffers
-	( std::vector< VkBuffer >& uBuffers, std::vector< VkDeviceMemory >& uBuffersMem )
+void Allocator::InitTexBuffer( const std::vector< T > &srData, VkBuffer &srBuffer, VkDeviceMemory &srBufferMem )
 {
-	VkDeviceSize bufferSize = sizeof( T );
+	VkBuffer 	stagingBuffer;
+	VkDeviceMemory 	stagingBufferMemory;
+	VkDeviceSize 	bufferSize = sizeof( srData[ 0 ] ) * srData.size(  );
+	
+	InitBuffer( bufferSize, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+		    VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer, stagingBufferMemory );
+	
+        MapMemory( stagingBufferMemory, bufferSize, srData.data(  ) );
+
+        InitBuffer( bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+		    srBuffer, srBufferMem );
+
+        CopyBuffer( stagingBuffer, srBuffer, bufferSize );
+	vkDestroyBuffer( apDevice->GetDevice(  ), stagingBuffer, NULL );
+        vkFreeMemory( apDevice->GetDevice(  ), stagingBufferMemory, NULL );
+}
+
+void Allocator::InitUniformBuffers( BufferSet &srUBuffers, MemorySet &srUBuffersMem )
+{
+	VkDeviceSize bufferSize = sizeof( ubo_3d_t );
 		
-	uBuffers.resize( swapChainImages->size(  ) );
-	uBuffersMem.resize( swapChainImages->size(  ) );
+	srUBuffers.resize( apSwapChainImages->size(  ) );
+	srUBuffersMem.resize( apSwapChainImages->size(  ) );
 
-	for ( int i = 0; i < swapChainImages->size(  ); i++ ) {
-		init_buffer( bufferSize,
-			     VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-			     VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-			     uBuffers[ i ],
-			     uBuffersMem[ i ] );
-	}
+	for ( int i = 0; i < apSwapChainImages->size(  ); i++ )
+	        InitBuffer( bufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+			     srUBuffers[ i ], srUBuffersMem[ i ] );
 }
 
-void Allocator::init_desc_sets
-	( std::vector< VkDescriptorSet >& descSets,
-	  VkDescriptorSetLayout& descSetLayout,
-	  VkDescriptorPool& descPool,
-	  const std::vector< combined_image_info_t >& descImageInfos,
-	  const std::vector< combined_buffer_info_t >& descBufferInfos )
+void Allocator::InitDescriptorSets( DescriptorSets &srDescSets, VkDescriptorSetLayout &srDescSetLayout, VkDescriptorPool &srDescPool,
+				    const ImageInfoSets &srDescImageInfos, const BufferInfoSets &srDescBufferInfos )
 {
-	std::vector< VkDescriptorSetLayout > layouts( swapChainImages->size(  ), descSetLayout );
-	VkDescriptorSetAllocateInfo allocInfo{  };
+	std::vector< VkDescriptorSetLayout > 	layouts( apSwapChainImages->size(  ), srDescSetLayout );
+	std::vector< VkWriteDescriptorSet > 	descriptorWrites{  };
+	VkDescriptorSetAllocateInfo 		allocInfo{  };
 	allocInfo.sType 		= VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-	allocInfo.descriptorPool 	= descPool;							//	Pool where descriptors are allocated
-	allocInfo.descriptorSetCount 	= ( uint32_t )swapChainImages->size(  );
+	allocInfo.descriptorPool 	= srDescPool;							//	Pool where descriptors are allocated
+	allocInfo.descriptorSetCount 	= ( uint32_t )apSwapChainImages->size(  );
 	allocInfo.pSetLayouts 		= layouts.data(  );
 
-	descSets.resize( swapChainImages->size(  ) );
-	if ( vkAllocateDescriptorSets( dev->dev(  ), &allocInfo, descSets.data(  ) ) != VK_SUCCESS )	//	Allocate descriptor sets
-	{
+	srDescSets.resize( apSwapChainImages->size(  ) );
+	if ( vkAllocateDescriptorSets( apDevice->GetDevice(  ), &allocInfo, srDescSets.data(  ) ) != VK_SUCCESS )	//	Allocate descriptor sets
 		throw std::runtime_error( "Failed to allocate descriptor sets!" );
-	}
 
-	for ( int i = 0; i < swapChainImages->size(  ); i++ )					        //	For each of the rendered frames
+	for ( int i = 0; i < apSwapChainImages->size(  ); i++ )					        //	For each of the rendered frames
 	{
-		std::vector< VkWriteDescriptorSet > descriptorWrites{  };
-		int j = 0;
-		for ( ; j < descBufferInfos.size(  ); ++j )						//	Iterate through the descriptor buffer infos and make descriptor writes for them
+		int bindingCount = 0;
+		for ( auto &&descBufferInfo : srDescBufferInfos )						//	Iterate through the descriptor buffer infos and make descriptor writes for them
 		{
-			auto buffer = desc_buffer( descBufferInfos[ j ].buffer, descBufferInfos[ j ].range, 0, i );
-			
-			VkWriteDescriptorSet descriptorWrite{  };
-			descriptorWrite.sType		= VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-			descriptorWrite.dstSet		= descSets[ i ];
-			descriptorWrite.dstBinding	= j;
-			descriptorWrite.dstArrayElement = 0;
-			descriptorWrite.descriptorType  = descBufferInfos[ j ].type;
-			descriptorWrite.descriptorCount = 1;
-			descriptorWrite.pBufferInfo	= &buffer;
+			auto 			buffer 		= DescriptorBuffer( descBufferInfo.buffer, descBufferInfo.range, 0, i );
+			VkWriteDescriptorSet 	descriptorWrite = WriteDescriptor( srDescSets[ i ], bindingCount, descBufferInfo.type, NULL, &buffer );
 			descriptorWrites.push_back( descriptorWrite );
+			++bindingCount;
 		}
-		for ( int k = j; k < descImageInfos.size(  ) + j; ++k )					//	Do the same for the descriptor image infos
+		for ( auto &&descImageInfo : srDescImageInfos )					//	Do the same for the descriptor image infos
 		{
-			auto image = desc_image(
-				descImageInfos[ k - descBufferInfos.size(  ) ].imageLayout,		//	k - descBufferInos.size(  ) ensures dstBinding iterates by one for each binding added
-				descImageInfos[ k - descBufferInfos.size(  ) ].imageView,		//	The texture that is loaded into memory, can have multiple VkDescriptorImageInfo for multiple textures, or rather multiple descriptor sets with different image views, so they can be rebinded before drawing vertices in sprite_t::bind()
-				descImageInfos[ k - descBufferInfos.size(  ) ].textureSampler );
-			VkWriteDescriptorSet descriptorWrite{  };
-			descriptorWrite.sType		= VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-			descriptorWrite.dstSet		= descSets[ i ];
-			descriptorWrite.dstBinding	= k;
-			descriptorWrite.dstArrayElement = 0;
-			descriptorWrite.descriptorType  = descImageInfos[ k - descBufferInfos.size(  ) ].type;
-			descriptorWrite.descriptorCount = 1;
-			descriptorWrite.pImageInfo	= &image;
+			auto image 				= DescriptorImage( descImageInfo.imageLayout, descImageInfo.imageView, descImageInfo.textureSampler );
+			VkWriteDescriptorSet descriptorWrite	= WriteDescriptor( srDescSets[ i ], bindingCount, descImageInfo.type, &image, NULL );
 			descriptorWrites.push_back( descriptorWrite );
+			++bindingCount;
 		}
-		vkUpdateDescriptorSets( dev->dev(  ), ( uint32_t )descriptorWrites.size(  ), descriptorWrites.data(  ), 0, NULL );
+		vkUpdateDescriptorSets( apDevice->GetDevice(  ), ( uint32_t )descriptorWrites.size(  ), descriptorWrites.data(  ), 0, NULL );
 	}
 }
 
-void Allocator::init_image_views
-	( std::vector< VkImageView >& swapChainImageViews, VkFormat& swapChainImageFormat )
+void Allocator::InitImageViews( ImageViews &srSwapChainImageViews, VkFormat &srSwapChainImageFormat )
 {
-	swapChainImageViews.resize( swapChainImages->size(  ) );
-	for ( int i = 0; i < swapChainImages->size(  ); i++ )
-	{
-		init_image_view( swapChainImageViews[ i ], swapChainImages->at( i ), swapChainImageFormat, VK_IMAGE_ASPECT_COLOR_BIT );
-	}
+	srSwapChainImageViews.resize( apSwapChainImages->size(  ) );
+	for ( int i = 0; i < apSwapChainImages->size(  ); i++ )
+	        InitImageView( srSwapChainImageViews[ i ], apSwapChainImages->at( i ), srSwapChainImageFormat, VK_IMAGE_ASPECT_COLOR_BIT );
 }
 
-void Allocator::init_render_pass
-	( VkRenderPass& renderPass, VkFormat& swapChainImageFormat )
+void Allocator::InitRenderPass( VkRenderPass &srRenderPass, VkFormat &srSwapChainImageFormat )
 {
-	VkAttachmentDescription colorAttachment{  };
-	colorAttachment.format 		= swapChainImageFormat;
-	colorAttachment.samples 	= VK_SAMPLE_COUNT_1_BIT;
-	colorAttachment.loadOp 		= VK_ATTACHMENT_LOAD_OP_CLEAR;
-	colorAttachment.storeOp 	= VK_ATTACHMENT_STORE_OP_STORE;
-	colorAttachment.stencilLoadOp 	= VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-	colorAttachment.stencilStoreOp 	= VK_ATTACHMENT_STORE_OP_DONT_CARE;
-	colorAttachment.initialLayout 	= VK_IMAGE_LAYOUT_UNDEFINED;
-	colorAttachment.finalLayout 	= VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-
-	VkAttachmentDescription depthAttachment{  };
-	depthAttachment.format 		= find_depth_format(  );
-	depthAttachment.samples 	= VK_SAMPLE_COUNT_1_BIT;
-	depthAttachment.loadOp 		= VK_ATTACHMENT_LOAD_OP_CLEAR;
-	depthAttachment.storeOp 	= VK_ATTACHMENT_STORE_OP_DONT_CARE;
-	depthAttachment.stencilLoadOp 	= VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-	depthAttachment.stencilStoreOp 	= VK_ATTACHMENT_STORE_OP_DONT_CARE;
-	depthAttachment.initialLayout 	= VK_IMAGE_LAYOUT_UNDEFINED;
-	depthAttachment.finalLayout 	= VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+	VkAttachmentDescription 	colorAttachment = AttachmentDescription( srSwapChainImageFormat, VK_ATTACHMENT_STORE_OP_STORE, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR );
+	VkAttachmentDescription 	depthAttachment = AttachmentDescription( FindDepthFormat(  ), VK_ATTACHMENT_STORE_OP_DONT_CARE, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL );
 
 	VkAttachmentReference colorAttachmentRef{  };
 	colorAttachmentRef.attachment 	= 0;	//	Referenced by index, so 0 means color is referenced first since type is ambiguous
@@ -416,24 +314,19 @@ void Allocator::init_render_pass
 	renderPassInfo.dependencyCount 	= 1;
 	renderPassInfo.pDependencies 	= &dependency;
 
-	if ( vkCreateRenderPass( dev->dev(  ), &renderPassInfo, NULL, &renderPass ) != VK_SUCCESS )
-	{
+	if ( vkCreateRenderPass( apDevice->GetDevice(  ), &renderPassInfo, NULL, &srRenderPass ) != VK_SUCCESS )
 		throw std::runtime_error( "Failed to create render pass!" );
-	}
 }
 
-void Allocator::init_desc_set_layout
-	( VkDescriptorSetLayout& descSetLayout, const std::vector< desc_set_layout_t >& bindings )
+void Allocator::InitDescriptorSetLayout
+	( VkDescriptorSetLayout &srDescSetLayout, const DescSetLayouts &srBindings )
 {
 	int i = -1;
 	std::vector< VkDescriptorSetLayoutBinding > layoutBindings;
-	for ( auto&& binding : bindings )
+	for ( auto&& binding : srBindings )
 	{
-		auto layoutBinding = layout_binding( binding.descriptorType,
-					  binding.descriptorCount,
-					  binding.stageFlags,
-					  binding.pImmutableSamplers );
-	        layoutBinding.binding = ++i;
+		auto layoutBinding 	= DescriptorLayoutBinding( binding.descriptorType, binding.descriptorCount, binding.stageFlags, binding.pImmutableSamplers );
+	        layoutBinding.binding 	= ++i;
 		layoutBindings.push_back( layoutBinding );
 	}
 
@@ -442,27 +335,19 @@ void Allocator::init_desc_set_layout
 	layoutInfo.bindingCount 		= ( uint32_t )layoutBindings.size(  );
 	layoutInfo.pBindings 			= layoutBindings.data(  );
 
-	if ( vkCreateDescriptorSetLayout( dev->dev(  ), &layoutInfo, NULL, &descSetLayout ) != VK_SUCCESS )
-	{
+	if ( vkCreateDescriptorSetLayout( apDevice->GetDevice(  ), &layoutInfo, NULL, &srDescSetLayout ) != VK_SUCCESS )
 		throw std::runtime_error( "Failed to create descriptor set layout!" );
-	}
 }
 
 template< typename T >
-void Allocator::init_graphics_pipeline
-	( VkPipeline& pipeline,
-	  VkPipelineLayout& layout,
-	  VkExtent2D& swapChainExtent,
-	  VkDescriptorSetLayout& descSetLayout,
-	  const std::string& vertShader,
-	  const std::string& fragShader,
-	  int flags )
+void Allocator::InitGraphicsPipeline( VkPipeline &srPipeline, VkPipelineLayout &srLayout, VkExtent2D &srSwapChainExtent, VkDescriptorSetLayout &srDescSetLayout,
+				      const String &srVertShader, const String &srFragShader, int sFlags )
 {
-	auto vertShaderCode = read_file( vertShader );
-	auto fragShaderCode = read_file( fragShader );
+	auto 		vertShaderCode  	= ReadFile( srVertShader );
+	auto 		fragShaderCode  	= ReadFile( srFragShader );
 		
-	VkShaderModule vertShaderModule = create_shader_module( vertShaderCode );	//	Processes incoming verticies, taking world position, color, and texture coordinates as an input
-	VkShaderModule fragShaderModule = create_shader_module( fragShaderCode );	//	Fills verticies with fragments to produce color, and depth
+	VkShaderModule 	vertShaderModule 	= CreateShaderModule( vertShaderCode );	//	Processes incoming verticies, taking world position, color, and texture coordinates as an input
+	VkShaderModule 	fragShaderModule 	= CreateShaderModule( fragShaderCode );	//	Fills verticies with fragments to produce color, and depth
 
 	VkPipelineShaderStageCreateInfo vertShaderStageInfo{  };
 	vertShaderStageInfo.sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;	//	Tells Vulkan which stage the shader is going to be used
@@ -499,17 +384,12 @@ void Allocator::init_graphics_pipeline
 	inputAssembly.topology 			= VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
 	inputAssembly.primitiveRestartEnable 	= VK_FALSE;
 
-	VkViewport viewport{  };	//	Region of frambuffer to be rendered to, likely will always use 0, 0 and width, height
-	viewport.x		= 0.0f;
-	viewport.y 		= 0.0f;
-	viewport.width 		= ( float )swapChainExtent.width;
-	viewport.height 	= ( float )swapChainExtent.height;
-	viewport.minDepth 	= 0.0f;
-	viewport.maxDepth 	= 1.0f;
+	/* Region of frambuffer to be rendered to, likely will always use 0, 0 and width, height  */
+	VkViewport viewport = Viewport( 0.f, 0.f, ( float )srSwapChainExtent.width, ( float )srSwapChainExtent.height, 0.f, 1.0f );
 
 	VkRect2D scissor{  };		//	More agressive cropping than viewport, defining which regions pixels are to be stored
 	scissor.offset = { 0, 0 };
-	scissor.extent = swapChainExtent;
+	scissor.extent = srSwapChainExtent;
 
 	VkPipelineViewportStateCreateInfo viewportState{  };	//	Combines viewport and scissor
 	viewportState.sType 		= VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
@@ -524,7 +404,7 @@ void Allocator::init_graphics_pipeline
 	rasterizer.rasterizerDiscardEnable 	= VK_FALSE;
 	rasterizer.polygonMode 			= VK_POLYGON_MODE_FILL;		//	Fill with fragments, can optionally use VK_POLYGON_MODE_LINE for a wireframe
 	rasterizer.lineWidth 			= 1.0f;
-	rasterizer.cullMode 			= ( flags & NO_CULLING ) ? VK_CULL_MODE_NONE : VK_CULL_MODE_BACK_BIT;	//	FIX FOR MAKING 2D SPRITES WORK!!! WOOOOO!!!!
+	rasterizer.cullMode 			= ( sFlags & NO_CULLING ) ? VK_CULL_MODE_NONE : VK_CULL_MODE_BACK_BIT;	//	FIX FOR MAKING 2D SPRITES WORK!!! WOOOOO!!!!
 	rasterizer.frontFace 			= VK_FRONT_FACE_COUNTER_CLOCKWISE;
 	rasterizer.depthBiasEnable 		= VK_FALSE;
 	rasterizer.depthBiasConstantFactor 	= 0.0f; // Optional
@@ -552,8 +432,8 @@ void Allocator::init_graphics_pipeline
 
 	VkPipelineDepthStencilStateCreateInfo depthStencil{  };
 	depthStencil.sType 			= VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
-	depthStencil.depthTestEnable 		= ( flags & NO_DEPTH ) ? VK_FALSE : VK_TRUE;
-	depthStencil.depthWriteEnable		= ( flags & NO_DEPTH ) ? VK_FALSE : VK_TRUE;
+	depthStencil.depthTestEnable 		= ( sFlags & NO_DEPTH ) ? VK_FALSE : VK_TRUE;
+	depthStencil.depthWriteEnable		= ( sFlags & NO_DEPTH ) ? VK_FALSE : VK_TRUE;
 	depthStencil.depthCompareOp 		= VK_COMPARE_OP_LESS;
 	depthStencil.depthBoundsTestEnable 	= VK_FALSE;
 	depthStencil.minDepthBounds 		= 0.0f; // Optional
@@ -586,14 +466,13 @@ void Allocator::init_graphics_pipeline
 	VkPipelineLayoutCreateInfo pipelineLayoutInfo{  };	//	Allows for use of uniform values
 	pipelineLayoutInfo.sType 			= VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
 	pipelineLayoutInfo.setLayoutCount 		= 1; // Optional
-	pipelineLayoutInfo.pSetLayouts 			= &descSetLayout; // Optional
+	pipelineLayoutInfo.pSetLayouts 			= &srDescSetLayout; // Optional
 	pipelineLayoutInfo.pushConstantRangeCount 	= 1;
 	pipelineLayoutInfo.pPushConstantRanges		= &pushConstantRange;
 
-	if ( vkCreatePipelineLayout( dev->dev(  ), &pipelineLayoutInfo, NULL, &layout ) != VK_SUCCESS )
-	{
+	if ( vkCreatePipelineLayout( apDevice->GetDevice(  ), &pipelineLayoutInfo, NULL, &srLayout ) != VK_SUCCESS )
 		throw std::runtime_error( "Failed to create pipeline layout!" );
-	}
+	
 	VkGraphicsPipelineCreateInfo pipelineInfo{  };	//	Combine all the objects above into one parameter for graphics pipeline creation
 	pipelineInfo.sType 			= VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
 	pipelineInfo.stageCount 		= 2;
@@ -606,86 +485,64 @@ void Allocator::init_graphics_pipeline
 	pipelineInfo.pDepthStencilState 	= &depthStencil;
 	pipelineInfo.pColorBlendState 		= &colorBlending;
 	pipelineInfo.pDynamicState 		= NULL; // Optional
-	pipelineInfo.layout 			= layout;
-	pipelineInfo.renderPass 		= *renderPass;
+	pipelineInfo.layout 			= srLayout;
+	pipelineInfo.renderPass 		= *apRenderPass;
 	pipelineInfo.subpass 			= 0;
 	pipelineInfo.basePipelineHandle 	= VK_NULL_HANDLE; // Optional, very important for later when making new pipelines. It is less expensive to reference an existing similar pipeline
 	pipelineInfo.basePipelineIndex 		= -1; // Optional
 
-	if ( vkCreateGraphicsPipelines( dev->dev(  ), VK_NULL_HANDLE, 1, &pipelineInfo, NULL, &pipeline ) != VK_SUCCESS )
-	{
+	if ( vkCreateGraphicsPipelines( apDevice->GetDevice(  ), VK_NULL_HANDLE, 1, &pipelineInfo, NULL, &srPipeline ) != VK_SUCCESS )
 		throw std::runtime_error( "Failed to create graphics pipeline!" );
-	}
 
-	vkDestroyShaderModule( dev->dev(  ), fragShaderModule, NULL );
-	vkDestroyShaderModule( dev->dev(  ), vertShaderModule, NULL );
+	vkDestroyShaderModule( apDevice->GetDevice(  ), fragShaderModule, NULL );
+	vkDestroyShaderModule( apDevice->GetDevice(  ), vertShaderModule, NULL );
 }
 
-void Allocator::init_depth_resources
-	( VkImage& depthImage, VkDeviceMemory& depthImageMemory, VkImageView& depthImageView, VkExtent2D& swapChainExtent )
+void Allocator::InitDepthResources( VkImage &srDepthImage, VkDeviceMemory &srDepthImageMemory, VkImageView &srDepthImageView, VkExtent2D &srSwapChainExtent )
 {
-	VkFormat depthFormat = dev->find_depth_format(  );
-	init_image( swapChainExtent.width,
-		    swapChainExtent.height,
-		    depthFormat,
-		    VK_IMAGE_TILING_OPTIMAL,
-		    VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
-		    VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-		    depthImage,
-		    depthImageMemory );
-	init_image_view( depthImageView, depthImage, depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT );
-	transition_image_layout( depthImage,
-				 VK_IMAGE_LAYOUT_UNDEFINED,
-				 VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL );
+	VkFormat depthFormat = apDevice->FindDepthFormat(  );
+        InitImage( Image( srSwapChainExtent.width, srSwapChainExtent.height, depthFormat, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT ),
+		   VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, srDepthImage, srDepthImageMemory );
+	
+        InitImageView( srDepthImageView, srDepthImage, depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT );
+        TransitionImageLayout( srDepthImage, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL );
 }
 
-void Allocator::init_frame_buffer
-	( std::vector< VkFramebuffer >& swapChainFramebuffers,
-	  std::vector< VkImageView >& swapChainImageViews,
-	  VkImageView& depthImageView,
-	  VkExtent2D& swapChainExtent )
+void Allocator::InitFrameBuffer( FrameBuffers &srSwapChainFramebuffers, ImageViews &srSwapChainImageViews,
+				 VkImageView &srDepthImageView, VkExtent2D &srSwapChainExtent )
 {
-	swapChainFramebuffers.resize( swapChainImageViews.size(  ) );
-	for ( int i = 0; i < swapChainImageViews.size(  ); i++ )
+	srSwapChainFramebuffers.resize( srSwapChainImageViews.size(  ) );
+	for ( int i = 0; i < srSwapChainImageViews.size(  ); i++ )
 	{
-		std::array< VkImageView, 2 > attachments = {
-			swapChainImageViews[ i ],
-			depthImageView
-		};
+		std::array< VkImageView, 2 > 	attachments = { srSwapChainImageViews[ i ], srDepthImageView };
 
-		VkFramebufferCreateInfo framebufferInfo{  };
+		VkFramebufferCreateInfo 	framebufferInfo{  };
 		framebufferInfo.sType 		= VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-		framebufferInfo.renderPass 	= *renderPass;
+		framebufferInfo.renderPass 	= *apRenderPass;
 		framebufferInfo.attachmentCount = ( uint32_t )attachments.size(  );
 		framebufferInfo.pAttachments 	= attachments.data(  );
-		framebufferInfo.width 		= swapChainExtent.width;
-		framebufferInfo.height 		= swapChainExtent.height;
+		framebufferInfo.width 		= srSwapChainExtent.width;
+		framebufferInfo.height 		= srSwapChainExtent.height;
 		framebufferInfo.layers 		= 1;
 
-		if ( vkCreateFramebuffer( dev->dev(  ), &framebufferInfo, NULL, &swapChainFramebuffers[ i ] ) != VK_SUCCESS )
-		{
+		if ( vkCreateFramebuffer( apDevice->GetDevice(  ), &framebufferInfo, NULL, &srSwapChainFramebuffers[ i ] ) != VK_SUCCESS )
 			throw std::runtime_error( "Failed to create framebuffer!" );
-		}
 	}
 }
 
-void Allocator::init_desc_pool	//	please for the love of god, change this
-	( VkDescriptorPool& descPool, std::vector< VkDescriptorPoolSize > poolSizes )
+void Allocator::InitDescPool( VkDescriptorPool &srDescPool, std::vector< VkDescriptorPoolSize > sPoolSizes )
 {
-	VkDescriptorPoolCreateInfo poolInfo{  };
-	poolInfo.sType 		= VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-	poolInfo.poolSizeCount  = ( uint32_t )poolSizes.size(  );
-	poolInfo.pPoolSizes 	= poolSizes.data(  );
-	poolInfo.maxSets 	= 2000;//( uint32_t )swapChainImages.size(  );
+	VkDescriptorPoolCreateInfo 	poolInfo{  };
+	poolInfo.sType 			= VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+	poolInfo.poolSizeCount  	= ( uint32_t )sPoolSizes.size(  );
+	poolInfo.pPoolSizes 		= sPoolSizes.data(  );
+	poolInfo.maxSets 		= 200000;//( uint32_t )swapChainImages.size(  );
 
-	if ( vkCreateDescriptorPool( dev->dev(  ), &poolInfo, NULL, &descPool ) != VK_SUCCESS )
-	{
+	if ( vkCreateDescriptorPool( apDevice->GetDevice(  ), &poolInfo, NULL, &srDescPool ) != VK_SUCCESS )
 		throw std::runtime_error( "Failed to create descriptor pool!" );
-	}
 }
 
-void Allocator::init_imgui_pool
-	( SDL_Window* window )
+void Allocator::InitImguiPool( SDL_Window *spWindow )
 {
 	std::array< VkDescriptorPoolSize, 11 > poolSizes
 	{
@@ -704,53 +561,43 @@ void Allocator::init_imgui_pool
 		}
 	};
 	
-	VkDescriptorPoolCreateInfo poolInfo{  };
-	poolInfo.sType 	= VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-	poolInfo.flags 	= VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
+	VkDescriptorPoolCreateInfo 	poolInfo{  };
+        VkDescriptorPool 		imguiPool;
+	poolInfo.sType 		= VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+	poolInfo.flags 		= VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
 	poolInfo.maxSets 	= 1000;
-	poolInfo.poolSizeCount = ( uint32_t )poolSizes.size(  );;
+	poolInfo.poolSizeCount 	= ( uint32_t )poolSizes.size(  );;
 	poolInfo.pPoolSizes 	= poolSizes.data(  );
 
-	VkDescriptorPool imguiPool;
-
-	if ( vkCreateDescriptorPool( dev->dev(  ), &poolInfo, NULL, &imguiPool ) != VK_SUCCESS )
-	{
+	if ( vkCreateDescriptorPool( apDevice->GetDevice(  ), &poolInfo, NULL, &imguiPool ) != VK_SUCCESS )
 		throw std::runtime_error( "Failed to create imgui pool!" );
-	}
 	
 	ImGui::CreateContext(  );
-
-	ImGui_ImplSDL2_InitForVulkan( window );
+	ImGui_ImplSDL2_InitForVulkan( spWindow );
 
 	ImGui_ImplVulkan_InitInfo initInfo{  };
-	initInfo.Instance 	= dev->instance(  );
-	initInfo.PhysicalDevice = dev->p_dev(  );
-	initInfo.Device 	= dev->dev(  );
-	initInfo.Queue 		= dev->g_queue(  );
+	initInfo.Instance 	= apDevice->GetInstance(  );
+	initInfo.PhysicalDevice = apDevice->GetPhysicalDevice(  );
+	initInfo.Device 	= apDevice->GetDevice(  );
+	initInfo.Queue 		= apDevice->GetGraphicsQueue(  );
 	initInfo.DescriptorPool = imguiPool;
 	initInfo.MinImageCount 	= 3;
 	initInfo.ImageCount 	= 3;
 	initInfo.MSAASamples 	= VK_SAMPLE_COUNT_1_BIT;
 
-	ImGui_ImplVulkan_Init( &initInfo, *renderPass );
-
-	submit( [ & ]( VkCommandBuffer c ){ ImGui_ImplVulkan_CreateFontsTexture( c ); } );
-
+	ImGui_ImplVulkan_Init( &initInfo, *apRenderPass );
+	Submit( [ & ]( VkCommandBuffer c ){ ImGui_ImplVulkan_CreateFontsTexture( c ); } );
 	ImGui_ImplVulkan_DestroyFontUploadObjects(  );
-
-	freeQueue.push_back( [ = ](  ){ vkDestroyDescriptorPool( dev->dev(  ), imguiPool, NULL ); ImGui_ImplVulkan_Shutdown(  ); } );
+	aFreeQueue.push_back( [ = ](  ){ vkDestroyDescriptorPool( apDevice->GetDevice(  ), imguiPool, NULL ); ImGui_ImplVulkan_Shutdown(  ); } );
 }
 
-void Allocator::init_sync
-	( std::vector< VkSemaphore >& imageAvailableSemaphores,
-	  std::vector< VkSemaphore >& renderFinishedSemaphores,
-	  std::vector< VkFence >& inFlightFences,
-	  std::vector< VkFence >& imagesInFlight )
+void Allocator::InitSync( SemaphoreList &srImageAvailableSemaphores, SemaphoreList &srRenderFinishedSemaphores,
+			  FenceList &srInFlightFences, FenceList &srImagesInFlight )
 {
-	imageAvailableSemaphores.resize( MAX_FRAMES_PROCESSING );
-	renderFinishedSemaphores.resize( MAX_FRAMES_PROCESSING );
-	inFlightFences.resize( MAX_FRAMES_PROCESSING );
-	imagesInFlight.resize( swapChainImages->size(  ), VK_NULL_HANDLE );
+	srImageAvailableSemaphores.resize( MAX_FRAMES_PROCESSING );
+	srRenderFinishedSemaphores.resize( MAX_FRAMES_PROCESSING );
+	srInFlightFences.resize( MAX_FRAMES_PROCESSING );
+	srImagesInFlight.resize( apSwapChainImages->size(  ), VK_NULL_HANDLE );
 	
 	VkSemaphoreCreateInfo semaphoreInfo{  };
 	semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
@@ -760,51 +607,28 @@ void Allocator::init_sync
 	fenceInfo.flags	    = VK_FENCE_CREATE_SIGNALED_BIT;
 
 	for ( int i = 0 ; i < MAX_FRAMES_PROCESSING; ++i )
-	{
-		if ( vkCreateSemaphore( dev->dev(  ), &semaphoreInfo, NULL, &imageAvailableSemaphores[ i ] ) != VK_SUCCESS ||
-		     vkCreateSemaphore( dev->dev(  ), &semaphoreInfo, NULL, &renderFinishedSemaphores[ i ] ) != VK_SUCCESS ||
-		     vkCreateFence( dev->dev(  ), &fenceInfo, NULL, &inFlightFences[ i ] ) != VK_SUCCESS )
-		{
+		if ( vkCreateSemaphore( apDevice->GetDevice(  ), &semaphoreInfo, NULL, &srImageAvailableSemaphores[ i ] ) != VK_SUCCESS ||
+		     vkCreateSemaphore( apDevice->GetDevice(  ), &semaphoreInfo, NULL, &srRenderFinishedSemaphores[ i ] ) != VK_SUCCESS ||
+		     vkCreateFence( apDevice->GetDevice(  ), &fenceInfo, NULL, &srInFlightFences[ i ] ) != VK_SUCCESS )
 			throw std::runtime_error( "Failed to create sync objects!" );
-		}
-	}
 }
 
-void Allocator::free_resources
-	(  )
+void Allocator::FreeResources(  )
 {
-	for ( const auto& func : freeQueue )
-	{
-		func(  );
-	}
+	for ( const auto& rFunc : aFreeQueue )
+		rFunc(  );
 }
 
 Allocator::~Allocator
 	(  )
 {
-	for ( const auto& func : freeQueue )
-	{
-		func(  );
-	}
+	FreeResources(  );
 }
 
-template void Allocator::init_vertex_buffer< vertex_2d_t >( const std::vector< vertex_2d_t >&, VkBuffer&, VkDeviceMemory& );
-template void Allocator::init_vertex_buffer< vertex_3d_t >( const std::vector< vertex_3d_t >&, VkBuffer&, VkDeviceMemory& );
-template void Allocator::init_uniform_buffers< ubo_2d_t >( std::vector< VkBuffer >&, std::vector< VkDeviceMemory >& );
-template void Allocator::init_uniform_buffers< ubo_3d_t >( std::vector< VkBuffer >&, std::vector< VkDeviceMemory >& );
-template void Allocator::init_graphics_pipeline< vertex_2d_t >(
-	VkPipeline&,
-        VkPipelineLayout&,
-	VkExtent2D&,
-	VkDescriptorSetLayout&,
-	const std::string&,
-	const std::string&,
-	int );
-template void Allocator::init_graphics_pipeline< vertex_3d_t >(
-	VkPipeline&,
-	VkPipelineLayout&,
-	VkExtent2D&,
-	VkDescriptorSetLayout&,
-	const std::string&,
-	const std::string&,
-	int );
+template void Allocator::InitTexBuffer< uint32_t >( const std::vector< uint32_t >&, VkBuffer&, VkDeviceMemory& );
+template void Allocator::InitTexBuffer< vertex_2d_t >( const std::vector< vertex_2d_t >&, VkBuffer&, VkDeviceMemory& );
+template void Allocator::InitTexBuffer< vertex_3d_t >( const std::vector< vertex_3d_t >&, VkBuffer&, VkDeviceMemory& );
+template void Allocator::InitGraphicsPipeline< vertex_2d_t >( VkPipeline&, VkPipelineLayout&, VkExtent2D&, VkDescriptorSetLayout&,
+							      const std::string&, const std::string&, int );
+template void Allocator::InitGraphicsPipeline< vertex_3d_t >( VkPipeline&, VkPipelineLayout&, VkExtent2D&, VkDescriptorSetLayout&,
+							      const std::string&, const std::string&, int );

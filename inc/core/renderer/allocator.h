@@ -61,7 +61,7 @@ private:
 public:
         ImageSet 		*apSwapChainImages = NULL;
 	VkRenderPass 		*apRenderPass = NULL;
-        device_c 		*apDevice;
+        Device 		*apDevice;
 
 	/* A.  */
 	void 			InitAllocator( ImageSet &sSwapChainImages );
@@ -75,11 +75,8 @@ public:
 	void 			InitTextureImageView( VkImageView &srTImageView, VkImage sTImage );
 	/* A.  */
 	template< typename T >
-	void 		        InitVertexBuffer( const std::vector< T > &srVertices, VkBuffer &srVBuffer, VkDeviceMemory &srVBufferMem );
+	void 		        InitTexBuffer( const std::vector< T > &srData, VkBuffer &srBuffer, VkDeviceMemory &srBufferMem );
 	/* A.  */
-	void 			InitIndexBuffer( IndexSet &srIndices, VkBuffer &srIBuffer, VkDeviceMemory &srIBufferMem );
-	/* A.  */
-	template< typename T >
         void 			InitUniformBuffers( BufferSet &srUBuffers, MemorySet &srUBuffersMem );
 	/* A.  */
 	void 			InitDescriptorSets( DescriptorSets &srDescSets, VkDescriptorSetLayout &srDescSetLayout,

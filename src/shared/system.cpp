@@ -4,18 +4,18 @@ void BaseSystem::ReadMessage(  )
 {
 	if ( !apMsgs )
 		return;
-	msg_s 	*pMsg;
+	Message 	*pMsg;
 	while ( true )
 	{
 		/* No more messages for this system.  */
-		if ( !( pMsg = apMsgs->fetch_msg( aSystemType, aFlags ) ) )
+		if ( !( pMsg = apMsgs->FetchMessage( aSystemType, aFlags ) ) )
 			return;
 		for ( auto&& cmd : aEngineCommands )
 			/* If the message is used by the system.  */
 			if ( cmd.msg == pMsg->msg )
 				cmd.func( pMsg->args );
 		/* Get rid of the spent message.  */
-		apMsgs->remove( apMsgs->lastMsgIndex );
+		apMsgs->Remove( apMsgs->aLastMsgIndex );
 	}
 }
 
@@ -26,9 +26,9 @@ void BaseSystem::ReadConsole(  )
 	std::string 	command;
 	while ( true )
 	{
-		if ( apConsole->empty(  ) )
+		if ( apConsole->Empty(  ) )
 			return;
-		command = apConsole->fetch_cmd(  );
+		command = apConsole->FetchCmd(  );
 		/* Exhausted all commands in console.  */
 		if ( command == "" )
 			return;
@@ -47,7 +47,7 @@ void BaseSystem::ReadConsole(  )
 					args.push_back( command.substr( start, end - start ) );
 				}
 				cmd.func( args );
-				apConsole->delete_command(  );
+				apConsole->DeleteCommand(  );
 			}
 		}
 	}
@@ -98,7 +98,12 @@ void BaseSystem::RemoveFlag( int sFlags )
 
 BaseSystem::BaseSystem(  )
 {
-        InitCommands(  );
+
+}
+
+void BaseSystem::Init(  )
+{
+	InitCommands(  );
 	InitConsoleCommands(  );
 	InitSubsystems(  );
 }

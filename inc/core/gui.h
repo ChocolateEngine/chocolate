@@ -6,7 +6,6 @@
 
 class GuiSystem : public BaseSystem
 {
-	SYSTEM_OBJECT( GuiSystem )
 protected:
 	SDL_Window 	*apWindow 	= NULL;
 	bool 		aConsoleShown 	= false;
@@ -15,10 +14,14 @@ protected:
 	void 		DrawGui(  );
 	/* Shows the console window.  */
 	void		ShowConsole(  );
+	/* Initializes all commands the system can respond to.  */
+	void 		InitCommands(  );
+
 public:
 	/* Gets the window pointer from the renderer.  */
 	void 		AssignWindow( SDL_Window* spWindow );
 	/* Constructor.  */
 	explicit	GuiSystem(  );
-
+	/* A.  */
+				~GuiSystem(  );
 };
