@@ -69,6 +69,8 @@ protected:
 
 	/* A.  */
 	void    InitCommands(  );
+	/* Waaaaah!!!  */
+	void	EnableImgui(  );
 	/* A.  */
 	void    InitCommandBuffers(  );
 	/* A.  */
@@ -93,6 +95,8 @@ protected:
 	/* A.  */
 	void 	Cleanup(  );
 public:
+	enum class	Commands{ NONE = 0, IMGUI_INITIALIZED };
+	
         ModelDataList 	aModels;
         SpriteDataList 	aSprites;
 	/* A.  */

@@ -13,25 +13,6 @@ which is shared amongst all engine systems
 #include <malloc.h>
 #include <any>
 
-class BaseCommand
-{
-public:
-	/* Virtual deconstructor for the function.  */
-	virtual 	~BaseCommand(  ){  }
-};
-
-template < class... Args >
-class Command : public BaseCommand
-{
-private:
-	typedef std::function< void( Args... ) > FuncType;
-	FuncType	aFunction;
-public:
-		Command(  ){  }
-  		Command( FuncType sFunction ) : aFunction( sFunction ){  }
-	void 	operator(  )( Args... sArgs ){ if( aFunction ) aFunction( sArgs... ); }
-};
-
 struct PublishedFunction
 {
 	std::function< std::any( std::any( std::any, std::any ) ) >	aCallableFunction;

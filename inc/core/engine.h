@@ -37,8 +37,9 @@ protected:
 	/* Initializes all console commands the system can respond to.  */
 	void 		InitConsoleCommands(  );
 public:
+	enum class	Commands{ NONE = 0, PING, EXIT };
+	
 	bool 		aActive;
-
 	/* Loads a shared object containing the game code.  */
 	void 		LoadObject( const std::string& srDlPath,
 				    const std::string& srEntry );
@@ -51,5 +52,5 @@ public:
 	void 		UpdateSystems(  );
 	/* Initialize the engine, creating systems, etc.  */
 	explicit 	Engine(  );
-				~Engine(  );
+		        ~Engine(  );
 };

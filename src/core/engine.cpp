@@ -23,18 +23,21 @@ void Engine::AddGameSystems(  )
 	for ( const auto& pSys : gameSystems )
 	{
 		pSys->AddFlag( EXTERNAL_SYSTEM );
-		pSys->apMsgs 	= this->apMsgs;
-		pSys->apConsole = apConsole;
+		pSys->apMsgs 		= this->apMsgs;
+		pSys->apConsole 	= this->apConsole;
+		pSys->apCommandManager 	= this->apCommandManager;
 		aSystems.push_back( pSys );
 	}
 	for ( const auto& pSys : gameSystems )
 		pSys->Init(  );
+	for ( const auto& pSys : gameSystems )
+		pSys->SendMessages(  );
 }
 
 void Engine::InitCommands(  )
 {
-	apMsgs->aCmdManager.Add( "_ping", [ & ](  ){ printf( "Ping!\n" ); } );
-	apMsgs->aCmdManager.Add( "_exit", [ & ](  ){ aActive = false; } );
+        apCommandManager->Add( Engine::Commands::PING, Command<  >( [ & ](  ){ printf( "Ping!\n" ); } ) );
+        apCommandManager->Add( Engine::Commands::EXIT, Command<  >( [ & ](  ){ aActive = false; } ) );
 }
 
 void Engine::InitConsoleCommands(  )
@@ -66,16 +69,19 @@ void Engine::LoadObject( const std::string& srDlPath, const std::string& srEntry
 
 void Engine::EngineMain(  )
 {
-	static Messages 		msgs;
-	static Console 	console;
+	static Messages         msgs;
+	static Console 		console;
+	static CommandManager   commandManager;
 
 	this->apMsgs 		= &msgs;
 	this->apConsole 	= &console;
+	this->apCommandManager  = &commandManager;
 	this->aActive 		= true;
 
         LoadObject( "bin/client" EXT_DLL, "game_init" );
 	InitSystems(  );
 	AddGameSystems(  );
+	InitCommands(  );
 
 	this->apMsgs->Add( ENGINE_C, ENGI_PING );
 	
@@ -90,9 +96,12 @@ void Engine::InitSystems(  )
 	{
 		pSys->apMsgs 		= this->apMsgs;
 		pSys->apConsole 	= this->apConsole;
+		pSys->apCommandManager	= this->apCommandManager;
 	}
 	for ( const auto& pSys : aSystems )
 		pSys->Init(  );
+	for ( const auto& pSys : aSystems )
+		pSys->SendMessages(  );
 }
 
 void Engine::UpdateSystems(  )

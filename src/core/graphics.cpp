@@ -29,9 +29,10 @@ void GraphicsSystem::LoadSprite( const std::string& srSpritePath, Sprite *spSpri
 void GraphicsSystem::InitCommands(  )
 {
         auto loadSprite = std::bind( &GraphicsSystem::LoadSprite, this, std::placeholders::_1, std::placeholders::_2 );
-	apMsgs->aCmdManager.Add( "_load_sprite", Command< const std::string&, Sprite* >( loadSprite ) );
-	auto loadModel = std::bind( &GraphicsSystem::LoadModel, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3 );
-	apMsgs->aCmdManager.Add( "_load_model", Command< const std::string&, const std::string&, Model* >( loadModel ) );
+        apCommandManager->Add( GraphicsSystem::Commands::INIT_SPRITE, Command< const std::string&, Sprite* >( loadSprite ) );
+	
+	auto loadModel = std::bind( &GraphicsSystem::LoadModel, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3 );       
+        apCommandManager->Add( GraphicsSystem::Commands::INIT_MODEL, Command< const std::string&, const std::string&, Model* >( loadModel ) );
 }
 
 void GraphicsSystem::InitConsoleCommands(  )
@@ -46,8 +47,9 @@ void GraphicsSystem::DrawFrame(  )
 
 void GraphicsSystem::SyncRenderer(  )
 {
-	aRenderer.apMsgs 		= this->apMsgs;
-	aRenderer.apConsole 	= this->apConsole;
+	aRenderer.apMsgs        	= this->apMsgs;
+ 	aRenderer.apConsole 		= this->apConsole;
+	aRenderer.apCommandManager	= this->apCommandManager;
 }
 
 GraphicsSystem::GraphicsSystem(  ) : BaseSystem(  )
@@ -61,8 +63,14 @@ GraphicsSystem::GraphicsSystem(  ) : BaseSystem(  )
 	LoadModel( "materials/models/protogen_wip_22/protogen_wip_22.obj", "materials/textures/blue_mat.png" );
 }
 
+void GraphicsSystem::SendMessages(  )
+{
+	aRenderer.SendMessages(  );
+}
+
 void GraphicsSystem::InitSubsystems(  )
 {
         SyncRenderer(  );
+	aRenderer.Init(  );
 	aRenderer.SendMessages(  );
 }

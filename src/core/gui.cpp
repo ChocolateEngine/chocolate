@@ -1,4 +1,5 @@
 #include "../../inc/core/gui.h"
+#include "../../inc/core/renderer/renderer.h"
 
 #include "../../inc/imgui/imgui.h"
 #include "../../inc/imgui/imgui_impl_vulkan.h"
@@ -11,6 +12,8 @@ void GuiSystem::DrawGui(  )
 	ImGui_ImplVulkan_NewFrame(  );
 	ImGui_ImplSDL2_NewFrame( apWindow );
 	ImGui::NewFrame(  );
+	if ( !aDrawnFrame )
+		apCommandManager->Execute( Renderer::Commands::IMGUI_INITIALIZED );
 	if ( aConsoleShown )
 	{
 		ImGui::Begin( "Developer Console" );
@@ -19,6 +22,7 @@ void GuiSystem::DrawGui(  )
 			apConsole->Add( buf );
 		ImGui::End(  );
 	}
+	aDrawnFrame = true;
 }
 
 void GuiSystem::ShowConsole(  )
@@ -29,9 +33,9 @@ void GuiSystem::ShowConsole(  )
 void GuiSystem::InitCommands(  )
 {
 	auto showConsole 	= std::bind( &GuiSystem::ShowConsole, this );
-	apMsgs->aCmdManager.Add( "_show_console", Command<  >( showConsole ) );
+        apCommandManager->Add( GuiSystem::Commands::SHOW_CONSOLE, Command<  >( showConsole ) );
 	auto assignWin 		= std::bind( &GuiSystem::AssignWindow, this, std::placeholders::_1 );
-	apMsgs->aCmdManager.Add( "_assign_win", Command< SDL_Window* >( assignWin ) );
+        apCommandManager->Add( GuiSystem::Commands::ASSIGN_WINDOW, Command< SDL_Window* >( assignWin ) );
 }
 
 void GuiSystem::AssignWindow( SDL_Window* spWindow )

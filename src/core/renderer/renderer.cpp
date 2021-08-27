@@ -1,4 +1,10 @@
+/*
+renderer.cpp ( Authored by p0lyh3dron )
 
+Defines the methods declared in renderer.h,
+creating a vulkan interface with which to
+draw to the screen.
+ */
 #include "../../../inc/core/renderer/renderer.h"
 #include "../../../inc/core/renderer/initializers.h"
 
@@ -23,6 +29,8 @@
 #include "../../../inc/imgui/imgui_impl_vulkan.h"
 #include "../../../inc/imgui/imgui_impl_sdl.h"
 
+#include "../../../inc/core/gui.h"
+
 #define MODEL_SET_LAYOUT_PARAMETERS { { { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_VERTEX_BIT, NULL }, { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, NULL } } }
 
 #define SPRITE_SET_LAYOUT_PARAMETERS { { { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, NULL, } } }
@@ -33,12 +41,12 @@
 
 void Renderer::InitCommands(  )
 {
-	Message msg;
-	msg.type = RENDERER_C;
+        apCommandManager->Add( Renderer::Commands::IMGUI_INITIALIZED, Command<  >( std::bind( &Renderer::EnableImgui, this ) ) );
+}
 
-	msg.msg = IMGUI_INITIALIZED;
-	msg.func = [ & ]( std::vector< std::any > args ){ aImGuiInitialized = true; };
-	aEngineCommands.push_back( msg );
+void Renderer::EnableImgui(  )
+{
+	aImGuiInitialized = true;
 }
 
 void Renderer::InitVulkan(  )
@@ -136,7 +144,6 @@ void Renderer::InitCommandBuffers(  )
 				sprite->Draw( aCommandBuffers[ i ] );
 			}
 		}
-
 		if ( aImGuiInitialized )
 		{
 			ImGui::Render(  );
@@ -197,8 +204,8 @@ void Renderer::LoadObj( const String &srObjPath, ModelData &srModel )
 	}
 	srModel.aVertexCount 	= ( uint32_t )vertices.size(  );
 	srModel.aIndexCount 	= ( uint32_t )indices.size(  );
-	aAllocator.InitTexBuffer( vertices, srModel.aVertexBuffer, srModel.aVertexBufferMem );
-	aAllocator.InitTexBuffer( indices, srModel.aIndexBuffer, srModel.aIndexBufferMem );
+	aAllocator.InitTexBuffer( vertices, srModel.aVertexBuffer, srModel.aVertexBufferMem, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT );
+	aAllocator.InitTexBuffer( indices, srModel.aIndexBuffer, srModel.aIndexBufferMem, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT );
 }
 
 void Renderer::LoadGltf( const String &srGltfPath, ModelData &srModel )
@@ -275,8 +282,8 @@ void Renderer::InitSpriteVertices( const String &srSpritePath, SpriteData &srSpr
 	};
 	srSprite.aVertexCount = ( uint32_t )vertices.size(  );
 	srSprite.aIndexCount = ( uint32_t )indices.size(  );
-        aAllocator.InitTexBuffer( vertices, srSprite.aVertexBuffer, srSprite.aVertexBufferMem );
-	aAllocator.InitTexBuffer( indices, srSprite.aIndexBuffer, srSprite.aIndexBufferMem );
+        aAllocator.InitTexBuffer( vertices, srSprite.aVertexBuffer, srSprite.aVertexBufferMem, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT );
+	aAllocator.InitTexBuffer( indices, srSprite.aIndexBuffer, srSprite.aIndexBufferMem, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT );
 }
 
 void Renderer::ReinitSwapChain(  )
@@ -522,7 +529,7 @@ Renderer::Renderer(  ) : BaseSystem(  )
 
 void Renderer::SendMessages(  )
 {
-	apMsgs->Add( GUI_C, ASSIGN_WIN, 0, { aDevice.GetWindow(  ) } );
+	apCommandManager->Execute( GuiSystem::Commands::ASSIGN_WINDOW, aDevice.GetWindow(  ) );
 }
 
 Renderer::~Renderer

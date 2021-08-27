@@ -79,6 +79,11 @@ void BaseSystem::InitConsoleCommands(  )
 	
 }
 
+void BaseSystem::InitSubsystems(  )
+{
+	
+}
+
 void BaseSystem::Update(  )
 {
 	ReadMessage(  );
@@ -108,7 +113,7 @@ void BaseSystem::Init(  )
 	InitSubsystems(  );
 }
 
-void BaseSystem::InitSubsystems(  )
+void BaseSystem::SendMessages(  )
 {
 	
 }
