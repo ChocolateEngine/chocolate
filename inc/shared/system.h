@@ -19,6 +19,7 @@ private:					\
 
 #include "console.h"
 #include "msgs.h"
+#include "commandmanager.h"
 
 #include "../types/enums.h"
 #include "../types/msg.h"
@@ -57,11 +58,10 @@ protected:
 	virtual void 	InitConsoleCommands(  );
 	/* Initializes any member systems of the base system.  */
 	virtual void    InitSubsystems(  );
-	
 public:
-	Messages 			*apMsgs 	= NULL;
-	Console 		*apConsole 	= NULL;
-
+	Messages 	        *apMsgs 		= NULL;
+	Console 		*apConsole 		= NULL;
+	CommandManager		*apCommandManager 	= NULL;
 	/* Updates the system, performing all neccesary tasks.  */
 	void 		Update(  );
 	/* Adds a flag to the aFlags, e.g update twice  */
@@ -72,7 +72,9 @@ public:
 	/* Constructor which will initialize the needed member variables.  */
 	explicit	BaseSystem(  );
 	/* Initialize system.  */
-	virtual void Init(  );
+	virtual void 	Init(  );
+	/* Send messages required for later stages of initialization.  */
+	virtual void	SendMessages(  );
 	/* Destructs the system, freeing any used memory.  */
 	virtual 	~BaseSystem(  ) = 0;
 };

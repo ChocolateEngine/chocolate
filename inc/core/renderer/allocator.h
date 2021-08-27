@@ -75,7 +75,7 @@ public:
 	void 			InitTextureImageView( VkImageView &srTImageView, VkImage sTImage );
 	/* A.  */
 	template< typename T >
-	void 		        InitTexBuffer( const std::vector< T > &srData, VkBuffer &srBuffer, VkDeviceMemory &srBufferMem );
+		void 	        InitTexBuffer( const std::vector< T > &srData, VkBuffer &srBuffer, VkDeviceMemory &srBufferMem, VkBufferUsageFlags sUsage );
 	/* A.  */
         void 			InitUniformBuffers( BufferSet &srUBuffers, MemorySet &srUBuffersMem );
 	/* A.  */

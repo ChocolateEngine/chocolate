@@ -1,6 +1,15 @@
+/*
+input.cpp ( Authored by p0lyh3dron )
+
+Defines the methods declared in
+input.h
+*/
 #include "../../inc/core/input.h"
 #include "../../inc/imgui/imgui.h"
 #include "../../inc/imgui/imgui_impl_sdl.h"
+
+#include "../../inc/core/engine.h"
+#include "../../inc/core/gui.h"
 
 #include <fstream>
 #include <iostream>
@@ -67,11 +76,11 @@ void InputSystem::ParseInput(  )
 	{
 		ImGui_ImplSDL2_ProcessEvent( &aEvent );
 		if ( aEvent.type == SDL_QUIT )
-			apMsgs->Add( ENGINE_C, ENGI_EXIT );
+			apCommandManager->Execute( Engine::Commands::EXIT );
 		if ( aEvent.type == SDL_KEYDOWN )
 		{
 			if ( aEvent.key.keysym.sym == SDLK_BACKQUOTE )
-				apMsgs->Add( GUI_C, LOAD_IMGUI_DEMO );
+				apCommandManager->Execute( GuiSystem::Commands::SHOW_CONSOLE );
 			else
 				for ( const auto& alias : aKeyAliases )
 					if ( aEvent.key.keysym.sym == alias.aCode )

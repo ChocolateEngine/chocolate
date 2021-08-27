@@ -182,7 +182,7 @@ void Allocator::InitTextureImage( const String &srImagePath, VkImage &srTImage, 
 	InitImage( Image( texWidth, texHeight, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT ),
 		   VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,srTImage,srTImageMem );
 	
-        TransitionImageLayout( srTImage,VK_IMAGE_LAYOUT_UNDEFINED,VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL );
+        TransitionImageLayout( srTImage, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL );
 	
         CopyBufferToImage( stagingBuffer, srTImage, ( uint32_t )texWidth, ( uint32_t )texHeight );
         TransitionImageLayout( srTImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
@@ -203,7 +203,7 @@ void Allocator::InitTextureImageView( VkImageView &srTImageView, VkImage sTImage
 }
 
 template< typename T >
-void Allocator::InitTexBuffer( const std::vector< T > &srData, VkBuffer &srBuffer, VkDeviceMemory &srBufferMem )
+void Allocator::InitTexBuffer( const std::vector< T > &srData, VkBuffer &srBuffer, VkDeviceMemory &srBufferMem, VkBufferUsageFlags sUsage )
 {
 	VkBuffer 	stagingBuffer;
 	VkDeviceMemory 	stagingBufferMemory;
@@ -214,7 +214,7 @@ void Allocator::InitTexBuffer( const std::vector< T > &srData, VkBuffer &srBuffe
 	
         MapMemory( stagingBufferMemory, bufferSize, srData.data(  ) );
 
-        InitBuffer( bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+        InitBuffer( bufferSize, sUsage, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
 		    srBuffer, srBufferMem );
 
         CopyBuffer( stagingBuffer, srBuffer, bufferSize );
@@ -280,7 +280,7 @@ void Allocator::InitImageViews( ImageViews &srSwapChainImageViews, VkFormat &srS
 void Allocator::InitRenderPass( VkRenderPass &srRenderPass, VkFormat &srSwapChainImageFormat )
 {
 	VkAttachmentDescription 	colorAttachment = AttachmentDescription( srSwapChainImageFormat, VK_ATTACHMENT_STORE_OP_STORE, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR );
-	VkAttachmentDescription 	depthAttachment = AttachmentDescription( FindDepthFormat(  ), VK_ATTACHMENT_STORE_OP_DONT_CARE, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL );
+	VkAttachmentDescription 	depthAttachment = AttachmentDescription( FindDepthFormat(  ), VK_ATTACHMENT_STORE_OP_DONT_CARE, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL );
 
 	VkAttachmentReference colorAttachmentRef{  };
 	colorAttachmentRef.attachment 	= 0;	//	Referenced by index, so 0 means color is referenced first since type is ambiguous
@@ -625,9 +625,9 @@ Allocator::~Allocator
 	FreeResources(  );
 }
 
-template void Allocator::InitTexBuffer< uint32_t >( const std::vector< uint32_t >&, VkBuffer&, VkDeviceMemory& );
-template void Allocator::InitTexBuffer< vertex_2d_t >( const std::vector< vertex_2d_t >&, VkBuffer&, VkDeviceMemory& );
-template void Allocator::InitTexBuffer< vertex_3d_t >( const std::vector< vertex_3d_t >&, VkBuffer&, VkDeviceMemory& );
+template void Allocator::InitTexBuffer< uint32_t >( const std::vector< uint32_t >&, VkBuffer&, VkDeviceMemory&, VkBufferUsageFlags );
+template void Allocator::InitTexBuffer< vertex_2d_t >( const std::vector< vertex_2d_t >&, VkBuffer&, VkDeviceMemory&, VkBufferUsageFlags );
+template void Allocator::InitTexBuffer< vertex_3d_t >( const std::vector< vertex_3d_t >&, VkBuffer&, VkDeviceMemory&, VkBufferUsageFlags );
 template void Allocator::InitGraphicsPipeline< vertex_2d_t >( VkPipeline&, VkPipelineLayout&, VkExtent2D&, VkDescriptorSetLayout&,
 							      const std::string&, const std::string&, int );
 template void Allocator::InitGraphicsPipeline< vertex_3d_t >( VkPipeline&, VkPipelineLayout&, VkExtent2D&, VkDescriptorSetLayout&,

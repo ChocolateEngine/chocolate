@@ -73,10 +73,13 @@ protected:
 	/* Initializes any member systems of the base system.  */
 	void    	InitSubsystems(  );
 public:
+	enum class	Commands{ NONE = 0, INIT_SPRITE, INIT_MODEL };
 	/* Draws all loaded models and sprites to screen.  */
 	void 		DrawFrame(  );
 	/* Syncronizes communication with renderer.  */
 	void 		SyncRenderer(  );
+	/* Initialize late variables.  */
+	void		SendMessages(  );
 
 	/* Sets some renderer parameters.  */
 	explicit 	GraphicsSystem(  );
