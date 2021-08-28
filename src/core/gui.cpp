@@ -48,7 +48,8 @@ void GuiSystem::DrawGui(  )
 
 	wasConsoleOpen = aConsoleShown;
 
-	ImGui::Begin( "Dev Info", (bool*)0, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoScrollbar );
+	// ImGui::Begin( "Dev Info", (bool*)0, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoScrollbar );
+	ImGui::Begin( "Dev Info", (bool*)0, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoScrollbar );
 	ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
 	ImGui::End(  );
 
