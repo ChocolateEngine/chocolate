@@ -20,12 +20,15 @@ private:					\
 #include "console.h"
 #include "msgs.h"
 #include "commandmanager.h"
+#include "systemmanager.h"
 
 #include "../types/enums.h"
 #include "../types/msg.h"
 #include "../types/command.h"
 
 #include <functional>
+
+union SDL_Event;
 
 class BaseSystem
 {
@@ -37,9 +40,9 @@ protected:
 	int 			aFlags = 0;
 	int 			aSystemType;
 	EngineCommands 		aEngineCommands;
-        ConsoleCommands 	aConsoleCommands;
-        FunctionList 		aFunctionList;
-        FunctionList		aFreeQueue;
+	ConsoleCommands 	aConsoleCommands;
+	FunctionList 		aFunctionList;
+	FunctionList		aFreeQueue;
 
 	/* Reads all messages that can be interpreted by the system.  */
 	void 		ReadMessage(  );
@@ -62,12 +65,15 @@ public:
 	Messages 	        *apMsgs 		= NULL;
 	Console 		*apConsole 		= NULL;
 	CommandManager		*apCommandManager 	= NULL;
+	SystemManager		*apSystemManager 	= NULL;
 	/* Updates the system, performing all neccesary tasks.  */
-	void 		Update(  );
+	virtual void 		Update( float dt );
 	/* Adds a flag to the aFlags, e.g update twice  */
 	void 		AddFlag( int sFlags );
 	/* Removes a flag from aFlags e.g no longer needs to update twice.  */
 	void 		RemoveFlag( int sFlags );
+	/* Handle an SDL Event.  */
+	virtual void 		HandleSDLEvent( SDL_Event* e );
 
 	/* Constructor which will initialize the needed member variables.  */
 	explicit	BaseSystem(  );

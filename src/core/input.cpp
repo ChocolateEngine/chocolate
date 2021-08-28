@@ -88,6 +88,11 @@ void InputSystem::ParseInput(  )
 							if ( bind.aBind == alias.aAlias )
 								apConsole->Add( bind.aCmd );
 		}
+
+		for ( BaseSystem* sys: apSystemManager->GetSystemList() )
+		{
+			sys->HandleSDLEvent( &aEvent );
+		}
 	}
 }
 
@@ -108,7 +113,7 @@ void InputSystem::InitConsoleCommands(  )
 	aConsoleCommands.push_back( cmd );
 }
 
-InputSystem::InputSystem(  ) : BaseSystem(  )
+InputSystem::InputSystem(  ) : BaseInputSystem(  )
 {
 	aSystemType = INPUT_C;
         AddUpdateFunction( [ & ](  ){ ParseInput(  ); } );

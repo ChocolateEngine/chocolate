@@ -2,5 +2,13 @@
 *.o
 *.so
 
+#build files
+obj/
+
+#windows build files
+*.lib
+*.vcxproj
+*.vcxproj.*
+
 #ignore emacs files
 *~

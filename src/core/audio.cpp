@@ -8,7 +8,7 @@ void AudioSystem::PlayMusic( const char* spMusicPath )
 #endif
 }
 
-AudioSystem::AudioSystem(  ) : BaseSystem(  )
+AudioSystem::AudioSystem(  ) : BaseAudioSystem(  )
 {
 	aSystemType = AUDIO_C;
 

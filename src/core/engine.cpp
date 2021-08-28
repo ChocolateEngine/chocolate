@@ -6,13 +6,16 @@ Defines the methods declared in engine.h.
 #include "../../inc/core/engine.h"
 #include "../../inc/shared/platform.h"
 
+#include <chrono>
+
 template< typename T, typename... TArgs >
 void Engine::AddSystem( const T *spSystem, TArgs... sSystems )
 {
 	if ( !spSystem )
 		return;
 	aSystems.push_back( ( BaseSystem* )spSystem );
-        AddSystem( sSystems... );
+	apSystemManager->Add( ( BaseSystem* )spSystem );
+	AddSystem( sSystems... );
 }
 
 void Engine::AddGameSystems(  )
@@ -26,7 +29,9 @@ void Engine::AddGameSystems(  )
 		pSys->apMsgs 		= this->apMsgs;
 		pSys->apConsole 	= this->apConsole;
 		pSys->apCommandManager 	= this->apCommandManager;
+		pSys->apSystemManager 	= this->apSystemManager;
 		aSystems.push_back( pSys );
+		apSystemManager->Add( pSys );
 	}
 	for ( const auto& pSys : gameSystems )
 		pSys->Init(  );
@@ -36,8 +41,8 @@ void Engine::AddGameSystems(  )
 
 void Engine::InitCommands(  )
 {
-        apCommandManager->Add( Engine::Commands::PING, Command<  >( [ & ](  ){ printf( "Ping!\n" ); } ) );
-        apCommandManager->Add( Engine::Commands::EXIT, Command<  >( [ & ](  ){ aActive = false; } ) );
+	apCommandManager->Add( Engine::Commands::PING, Command<  >( [ & ](  ){ printf( "Ping!\n" ); } ) );
+	apCommandManager->Add( Engine::Commands::EXIT, Command<  >( [ & ](  ){ aActive = false; } ) );
 }
 
 void Engine::InitConsoleCommands(  )
@@ -72,31 +77,35 @@ void Engine::EngineMain(  )
 	static Messages         msgs;
 	static Console 		console;
 	static CommandManager   commandManager;
+	static SystemManager   systemManager;
 
-	this->apMsgs 		= &msgs;
-	this->apConsole 	= &console;
-	this->apCommandManager  = &commandManager;
-	this->aActive 		= true;
+	apMsgs 		= &msgs;
+	apConsole 	= &console;
+	apCommandManager  = &commandManager;
+	apSystemManager  = &systemManager;
+	aActive 		= true;
 
-        LoadObject( "bin/client" EXT_DLL, "game_init" );
+	LoadObject( "bin/client" EXT_DLL, "game_init" );
 	InitSystems(  );
 	AddGameSystems(  );
 	InitCommands(  );
 
-	this->apMsgs->Add( ENGINE_C, ENGI_PING );
+	apMsgs->Add( ENGINE_C, ENGI_PING );
 	
 	while ( aActive )
-	        UpdateSystems(  );
+		UpdateSystems(  );
 }
 
 void Engine::InitSystems(  )
 {
 	AddSystem( new GraphicsSystem, new InputSystem, new AudioSystem, new GuiSystem );
+
 	for ( const auto& pSys : aSystems )
 	{
-		pSys->apMsgs 		= this->apMsgs;
-		pSys->apConsole 	= this->apConsole;
-		pSys->apCommandManager	= this->apCommandManager;
+		pSys->apMsgs 		= apMsgs;
+		pSys->apConsole 	= apConsole;
+		pSys->apCommandManager	= apCommandManager;
+		pSys->apSystemManager	= apSystemManager;
 	}
 	for ( const auto& pSys : aSystems )
 		pSys->Init(  );
@@ -106,11 +115,18 @@ void Engine::InitSystems(  )
 
 void Engine::UpdateSystems(  )
 {
+	static auto startTime = std::chrono::high_resolution_clock::now(  );
+
+	auto currentTime = std::chrono::high_resolution_clock::now();
+	float time = std::chrono::duration< float, std::chrono::seconds::period >( currentTime - startTime ).count(  );
+
 	/* Update self.  */
-	this->Update(  );
+	Update( time );
 
 	for ( const auto& pSys : aSystems )
-		pSys->Update(  );
+		pSys->Update( time );
+
+	startTime = currentTime;
 }
 
 Engine::Engine(  ) : BaseSystem(  )
@@ -121,5 +137,9 @@ Engine::Engine(  ) : BaseSystem(  )
 Engine::~Engine(  )
 {
 	for ( const auto& pSys : aSystems )
-		pSys->~BaseSystem(  );
+		//pSys->~BaseSystem(  );
+		delete pSys;
+
+	for ( const auto& handle : aDlHandles )
+		CLOSE_LIBRARY( (Module)handle );
 }
