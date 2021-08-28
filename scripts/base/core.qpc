@@ -13,7 +13,7 @@ macro BUILD_DIR "$ROOT_DIR$/obj/$OUT_NAME$/$CONFIG$"    [!$BUILD_DIR$]
 include "$SCRIPT_DIR$/msvc.qpc" [$WINDOWS$]
 
 // dies of cringe
-macro VK_DIR "C:\VulkanSDK\1.2.182.0" [!$VK_DIR$]
+macro VK_DIR "C:\VulkanSDK\1.2.182.0" [!$VK_DIR$ && $WINDOWS$]
 
 config
 {
@@ -33,7 +33,7 @@ config
 	{
 		inc_dirs
 		{
-			"$VK_DIR$/Include"
+			"$VK_DIR$/Include" [$WINDOWS$]
 		}
 		
 		defines
@@ -42,22 +42,29 @@ config
 			"_AMD64_"   [$AMD64$]
 			"_ARM64_"   [$ARM64$]
 			"_ARM_"     [$ARM$]
-			// "_IA64_"    [$IA64$]
 		}
 
-		options { "-std=c++17" [$LINUX$] }
+		// is this needed?
+		options { "-std=c++20" [$LINUX$] }
 	}
 	
 	link
 	{
-		// import_lib "$BUILD_DIR$/qpc$EXT_LIB$"
 		lib_dirs
 		{
-			"$VK_DIR$/Lib"
+			"$VK_DIR$/Lib" [$WINDOWS$]
+			"../lib"
 		}
 		
 		libs
 		{
+			"SDL2" "vulkan-1" [$WINDOWS$]
+			
+			// -lSDL2 -lvulkan -ldl -lpthread -lX11 -lXxf86vm -lXrandr -lXi -lSDL2_mixer [$LINUX$]
+			SDL2 vulkan dl pthread X11 Xxf86vm Xrandr Xi [$LINUX$]
+			
+			// "dl" [$LINUX$]
+			// "stdc++fs" [$LINUX$]
 		}
 	}
 }

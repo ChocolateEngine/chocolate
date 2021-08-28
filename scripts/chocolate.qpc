@@ -48,13 +48,6 @@ config
 		
 		libs
 		{
-			"SDL2" "vulkan-1" [$WINDOWS$]
-			
-			// -lSDL2 -lvulkan -ldl -lpthread -lX11 -lXxf86vm -lXrandr -lXi -lSDL2_mixer [$LINUX$]
-			SDL2 vulkan dl pthread X11 Xxf86vm Xrandr Xi [$LINUX$]
-			
-			// "dl" [$LINUX$]
-			// "stdc++fs" [$LINUX$]
 		}
 	}
 }
