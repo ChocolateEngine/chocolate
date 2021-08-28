@@ -171,7 +171,7 @@ static inline VkAttachmentDescription AttachmentDescription( VkFormat sFormat, V
 /* Region of frambuffer to be rendered to, likely will always use 0, 0 and width, height.  */
 static inline VkViewport Viewport( float x, float y, float width, float height, float minDepth, float maxDepth )
 {
-	VkViewport viewport = { x, y, width, height, minDepth, maxDepth };
+	VkViewport viewport = { x, height + y, width, height * -1.f, minDepth, maxDepth };
 
 	return viewport;
 }

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../shared/system.h"
+#include "../shared/baseaudio.h"
 
 #if SDL_MIXER
 #include <SDL2/SDL_mixer.h>
@@ -8,7 +9,7 @@
 
 const int RATE = 44100;
 
-class AudioSystem : public BaseSystem
+class AudioSystem : public BaseAudioSystem
 {
 protected:
 #if SDL_MIXER

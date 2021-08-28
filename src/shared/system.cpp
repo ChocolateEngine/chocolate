@@ -1,5 +1,7 @@
 #include "../../inc/shared/system.h"
 
+#include <SDL2/SDL.h>
+
 void BaseSystem::ReadMessage(  )
 {
 	if ( !apMsgs )
@@ -84,11 +86,11 @@ void BaseSystem::InitSubsystems(  )
 	
 }
 
-void BaseSystem::Update(  )
+void BaseSystem::Update( float dt )
 {
 	ReadMessage(  );
-        ReadConsole(  );
-        ExecuteFunctions( aFunctionList );
+	ReadConsole(  );
+	ExecuteFunctions( aFunctionList );
 }
 
 void BaseSystem::AddFlag( int sFlags )
@@ -97,6 +99,11 @@ void BaseSystem::AddFlag( int sFlags )
 }
 	
 void BaseSystem::RemoveFlag( int sFlags )
+{
+	
+}
+	
+void BaseSystem::HandleSDLEvent( SDL_Event* e )
 {
 	
 }

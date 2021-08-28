@@ -1,4 +1,5 @@
 #include "../../inc/core/graphics.h"
+#include "../../inc/shared/util.h"
 
 #include <cstdlib>
 #include <ctime>
@@ -6,12 +7,18 @@
 void GraphicsSystem::LoadModel( const std::string& srModelPath, const std::string& srTexturePath, Model *spModel )
 {
 	if ( spModel == NULL )
-	        spModel = new Model;
+		spModel = new Model;
+
 	spModel->SetPosition( 0.f, 0.f, 0.f );
 	aRenderer.InitModel( spModel->GetModelData(  ), srModelPath, srTexturePath );
 	
 	aModels.push_back( spModel );
-	AddFreeFunction( [ = ](  ){ delete spModel; } );
+	AddFreeFunction( [ = ](  ){ if ( spModel != NULL ) delete spModel; } );
+}
+
+void GraphicsSystem::UnloadModel( Model *spModel )
+{
+	vec_remove( aModels, spModel );
 }
 
 void GraphicsSystem::LoadSprite( const std::string& srSpritePath, Sprite *spSprite )
@@ -23,16 +30,36 @@ void GraphicsSystem::LoadSprite( const std::string& srSpritePath, Sprite *spSpri
 	aRenderer.InitSprite( spSprite->GetSpriteData(  ), srSpritePath );
 	
 	aSprites.push_back( spSprite );
-	AddFreeFunction( [ = ](  ){ delete spSprite; } );
+	AddFreeFunction( [ = ](  ){ if ( spSprite != NULL ) delete spSprite; } );
+}
+
+void GraphicsSystem::UnloadSprite( Sprite *spSprite )
+{
+	vec_remove( aSprites, spSprite );
+}
+
+SDL_Window *GraphicsSystem::GetWindow(  )
+{
+	return aRenderer.GetWindow(  );
+}
+
+void GraphicsSystem::SetView( View& view )
+{
+	aRenderer.SetView( view );
+}
+
+void GraphicsSystem::GetWindowSize( uint32_t* width, uint32_t* height )
+{
+	aRenderer.GetWindowSize( width, height );
 }
 
 void GraphicsSystem::InitCommands(  )
 {
-        auto loadSprite = std::bind( &GraphicsSystem::LoadSprite, this, std::placeholders::_1, std::placeholders::_2 );
-        apCommandManager->Add( GraphicsSystem::Commands::INIT_SPRITE, Command< const std::string&, Sprite* >( loadSprite ) );
+	auto loadSprite = std::bind( &GraphicsSystem::LoadSprite, this, std::placeholders::_1, std::placeholders::_2 );
+	apCommandManager->Add( GraphicsSystem::Commands::INIT_SPRITE, Command< const std::string&, Sprite* >( loadSprite ) );
 	
 	auto loadModel = std::bind( &GraphicsSystem::LoadModel, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3 );       
-        apCommandManager->Add( GraphicsSystem::Commands::INIT_MODEL, Command< const std::string&, const std::string&, Model* >( loadModel ) );
+	apCommandManager->Add( GraphicsSystem::Commands::INIT_MODEL, Command< const std::string&, const std::string&, Model* >( loadModel ) );
 }
 
 void GraphicsSystem::InitConsoleCommands(  )
@@ -47,20 +74,27 @@ void GraphicsSystem::DrawFrame(  )
 
 void GraphicsSystem::SyncRenderer(  )
 {
-	aRenderer.apMsgs        	= this->apMsgs;
- 	aRenderer.apConsole 		= this->apConsole;
-	aRenderer.apCommandManager	= this->apCommandManager;
+	aRenderer.apMsgs        	= apMsgs;
+ 	aRenderer.apConsole 		= apConsole;
+	aRenderer.apCommandManager	= apCommandManager;
 }
 
-GraphicsSystem::GraphicsSystem(  ) : BaseSystem(  )
+GraphicsSystem::GraphicsSystem(  ) : BaseGraphicsSystem(  )
 {
 	aSystemType = GRAPHICS_C;
-	AddUpdateFunction( [ & ](  ){ aRenderer.Update(  ); } );
-        AddUpdateFunction( [ & ](  ){ DrawFrame(  ); } );
+}
 
+void GraphicsSystem::Init(  )
+{
+	BaseClass::Init(  );
 	aRenderer.InitVulkan(  );
+}
 
-	LoadModel( "materials/models/protogen_wip_22/protogen_wip_22.obj", "materials/textures/blue_mat.png" );
+void GraphicsSystem::Update( float dt )
+{
+	BaseClass::Update( dt );
+	aRenderer.Update( dt );
+	DrawFrame(  );
 }
 
 void GraphicsSystem::SendMessages(  )
@@ -70,7 +104,7 @@ void GraphicsSystem::SendMessages(  )
 
 void GraphicsSystem::InitSubsystems(  )
 {
-        SyncRenderer(  );
+	SyncRenderer(  );
 	aRenderer.Init(  );
 	aRenderer.SendMessages(  );
 }

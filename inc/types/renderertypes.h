@@ -5,6 +5,8 @@
 #include <vulkan/vulkan.h>
 #include <glm/glm.hpp>
 #include <glm/gtx/hash.hpp>
+#include <glm/gtx/quaternion.hpp>
+#include <glm/gtx/transform.hpp>
 #include <array>
 #include <optional>
 #include <vector>
@@ -192,8 +194,7 @@ public:
 	uint32_t 		aVertexCount;
 	uint32_t		aIndexCount;
 	bool 			aNoDraw = false;
-	float 			aPosX 	= 0.0f;
-	float			aPosY 	= 0.0f;
+	glm::vec2 		aPos;
 	float 			aWidth 	= 0.5f;
 	float			aHeight = 0.5f;
 
@@ -229,9 +230,7 @@ public:
 	uint32_t 		aVertexCount;
 	uint32_t		aIndexCount;
 	bool 			aNoDraw = false;
-	float 			aPosX 	= 0.0f;
-	float			aPosY 	= 0.0f;
-	float			aPosZ	= 0.0f;
+	glm::vec3 		aPos;
 	float 			aWidth 	= 0.5f;
 	float			aHeight = 0.5f;
 
@@ -246,5 +245,108 @@ public:
 		}
 	/* Draws the model to the screen.  */
 	void 		Draw( VkCommandBuffer c ){ vkCmdDrawIndexed( c, aIndexCount, 1, 0, 0, 0 ); }
+};
+
+// =================================================================
+// View
+// =================================================================
+
+struct Transform
+{
+	glm::vec3 position = {};
+	glm::vec3 scale = { 1.0f, 1.0f, 1.0f };
+	glm::quat rotation = {};
+};
+
+inline glm::mat4 ToTransformation(const Transform &transform)
+{
+	glm::mat4 translation = glm::translate(transform.position);
+	glm::mat4 rotation = glm::toMat4(transform.rotation);
+	glm::mat4 scale = glm::scale(transform.scale);
+
+	return translation * rotation * scale;
+}
+
+inline glm::mat4 ToFirstPersonCameraTransformation(const Transform &transform)
+{
+	glm::mat4 translation = glm::translate(-transform.position);
+	glm::mat4 rotation = glm::toMat4(transform.rotation);
+	glm::mat4 scale = glm::scale(transform.scale);
+
+	return rotation * translation * scale;
+}
+
+inline glm::mat4 ToOrbitalCameraTransformation(const Transform &transform)
+{
+	return ToTransformation(transform);
+}
+
+inline glm::mat4 ToTransformationNoScale(const Transform &transform)
+{
+	glm::mat4 translation = glm::translate(-transform.position);
+	glm::mat4 rotation = glm::toMat4(transform.rotation);
+
+	return rotation * translation;
+}
+
+
+class View
+{
+public:
+
+	View(int32_t x, int32_t y, uint32_t width, uint32_t height, float zNear, float zFar, float fieldOfView)
+	{
+		Set(x, y, width, height, zNear, zFar, fieldOfView);
+		ComputeProjection();
+	}
+
+	void Set(int32_t x, int32_t y, uint32_t width, uint32_t height, float zNear, float zFar, float fieldOfView)
+	{
+		this->x = x;
+		this->y = y;
+		this->width = width;
+		this->height = height;
+		this->zNear = zNear;
+		this->zFar = zFar;
+		this->fieldOfView = fieldOfView;
+		ComputeProjection();
+	}
+
+	void Set(View& view)
+	{
+		Set(view.x, view.y, view.width, view.height, view.zNear, view.zFar, view.fieldOfView);
+		SetViewMatrix(view.viewMatrix);
+	}
+
+	void SetViewMatrix(glm::mat4 viewMatrix)
+	{
+		this->viewMatrix = viewMatrix;
+	}
+
+	const glm::mat4 &GetProjection() const { return projectionMatrix; }
+
+	void ComputeProjection()
+	{
+		const float hAspect = (float)width / (float)height;
+		const float vAspect = (float)height / (float)width;
+
+		float V = 2.0f * atanf(tanf(glm::radians(fieldOfView) / 2.0f) * vAspect);
+
+		projectionMatrix = glm::perspective(V, hAspect, zNear, zFar);
+	}
+
+	int32_t x;
+	int32_t y;
+	uint32_t width;
+	uint32_t height;
+
+	float zNear;
+	float zFar;
+	float fieldOfView;
+
+	glm::mat4 viewMatrix;
+
+private:
+	glm::mat4 projectionMatrix;
 };
 

@@ -14,6 +14,9 @@ various systems and synchronizations
 
 #include <vector>
 
+#define CRY_ABOUT_IT() \
+	apCommandManager->Execute( Engine::Commands::EXIT );
+
 class Engine : public BaseSystem
 {
 protected:
@@ -30,6 +33,7 @@ protected:
 	/* Adds a system to aSystems.  */
 	template< typename T, typename... TArgs >
         void 		AddSystem( const T *spSystem = NULL, TArgs... sSystems );
+
 	/* Adds the game systems to aSystems.  */
 	void 		AddGameSystems(  );
 	/* Initializes all commands the system can respond to.  */

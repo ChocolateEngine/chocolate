@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../shared/system.h"
+#include "../shared/baseinput.h"
 
 #include <SDL2/SDL.h>
 
@@ -18,7 +19,7 @@ public:
 	std::string	aCmd;
 };
 
-class InputSystem : public BaseSystem
+class InputSystem : public BaseInputSystem
 {
 protected:
 	typedef std::vector< KeyAlias > KeyAliases;

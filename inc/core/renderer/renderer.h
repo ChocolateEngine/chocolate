@@ -37,35 +37,36 @@ protected:
 	typedef std::vector< ModelData* >		ModelDataList;
 	typedef std::vector< SpriteData* >		SpriteDataList;
 	typedef std::string				String;
-	
-        Device 				aDevice;
-        Allocator 			aAllocator;
-	VkSwapchainKHR 			aSwapChain;		        //	Queue for stuff to be rendered, does some processing before drawn to screen
-        ImageViews 			aSwapChainImageViews;	        //	View into an image, describing which part to access, one needed for each image
-        ImageSet 			aSwapChainImages;	        //	Stores images to be rendered, can have many
-        Framebuffers 			aSwapChainFramebuffers;		//	
-        CommandBuffers 			aCommandBuffers;	        //	Send commands to these to be executed later, better for concurrency, so many are nice
-	VkFormat 			aSwapChainImageFormat;
-	VkExtent2D 			aSwapChainExtent;
-	VkRenderPass 			aRenderPass;		        //	Stores framebuffer attachments that will be used for rendering
-	VkDescriptorSetLayout 		aModelSetLayout;
-	VkDescriptorSetLayout 		aSpriteSetLayout;
-	VkDescriptorPool 		aDescPool;
-	VkImageView 			aTextureImageView;
-	VkSampler 			aTextureSampler;
-	VkImage 			aDepthImage;
-	VkDeviceMemory 			aDepthImageMemory;
-	VkImageView 			aDepthImageView;
-	VkPipelineLayout 		aModelLayout;
-	VkPipelineLayout 		aSpriteLayout;
-	VkPipeline 			aModelPipeline;		        //	Colossal object that handles most stages of rendering. Seems to need multiple to render multiple things.
-	VkPipeline 			aSpritePipeline;
-        SemaphoreList 			aImageAvailableSemaphores;
-	SemaphoreList 			aRenderFinishedSemaphores;
-        FenceList 			aInFlightFences;
-	FenceList 			aImagesInFlight;
-        int 				aCurrentFrame 		= 0;
-        bool 				aImGuiInitialized 	= false;
+
+	View                        aView;
+	Device                      aDevice;
+	Allocator                   aAllocator;
+	VkSwapchainKHR              aSwapChain;                 // Queue for stuff to be rendered, does some processing before drawn to screen
+	ImageViews                  aSwapChainImageViews;       // View into an image, describing which part to access, one needed for each image
+	ImageSet                    aSwapChainImages;	        // Stores images to be rendered, can have many
+	Framebuffers                aSwapChainFramebuffers;		//  
+	CommandBuffers              aCommandBuffers;	        // Send commands to these to be executed later, better for concurrency, so many are nice
+	VkFormat                    aSwapChainImageFormat;
+	VkExtent2D                  aSwapChainExtent;
+	VkRenderPass                aRenderPass;                // Stores framebuffer attachments that will be used for rendering
+	VkDescriptorSetLayout       aModelSetLayout;
+	VkDescriptorSetLayout       aSpriteSetLayout;
+	VkDescriptorPool            aDescPool;
+	VkImageView                 aTextureImageView;
+	VkSampler                   aTextureSampler;
+	VkImage                     aDepthImage;
+	VkDeviceMemory              aDepthImageMemory;
+	VkImageView                 aDepthImageView;
+	VkPipelineLayout            aModelLayout;
+	VkPipelineLayout            aSpriteLayout;
+	VkPipeline                  aModelPipeline;             // Colossal object that handles most stages of rendering. Seems to need multiple to render multiple things.
+	VkPipeline                  aSpritePipeline;
+	SemaphoreList               aImageAvailableSemaphores;
+	SemaphoreList               aRenderFinishedSemaphores;
+	FenceList                   aInFlightFences;
+	FenceList                   aImagesInFlight;
+	int                         aCurrentFrame       = 0;
+	bool                        aImGuiInitialized   = false;
 
 	/* A.  */
 	void    InitCommands(  );
@@ -95,10 +96,13 @@ protected:
 	/* A.  */
 	void 	Cleanup(  );
 public:
-	enum class	Commands{ NONE = 0, IMGUI_INITIALIZED };
+	enum class	Commands{ NONE = 0, IMGUI_INITIALIZED, SET_VIEW, GET_WINDOW_SIZE };
 	
-        ModelDataList 	aModels;
-        SpriteDataList 	aSprites;
+	ModelDataList   aModels;
+	SpriteDataList  aSprites;
+
+	/* A.  */
+	void    Init(  );
 	/* A.  */
 	void 	InitVulkan(  );
 	/* A.  */
@@ -107,6 +111,14 @@ public:
 	void 	InitSprite( SpriteData &srSpriteData, const String &srSpritePath );
 	/* A.  */
 	void 	DrawFrame(  );
+
+	/* Sets the view  */
+	void    SetView( View& view );
+	/* Get the window width and height  */
+	void    GetWindowSize( uint32_t* width, uint32_t* height );
+	/* A.  */
+	SDL_Window    *GetWindow(  );
+
 	/* A.  */
 		Renderer(  );
 	/* A.  */

@@ -9,77 +9,64 @@ by the renderer.
 
 #include "../shared/system.h"
 #include "renderer/renderer.h"
+#include "../shared/basegraphics.h"
 
-class Sprite
+
+class GraphicsSystem : public BaseGraphicsSystem
 {
-private:
-        SpriteData aSpriteData;
 public:
-	/* Returns aSpriteData, in case it is needed, usually not.  */
-        SpriteData      &GetSpriteData(  ) { return aSpriteData; }
-	/* Sets the position of the sprite to a given x and y.  */
-	void 		SetPosition( float sX, float sY ){ aSpriteData.aPosX = sX;
-						   aSpriteData.aPosY = sY; }
-	/* Translates the sprite by x and y.  */
-	void 		Translate( float sX, float sY ){ aSpriteData.aPosX += sX;
-					         aSpriteData.aPosY += sY; }
-	/* Sets the visibility of the sprite.  */
-	void 		SetVisibility( bool sVisible ){ aSpriteData.aNoDraw = !sVisible; }
-};
+	typedef BaseSystem BaseClass;
 
-class Model
-{
-private:
-        ModelData aModelData;
-public:
-	/* Returns aModelData, in case it is needed, usually not.  */
-	ModelData	&GetModelData(  ){ return aModelData; }
-	/* Sets the position of the model to a given x and y.  */
-	void 		SetPosition( float sX, float sY, float sZ ){ aModelData.aPosX = sX;
-						   	     aModelData.aPosY = sY;
-							     aModelData.aPosZ = sZ; }
-	/* Translates the model by x y, and z.  */
-	void 		Translate( float sX, float sY, float sZ ){ aModelData.aPosX += sX;
-					         	   aModelData.aPosY += sY;
-							   aModelData.aPosZ += sZ; }
-	/* Sets the visibility of the model.  */
-	void 		SetVisibility( bool sVisible ){ aModelData.aNoDraw = !sVisible; }
-};
-
-class GraphicsSystem : public BaseSystem
-{
 protected:
-        typedef std::vector< Sprite* > 	SpriteList;
+	typedef std::vector< Sprite* > 	SpriteList;
 	typedef std::vector< Model* >	ModelList;
 
 	int 		aRandom = time( 0 );
-        SpriteList 	aSprites;
-        ModelList 	aModels;
+	SpriteList 	aSprites;
+	ModelList 	aModels;
 	Renderer 	aRenderer;
 
-	/* Loads a model given a path for the model and texture, 
-	   spModel is optional for external management.  */
-	void 		LoadModel( const std::string& srModelPath,
-				   const std::string& srTexturePath,
-				   Model *spModel = NULL );
-	/* Loads a sprite given a path to the sprite,
-	   spSprite is optional for external management.  */
-	void 		LoadSprite( const std::string& srSpritePath,
-				    Sprite *spSprite = NULL );
+	/*   */
+	void 		Init(  );
 	/* Initializes all commands the system can respond to.  */
 	void 		InitCommands(  );
 	/* Initializes all console commands the system can respond to.  */
 	void 		InitConsoleCommands(  );
 	/* Initializes any member systems of the base system.  */
 	void    	InitSubsystems(  );
+
 public:
 	enum class	Commands{ NONE = 0, INIT_SPRITE, INIT_MODEL };
+	/* Update  */
+	void 		Update( float dt );
 	/* Draws all loaded models and sprites to screen.  */
 	void 		DrawFrame(  );
 	/* Syncronizes communication with renderer.  */
 	void 		SyncRenderer(  );
 	/* Initialize late variables.  */
 	void		SendMessages(  );
+
+	/* Loads a model given a path for the model and texture, 
+	   spModel is optional for external management.  */
+	void 		LoadModel( const std::string& srModelPath,
+				   const std::string& srTexturePath,
+				   Model *spModel = NULL );
+	/* Unload a model.  */
+	void 		UnloadModel( Model *spModel );
+
+	/* Loads a sprite given a path to the sprite,
+	   spSprite is optional for external management.  */
+	void 		LoadSprite( const std::string& srSpritePath,
+				    Sprite *spSprite = NULL );
+	/* Unload a sprite.  */
+	void 		UnloadSprite( Sprite *spSprite );
+
+	/* Sets the view  */
+	void        SetView( View& view );
+	/* Get the window width and height  */
+	void        GetWindowSize( uint32_t* width, uint32_t* height );
+	/* Get the SDL_Window  */
+	SDL_Window  *GetWindow(  );
 
 	/* Sets some renderer parameters.  */
 	explicit 	GraphicsSystem(  );
