@@ -10,11 +10,8 @@ config
 	{
 		options
 		{
-			"/Od" "/MTd" "/ZI"  [$DEBUG$]
-			"/O2" "/MT"         [$RELEASE$]
-			
-			// enable standards conformance
-			// "/permissive-"
+			"/Od" "/MDd" "/ZI"  [$DEBUG$]
+			"/O2" "/MD"         [$RELEASE$]
 		}
 	}
 }
