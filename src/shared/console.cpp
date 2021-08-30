@@ -2,7 +2,10 @@
 
 bool Console::Empty(  )
 {
-        return aQueue.empty(  ) ? true : false;
+	if ( aQueue.empty() )
+		aCmdIndex = -1;
+
+	return aQueue.empty(  ) ? true : false;
 }
 
 void Console::Add( const String &srCmd )
@@ -22,13 +25,13 @@ void Console::Clear(  )
 
 std::string Console::FetchCmd(  )
 {
+	aCmdIndex++;
 	if ( Empty(  ) || aCmdIndex >= aQueue.size(  ) )
 	{
 		aCmdIndex = 0;
 		return "";
 	}
-	aCmdIndex++;
-	return aQueue[ aCmdIndex - 1 ];
+	return aQueue[ aCmdIndex ];
 }
 
 Console::Console(  )
