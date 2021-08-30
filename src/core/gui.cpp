@@ -48,9 +48,13 @@ void GuiSystem::DrawGui(  )
 
 	wasConsoleOpen = aConsoleShown;
 
-	// ImGui::Begin( "Dev Info", (bool*)0, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoScrollbar );
-	ImGui::Begin( "Dev Info", (bool*)0, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoScrollbar );
-	ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
+	ImGuiWindowFlags devFlags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_AlwaysAutoResize;
+	if ( !aConsoleShown )
+		devFlags |= ImGuiWindowFlags_NoMove;
+
+	// NOTE: imgui framerate is a rough estimate, might wanna have our own fps counter?
+	ImGui::Begin( "Dev Info", (bool*)0, devFlags );
+	ImGui::Text("%.1f FPS (%.3f ms/frame)", ImGui::GetIO().Framerate, 1000.0f / ImGui::GetIO().Framerate);
 	ImGui::End(  );
 
 	aDrawnFrame = true;
