@@ -24,7 +24,7 @@ class Console
 	typedef std::string 			String;
 	typedef std::vector< std::string >	StringList;
 protected:
-	int 				aCmdIndex = 0;
+	int 				aCmdIndex = -1;
         StringList 			aQueue;
 public:
 	/* A.  */
