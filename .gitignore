@@ -1,14 +1,34 @@
+#ignore game assets
+imgui.ini
+sidury/riff
+sidury/*.png
+sidury/*.jpg
+
 #ignore objects
 *.o
 *.so
+*.dylib
+*.a
 
 #build files
 obj/
 
 #windows build files
+*.exe
+*.dll
+*.obj
 *.lib
+*.ilk
+*.exp
+*.pch
 *.vcxproj
 *.vcxproj.*
 
-#ignore emacs files
+#qpc generated files
+scripts/*.mak
+
+#ignore other files
 *~
+.emacs.*
+*.desktop
+*.bak
