@@ -53,15 +53,15 @@ void GuiSystem::DrawGui(  )
 
 	ImGuiWindowFlags devFlags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_AlwaysAutoResize;
 	if ( !aConsoleShown )
-		devFlags |= ImGuiWindowFlags_NoMove
+		devFlags |= ImGuiWindowFlags_NoMove;
 
-        curtick = SDL_GetTicks();
-	Uint32 delta = curtick - prevtick;;
+	//curtick = SDL_GetTicks();
+	//Uint32 delta = curtick - prevtick;;
 
 	// NOTE: imgui framerate is a rough estimate, might wanna have our own fps counter?
 	ImGui::Begin( "Dev Info", (bool*)0, devFlags );
-        //ImGui::Text("%.1f FPS (%.3f ms/frame)", ImGui::GetIO().Framerate, 1000.0f / ImGui::GetIO().Framerate);
-	ImGui::Text("%.1f FPS (%.3f ms/frame)", (float)1000 / delta, (float)delta);
+	ImGui::Text("%.1f FPS (%.3f ms/frame)", ImGui::GetIO().Framerate, 1000.0f / ImGui::GetIO().Framerate);
+	//ImGui::Text("%.1f FPS (%.3f ms/frame)", 1000.f / delta, (float)delta);  // ms/frame is inaccurate
 	ImGui::End(  );
 	prevtick = SDL_GetTicks();
 

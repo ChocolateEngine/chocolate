@@ -7,7 +7,7 @@
 macro PROJECT_NAME "Chocolate"
 macro OUT_NAME "engine"
 
-include "base/core.qpc"
+include "core.qpc"
 
 config
 {
@@ -53,17 +53,37 @@ config
 }
 
 
+// i should have an option to use the system folders instead here
 files
 {
-	"../src/shared/*.cpp"
-	"../src/imgui/*.cpp"
-	"../src/core/*.cpp"
-	"../src/core/renderer/*.cpp"
+	folder "shared"
+	{
+		"../src/shared/*.cpp"
+		"../inc/shared/*.h"
+	}
 	
-	"../inc/types/*.h"
-	"../inc/shared/*.h"
-	"../inc/imgui/*.h"
-	"../inc/core/*.h"
-	"../inc/core/renderer/*.h"
+	folder "imgui"
+	{
+		"../src/imgui/*.cpp"
+		"../inc/imgui/*.h"
+	}
+	
+	folder "core"
+	{
+		"../src/core/*.cpp"
+		"../inc/core/*.h"
+		
+		folder "renderer"
+		{
+			"../src/core/renderer/*.cpp"
+			"../inc/core/renderer/*.h"
+		}
+	}
+	
+	folder "types"
+	{
+		"../src/types/*.cpp"
+		"../inc/types/*.h"
+	}
 }
 
