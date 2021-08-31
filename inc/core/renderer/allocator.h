@@ -9,6 +9,7 @@ many of the Vk objects used in the renderer.
 #define MAX_FRAMES_PROCESSING 2
 
 #include "device.h"
+#include "shadercache.h"
 
 #include <vector>
 #include <functional>
@@ -37,7 +38,7 @@ private:
 	typedef std::vector< VkFence >				FenceList;
 	
 	FunctionList 		aFreeQueue;
-
+	ShaderCache		aShaderCache;
 	/* A.  */
 	VkFormat 		FindDepthFormat(  );
 	/* Reads a file into a byte array.  */
@@ -50,6 +51,8 @@ private:
 	/* Creates a buffer and maps the memory.  */
 	void 			InitBuffer( VkDeviceSize sSize, VkBufferUsageFlags sUsage, VkMemoryPropertyFlags sProperties,
 					    VkBuffer &srBuffer, VkDeviceMemory &srBufferMemory );
+	/* Initializes a texture, view, and appropriate descriptors.  */
+	void			InitTexture(  );
 	/* Copies the memory into the GPU.  */
 	void 			MapMemory( VkDeviceMemory sBufferMemory, VkDeviceSize sSize, const void *spData );
 	/* Copies the contents of a buffer into another buffer.  */
@@ -61,7 +64,7 @@ private:
 public:
         ImageSet 		*apSwapChainImages = NULL;
 	VkRenderPass 		*apRenderPass = NULL;
-        Device 		*apDevice;
+        Device 			*apDevice;
 
 	/* A.  */
 	void 			InitAllocator( ImageSet &sSwapChainImages );
@@ -83,24 +86,26 @@ public:
 						    VkDescriptorPool &srDescPool,
 						    const ImageInfoSets   &srDescImageInfos  = ImageInfoSets(  ),
 						    const BufferInfoSets  &srDescBufferInfos = BufferInfoSets(  ) );
+        /* Initializes the texture, uniform values, and pipeline for the model.  */
+	void			InitModelResources(  );
 	/* A.  */
-	void 			InitImageViews( ImageViews &srSwapChainImageViews, VkFormat &srSwapChainImageFormat );
+	void 			InitImageViews( ImageViews &srSwapChainImageViews );
 	/* A.  */
-	void 			InitRenderPass( VkRenderPass &srRenderPass, VkFormat &srSwapChainImageFormat );
+	void 			InitRenderPass( VkRenderPass &srRenderPass );
 	/* A.  */
 	void 			InitDescriptorSetLayout( VkDescriptorSetLayout &srDescSetLayout,
 							 const DescSetLayouts &srBindings = DescSetLayouts(  ) );
+	/* Creates graphics pipeline layouts using the specified descriptor set layouts.  */
+	VkPipelineLayout        InitPipelineLayouts( VkDescriptorSetLayout *spSetLayouts, uint32_t setLayoutsCount );
 	/* A.  */
 	template< typename T >
-        void 			InitGraphicsPipeline( VkPipeline &srPipeline, VkPipelineLayout &srLayout, VkExtent2D &srSwapChainExtent,
-						      VkDescriptorSetLayout &srDescSetLayout, const String &srVertShader,
+        void 			InitGraphicsPipeline( VkPipeline &srPipeline, VkPipelineLayout &srLayout, VkDescriptorSetLayout &srDescSetLayout, const String &srVertShader,
 						      const String &srFragShader, int sFlags );
 	/* A.  */
-	void 			InitDepthResources( VkImage &srDepthImage, VkDeviceMemory &srDepthImageMemory, VkImageView &srDepthImageView,
-						    VkExtent2D &srSwapChainExtent );
+	void 			InitDepthResources( VkImage &srDepthImage, VkDeviceMemory &srDepthImageMemory, VkImageView &srDepthImageView );
 	/* A.  */
 	void 			InitFrameBuffer( FrameBuffers &srSwapChainFramebuffers, ImageViews &srSwapChainImageViews,
-						 VkImageView &srDepthImageView, VkExtent2D &srSwapChainExtent );
+						 VkImageView &srDepthImageView );
 	/* A.  */
 	void 			InitDescPool( VkDescriptorPool &srDescPool, std::vector< VkDescriptorPoolSize > sPoolSizes );
 	/* A.  */

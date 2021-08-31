@@ -12,6 +12,7 @@ Vulkan.
 #include "../../shared/system.h"
 #include "../../types/enums.h"
 #include "../../types/renderertypes.h"
+#include "../../types/modeldata.h"
 #include "../gui.h"
 
 #include "allocator.h"
@@ -39,15 +40,11 @@ protected:
 	typedef std::string				String;
 
 	View                        aView;
-	Device                      aDevice;
 	Allocator                   aAllocator;
-	VkSwapchainKHR              aSwapChain;                 // Queue for stuff to be rendered, does some processing before drawn to screen
+	Device						aDevice;
 	ImageViews                  aSwapChainImageViews;       // View into an image, describing which part to access, one needed for each image
-	ImageSet                    aSwapChainImages;	        // Stores images to be rendered, can have many
 	Framebuffers                aSwapChainFramebuffers;		//  
 	CommandBuffers              aCommandBuffers;	        // Send commands to these to be executed later, better for concurrency, so many are nice
-	VkFormat                    aSwapChainImageFormat;
-	VkExtent2D                  aSwapChainExtent;
 	VkRenderPass                aRenderPass;                // Stores framebuffer attachments that will be used for rendering
 	VkDescriptorSetLayout       aModelSetLayout;
 	VkDescriptorSetLayout       aSpriteSetLayout;
