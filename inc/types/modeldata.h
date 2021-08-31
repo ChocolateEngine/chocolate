@@ -19,7 +19,7 @@ public:
 	VkBuffer 		aVertexBuffer;
 	VkBuffer		aIndexBuffer;
 	VkDeviceMemory 		aVertexBufferMem;
-        VkDeviceMemory		aIndexBufferMem;
+	VkDeviceMemory		aIndexBufferMem;
 	VkDeviceMemory		aTextureImageMem;
 	VkImage 		aTextureImage;
 	VkImageView 		aTextureImageView;
@@ -28,23 +28,26 @@ public:
 	VkPipelineLayout	aPipelineLayout;
 	VkPipeline		aPipeline;
 	DescriptorSetList 	aDescriptorSets;
+
 	uint32_t 		aVertexCount;
 	uint32_t		aIndexCount;
+	std::vector< vertex_3d_t > aVertices;
+	std::vector< uint32_t > aIndices;
 	bool 			aNoDraw = false;
 	glm::vec3 		aPos;
 	float 			aWidth 	= 0.5f;
 	float			aHeight = 0.5f;
 
-        void		Init( Allocator &srAllocator, const std::string &srModelPath, const std::string &srTexturePath,
-			      VkDescriptorSetLayout srModelSetLayout, VkSampler srTextureSampler, VkDescriptorPool srDescPool, VkExtent2D srSwapChainExtent )
-		{
-			srAllocator.InitTextureImage( srTexturePath, aTextureImage, aTextureImageMem, NULL, NULL );
-			srAllocator.InitTextureImageView( aTextureImageView, aTextureImage );
-			srAllocator.InitUniformBuffers( aUniformBuffers, aUniformBuffersMem );
-			srAllocator.InitDescriptorSets( aDescriptorSets, srModelSetLayout, srDescPool, MODEL_SET_PARAMETERS_TEMP( aTextureImageView, aUniformBuffers ) );
-		        aPipelineLayout = srAllocator.InitPipelineLayouts( &srModelSetLayout, 1 );
-			srAllocator.InitGraphicsPipeline< vertex_3d_t >( aPipeline, aPipelineLayout, srModelSetLayout, "materials/shaders/3dvert.spv", "materials/shaders/3dfrag.spv", 0 );
-		}
+	void		Init( Allocator &srAllocator, const std::string &srModelPath, const std::string &srTexturePath,
+				VkDescriptorSetLayout srModelSetLayout, VkSampler srTextureSampler, VkDescriptorPool srDescPool, VkExtent2D srSwapChainExtent )
+	{
+		srAllocator.InitTextureImage( srTexturePath, aTextureImage, aTextureImageMem, NULL, NULL );
+		srAllocator.InitTextureImageView( aTextureImageView, aTextureImage );
+		srAllocator.InitUniformBuffers( aUniformBuffers, aUniformBuffersMem );
+		srAllocator.InitDescriptorSets( aDescriptorSets, srModelSetLayout, srDescPool, MODEL_SET_PARAMETERS_TEMP( aTextureImageView, aUniformBuffers ) );
+			aPipelineLayout = srAllocator.InitPipelineLayouts( &srModelSetLayout, 1 );
+		srAllocator.InitGraphicsPipeline< vertex_3d_t >( aPipeline, aPipelineLayout, srModelSetLayout, "materials/shaders/3dvert.spv", "materials/shaders/3dfrag.spv", 0 );
+	}
 	/* Binds the model data to the GPU to be rendered later.  */
 	void 		Bind( VkCommandBuffer c, uint32_t i )
 		{

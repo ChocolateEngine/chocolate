@@ -7,6 +7,7 @@ draw to the screen.
  */
 #include "../../../inc/core/renderer/renderer.h"
 #include "../../../inc/core/renderer/initializers.h"
+#include "../../../inc/types/transform.h"
 
 #define GLM_FORCE_RADIANS
 #define STB_IMAGE_IMPLEMENTATION
@@ -166,8 +167,6 @@ void Renderer::LoadObj( const String &srObjPath, ModelData &srModel )
 	tinyobj::attrib_t attrib;
 	std::vector< tinyobj::shape_t > shapes;
 	std::vector< tinyobj::material_t > materials;
-	std::vector< vertex_3d_t > vertices;
-	std::vector< uint32_t > indices;
 	std::string warn, err;
 
 	if ( !tinyobj::LoadObj( &attrib, &shapes, &materials, &warn, &err, srObjPath.c_str(  ) ) )
@@ -197,17 +196,18 @@ void Renderer::LoadObj( const String &srObjPath, ModelData &srModel )
 			vertex.color = { 1.0f, 1.0f, 1.0f };
 			if ( uniqueVertices.count( vertex ) == 0 )
 			{
-				uniqueVertices[ vertex ] = ( uint32_t )vertices.size(  );
-				vertices.push_back( vertex );
+				uniqueVertices[ vertex ] = ( uint32_t )srModel.aVertices.size(  );
+				srModel.aVertices.push_back( vertex );
 			}
 			
-			indices.push_back( uniqueVertices[ vertex ] );
+			srModel.aIndices.push_back( uniqueVertices[ vertex ] );
 		}
 	}
-	srModel.aVertexCount 	= ( uint32_t )vertices.size(  );
-	srModel.aIndexCount 	= ( uint32_t )indices.size(  );
-	aAllocator.InitTexBuffer( vertices, srModel.aVertexBuffer, srModel.aVertexBufferMem, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT );
-	aAllocator.InitTexBuffer( indices, srModel.aIndexBuffer, srModel.aIndexBufferMem, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT );
+
+	srModel.aVertexCount 	= ( uint32_t )srModel.aVertices.size(  );
+	srModel.aIndexCount 	= ( uint32_t )srModel.aIndices.size(  );
+	aAllocator.InitTexBuffer( srModel.aVertices, srModel.aVertexBuffer, srModel.aVertexBufferMem, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT );
+	aAllocator.InitTexBuffer( srModel.aIndices, srModel.aIndexBuffer, srModel.aIndexBufferMem, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT );
 }
 
 void Renderer::LoadGltf( const String &srGltfPath, ModelData &srModel )
