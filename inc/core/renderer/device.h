@@ -7,6 +7,7 @@ functions that utilize GPU functionality.
 #pragma once
 
 #include "../../../inc/types/renderertypes.h"
+#include "swapchain.h"
 
 #include <vulkan/vulkan.h>
 #include <SDL2/SDL.h>
@@ -43,6 +44,7 @@ protected:
 	VkQueue 			aGraphicsQueue;
 	VkQueue				aPresentQueue;
 	VkCommandPool 			aCommandPool;
+	SwapChain			aSwapChain;
 	/* Debug callback that displays the validation layer errors.  */
 	static VKAPI_ATTR VkBool32 VKAPI_CALL   DebugCallback( VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, VkDebugUtilsMessageTypeFlagsEXT messageType,
 								const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData );
@@ -93,8 +95,7 @@ public:
 	int 	aWidth 	= 1280;
 	int 	aHeight = 720;
 	/* A.  */
-	void 					InitSwapChain( VkSwapchainKHR &srSwapChain, ImageSet &srSwapChainImages, VkFormat &srSwapChainImageFormat,
-							       VkExtent2D &srSwapChainExtent );
+	void 					InitSwapChain(  );
 	/* A.  */
 	void 					InitTextureSampler( VkSampler& textureSampler, VkSamplerAddressMode mode );
 	/* A.  */
@@ -120,6 +121,8 @@ public:
 	VkQueue 				GetGraphicsQueue(  ){ return aGraphicsQueue; }
 	/* A.  */
 	VkQueue 				GetPresentQueue(  ){ return aPresentQueue; }
+	/* Returns the swap chain.  */
+	SwapChain				GetSwapChain(  ){ return aSwapChain; }
 	/* A.  */
 	void 					SetResolution( int sWidth, int sHeight ){ aWidth = sWidth; aHeight = sHeight; }
 	/* A.  */

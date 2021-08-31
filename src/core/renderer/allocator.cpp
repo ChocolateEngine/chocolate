@@ -12,6 +12,8 @@
 #include "../../../inc/imgui/imgui_impl_sdl.h"
 #include "../../../inc/imgui/imgui_impl_vulkan.h"
 
+#define PSWAPCHAIN apDevice->GetSwapChain(  )
+
 VkFormat Allocator::FindDepthFormat(  )
 {
 	return apDevice->FindSupportedFormat(
@@ -226,10 +228,10 @@ void Allocator::InitUniformBuffers( BufferSet &srUBuffers, MemorySet &srUBuffers
 {
 	VkDeviceSize bufferSize = sizeof( ubo_3d_t );
 		
-	srUBuffers.resize( apSwapChainImages->size(  ) );
-	srUBuffersMem.resize( apSwapChainImages->size(  ) );
+	srUBuffers.resize( PSWAPCHAIN.GetImages(  ).size(  ) );
+	srUBuffersMem.resize( PSWAPCHAIN.GetImages(  ).size(  ) );
 
-	for ( int i = 0; i < apSwapChainImages->size(  ); i++ )
+	for ( int i = 0; i < PSWAPCHAIN.GetImages(  ).size(  ); i++ )
 	        InitBuffer( bufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
 			     srUBuffers[ i ], srUBuffersMem[ i ] );
 }
@@ -237,19 +239,19 @@ void Allocator::InitUniformBuffers( BufferSet &srUBuffers, MemorySet &srUBuffers
 void Allocator::InitDescriptorSets( DescriptorSets &srDescSets, VkDescriptorSetLayout &srDescSetLayout, VkDescriptorPool &srDescPool,
 				    const ImageInfoSets &srDescImageInfos, const BufferInfoSets &srDescBufferInfos )
 {
-	std::vector< VkDescriptorSetLayout > 	layouts( apSwapChainImages->size(  ), srDescSetLayout );
+	std::vector< VkDescriptorSetLayout > 	layouts( PSWAPCHAIN.GetImages(  ).size(  ), srDescSetLayout );
 	std::vector< VkWriteDescriptorSet > 	descriptorWrites{  };
 	VkDescriptorSetAllocateInfo 		allocInfo{  };
 	allocInfo.sType 		= VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
 	allocInfo.descriptorPool 	= srDescPool;							//	Pool where descriptors are allocated
-	allocInfo.descriptorSetCount 	= ( uint32_t )apSwapChainImages->size(  );
+	allocInfo.descriptorSetCount 	= ( uint32_t )PSWAPCHAIN.GetImages(  ).size(  );
 	allocInfo.pSetLayouts 		= layouts.data(  );
 
-	srDescSets.resize( apSwapChainImages->size(  ) );
+	srDescSets.resize( PSWAPCHAIN.GetImages(  ).size(  ) );
 	if ( vkAllocateDescriptorSets( apDevice->GetDevice(  ), &allocInfo, srDescSets.data(  ) ) != VK_SUCCESS )	//	Allocate descriptor sets
 		throw std::runtime_error( "Failed to allocate descriptor sets!" );
 
-	for ( int i = 0; i < apSwapChainImages->size(  ); i++ )					        //	For each of the rendered frames
+	for ( int i = 0; i < PSWAPCHAIN.GetImages(  ).size(  ); i++ )					        //	For each of the rendered frames
 	{
 		int bindingCount = 0;
 		for ( auto &&descBufferInfo : srDescBufferInfos )						//	Iterate through the descriptor buffer infos and make descriptor writes for them
@@ -270,16 +272,22 @@ void Allocator::InitDescriptorSets( DescriptorSets &srDescSets, VkDescriptorSetL
 	}
 }
 
-void Allocator::InitImageViews( ImageViews &srSwapChainImageViews, VkFormat &srSwapChainImageFormat )
+/* Initializes the texture, uniform values, and pipeline for the model.  */
+void Allocator::InitModelResources(  )
 {
-	srSwapChainImageViews.resize( apSwapChainImages->size(  ) );
-	for ( int i = 0; i < apSwapChainImages->size(  ); i++ )
-	        InitImageView( srSwapChainImageViews[ i ], apSwapChainImages->at( i ), srSwapChainImageFormat, VK_IMAGE_ASPECT_COLOR_BIT );
+	
 }
 
-void Allocator::InitRenderPass( VkRenderPass &srRenderPass, VkFormat &srSwapChainImageFormat )
+void Allocator::InitImageViews( ImageViews &srSwapChainImageViews )
 {
-	VkAttachmentDescription 	colorAttachment = AttachmentDescription( srSwapChainImageFormat, VK_ATTACHMENT_STORE_OP_STORE, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR );
+	srSwapChainImageViews.resize( PSWAPCHAIN.GetImages(  ).size(  ) );
+	for ( int i = 0; i < PSWAPCHAIN.GetImages(  ).size(  ); i++ )
+	        InitImageView( srSwapChainImageViews[ i ], PSWAPCHAIN.GetImages(  ).at( i ), PSWAPCHAIN.GetFormat(  ), VK_IMAGE_ASPECT_COLOR_BIT );
+}
+
+void Allocator::InitRenderPass( VkRenderPass &srRenderPass )
+{
+	VkAttachmentDescription 	colorAttachment = AttachmentDescription( PSWAPCHAIN.GetFormat(  ), VK_ATTACHMENT_STORE_OP_STORE, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR );
 	VkAttachmentDescription 	depthAttachment = AttachmentDescription( FindDepthFormat(  ), VK_ATTACHMENT_STORE_OP_DONT_CARE, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL );
 
 	VkAttachmentReference colorAttachmentRef{  };
@@ -317,9 +325,8 @@ void Allocator::InitRenderPass( VkRenderPass &srRenderPass, VkFormat &srSwapChai
 	if ( vkCreateRenderPass( apDevice->GetDevice(  ), &renderPassInfo, NULL, &srRenderPass ) != VK_SUCCESS )
 		throw std::runtime_error( "Failed to create render pass!" );
 }
-
-void Allocator::InitDescriptorSetLayout
-	( VkDescriptorSetLayout &srDescSetLayout, const DescSetLayouts &srBindings )
+/* Create layouts of only one binding for future.  */
+void Allocator::InitDescriptorSetLayout( VkDescriptorSetLayout &srDescSetLayout, const DescSetLayouts &srBindings )
 {
 	int i = -1;
 	std::vector< VkDescriptorSetLayoutBinding > layoutBindings;
@@ -338,11 +345,30 @@ void Allocator::InitDescriptorSetLayout
 	if ( vkCreateDescriptorSetLayout( apDevice->GetDevice(  ), &layoutInfo, NULL, &srDescSetLayout ) != VK_SUCCESS )
 		throw std::runtime_error( "Failed to create descriptor set layout!" );
 }
+VkPipelineLayout Allocator::InitPipelineLayouts( VkDescriptorSetLayout *spSetLayouts, uint32_t setLayoutsCount )
+{
+	VkPipelineLayout		pipelineLayout;
+	VkPipelineLayoutCreateInfo 	pipelineInfo = PipelineLayout( spSetLayouts, setLayoutsCount );
+	VkPushConstantRange		pushConstantRange = PushConstantRange( VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
+									       sizeof( push_constant_t ), 0 );
 
+        pipelineInfo.pushConstantRangeCount 	= 1;
+	pipelineInfo.pPushConstantRanges 	= &pushConstantRange;
+        if ( vkCreatePipelineLayout( apDevice->GetDevice(  ), &pipelineInfo, NULL, &pipelineLayout ) != VK_SUCCESS )
+		throw std::runtime_error( "Failed to create pipeline layout!" );
+	return pipelineLayout;
+}
+/* Refactor to create multiple pipelines for materials, Called whenever a new model is loaded.  */
 template< typename T >
-void Allocator::InitGraphicsPipeline( VkPipeline &srPipeline, VkPipelineLayout &srLayout, VkExtent2D &srSwapChainExtent, VkDescriptorSetLayout &srDescSetLayout,
+void Allocator::InitGraphicsPipeline( VkPipeline &srPipeline, VkPipelineLayout &srLayout, VkDescriptorSetLayout &srDescSetLayout,
 				      const String &srVertShader, const String &srFragShader, int sFlags )
 {
+	if ( aShaderCache.Exists( srVertShader, srFragShader, srLayout ) )
+	{
+		srPipeline 		= aShaderCache.GetPipeline(  );
+		return;
+	}
+		
 	auto 		vertShaderCode  	= ReadFile( srVertShader );
 	auto 		fragShaderCode  	= ReadFile( srFragShader );
 		
@@ -373,23 +399,17 @@ void Allocator::InitGraphicsPipeline( VkPipeline &srPipeline, VkPipelineLayout &
 	vertexInputInfo.vertexAttributeDescriptionCount = ( uint32_t )( attributeDescriptions.size(  ) );
 	vertexInputInfo.pVertexAttributeDescriptions 	= attributeDescriptions.data(  );	//	Same as above
 
-	VkPushConstantRange pushConstantRange{  };
-	pushConstantRange.stageFlags 	= VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
-	pushConstantRange.offset     	= 0;
-	pushConstantRange.size 		= sizeof( push_constant_t );
-	
-
 	VkPipelineInputAssemblyStateCreateInfo inputAssembly{  };	//	Collects raw vertex data from buffers
 	inputAssembly.sType 			= VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
 	inputAssembly.topology 			= VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
 	inputAssembly.primitiveRestartEnable 	= VK_FALSE;
 
 	/* Region of frambuffer to be rendered to, likely will always use 0, 0 and width, height  */
-	VkViewport viewport = Viewport( 0.f, 0.f, ( float )srSwapChainExtent.width, ( float )srSwapChainExtent.height, 0.f, 1.0f );
+	VkViewport viewport = Viewport( 0.f, 0.f, ( float )PSWAPCHAIN.GetExtent(  ).width, ( float )PSWAPCHAIN.GetExtent(  ).height, 0.f, 1.0f );
 
 	VkRect2D scissor{  };		//	More agressive cropping than viewport, defining which regions pixels are to be stored
 	scissor.offset = { 0, 0 };
-	scissor.extent = srSwapChainExtent;
+	scissor.extent = PSWAPCHAIN.GetExtent(  );
 
 	VkPipelineViewportStateCreateInfo viewportState{  };	//	Combines viewport and scissor
 	viewportState.sType 		= VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
@@ -462,16 +482,6 @@ void Allocator::InitGraphicsPipeline( VkPipeline &srPipeline, VkPipelineLayout &
 	dynamicState.sType 		= VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
 	dynamicState.dynamicStateCount  = 2;
 	dynamicState.pDynamicStates 	= dynamicStates;
-
-	VkPipelineLayoutCreateInfo pipelineLayoutInfo{  };	//	Allows for use of uniform values
-	pipelineLayoutInfo.sType 			= VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-	pipelineLayoutInfo.setLayoutCount 		= 1; // Optional
-	pipelineLayoutInfo.pSetLayouts 			= &srDescSetLayout; // Optional
-	pipelineLayoutInfo.pushConstantRangeCount 	= 1;
-	pipelineLayoutInfo.pPushConstantRanges		= &pushConstantRange;
-
-	if ( vkCreatePipelineLayout( apDevice->GetDevice(  ), &pipelineLayoutInfo, NULL, &srLayout ) != VK_SUCCESS )
-		throw std::runtime_error( "Failed to create pipeline layout!" );
 	
 	VkGraphicsPipelineCreateInfo pipelineInfo{  };	//	Combine all the objects above into one parameter for graphics pipeline creation
 	pipelineInfo.sType 			= VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
@@ -494,14 +504,16 @@ void Allocator::InitGraphicsPipeline( VkPipeline &srPipeline, VkPipelineLayout &
 	if ( vkCreateGraphicsPipelines( apDevice->GetDevice(  ), VK_NULL_HANDLE, 1, &pipelineInfo, NULL, &srPipeline ) != VK_SUCCESS )
 		throw std::runtime_error( "Failed to create graphics pipeline!" );
 
+	aShaderCache.AddPipeline( srVertShader, srFragShader, srLayout, srPipeline );
+
 	vkDestroyShaderModule( apDevice->GetDevice(  ), fragShaderModule, NULL );
 	vkDestroyShaderModule( apDevice->GetDevice(  ), vertShaderModule, NULL );
 }
 
-void Allocator::InitDepthResources( VkImage &srDepthImage, VkDeviceMemory &srDepthImageMemory, VkImageView &srDepthImageView, VkExtent2D &srSwapChainExtent )
+void Allocator::InitDepthResources( VkImage &srDepthImage, VkDeviceMemory &srDepthImageMemory, VkImageView &srDepthImageView )
 {
 	VkFormat depthFormat = apDevice->FindDepthFormat(  );
-        InitImage( Image( srSwapChainExtent.width, srSwapChainExtent.height, depthFormat, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT ),
+        InitImage( Image( PSWAPCHAIN.GetExtent(  ).width, PSWAPCHAIN.GetExtent(  ).height, depthFormat, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT ),
 		   VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, srDepthImage, srDepthImageMemory );
 	
         InitImageView( srDepthImageView, srDepthImage, depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT );
@@ -509,7 +521,7 @@ void Allocator::InitDepthResources( VkImage &srDepthImage, VkDeviceMemory &srDep
 }
 
 void Allocator::InitFrameBuffer( FrameBuffers &srSwapChainFramebuffers, ImageViews &srSwapChainImageViews,
-				 VkImageView &srDepthImageView, VkExtent2D &srSwapChainExtent )
+				 VkImageView &srDepthImageView )
 {
 	srSwapChainFramebuffers.resize( srSwapChainImageViews.size(  ) );
 	for ( int i = 0; i < srSwapChainImageViews.size(  ); i++ )
@@ -521,8 +533,8 @@ void Allocator::InitFrameBuffer( FrameBuffers &srSwapChainFramebuffers, ImageVie
 		framebufferInfo.renderPass 	= *apRenderPass;
 		framebufferInfo.attachmentCount = ( uint32_t )attachments.size(  );
 		framebufferInfo.pAttachments 	= attachments.data(  );
-		framebufferInfo.width 		= srSwapChainExtent.width;
-		framebufferInfo.height 		= srSwapChainExtent.height;
+		framebufferInfo.width 		= PSWAPCHAIN.GetExtent(  ).width;
+		framebufferInfo.height 		= PSWAPCHAIN.GetExtent(  ).height;
 		framebufferInfo.layers 		= 1;
 
 		if ( vkCreateFramebuffer( apDevice->GetDevice(  ), &framebufferInfo, NULL, &srSwapChainFramebuffers[ i ] ) != VK_SUCCESS )
@@ -597,7 +609,7 @@ void Allocator::InitSync( SemaphoreList &srImageAvailableSemaphores, SemaphoreLi
 	srImageAvailableSemaphores.resize( MAX_FRAMES_PROCESSING );
 	srRenderFinishedSemaphores.resize( MAX_FRAMES_PROCESSING );
 	srInFlightFences.resize( MAX_FRAMES_PROCESSING );
-	srImagesInFlight.resize( apSwapChainImages->size(  ), VK_NULL_HANDLE );
+	srImagesInFlight.resize( PSWAPCHAIN.GetImages(  ).size(  ), VK_NULL_HANDLE );
 	
 	VkSemaphoreCreateInfo semaphoreInfo{  };
 	semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
@@ -628,7 +640,7 @@ Allocator::~Allocator
 template void Allocator::InitTexBuffer< uint32_t >( const std::vector< uint32_t >&, VkBuffer&, VkDeviceMemory&, VkBufferUsageFlags );
 template void Allocator::InitTexBuffer< vertex_2d_t >( const std::vector< vertex_2d_t >&, VkBuffer&, VkDeviceMemory&, VkBufferUsageFlags );
 template void Allocator::InitTexBuffer< vertex_3d_t >( const std::vector< vertex_3d_t >&, VkBuffer&, VkDeviceMemory&, VkBufferUsageFlags );
-template void Allocator::InitGraphicsPipeline< vertex_2d_t >( VkPipeline&, VkPipelineLayout&, VkExtent2D&, VkDescriptorSetLayout&,
+template void Allocator::InitGraphicsPipeline< vertex_2d_t >( VkPipeline&, VkPipelineLayout&, VkDescriptorSetLayout&,
 							      const std::string&, const std::string&, int );
-template void Allocator::InitGraphicsPipeline< vertex_3d_t >( VkPipeline&, VkPipelineLayout&, VkExtent2D&, VkDescriptorSetLayout&,
+template void Allocator::InitGraphicsPipeline< vertex_3d_t >( VkPipeline&, VkPipelineLayout&, VkDescriptorSetLayout&,
 							      const std::string&, const std::string&, int );

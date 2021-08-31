@@ -39,6 +39,8 @@ draw to the screen.
 
 #define SPRITE_SET_PARAMETERS( tImageView ) { { { VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, tImageView, aTextureSampler, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER } } }
 
+#define SWAPCHAIN aDevice.GetSwapChain(  )
+
 void Renderer::InitCommands(  )
 {
 	apCommandManager->Add( Renderer::Commands::IMGUI_INITIALIZED, Command<  >( std::bind( &Renderer::EnableImgui, this ) ) );
@@ -57,19 +59,16 @@ void Renderer::EnableImgui(  )
 
 void Renderer::InitVulkan(  )
 {
-	aDevice.InitSwapChain( aSwapChain, aSwapChainImages, aSwapChainImageFormat, aSwapChainExtent );
-	aAllocator.apSwapChainImages = &aSwapChainImages;
-	aAllocator.InitImageViews( aSwapChainImageViews, aSwapChainImageFormat );
-	aAllocator.InitRenderPass( aRenderPass, aSwapChainImageFormat );
+	aAllocator.InitImageViews( aSwapChainImageViews );
+	aAllocator.InitRenderPass( aRenderPass );
 	aAllocator.apRenderPass = &aRenderPass;
 	aAllocator.InitDescriptorSetLayout( aModelSetLayout, MODEL_SET_LAYOUT_PARAMETERS );
 	aAllocator.InitDescriptorSetLayout( aSpriteSetLayout, SPRITE_SET_LAYOUT_PARAMETERS );
-	aAllocator.InitGraphicsPipeline< vertex_3d_t >( aModelPipeline, aModelLayout, aSwapChainExtent, aModelSetLayout, "materials/shaders/3dvert.spv",
-							  "materials/shaders/3dfrag.spv", 0 );
-	aAllocator.InitGraphicsPipeline< vertex_2d_t >( aSpritePipeline, aSpriteLayout, aSwapChainExtent, aSpriteSetLayout, "materials/shaders/2dvert.spv",
-							  "materials/shaders/2dfrag.spv", NO_CULLING | NO_DEPTH );
-	aAllocator.InitDepthResources( aDepthImage, aDepthImageMemory, aDepthImageView, aSwapChainExtent );
-	aAllocator.InitFrameBuffer( aSwapChainFramebuffers, aSwapChainImageViews, aDepthImageView, aSwapChainExtent );
+        aSpriteLayout 	= aAllocator.InitPipelineLayouts( &aSpriteSetLayout, 1 );
+	aAllocator.InitGraphicsPipeline< vertex_2d_t >( aSpritePipeline, aSpriteLayout, aSpriteSetLayout, "materials/shaders/2dvert.spv",
+							"materials/shaders/2dfrag.spv", NO_CULLING | NO_DEPTH );
+	aAllocator.InitDepthResources( aDepthImage, aDepthImageMemory, aDepthImageView );
+	aAllocator.InitFrameBuffer( aSwapChainFramebuffers, aSwapChainImageViews, aDepthImageView );
 	aDevice.InitTextureSampler( aTextureSampler, VK_SAMPLER_ADDRESS_MODE_REPEAT );
 	aAllocator.InitDescPool( aDescPool, { { { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 2000 }, { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 2000 } } } );
 	aAllocator.InitImguiPool( aDevice.GetWindow(  ) );
@@ -90,14 +89,8 @@ void Renderer::InitCommandBuffers(  )
 	allocInfo.level 		= VK_COMMAND_BUFFER_LEVEL_PRIMARY;
 	allocInfo.commandBufferCount	= ( uint32_t )aCommandBuffers.size(  );
 
-	// HACK
-	if ( aCommandBuffers[0] == NULL )
-	{
-		if ( vkAllocateCommandBuffers( aDevice.GetDevice(  ), &allocInfo, aCommandBuffers.data(  ) ) != VK_SUCCESS )
-		{
-			throw std::runtime_error( "Failed to allocate command buffers!" );
-		}
-	}
+	if ( vkAllocateCommandBuffers( aDevice.GetDevice(  ), &allocInfo, aCommandBuffers.data(  ) ) != VK_SUCCESS )
+		throw std::runtime_error( "Failed to allocate command buffers!" );
 
 	for ( int i = 0; i < aCommandBuffers.size(  ); i++ )
 	{
@@ -115,7 +108,7 @@ void Renderer::InitCommandBuffers(  )
 		renderPassInfo.renderPass 	 = aRenderPass;
 		renderPassInfo.framebuffer 	 = aSwapChainFramebuffers[ i ];
 		renderPassInfo.renderArea.offset = { 0, 0 };
-		renderPassInfo.renderArea.extent = aSwapChainExtent;
+		renderPassInfo.renderArea.extent = SWAPCHAIN.GetExtent(  );
 
 		std::array< VkClearValue, 2 > clearValues{  };
 		clearValues[ 0 ].color = { 0.0f, 0.0f, 0.0f, 1.0f };
@@ -125,12 +118,10 @@ void Renderer::InitCommandBuffers(  )
 		renderPassInfo.pClearValues 	 = clearValues.data(  );
 
 		vkCmdBeginRenderPass( aCommandBuffers[ i ], &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE );
-		
-		vkCmdBindPipeline( aCommandBuffers[ i ], VK_PIPELINE_BIND_POINT_GRAPHICS, aModelPipeline );
 
 		for ( auto& model : aModels )
 		{
-			model->Bind( aCommandBuffers[ i ], aModelLayout, i );
+			model->Bind( aCommandBuffers[ i ], i );
 			model->Draw( aCommandBuffers[ i ] );
 		}
 		vkCmdBindPipeline( aCommandBuffers[ i ], VK_PIPELINE_BIND_POINT_GRAPHICS, aSpritePipeline );
@@ -310,19 +301,19 @@ void Renderer::ReinitSwapChain(  )
 
 	DestroySwapChain(  );
 
-	aDevice.InitSwapChain( aSwapChain, aSwapChainImages, aSwapChainImageFormat, aSwapChainExtent );
-	aAllocator.apSwapChainImages = &aSwapChainImages;
-	aAllocator.InitImageViews( aSwapChainImageViews, aSwapChainImageFormat );
-	aAllocator.InitRenderPass( aRenderPass, aSwapChainImageFormat );
+	aAllocator.InitImageViews( aSwapChainImageViews );
+	aAllocator.InitRenderPass( aRenderPass );
 	aAllocator.apRenderPass = &aRenderPass;
-	aAllocator.InitDescriptorSetLayout( aModelSetLayout, MODEL_SET_LAYOUT_PARAMETERS );
+        aAllocator.InitDescriptorSetLayout( aModelSetLayout, MODEL_SET_LAYOUT_PARAMETERS );
+	auto modelLayout 	= aAllocator.InitPipelineLayouts( &aModelSetLayout, 1 );
 	aAllocator.InitDescriptorSetLayout( aSpriteSetLayout, SPRITE_SET_LAYOUT_PARAMETERS );
-	aAllocator.InitGraphicsPipeline< vertex_3d_t >( aModelPipeline, aModelLayout, aSwapChainExtent, aModelSetLayout, "materials/shaders/3dvert.spv",
-							  "materials/shaders/3dfrag.spv", 0 );
-	aAllocator.InitGraphicsPipeline< vertex_2d_t >( aSpritePipeline, aSpriteLayout, aSwapChainExtent, aSpriteSetLayout, "materials/shaders/2dvert.spv",
-							  "materials/shaders/2dfrag.spv", NO_CULLING | NO_DEPTH );
-	aAllocator.InitDepthResources( aDepthImage, aDepthImageMemory, aDepthImageView, aSwapChainExtent );
-	aAllocator.InitFrameBuffer( aSwapChainFramebuffers, aSwapChainImageViews, aDepthImageView, aSwapChainExtent );
+	auto spriteLayout 	= aAllocator.InitPipelineLayouts( &aSpriteSetLayout, 1 );
+	aAllocator.InitGraphicsPipeline< vertex_3d_t >( aModelPipeline, modelLayout, aModelSetLayout, "materials/shaders/3dvert.spv",
+						        "materials/shaders/3dfrag.spv", 0 );
+	aAllocator.InitGraphicsPipeline< vertex_2d_t >( aSpritePipeline, spriteLayout, aSpriteSetLayout, "materials/shaders/2dvert.spv",
+						        "materials/shaders/2dfrag.spv", NO_CULLING | NO_DEPTH );
+	aAllocator.InitDepthResources( aDepthImage, aDepthImageMemory, aDepthImageView );
+	aAllocator.InitFrameBuffer( aSwapChainFramebuffers, aSwapChainImageViews, aDepthImageView );
 	
 	for ( auto& model : aModels )
 	{
@@ -346,7 +337,7 @@ void Renderer::DestroySwapChain(  )
 	vkFreeMemory( aDevice.GetDevice(  ), aDepthImageMemory, nullptr );
 	for ( auto& model : aModels )
 	{
-		for ( int i = 0; i < aSwapChainImages.size(  ); i++ )
+		for ( int i = 0; i < SWAPCHAIN.GetImages(  ).size(  ); i++ )
 		{
 			vkDestroyBuffer( aDevice.GetDevice(  ), model->aUniformBuffers[ i ], NULL );
 			vkFreeMemory( aDevice.GetDevice(  ), model->aUniformBuffersMem[ i ], NULL );
@@ -376,7 +367,7 @@ void Renderer::DestroySwapChain(  )
 		vkDestroyImageView( aDevice.GetDevice(  ), imageView, NULL );
 	}
 
-	vkDestroySwapchainKHR( aDevice.GetDevice(  ), aSwapChain, NULL );
+	vkDestroySwapchainKHR( aDevice.GetDevice(  ), SWAPCHAIN.GetSwapChain(  ), NULL );
 }
 
 template< typename T >
@@ -408,10 +399,7 @@ void Renderer::UpdateUniformBuffers( uint32_t sCurrentImage, ModelData &srModelD
 void Renderer::InitModel( ModelData &srModelData, const String &srModelPath, const String &srTexturePath )
 {
 	InitModelVertices( srModelPath, srModelData );
-	aAllocator.InitTextureImage( srTexturePath, srModelData.aTextureImage, srModelData.aTextureImageMem, NULL, NULL );
-	aAllocator.InitTextureImageView( srModelData.aTextureImageView, srModelData.aTextureImage );
-	aAllocator.InitUniformBuffers( srModelData.aUniformBuffers, srModelData.aUniformBuffersMem );
-	aAllocator.InitDescriptorSets( srModelData.aDescriptorSets, aModelSetLayout, aDescPool, MODEL_SET_PARAMETERS( srModelData.aTextureImageView, srModelData.aUniformBuffers ) );
+        srModelData.Init( aAllocator, srModelPath, srTexturePath, aModelSetLayout, aTextureSampler, aDescPool, SWAPCHAIN.GetExtent(  ) );
 	aModels.push_back( &srModelData );
 }
 
@@ -431,7 +419,7 @@ void Renderer::DrawFrame(  )
 	vkWaitForFences( aDevice.GetDevice(  ), 1, &aInFlightFences[ aCurrentFrame ], VK_TRUE, UINT64_MAX );
 	
 	uint32_t imageIndex;
-	VkResult res =  vkAcquireNextImageKHR( aDevice.GetDevice(  ), aSwapChain, UINT64_MAX, aImageAvailableSemaphores[ aCurrentFrame ], VK_NULL_HANDLE, &imageIndex );
+	VkResult res =  vkAcquireNextImageKHR( aDevice.GetDevice(  ), SWAPCHAIN.GetSwapChain(  ), UINT64_MAX, aImageAvailableSemaphores[ aCurrentFrame ], VK_NULL_HANDLE, &imageIndex );
 
 	if ( res == VK_ERROR_OUT_OF_DATE_KHR )
 	{
@@ -479,7 +467,7 @@ void Renderer::DrawFrame(  )
 	presentInfo.waitSemaphoreCount 		= 1;
 	presentInfo.pWaitSemaphores 		= signalSemaphores;
 
-	VkSwapchainKHR swapChains[  ] 		= { aSwapChain };
+	VkSwapchainKHR swapChains[  ] 		= { SWAPCHAIN.GetSwapChain(  ) };
 	presentInfo.swapchainCount 		= 1;
 	presentInfo.pSwapchains 		= swapChains;
 	presentInfo.pImageIndices 		= &imageIndex;
@@ -499,6 +487,7 @@ void Renderer::DrawFrame(  )
 	vkQueueWaitIdle( aDevice.GetPresentQueue(  ) );
 
 	aCurrentFrame = ( aCurrentFrame + 1 ) % MAX_FRAMES_PROCESSING;
+	vkFreeCommandBuffers( aDevice.GetDevice(  ), aDevice.GetCommandPool(  ), ( uint32_t )aCommandBuffers.size(  ), aCommandBuffers.data(  ) );
 	
 	//SDL_Delay( 1000 / 144 );
 }

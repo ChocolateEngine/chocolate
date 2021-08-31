@@ -175,3 +175,23 @@ static inline VkViewport Viewport( float x, float y, float width, float height, 
 
 	return viewport;
 }
+
+static inline VkPipelineLayoutCreateInfo PipelineLayout( const VkDescriptorSetLayout *spSetLayouts, uint32_t sSetLayoutCount )
+{
+	VkPipelineLayoutCreateInfo pipelineLayout{  };
+	pipelineLayout.sType 		= VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+	pipelineLayout.setLayoutCount 	= sSetLayoutCount;
+	pipelineLayout.pSetLayouts 	= spSetLayouts;
+
+	return pipelineLayout;
+}
+
+static inline VkPushConstantRange PushConstantRange( VkShaderStageFlags sStageFlags, uint32_t sSize, uint32_t sOffset )
+{
+	VkPushConstantRange pushConstantRange{  };
+	pushConstantRange.stageFlags 	= sStageFlags;
+	pushConstantRange.offset 	= sOffset;
+	pushConstantRange.size 		= sSize;
+
+	return pushConstantRange;
+}

@@ -11,6 +11,8 @@
 #include <optional>
 #include <vector>
 
+//#define MODEL_SET_PARAMETERS_TEMP( tImageView, uBuffers ) { { { VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, tImageView, srTextureSampler, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER } } }, { { { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, uBuffers, sizeof( ubo_3d_t ) } } }
+
 class QueueFamilyIndices
 {
 public:
@@ -211,41 +213,6 @@ public:
 	void 		Draw( VkCommandBuffer c ){ vkCmdDrawIndexed( c, aIndexCount, 1, 0, 0, 0 ); }
 };
 
-class ModelData
-{
-	typedef std::vector< VkBuffer >		BufferSet;
-	typedef std::vector< VkDeviceMemory >	MemorySet;
-	typedef std::vector< VkDescriptorSet > 	DescriptorSetList;
-public:
-	VkBuffer 		aVertexBuffer;
-	VkBuffer		aIndexBuffer;
-	VkDeviceMemory 		aVertexBufferMem;
-        VkDeviceMemory		aIndexBufferMem;
-	VkDeviceMemory		aTextureImageMem;
-	VkImage 		aTextureImage;
-	VkImageView 		aTextureImageView;
-	BufferSet		aUniformBuffers;
-	MemorySet		aUniformBuffersMem;
-	DescriptorSetList 	aDescriptorSets;
-	uint32_t 		aVertexCount;
-	uint32_t		aIndexCount;
-	bool 			aNoDraw = false;
-	glm::vec3 		aPos;
-	float 			aWidth 	= 0.5f;
-	float			aHeight = 0.5f;
-
-	/* Binds the model data to the GPU to be rendered later.  */
-	void 		Bind( VkCommandBuffer c, VkPipelineLayout p, uint32_t i )
-		{
-			VkBuffer 	vBuffers[  ] 	= { aVertexBuffer };
-			VkDeviceSize 	offsets[  ] 	= { 0 };
-			vkCmdBindVertexBuffers( c, 0, 1, vBuffers, offsets );
-			vkCmdBindIndexBuffer( c, aIndexBuffer, 0, VK_INDEX_TYPE_UINT32 );
-			vkCmdBindDescriptorSets( c, VK_PIPELINE_BIND_POINT_GRAPHICS, p, 0, 1, &aDescriptorSets[ i ], 0, NULL );
-		}
-	/* Draws the model to the screen.  */
-	void 		Draw( VkCommandBuffer c ){ vkCmdDrawIndexed( c, aIndexCount, 1, 0, 0, 0 ); }
-};
 
 // =================================================================
 // View

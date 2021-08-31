@@ -19,6 +19,7 @@ void Device::InitDevice(  )
 	InitPhysicalDevice(  );
 	InitLogicalDevice(  );
         InitCommandPool(  );
+	InitSwapChain(  );
 }
 
 void Device::InitWindow(  )
@@ -434,13 +435,15 @@ void Device::Cleanup(  )
 	SDL_Quit(  );
 }
 
-void Device::InitSwapChain( VkSwapchainKHR &srSwapChain, ImageSet &srSwapChainImages, VkFormat &srSwapChainImageFormat, VkExtent2D &srSwapChainExtent )
+void Device::InitSwapChain(  )
 {
-        SwapChainSupportInfo swapChainSupport 		= CheckSwapChainSupport( aPhysicalDevice );
+        SwapChainSupportInfo 	swapChainSupport        = CheckSwapChainSupport( aPhysicalDevice );
 
-	VkSurfaceFormatKHR surfaceFormat 		= ChooseSwapSurfaceFormat( swapChainSupport.aFormats );
-	VkPresentModeKHR presentMode 			= ChooseSwapPresentMode( swapChainSupport.aPresentModes );
-	VkExtent2D extent 				= ChooseSwapExtent( swapChainSupport.aCapabilities );
+	VkSurfaceFormatKHR 	surfaceFormat 		= ChooseSwapSurfaceFormat( swapChainSupport.aFormats );
+	VkPresentModeKHR 	presentMode 	        = ChooseSwapPresentMode( swapChainSupport.aPresentModes );
+	VkExtent2D 		extent 		        = ChooseSwapExtent( swapChainSupport.aCapabilities );
+	VkSwapchainKHR		swapChain;
+	ImageSet		swapChainImages;
 
 	uint32_t imageCount 				= swapChainSupport.aCapabilities.minImageCount + 1;
 	if ( swapChainSupport.aCapabilities.maxImageCount > 0 && imageCount > swapChainSupport.aCapabilities.maxImageCount )
@@ -481,16 +484,15 @@ void Device::InitSwapChain( VkSwapchainKHR &srSwapChain, ImageSet &srSwapChainIm
 	createInfo.clipped		= VK_TRUE;
 	createInfo.oldSwapchain 	= VK_NULL_HANDLE;
 
-	if ( vkCreateSwapchainKHR( aDevice, &createInfo, NULL, &srSwapChain ) != VK_SUCCESS )
+	if ( vkCreateSwapchainKHR( aDevice, &createInfo, NULL, &swapChain ) != VK_SUCCESS )
 	{
 		throw std::runtime_error( "Failed to create swap chain!" );
 	}
-	vkGetSwapchainImagesKHR( aDevice, srSwapChain, &imageCount, NULL );
-	srSwapChainImages.resize( imageCount );
-	vkGetSwapchainImagesKHR( aDevice, srSwapChain, &imageCount, srSwapChainImages.data(  ) );
+	vkGetSwapchainImagesKHR( aDevice, swapChain, &imageCount, NULL );
+	swapChainImages.resize( imageCount );
+	vkGetSwapchainImagesKHR( aDevice, swapChain, &imageCount, swapChainImages.data(  ) );
 
-	srSwapChainImageFormat 	= surfaceFormat.format;
-	srSwapChainExtent 	= extent;
+	aSwapChain.Init( swapChain, swapChainImages, surfaceFormat.format, extent );
 }
 
 void Device::InitTextureSampler( VkSampler& textureSampler, VkSamplerAddressMode mode )

@@ -1,0 +1,163 @@
+;; -*- mode: emacs-lisp; lexical-binding:t; coding: utf-8-emacs; -*-
+;; --------------------------------------------------------------------------
+;; Desktop File for Emacs
+;; --------------------------------------------------------------------------
+;; Created Mon Aug 30 20:00:04 2021
+;; Desktop file format version 208
+;; Emacs version 27.1
+
+;; Global section:
+(setq desktop-saved-frameset [frameset 1 (24877 28932 483232 844000) (desktop . "208") "karl@Inverted" nil nil ((((minibuffer . t) (undecorated) (override-redirect) (font . "-unknown-MonoxRegular-normal-normal-normal-*-14-*-*-*-m-0-iso10646-1") (font-parameter . "MonoxRegular") (border-width . 0) (internal-border-width . 0) (right-divider-width . 0) (bottom-divider-width . 0) (vertical-scroll-bars . right) (horizontal-scroll-bars) (foreground-color . "#B0CCDC") (background-color . "#000000") (mouse-color . "#d3dae3") (border-color . "black") (screen-gamma) (line-spacing) (left-fringe . 8) (right-fringe . 8) (no-special-glyphs) (scroll-bar-foreground . "#d3dae3") (scroll-bar-background . "#d3dae3") (menu-bar-lines . 1) (tab-bar-lines . 0) (height . 63) (tool-bar-lines . 1) (title) (wait-for-wm . t) (tool-bar-position . top) (inhibit-double-buffering) (icon-type . t) (auto-raise) (auto-lower) (cursor-type . box) (scroll-bar-width . 16) (scroll-bar-height . 16) (alpha) (no-focus-on-map) (no-accept-focus) (fullscreen . maximized) (visibility . t) (skip-taskbar) (z-group) (display-type . color) (background-mode . dark) (cursor-color . "#B0CCDC") (sticky) (environment) (last-focus-update . t) (frameset--id . "D21A-DA0F-367A-EFC5") (frameset--mini t . t) (width . 269) (modeline . t) (unsplittable) (left . 1920) (top . 0) (icon-name) (display . ":0") (explicit-name)) ((min-height . 4) (min-width . 40) (min-height-ignore . 2) (min-width-ignore . 14) (min-height-safe . 1) (min-width-safe . 4) (min-pixel-height . 60) (min-pixel-width . 280) (min-pixel-height-ignore . 30) (min-pixel-width-ignore . 98) (min-pixel-height-safe . 15) (min-pixel-width-safe . 28)) hc (pixel-width . 1920) (pixel-height . 930) (total-width . 274) (total-height . 62) (normal-height . 1.0) (normal-width . 1.0) (combination-limit) (leaf (pixel-width . 210) (pixel-height . 930) (total-width . 30) (total-height . 62) (normal-height . 1.0) (normal-width . 0.1098958333333333) (parameters (window-side . left) (window-slot . 0)) (buffer " *NeoTree*" (selected) (hscroll . 0) (fringes 8 8 nil nil) (margins nil) (scroll-bars nil 3 t nil 0 t nil) (vscroll . 0) (dedicated . t) (point . 180) (start . 64)) (prev-buffers (" *NeoTree*" 1 1))) (leaf (last . t) (pixel-width . 1710) (pixel-height . 930) (total-width . 244) (total-height . 62) (normal-height . 1.0) (normal-width . 0.8901041666666667) (buffer "modeldata.h" (selected . t) (hscroll . 0) (fringes 8 8 nil nil) (margins nil) (scroll-bars nil 3 t nil 0 t nil) (vscroll . 0) (dedicated) (point . 455) (start . 1)) (next-buffers "renderertypes.h") (prev-buffers ("renderertypes.h" 1 251) ("modeldata.h" 1 455) ("*Messages*" 74036 77287) ("*Flycheck error messages*" 1 1) ("systemmanager.h" 1 193) ("shadercache.cpp" 1 718) ("*scratch*" 1 146) ("renderer.h" 1 324) ("initializers.h" 6524 7383) ("device.cpp" 14766 15642) ("device.h" 1 1327) ("renderer.cpp" 15394 16944) ("allocator.cpp" 24041 24041) ("shadercache.h" 121 572) ("allocator.h" 1 230)))))])
+(setq desktop-missing-file-warning nil)
+(setq tags-file-name nil)
+(setq tags-table-list nil)
+(setq search-ring '(#("aSwapChain" 0 10 (isearch-regexp-function nil isearch-case-fold-search nil)) #("initmodel" 0 9 (isearch-regexp-function nil isearch-case-fold-search t)) #("initdd" 0 6 (isearch-regexp-function nil isearch-case-fold-search t)) #("initimage" 0 9 (isearch-regexp-function nil isearch-case-fold-search t)) #("initcommands" 0 12 (isearch-regexp-function nil isearch-case-fold-search t)) #("amodelpipeline" 0 14 (isearch-regexp-function nil isearch-case-fold-search t)) #("initdescriptorsetlayout" 0 23 (isearch-regexp-function nil isearch-case-fold-search t))))
+(setq regexp-search-ring nil)
+(setq register-alist nil)
+(setq file-name-history '("~/Desktop/Git-Repos/sidury/chocolate/inc/types/" "/home/karl/Desktop/Git-Repos/sidury"))
+
+;; Buffer section -- buffers listed in same order as in buffer list:
+(desktop-create-buffer 208
+  "/home/karl/Desktop/Git-Repos/sidury/chocolate/inc/types/modeldata.h"
+  "modeldata.h"
+  'c-mode
+  '(abbrev-mode eldoc-mode auto-complete-mode flycheck-mode irony-mode company-mode text-scale-mode)
+  455
+  '(137 nil)
+  nil
+  nil
+  '((buffer-display-time 24877 28932 286343 200000) (buffer-file-coding-system . utf-8-unix))
+  '((mark-ring (122 438 2024 135 440 135 135 2024 2024 2024 439 438 749 1060 122 455))))
+
+(desktop-create-buffer 208
+  "/home/karl/Desktop/Git-Repos/sidury/chocolate/inc/types/renderertypes.h"
+  "renderertypes.h"
+  'c++-mode
+  '(abbrev-mode eldoc-mode auto-complete-mode flycheck-mode irony-mode company-mode text-scale-mode)
+  251
+  '(511 nil)
+  nil
+  nil
+  '((buffer-display-time 24877 28924 944838 152000) (buffer-file-coding-system . undecided-unix))
+  '((mark-ring (6192 511 249 247 575 249 6192 6192 6192 6192 6192 6192 6192 6192 6192 6192))))
+
+(desktop-create-buffer 208
+  "/home/karl/Desktop/Git-Repos/sidury/chocolate/inc/core/renderer/renderer.h"
+  "renderer.h"
+  'c++-mode
+  '(abbrev-mode eldoc-mode auto-complete-mode flycheck-mode irony-mode company-mode text-scale-mode)
+  324
+  '(345 nil)
+  nil
+  nil
+  '((buffer-display-time 24877 28818 293104 938000) (buffer-file-coding-system . undecided-unix))
+  '((mark-ring (290))))
+
+(desktop-create-buffer 208
+  "/home/karl/Desktop/Git-Repos/sidury/chocolate/inc/core/renderer/initializers.h"
+  "initializers.h"
+  'c-mode
+  '(abbrev-mode eldoc-mode auto-complete-mode flycheck-mode irony-mode company-mode text-scale-mode)
+  7383
+  '(7473 nil)
+  nil
+  nil
+  '((buffer-display-time 24877 28817 647511 635000) (buffer-file-coding-system . undecided-unix))
+  '((mark-ring (7327 450 450 6956 7087 7014 7297 7329 7383 7473 7474 7043 7066 7291 7242 7364))))
+
+(desktop-create-buffer 208
+  "/home/karl/Desktop/Git-Repos/sidury/chocolate/inc/core/renderer/allocator.h"
+  "allocator.h"
+  'c++-mode
+  '(abbrev-mode eldoc-mode auto-complete-mode flycheck-mode irony-mode company-mode text-scale-mode)
+  230
+  '(230 nil)
+  nil
+  nil
+  '((buffer-display-time 24877 28813 537065 10000) (buffer-file-coding-system . undecided-unix))
+  '((mark-ring (3230 3092 3093 3090 3632 3632 2818 1723 4184 4208 4031 4031 4031 4031 4031 4184))))
+
+(desktop-create-buffer 208
+  "/home/karl/Desktop/Git-Repos/sidury/chocolate/inc/core/renderer/shadercache.h"
+  "shadercache.h"
+  'c-mode
+  '(abbrev-mode eldoc-mode auto-complete-mode flycheck-mode irony-mode company-mode text-scale-mode)
+  572
+  '(477 nil)
+  nil
+  nil
+  '((buffer-display-time 24877 28814 132679 680000) (buffer-file-coding-system . utf-8-unix))
+  '((mark-ring (477 422 205 477 402 832 546 426 410 422 235 536 997 997 422 572))))
+
+(desktop-create-buffer 208
+  "/home/karl/Desktop/Git-Repos/sidury/chocolate/src/core/renderer/allocator.cpp"
+  "allocator.cpp"
+  'c++-mode
+  '(abbrev-mode eldoc-mode auto-complete-mode flycheck-mode irony-mode company-mode text-scale-mode)
+  24041
+  '(11975 nil)
+  nil
+  nil
+  '((buffer-display-time 24877 28814 906646 975000) (buffer-file-coding-system . undecided-unix))
+  '((mark-ring (11895 6419 6419 12628 24660 16839 16842 16839 16841 16825 16772 16797 16779 16835 16779 16734))))
+
+(desktop-create-buffer 208
+  "/home/karl/Desktop/Git-Repos/sidury/chocolate/src/core/renderer/renderer.cpp"
+  "renderer.cpp"
+  'c++-mode
+  '(abbrev-mode eldoc-mode auto-complete-mode flycheck-mode irony-mode company-mode text-scale-mode)
+  16944
+  '(16043 nil)
+  nil
+  nil
+  '((buffer-display-time 24877 28815 475009 359000) (buffer-file-coding-system . undecided-unix))
+  '((mark-ring (1456 1202 16043 16043 16043 16043 15988 6649 7946 15953 16043 15926 15926 15926 15903 16944))))
+
+(desktop-create-buffer 208
+  "/home/karl/Desktop/Git-Repos/sidury/chocolate/src/core/renderer/device.cpp"
+  "device.cpp"
+  'c++-mode
+  '(abbrev-mode eldoc-mode auto-complete-mode flycheck-mode irony-mode company-mode text-scale-mode)
+  15642
+  '(15642 nil)
+  nil
+  nil
+  '((buffer-display-time 24877 28817 26773 81000) (buffer-file-coding-system . undecided-unix))
+  '((mark-ring nil)))
+
+(desktop-create-buffer 208
+  "/home/karl/Desktop/Git-Repos/sidury/chocolate/inc/core/renderer/device.h"
+  "device.h"
+  'c++-mode
+  '(abbrev-mode eldoc-mode auto-complete-mode flycheck-mode irony-mode company-mode text-scale-mode)
+  1327
+  '(nil nil)
+  nil
+  nil
+  '((buffer-display-time 24877 28815 940132 892000) (buffer-file-coding-system . undecided-unix))
+  '((mark-ring nil)))
+
+(desktop-create-buffer 208
+  "/home/karl/Desktop/Git-Repos/sidury/chocolate/src/core/renderer/shadercache.cpp"
+  "shadercache.cpp"
+  'c++-mode
+  '(abbrev-mode eldoc-mode auto-complete-mode flycheck-mode irony-mode company-mode text-scale-mode)
+  718
+  '(601 nil)
+  nil
+  nil
+  '((buffer-display-time 24877 28819 868500 983000) (buffer-file-coding-system . utf-8-unix))
+  '((mark-ring (954 557 556 557 369 369 369 369 954 954 954 954 360 369 369 718))))
+
+(desktop-create-buffer 208
+  "/home/karl/Desktop/Git-Repos/sidury/chocolate/inc/shared/systemmanager.h"
+  "systemmanager.h"
+  'c++-mode
+  '(abbrev-mode eldoc-mode auto-complete-mode flycheck-mode irony-mode company-mode text-scale-mode)
+  193
+  '(169 nil)
+  nil
+  nil
+  '((buffer-display-time 24877 28820 305794 805000) (buffer-file-coding-system . undecided-unix))
+  '((mark-ring (169 169))))
+

@@ -8,7 +8,7 @@ by the renderer.
 #pragma once
 
 #include "../shared/system.h"
-#include "renderer/renderer.h"
+#include "../core/renderer/renderer.h"
 
 class Sprite
 {
