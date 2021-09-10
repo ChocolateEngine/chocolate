@@ -1,0 +1,76 @@
+// ---------------------------------------------------------------
+// Base Project Script for All QPC Projects
+// ---------------------------------------------------------------
+
+macro PLAT_DIR "win"        [$WINDOWS$]
+macro PLAT_DIR "linux"      [$LINUX$]
+
+macro GAME_DIR   "test"                                 [!$GAME_DIR$]
+macro OUT_NAME  "$PROJECT_SCRIPT_NAME$"                 [!$OUT_NAME$]
+macro OUT_DIR   "$ROOT_DIR$/$GAME_DIR$/bin"             [!$OUT_DIR$]
+macro BUILD_DIR "$ROOT_DIR$/obj/$OUT_NAME$/$CONFIG$"    [!$BUILD_DIR$]
+
+getenv VK_DIR VULKAN_SDK [$WINDOWS$]
+
+macro MSVC "1" [$WINDOWS$]
+macro GCC "1" [$LINUX$]
+
+config
+{
+	general
+	{
+		out_name "$OUT_NAME$"
+		out_dir "$OUT_DIR$"
+		build_dir "$BUILD_DIR$"
+		
+		language "cpp20"
+		config_type "dynamic_lib"
+
+		compiler "g++" [$GCC$]
+	}
+	
+	compile
+	{
+		inc_dirs
+		{
+			"$VK_DIR$/Include" [$WINDOWS$]
+		}
+		
+		defines
+		{
+			"_X86_"     [$I386$]
+			"_AMD64_"   [$AMD64$]
+			"_ARM64_"   [$ARM64$]
+			"_ARM_"     [$ARM$]
+		}
+
+		// is this needed?
+		options [$GCC$ || $CLANG$]
+		{
+			"-std=c++20"
+		}
+		
+		options [$MSVC$]
+		{
+			"/Od" "/MDd" "/ZI"  [$DEBUG$]
+			"/O2" "/MD"         [$RELEASE$]
+		}
+	}
+	
+	link
+	{
+		lib_dirs
+		{
+			"$VK_DIR$/Lib" [$WINDOWS$]
+			"../lib"
+		}
+		
+		libs
+		{
+			"SDL2"
+			"vulkan-1" [$WINDOWS$]
+			"vulkan" "dl" "pthread" "X11" "Xxf86vm" "Xrandr" "Xi" [$LINUX$]
+		}
+	}
+}
+
