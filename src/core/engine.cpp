@@ -91,6 +91,7 @@ void Engine::EngineMain(  )
 	InitCommands(  );
 
 	apMsgs->Add( ENGINE_C, ENGI_PING );
+	apCommandManager->Execute( GraphicsSystem::Commands::INIT_SPRITE, "/home/karl/Pictures/tidd.png", NULL );
 	
 	while ( aActive )
 		UpdateSystems(  );

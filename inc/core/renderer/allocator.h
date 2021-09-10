@@ -10,6 +10,7 @@ many of the Vk objects used in the renderer.
 
 #include "device.h"
 #include "shadercache.h"
+#include "descriptorcache.h"
 
 #include <vector>
 #include <functional>
@@ -39,6 +40,7 @@ private:
 	
 	FunctionList 		aFreeQueue;
 	ShaderCache		aShaderCache;
+	DescriptorCache		aDescriptorCache;
 	/* A.  */
 	VkFormat 		FindDepthFormat(  );
 	/* Reads a file into a byte array.  */

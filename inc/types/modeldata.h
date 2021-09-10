@@ -31,8 +31,8 @@ public:
 
 	uint32_t 		aVertexCount;
 	uint32_t		aIndexCount;
-	std::vector< vertex_3d_t > aVertices;
-	std::vector< uint32_t > aIndices;
+        vertex_3d_t 		*apVertices;
+        uint32_t 		*apIndices;
 	bool 			aNoDraw = false;
 	glm::vec3 		aPos;
 	float 			aWidth 	= 0.5f;
