@@ -29,7 +29,7 @@ static inline VkDescriptorImageInfo DescriptorImage( VkImageLayout sImageLayout,
 	return imageInfo;
 }
 /* Creates a structure specifying a descriptor set layout binding.  */
-static inline VkDescriptorSetLayoutBinding DescriptorLayoutBinding( VkDescriptorType sDescriptorType, unsigned int sDescriptorCount, \
+static inline VkDescriptorSetLayoutBinding DescriptorLayoutBinding( VkDescriptorType sDescriptorType, unsigned int sDescriptorCount,
 							   	    VkShaderStageFlags sStageFlags, const VkSampler *spImmutableSamplers )
 {
 	VkDescriptorSetLayoutBinding 	layoutBinding{  };

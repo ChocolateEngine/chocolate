@@ -7,8 +7,10 @@ stores all data related to a model.
 #pragma once
 
 #define MODEL_SET_PARAMETERS_TEMP( tImageView, uBuffers ) { { { VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, tImageView, srTextureSampler, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER } } }, { { { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, uBuffers, sizeof( ubo_3d_t ) } } }
+#define MODEL_SET_LAYOUT_PARAMETERS_TEMP { { DescriptorLayoutBinding( VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_VERTEX_BIT, NULL ), DescriptorLayoutBinding( VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, NULL ) } }
 
 #include "../core/renderer/allocator.h"
+#include "../core/renderer/initializers.h"
 
 class ModelData
 {
@@ -28,6 +30,7 @@ public:
 	VkPipelineLayout	aPipelineLayout;
 	VkPipeline		aPipeline;
 	DescriptorSetList 	aDescriptorSets;
+	VkDescriptorSetLayout	aDescriptorSetLayout;
 
 	uint32_t 		aVertexCount;
 	uint32_t		aIndexCount;
@@ -44,9 +47,11 @@ public:
 		srAllocator.InitTextureImage( srTexturePath, aTextureImage, aTextureImageMem, NULL, NULL );
 		srAllocator.InitTextureImageView( aTextureImageView, aTextureImage );
 		srAllocator.InitUniformBuffers( aUniformBuffers, aUniformBuffersMem );
-		srAllocator.InitDescriptorSets( aDescriptorSets, srModelSetLayout, srDescPool, MODEL_SET_PARAMETERS_TEMP( aTextureImageView, aUniformBuffers ) );
-			aPipelineLayout = srAllocator.InitPipelineLayouts( &srModelSetLayout, 1 );
-		srAllocator.InitGraphicsPipeline< vertex_3d_t >( aPipeline, aPipelineLayout, srModelSetLayout, "materials/shaders/3dvert.spv", "materials/shaders/3dfrag.spv", 0 );
+		aDescriptorSetLayout = srAllocator.InitDescriptorSetLayout( MODEL_SET_LAYOUT_PARAMETERS_TEMP );
+		srAllocator.InitDescriptorSets( aDescriptorSets, aDescriptorSetLayout, srDescPool, MODEL_SET_PARAMETERS_TEMP( aTextureImageView, aUniformBuffers ) );
+	        aPipelineLayout = srAllocator.InitPipelineLayouts( &aDescriptorSetLayout, 1 );
+		srAllocator.InitGraphicsPipeline< vertex_3d_t >( aPipeline, aPipelineLayout, aDescriptorSetLayout, "materials/shaders/3dvert.spv",
+								 "materials/shaders/3dfrag.spv", 0 );
 	}
 	/* Binds the model data to the GPU to be rendered later.  */
 	void 		Bind( VkCommandBuffer c, uint32_t i )

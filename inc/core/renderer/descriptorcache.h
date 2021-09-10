@@ -10,18 +10,35 @@ new layouts for materials.
 #include <vulkan/vulkan.hpp>
 #include <map>
 #include <string>
+#include <unordered_map>
+
+class LayoutInfo
+{
+public:
+	VkDescriptorType	aType;
+	VkShaderStageFlags	aStageFlags;
+};
+
+typedef std::vector< LayoutInfo >	LayoutInfoList;
+
+class AllocatedLayout
+{
+public:
+	LayoutInfoList		aList;
+	VkDescriptorSetLayout	aLayout;
+};
 
 class DescriptorCache
 {
-	typedef std::vector< VkDescriptorSetLayout >	AllocatedLayouts;
+	typedef std::vector< AllocatedLayout >     AllocatedLayouts;
 protected:
-	AllocatedLayouts	aLayouts;
+	AllocatedLayouts	aLayouts{  };
 	VkDescriptorSetLayout	aLayoutReturn;
 public:
 	/* Checks if a matching descriptor layout has already been allocated.  */
-	bool			Exists(  );
+	bool			Exists( LayoutInfoList sLayouts );
 	/* Get the layout indexed by a call to Exists(  ).  */
 	VkDescriptorSetLayout	GetLayout(  );
 	/* Adds an allocated layout to the list of layouts.  */
-	void			AddLayout(  );
+	void			AddLayout( VkDescriptorSetLayout sLayout, LayoutInfoList sLayouts );
 };
