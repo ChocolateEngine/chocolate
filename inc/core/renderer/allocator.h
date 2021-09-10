@@ -33,7 +33,7 @@ private:
 	typedef std::vector< combined_image_info_t >		ImageInfoSets;
 	typedef std::vector< combined_buffer_info_t >		BufferInfoSets;
 	typedef std::vector< VkImageView >			ImageViews;
-	typedef std::vector< desc_set_layout_t >		DescSetLayouts;
+	typedef std::vector< VkDescriptorSetLayoutBinding >     DescSetLayouts;
 	typedef std::vector< VkFramebuffer >			FrameBuffers;
 	typedef std::vector< VkSemaphore >			SemaphoreList;
 	typedef std::vector< VkFence >				FenceList;
@@ -95,8 +95,7 @@ public:
 	/* A.  */
 	void 			InitRenderPass( VkRenderPass &srRenderPass );
 	/* A.  */
-	void 			InitDescriptorSetLayout( VkDescriptorSetLayout &srDescSetLayout,
-							 const DescSetLayouts &srBindings = DescSetLayouts(  ) );
+        VkDescriptorSetLayout   InitDescriptorSetLayout( DescSetLayouts sBindings );
 	/* Creates graphics pipeline layouts using the specified descriptor set layouts.  */
 	VkPipelineLayout        InitPipelineLayouts( VkDescriptorSetLayout *spSetLayouts, uint32_t setLayoutsCount );
 	/* A.  */

@@ -32,13 +32,16 @@ draw to the screen.
 
 #include "../../../inc/core/gui.h"
 
-#define MODEL_SET_LAYOUT_PARAMETERS { { { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_VERTEX_BIT, NULL }, { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, NULL } } }
+//#define MODEL_SET_LAYOUT_PARAMETERS { { { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_VERTEX_BIT, NULL }, { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, NULL } } }
+#define MODEL_SET_LAYOUT_PARAMETERS { { DescriptorLayoutBinding( VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_VERTEX_BIT, NULL ), DescriptorLayoutBinding( VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, NULL ) } }
 
 #define SPRITE_SET_LAYOUT_PARAMETERS { { { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, NULL, } } }
 
 #define MODEL_SET_PARAMETERS( tImageView, uBuffers ) { { { VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, tImageView, aTextureSampler, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER } } }, { { { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, uBuffers, sizeof( ubo_3d_t ) } } }
 
 #define SPRITE_SET_PARAMETERS( tImageView ) { { { VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, tImageView, aTextureSampler, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER } } }
+
+#define SPRITE_SUPPORTED 0
 
 #define SWAPCHAIN aDevice.GetSwapChain(  )
 
@@ -63,11 +66,12 @@ void Renderer::InitVulkan(  )
 	aAllocator.InitImageViews( aSwapChainImageViews );
 	aAllocator.InitRenderPass( aRenderPass );
 	aAllocator.apRenderPass = &aRenderPass;
-	aAllocator.InitDescriptorSetLayout( aModelSetLayout, MODEL_SET_LAYOUT_PARAMETERS );
+#if SPRITE_SUPPORTED
 	aAllocator.InitDescriptorSetLayout( aSpriteSetLayout, SPRITE_SET_LAYOUT_PARAMETERS );
         aSpriteLayout 	= aAllocator.InitPipelineLayouts( &aSpriteSetLayout, 1 );
 	aAllocator.InitGraphicsPipeline< vertex_2d_t >( aSpritePipeline, aSpriteLayout, aSpriteSetLayout, "materials/shaders/2dvert.spv",
 							"materials/shaders/2dfrag.spv", NO_CULLING | NO_DEPTH );
+#endif /* SPRITE_SUPPORTED  */
 	aAllocator.InitDepthResources( aDepthImage, aDepthImageMemory, aDepthImageView );
 	aAllocator.InitFrameBuffer( aSwapChainFramebuffers, aSwapChainImageViews, aDepthImageView );
 	aDevice.InitTextureSampler( aTextureSampler, VK_SAMPLER_ADDRESS_MODE_REPEAT );
@@ -125,6 +129,7 @@ void Renderer::InitCommandBuffers(  )
 			model->Bind( aCommandBuffers[ i ], i );
 			model->Draw( aCommandBuffers[ i ] );
 		}
+#if SPRITE_SUPPORTED
 		vkCmdBindPipeline( aCommandBuffers[ i ], VK_PIPELINE_BIND_POINT_GRAPHICS, aSpritePipeline );
 		for ( auto& sprite : aSprites )
 		{
@@ -147,6 +152,7 @@ void Renderer::InitCommandBuffers(  )
 				sprite->Draw( aCommandBuffers[ i ] );
 			}
 		}
+#endif /* SPRITE_SUPPORTED  */
 		if ( aImGuiInitialized )
 		{
 			ImGui::Render(  );
@@ -307,14 +313,16 @@ void Renderer::ReinitSwapChain(  )
 	aAllocator.InitImageViews( aSwapChainImageViews );
 	aAllocator.InitRenderPass( aRenderPass );
 	aAllocator.apRenderPass = &aRenderPass;
-        aAllocator.InitDescriptorSetLayout( aModelSetLayout, MODEL_SET_LAYOUT_PARAMETERS );
+        aModelSetLayout = aAllocator.InitDescriptorSetLayout( MODEL_SET_LAYOUT_PARAMETERS );
 	auto modelLayout 	= aAllocator.InitPipelineLayouts( &aModelSetLayout, 1 );
+#if SPRITE_SUPPORTED
 	aAllocator.InitDescriptorSetLayout( aSpriteSetLayout, SPRITE_SET_LAYOUT_PARAMETERS );
 	auto spriteLayout 	= aAllocator.InitPipelineLayouts( &aSpriteSetLayout, 1 );
+	aAllocator.InitGraphicsPipeline< vertex_2d_t >( aSpritePipeline, spriteLayout, aSpriteSetLayout, "materials/shaders/2dvert.spv",
+							"materials/shaders/2dfrag.spv", NO_CULLING | NO_DEPTH );
+#endif
 	aAllocator.InitGraphicsPipeline< vertex_3d_t >( aModelPipeline, modelLayout, aModelSetLayout, "materials/shaders/3dvert.spv",
 						        "materials/shaders/3dfrag.spv", 0 );
-	aAllocator.InitGraphicsPipeline< vertex_2d_t >( aSpritePipeline, spriteLayout, aSpriteSetLayout, "materials/shaders/2dvert.spv",
-						        "materials/shaders/2dfrag.spv", NO_CULLING | NO_DEPTH );
 	aAllocator.InitDepthResources( aDepthImage, aDepthImageMemory, aDepthImageView );
 	aAllocator.InitFrameBuffer( aSwapChainFramebuffers, aSwapChainImageViews, aDepthImageView );
 	
@@ -327,10 +335,12 @@ void Renderer::ReinitSwapChain(  )
 	{
 		aAllocator.InitDescriptorSets( model->aDescriptorSets, aModelSetLayout, aDescPool, MODEL_SET_PARAMETERS( model->aTextureImageView, model->aUniformBuffers ) );	
 	}
+#if SPRITE_SUPPORTED
 	for ( auto& sprite : aSprites )
 	{	        
 		aAllocator.InitDescriptorSets( sprite->aDescriptorSets, aSpriteSetLayout, aDescPool, SPRITE_SET_PARAMETERS( sprite->aTextureImageView ) );	
 	}
+#endif /* SPRITE_SUPPORTED  */
 }
 
 void Renderer::DestroySwapChain(  )

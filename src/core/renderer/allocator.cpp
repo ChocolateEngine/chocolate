@@ -326,24 +326,28 @@ void Allocator::InitRenderPass( VkRenderPass &srRenderPass )
 		throw std::runtime_error( "Failed to create render pass!" );
 }
 /* Create layouts of only one binding for future.  */
-void Allocator::InitDescriptorSetLayout( VkDescriptorSetLayout &srDescSetLayout, const DescSetLayouts &srBindings )
+VkDescriptorSetLayout Allocator::InitDescriptorSetLayout( DescSetLayouts sBindings )
 {
-	int i = -1;
-	std::vector< VkDescriptorSetLayoutBinding > layoutBindings;
-	for ( auto&& binding : srBindings )
-	{
-		auto layoutBinding 	= DescriptorLayoutBinding( binding.descriptorType, binding.descriptorCount, binding.stageFlags, binding.pImmutableSamplers );
-	        layoutBinding.binding 	= ++i;
-		layoutBindings.push_back( layoutBinding );
-	}
+	LayoutInfoList	info{  };
+	for ( auto&& binding : sBindings )
+		info.push_back( { binding.descriptorType, binding.stageFlags } );
+	if ( aDescriptorCache.Exists( info ) )
+	        return aDescriptorCache.GetLayout(  );
+	
+        uint32_t 	        i = -1;
+	VkDescriptorSetLayout   layout;
+	for ( auto&& binding : sBindings )
+	        binding.binding = ++i;
 
 	VkDescriptorSetLayoutCreateInfo layoutInfo{  };
 	layoutInfo.sType 			= VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-	layoutInfo.bindingCount 		= ( uint32_t )layoutBindings.size(  );
-	layoutInfo.pBindings 			= layoutBindings.data(  );
-
-	if ( vkCreateDescriptorSetLayout( apDevice->GetDevice(  ), &layoutInfo, NULL, &srDescSetLayout ) != VK_SUCCESS )
+	layoutInfo.bindingCount 		= ( uint32_t )sBindings.size(  );
+	layoutInfo.pBindings 			= sBindings.data(  );
+	if ( vkCreateDescriptorSetLayout( apDevice->GetDevice(  ), &layoutInfo, NULL, &layout ) != VK_SUCCESS )
 		throw std::runtime_error( "Failed to create descriptor set layout!" );
+
+	aDescriptorCache.AddLayout( layout, info );
+	return layout;
 }
 VkPipelineLayout Allocator::InitPipelineLayouts( VkDescriptorSetLayout *spSetLayouts, uint32_t setLayoutsCount )
 {
