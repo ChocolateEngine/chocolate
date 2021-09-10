@@ -17,6 +17,10 @@ struct Transform
 };
 
 
+void DecomposeMatrix( const glm::mat4& m, glm::vec3& pos, glm::quat& rot, glm::vec3& scale );
+void DecomposeMatrix( const glm::mat4& m, glm::vec3& pos, glm::quat& rot );
+
+
 inline glm::mat4 ToTransformation(const Transform &transform)
 {
 	glm::mat4 translation = glm::translate(transform.position);
