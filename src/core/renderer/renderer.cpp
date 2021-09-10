@@ -164,20 +164,18 @@ void Renderer::InitCommandBuffers(  )
 
 void Renderer::LoadObj( const String &srObjPath, ModelData &srModel )
 {
-	tinyobj::attrib_t attrib;
-	std::vector< tinyobj::shape_t > shapes;
-	std::vector< tinyobj::material_t > materials;
-	std::string warn, err;
+	tinyobj::attrib_t 				attrib;
+	std::vector< tinyobj::shape_t > 		shapes;
+	std::vector< tinyobj::material_t > 		materials;
+	std::string 					warn, err;
+	std::vector< vertex_3d_t > 			vertices;
+	std::vector< uint32_t > 			indices;
+        std::unordered_map< vertex_3d_t, uint32_t  >	uniqueVertices{  };
 
 	if ( !tinyobj::LoadObj( &attrib, &shapes, &materials, &warn, &err, srObjPath.c_str(  ) ) )
-	{
 		throw std::runtime_error( warn + err );
-	}
-
-	std::unordered_map< vertex_3d_t, uint32_t  >uniqueVertices{  };
 	
 	for ( const auto& shape : shapes )
-	{
 		for ( const auto& index : shape.mesh.indices )
 		{
 			vertex_3d_t vertex{  };
@@ -196,18 +194,23 @@ void Renderer::LoadObj( const String &srObjPath, ModelData &srModel )
 			vertex.color = { 1.0f, 1.0f, 1.0f };
 			if ( uniqueVertices.count( vertex ) == 0 )
 			{
-				uniqueVertices[ vertex ] = ( uint32_t )srModel.aVertices.size(  );
-				srModel.aVertices.push_back( vertex );
+				uniqueVertices[ vertex ] = ( uint32_t )vertices.size(  );
+			        vertices.push_back( vertex );
 			}
-			
-			srModel.aIndices.push_back( uniqueVertices[ vertex ] );
+		        indices.push_back( uniqueVertices[ vertex ] );
 		}
-	}
+	srModel.aVertexCount 	= ( uint32_t )vertices.size(  );
+	srModel.aIndexCount 	= ( uint32_t )indices.size(  );
+	aAllocator.InitTexBuffer( vertices, srModel.aVertexBuffer, srModel.aVertexBufferMem, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT );
+	aAllocator.InitTexBuffer( indices, srModel.aIndexBuffer, srModel.aIndexBufferMem, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT );
 
-	srModel.aVertexCount 	= ( uint32_t )srModel.aVertices.size(  );
-	srModel.aIndexCount 	= ( uint32_t )srModel.aIndices.size(  );
-	aAllocator.InitTexBuffer( srModel.aVertices, srModel.aVertexBuffer, srModel.aVertexBufferMem, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT );
-	aAllocator.InitTexBuffer( srModel.aIndices, srModel.aIndexBuffer, srModel.aIndexBufferMem, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT );
+	srModel.apVertices = new vertex_3d_t[ vertices.size(  ) ];
+	srModel.apIndices  = new uint32_t[ indices.size(  ) ];
+	
+	for ( int i = 0; i < vertices.size(  ); ++i )
+		srModel.apVertices[ i ] = vertices[ i ];
+	for ( int i = 0; i < indices.size(  ); ++i )
+		srModel.apIndices[ i ] = indices[ i ];
 }
 
 void Renderer::LoadGltf( const String &srGltfPath, ModelData &srModel )

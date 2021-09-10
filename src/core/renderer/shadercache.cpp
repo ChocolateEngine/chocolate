@@ -9,12 +9,10 @@ Defines the shadercache declared in shadercache.h.
 bool ShaderCache::Exists( const std::string &srVertShader, const std::string &srFragShader, VkPipelineLayout sLayout )
 {
         for ( const auto& pipeline : aPipelines )
-	{
 		if ( srVertShader == pipeline.aVertShader &&
 		     srFragShader == pipeline.aFragShader &&
 		     sLayout	  == pipeline.aLayout )
 		        return aPipelineReturn = pipeline.aPipeline;
-	}
 	return false;
 }
 /* Get the pipeline indexed by a call to Exists(  ).  */
