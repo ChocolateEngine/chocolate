@@ -18,10 +18,12 @@ class IndexInfo
 public:
 	uint32_t	aIndexCount;
 	uint32_t	aOffset;
+	uint32_t	aMaterialId;
 };
 
 static std::vector< TextureDescriptor > gTextures;
 static std::vector< IndexInfo >		gOffsets;
+static std::vector< uint32_t >		gDontDrawTheseTexturesPls;
 
 class ModelData
 {
@@ -84,17 +86,64 @@ public:
 			}
 		}
 	/* Draws the model to the screen.  */
-	void 		Draw( VkCommandBuffer c ){ if ( !aNoDraw ) vkCmdDrawIndexed( c, aIndexCount, 1, 0, 0, 0 ); }
-	void		AddMaterial( const std::string &srTexturePath, Allocator &srAllocator, VkDescriptorPool sPool, VkSampler sSampler )
+	void 		Draw( VkCommandBuffer c, uint32_t i )
 		{
+			if ( !aNoDraw )
+			{
+				for ( auto&& index : gOffsets )
+				{
+					/*uint32_t j;
+					bool shouldDraw = true;
+					for ( j = 0; j < gTextures.size(  ) && gTextures[ j ].aMaterialId != index.aMaterialId; ++j );
+					for ( auto&& noDraw : gDontDrawTheseTexturesPls )
+						if ( j == noDraw )
+						        shouldDraw = false; break;
+					if ( shouldDraw )
+					{
+						VkDescriptorSet sets[  ] = { gTextures[ j ].apDescriptorSets[ i ], aUniformData.apDescriptorSets[ i ] };
+						vkCmdBindDescriptorSets( c, VK_PIPELINE_BIND_POINT_GRAPHICS, aPipelineLayout, 0, 2, sets, 0, NULL );
+						vkCmdDrawIndexed( c, index.aIndexCount, 1, index.aOffset, 0, 0 );
+						}*/
+					if ( gTextures[ index.aMaterialId ].apDescriptorSets )
+					{
+						VkDescriptorSet sets[  ] = { gTextures[ index.aMaterialId ].apDescriptorSets[ i ], aUniformData.apDescriptorSets[ i ] };
+						vkCmdBindDescriptorSets( c, VK_PIPELINE_BIND_POINT_GRAPHICS, aPipelineLayout, 0, 2, sets, 0, NULL );
+						vkCmdDrawIndexed( c, index.aIndexCount, 1, index.aOffset, 0, 0 );
+					}
+				}
+			}
+		}
+	void		AddMaterial( const std::string &srTexturePath, Allocator &srAllocator, uint32_t sMaterialId, VkDescriptorPool sPool, VkSampler sSampler )
+		{
+			if ( srTexturePath == "" )
+			{
+				/*gDontDrawTheseTexturesPls.push_back( sMaterialId );
+				  return;*/
+				gTextures.push_back( srAllocator.InitTexture( "materials/act_like_a_baka.jpg", aTextureLayout, sPool, sSampler ) );
+				++aTextureCount;
+				return;
+			}
 			++aTextureCount;
 		        /*auto pTextures = new TextureDescriptor[ ++aTextureCount ];
 			memcpy( pTextures, apTextures, ( aTextureCount - 1 ) * sizeof( TextureDescriptor ) );
 			delete[  ] apTextures;
 			apTextures = pTextures;*/
 			gTextures.push_back( srAllocator.InitTexture( srTexturePath, aTextureLayout, sPool, sSampler ) );
+			gTextures[ aTextureCount ].aMaterialId = sMaterialId;
 			//apTextures[ aTextureCount ] = srAllocator.InitTexture( srTexturePath, aTextureLayout, sPool, sSampler );
 		}
-	void		AddIndexGroup( uint32_t a, uint32_t b ){ gOffsets.push_back( { a, b } ); }
+	void		AddIndexGroup( std::vector< uint32_t > sVec )
+		{
+			uint32_t search;
+			uint32_t numIndices;
+		        for ( uint32_t i = 0; i < sVec.size(  ); )
+			{
+				search  = sVec[ i ];
+				for ( numIndices = 0; i < sVec.size(  ) && search == sVec[ i ]; ++i, ++numIndices );
+				//++i; ++numIndices;
+				gOffsets.push_back( { numIndices, i - numIndices, sVec[ i - 1 ] } );
+				printf( "%i indices, at offset %i, using material id %i\n", numIndices, i - numIndices, sVec[ i - 1 ] );
+			}
+		}
 };
 
