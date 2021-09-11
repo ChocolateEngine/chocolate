@@ -204,6 +204,20 @@ void Allocator::InitTextureImageView( VkImageView &srTImageView, VkImage sTImage
         InitImageView( srTImageView, sTImage, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT );
 }
 
+/* A.  */
+TextureDescriptor Allocator::InitTexture( const String &srImagePath, VkDescriptorSetLayout sLayout, VkDescriptorPool sPool, VkSampler sSampler )
+{
+	TextureDescriptor	texture{  };
+	VkImage 		textureImage;
+	VkDeviceMemory 		textureMem;
+	VkImageView		textureView;
+	InitTextureImage( srImagePath, textureImage, textureMem, NULL, NULL );
+	InitTextureImageView( textureView, textureImage );
+	InitDescriptorSets( texture.apDescriptorSets, sLayout, sPool, { { { VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, textureView, sSampler, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER } } }, {  } );
+
+	return texture;
+}
+
 template< typename T >
 void Allocator::InitTexBuffer( const std::vector< T > &srData, VkBuffer &srBuffer, VkDeviceMemory &srBufferMem, VkBufferUsageFlags sUsage )
 {
@@ -224,20 +238,20 @@ void Allocator::InitTexBuffer( const std::vector< T > &srData, VkBuffer &srBuffe
         vkFreeMemory( apDevice->GetDevice(  ), stagingBufferMemory, NULL );
 }
 
-void Allocator::InitUniformBuffers( BufferSet &srUBuffers, MemorySet &srUBuffersMem )
+void Allocator::InitUniformBuffers( VkBuffer *&sprUBuffers, VkDeviceMemory *&sprUBuffersMem )
 {
 	VkDeviceSize bufferSize = sizeof( ubo_3d_t );
 		
-	srUBuffers.resize( PSWAPCHAIN.GetImages(  ).size(  ) );
-	srUBuffersMem.resize( PSWAPCHAIN.GetImages(  ).size(  ) );
+	sprUBuffers 	= new VkBuffer[ PSWAPCHAIN.GetImages(  ).size(  ) ];
+	sprUBuffersMem	= new VkDeviceMemory[ PSWAPCHAIN.GetImages(  ).size(  ) ];
 
 	for ( int i = 0; i < PSWAPCHAIN.GetImages(  ).size(  ); i++ )
 	        InitBuffer( bufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-			     srUBuffers[ i ], srUBuffersMem[ i ] );
+			     sprUBuffers[ i ], sprUBuffersMem[ i ] );
 }
 
-void Allocator::InitDescriptorSets( DescriptorSets &srDescSets, VkDescriptorSetLayout &srDescSetLayout, VkDescriptorPool &srDescPool,
-				    const ImageInfoSets &srDescImageInfos, const BufferInfoSets &srDescBufferInfos )
+void Allocator::InitDescriptorSets( VkDescriptorSet *&sprDescSets, VkDescriptorSetLayout &srDescSetLayout, VkDescriptorPool &srDescPool,
+				    ImageInfoSets sDescImageInfos, BufferInfoSets sDescBufferInfos )
 {
 	std::vector< VkDescriptorSetLayout > 	layouts( PSWAPCHAIN.GetImages(  ).size(  ), srDescSetLayout );
 	std::vector< VkWriteDescriptorSet > 	descriptorWrites{  };
@@ -247,24 +261,24 @@ void Allocator::InitDescriptorSets( DescriptorSets &srDescSets, VkDescriptorSetL
 	allocInfo.descriptorSetCount 	= ( uint32_t )PSWAPCHAIN.GetImages(  ).size(  );
 	allocInfo.pSetLayouts 		= layouts.data(  );
 
-	srDescSets.resize( PSWAPCHAIN.GetImages(  ).size(  ) );
-	if ( vkAllocateDescriptorSets( apDevice->GetDevice(  ), &allocInfo, srDescSets.data(  ) ) != VK_SUCCESS )	//	Allocate descriptor sets
+	sprDescSets = new VkDescriptorSet [ PSWAPCHAIN.GetImages(  ).size(  ) ];
+	if ( vkAllocateDescriptorSets( apDevice->GetDevice(  ), &allocInfo, sprDescSets ) != VK_SUCCESS )	//	Allocate descriptor sets
 		throw std::runtime_error( "Failed to allocate descriptor sets!" );
 
 	for ( int i = 0; i < PSWAPCHAIN.GetImages(  ).size(  ); i++ )					        //	For each of the rendered frames
 	{
 		int bindingCount = 0;
-		for ( auto &&descBufferInfo : srDescBufferInfos )						//	Iterate through the descriptor buffer infos and make descriptor writes for them
+		for ( auto &&descBufferInfo : sDescBufferInfos )						//	Iterate through the descriptor buffer infos and make descriptor writes for them
 		{
-			auto 			buffer 		= DescriptorBuffer( descBufferInfo.buffer, descBufferInfo.range, 0, i );
-			VkWriteDescriptorSet 	descriptorWrite = WriteDescriptor( srDescSets[ i ], bindingCount, descBufferInfo.type, NULL, &buffer );
+			auto 			buffer 		= DescriptorBuffer( descBufferInfo.apBuffer, descBufferInfo.range, 0, i );
+			VkWriteDescriptorSet 	descriptorWrite = WriteDescriptor( sprDescSets[ i ], bindingCount, descBufferInfo.type, NULL, &buffer );
 			descriptorWrites.push_back( descriptorWrite );
 			++bindingCount;
 		}
-		for ( auto &&descImageInfo : srDescImageInfos )					//	Do the same for the descriptor image infos
+		for ( auto &&descImageInfo : sDescImageInfos )					//	Do the same for the descriptor image infos
 		{
 			auto image 				= DescriptorImage( descImageInfo.imageLayout, descImageInfo.imageView, descImageInfo.textureSampler );
-			VkWriteDescriptorSet descriptorWrite	= WriteDescriptor( srDescSets[ i ], bindingCount, descImageInfo.type, &image, NULL );
+			VkWriteDescriptorSet descriptorWrite	= WriteDescriptor( sprDescSets[ i ], bindingCount, descImageInfo.type, &image, NULL );
 			descriptorWrites.push_back( descriptorWrite );
 			++bindingCount;
 		}

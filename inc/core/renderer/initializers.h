@@ -9,10 +9,10 @@ structures.
 
 #include <vulkan/vulkan.hpp>
 /* Creates a structure specifying descriptor buffer information.  */
-static inline VkDescriptorBufferInfo DescriptorBuffer( std::vector< VkBuffer > &srBuffers, unsigned int sRange, unsigned int sOffset, unsigned int sIndex )
+static inline VkDescriptorBufferInfo DescriptorBuffer( VkBuffer *spBuffers, unsigned int sRange, unsigned int sOffset, unsigned int sIndex )
 {
 	VkDescriptorBufferInfo 	bufferInfo{  };
-	bufferInfo.buffer = srBuffers[ sIndex ];
+	bufferInfo.buffer = spBuffers[ sIndex ];
 	bufferInfo.offset = sOffset;
 	bufferInfo.range  = sRange;
 
