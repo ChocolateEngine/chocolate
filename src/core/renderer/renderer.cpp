@@ -168,20 +168,41 @@ void Renderer::InitCommandBuffers(  )
 	}
 }
 
+/* A.  */
+std::string Renderer::GetBaseDir( const String &srPath )
+{
+	if ( srPath.find_last_of( "/\\" ) != std::string::npos )
+		return srPath.substr( 0, srPath.find_last_of( "/\\" ) );
+	return "";
+}
+
 void Renderer::LoadObj( const String &srObjPath, ModelData &srModel )
 {
 	tinyobj::attrib_t 				attrib;
 	std::vector< tinyobj::shape_t > 		shapes;
 	std::vector< tinyobj::material_t > 		materials;
-	std::string 					warn, err;
+	std::string 					warn;
+	std::string					err;
 	std::vector< vertex_3d_t > 			vertices;
 	std::vector< uint32_t > 			indices;
         std::unordered_map< vertex_3d_t, uint32_t  >	uniqueVertices{  };
+	std::string					baseDir = GetBaseDir( srObjPath );
 
-	if ( !tinyobj::LoadObj( &attrib, &shapes, &materials, &warn, &err, srObjPath.c_str(  ) ) )
+	if ( baseDir.empty(  ) )
+		baseDir = ".";
+	baseDir += "/";
+	
+	if ( !tinyobj::LoadObj( &attrib, &shapes, &materials, &warn, &err, srObjPath.c_str(  ), baseDir.c_str(  ) ) )
 		throw std::runtime_error( warn + err );
+
+        for ( auto&& material : materials )
+		if ( material.diffuse_texname != "" )
+		        srModel.AddMaterial( baseDir + material.diffuse_texname, aAllocator, aDescPool, aTextureSampler );
+			
 	
 	for ( const auto& shape : shapes )
+	{
+		std::vector< uint32_t > shapeIndices;
 		for ( const auto& index : shape.mesh.indices )
 		{
 			vertex_3d_t vertex{  };
@@ -203,8 +224,11 @@ void Renderer::LoadObj( const String &srObjPath, ModelData &srModel )
 				uniqueVertices[ vertex ] = ( uint32_t )vertices.size(  );
 			        vertices.push_back( vertex );
 			}
+			shapeIndices.push_back( uniqueVertices[ vertex ] );
 		        indices.push_back( uniqueVertices[ vertex ] );
 		}
+		srModel.AddIndexGroup( shapeIndices.size(  ), indices.size(  ) );
+	}
 	srModel.aVertexCount 	= ( uint32_t )vertices.size(  );
 	srModel.aIndexCount 	= ( uint32_t )indices.size(  );
 	aAllocator.InitTexBuffer( vertices, srModel.aVertexBuffer, srModel.aVertexBufferMem, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT );
@@ -328,12 +352,12 @@ void Renderer::ReinitSwapChain(  )
 	
 	for ( auto& model : aModels )
 	{
-		aAllocator.InitUniformBuffers( model->aUniformBuffers, model->aUniformBuffersMem );
+		aAllocator.InitUniformBuffers( model->aUniformData.apUniformBuffers, model->aUniformData.apUniformBuffersMem );
 	}
 	aAllocator.InitDescPool( aDescPool, { { { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 2000 }, { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 2000 } } } );
 	for ( auto& model : aModels )
 	{
-		aAllocator.InitDescriptorSets( model->aDescriptorSets, aModelSetLayout, aDescPool, MODEL_SET_PARAMETERS( model->aTextureImageView, model->aUniformBuffers ) );	
+		//aAllocator.InitDescriptorSets( model->aDescriptorSets, aModelSetLayout, aDescPool, MODEL_SET_PARAMETERS( model->aTextureImageView, model->aUniformBuffers ) );	
 	}
 #if SPRITE_SUPPORTED
 	for ( auto& sprite : aSprites )
@@ -352,8 +376,8 @@ void Renderer::DestroySwapChain(  )
 	{
 		for ( int i = 0; i < SWAPCHAIN.GetImages(  ).size(  ); i++ )
 		{
-			vkDestroyBuffer( aDevice.GetDevice(  ), model->aUniformBuffers[ i ], NULL );
-			vkFreeMemory( aDevice.GetDevice(  ), model->aUniformBuffersMem[ i ], NULL );
+			//vkDestroyBuffer( aDevice.GetDevice(  ), model->aUniformBuffers[ i ], NULL );
+			//vkFreeMemory( aDevice.GetDevice(  ), model->aUniformBuffersMem[ i ], NULL );
 		}
 	}
 	for ( auto& sprite : aSprites  )
@@ -386,9 +410,9 @@ void Renderer::DestroySwapChain(  )
 template< typename T >
 void Renderer::DestroyRenderable( T &srRenderable )
 {
-	vkDestroyImageView( aDevice.GetDevice(  ), srRenderable.aTextureImageView, NULL );
-	vkDestroyImage( aDevice.GetDevice(  ), srRenderable.aTextureImage, NULL );
-	vkFreeMemory( aDevice.GetDevice(  ), srRenderable.aTextureImageMem, NULL );
+	//vkDestroyImageView( aDevice.GetDevice(  ), srRenderable.aTextureImageView, NULL );
+	//vkDestroyImage( aDevice.GetDevice(  ), srRenderable.aTextureImage, NULL );
+	//vkFreeMemory( aDevice.GetDevice(  ), srRenderable.aTextureImageMem, NULL );
 	vkDestroyBuffer( aDevice.GetDevice(  ), srRenderable.aIndexBuffer, NULL );
 	vkFreeMemory( aDevice.GetDevice(  ), srRenderable.aIndexBufferMem, NULL );
 	vkDestroyBuffer( aDevice.GetDevice(  ), srRenderable.aVertexBuffer, NULL );
@@ -404,25 +428,27 @@ void Renderer::UpdateUniformBuffers( uint32_t sCurrentImage, ModelData &srModelD
 	ubo.proj  = aView.GetProjection();
 
 	void* data;
-	vkMapMemory( aDevice.GetDevice(  ), srModelData.aUniformBuffersMem[ sCurrentImage ], 0, sizeof( ubo ), 0, &data );
+	vkMapMemory( aDevice.GetDevice(  ), srModelData.aUniformData.apUniformBuffersMem[ sCurrentImage ], 0, sizeof( ubo ), 0, &data );
 	memcpy( data, &ubo, sizeof( ubo ) );
-	vkUnmapMemory( aDevice.GetDevice(  ), srModelData.aUniformBuffersMem[ sCurrentImage ] );
+	vkUnmapMemory( aDevice.GetDevice(  ), srModelData.aUniformData.apUniformBuffersMem[ sCurrentImage ] );
 }
 
 void Renderer::InitModel( ModelData &srModelData, const String &srModelPath, const String &srTexturePath )
 {
-	InitModelVertices( srModelPath, srModelData );
         srModelData.Init( aAllocator, srModelPath, srTexturePath, aModelSetLayout, aTextureSampler, aDescPool, SWAPCHAIN.GetExtent(  ) );
+	InitModelVertices( srModelPath, srModelData );
 	aModels.push_back( &srModelData );
 }
 
 void Renderer::InitSprite( SpriteData &srSpriteData, const String &srSpritePath )
 {
+	#if SPRITE_SUPPORTED
 	aAllocator.InitTextureImage( srSpritePath, srSpriteData.aTextureImage, srSpriteData.aTextureImageMem, NULL, NULL );
 	aAllocator.InitTextureImageView( srSpriteData.aTextureImageView, srSpriteData.aTextureImage );
 	InitSpriteVertices( srSpritePath, srSpriteData );
-	aAllocator.InitDescriptorSets( srSpriteData.aDescriptorSets, aSpriteSetLayout, aDescPool, SPRITE_SET_PARAMETERS( srSpriteData.aTextureImageView ) );
+	aAllocator.InitDescriptorSets( srSpriteData.aDescriptorSets, aSpriteSetLayout, aDescPool, SPRITE_SET_PARAMETERS( srSpriteData.aTextureImageView ), {  } );
 	aSprites.push_back( &srSpriteData );
+#endif /* SPRITE_SUPPORTED  */
 }
 
 void Renderer::DrawFrame(  )

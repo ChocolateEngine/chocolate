@@ -11,6 +11,7 @@ many of the Vk objects used in the renderer.
 #include "device.h"
 #include "shadercache.h"
 #include "descriptorcache.h"
+#include "../../types/renderertypes.h"
 
 #include <vector>
 #include <functional>
@@ -79,15 +80,15 @@ public:
 	/* A.  */
 	void 			InitTextureImageView( VkImageView &srTImageView, VkImage sTImage );
 	/* A.  */
+	TextureDescriptor       InitTexture( const String &srImagePath, VkDescriptorSetLayout sLayout, VkDescriptorPool sPool, VkSampler sSampler );
+	/* A.  */
 	template< typename T >
 		void 	        InitTexBuffer( const std::vector< T > &srData, VkBuffer &srBuffer, VkDeviceMemory &srBufferMem, VkBufferUsageFlags sUsage );
 	/* A.  */
-        void 			InitUniformBuffers( BufferSet &srUBuffers, MemorySet &srUBuffersMem );
+        void 			InitUniformBuffers( VkBuffer *&sprUBuffers, VkDeviceMemory *&sprUBuffersMem );
 	/* A.  */
-	void 			InitDescriptorSets( DescriptorSets &srDescSets, VkDescriptorSetLayout &srDescSetLayout,
-						    VkDescriptorPool &srDescPool,
-						    const ImageInfoSets   &srDescImageInfos  = ImageInfoSets(  ),
-						    const BufferInfoSets  &srDescBufferInfos = BufferInfoSets(  ) );
+	void 			InitDescriptorSets( VkDescriptorSet *&sprDescSets, VkDescriptorSetLayout &srDescSetLayout,
+						    VkDescriptorPool &srDescPool, ImageInfoSets sDescImageInfos, BufferInfoSets sDescBufferInfos );
         /* Initializes the texture, uniform values, and pipeline for the model.  */
 	void			InitModelResources(  );
 	/* A.  */

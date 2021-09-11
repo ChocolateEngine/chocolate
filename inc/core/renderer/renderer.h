@@ -72,6 +72,8 @@ protected:
 	/* A.  */
 	void    InitCommandBuffers(  );
 	/* A.  */
+        String	GetBaseDir( const String &srPath );
+	/* A.  */
 	void    LoadObj( const String &srObjPath, ModelData &srModel );
 	/* A.  */
 	void    LoadGltf( const String &srGltfPath, ModelData &srModel );

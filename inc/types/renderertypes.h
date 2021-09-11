@@ -36,7 +36,7 @@ public:
 struct combined_buffer_info_t
 {
 	VkDescriptorType type;
-	std::vector< VkBuffer >& buffer;
+        VkBuffer *apBuffer;
 	unsigned int range;
 };
 
@@ -213,6 +213,27 @@ public:
 	void 		Draw( VkCommandBuffer c ){ vkCmdDrawIndexed( c, aIndexCount, 1, 0, 0, 0 ); }
 };
 
+class TextureDescriptor
+{
+public:
+	uint32_t		aMaterialId;
+	VkDeviceMemory		aTextureImageMem;
+	VkImage 		aTextureImage;
+	VkImageView 		aTextureImageView;
+        VkDescriptorSet 	*apDescriptorSets;
+	uint32_t		aSetCount;
+};
+
+class UniformDescriptor
+{	
+public:
+        VkBuffer		*apUniformBuffers;
+	uint32_t		aBufferCount;
+	VkDeviceMemory		*apUniformBuffersMem;
+	uint32_t		aMemoryCount;
+	VkDescriptorSet		*apDescriptorSets;
+	uint32_t		aSetCount;
+};
 
 // =================================================================
 // View
