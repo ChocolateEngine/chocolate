@@ -127,7 +127,7 @@ void Renderer::InitCommandBuffers(  )
 		for ( auto& model : aModels )
 		{
 			model->Bind( aCommandBuffers[ i ], i );
-			model->Draw( aCommandBuffers[ i ] );
+			model->Draw( aCommandBuffers[ i ], i );
 		}
 #if SPRITE_SUPPORTED
 		vkCmdBindPipeline( aCommandBuffers[ i ], VK_PIPELINE_BIND_POINT_GRAPHICS, aSpritePipeline );
@@ -185,8 +185,11 @@ void Renderer::LoadObj( const String &srObjPath, ModelData &srModel )
 	std::string					err;
 	std::vector< vertex_3d_t > 			vertices;
 	std::vector< uint32_t > 			indices;
+	std::vector< uint32_t >				materialIndices;
         std::unordered_map< vertex_3d_t, uint32_t  >	uniqueVertices{  };
 	std::string					baseDir = GetBaseDir( srObjPath );
+	int onion_ring = 0;
+	int loops = 0;
 
 	if ( baseDir.empty(  ) )
 		baseDir = ".";
@@ -195,40 +198,57 @@ void Renderer::LoadObj( const String &srObjPath, ModelData &srModel )
 	if ( !tinyobj::LoadObj( &attrib, &shapes, &materials, &warn, &err, srObjPath.c_str(  ), baseDir.c_str(  ) ) )
 		throw std::runtime_error( warn + err );
 
-        for ( auto&& material : materials )
-		if ( material.diffuse_texname != "" )
-		        srModel.AddMaterial( baseDir + material.diffuse_texname, aAllocator, aDescPool, aTextureSampler );
+        for ( uint32_t i = 0; i < materials.size(  ); ++i )
+		if ( materials[ i ].diffuse_texname == "" )
+			srModel.AddMaterial( "", aAllocator, i, aDescPool, aTextureSampler );
+		else
+			srModel.AddMaterial( baseDir + materials[ i ].diffuse_texname, aAllocator, i, aDescPool, aTextureSampler );
 			
 	
 	for ( const auto& shape : shapes )
 	{
-		std::vector< uint32_t > shapeIndices;
-		for ( const auto& index : shape.mesh.indices )
-		{
+		uint32_t indexOffset = 0;
+
+		for ( const auto& index : shape.mesh.num_face_vertices )
+		{		      
 			vertex_3d_t vertex{  };
+			uint32_t faceVertices = index;
 
-			vertex.pos = {
-				attrib.vertices[ 3 * index.vertex_index + 0 ],
-				attrib.vertices[ 3 * index.vertex_index + 1 ],
-				attrib.vertices[ 3 * index.vertex_index + 2 ]
-			};
-
-			vertex.texCoord = {
-				attrib.texcoords[ 2 * index.texcoord_index + 0 ],
-				1.0f - attrib.texcoords[ 2 * index.texcoord_index + 1 ]
-			};
-
-			vertex.color = { 1.0f, 1.0f, 1.0f };
-			if ( uniqueVertices.count( vertex ) == 0 )
+			for ( uint32_t i = 0; i < faceVertices; ++i )
 			{
-				uniqueVertices[ vertex ] = ( uint32_t )vertices.size(  );
-			        vertices.push_back( vertex );
+			        std::vector< uint32_t > shapeIndices;
+				tinyobj::index_t tempIndex = shape.mesh.indices[ indexOffset + i ];
+
+				vertex.pos = {
+					attrib.vertices[ 3 * tempIndex.vertex_index + 0 ],
+					attrib.vertices[ 3 * tempIndex.vertex_index + 1 ],
+					attrib.vertices[ 3 * tempIndex.vertex_index + 2 ]
+				};
+
+				vertex.texCoord = {
+					attrib.texcoords[ 2 * tempIndex.texcoord_index + 0 ],
+					1.0f - attrib.texcoords[ 2 * tempIndex.texcoord_index + 1 ]
+				};
+
+				vertex.color = { 1.0f, 1.0f, 1.0f };
+				if ( uniqueVertices.count( vertex ) == 0 )
+				{
+					uniqueVertices[ vertex ] = ( uint32_t )vertices.size(  );
+					vertices.push_back( vertex );
+				}
+				shapeIndices.push_back( uniqueVertices[ vertex ] );
+				indices.push_back( uniqueVertices[ vertex ] );
+				materialIndices.push_back( shape.mesh.material_ids[ onion_ring ] );
+				loops = i;
 			}
-			shapeIndices.push_back( uniqueVertices[ vertex ] );
-		        indices.push_back( uniqueVertices[ vertex ] );
+			printf( "onion ring %i\n", onion_ring++ );
+			printf( "new incies:%i\n", loops );
+			indexOffset += faceVertices;
 		}
-		srModel.AddIndexGroup( shapeIndices.size(  ), indices.size(  ) );
+		srModel.AddIndexGroup( materialIndices );
 	}
+	for ( auto&& num : materialIndices )
+		printf( "%i", num );
 	srModel.aVertexCount 	= ( uint32_t )vertices.size(  );
 	srModel.aIndexCount 	= ( uint32_t )indices.size(  );
 	aAllocator.InitTexBuffer( vertices, srModel.aVertexBuffer, srModel.aVertexBufferMem, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT );
