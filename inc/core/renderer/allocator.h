@@ -68,6 +68,7 @@ public:
         ImageSet 		*apSwapChainImages = NULL;
 	VkRenderPass 		*apRenderPass = NULL;
         Device 			*apDevice;
+	VkDescriptorPool	*apPool = NULL;
 
 	/* A.  */
 	void 			InitAllocator( ImageSet &sSwapChainImages );
@@ -80,7 +81,7 @@ public:
 	/* A.  */
 	void 			InitTextureImageView( VkImageView &srTImageView, VkImage sTImage );
 	/* A.  */
-	TextureDescriptor       InitTexture( const String &srImagePath, VkDescriptorSetLayout sLayout, VkDescriptorPool sPool, VkSampler sSampler );
+	TextureDescriptor       *InitTexture( const String &srImagePath, VkDescriptorSetLayout sLayout, VkDescriptorPool sPool, VkSampler sSampler );
 	/* A.  */
 	template< typename T >
 		void 	        InitTexBuffer( const std::vector< T > &srData, VkBuffer &srBuffer, VkDeviceMemory &srBufferMem, VkBufferUsageFlags sUsage );
@@ -89,8 +90,8 @@ public:
 	/* A.  */
 	void 			InitDescriptorSets( VkDescriptorSet *&sprDescSets, VkDescriptorSetLayout &srDescSetLayout,
 						    VkDescriptorPool &srDescPool, ImageInfoSets sDescImageInfos, BufferInfoSets sDescBufferInfos );
-        /* Initializes the texture, uniform values, and pipeline for the model.  */
-	void			InitModelResources(  );
+        /* Initializes the uniform data, such as uniform buffers.  */
+	void			InitUniformData( UniformDescriptor &srDescriptor, VkDescriptorSetLayout sLayout );
 	/* A.  */
 	void 			InitImageViews( ImageViews &srSwapChainImageViews );
 	/* A.  */

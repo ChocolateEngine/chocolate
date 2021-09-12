@@ -6,9 +6,6 @@ stores all data related to a model.
 */
 #pragma once
 
-#define MODEL_SET_PARAMETERS_TEMP( tImageView, uBuffers ) { { { VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, tImageView, srTextureSampler, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER } } }, { { { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, uBuffers, sizeof( ubo_3d_t ) } } }
-#define MODEL_SET_LAYOUT_PARAMETERS_TEMP { { DescriptorLayoutBinding( VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_VERTEX_BIT, NULL ), DescriptorLayoutBinding( VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, NULL ) } }
-
 #include "../core/renderer/allocator.h"
 #include "../core/renderer/initializers.h"
 #include "renderertypes.h"
@@ -21,9 +18,8 @@ public:
 	uint32_t	aMaterialId;
 };
 
-static std::vector< TextureDescriptor > gTextures;
-static std::vector< IndexInfo >		gOffsets;
-static std::vector< uint32_t >		gDontDrawTheseTexturesPls;
+static std::vector< TextureDescriptor* > 	gTextures;
+static std::vector< IndexInfo >			gOffsets;
 
 class ModelData
 {
@@ -49,101 +45,24 @@ public:
 	uint32_t 		*apIndices;
 	bool 			aNoDraw = true;
 	glm::vec3 		aPos;
-	float 			aWidth 	= 0.5f;
-	float			aHeight = 0.5f;
-
+	/* Allocates the model, and loads its textures etc.  */
 	void		Init( Allocator &srAllocator, const std::string &srModelPath, const std::string &srTexturePath,
-				VkDescriptorSetLayout srModelSetLayout, VkSampler srTextureSampler, VkDescriptorPool srDescPool, VkExtent2D srSwapChainExtent )
-	{
-		aNoDraw = true;
-		aTextureCount = 0;
-		//apTextures = new TextureDescriptor;
-		aTextureLayout = srAllocator.InitDescriptorSetLayout( { { DescriptorLayoutBinding( VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1,
-												   VK_SHADER_STAGE_FRAGMENT_BIT, NULL ) } } );
-		aUniformLayout = srAllocator.InitDescriptorSetLayout( { { DescriptorLayoutBinding( VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1,
-												   VK_SHADER_STAGE_VERTEX_BIT, NULL ) } } );
-		//apTextures[ 0 ] = srAllocator.InitTexture( srTexturePath, aTextureLayout, srDescPool, srTextureSampler );
-		srAllocator.InitUniformBuffers( aUniformData.apUniformBuffers, aUniformData.apUniformBuffersMem );
-		srAllocator.InitDescriptorSets( aUniformData.apDescriptorSets, aUniformLayout, srDescPool, {  }, { { { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, aUniformData.apUniformBuffers, sizeof( ubo_3d_t ) } } } );
-		VkDescriptorSetLayout layouts[  ] = { aTextureLayout, aUniformLayout };
-	        aPipelineLayout = srAllocator.InitPipelineLayouts( layouts, 2 );
-		srAllocator.InitGraphicsPipeline< vertex_3d_t >( aPipeline, aPipelineLayout, aUniformLayout, "materials/shaders/3dvert.spv",
-								 "materials/shaders/3dfrag.spv", 0 );
-	}
+			      VkDescriptorSetLayout srModelSetLayout, VkSampler srTextureSampler, VkDescriptorPool srDescPool, VkExtent2D srSwapChainExtent );
+	/* Reinitialize data that is useless after the swapchain becomes outdated.  */
+	void		Reinit( Allocator &srAllocator );
 	/* Binds the model data to the GPU to be rendered later.  */
-	void 		Bind( VkCommandBuffer c, uint32_t i )
-		{
-			if ( aTextureCount ) aNoDraw = false;
-			if ( !aNoDraw )
-			{
-				VkBuffer 	vBuffers[  ] 	= { aVertexBuffer };
-				VkDeviceSize 	offsets[  ] 	= { 0 };
-			        VkDescriptorSet sets[  ] = { gTextures[ 0 ].apDescriptorSets[ i ], aUniformData.apDescriptorSets[ i ] };
-				vkCmdBindPipeline( c, VK_PIPELINE_BIND_POINT_GRAPHICS, aPipeline );
-				vkCmdBindVertexBuffers( c, 0, 1, vBuffers, offsets );
-				vkCmdBindIndexBuffer( c, aIndexBuffer, 0, VK_INDEX_TYPE_UINT32 );
-				vkCmdBindDescriptorSets( c, VK_PIPELINE_BIND_POINT_GRAPHICS, aPipelineLayout, 0, 2, sets, 0, NULL );
-			}
-		}
+	void 		Bind( VkCommandBuffer c, uint32_t i );
 	/* Draws the model to the screen.  */
-	void 		Draw( VkCommandBuffer c, uint32_t i )
-		{
-			if ( !aNoDraw )
-			{
-				for ( auto&& index : gOffsets )
-				{
-					/*uint32_t j;
-					bool shouldDraw = true;
-					for ( j = 0; j < gTextures.size(  ) && gTextures[ j ].aMaterialId != index.aMaterialId; ++j );
-					for ( auto&& noDraw : gDontDrawTheseTexturesPls )
-						if ( j == noDraw )
-						        shouldDraw = false; break;
-					if ( shouldDraw )
-					{
-						VkDescriptorSet sets[  ] = { gTextures[ j ].apDescriptorSets[ i ], aUniformData.apDescriptorSets[ i ] };
-						vkCmdBindDescriptorSets( c, VK_PIPELINE_BIND_POINT_GRAPHICS, aPipelineLayout, 0, 2, sets, 0, NULL );
-						vkCmdDrawIndexed( c, index.aIndexCount, 1, index.aOffset, 0, 0 );
-						}*/
-					if ( gTextures[ index.aMaterialId ].apDescriptorSets )
-					{
-						VkDescriptorSet sets[  ] = { gTextures[ index.aMaterialId ].apDescriptorSets[ i ], aUniformData.apDescriptorSets[ i ] };
-						vkCmdBindDescriptorSets( c, VK_PIPELINE_BIND_POINT_GRAPHICS, aPipelineLayout, 0, 2, sets, 0, NULL );
-						vkCmdDrawIndexed( c, index.aIndexCount, 1, index.aOffset, 0, 0 );
-					}
-				}
-			}
-		}
-	void		AddMaterial( const std::string &srTexturePath, Allocator &srAllocator, uint32_t sMaterialId, VkDescriptorPool sPool, VkSampler sSampler )
-		{
-			if ( srTexturePath == "" )
-			{
-				/*gDontDrawTheseTexturesPls.push_back( sMaterialId );
-				  return;*/
-				gTextures.push_back( srAllocator.InitTexture( "materials/act_like_a_baka.jpg", aTextureLayout, sPool, sSampler ) );
-				++aTextureCount;
-				return;
-			}
-			++aTextureCount;
-		        /*auto pTextures = new TextureDescriptor[ ++aTextureCount ];
-			memcpy( pTextures, apTextures, ( aTextureCount - 1 ) * sizeof( TextureDescriptor ) );
-			delete[  ] apTextures;
-			apTextures = pTextures;*/
-			gTextures.push_back( srAllocator.InitTexture( srTexturePath, aTextureLayout, sPool, sSampler ) );
-			gTextures[ aTextureCount ].aMaterialId = sMaterialId;
-			//apTextures[ aTextureCount ] = srAllocator.InitTexture( srTexturePath, aTextureLayout, sPool, sSampler );
-		}
-	void		AddIndexGroup( std::vector< uint32_t > sVec )
-		{
-			uint32_t search;
-			uint32_t numIndices;
-		        for ( uint32_t i = 0; i < sVec.size(  ); )
-			{
-				search  = sVec[ i ];
-				for ( numIndices = 0; i < sVec.size(  ) && search == sVec[ i ]; ++i, ++numIndices );
-				//++i; ++numIndices;
-				gOffsets.push_back( { numIndices, i - numIndices, sVec[ i - 1 ] } );
-				printf( "%i indices, at offset %i, using material id %i\n", numIndices, i - numIndices, sVec[ i - 1 ] );
-			}
-		}
+	void 		Draw( VkCommandBuffer c, uint32_t i );
+	/* Adds a material to the model.  */
+	void		AddMaterial( const std::string &srTexturePath, Allocator &srAllocator, uint32_t sMaterialId, VkDescriptorPool sPool, VkSampler sSampler );
+	/* Adds an index group to the model which groups together indices in the same material to be used for multiple draw calls for multiple textures.  */
+	void		AddIndexGroup( std::vector< uint32_t > sVec );
+	/* Default the model and set limits.  */
+        		ModelData(  );
+	/* Frees the memory used by objects outdated by a new swapchain state.  */
+	void		FreeOldResources(  );
+	/* Frees all memory used by model.  */
+			~ModelData(  );
 };
 

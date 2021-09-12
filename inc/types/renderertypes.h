@@ -183,7 +183,7 @@ struct ubo_2d_t
 
 class SpriteData
 {
-	typedef std::vector< VkDescriptorSet > DescriptorSetList;
+	typedef std::vector< VkDescriptorSet >  DescriptorSetList;
 public:	
 	VkBuffer 		aVertexBuffer;
 	VkBuffer		aIndexBuffer;
@@ -213,26 +213,40 @@ public:
 	void 		Draw( VkCommandBuffer c ){ vkCmdDrawIndexed( c, aIndexCount, 1, 0, 0, 0 ); }
 };
 
+template< class T >
+class DataBuffer
+{
+	T			*apBuffers 	= NULL;
+	uint32_t		aBufferCount    = 0;
+public:
+	/* Returns true if there are allocated buffers, false if the memory isn't and should not be accessed.  */
+	bool			IsValid(  ){ return apBuffers; }
+	/* Returns the buffer.  */
+        T			*&GetBuffer(  ){ return apBuffers; }
+	/* Allocates memory for the buffer.  */
+	void			Allocate( uint32_t sSize ){ apBuffers = new T[ sSize ]; aBufferCount = sSize; }
+	/* Reallocates the buffer.  */
+	void			Reallocate( uint32_t sSize ){ /* ... */ }
+	/* Frees the buffer when no longer in use.  */
+				~DataBuffer(  ){ delete[  ] apBuffers; }
+};
+
 class TextureDescriptor
 {
 public:
-	uint32_t		aMaterialId;
-	VkDeviceMemory		aTextureImageMem;
-	VkImage 		aTextureImage;
-	VkImageView 		aTextureImageView;
-        VkDescriptorSet 	*apDescriptorSets;
-	uint32_t		aSetCount;
+	uint32_t			aMaterialId;
+	VkDeviceMemory			aTextureImageMem;
+	VkImage 			aTextureImage;
+	VkImageView 			aTextureImageView;
+        DataBuffer< VkDescriptorSet >	aSets;
 };
 
 class UniformDescriptor
 {	
 public:
-        VkBuffer		*apUniformBuffers;
-	uint32_t		aBufferCount;
-	VkDeviceMemory		*apUniformBuffersMem;
-	uint32_t		aMemoryCount;
-	VkDescriptorSet		*apDescriptorSets;
-	uint32_t		aSetCount;
+        DataBuffer< VkBuffer >  	aData;
+        DataBuffer< VkDeviceMemory >    aMem;
+	DataBuffer< VkDescriptorSet >	aSets;
 };
 
 // =================================================================
