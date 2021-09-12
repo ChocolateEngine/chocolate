@@ -372,7 +372,7 @@ void Renderer::ReinitSwapChain(  )
 	
 	for ( auto& model : aModels )
 	{
-		aAllocator.InitUniformBuffers( model->aUniformData.apUniformBuffers, model->aUniformData.apUniformBuffersMem );
+		model->Reinit( aAllocator );
 	}
 	aAllocator.InitDescPool( aDescPool, { { { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 2000 }, { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 2000 } } } );
 	for ( auto& model : aModels )
@@ -448,9 +448,9 @@ void Renderer::UpdateUniformBuffers( uint32_t sCurrentImage, ModelData &srModelD
 	ubo.proj  = aView.GetProjection();
 
 	void* data;
-	vkMapMemory( aDevice.GetDevice(  ), srModelData.aUniformData.apUniformBuffersMem[ sCurrentImage ], 0, sizeof( ubo ), 0, &data );
+	vkMapMemory( aDevice.GetDevice(  ), srModelData.aUniformData.aMem.GetBuffer(  )[ sCurrentImage ], 0, sizeof( ubo ), 0, &data );
 	memcpy( data, &ubo, sizeof( ubo ) );
-	vkUnmapMemory( aDevice.GetDevice(  ), srModelData.aUniformData.apUniformBuffersMem[ sCurrentImage ] );
+	vkUnmapMemory( aDevice.GetDevice(  ), srModelData.aUniformData.aMem.GetBuffer(  )[ sCurrentImage ] );
 }
 
 void Renderer::InitModel( ModelData &srModelData, const String &srModelPath, const String &srTexturePath )

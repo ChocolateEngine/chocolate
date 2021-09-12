@@ -205,17 +205,22 @@ void Allocator::InitTextureImageView( VkImageView &srTImageView, VkImage sTImage
 }
 
 /* A.  */
-TextureDescriptor Allocator::InitTexture( const String &srImagePath, VkDescriptorSetLayout sLayout, VkDescriptorPool sPool, VkSampler sSampler )
+TextureDescriptor *Allocator::InitTexture( const String &srImagePath, VkDescriptorSetLayout sLayout, VkDescriptorPool sPool, VkSampler sSampler )
 {
-	TextureDescriptor	texture{  };
+	TextureDescriptor	*pTexture = new TextureDescriptor;
 	VkImage 		textureImage;
 	VkDeviceMemory 		textureMem;
 	VkImageView		textureView;
 	InitTextureImage( srImagePath, textureImage, textureMem, NULL, NULL );
 	InitTextureImageView( textureView, textureImage );
-	InitDescriptorSets( texture.apDescriptorSets, sLayout, sPool, { { { VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, textureView, sSampler, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER } } }, {  } );
+	InitDescriptorSets( pTexture->aSets.GetBuffer(  ), sLayout, sPool,
+			    { { { VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, textureView, sSampler, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER } } }, {  } );
 
-	return texture;
+	pTexture->aTextureImage 	= textureImage;
+	pTexture->aTextureImageMem	= textureMem;
+	pTexture->aTextureImageView     = textureView;
+
+	return pTexture;
 }
 
 template< typename T >
@@ -286,10 +291,12 @@ void Allocator::InitDescriptorSets( VkDescriptorSet *&sprDescSets, VkDescriptorS
 	}
 }
 
-/* Initializes the texture, uniform values, and pipeline for the model.  */
-void Allocator::InitModelResources(  )
+/* Initializes the uniform data, such as uniform buffers.  */
+void Allocator::InitUniformData( UniformDescriptor &srDescriptor, VkDescriptorSetLayout sLayout )
 {
-	
+	InitUniformBuffers( srDescriptor.aData.GetBuffer(  ), srDescriptor.aMem.GetBuffer(  ) );
+	InitDescriptorSets( srDescriptor.aSets.GetBuffer(  ), sLayout, *apPool, {  },
+			    { { { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, srDescriptor.aData.GetBuffer(  ), sizeof( ubo_3d_t ) } } } );
 }
 
 void Allocator::InitImageViews( ImageViews &srSwapChainImageViews )
@@ -570,6 +577,8 @@ void Allocator::InitDescPool( VkDescriptorPool &srDescPool, std::vector< VkDescr
 
 	if ( vkCreateDescriptorPool( apDevice->GetDevice(  ), &poolInfo, NULL, &srDescPool ) != VK_SUCCESS )
 		throw std::runtime_error( "Failed to create descriptor pool!" );
+	
+	apPool = &srDescPool;
 }
 
 void Allocator::InitImguiPool( SDL_Window *spWindow )
