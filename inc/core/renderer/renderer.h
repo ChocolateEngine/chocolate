@@ -40,8 +40,6 @@ protected:
 	typedef std::string				String;
 
 	View                        aView;
-	Allocator                   aAllocator;
-	Device						aDevice;
 	ImageViews                  aSwapChainImageViews;       // View into an image, describing which part to access, one needed for each image
 	Framebuffers                aSwapChainFramebuffers;		//  
 	CommandBuffers              aCommandBuffers;	        // Send commands to these to be executed later, better for concurrency, so many are nice

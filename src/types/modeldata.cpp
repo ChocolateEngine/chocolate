@@ -6,37 +6,34 @@ modeldata.h.
 */
 #include "../../inc/types/modeldata.h"
 /* Allocates the model, and loads its textures etc.  */
-void ModelData::Init( Allocator &srAllocator, const std::string &srModelPath, const std::string &srTexturePath,
-		      VkDescriptorSetLayout srModelSetLayout, VkSampler srTextureSampler, VkDescriptorPool srDescPool, VkExtent2D srSwapChainExtent )
+void ModelData::Init(  )
 {
-	aNoDraw = true;
-	aTextureCount = 0;
-	aTextureLayout = srAllocator.InitDescriptorSetLayout( { { DescriptorLayoutBinding( VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1,
+	aTextureLayout = InitDescriptorSetLayout( { { DescriptorLayoutBinding( VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1,
 											   VK_SHADER_STAGE_FRAGMENT_BIT, NULL ) } } );
 	
-	aUniformLayout = srAllocator.InitDescriptorSetLayout( { { DescriptorLayoutBinding( VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1,
+	aUniformLayout = InitDescriptorSetLayout( { { DescriptorLayoutBinding( VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1,
 											   VK_SHADER_STAGE_VERTEX_BIT, NULL ) } } );
 	
-	srAllocator.InitUniformData( aUniformData, aUniformLayout );
+	InitUniformData( aUniformData, aUniformLayout );
 	VkDescriptorSetLayout layouts[  ] = { aTextureLayout, aUniformLayout };
-	aPipelineLayout = srAllocator.InitPipelineLayouts( layouts, 2 );
-	srAllocator.InitGraphicsPipeline< vertex_3d_t >( aPipeline, aPipelineLayout, aUniformLayout, "materials/shaders/3dvert.spv",
+	aPipelineLayout = InitPipelineLayouts( layouts, 2 );
+	InitGraphicsPipeline< vertex_3d_t >( aPipeline, aPipelineLayout, aUniformLayout, "materials/shaders/3dvert.spv",
 							 "materials/shaders/3dfrag.spv", 0 );
 	
 }
 /* Reinitialize data that is useless after the swapchain becomes outdated.  */
-void ModelData::Reinit( Allocator &srAllocator )
+void ModelData::Reinit(  )
 {
-        aTextureLayout = srAllocator.InitDescriptorSetLayout( { { DescriptorLayoutBinding( VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1,
+    	aTextureLayout = InitDescriptorSetLayout( { { DescriptorLayoutBinding( VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1,
 											   VK_SHADER_STAGE_FRAGMENT_BIT, NULL ) } } );
 	
-	aUniformLayout = srAllocator.InitDescriptorSetLayout( { { DescriptorLayoutBinding( VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1,
+	aUniformLayout = InitDescriptorSetLayout( { { DescriptorLayoutBinding( VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1,
 											   VK_SHADER_STAGE_VERTEX_BIT, NULL ) } } );
 	
-	srAllocator.InitUniformData( aUniformData, aUniformLayout );
+	InitUniformData( aUniformData, aUniformLayout );
 	VkDescriptorSetLayout layouts[  ] = { aTextureLayout, aUniformLayout };
-	aPipelineLayout = srAllocator.InitPipelineLayouts( layouts, 2 );
-	srAllocator.InitGraphicsPipeline< vertex_3d_t >( aPipeline, aPipelineLayout, aUniformLayout, "materials/shaders/3dvert.spv",
+	aPipelineLayout = InitPipelineLayouts( layouts, 2 );
+	InitGraphicsPipeline< vertex_3d_t >( aPipeline, aPipelineLayout, aUniformLayout, "materials/shaders/3dvert.spv",
 							 "materials/shaders/3dfrag.spv", 0 );
 }
 /* Binds the model data to the GPU to be rendered later.  */
@@ -62,6 +59,7 @@ void ModelData::Draw( VkCommandBuffer c, uint32_t i )
 			if ( gTextures[ index.aMaterialId ]->aSets.IsValid(  ) )
 			{
 				VkDescriptorSet sets[  ] = { gTextures[ index.aMaterialId ]->aSets.GetBuffer(  )[ i ], aUniformData.aSets.GetBuffer(  )[ i ] };
+				printf( "Binding descriptor set: 0x%lX, and 0x%lX\n", sets[ 0 ], sets[ 1 ] );
 				vkCmdBindDescriptorSets( c, VK_PIPELINE_BIND_POINT_GRAPHICS, aPipelineLayout, 0, 2, sets, 0, NULL );
 				vkCmdDrawIndexed( c, index.aIndexCount, 1, index.aOffset, 0, 0 );
 			}
@@ -69,15 +67,15 @@ void ModelData::Draw( VkCommandBuffer c, uint32_t i )
 	}
 }
 /* Adds a material to the model.  */
-void ModelData::AddMaterial( const std::string &srTexturePath, Allocator &srAllocator, uint32_t sMaterialId, VkDescriptorPool sPool, VkSampler sSampler )
+void ModelData::AddMaterial( const std::string &srTexturePath, uint32_t sMaterialId, VkSampler sSampler )
 {
 	if ( srTexturePath == "" )
 	{
-		gTextures.push_back( srAllocator.InitTexture( "materials/act_like_a_baka.jpg", aTextureLayout, sPool, sSampler ) );
+		gTextures.push_back( InitTexture( "materials/act_like_a_baka.jpg", aTextureLayout, *gpPool, sSampler ) );
 		++aTextureCount;
 		return;
 	}
-	gTextures.push_back( srAllocator.InitTexture( srTexturePath, aTextureLayout, sPool, sSampler ) );
+	gTextures.push_back( InitTexture( srTexturePath, aTextureLayout, *gpPool, sSampler ) );
 	gTextures[ aTextureCount ]->aMaterialId = sMaterialId;
 	++aTextureCount;
 }
@@ -101,10 +99,34 @@ ModelData::ModelData(  ) : apTextures( NULL ), aTextureCount( 0 ), apVertices( N
 /* Frees the memory used by objects outdated by a new swapchain state.  */
 void ModelData::FreeOldResources(  )
 {
-	
+	/* Destroy Vulkan objects, keeping the allocations for their storage units.  */
+	vkDestroyPipeline( DEVICE, aPipeline, NULL );
+	vkDestroyPipelineLayout( DEVICE, aPipelineLayout, NULL );
+	/* Ugly, fix later.  */
+	for ( uint32_t i = 0; i < PSWAPCHAIN.GetImages(  ).size(  ); ++i )
+	{
+		/* Free uniform data.  */
+		vkDestroyBuffer( DEVICE, aUniformData.aData.GetBuffer(  )[ i ], NULL );
+		vkFreeMemory( DEVICE, aUniformData.aMem.GetBuffer(  )[ i ], NULL );
+	}
 }
 /* Frees all memory used by model.  */
 ModelData::~ModelData(  )
 {
-	
+	FreeOldResources(  );
+	for ( auto&& texture : gTextures )
+	{
+		vkDestroyImageView( DEVICE, texture->aTextureImageView, NULL );
+		vkDestroyImage( DEVICE, texture->aTextureImage, NULL );
+		vkFreeMemory( DEVICE, texture->aTextureImageMem, NULL );
+		delete texture;
+	}
+	vkDestroyDescriptorSetLayout( DEVICE, aUniformLayout, NULL );
+	vkDestroyDescriptorSetLayout( DEVICE, aTextureLayout, NULL );
+	vkDestroyBuffer( DEVICE, aVertexBuffer, NULL );
+	vkFreeMemory( DEVICE, aVertexBufferMem, NULL );
+	vkDestroyBuffer( DEVICE, aIndexBuffer, NULL );
+	vkFreeMemory( DEVICE, aIndexBufferMem, NULL );
+	delete[  ] apVertices;
+	delete[  ] apIndices;
 }

@@ -13,7 +13,6 @@ void GraphicsSystem::LoadModel( const std::string& srModelPath, const std::strin
 	aRenderer.InitModel( spModel->GetModelData(  ), srModelPath, srTexturePath );
 	
 	aModels.push_back( spModel );
-	AddFreeFunction( [ = ](  ){ if ( spModel != NULL ) delete spModel; } );
 }
 
 void GraphicsSystem::UnloadModel( Model *spModel )
@@ -30,7 +29,6 @@ void GraphicsSystem::LoadSprite( const std::string& srSpritePath, Sprite *spSpri
 	aRenderer.InitSprite( spSprite->GetSpriteData(  ), srSpritePath );
 	
 	aSprites.push_back( spSprite );
-	AddFreeFunction( [ = ](  ){ if ( spSprite != NULL ) delete spSprite; } );
 }
 
 void GraphicsSystem::UnloadSprite( Sprite *spSprite )

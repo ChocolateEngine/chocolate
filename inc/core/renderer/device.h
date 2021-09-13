@@ -7,7 +7,7 @@ functions that utilize GPU functionality.
 #pragma once
 
 #include "../../../inc/types/renderertypes.h"
-#include "swapchain.h"
+#include "swapchain.hh"
 
 #include <vulkan/vulkan.h>
 #include <SDL2/SDL.h>
@@ -24,9 +24,6 @@ typedef std::vector< const char* > 	StringList;
     const bool 	gEnableValidationLayers = true;
 #endif
 
-const 		StringList gValidationLayers = { "VK_LAYER_KHRONOS_validation" };
-const 		StringList gDeviceExtensions = { VK_KHR_SWAPCHAIN_EXTENSION_NAME };
-
 class Device
 {
 protected:
@@ -34,6 +31,9 @@ protected:
 	typedef std::vector< VkPresentModeKHR >		PresentModes;
 	typedef std::vector< VkImage > 			ImageSet;
 	typedef std::vector< VkFormat >			FormatSet;
+
+	const StringList 		aValidationLayers = { "VK_LAYER_KHRONOS_validation" };
+	const StringList 		aDeviceExtensions = { VK_KHR_SWAPCHAIN_EXTENSION_NAME };
 	
 	SDL_Window  			*apWindow;		        	//	Window to display stuff
 	VkSurfaceKHR 			aSurface;				//	Allows window to display stuff	
@@ -96,6 +96,8 @@ public:
 	int 	aHeight = 720;
 	/* A.  */
 	void 					InitSwapChain(  );
+	/* Reinitializes the swap chain after is is outdated ( e.g a window size change ).  */
+	void					ReinitSwapChain(  );
 	/* A.  */
 	void 					InitTextureSampler( VkSampler& textureSampler, VkSamplerAddressMode mode );
 	/* A.  */

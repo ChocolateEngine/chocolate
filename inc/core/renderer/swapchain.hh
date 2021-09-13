@@ -13,9 +13,9 @@ class SwapChain
 	typedef std::vector< VkImage >		ImageSet;
 protected:
 	VkSwapchainKHR	aSwapChain;
-	ImageSet	aSwapChainImages;
-	VkFormat	aSwapChainImageFormat;
-	VkExtent2D	aSwapChainExtent;
+	ImageSet		aSwapChainImages;
+	VkFormat		aSwapChainImageFormat;
+	VkExtent2D		aSwapChainExtent;
 public:
 	/* Returns the swap chain.  */
 	VkSwapchainKHR		GetSwapChain(  ){ return aSwapChain; }
