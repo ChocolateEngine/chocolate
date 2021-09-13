@@ -82,8 +82,8 @@ void Device::InitInstance(  )
 	VkDebugUtilsMessengerCreateInfoEXT debugCreateInfo;
 	if ( gEnableValidationLayers )
 	{
-		createInfo.enabledLayerCount 	= ( unsigned int )gValidationLayers.size(  );
-		createInfo.ppEnabledLayerNames 	= gValidationLayers.data(  );
+		createInfo.enabledLayerCount 	= ( unsigned int )aValidationLayers.size(  );
+		createInfo.ppEnabledLayerNames 	= aValidationLayers.data(  );
 	        InitDebugMessengerInfo( debugCreateInfo );
 		createInfo.pNext 		= ( VkDebugUtilsMessengerCreateInfoEXT* )&debugCreateInfo;
 	}
@@ -216,13 +216,13 @@ void Device::InitLogicalDevice(  )
 
 	createInfo.pEnabledFeatures 		= &deviceFeatures;
 
-	createInfo.enabledExtensionCount 	= ( uint32_t )( gDeviceExtensions.size(  ) );
-	createInfo.ppEnabledExtensionNames 	= gDeviceExtensions.data(  );
+	createInfo.enabledExtensionCount 	= ( uint32_t )( aDeviceExtensions.size(  ) );
+	createInfo.ppEnabledExtensionNames 	= aDeviceExtensions.data(  );
 
 	if ( gEnableValidationLayers )
 	{
-		createInfo.enabledLayerCount 	= ( uint32_t )( gValidationLayers.size(  ) );
-		createInfo.ppEnabledLayerNames 	= gValidationLayers.data(  );
+		createInfo.enabledLayerCount 	= ( uint32_t )( aValidationLayers.size(  ) );
+		createInfo.ppEnabledLayerNames 	= aValidationLayers.data(  );
 	}
 	else
 	{
@@ -260,7 +260,7 @@ bool Device::CheckValidationLayerSupport(  )
 	std::vector< VkLayerProperties > availableLayers( layerCount );
 	vkEnumerateInstanceLayerProperties( &layerCount, availableLayers.data(  ) );
 	
-	for ( const char* layerName : gValidationLayers )
+	for ( const char* layerName : aValidationLayers )
 	{
 		layerFound = false;
 
@@ -319,7 +319,7 @@ bool Device::CheckDeviceExtensionSupport( VkPhysicalDevice sDevice )
 	std::vector< VkExtensionProperties > availableExtensions( extensionCount );
 	vkEnumerateDeviceExtensionProperties( sDevice, NULL, &extensionCount, availableExtensions.data(  ) );
 
-	std::set< std::string > requiredExtensions(  gDeviceExtensions.begin(  ), gDeviceExtensions.end(  ) );
+	std::set< std::string > requiredExtensions( aDeviceExtensions.begin(  ), aDeviceExtensions.end(  ) );
 
 	for ( const auto& extension : availableExtensions )
 	{
@@ -422,12 +422,12 @@ void Device::DestroyDebugMessenger( const VkAllocationCallbacks *pAllocator )
 
 void Device::Cleanup(  )
 {
+	vkDestroySwapchainKHR( aDevice, aSwapChain.GetSwapChain(  ), NULL );
 	vkDestroyCommandPool( aDevice, aCommandPool, NULL );
 	vkDestroyDevice( aDevice, NULL );
 	if ( gEnableValidationLayers )
-	{
 		DestroyDebugMessenger( NULL );
-	}
+	
 	vkDestroySurfaceKHR( aInstance, aSurface, NULL );
         vkDestroyInstance( aInstance, NULL );
 		
@@ -493,6 +493,13 @@ void Device::InitSwapChain(  )
 	vkGetSwapchainImagesKHR( aDevice, swapChain, &imageCount, swapChainImages.data(  ) );
 
 	aSwapChain.Init( swapChain, swapChainImages, surfaceFormat.format, extent );
+}
+
+/* Reinitializes the swap chain after is is outdated ( e.g a window size change ).  */
+void Device::ReinitSwapChain(  )
+{
+	vkDestroySwapchainKHR( aDevice, aSwapChain.GetSwapChain(  ), NULL );
+	InitSwapChain(  );
 }
 
 void Device::InitTextureSampler( VkSampler& textureSampler, VkSamplerAddressMode mode )

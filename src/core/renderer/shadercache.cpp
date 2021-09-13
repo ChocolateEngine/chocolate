@@ -23,3 +23,8 @@ void ShaderCache::AddPipeline( const String &srVertShader, const String &srFragS
 {
         aPipelines.push_back( { srVertShader, srFragShader, sLayout, sPipeline } );
 }
+/* Clear the cache once the swapchain is outdated so new pipelines can be created.  */
+void ShaderCache::ClearCache(  )
+{
+	aPipelines.clear(  );
+}

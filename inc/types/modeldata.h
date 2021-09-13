@@ -46,16 +46,15 @@ public:
 	bool 			aNoDraw = true;
 	glm::vec3 		aPos;
 	/* Allocates the model, and loads its textures etc.  */
-	void		Init( Allocator &srAllocator, const std::string &srModelPath, const std::string &srTexturePath,
-			      VkDescriptorSetLayout srModelSetLayout, VkSampler srTextureSampler, VkDescriptorPool srDescPool, VkExtent2D srSwapChainExtent );
+	void		Init(  );
 	/* Reinitialize data that is useless after the swapchain becomes outdated.  */
-	void		Reinit( Allocator &srAllocator );
+	void		Reinit(  );
 	/* Binds the model data to the GPU to be rendered later.  */
 	void 		Bind( VkCommandBuffer c, uint32_t i );
 	/* Draws the model to the screen.  */
 	void 		Draw( VkCommandBuffer c, uint32_t i );
 	/* Adds a material to the model.  */
-	void		AddMaterial( const std::string &srTexturePath, Allocator &srAllocator, uint32_t sMaterialId, VkDescriptorPool sPool, VkSampler sSampler );
+	void		AddMaterial( const std::string &srTexturePath, uint32_t sMaterialId, VkSampler sSampler );
 	/* Adds an index group to the model which groups together indices in the same material to be used for multiple draw calls for multiple textures.  */
 	void		AddIndexGroup( std::vector< uint32_t > sVec );
 	/* Default the model and set limits.  */
