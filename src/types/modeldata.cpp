@@ -59,7 +59,6 @@ void ModelData::Draw( VkCommandBuffer c, uint32_t i )
 			if ( gTextures[ index.aMaterialId ]->aSets.IsValid(  ) )
 			{
 				VkDescriptorSet sets[  ] = { gTextures[ index.aMaterialId ]->aSets.GetBuffer(  )[ i ], aUniformData.aSets.GetBuffer(  )[ i ] };
-				printf( "Binding descriptor set: 0x%lX, and 0x%lX\n", sets[ 0 ], sets[ 1 ] );
 				vkCmdBindDescriptorSets( c, VK_PIPELINE_BIND_POINT_GRAPHICS, aPipelineLayout, 0, 2, sets, 0, NULL );
 				vkCmdDrawIndexed( c, index.aIndexCount, 1, index.aOffset, 0, 0 );
 			}
