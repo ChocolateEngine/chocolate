@@ -32,15 +32,6 @@ draw to the screen.
 
 #include "../../../inc/core/gui.h"
 
-//#define MODEL_SET_LAYOUT_PARAMETERS { { { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_VERTEX_BIT, NULL }, { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, NULL } } }
-#define MODEL_SET_LAYOUT_PARAMETERS { { DescriptorLayoutBinding( VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_VERTEX_BIT, NULL ), DescriptorLayoutBinding( VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, NULL ) } }
-
-#define SPRITE_SET_LAYOUT_PARAMETERS { { { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, NULL, } } }
-
-#define MODEL_SET_PARAMETERS( tImageView, uBuffers ) { { { VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, tImageView, aTextureSampler, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER } } }, { { { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, uBuffers, sizeof( ubo_3d_t ) } } }
-
-#define SPRITE_SET_PARAMETERS( tImageView ) { { { VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, tImageView, aTextureSampler, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER } } }
-
 #define SPRITE_SUPPORTED 0
 
 #define SWAPCHAIN gpDevice->GetSwapChain(  )
@@ -325,7 +316,6 @@ void Renderer::ReinitSwapChain(  )
 #endif
 	InitDepthResources( aDepthImage, aDepthImageMemory, aDepthImageView );
 	InitFrameBuffer( aSwapChainFramebuffers, aSwapChainImageViews, aDepthImageView );
-        InitDescPool( aDescPool, { { { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 2000 }, { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 2000 } } } );
 	for ( auto& model : aModels )
 		model->Reinit(  );
 	
@@ -356,8 +346,6 @@ void Renderer::DestroySwapChain(  )
 	vkDestroyRenderPass( DEVICE, aRenderPass, NULL );
 	for ( auto imageView : aSwapChainImageViews )
 		vkDestroyImageView( DEVICE, imageView, NULL );
-	
-	vkDestroyDescriptorPool( DEVICE, aDescPool, NULL );
 }
 
 template< typename T >
@@ -482,6 +470,7 @@ void Renderer::Cleanup(  )
 {
 	DestroySwapChain(  );
 	vkDestroySampler( DEVICE, aTextureSampler, NULL );
+	vkDestroyDescriptorPool( DEVICE, aDescPool, NULL );
 	for ( auto& sprite : aSprites )
 	{
 		DestroyRenderable< SpriteData >( *sprite );
