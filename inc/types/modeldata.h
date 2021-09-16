@@ -58,7 +58,7 @@ public:
 	/* Adds an index group to the model which groups together indices in the same material to be used for multiple draw calls for multiple textures.  */
 	void		AddIndexGroup( std::vector< uint32_t > sVec );
 	/* Default the model and set limits.  */
-        		ModelData(  );
+			ModelData(  ) : apTextures( NULL ), aTextureCount( 0 ), apVertices( NULL ), apIndices( NULL ), aNoDraw( false ){  };
 	/* Frees the memory used by objects outdated by a new swapchain state.  */
 	void		FreeOldResources(  );
 	/* Frees all memory used by model.  */

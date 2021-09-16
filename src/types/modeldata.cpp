@@ -68,12 +68,6 @@ void ModelData::Draw( VkCommandBuffer c, uint32_t i )
 /* Adds a material to the model.  */
 void ModelData::AddMaterial( const std::string &srTexturePath, uint32_t sMaterialId, VkSampler sSampler )
 {
-	if ( srTexturePath == "" )
-	{
-		gTextures.push_back( InitTexture( "materials/act_like_a_baka.jpg", aTextureLayout, *gpPool, sSampler ) );
-		++aTextureCount;
-		return;
-	}
 	gTextures.push_back( InitTexture( srTexturePath, aTextureLayout, *gpPool, sSampler ) );
 	gTextures[ aTextureCount ]->aMaterialId = sMaterialId;
 	++aTextureCount;
@@ -91,10 +85,6 @@ void ModelData::AddIndexGroup( std::vector< uint32_t > sVec )
 	}
 }
 /* Default the model and set limits.  */
-ModelData::ModelData(  ) : apTextures( NULL ), aTextureCount( 0 ), apVertices( NULL ), apIndices( NULL ), aNoDraw( false )
-{
-
-}
 /* Frees the memory used by objects outdated by a new swapchain state.  */
 void ModelData::FreeOldResources(  )
 {

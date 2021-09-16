@@ -31,7 +31,6 @@ draw to the screen.
 #include "../../../inc/imgui/imgui_impl_sdl.h"
 
 #include "../../../inc/core/gui.h"
-
 #define SPRITE_SUPPORTED 0
 
 #define SWAPCHAIN gpDevice->GetSwapChain(  )
@@ -40,8 +39,8 @@ void Renderer::InitCommands(  )
 {
 	apCommandManager->Add( Renderer::Commands::IMGUI_INITIALIZED, Command<  >( std::bind( &Renderer::EnableImgui, this ) ) );
 
-	auto setView = std::bind( &Renderer::SetView, this, std::placeholders::_1 );       
-	apCommandManager->Add( Renderer::Commands::SET_VIEW, Command< View& >( setView ) );
+	//auto setView = std::bind( &Renderer::SetView, this, std::placeholders::_1 );       
+	apCommandManager->Add( Renderer::Commands::SET_VIEW, Command< View& >( [ this ]( View& srView ){ aView.Set( srView ); } ) );
 
 	auto getWindowSize = std::bind( &Renderer::GetWindowSize, this, std::placeholders::_1, std::placeholders::_2 );       
 	apCommandManager->Add( Renderer::Commands::GET_WINDOW_SIZE, Command< uint32_t*, uint32_t* >( getWindowSize ) );
@@ -179,6 +178,7 @@ void Renderer::LoadObj( const String &srObjPath, ModelData &srModel )
 	std::vector< uint32_t >				materialIndices;
         std::unordered_map< vertex_3d_t, uint32_t  >	uniqueVertices{  };
 	std::string					baseDir = GetBaseDir( srObjPath );
+	/* TODO: Figure out what this variable does, I have no idea what it does, but it is needed.  */
 	int onion_ring = 0;
 	int loops = 0;
 
@@ -232,14 +232,11 @@ void Renderer::LoadObj( const String &srObjPath, ModelData &srModel )
 				materialIndices.push_back( shape.mesh.material_ids[ onion_ring ] );
 				loops = i;
 			}
-			printf( "onion ring %i\n", onion_ring++ );
-			printf( "new incies:%i\n", loops );
+			onion_ring++;
 			indexOffset += faceVertices;
 		}
 		srModel.AddIndexGroup( materialIndices );
 	}
-	for ( auto&& num : materialIndices )
-		printf( "%i", num );
 	srModel.aVertexCount 	= ( uint32_t )vertices.size(  );
 	srModel.aIndexCount 	= ( uint32_t )indices.size(  );
 	InitTexBuffer( vertices, srModel.aVertexBuffer, srModel.aVertexBufferMem, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT );
