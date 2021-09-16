@@ -8,6 +8,7 @@ stores all data related to a model.
 
 #include "../core/renderer/allocator.h"
 #include "../core/renderer/initializers.h"
+#include "transform.h"
 #include "renderertypes.h"
 
 class IndexInfo
@@ -44,7 +45,7 @@ public:
 	vertex_3d_t 		*apVertices;
 	uint32_t 		*apIndices;
 	bool 			aNoDraw = true;
-	glm::vec3 		aPos;
+	Transform		aTransform;
 	/* Allocates the model, and loads its textures etc.  */
 	void		Init(  );
 	/* Reinitialize data that is useless after the swapchain becomes outdated.  */

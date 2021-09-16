@@ -35,13 +35,9 @@ public:
 	/* Returns aModelData, in case it is needed, usually not.  */
 	ModelData	&GetModelData(  ){ return aModelData; }
 	/* Sets the position of the model to a given x and y.  */
-	void 		SetPosition( float sX, float sY, float sZ ){ aModelData.aPos.x = sX;
-								aModelData.aPos.y = sY;
-								aModelData.aPos.z = sZ; }
+	void 		SetPosition( const glm::vec3 &srPos ){ aModelData.aTransform.position = srPos; }
 	/* Translates the model by x y, and z.  */
-	void 		Translate( float sX, float sY, float sZ ){ aModelData.aPos.x += sX;
-								aModelData.aPos.y += sY;
-								aModelData.aPos.z += sZ; }
+	void 		Translate( const glm::vec3 &srPos ){ aModelData.aTransform.position += srPos; }
 	/* Sets the visibility of the model.  */
 	void 		SetVisibility( bool sVisible ){ aModelData.aNoDraw = !sVisible; }
 };
