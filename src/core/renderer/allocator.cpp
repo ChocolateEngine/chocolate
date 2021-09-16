@@ -10,7 +10,7 @@ DescriptorCache			gDescriptorCache;
 Device 				*gpDevice 		= new Device;
 ImageSet 			*gpSwapChainImages 	= NULL;
 VkRenderPass 			*gpRenderPass 		= NULL;
-VkDescriptorPool	        *gpPool 		= NULL;
+VkDescriptorPool	        *gpPool 		= new VkDescriptorPool;
 
 VkFormat FindDepthFormat(  )
 {
@@ -230,20 +230,20 @@ void InitTexBuffer( const std::vector< T > &srData, VkBuffer &srBuffer, VkDevice
         vkFreeMemory( DEVICE, stagingBufferMemory, NULL );
 }
 
-void InitUniformBuffers( VkBuffer *&sprUBuffers, VkDeviceMemory *&sprUBuffersMem )
+void InitUniformBuffers( DataBuffer< VkBuffer > &srUBuffers, DataBuffer< VkDeviceMemory > &srUBuffersMem )
 {
 	VkDeviceSize bufferSize = sizeof( ubo_3d_t );
 		
-	sprUBuffers 	= new VkBuffer[ PSWAPCHAIN.GetImages(  ).size(  ) ];
-	sprUBuffersMem	= new VkDeviceMemory[ PSWAPCHAIN.GetImages(  ).size(  ) ];
+	srUBuffers.Allocate( PSWAPCHAIN.GetImages(  ).size(  ) );
+	srUBuffersMem.Allocate( PSWAPCHAIN.GetImages(  ).size(  ) );
 
 	for ( int i = 0; i < PSWAPCHAIN.GetImages(  ).size(  ); i++ )
 	        InitBuffer( bufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-			     sprUBuffers[ i ], sprUBuffersMem[ i ] );
+			    srUBuffers.GetBuffer(  )[ i ], srUBuffersMem.GetBuffer(  )[ i ] );
 }
 
-void InitDescriptorSets( VkDescriptorSet *&sprDescSets, VkDescriptorSetLayout &srDescSetLayout, VkDescriptorPool &srDescPool,
-				    ImageInfoSets sDescImageInfos, BufferInfoSets sDescBufferInfos )
+void InitDescriptorSets( DataBuffer< VkDescriptorSet > &srDescSets, VkDescriptorSetLayout &srDescSetLayout, VkDescriptorPool &srDescPool,
+			 ImageInfoSets sDescImageInfos, BufferInfoSets sDescBufferInfos )
 {
 	std::vector< VkDescriptorSetLayout > 	layouts( PSWAPCHAIN.GetImages(  ).size(  ), srDescSetLayout );
 	std::vector< VkWriteDescriptorSet > 	descriptorWrites{  };
@@ -253,8 +253,8 @@ void InitDescriptorSets( VkDescriptorSet *&sprDescSets, VkDescriptorSetLayout &s
 	allocInfo.descriptorSetCount 	= ( uint32_t )PSWAPCHAIN.GetImages(  ).size(  );
 	allocInfo.pSetLayouts 		= layouts.data(  );
 
-	sprDescSets = new VkDescriptorSet [ PSWAPCHAIN.GetImages(  ).size(  ) ];
-	if ( vkAllocateDescriptorSets( DEVICE, &allocInfo, sprDescSets ) != VK_SUCCESS )	//	Allocate descriptor sets
+	srDescSets.Allocate( PSWAPCHAIN.GetImages(  ).size(  ) );
+	if ( vkAllocateDescriptorSets( DEVICE, &allocInfo, srDescSets.GetBuffer(  ) ) != VK_SUCCESS )	//	Allocate descriptor sets
 		throw std::runtime_error( "Failed to allocate descriptor sets!" );
 
 	for ( int i = 0; i < PSWAPCHAIN.GetImages(  ).size(  ); i++ )					        //	For each of the rendered frames
@@ -263,14 +263,14 @@ void InitDescriptorSets( VkDescriptorSet *&sprDescSets, VkDescriptorSetLayout &s
 		for ( auto &&descBufferInfo : sDescBufferInfos )						//	Iterate through the descriptor buffer infos and make descriptor writes for them
 		{
 			auto 			buffer 		= DescriptorBuffer( descBufferInfo.apBuffer, descBufferInfo.range, 0, i );
-			VkWriteDescriptorSet 	descriptorWrite = WriteDescriptor( sprDescSets[ i ], bindingCount, descBufferInfo.type, NULL, &buffer );
+			VkWriteDescriptorSet 	descriptorWrite = WriteDescriptor( srDescSets.GetBuffer(  )[ i ], bindingCount, descBufferInfo.type, NULL, &buffer );
 			descriptorWrites.push_back( descriptorWrite );
 			++bindingCount;
 		}
 		for ( auto &&descImageInfo : sDescImageInfos )					//	Do the same for the descriptor image infos
 		{
 			auto image 				= DescriptorImage( descImageInfo.imageLayout, descImageInfo.imageView, descImageInfo.textureSampler );
-			VkWriteDescriptorSet descriptorWrite	= WriteDescriptor( sprDescSets[ i ], bindingCount, descImageInfo.type, &image, NULL );
+			VkWriteDescriptorSet descriptorWrite	= WriteDescriptor( srDescSets.GetBuffer(  )[ i ], bindingCount, descImageInfo.type, &image, NULL );
 			descriptorWrites.push_back( descriptorWrite );
 			++bindingCount;
 		}
@@ -286,7 +286,7 @@ TextureDescriptor *InitTexture( const String &srImagePath, VkDescriptorSetLayout
 	VkImageView		textureView;
 	InitTextureImage( srImagePath, textureImage, textureMem, NULL, NULL );
 	InitTextureImageView( textureView, textureImage );
-	InitDescriptorSets( pTexture->aSets.GetBuffer(  ), sLayout, sPool,
+	InitDescriptorSets( pTexture->aSets, sLayout, sPool,
 			    { { { VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, textureView, sSampler, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER } } }, {  } );
 
 	pTexture->aTextureImage 	= textureImage;
@@ -298,8 +298,8 @@ TextureDescriptor *InitTexture( const String &srImagePath, VkDescriptorSetLayout
 /* Initializes the uniform data, such as uniform buffers.  */
 void InitUniformData( UniformDescriptor &srDescriptor, VkDescriptorSetLayout sLayout )
 {
-	InitUniformBuffers( srDescriptor.aData.GetBuffer(  ), srDescriptor.aMem.GetBuffer(  ) );
-	InitDescriptorSets( srDescriptor.aSets.GetBuffer(  ), sLayout, *gpPool, {  },
+	InitUniformBuffers( srDescriptor.aData, srDescriptor.aMem );
+	InitDescriptorSets( srDescriptor.aSets, sLayout, *gpPool, {  },
 			    { { { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, srDescriptor.aData.GetBuffer(  ), sizeof( ubo_3d_t ) } } } );
 }
 
@@ -572,7 +572,7 @@ void InitFrameBuffer( FrameBuffers &srSwapChainFramebuffers, ImageViews &srSwapC
 	}
 }
 
-void InitDescPool( VkDescriptorPool &srDescPool, std::vector< VkDescriptorPoolSize > sPoolSizes )
+void InitDescPool( std::vector< VkDescriptorPoolSize > sPoolSizes )
 {
 	VkDescriptorPoolCreateInfo 	poolInfo{  };
 	poolInfo.sType 			= VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
@@ -580,10 +580,8 @@ void InitDescPool( VkDescriptorPool &srDescPool, std::vector< VkDescriptorPoolSi
 	poolInfo.pPoolSizes 		= sPoolSizes.data(  );
 	poolInfo.maxSets 		= 200000;//( uint32_t )swapChainImages.size(  );
 
-	if ( vkCreateDescriptorPool( DEVICE, &poolInfo, NULL, &srDescPool ) != VK_SUCCESS )
+	if ( vkCreateDescriptorPool( DEVICE, &poolInfo, NULL, gpPool ) != VK_SUCCESS )
 		throw std::runtime_error( "Failed to create descriptor pool!" );
-	
-	gpPool = &srDescPool;
 }
 
 void InitImguiPool( SDL_Window *spWindow )

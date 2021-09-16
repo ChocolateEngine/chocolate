@@ -37,13 +37,12 @@ draw to the screen.
 
 void Renderer::InitCommands(  )
 {
-	apCommandManager->Add( Renderer::Commands::IMGUI_INITIALIZED, Command<  >( std::bind( &Renderer::EnableImgui, this ) ) );
-
-	//auto setView = std::bind( &Renderer::SetView, this, std::placeholders::_1 );       
+	apCommandManager->Add( Renderer::Commands::IMGUI_INITIALIZED, Command<  >( std::bind( &Renderer::EnableImgui, this ) ) );  
 	apCommandManager->Add( Renderer::Commands::SET_VIEW, Command< View& >( [ this ]( View& srView ){ aView.Set( srView ); } ) );
 
-	auto getWindowSize = std::bind( &Renderer::GetWindowSize, this, std::placeholders::_1, std::placeholders::_2 );       
-	apCommandManager->Add( Renderer::Commands::GET_WINDOW_SIZE, Command< uint32_t*, uint32_t* >( getWindowSize ) );
+//	auto getWindowSize = std::bind( &Renderer::GetWindowSize, this, std::placeholders::_1, std::placeholders::_2 );       
+	apCommandManager->Add( Renderer::Commands::GET_WINDOW_SIZE,
+			       Command< uint32_t*, uint32_t* >( [ this ]( uint32_t *spWidth, uint32_t *spHeight ){ GetWindowSize( spWidth, spHeight ); } ) );
 }
 
 void Renderer::EnableImgui(  )
@@ -65,7 +64,7 @@ void Renderer::InitVulkan(  )
 	InitDepthResources( aDepthImage, aDepthImageMemory, aDepthImageView );
 	InitFrameBuffer( aSwapChainFramebuffers, aSwapChainImageViews, aDepthImageView );
 	gpDevice->InitTextureSampler( aTextureSampler, VK_SAMPLER_ADDRESS_MODE_REPEAT );
-	InitDescPool( aDescPool, { { { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 2000 }, { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 2000 } } } );
+	InitDescPool( { { { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 2000 }, { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 2000 } } } );
 	InitImguiPool( gpDevice->GetWindow(  ) );
 	InitSync( aImageAvailableSemaphores, aRenderFinishedSemaphores, aInFlightFences, aImagesInFlight );
 }
@@ -459,15 +458,13 @@ void Renderer::DrawFrame(  )
 
 	aCurrentFrame = ( aCurrentFrame + 1 ) % MAX_FRAMES_PROCESSING;
 	vkFreeCommandBuffers( DEVICE, gpDevice->GetCommandPool(  ), ( uint32_t )aCommandBuffers.size(  ), aCommandBuffers.data(  ) );
-	
-	//SDL_Delay( 1000 / 144 );
 }
 
 void Renderer::Cleanup(  )
 {
 	DestroySwapChain(  );
 	vkDestroySampler( DEVICE, aTextureSampler, NULL );
-	vkDestroyDescriptorPool( DEVICE, aDescPool, NULL );
+	vkDestroyDescriptorPool( DEVICE, *gpPool, NULL );
 	for ( auto& sprite : aSprites )
 	{
 		DestroyRenderable< SpriteData >( *sprite );
@@ -490,6 +487,8 @@ Renderer::Renderer(  ) :
 void Renderer::Init(  )
 {
 	BaseSystem::Init(  );
+
+	gpDevice->InitDevice(  );
 
 	uint32_t w, h;
 	GetWindowSize( &w, &h );

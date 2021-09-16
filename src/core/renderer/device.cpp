@@ -10,18 +10,6 @@ VKAPI_ATTR VkBool32 VKAPI_CALL Device::DebugCallback( VkDebugUtilsMessageSeverit
         return VK_FALSE;
 }
 
-void Device::InitDevice(  )
-{
-        InitWindow(  );
-        InitInstance(  );
-        InitValidationLayers(  );
-	InitSurface(  );
-	InitPhysicalDevice(  );
-	InitLogicalDevice(  );
-        InitCommandPool(  );
-	InitSwapChain(  );
-}
-
 void Device::InitWindow(  )
 {
 	if ( SDL_Init( SDL_INIT_VIDEO | SDL_INIT_EVENTS ) != 0 )
@@ -435,6 +423,18 @@ void Device::Cleanup(  )
 	SDL_Quit(  );
 }
 
+void Device::InitDevice(  )
+{
+        InitWindow(  );
+        InitInstance(  );
+        InitValidationLayers(  );
+	InitSurface(  );
+	InitPhysicalDevice(  );
+	InitLogicalDevice(  );
+        InitCommandPool(  );
+	InitSwapChain(  );
+}
+
 void Device::InitSwapChain(  )
 {
         SwapChainSupportInfo 	swapChainSupport        = CheckSwapChainSupport( aPhysicalDevice );
@@ -609,7 +609,7 @@ uint32_t Device::FindMemoryType( uint32_t sTypeFilter, VkMemoryPropertyFlags sPr
 
 Device::Device(  )
 {
-        InitDevice(  );
+	
 }
 
 Device::~Device(  )
