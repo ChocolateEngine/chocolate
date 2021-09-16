@@ -48,8 +48,6 @@ protected:
 	/* Debug callback that displays the validation layer errors.  */
 	static VKAPI_ATTR VkBool32 VKAPI_CALL   DebugCallback( VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, VkDebugUtilsMessageTypeFlagsEXT messageType,
 								const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData );
-	/* Creates the main device which essentially preps the GPU.  */
-	void 				        InitDevice(  );
 	/* Create the SDL2 window.  */
 	void 				        InitWindow(  );
 	/* A.  */
@@ -94,6 +92,8 @@ protected:
 public:
 	int 	aWidth 	= 1280;
 	int 	aHeight = 720;
+	/* Creates the main device which essentially preps the GPU.  */
+	void 				        InitDevice(  );
 	/* A.  */
 	void 					InitSwapChain(  );
 	/* Reinitializes the swap chain after is is outdated ( e.g a window size change ).  */

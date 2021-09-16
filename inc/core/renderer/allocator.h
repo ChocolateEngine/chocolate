@@ -94,9 +94,9 @@ TextureDescriptor       *InitTexture( const String &srImagePath, VkDescriptorSet
 template< typename T >
 void 	        	InitTexBuffer( const std::vector< T > &srData, VkBuffer &srBuffer, VkDeviceMemory &srBufferMem, VkBufferUsageFlags sUsage );
 /* A.  */
-void 			InitUniformBuffers( VkBuffer *&sprUBuffers, VkDeviceMemory *&sprUBuffersMem );
+void 			InitUniformBuffers( DataBuffer< VkBuffer > &srUBuffers, DataBuffer< VkDeviceMemory > &srUBuffersMem );
 /* A.  */
-void 			InitDescriptorSets( VkDescriptorSet *&sprDescSets, VkDescriptorSetLayout &srDescSetLayout,
+void 			InitDescriptorSets( DataBuffer< VkDescriptorSet > &srDescSets, VkDescriptorSetLayout &srDescSetLayout,
 					    VkDescriptorPool &srDescPool, ImageInfoSets sDescImageInfos, BufferInfoSets sDescBufferInfos );
 /* Initializes the uniform data, such as uniform buffers.  */
 void			InitUniformData( UniformDescriptor &srDescriptor, VkDescriptorSetLayout sLayout );
@@ -118,7 +118,7 @@ void 			InitDepthResources( VkImage &srDepthImage, VkDeviceMemory &srDepthImageM
 void 			InitFrameBuffer( FrameBuffers &srSwapChainFramebuffers, ImageViews &srSwapChainImageViews,
 					 VkImageView &srDepthImageView );
 /* A.  */
-void 			InitDescPool( VkDescriptorPool &srDescPool, std::vector< VkDescriptorPoolSize > sPoolSizes );
+void 			InitDescPool( std::vector< VkDescriptorPoolSize > sPoolSizes );
 /* A.  */
 void 			InitImguiPool( SDL_Window *spWindow );
 /* A.  */
