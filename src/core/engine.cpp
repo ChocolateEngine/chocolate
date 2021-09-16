@@ -8,6 +8,9 @@ Defines the methods declared in engine.h.
 
 #include <chrono>
 
+// im sorry
+extern Console* g_console;
+
 template< typename T, typename... TArgs >
 void Engine::AddSystem( const T *spSystem, TArgs... sSystems )
 {
@@ -120,6 +123,8 @@ void Engine::UpdateSystems(  )
 
 	auto currentTime = std::chrono::high_resolution_clock::now();
 	float time = std::chrono::duration< float, std::chrono::seconds::period >( currentTime - startTime ).count(  );
+
+	apConsole->Update(  );
 
 	/* Update self.  */
 	Update( time );

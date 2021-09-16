@@ -14,6 +14,14 @@ input.h
 #include <fstream>
 #include <iostream>
 
+InputSystem::InputSystem(  ) : BaseInputSystem(  )
+{
+	aSystemType = INPUT_C;
+
+	MakeAliases(  );
+	ParseBindings(  );
+}
+
 void InputSystem::MakeAliases(  )
 {
 	std::ifstream 	in( "resource/SDL_Alias_List.txt" );
@@ -75,18 +83,37 @@ void InputSystem::ParseInput(  )
 	for ( ; SDL_PollEvent( &aEvent ) ; )
 	{
 		ImGui_ImplSDL2_ProcessEvent( &aEvent );
-		if ( aEvent.type == SDL_QUIT )
-			apCommandManager->Execute( Engine::Commands::EXIT );
-		if ( aEvent.type == SDL_KEYDOWN )
+
+		switch (aEvent.type)
 		{
-			if ( aEvent.key.keysym.sym == SDLK_BACKQUOTE )
-				apCommandManager->Execute( GuiSystem::Commands::SHOW_CONSOLE );
-			else
-				for ( const auto& alias : aKeyAliases )
-					if ( aEvent.key.keysym.sym == alias.aCode )
-						for ( const auto& bind : aKeyBinds )
-							if ( bind.aBind == alias.aAlias )
-								apConsole->Add( bind.aCmd );
+			case SDL_QUIT:
+			{
+				apCommandManager->Execute( Engine::Commands::EXIT );
+				break;
+			}
+
+			case SDL_KEYDOWN:
+			{
+				if ( aEvent.key.keysym.sym == SDLK_BACKQUOTE )
+					apCommandManager->Execute( GuiSystem::Commands::SHOW_CONSOLE );
+				else
+					for ( const auto& alias : aKeyAliases )
+						if ( aEvent.key.keysym.sym == alias.aCode )
+							for ( const auto& bind : aKeyBinds )
+								if ( bind.aBind == alias.aAlias )
+									apConsole->Add( bind.aCmd );
+
+				break;
+			}
+
+			case SDL_MOUSEMOTION:
+			{
+				aMousePos.x = aEvent.motion.x;
+				aMousePos.y = aEvent.motion.y;
+				aMouseDelta.x += aEvent.motion.xrel;
+				aMouseDelta.y += aEvent.motion.yrel;
+				break;
+			}
 		}
 
 		for ( BaseSystem* sys: apSystemManager->GetSystemList() )
@@ -96,28 +123,51 @@ void InputSystem::ParseInput(  )
 	}
 }
 
+
+CON_COMMAND( bind )
+{
+	// uhhhhh, should probably have an option to have a void* for the data we need or something, like a class
+	// Bind( sArgs[ 1 ], sArgs[ 2 ] );
+}
+
+
 void InputSystem::InitConsoleCommands(  )
 {
-	ConCommand cmd;
-
-	cmd.str = "bind";
-	cmd.func = [ & ]( std::vector< std::string > sArgs )
+	// doesn't work at the moment
+	/*ConCommand bind( "bind", [ & ]( std::vector< std::string > sArgs )
+	{
+		if ( sArgs.size(  ) < 3 )
 		{
-			if ( sArgs.size(  ) < 3 )
-			{
-				printf( "Insufficient arguments for bind\n" );
-				return;
-			}
-			Bind( sArgs[ 1 ], sArgs[ 2 ] );
-		};
-	aConsoleCommands.push_back( cmd );
+			printf( "Insufficient arguments for bind\n" );
+			return;
+		}
+		Bind( sArgs[ 1 ], sArgs[ 2 ] );
+	} );*/
+
+	BaseSystem::InitConsoleCommands(  );
 }
 
-InputSystem::InputSystem(  ) : BaseInputSystem(  )
+
+void InputSystem::Update( float frameTime )
 {
-	aSystemType = INPUT_C;
-        AddUpdateFunction( [ & ](  ){ ParseInput(  ); } );
-	
-        MakeAliases(  );
-        ParseBindings(  );
+	ResetInputs(  );
+	ParseInput(  );
 }
+
+
+void InputSystem::ResetInputs(  )
+{
+	aMouseDelta = {0, 0};
+}
+
+const glm::vec2& InputSystem::GetMouseDelta(  )
+{
+	return aMouseDelta;
+}
+
+const glm::vec2& InputSystem::GetMousePos(  )
+{
+	return aMousePos;
+}
+
+

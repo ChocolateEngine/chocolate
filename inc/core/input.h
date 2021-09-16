@@ -37,9 +37,22 @@ protected:
 	void 		Bind( const std::string& srKey, const std::string& srCmd );
 	/* Initializes all console commands the system can respond to.  */
 	void 		InitConsoleCommands(  );
+	/*   */
+	void 		Update( float frameTime );
+
+	void        ResetInputs(  );
+
+	glm::vec2   aMouseDelta = {0, 0};
+	glm::vec2   aMousePos = {0, 0};
+
 public:
 	/* Parses SDL inputs and if there is a valid input, execute the console command.  */
 	void 		ParseInput(  );
+
+	const glm::vec2& GetMouseDelta(  );
+	const glm::vec2& GetMousePos(  );
+
+
 	/* Cosntructor.  */
 	explicit        InputSystem(  );
 };
