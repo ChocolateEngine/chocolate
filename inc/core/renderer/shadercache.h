@@ -26,7 +26,7 @@ class ShaderCache
 	typedef std::string		        String;
 protected:
 	AllocatedPipelines	aPipelines;
-	VkPipeline		aPipelineReturn;
+	uint32_t		aPipelineIndex;
 public:
 	/* Checks to see if a pipeline has already been compiled with the shader code.  */
 	bool		Exists( const std::string &srVertShader, const std::string &srFragShader, VkPipelineLayout sLayout );
@@ -34,6 +34,8 @@ public:
 	VkPipeline	GetPipeline(  );
 	/* Adds an allocated pipeline to the list of pipelines.  */
 	void		AddPipeline( const String &srVertShader, const String &srFragShader, VkPipelineLayout sLayout, VkPipeline sPipeline );
+	/* Remove previous pipeline.  */
+	void 		RemovePipeline(  );
 	/* Clear the cache once the swapchain is outdated so new pipelines can be created.  */
 	void		ClearCache(  );
 };
