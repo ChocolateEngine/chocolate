@@ -30,34 +30,10 @@ class SystemManager
 	typedef std::unordered_map< std::type_index, std::any > 	SystemMap;
 public:
 
-	/*template< typename T >
-	void Add( T* sys )
-	{
-		aSystemList.push_back( sys );
-	}*/
-
 	void Add( BaseSystem* sys )
 	{
 		aSystemList.push_back( sys );
 	}
-
-	/*template< typename T, typename Base >
-	void Add( T* sys )
-	{
-		aSystemMap[Base] = sys;
-	}*/
-
-	/*template< typename T >
-	T* GetOld( const std::type_info& type )
-	{
-		for ( const auto& sys: aSystemList )
-		{
-			if ( sys.type().hash_code() == type.hash_code() )
-				return std::any_cast<T*>(sys);
-		}
-
-		return nullptr;
-	}*/
 
 	template< typename T >
 	T* Get()
@@ -72,26 +48,6 @@ public:
 
 		return nullptr;
 	}
-
-	/*template< typename T, typename Base >
-	T* Get( const std::type_info& type )
-	{
-		return aSystemMap[Base];
-
-		/*for ( auto const& [key, val] : aSystemMap )
-		{
-			if ( sys.type() == type )
-				return std::any_cast<T*>(sys);
-		}
-
-		return nullptr;
-	}*/
-
-	/* Returns a system list for iterating through. */
-	/*std::vector< BaseSystem* > GetSystemList()
-	{
-		return std::any_cast<std::vector< BaseSystem* >>(aSystemList);
-	}*/
 	
 	SystemList GetSystemList()
 	{

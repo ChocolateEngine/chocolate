@@ -23,6 +23,7 @@ void BaseSystem::ReadMessage(  )
 
 void BaseSystem::ReadConsole(  )
 {
+#if 0
 	if ( !apConsole || aConsoleCommands.empty(  ) )
 		return;
 	std::string 	command;
@@ -53,6 +54,7 @@ void BaseSystem::ReadConsole(  )
 			}
 		}
 	}
+#endif
 }
 
 void BaseSystem::AddUpdateFunction( std::function< void(  ) > sFunction )
@@ -78,7 +80,9 @@ void BaseSystem::InitCommands(  )
 
 void BaseSystem::InitConsoleCommands(  )
 {
-	
+	// really should move this to when loading a dll, before even calling this
+	// maybe some DLLInit function
+	apConsole->RegisterConVars(  );
 }
 
 void BaseSystem::InitSubsystems(  )
