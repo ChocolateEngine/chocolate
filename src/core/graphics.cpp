@@ -9,7 +9,7 @@ void GraphicsSystem::LoadModel( const std::string& srModelPath, const std::strin
 	if ( spModel == NULL )
 		spModel = new Model;
 
-	spModel->SetPosition( 0.f, 0.f, 0.f );
+	spModel->SetPosition( { 0.f, 0.f, 0.f } );
 	aRenderer.InitModel( spModel->GetModelData(  ), srModelPath, srTexturePath );
 	
 	aModels.push_back( spModel );
