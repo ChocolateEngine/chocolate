@@ -515,7 +515,7 @@ void Device::InitTextureSampler( VkSampler& textureSampler, VkSamplerAddressMode
 	VkPhysicalDeviceProperties properties{  };
 	vkGetPhysicalDeviceProperties( aPhysicalDevice, &properties );
 
-	samplerInfo.anisotropyEnable 		= VK_FALSE;
+	samplerInfo.anisotropyEnable 		= VK_TRUE;
 	samplerInfo.maxAnisotropy 		= properties.limits.maxSamplerAnisotropy;
 	samplerInfo.borderColor 		= VK_BORDER_COLOR_INT_OPAQUE_BLACK;
 	samplerInfo.unnormalizedCoordinates 	= VK_FALSE;

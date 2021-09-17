@@ -11,6 +11,7 @@ Declares the sdfhuosdfhuiosdfhusdfhuisfhu
 #include <functional>
 
 #include "../types/msg.h"
+#include "../types/databuffer.hh"
 
 
 typedef std::function< void( std::vector< std::string > args ) > ConVarFunc;

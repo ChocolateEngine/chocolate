@@ -84,10 +84,10 @@ void Engine::LoadObject( const std::string& srDlPath, const std::string& srEntry
 
 void Engine::EngineMain(  )
 {
-	static Messages         msgs;
-	static Console 		console;
-	static CommandManager   commandManager;
-	static SystemManager   systemManager;
+	static Messages         			msgs;
+	static Console 					console;
+	static CommandManager			   	commandManager;
+	static SystemManager   				systemManager;
 
 	apMsgs 		= &msgs;
 	apConsole 	= &console;
