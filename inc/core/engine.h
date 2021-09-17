@@ -23,7 +23,6 @@ protected:
 	typedef std::vector< BaseSystem* >      SystemList;
 	typedef std::vector< void* > 	        DataList;
 
-	SystemList	aSystems;
 	DataList	aDlHandles;
 
 	/* Entry for the game code.  */
