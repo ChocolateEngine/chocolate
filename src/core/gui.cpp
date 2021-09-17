@@ -147,6 +147,7 @@ void GuiSystem::DrawConsole( bool wasConsoleOpen )
 	std::vector< std::string > cvarAutoComplete = apConsole->GetAutoCompleteList();
 
 	if ( !cvarAutoComplete.empty() )
+	// if ( 0 )
 	{
 		//ImGui::BeginPopup( "cvars_modal", ImGuiWindowFlags_Popup );
 		//ImGui::BeginPopupModal( "cvars_modal" );
