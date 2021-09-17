@@ -44,6 +44,7 @@ protected:
 
 	glm::vec2   aMouseDelta = {0, 0};
 	glm::vec2   aMousePos = {0, 0};
+	bool        aHasFocus = false;
 
 public:
 	/* Parses SDL inputs and if there is a valid input, execute the console command.  */
@@ -52,6 +53,7 @@ public:
 	const glm::vec2& GetMouseDelta(  );
 	const glm::vec2& GetMousePos(  );
 
+	bool WindowHasFocus(  );
 
 	/* Cosntructor.  */
 	explicit        InputSystem(  );

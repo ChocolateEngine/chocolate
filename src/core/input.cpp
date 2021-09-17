@@ -114,6 +114,18 @@ void InputSystem::ParseInput(  )
 				aMouseDelta.y += aEvent.motion.yrel;
 				break;
 			}
+
+			case SDL_WINDOWEVENT_FOCUS_GAINED:
+			{
+				aHasFocus = true;
+				break;
+			}
+
+			case SDL_WINDOWEVENT_FOCUS_LOST:
+			{
+				aHasFocus = false;
+				break;
+			}
 		}
 
 		for ( BaseSystem* sys: apSystemManager->GetSystemList() )
@@ -162,6 +174,11 @@ const glm::vec2& InputSystem::GetMouseDelta(  )
 const glm::vec2& InputSystem::GetMousePos(  )
 {
 	return aMousePos;
+}
+
+bool InputSystem::WindowHasFocus(  )
+{
+	return aHasFocus;
 }
 
 
