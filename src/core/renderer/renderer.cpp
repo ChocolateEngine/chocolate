@@ -177,8 +177,7 @@ void Renderer::LoadObj( const String &srObjPath, ModelData &srModel )
 	std::vector< uint32_t >				materialIndices;
         std::unordered_map< vertex_3d_t, uint32_t  >	uniqueVertices{  };
 	std::string					baseDir = GetBaseDir( srObjPath );
-	/* TODO: Figure out what this variable does, I have no idea what it does, but it is needed.  */
-	int onion_ring = 0;
+	std::vector< Mesh >				meshes;
 	int loops = 0;
 
 	if ( baseDir.empty(  ) )
@@ -188,16 +187,11 @@ void Renderer::LoadObj( const String &srObjPath, ModelData &srModel )
 	if ( !tinyobj::LoadObj( &attrib, &shapes, &materials, &warn, &err, srObjPath.c_str(  ), baseDir.c_str(  ) ) )
 		throw std::runtime_error( warn + err );
 
-        for ( uint32_t i = 0; i < materials.size(  ); ++i )
-		if ( materials[ i ].diffuse_texname == "" )
-			srModel.AddMaterial( "", i, aTextureSampler );
-		else
-			srModel.AddMaterial( baseDir + materials[ i ].diffuse_texname, i, aTextureSampler );
-			
-	
 	for ( const auto& shape : shapes )
 	{
 		uint32_t indexOffset = 0;
+		/* TODO: Figure out what this variable does, I have no idea what it does, but it is needed.  */
+		uint32_t onion_ring = 0;
 
 		for ( const auto& index : shape.mesh.num_face_vertices )
 		{		      
@@ -236,6 +230,16 @@ void Renderer::LoadObj( const String &srObjPath, ModelData &srModel )
 		}
 		srModel.AddIndexGroup( materialIndices );
 	}
+
+	uint32_t search = 0;
+	uint32_t numIndices = 0;
+	uint32_t j = 0;
+	for ( j = 0; j < materialIndices.size(  ); )
+	{
+		for ( numIndices = 0, search = materialIndices[ j ]; j < materialIndices.size(  ) && search == materialIndices[ j ]; ++j, ++numIndices );
+		srModel.AddMesh( baseDir + materials[ search ].diffuse_texname, numIndices, j - numIndices, aTextureSampler );
+	}
+	
 	srModel.aVertexCount 	= ( uint32_t )vertices.size(  );
 	srModel.aIndexCount 	= ( uint32_t )indices.size(  );
 	InitTexBuffer( vertices, srModel.aVertexBuffer, srModel.aVertexBufferMem, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT );

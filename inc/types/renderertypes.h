@@ -223,10 +223,15 @@ public:
 	bool			IsValid(  ){ return apBuffers; }
 	/* Returns the buffer.  */
         T			*&GetBuffer(  ){ return apBuffers; }
+	/* Returns the size of the buffer.  */
+	uint32_t		GetSize(  ){ return aBufferCount; }
+	/* Returns the topmost buffer.  */
+	T			&GetTop(  ){ return apBuffers[ aBufferCount - 1 ]; }
 	/* Allocates memory for the buffer.  */
-	void			Allocate( uint32_t sSize ){ apBuffers = new T[ sSize ]; aBufferCount = sSize; }
+	void			Allocate( uint32_t sSize ){ apBuffers = new T[ sSize + 1 ]; aBufferCount = sSize; }
 	/* Reallocates the buffer.  */
-	void			Reallocate( uint32_t sSize ){ /* ... */ }
+	void			Reallocate( uint32_t sSize ){ T *pTemp = new T[ sSize + 1 ]; for ( uint32_t i = 0; i < aBufferCount && i < sSize; ++i ) pTemp[ i ] = apBuffers[ i ]; delete[  ] apBuffers; apBuffers = pTemp; aBufferCount = sSize; }
+	void			Increment(  ){ Reallocate( aBufferCount + 1 ); }
 	/* Frees the buffer when no longer in use.  */
 				~DataBuffer(  ){ delete[  ] apBuffers; }
 };
