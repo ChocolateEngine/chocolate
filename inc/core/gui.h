@@ -15,6 +15,8 @@ protected:
 
 	/* Draw the gui.  */
 	void 		DrawGui(  );
+	/* Draw the console, move to it's own class later  */
+	void 		DrawConsole( bool wasConsoleOpen );
 	/* Initializes all commands the system can respond to.  */
 	void 		InitCommands(  );
 

@@ -29,25 +29,7 @@ void GuiSystem::DrawGui(  )
 		apCommandManager->Execute( Renderer::Commands::IMGUI_INITIALIZED );
 
 	if ( aConsoleShown )
-	{
-		ImGui::Begin( "Developer Console" );
-		static char buf[ 256 ] = "";
-
-		if ( !wasConsoleOpen )
-		{
-			ImGui::SetKeyboardFocusHere(0);
-		}
-		ImGui::BeginChild("ConsoleOutput", ImVec2(256,256), true);
-		ImGui::EndChild();
-		if ( ImGui::InputText( "send", buf, 256, ImGuiInputTextFlags_EnterReturnsTrue ) )
-		{
-			apConsole->Add( buf );
-			snprintf(buf, 256, "");
-			ImGui::SetKeyboardFocusHere(0);
-		}
-
-		ImGui::End(  );
-	}
+		DrawConsole( wasConsoleOpen );
 
 	wasConsoleOpen = aConsoleShown;
 
@@ -66,6 +48,104 @@ void GuiSystem::DrawGui(  )
 	prevtick = SDL_GetTicks();
 
 	aDrawnFrame = true;
+}
+
+
+bool CheckAddLastCommand( ImGuiInputTextCallbackData* data, Console* console, int& lastCommandIndex )
+{
+	if ( console->GetCommandHistory().empty() )
+		return false;
+
+	bool upPressed = ImGui::IsKeyPressed( ImGui::GetKeyIndex(ImGuiKey_UpArrow) );
+	bool downPressed = ImGui::IsKeyPressed( ImGui::GetKeyIndex(ImGuiKey_DownArrow) );
+
+	if ( upPressed )
+	{
+		lastCommandIndex--;
+
+		if ( lastCommandIndex == -2 )
+			lastCommandIndex = console->GetCommandHistory().size() - 1;
+	}
+
+	if ( downPressed )
+	{
+		lastCommandIndex++;
+
+		if ( lastCommandIndex == console->GetCommandHistory().size() )
+			lastCommandIndex = -1;
+	}
+
+	if ( upPressed || downPressed )
+	{
+		snprintf( data->Buf, 256, (lastCommandIndex == -1) ? "" : console->GetCommandHistory()[lastCommandIndex].c_str() );
+		data->CursorPos = std::string(data->Buf).length();
+	}
+
+	return upPressed || downPressed;
+}
+
+
+bool CheckEnterPress( char* buf, Console* console, int& lastCommandIndex )
+{
+	bool isPressed = ImGui::IsKeyPressed( ImGui::GetKeyIndex(ImGuiKey_Enter), false );
+
+	if ( isPressed )
+	{
+		console->Add( buf );
+		snprintf( buf, 256, "" );
+		ImGui::SetKeyboardFocusHere(  );
+		lastCommandIndex = -1;
+	}
+
+	return isPressed;
+}
+
+
+int ConsoleInputCallback( ImGuiInputTextCallbackData* data )
+{
+	static int lastCommandIndex = -1;
+
+	Console* console = (Console*)data->UserData;
+
+	data->BufDirty = CheckAddLastCommand( data, console, lastCommandIndex );
+
+	if ( !data->BufDirty )
+		data->BufDirty = CheckEnterPress( data->Buf, console, lastCommandIndex );
+
+	console->SetTextBuffer( data->Buf );
+	data->BufTextLen = console->GetTextBuffer().length();
+
+	return 0;
+}
+
+
+void GuiSystem::DrawConsole( bool wasConsoleOpen )
+{
+	// blech
+	static bool wasUpArrowPressed = false;
+	//static bool wasUpArrowPressed = false;
+
+	static int lastCommandIndex = 0;
+
+	ImGui::Begin( "Developer Console" );
+	static char buf[ 256 ] = "";
+
+	if ( !wasConsoleOpen )
+	{
+		ImGui::SetKeyboardFocusHere(0);
+	}
+
+	ImGui::BeginChild("ConsoleOutput", ImVec2( ImGui::GetWindowSize().x - 32, ImGui::GetWindowSize().y - 64 ), true);
+
+	ImGui::Text( apConsole->GetConsoleHistory().c_str() );
+
+	ImGui::EndChild();
+
+	snprintf( buf, 256, apConsole->GetTextBuffer(  ).c_str() );
+
+	ImGui::InputText( "send", buf, 256, ImGuiInputTextFlags_CallbackAlways, &ConsoleInputCallback, apConsole );
+
+	ImGui::End(  );
 }
 
 void GuiSystem::ShowConsole(  )
