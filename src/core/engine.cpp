@@ -11,12 +11,12 @@ Defines the methods declared in engine.h.
 // im sorry
 extern Console* g_console;
 
+
 template< typename T, typename... TArgs >
 void Engine::AddSystem( const T *spSystem, TArgs... sSystems )
 {
 	if ( !spSystem )
 		return;
-	aSystems.push_back( ( BaseSystem* )spSystem );
 	apSystemManager->Add( ( BaseSystem* )spSystem );
 	AddSystem( sSystems... );
 }
@@ -33,7 +33,7 @@ void Engine::AddGameSystems(  )
 		pSys->apConsole 	= this->apConsole;
 		pSys->apCommandManager 	= this->apCommandManager;
 		pSys->apSystemManager 	= this->apSystemManager;
-		aSystems.push_back( pSys );
+		//aSystems.push_back( pSys );
 		apSystemManager->Add( pSys );
 	}
 	for ( const auto& pSys : gameSystems )
@@ -104,16 +104,18 @@ void Engine::InitSystems(  )
 {
 	AddSystem( new GraphicsSystem, new InputSystem, new AudioSystem, new GuiSystem );
 
-	for ( const auto& pSys : aSystems )
+	for ( const auto& pSys : apSystemManager->GetSystemList() )
 	{
 		pSys->apMsgs 		= apMsgs;
 		pSys->apConsole 	= apConsole;
 		pSys->apCommandManager	= apCommandManager;
 		pSys->apSystemManager	= apSystemManager;
 	}
-	for ( const auto& pSys : aSystems )
+
+	for ( const auto& pSys : apSystemManager->GetSystemList() )
 		pSys->Init(  );
-	for ( const auto& pSys : aSystems )
+
+	for ( const auto& pSys : apSystemManager->GetSystemList() )
 		pSys->SendMessages(  );
 }
 
@@ -129,7 +131,7 @@ void Engine::UpdateSystems(  )
 	/* Update self.  */
 	Update( time );
 
-	for ( const auto& pSys : aSystems )
+	for ( const auto& pSys : apSystemManager->GetSystemList() )
 		pSys->Update( time );
 
 	startTime = currentTime;
@@ -142,7 +144,7 @@ Engine::Engine(  ) : BaseSystem(  )
 
 Engine::~Engine(  )
 {
-	for ( const auto& pSys : aSystems )
+	for ( const auto& pSys : apSystemManager->GetSystemList() )
 		//pSys->~BaseSystem(  );
 		delete pSys;
 
