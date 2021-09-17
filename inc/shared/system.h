@@ -25,6 +25,7 @@ private:					\
 #include "../types/enums.h"
 #include "../types/msg.h"
 #include "../types/command.h"
+#include "../types/databuffer.hh"
 
 #include <functional>
 
@@ -62,10 +63,10 @@ protected:
 	/* Initializes any member systems of the base system.  */
 	virtual void    InitSubsystems(  );
 public:
-	Messages 	        *apMsgs 		= NULL;
-	Console 		*apConsole 		= NULL;
-	CommandManager		*apCommandManager 	= NULL;
-	SystemManager		*apSystemManager 	= NULL;
+	Messages 	        		*apMsgs 		= NULL;
+	Console 				*apConsole 		= NULL;
+	CommandManager				*apCommandManager 	= NULL;
+	SystemManager				*apSystemManager 	= NULL;
 	/* Updates the system, performing all neccesary tasks.  */
 	virtual void 		Update( float dt );
 	/* Adds a flag to the aFlags, e.g update twice  */

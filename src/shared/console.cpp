@@ -6,16 +6,17 @@
 Console* g_console = nullptr;
 
 // concommands to register after static initalization
-std::vector< ConCommand* > g_registerConCommands;
-std::vector< ConVar* > g_registerConVars;
+static DataBuffer< ConCommand* > g_registerConCommands;
+static DataBuffer< ConVar* > g_registerConVars;
 
 
 void ConCommand::Init( const std::string& name, ConVarFunc func )
 {
+	g_registerConCommands.Increment(  );
 	aName = name;
 	aFunc = func;
 
-	g_registerConCommands.push_back( this );
+	g_registerConCommands.GetTop(  ) = this;
 }
 
 std::string ConCommand::GetPrintMessage(  )
@@ -28,24 +29,26 @@ std::string ConCommand::GetPrintMessage(  )
 
 void ConVar::Init( const std::string& name, const std::string& defaultValue )
 {
+	g_registerConVars.Increment(  );
 	aName = name;
 	aDefaultValue = defaultValue;
 
 	SetValue( defaultValue );
 
-	g_registerConVars.push_back( this );
+	g_registerConVars.GetTop(  ) = this;
 }
 
 
 void ConVar::Init( const std::string& name, const std::string& defaultValue, ConVarFunc callback )
 {
+	g_registerConVars.Increment(  );
 	aName = name;
 	aDefaultValue = defaultValue;
 	aFunc = callback;
 
 	SetValue( defaultValue );
 
-	g_registerConVars.push_back( this );
+	g_registerConVars.GetTop(  ) = this;
 }
 
 std::string ConVar::GetPrintMessage(  )
@@ -119,14 +122,14 @@ void Console::RegisterConVars(  )
 	//	return;
 
 	// TODO: make both of these share a base class, and use dynamic_cast to check which one it is, smh my head
-	for ( auto const& cmd : g_registerConCommands )
+	for ( uint32_t i = 0; i < g_registerConCommands.GetSize(  ); ++i )
 	{
-		AddConCommand( cmd );
+		AddConCommand( g_registerConCommands.GetBuffer(  )[ i ] );
 	}
 
-	for ( auto const& cmd : g_registerConVars )
+	for ( uint32_t i = 0; i < g_registerConVars.GetSize(  ); ++i )
 	{
-		AddConVar( cmd );
+		AddConVar( g_registerConVars.GetBuffer(  )[ i ] );
 	}
 
 	registered = true;
@@ -250,19 +253,19 @@ const std::vector< std::string >& Console::GetAutoCompleteList( )
 
 void Console::Update(  )
 {
-	static size_t regConCmds = g_registerConCommands.size();
-	static size_t regCVars = g_registerConVars.size();
+	static size_t regConCmds = g_registerConCommands.GetSize();
+	static size_t regCVars = g_registerConVars.GetSize();
 
 	// probably can't do this only on the first call here due to potentially loading other dlls with convars
 	// after this has already called
-	if ( regConCmds != g_registerConCommands.size() || regCVars != g_registerConVars.size() )
+	//if ( regConCmds != g_registerConCommands.GetSize() || regCVars != g_registerConVars.GetSize() )
 	{
 		// HACK HACK HACK
 		// only needed for when creating cvars in functions
 		RegisterConVars(  );
 
-		regConCmds = g_registerConCommands.size();
-		regCVars = g_registerConVars.size();
+		regConCmds = g_registerConCommands.GetSize();
+		regCVars = g_registerConVars.GetSize();
 	}
 
 	std::string command;
