@@ -64,7 +64,7 @@ ByteArray     		ReadFile( const String &srFilePath );
 /* Wraps bytecode into objects for the pipeline to use.  */
 VkShaderModule 		CreateShaderModule( const ByteArray &srCode );
 /* A.  */
-void 			TransitionImageLayout( VkImage sImage, VkImageLayout sOldLayout, VkImageLayout sNewLayout );
+void 			TransitionImageLayout( VkImage sImage, VkImageLayout sOldLayout, VkImageLayout sNewLayout, uint32_t sMipLevels );
 /* Creates a buffer and maps the memory.  */
 void 			InitBuffer( VkDeviceSize sSize, VkBufferUsageFlags sUsage, VkMemoryPropertyFlags sProperties,
 				    VkBuffer &srBuffer, VkDeviceMemory &srBufferMemory );
@@ -81,13 +81,15 @@ void 			Submit( const auto &&sFunction );
 /* A.  */
 void 			InitAllocator( ImageSet &sSwapChainImages );
 /* A.  */
-void 			InitImageView( VkImageView &sImageView, VkImage sImage, VkFormat sFormat, VkImageAspectFlags sAspectFlags );
+void 			InitImageView( VkImageView &sImageView, VkImage sImage, VkFormat sFormat, VkImageAspectFlags sAspectFlags, uint32_t sMipLevels );
 /* A.  */
 void 			InitImage( VkImageCreateInfo sImageInfo, VkMemoryPropertyFlags sProperties, VkImage &srImage, VkDeviceMemory &srImageMemory );
 /* A.  */
-void 			InitTextureImage( const String &srImagePath, VkImage &srTImage, VkDeviceMemory &srTImageMem, float *spWidth, float *spHeight );
+void 			InitTextureImage( const String &srImagePath, VkImage &srTImage, VkDeviceMemory &srTImageMem, uint32_t &srMipLevels );
 /* A.  */
-void 			InitTextureImageView( VkImageView &srTImageView, VkImage sTImage );
+void 			InitTextureImageView( VkImageView &srTImageView, VkImage sTImage, uint32_t sMipLevels );
+/* Creates the mip maps from a given VkImage.  */
+void			GenerateMipMaps( VkImage sImage, VkFormat sFormat, uint32_t sWidth, uint32_t sHeight, uint32_t sMipLevels );
 /* A.  */
 TextureDescriptor       *InitTexture( const String &srImagePath, VkDescriptorSetLayout sLayout, VkDescriptorPool sPool, VkSampler sSampler );
 /* A.  */

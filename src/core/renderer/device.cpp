@@ -522,7 +522,7 @@ void Device::InitTextureSampler( VkSampler& textureSampler, VkSamplerAddressMode
 	samplerInfo.mipmapMode 			= VK_SAMPLER_MIPMAP_MODE_LINEAR;
 	samplerInfo.mipLodBias 			= 0.0f;
 	samplerInfo.minLod 			= 0.0f;
-	samplerInfo.maxLod 			= 0.0f;
+	samplerInfo.maxLod 			= 1000.0f;
 
 	if ( vkCreateSampler( aDevice, &samplerInfo, NULL, &textureSampler ) != VK_SUCCESS )
 	{

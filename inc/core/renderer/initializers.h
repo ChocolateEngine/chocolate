@@ -41,7 +41,7 @@ static inline VkDescriptorSetLayoutBinding DescriptorLayoutBinding( VkDescriptor
 	return layoutBinding;
 }
 /* Creates a structure specifying the parameters of an image memory barrier.  */
-static inline VkImageMemoryBarrier ImageMemoryBarrier( VkImage sImage, VkImageLayout sOldLayout, VkImageLayout sNewLayout )
+static inline VkImageMemoryBarrier ImageMemoryBarrier( VkImage sImage, VkImageLayout sOldLayout, VkImageLayout sNewLayout, uint32_t sMipLevels )
 {
 	VkImageMemoryBarrier 	barrier{  };
         barrier.sType 				= VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
@@ -52,7 +52,7 @@ static inline VkImageMemoryBarrier ImageMemoryBarrier( VkImage sImage, VkImageLa
         barrier.image 				= sImage;
         barrier.subresourceRange.aspectMask 	= VK_IMAGE_ASPECT_COLOR_BIT;
         barrier.subresourceRange.baseMipLevel 	= 0;
-        barrier.subresourceRange.levelCount 	= 1;
+        barrier.subresourceRange.levelCount 	= sMipLevels;
         barrier.subresourceRange.baseArrayLayer = 0;
         barrier.subresourceRange.layerCount 	= 1;
 
@@ -98,7 +98,7 @@ static inline VkBufferImageCopy BufferImageCopy( uint32_t sWidth, uint32_t sHeig
 	return region;
 }
 /* Create a structure specifying parameters of a newly created image view.  */
-static inline VkImageViewCreateInfo ImageView( VkImage sImage, VkFormat sFormat, VkImageAspectFlags sAspectFlags )
+static inline VkImageViewCreateInfo ImageView( VkImage sImage, VkFormat sFormat, VkImageAspectFlags sAspectFlags, uint32_t sMipLevels )
 {
 	VkImageViewCreateInfo viewInfo{  };
 	viewInfo.sType 				 = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
@@ -107,22 +107,22 @@ static inline VkImageViewCreateInfo ImageView( VkImage sImage, VkFormat sFormat,
 	viewInfo.format 			 = sFormat;
 	viewInfo.subresourceRange.aspectMask 	 = sAspectFlags;
 	viewInfo.subresourceRange.baseMipLevel 	 = 0;
-	viewInfo.subresourceRange.levelCount 	 = 1;
+	viewInfo.subresourceRange.levelCount 	 = sMipLevels;
 	viewInfo.subresourceRange.baseArrayLayer = 0;
 	viewInfo.subresourceRange.layerCount 	 = 1;
 
 	return viewInfo;
 }
 
-static inline VkImageCreateInfo Image( uint32_t sWidth, uint32_t sHeight, VkFormat sFormat, VkImageTiling sTiling, VkImageUsageFlags sUsage )
+static inline VkImageCreateInfo Image( uint32_t sWidth, uint32_t sHeight, VkFormat sFormat, VkImageTiling sTiling, VkImageUsageFlags sUsage, uint32_t sMipLevels )
 {
 	VkImageCreateInfo imageInfo{  };
 	imageInfo.sType 	= VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
 	imageInfo.imageType 	= VK_IMAGE_TYPE_2D;
 	imageInfo.extent.width 	= sWidth;
 	imageInfo.extent.height = sHeight;
-	imageInfo.extent.depth 	= 1;
-	imageInfo.mipLevels 	= 1;
+	imageInfo.extent.depth 	= 1; 
+	imageInfo.mipLevels 	= sMipLevels;
 	imageInfo.arrayLayers 	= 1;
 	imageInfo.format 	= sFormat;
 	imageInfo.tiling 	= sTiling;
