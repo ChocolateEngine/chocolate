@@ -358,9 +358,7 @@ void Renderer::UpdateUniformBuffers( uint32_t sCurrentImage, ModelData &srModelD
 {
 	ubo_3d_t ubo{  };
 
-	ubo.model = glm::translate( glm::mat4( 1.0f ), srModelData.aTransform.position ) * glm::rotate( glm::mat4( 1.0f ),
-													glm::radians( 0.0f ),
-													glm::vec3( 0.0f, 0.0f, 1.0f ) );
+	ubo.model = glm::scale( glm::translate( glm::mat4( 1.0f ), srModelData.aTransform.position ) * glm::rotate( glm::mat4( 1.0f ), glm::radians( 0.0f ), glm::vec3( 1.0f, 1.0f, 1.0f ) ), srModelData.aTransform.scale );
 	
 	ubo.view  = aView.viewMatrix;
 	ubo.proj  = aView.GetProjection();
