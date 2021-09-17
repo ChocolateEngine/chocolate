@@ -239,7 +239,7 @@ public:
 class TextureDescriptor
 {
 public:
-	uint32_t			aMaterialId;
+	uint32_t			aMipLevels;
 	VkDeviceMemory			aTextureImageMem;
 	VkImage 			aTextureImage;
 	VkImageView 			aTextureImageView;
