@@ -50,7 +50,7 @@ void ConVar::Init( const std::string& name, const std::string& defaultValue, Con
 
 std::string ConVar::GetPrintMessage(  )
 {
-	return aName + " = " + GetValue() + "\n";
+	return aName + " = " + GetValue() + " (" + aDefaultValue + " default)\n";
 }
 
 
