@@ -16,11 +16,33 @@ Declares the sdfhuosdfhuiosdfhusdfhuisfhu
 typedef std::function< void( std::vector< std::string > args ) > ConVarFunc;
 
 
-class ConCommand
+class ConVarBase
+{
+public:
+	ConVarBase( const std::string& name );
+	virtual std::string		GetPrintMessage(  ) = 0;
+
+	const std::string&      GetName(  );
+	ConVarBase*             GetNext(  );
+
+	friend class ConCommand;
+	friend class ConVar;
+	friend class Console;
+
+private:
+	std::string             aName;
+	ConVarBase*             apNext = nullptr;
+
+	static ConVarBase*      spConVarBases;
+};
+
+
+class ConCommand : public ConVarBase
 {
 public:
 
-	ConCommand( const std::string& name, ConVarFunc func )
+	ConCommand( const std::string& name, ConVarFunc func ):
+		ConVarBase( name )
 	{
 		Init( name, func );
 	}
@@ -34,21 +56,22 @@ public:
 };
 
 
-class ConVar
+class ConVar : public ConVarBase
 {
 public:
 
-	ConVar( const std::string& name, const std::string& defaultValue )
+	ConVar( const std::string& name, const std::string& defaultValue ):
+		ConVarBase( name )
 	{
-		Init( name, defaultValue );
+		Init( name, defaultValue, aFunc );
 	}
 
-	ConVar( const std::string& name, const std::string& defaultValue, ConVarFunc callback )
+	ConVar( const std::string& name, const std::string& defaultValue, ConVarFunc callback ):
+		ConVarBase( name )
 	{
 		Init( name, defaultValue, callback );
 	}
 
-	void Init( const std::string& name, const std::string& defaultValue );
 	void Init( const std::string& name, const std::string& defaultValue, ConVarFunc func );
 
 	std::string GetPrintMessage(  );
@@ -87,8 +110,7 @@ class Console
 protected:
 	int 				aCmdIndex = -1;
 	StringList 			aQueue;
-	std::vector< ConCommand* >	aConCommandList;
-	std::vector< ConVar* >	aConVarList;
+	std::vector< ConVarBase* >	aConVarList;
 	std::string         aConsoleHistory;
 	StringList 			aCommandHistory;
 	std::string         aTextBuffer;
@@ -102,10 +124,6 @@ public:
 
 	/* Register all the ConCommands and ConVars created from static initialization.  */
 	void 	RegisterConVars(  );
-	/* A.  */
-	void 	AddConCommand( ConCommand* cmd );
-	/* A.  */
-	void 	AddConVar( ConVar* cmd );
 	/* A.  */
 	const std::string&    GetConsoleHistory(  );
 

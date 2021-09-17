@@ -5,17 +5,40 @@
 
 Console* g_console = nullptr;
 
-// concommands to register after static initalization
-std::vector< ConCommand* > g_registerConCommands;
-std::vector< ConVar* > g_registerConVars;
+
+// ================================================================================
+
+
+// convars to register after static initalization
+ConVarBase* ConVarBase::spConVarBases = nullptr;
+
+
+ConVarBase::ConVarBase( const std::string& name )
+{
+	aName = name;
+
+	apNext = spConVarBases;
+	spConVarBases = this;
+}
+
+const std::string& ConVarBase::GetName(  )
+{
+	return aName;
+}
+
+ConVarBase* ConVarBase::GetNext(  )
+{
+	return apNext;
+}
+
+
+// ================================================================================
 
 
 void ConCommand::Init( const std::string& name, ConVarFunc func )
 {
 	aName = name;
 	aFunc = func;
-
-	g_registerConCommands.push_back( this );
 }
 
 std::string ConCommand::GetPrintMessage(  )
@@ -26,17 +49,6 @@ std::string ConCommand::GetPrintMessage(  )
 // ================================================================================
 
 
-void ConVar::Init( const std::string& name, const std::string& defaultValue )
-{
-	aName = name;
-	aDefaultValue = defaultValue;
-
-	SetValue( defaultValue );
-
-	g_registerConVars.push_back( this );
-}
-
-
 void ConVar::Init( const std::string& name, const std::string& defaultValue, ConVarFunc callback )
 {
 	aName = name;
@@ -44,8 +56,6 @@ void ConVar::Init( const std::string& name, const std::string& defaultValue, Con
 	aFunc = callback;
 
 	SetValue( defaultValue );
-
-	g_registerConVars.push_back( this );
 }
 
 std::string ConVar::GetPrintMessage(  )
@@ -118,32 +128,25 @@ void Console::RegisterConVars(  )
 	//if ( registered )
 	//	return;
 
-	// TODO: make both of these share a base class, and use dynamic_cast to check which one it is, smh my head
-	for ( auto const& cmd : g_registerConCommands )
-	{
-		AddConCommand( cmd );
-	}
+	ConVarBase *current;
+	ConVarBase *next;
 
-	for ( auto const& cmd : g_registerConVars )
+	current = ConVarBase::spConVarBases;
+	while ( current )
 	{
-		AddConVar( cmd );
+		next = current->apNext;
+
+		if ( !vec_contains( aConVarList, current ) )
+			aConVarList.push_back( current );
+
+		current = next;
 	}
 
 	registered = true;
+
+	ConVarBase::spConVarBases = nullptr;
 }
 
-
-void Console::AddConCommand( ConCommand* cmd )
-{
-	if ( !vec_contains( aConCommandList, cmd ) )
-		aConCommandList.push_back( cmd );
-}
-
-void Console::AddConVar( ConVar* cmd )
-{
-	if ( !vec_contains( aConVarList, cmd ) )
-		aConVarList.push_back( cmd );
-}
 
 void Console::DeleteCommand(  )
 {
@@ -191,12 +194,12 @@ void Console::PrintAllConVars( )
 		Print( cvar->GetPrintMessage().c_str() );
 	}
 
-	Print( "\nConCommands:\n--------------------------------------\n" );
+	/*Print( "\nConCommands:\n--------------------------------------\n" );
 
 	for ( const auto& cmd : aConCommandList )
 	{
 		Print( cmd->GetPrintMessage().c_str() );
-	}
+	}*/
 
 	Print( "--------------------------------------\n" );
 }
@@ -232,13 +235,13 @@ void Console::CalculateAutoCompleteList( )
 		}
 	}
 
-	for ( const auto& cmd : aConCommandList )
+	/*for ( const auto& cmd : aConCommandList )
 	{
 		if ( cmd->aName.starts_with( aTextBuffer ) )
 		{
 			aAutoCompleteList.push_back( cmd->aName );
 		}
-	}
+	}*/
 }
 
 
@@ -250,20 +253,9 @@ const std::vector< std::string >& Console::GetAutoCompleteList( )
 
 void Console::Update(  )
 {
-	static size_t regConCmds = g_registerConCommands.size();
-	static size_t regCVars = g_registerConVars.size();
-
-	// probably can't do this only on the first call here due to potentially loading other dlls with convars
-	// after this has already called
-	if ( regConCmds != g_registerConCommands.size() || regCVars != g_registerConVars.size() )
-	{
-		// HACK HACK HACK
-		// only needed for when creating cvars in functions
-		RegisterConVars(  );
-
-		regConCmds = g_registerConCommands.size();
-		regCVars = g_registerConVars.size();
-	}
+	// HACK HACK HACK
+	// only needed for when creating cvars in functions
+	RegisterConVars(  );
 
 	std::string command;
 
@@ -299,35 +291,29 @@ void Console::Update(  )
 		{
 			if ( cvar->aName == commandName )
 			{
-				commandCalled = true;
-
-				if ( !args.empty() )
+				if ( ConVar* convar = dynamic_cast<ConVar*>(cvar) )
 				{
-					cvar->SetValue( args[0] );
+					commandCalled = true;
 
-					// TODO: convar callbacks should have different parameters
-					if ( cvar->aFunc )
-						cvar->aFunc( args );
+					if ( !args.empty() )
+					{
+						convar->SetValue( args[0] );
+
+						// TODO: convar callbacks should have different parameters
+						if ( convar->aFunc )
+							convar->aFunc( args );
+					}
+					else
+					{
+						Print( convar->GetPrintMessage().c_str() );
+					}
 				}
-				else
+				else if ( ConCommand* cmd = dynamic_cast<ConCommand*>(cvar) )
 				{
-					Print( cvar->GetPrintMessage().c_str() );
+					commandCalled = true;
+					cmd->aFunc( args );
 				}
 
-				DeleteCommand(  );
-				break;
-			}
-		}
-
-		if ( commandCalled )
-			continue;
-
-		for ( const auto& cmd : aConCommandList )
-		{
-			if ( cmd->aName == commandName )
-			{
-				commandCalled = true;
-				cmd->aFunc( args );
 				DeleteCommand(  );
 				break;
 			}
