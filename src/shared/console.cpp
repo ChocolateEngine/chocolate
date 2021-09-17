@@ -1,6 +1,7 @@
 #include "../../inc/shared/console.h"
 #include "../../inc/shared/util.h"
 
+#include <stdarg.h>
 
 Console* g_console = nullptr;
 
@@ -15,6 +16,11 @@ void ConCommand::Init( const std::string& name, ConVarFunc func )
 	aFunc = func;
 
 	g_registerConCommands.push_back( this );
+}
+
+std::string ConCommand::GetPrintMessage(  )
+{
+	return aName + "\n";
 }
 
 // ================================================================================
@@ -42,6 +48,11 @@ void ConVar::Init( const std::string& name, const std::string& defaultValue, Con
 	g_registerConVars.push_back( this );
 }
 
+std::string ConVar::GetPrintMessage(  )
+{
+	return aName + " = " + GetValue() + "\n";
+}
+
 
 static float ToFloat( const std::string& value, float prev )
 {
@@ -62,14 +73,12 @@ static float ToFloat( const std::string& value, float prev )
 }
 
 
-
 void ConVar::SetValue( const std::string& value )
 {
 	aValue = value;
 
 	aValueFloat = ToFloat( value, aValueFloat );
 }
-
 
 const std::string& ConVar::GetValue(  )
 {
@@ -164,11 +173,78 @@ Console::StringList Console::GetCommandHistory( )
 void Console::SetTextBuffer( const std::string& str )
 {
 	aTextBuffer = str;
+	CalculateAutoCompleteList(  );
 }
 
 const std::string& Console::GetTextBuffer( )
 {
 	return aTextBuffer;
+}
+
+
+void Console::PrintAllConVars( )
+{
+	Print( "\nConVars:\n--------------------------------------\n" );
+
+	for ( const auto& cvar : aConVarList )
+	{
+		Print( cvar->GetPrintMessage().c_str() );
+	}
+
+	Print( "\nConCommands:\n--------------------------------------\n" );
+
+	for ( const auto& cmd : aConCommandList )
+	{
+		Print( cmd->GetPrintMessage().c_str() );
+	}
+
+	Print( "--------------------------------------\n" );
+}
+
+
+void Console::Print( const char* str, ... )
+{
+	char buffer[8192];
+	va_list args;
+
+	va_start( args, str );
+
+	vsnprintf( buffer, 8192, str, args );
+
+	printf( buffer );
+	aConsoleHistory += buffer;
+	va_end( args );
+}
+
+
+void Console::CalculateAutoCompleteList( )
+{
+	aAutoCompleteList.clear();
+
+	if ( aTextBuffer.empty() )
+		return;
+
+	for ( const auto& cvar : aConVarList )
+	{
+		if ( cvar->aName.starts_with( aTextBuffer ) )
+		{
+			aAutoCompleteList.push_back( cvar->aName );
+		}
+	}
+
+	for ( const auto& cmd : aConCommandList )
+	{
+		if ( cmd->aName.starts_with( aTextBuffer ) )
+		{
+			aAutoCompleteList.push_back( cmd->aName );
+		}
+	}
+}
+
+
+const std::vector< std::string >& Console::GetAutoCompleteList( )
+{
+	return aAutoCompleteList;
 }
 
 
@@ -224,11 +300,19 @@ void Console::Update(  )
 			if ( cvar->aName == commandName )
 			{
 				commandCalled = true;
-				cvar->SetValue( args[0] );
 
-				// TODO: convar callbacks should have different parameters
-				if ( cvar->aFunc )
-					cvar->aFunc( args );
+				if ( !args.empty() )
+				{
+					cvar->SetValue( args[0] );
+
+					// TODO: convar callbacks should have different parameters
+					if ( cvar->aFunc )
+						cvar->aFunc( args );
+				}
+				else
+				{
+					Print( cvar->GetPrintMessage().c_str() );
+				}
 
 				DeleteCommand(  );
 				break;
@@ -253,11 +337,7 @@ void Console::Update(  )
 			continue;
 
 		// command wasn't used?
-		std::string warningMsg = "Command \"" + commandName + "\" is undefined\n";
-
-		// blech
-		printf( warningMsg.c_str() );
-		aConsoleHistory += warningMsg;
+		Print( "Command \"%s\" is undefined\n", commandName.c_str() );
 
 		DeleteCommand(  );
 	}
@@ -277,6 +357,7 @@ std::string Console::FetchCmd(  )
 
 Console::Console(  )
 {
+	g_console = this;
 }
 
 Console::~Console(  )

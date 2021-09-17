@@ -67,3 +67,5 @@ bool vec_contains(const std::vector<T> &vec, T item)
 void str_upper(std::string &string);
 void str_lower(std::string &string);
 
+void Print( const char* str, ... );
+

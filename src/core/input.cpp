@@ -132,7 +132,7 @@ void InputSystem::InitConsoleCommands(  )
 	{
 		if ( sArgs.size(  ) < 3 )
 		{
-			printf( "Insufficient arguments for bind\n" );
+			apConsole->Print( "Insufficient arguments for bind\n" );
 			return;
 		}
 		Bind( sArgs[ 1 ], sArgs[ 2 ] );

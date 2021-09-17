@@ -1,5 +1,7 @@
 #include "../../../inc/core/renderer/device.h"
 
+#include "../../../inc/shared/util.h"
+
 #include <set>
 
 VKAPI_ATTR VkBool32 VKAPI_CALL Device::DebugCallback( VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, VkDebugUtilsMessageTypeFlagsEXT messageType,
@@ -38,10 +40,10 @@ StringList Device::InitRequiredExtensions(  )
 		throw std::runtime_error( "Unable to query the number of Vulkan instance extension names\n" );
 	}
 	// Display names
-	printf( "Found %d Vulkan extensions:\n", extensionCount );
+	Print( "Found %d Vulkan extensions:\n", extensionCount );
 	for ( int i = 0; i < extensionCount; ++i )
 	{
-	        printf( "%i : %s\n", i, extensions[ i ] );
+		Print( "%i : %s\n", i, extensions[ i ] );
 	}
 
 	// Add debug display extension, we need this to relay debug messages
@@ -97,11 +99,11 @@ void Device::InitInstance(  )
 	std::vector< VkExtensionProperties > extensions( extensionCount );
 	vkEnumerateInstanceExtensionProperties( NULL, &extensionCount, extensions.data(  ) );
 
-	printf( "%d Vulkan extensions available:\n", extensionCount );
+	Print( "%d Vulkan extensions available:\n", extensionCount );
 
 	for ( const auto& extension : extensions )
 	{
-		printf( "\t%s\n", extension.extensionName );
+		Print( "\t%s\n", extension.extensionName );
 	}
 }
 
