@@ -124,17 +124,11 @@ void InputSystem::ParseInput(  )
 }
 
 
-CON_COMMAND( bind )
-{
-	// uhhhhh, should probably have an option to have a void* for the data we need or something, like a class
-	// Bind( sArgs[ 1 ], sArgs[ 2 ] );
-}
-
-
 void InputSystem::InitConsoleCommands(  )
 {
-	// doesn't work at the moment
-	/*ConCommand bind( "bind", [ & ]( std::vector< std::string > sArgs )
+	// memory leak from using new, probably not important, will be here for the entire program runtime anyway
+	// also slightly odd syntax, idk
+	CON_COMMAND_LAMBDA( bind )
 	{
 		if ( sArgs.size(  ) < 3 )
 		{
@@ -142,7 +136,7 @@ void InputSystem::InitConsoleCommands(  )
 			return;
 		}
 		Bind( sArgs[ 1 ], sArgs[ 2 ] );
-	} );*/
+	});
 
 	BaseSystem::InitConsoleCommands(  );
 }

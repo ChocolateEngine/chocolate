@@ -49,7 +49,7 @@ public:
 		return nullptr;
 	}
 	
-	SystemList GetSystemList()
+	const SystemList& GetSystemList()
 	{
 		return aSystemList;
 	}
