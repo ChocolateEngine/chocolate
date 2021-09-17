@@ -447,9 +447,7 @@ void Device::InitSwapChain(  )
 
 	uint32_t imageCount 				= swapChainSupport.aCapabilities.minImageCount + 1;
 	if ( swapChainSupport.aCapabilities.maxImageCount > 0 && imageCount > swapChainSupport.aCapabilities.maxImageCount )
-	{
 		imageCount = swapChainSupport.aCapabilities.maxImageCount;
-	}
 
 	VkSwapchainCreateInfoKHR createInfo{  };
 	createInfo.sType 		= VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;

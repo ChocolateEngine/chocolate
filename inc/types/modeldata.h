@@ -16,7 +16,13 @@ class IndexInfo
 public:
 	uint32_t	aIndexCount;
 	uint32_t	aOffset;
-	uint32_t	aMaterialId;
+};
+
+class Mesh
+{
+public:
+	IndexInfo 		        aShape;
+        TextureDescriptor		*apTexture;
 };
 
 static std::vector< TextureDescriptor* > 	gTextures;
@@ -27,13 +33,12 @@ class ModelData
 	typedef std::vector< VkBuffer >			BufferSet;
 	typedef std::vector< VkDeviceMemory >		MemorySet;
 	typedef std::vector< VkDescriptorSet > 		DescriptorSetList;
+	typedef DataBuffer< Mesh >			Meshes;
 public:
 	VkBuffer 		aVertexBuffer;
 	VkBuffer		aIndexBuffer;
 	VkDeviceMemory 		aVertexBufferMem;
 	VkDeviceMemory		aIndexBufferMem;
-        TextureDescriptor       *apTextures;
-	uint32_t		aTextureCount = 0;
 	VkDescriptorSetLayout	aTextureLayout;
         UniformDescriptor	aUniformData;
 	VkDescriptorSetLayout	aUniformLayout;
@@ -45,7 +50,9 @@ public:
 	vertex_3d_t 		*apVertices;
 	uint32_t 		*apIndices;
 	bool 			aNoDraw = true;
+	
 	Transform		aTransform;
+        Meshes			aMeshes;
 	/* Allocates the model, and loads its textures etc.  */
 	void		Init(  );
 	/* Reinitialize data that is useless after the swapchain becomes outdated.  */
@@ -56,10 +63,12 @@ public:
 	void 		Draw( VkCommandBuffer c, uint32_t i );
 	/* Adds a material to the model.  */
 	void		AddMaterial( const std::string &srTexturePath, uint32_t sMaterialId, VkSampler sSampler );
+	/* Adds a mesh to the model.  */
+	void		AddMesh( const std::string &srTexturePath, uint32_t sIndexCount, uint32_t sIndexOffset, VkSampler sSampler );
 	/* Adds an index group to the model which groups together indices in the same material to be used for multiple draw calls for multiple textures.  */
 	void		AddIndexGroup( std::vector< uint32_t > sVec );
 	/* Default the model and set limits.  */
-			ModelData(  ) : apTextures( NULL ), aTextureCount( 0 ), apVertices( NULL ), apIndices( NULL ), aNoDraw( false ){  };
+			ModelData(  ) : apVertices( NULL ), apIndices( NULL ), aNoDraw( false ){  };
 	/* Frees the memory used by objects outdated by a new swapchain state.  */
 	void		FreeOldResources(  );
 	/* Frees all memory used by model.  */
