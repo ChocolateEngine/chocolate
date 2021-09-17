@@ -265,7 +265,6 @@ public:
 	View(int32_t x, int32_t y, uint32_t width, uint32_t height, float zNear, float zFar, float fieldOfView)
 	{
 		Set(x, y, width, height, zNear, zFar, fieldOfView);
-		ComputeProjection();
 	}
 
 	void Set(int32_t x, int32_t y, uint32_t width, uint32_t height, float zNear, float zFar, float fieldOfView)
