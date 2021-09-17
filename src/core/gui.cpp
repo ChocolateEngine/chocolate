@@ -131,21 +131,60 @@ void GuiSystem::DrawConsole( bool wasConsoleOpen )
 	static char buf[ 256 ] = "";
 
 	if ( !wasConsoleOpen )
-	{
 		ImGui::SetKeyboardFocusHere(0);
-	}
 
 	ImGui::BeginChild("ConsoleOutput", ImVec2( ImGui::GetWindowSize().x - 32, ImGui::GetWindowSize().y - 64 ), true);
-
 	ImGui::Text( apConsole->GetConsoleHistory().c_str() );
-
 	ImGui::EndChild();
 
 	snprintf( buf, 256, apConsole->GetTextBuffer(  ).c_str() );
-
 	ImGui::InputText( "send", buf, 256, ImGuiInputTextFlags_CallbackAlways, &ConsoleInputCallback, apConsole );
 
+	ImVec2 dropDownPos( ImGui::GetWindowPos().x, ImGui::GetWindowSize().y + ImGui::GetWindowPos().y );
+
 	ImGui::End(  );
+
+	std::vector< std::string > cvarAutoComplete = apConsole->GetAutoCompleteList();
+
+	if ( !cvarAutoComplete.empty() )
+	{
+		//ImGui::BeginPopup( "cvars_modal", ImGuiWindowFlags_Popup );
+		//ImGui::BeginPopupModal( "cvars_modal" );
+
+		ImGui::SetNextWindowPos( dropDownPos, ImGuiCond_Always, ImVec2(0.0f, 0.0f));
+
+		ImGui::PushStyleVar( ImGuiStyleVar_WindowPadding, ImVec2(0,0) );
+
+		ImGui::Begin( "cvars_box", NULL,
+					 ImGuiWindowFlags_NoBringToFrontOnFocus |
+					 ImGuiWindowFlags_AlwaysAutoResize |
+					 ImGuiWindowFlags_NoBackground |
+					 ImGuiWindowFlags_NoDecoration |
+					 ImGuiWindowFlags_NoTitleBar |
+					 ImGuiWindowFlags_NoMove |
+					 //ImGuiWindowFlags_NoNavFocus |
+					 ImGuiWindowFlags_NoFocusOnAppearing );
+
+		ImGui::BeginListBox( "" );
+
+		for ( std::string item: cvarAutoComplete )
+		{
+			if ( ImGui::Selectable( item.c_str(), false ) )
+			{
+				apConsole->SetTextBuffer( item );
+				//break;
+			}
+		}
+
+		ImGui::EndListBox(  );
+
+		ImGui::End(  );
+
+		ImGui::PopStyleVar();
+
+		//ImGui::EndPopup(  );
+	}
+
 }
 
 void GuiSystem::ShowConsole(  )

@@ -27,6 +27,8 @@ public:
 
 	void Init( const std::string& name, ConVarFunc func );
 
+	std::string GetPrintMessage(  );
+
 	std::string aName;
 	ConVarFunc aFunc;
 };
@@ -48,6 +50,8 @@ public:
 
 	void Init( const std::string& name, const std::string& defaultValue );
 	void Init( const std::string& name, const std::string& defaultValue, ConVarFunc func );
+
+	std::string GetPrintMessage(  );
 
 	void SetValue( const std::string& value );
 
@@ -88,8 +92,11 @@ protected:
 	std::string         aConsoleHistory;
 	StringList 			aCommandHistory;
 	std::string         aTextBuffer;
+	StringList          aAutoCompleteList;
 
 	void    AddToHistory( const std::string& str );
+
+	void    CalculateAutoCompleteList(  );
 
 public:
 
@@ -107,6 +114,12 @@ public:
 	/* Set and get current user text input.  */
 	void                  SetTextBuffer( const std::string& str );
 	const std::string&    GetTextBuffer(  );
+
+	const std::vector< std::string >& GetAutoCompleteList(  );
+
+	void    PrintAllConVars(  );
+
+	void    Print( const char* str, ... );
 
 	/* A.  */
 	bool 	Empty(  );

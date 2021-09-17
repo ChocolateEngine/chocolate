@@ -44,13 +44,18 @@ void Engine::AddGameSystems(  )
 
 void Engine::InitCommands(  )
 {
-	apCommandManager->Add( Engine::Commands::PING, Command<  >( [ & ](  ){ printf( "Ping!\n" ); } ) );
+	apCommandManager->Add( Engine::Commands::PING, Command<  >( [ & ](  ){ apConsole->Print( "Ping!\n" ); } ) );
 	apCommandManager->Add( Engine::Commands::EXIT, Command<  >( [ & ](  ){ aActive = false; } ) );
 }
 
 void Engine::InitConsoleCommands(  )
 {
-	
+	CON_COMMAND_LAMBDA( help )
+	{
+		apConsole->PrintAllConVars();
+	});
+
+	BaseSystem::InitConsoleCommands(  );
 }
 
 void Engine::LoadObject( const std::string& srDlPath, const std::string& srEntry )
@@ -60,14 +65,16 @@ void Engine::LoadObject( const std::string& srDlPath, const std::string& srEntry
 	handle = LOAD_LIBRARY( srDlPath.c_str(  ) );
 	if ( !handle )
 	{
-		fprintf( stderr, "Error: %s\n", GET_ERROR() );
+		// fprintf( stderr, "Error: %s\n", GET_ERROR() );
+		apConsole->Print( "Error: %s\n", GET_ERROR() );
 		throw std::runtime_error( "Unable to load shared librarys!" );
 	}
 
 	*( void** )( &game_init ) = LOAD_FUNC( handle, srEntry.c_str(  ) );
 	if ( !game_init )
 	{
-		fprintf( stderr, "Error: %s\n", GET_ERROR() );
+		//fprintf( stderr, "Error: %s\n", GET_ERROR() );
+		apConsole->Print( "Error: %s\n", GET_ERROR() );
 		CLOSE_LIBRARY( handle );
 		throw std::runtime_error( "Unable to link library's entry point!" );
 	}
@@ -92,6 +99,7 @@ void Engine::EngineMain(  )
 	InitSystems(  );
 	AddGameSystems(  );
 	InitCommands(  );
+	InitConsoleCommands(  );
 
 	apMsgs->Add( ENGINE_C, ENGI_PING );
 	//apCommandManager->Execute( GraphicsSystem::Commands::INIT_SPRITE, "/home/karl/Pictures/tidd.png", NULL );
