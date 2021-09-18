@@ -42,6 +42,8 @@ config
 			"_AMD64_"   [$AMD64$]
 			"_ARM64_"   [$ARM64$]
 			"_ARM_"     [$ARM$]
+			
+			"NDEBUG=1"  [$RELEASE$]
 		}
 
 		// is this needed?
@@ -54,6 +56,8 @@ config
 		{
 			"/Od" "/MDd" "/ZI"  [$DEBUG$]
 			"/O2" "/MD"         [$RELEASE$]
+			
+			"/MT" // multi-threaded compilation
 		}
 	}
 	
