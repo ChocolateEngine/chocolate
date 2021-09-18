@@ -168,15 +168,17 @@ const std::string& Console::GetConsoleHistory( )
 	return aConsoleHistory;
 }
 
-Console::StringList Console::GetCommandHistory( )
+const std::vector< std::string >& Console::GetCommandHistory( )
 {
 	return aCommandHistory;
 }
 
-void Console::SetTextBuffer( const std::string& str )
+void Console::SetTextBuffer( const std::string& str, bool recalculateList )
 {
 	aTextBuffer = str;
-	CalculateAutoCompleteList(  );
+
+	if ( recalculateList )
+		CalculateAutoCompleteList( aTextBuffer );
 }
 
 const std::string& Console::GetTextBuffer( )
@@ -220,28 +222,20 @@ void Console::Print( const char* str, ... )
 }
 
 
-void Console::CalculateAutoCompleteList( )
+void Console::CalculateAutoCompleteList( const std::string& textBuffer )
 {
 	aAutoCompleteList.clear();
 
-	if ( aTextBuffer.empty() )
+	if ( textBuffer.empty() )
 		return;
 
 	for ( const auto& cvar : aConVarList )
 	{
-		if ( cvar->aName.starts_with( aTextBuffer ) )
+		if ( cvar->aName.starts_with( textBuffer ) )
 		{
 			aAutoCompleteList.push_back( cvar->aName );
 		}
 	}
-
-	/*for ( const auto& cmd : aConCommandList )
-	{
-		if ( cmd->aName.starts_with( aTextBuffer ) )
-		{
-			aAutoCompleteList.push_back( cmd->aName );
-		}
-	}*/
 }
 
 

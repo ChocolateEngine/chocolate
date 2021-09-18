@@ -119,20 +119,20 @@ protected:
 
 	void    AddToHistory( const std::string& str );
 
-	void    CalculateAutoCompleteList(  );
-
 public:
 
 	/* Register all the ConCommands and ConVars created from static initialization.  */
 	void 	RegisterConVars(  );
 	/* A.  */
-	const std::string&    GetConsoleHistory(  );
+	const std::string&                  GetConsoleHistory(  );
 
-	StringList            GetCommandHistory(  );
+	const std::vector< std::string >&   GetCommandHistory(  );
 
 	/* Set and get current user text input.  */
-	void                  SetTextBuffer( const std::string& str );
+	void                  SetTextBuffer( const std::string& str, bool recalculateList = true );
 	const std::string&    GetTextBuffer(  );
+
+	void                              CalculateAutoCompleteList( const std::string& textBuffer );
 
 	const std::vector< std::string >& GetAutoCompleteList(  );
 
