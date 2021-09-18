@@ -45,6 +45,7 @@ protected:
 	VkQueue				aPresentQueue;
 	VkCommandPool 			aCommandPool;
 	SwapChain			aSwapChain;
+        VkSampleCountFlagBits	        aMsaaSamples;
 	/* Debug callback that displays the validation layer errors.  */
 	static VKAPI_ATTR VkBool32 VKAPI_CALL   DebugCallback( VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, VkDebugUtilsMessageTypeFlagsEXT messageType,
 								const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData );
@@ -65,6 +66,8 @@ protected:
 	void 					InitSurface(  );
 	/* A.  */
 	void 					InitPhysicalDevice(  );
+	/* Get the max amount of samples supported by the GPU.  */
+	VkSampleCountFlagBits			GetMaxUsableSampleCount(  );
 	/* A.  */
 	void 					InitLogicalDevice(  );
 	/* A.  */
@@ -125,6 +128,8 @@ public:
 	VkQueue 				GetPresentQueue(  ){ return aPresentQueue; }
 	/* Returns the swap chain.  */
 	SwapChain				GetSwapChain(  ){ return aSwapChain; }
+	/* Returns the number of msaa samples supported by the device.  */
+        VkSampleCountFlagBits		        GetSamples(  ){ return aMsaaSamples; }
 	/* A.  */
 	void 					SetResolution( int sWidth, int sHeight ){ aWidth = sWidth; aHeight = sHeight; }
 	/* A.  */

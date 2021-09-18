@@ -53,16 +53,16 @@ void Renderer::EnableImgui(  )
 void Renderer::InitVulkan(  )
 {
 	InitImageViews( aSwapChainImageViews );
-	InitRenderPass( aRenderPass );
-	gpRenderPass = &aRenderPass;
+	InitRenderPass(  );
 #if SPRITE_SUPPORTED
 	InitDescriptorSetLayout( aSpriteSetLayout, SPRITE_SET_LAYOUT_PARAMETERS );
         aSpriteLayout 	= InitPipelineLayouts( &aSpriteSetLayout, 1 );
 	InitGraphicsPipeline< vertex_2d_t >( aSpritePipeline, aSpriteLayout, aSpriteSetLayout, "materials/shaders/2dvert.spv",
 							"materials/shaders/2dfrag.spv", NO_CULLING | NO_DEPTH );
 #endif /* SPRITE_SUPPORTED  */
+	InitColorResources( aColorImage, aColorImageMemory, aColorImageView );
 	InitDepthResources( aDepthImage, aDepthImageMemory, aDepthImageView );
-	InitFrameBuffer( aSwapChainFramebuffers, aSwapChainImageViews, aDepthImageView );
+	InitFrameBuffer( aSwapChainFramebuffers, aSwapChainImageViews, aDepthImageView, aColorImageView );
 	gpDevice->InitTextureSampler( aTextureSampler, VK_SAMPLER_ADDRESS_MODE_REPEAT );
 	InitDescPool( { { { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 2000 }, { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 2000 } } } );
 	InitImguiPool( gpDevice->GetWindow(  ) );
@@ -99,7 +99,7 @@ void Renderer::InitCommandBuffers(  )
 		}
 		VkRenderPassBeginInfo renderPassInfo{  };
 		renderPassInfo.sType 		 = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-		renderPassInfo.renderPass 	 = aRenderPass;
+		renderPassInfo.renderPass 	 = *gpRenderPass;
 		renderPassInfo.framebuffer 	 = aSwapChainFramebuffers[ i ];
 		renderPassInfo.renderArea.offset = { 0, 0 };
 		renderPassInfo.renderArea.extent = SWAPCHAIN.GetExtent(  );
@@ -234,11 +234,12 @@ void Renderer::LoadObj( const String &srObjPath, ModelData &srModel )
 	uint32_t search = 0;
 	uint32_t numIndices = 0;
 	uint32_t j = 0;
-	for ( j = 0; j < materialIndices.size(  ); )
-	{
-		for ( numIndices = 0, search = materialIndices[ j ]; j < materialIndices.size(  ) && search == materialIndices[ j ]; ++j, ++numIndices );
-		srModel.AddMesh( baseDir + materials[ search ].diffuse_texname, numIndices, j - numIndices, aTextureSampler );
-	}
+	if ( materials.size(  ) )
+		for ( j = 0; j < materialIndices.size(  ); )
+		{
+			for ( numIndices = 0, search = materialIndices[ j ]; j < materialIndices.size(  ) && search == materialIndices[ j ]; ++j, ++numIndices );
+			srModel.AddMesh( baseDir + materials[ search ].diffuse_texname, numIndices, j - numIndices, aTextureSampler );
+		}
 	
 	srModel.aVertexCount 	= ( uint32_t )vertices.size(  );
 	srModel.aIndexCount 	= ( uint32_t )indices.size(  );
@@ -306,16 +307,16 @@ void Renderer::ReinitSwapChain(  )
 	gpDevice->ReinitSwapChain(  );
 
 	InitImageViews( aSwapChainImageViews );
-	InitRenderPass( aRenderPass );
-	gpRenderPass = &aRenderPass;
+	InitRenderPass(  );
 #if SPRITE_SUPPORTED
 	InitDescriptorSetLayout( aSpriteSetLayout, SPRITE_SET_LAYOUT_PARAMETERS );
 	auto spriteLayout 	= InitPipelineLayouts( &aSpriteSetLayout, 1 );
 	InitGraphicsPipeline< vertex_2d_t >( aSpritePipeline, spriteLayout, aSpriteSetLayout, "materials/shaders/2dvert.spv",
 							"materials/shaders/2dfrag.spv", NO_CULLING | NO_DEPTH );
 #endif
+	InitColorResources( aColorImage, aColorImageMemory, aColorImageView );
 	InitDepthResources( aDepthImage, aDepthImageMemory, aDepthImageView );
-	InitFrameBuffer( aSwapChainFramebuffers, aSwapChainImageViews, aDepthImageView );
+	InitFrameBuffer( aSwapChainFramebuffers, aSwapChainImageViews, aDepthImageView, aColorImageView );
 	for ( auto& model : aModels )
 		model->Reinit(  );
 	
@@ -333,6 +334,9 @@ void Renderer::DestroySwapChain(  )
 	vkDestroyImageView( DEVICE, aDepthImageView, nullptr );
 	vkDestroyImage( DEVICE, aDepthImage, nullptr );
 	vkFreeMemory( DEVICE, aDepthImageMemory, nullptr );
+	vkDestroyImageView( DEVICE, aColorImageView, nullptr );
+	vkDestroyImage( DEVICE, aColorImage, nullptr );
+	vkFreeMemory( DEVICE, aColorImageMemory, nullptr );
 	for ( auto& model : aModels )
 	        model->FreeOldResources(  );
 	
@@ -343,7 +347,7 @@ void Renderer::DestroySwapChain(  )
 	for ( auto framebuffer : aSwapChainFramebuffers )
 		vkDestroyFramebuffer( DEVICE, framebuffer, NULL );
 	
-	vkDestroyRenderPass( DEVICE, aRenderPass, NULL );
+	vkDestroyRenderPass( DEVICE, *gpRenderPass, NULL );
 	for ( auto imageView : aSwapChainImageViews )
 		vkDestroyImageView( DEVICE, imageView, NULL );
 }

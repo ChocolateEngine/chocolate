@@ -167,6 +167,7 @@ void Device::InitPhysicalDevice(  )
 	for ( const auto& device : devices ) {
 		if ( IsSuitableDevice( device ) ) {
 			aPhysicalDevice = device;
+			aMsaaSamples = GetMaxUsableSampleCount(  );
 			break;
 		}
 	}
@@ -174,6 +175,23 @@ void Device::InitPhysicalDevice(  )
 	if ( aPhysicalDevice == VK_NULL_HANDLE ) {
 		throw std::runtime_error( "Failed to find a suitable GPU!" );
 	}	
+}
+
+/* Get the max amount of samples supported by the GPU.  */
+VkSampleCountFlagBits Device::GetMaxUsableSampleCount(  )
+{
+	VkPhysicalDeviceProperties 	physicalDeviceProperties;
+	vkGetPhysicalDeviceProperties( aPhysicalDevice, &physicalDeviceProperties );
+
+	VkSampleCountFlags counts = physicalDeviceProperties.limits.framebufferColorSampleCounts & physicalDeviceProperties.limits.framebufferDepthSampleCounts;
+	if ( counts & VK_SAMPLE_COUNT_64_BIT ) 	return VK_SAMPLE_COUNT_64_BIT;
+	if ( counts & VK_SAMPLE_COUNT_32_BIT ) 	return VK_SAMPLE_COUNT_32_BIT;
+	if ( counts & VK_SAMPLE_COUNT_16_BIT ) 	return VK_SAMPLE_COUNT_16_BIT;
+	if ( counts & VK_SAMPLE_COUNT_8_BIT ) 	return VK_SAMPLE_COUNT_8_BIT;
+	if ( counts & VK_SAMPLE_COUNT_4_BIT ) 	return VK_SAMPLE_COUNT_4_BIT;
+	if ( counts & VK_SAMPLE_COUNT_2_BIT ) 	return VK_SAMPLE_COUNT_2_BIT;
+
+	return VK_SAMPLE_COUNT_1_BIT;
 }
 
 void Device::InitLogicalDevice(  )
@@ -527,9 +545,7 @@ void Device::InitTextureSampler( VkSampler& textureSampler, VkSamplerAddressMode
 	samplerInfo.maxLod 			= 1000.0f;
 
 	if ( vkCreateSampler( aDevice, &samplerInfo, NULL, &textureSampler ) != VK_SUCCESS )
-	{
 		throw std::runtime_error( "Failed to create texture sampler!" );
-	}
 }
 
 VkCommandBuffer Device::BeginSingleTimeCommands(  )

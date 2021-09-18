@@ -114,7 +114,7 @@ static inline VkImageViewCreateInfo ImageView( VkImage sImage, VkFormat sFormat,
 	return viewInfo;
 }
 
-static inline VkImageCreateInfo Image( uint32_t sWidth, uint32_t sHeight, VkFormat sFormat, VkImageTiling sTiling, VkImageUsageFlags sUsage, uint32_t sMipLevels )
+static inline VkImageCreateInfo Image( uint32_t sWidth, uint32_t sHeight, VkFormat sFormat, VkImageTiling sTiling, VkImageUsageFlags sUsage, uint32_t sMipLevels, VkSampleCountFlagBits sSamples )
 {
 	VkImageCreateInfo imageInfo{  };
 	imageInfo.sType 	= VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
@@ -128,7 +128,7 @@ static inline VkImageCreateInfo Image( uint32_t sWidth, uint32_t sHeight, VkForm
 	imageInfo.tiling 	= sTiling;
 	imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 	imageInfo.usage	 	= sUsage;
-	imageInfo.samples 	= VK_SAMPLE_COUNT_1_BIT;
+	imageInfo.samples 	= sSamples;
 	imageInfo.sharingMode 	= VK_SHARING_MODE_EXCLUSIVE;
 
 	return imageInfo;
@@ -153,12 +153,12 @@ static inline VkWriteDescriptorSet WriteDescriptor( VkDescriptorSet sDescSet, ui
 	return descriptorWrite;
 }
 /* Creates a structure specifying an attachment description.  */
-static inline VkAttachmentDescription AttachmentDescription( VkFormat sFormat, VkAttachmentStoreOp sStoreOp, VkImageLayout sFinalLayout )
+static inline VkAttachmentDescription AttachmentDescription( VkFormat sFormat, VkAttachmentLoadOp sLoadOp, VkAttachmentStoreOp sStoreOp, VkImageLayout sFinalLayout, VkSampleCountFlagBits sSamples )
 {
 	VkAttachmentDescription attachment{  };
 	attachment.format 		= sFormat;
-	attachment.samples 		= VK_SAMPLE_COUNT_1_BIT;
-	attachment.loadOp 		= VK_ATTACHMENT_LOAD_OP_CLEAR;
+	attachment.samples 		= sSamples;
+	attachment.loadOp 		= sLoadOp;
 	attachment.storeOp 		= sStoreOp;
 	attachment.stencilLoadOp 	= VK_ATTACHMENT_LOAD_OP_DONT_CARE;
 	attachment.stencilStoreOp 	= VK_ATTACHMENT_STORE_OP_DONT_CARE;
