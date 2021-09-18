@@ -9,7 +9,7 @@ DescriptorCache			gDescriptorCache;
 
 Device 				*gpDevice 		= new Device;
 ImageSet 			*gpSwapChainImages 	= NULL;
-VkRenderPass 			*gpRenderPass 		= NULL;
+VkRenderPass 			*gpRenderPass 		= new VkRenderPass;
 VkDescriptorPool	        *gpPool 		= new VkDescriptorPool;
 
 VkFormat FindDepthFormat(  )
@@ -190,7 +190,7 @@ void InitTextureImage( const String &srImagePath, VkImage &srTImage, VkDeviceMem
 		stbi_image_free( pPixels );
 	
 	InitImage( Image( texWidth, texHeight, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_TILING_OPTIMAL,
-			  VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT, srMipLevels ),
+			  VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT, srMipLevels, VK_SAMPLE_COUNT_1_BIT ),
 		   VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, srTImage, srTImageMem );
 	
         TransitionImageLayout( srTImage, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, srMipLevels );
@@ -366,10 +366,19 @@ void InitImageViews( ImageViews &srSwapChainImageViews )
 	        InitImageView( srSwapChainImageViews[ i ], PSWAPCHAIN.GetImages(  ).at( i ), PSWAPCHAIN.GetFormat(  ), VK_IMAGE_ASPECT_COLOR_BIT, 1 );
 }
 
-void InitRenderPass( VkRenderPass &srRenderPass )
+void InitRenderPass(  )
 {
-	VkAttachmentDescription 	colorAttachment = AttachmentDescription( PSWAPCHAIN.GetFormat(  ), VK_ATTACHMENT_STORE_OP_STORE, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR );
-	VkAttachmentDescription 	depthAttachment = AttachmentDescription( FindDepthFormat(  ), VK_ATTACHMENT_STORE_OP_DONT_CARE, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL );
+	VkAttachmentDescription 	colorAttachment 	= AttachmentDescription( PSWAPCHAIN.GetFormat(  ), VK_ATTACHMENT_LOAD_OP_CLEAR,
+											 VK_ATTACHMENT_STORE_OP_STORE,
+											 VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, gpDevice->GetSamples(  ) );
+	
+	VkAttachmentDescription 	depthAttachment 	= AttachmentDescription( FindDepthFormat(  ), VK_ATTACHMENT_LOAD_OP_CLEAR,
+											 VK_ATTACHMENT_STORE_OP_DONT_CARE, 
+											 VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, gpDevice->GetSamples(  ) );
+	
+	VkAttachmentDescription		colorAttachmentResolve 	= AttachmentDescription( PSWAPCHAIN.GetFormat(  ), VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+											 VK_ATTACHMENT_STORE_OP_STORE,
+											 VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, VK_SAMPLE_COUNT_1_BIT );
 
 	VkAttachmentReference colorAttachmentRef{  };
 	colorAttachmentRef.attachment 	= 0;	//	Referenced by index, so 0 means color is referenced first since type is ambiguous
@@ -379,11 +388,16 @@ void InitRenderPass( VkRenderPass &srRenderPass )
 	depthAttachmentRef.attachment 	= 1;
 	depthAttachmentRef.layout 	= VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 
+	VkAttachmentReference colorAttachmentResolveRef{  };
+	colorAttachmentResolveRef.attachment 	= 2;
+	colorAttachmentResolveRef.layout 	= VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
 	VkSubpassDescription subpass{  };	//	Smaller render operations, store them here
 	subpass.pipelineBindPoint 	= VK_PIPELINE_BIND_POINT_GRAPHICS;
 	subpass.colorAttachmentCount 	= 1;
 	subpass.pColorAttachments 	= &colorAttachmentRef;
 	subpass.pDepthStencilAttachment = &depthAttachmentRef;
+	subpass.pResolveAttachments 	= &colorAttachmentResolveRef;
 
 	VkSubpassDependency dependency{  };
 	dependency.srcSubpass 		= VK_SUBPASS_EXTERNAL;
@@ -393,7 +407,7 @@ void InitRenderPass( VkRenderPass &srRenderPass )
 	dependency.dstStageMask 	= VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
 	dependency.dstAccessMask 	= VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
 
-	std::array< VkAttachmentDescription, 2 > attachments = { colorAttachment, depthAttachment };
+	std::array< VkAttachmentDescription, 3 > attachments = { colorAttachment, depthAttachment, colorAttachmentResolve };
 	VkRenderPassCreateInfo renderPassInfo{  };
 	renderPassInfo.sType 		= VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
 	renderPassInfo.attachmentCount 	= ( uint32_t )attachments.size(  );
@@ -403,7 +417,7 @@ void InitRenderPass( VkRenderPass &srRenderPass )
 	renderPassInfo.dependencyCount 	= 1;
 	renderPassInfo.pDependencies 	= &dependency;
 
-	if ( vkCreateRenderPass( DEVICE, &renderPassInfo, NULL, &srRenderPass ) != VK_SUCCESS )
+	if ( vkCreateRenderPass( DEVICE, &renderPassInfo, NULL, gpRenderPass ) != VK_SUCCESS )
 		throw std::runtime_error( "Failed to create render pass!" );
 }
 /* Create layouts of only one binding for future.  */
@@ -520,7 +534,7 @@ void InitGraphicsPipeline( VkPipeline &srPipeline, VkPipelineLayout &srLayout, V
 	VkPipelineMultisampleStateCreateInfo multisampling{  };		//	Performs anti-aliasing
 	multisampling.sType 		    = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
 	multisampling.sampleShadingEnable   = VK_FALSE;
-	multisampling.rasterizationSamples  = VK_SAMPLE_COUNT_1_BIT;
+	multisampling.rasterizationSamples  = gpDevice->GetSamples(  );
 	multisampling.minSampleShading 	    = 1.0f; // Optional
 	multisampling.pSampleMask 	    = NULL; // Optional
 	multisampling.alphaToCoverageEnable = VK_FALSE; // Optional
@@ -600,20 +614,29 @@ void InitDepthResources( VkImage &srDepthImage, VkDeviceMemory &srDepthImageMemo
 {
 	VkFormat depthFormat = gpDevice->FindDepthFormat(  );
         InitImage( Image( PSWAPCHAIN.GetExtent(  ).width, PSWAPCHAIN.GetExtent(  ).height, depthFormat,
-			  VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, 1 ),
+			  VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, 1, gpDevice->GetSamples(  ) ),
 		   VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, srDepthImage, srDepthImageMemory );
 	
         InitImageView( srDepthImageView, srDepthImage, depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT, 1 );
         TransitionImageLayout( srDepthImage, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, 1 );
 }
+/* Initializes the multisampling image.  */
+void InitColorResources( VkImage &srColorImage, VkDeviceMemory &srColorImageMemory, VkImageView &srColorImageView )
+{
+	VkFormat colorFormat = PSWAPCHAIN.GetFormat(  );
 
-void InitFrameBuffer( FrameBuffers &srSwapChainFramebuffers, ImageViews &srSwapChainImageViews,
-				 VkImageView &srDepthImageView )
+        InitImage( Image( PSWAPCHAIN.GetExtent(  ).width, PSWAPCHAIN.GetExtent(  ).height, colorFormat, VK_IMAGE_TILING_OPTIMAL,
+			  VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, 1, gpDevice->GetSamples(  ) ),
+		   VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, srColorImage, srColorImageMemory );
+        InitImageView( srColorImageView, srColorImage, colorFormat, VK_IMAGE_ASPECT_COLOR_BIT, 1 );
+}
+
+void InitFrameBuffer( FrameBuffers &srSwapChainFramebuffers, ImageViews &srSwapChainImageViews, VkImageView &srDepthImageView, VkImageView &srColorImageView )
 {
 	srSwapChainFramebuffers.resize( srSwapChainImageViews.size(  ) );
 	for ( int i = 0; i < srSwapChainImageViews.size(  ); i++ )
 	{
-		std::array< VkImageView, 2 > 	attachments = { srSwapChainImageViews[ i ], srDepthImageView };
+		std::array< VkImageView, 3 > 	attachments = { srColorImageView, srDepthImageView, srSwapChainImageViews[ i ] };
 
 		VkFramebufferCreateInfo 	framebufferInfo{  };
 		framebufferInfo.sType 		= VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
@@ -682,7 +705,7 @@ void InitImguiPool( SDL_Window *spWindow )
 	initInfo.DescriptorPool = imguiPool;
 	initInfo.MinImageCount 	= 3;
 	initInfo.ImageCount 	= 3;
-	initInfo.MSAASamples 	= VK_SAMPLE_COUNT_1_BIT;
+	initInfo.MSAASamples 	= gpDevice->GetSamples(  );
 
 	ImGui_ImplVulkan_Init( &initInfo, *gpRenderPass );
 	Submit( [ & ]( VkCommandBuffer c ){ ImGui_ImplVulkan_CreateFontsTexture( c ); } );

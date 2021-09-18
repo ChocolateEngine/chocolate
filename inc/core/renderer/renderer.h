@@ -43,19 +43,14 @@ protected:
 	ImageViews                  aSwapChainImageViews;       // View into an image, describing which part to access, one needed for each image
 	Framebuffers                aSwapChainFramebuffers;		//  
 	CommandBuffers              aCommandBuffers;	        // Send commands to these to be executed later, better for concurrency, so many are nice
-	VkRenderPass                aRenderPass;                // Stores framebuffer attachments that will be used for rendering
-	VkDescriptorSetLayout       aModelSetLayout;
-	VkDescriptorSetLayout       aSpriteSetLayout;
 	VkDescriptorPool            aDescPool;
-	VkImageView                 aTextureImageView;
 	VkSampler                   aTextureSampler;
 	VkImage                     aDepthImage;
 	VkDeviceMemory              aDepthImageMemory;
 	VkImageView                 aDepthImageView;
-	VkPipelineLayout            aModelLayout;
-	VkPipelineLayout            aSpriteLayout;
-	VkPipeline                  aModelPipeline;             // Colossal object that handles most stages of rendering. Seems to need multiple to render multiple things.
-	VkPipeline                  aSpritePipeline;
+	VkImage                     aColorImage;
+	VkDeviceMemory              aColorImageMemory;
+	VkImageView                 aColorImageView;
 	SemaphoreList               aImageAvailableSemaphores;
 	SemaphoreList               aRenderFinishedSemaphores;
 	FenceList                   aInFlightFences;

@@ -105,7 +105,7 @@ void			InitUniformData( UniformDescriptor &srDescriptor, VkDescriptorSetLayout s
 /* A.  */
 void 			InitImageViews( ImageViews &srSwapChainImageViews );
 /* A.  */
-void 			InitRenderPass( VkRenderPass &srRenderPass );
+void 			InitRenderPass(  );
 /* A.  */
 VkDescriptorSetLayout   InitDescriptorSetLayout( DescSetLayouts sBindings );
 /* Creates graphics pipeline layouts using the specified descriptor set layouts.  */
@@ -116,9 +116,11 @@ void 			InitGraphicsPipeline( VkPipeline &srPipeline, VkPipelineLayout &srLayout
 						      const String &srFragShader, int sFlags );
 /* A.  */
 void 			InitDepthResources( VkImage &srDepthImage, VkDeviceMemory &srDepthImageMemory, VkImageView &srDepthImageView );
+/* Initializes the multisampling image.  */
+void			InitColorResources( VkImage &srColorImage, VkDeviceMemory &srColorImageMemory, VkImageView &srColorImageView );
 /* A.  */
 void 			InitFrameBuffer( FrameBuffers &srSwapChainFramebuffers, ImageViews &srSwapChainImageViews,
-					 VkImageView &srDepthImageView );
+					 VkImageView &srDepthImageView, VkImageView &srColorImageView );
 /* A.  */
 void 			InitDescPool( std::vector< VkDescriptorPoolSize > sPoolSizes );
 /* A.  */
