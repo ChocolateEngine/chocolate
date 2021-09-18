@@ -51,41 +51,103 @@ void GuiSystem::DrawGui(  )
 }
 
 
-bool CheckAddLastCommand( ImGuiInputTextCallbackData* data, Console* console, int& lastCommandIndex )
+bool CheckKeyPress( int& commandIndex, int maxSize, bool addTabInDownKey = false )
 {
-	if ( console->GetCommandHistory().empty() )
-		return false;
-
 	bool upPressed = ImGui::IsKeyPressed( ImGui::GetKeyIndex(ImGuiKey_UpArrow) );
 	bool downPressed = ImGui::IsKeyPressed( ImGui::GetKeyIndex(ImGuiKey_DownArrow) );
 
-	if ( upPressed )
-	{
-		lastCommandIndex--;
+	if ( addTabInDownKey )
+		downPressed |= ImGui::IsKeyPressed( ImGui::GetKeyIndex(ImGuiKey_Tab) );
 
-		if ( lastCommandIndex == -2 )
-			lastCommandIndex = console->GetCommandHistory().size() - 1;
-	}
+	if ( upPressed && --commandIndex == -2 )
+		commandIndex = maxSize - 1;
 
-	if ( downPressed )
-	{
-		lastCommandIndex++;
-
-		if ( lastCommandIndex == console->GetCommandHistory().size() )
-			lastCommandIndex = -1;
-	}
-
-	if ( upPressed || downPressed )
-	{
-		snprintf( data->Buf, 256, (lastCommandIndex == -1) ? "" : console->GetCommandHistory()[lastCommandIndex].c_str() );
-		data->CursorPos = std::string(data->Buf).length();
-	}
+	if ( downPressed && ++commandIndex == maxSize)
+		commandIndex = -1;
 
 	return upPressed || downPressed;
 }
 
 
-bool CheckEnterPress( char* buf, Console* console, int& lastCommandIndex )
+bool CheckAddLastCommand( ImGuiInputTextCallbackData* data, Console* console, int& commandIndex )
+{
+	if ( console->GetCommandHistory().empty() )
+		return false;
+
+	bool keyPressed = CheckKeyPress( commandIndex, console->GetCommandHistory().size() );
+
+	if ( keyPressed )
+	{
+		snprintf( data->Buf, 256, (commandIndex == -1) ? "" :console->GetCommandHistory()[commandIndex].c_str() );
+		console->SetTextBuffer( data->Buf );
+		data->CursorPos = console->GetTextBuffer().length();
+	}
+
+	return keyPressed;
+}
+
+
+bool CheckAddDropDownCommand( ImGuiInputTextCallbackData* data, Console* console, int& commandIndex )
+{
+	static std::string originalTextBuffer = "";
+	static std::string prevTextBuffer = "";
+
+	bool keyPressed = CheckKeyPress( commandIndex, console->GetAutoCompleteList().size(), true );
+
+	// Reset the selected command index if the buffer is empty
+	if ( strncmp(data->Buf, "", data->BufSize) == 0 && !keyPressed )
+		commandIndex = -1;
+
+	bool inDropDown = commandIndex != -1;
+	bool textBufChanged = prevTextBuffer != data->Buf;
+
+	// If the user typed something in, then update the original text inputted
+	// relies on the if (inDropDown) below to set commandIndex back to -1 if there was something selected
+	if ( textBufChanged && !inDropDown )
+		originalTextBuffer = data->Buf;
+
+	bool bufDirty = false;
+
+	if ( keyPressed || textBufChanged )
+	{
+		if ( !inDropDown )
+		{
+			// No items selected in auto complete list
+			// Set back to original text and recalculate the auto complete list
+			snprintf( data->Buf, data->BufSize, originalTextBuffer.c_str() );
+			console->CalculateAutoCompleteList( data->Buf );
+			bufDirty = true;
+		}
+		else if ( keyPressed )
+		{
+			// An arrow key or tab is pressed, so fill the buffer with the selected item from the auto complete list
+			snprintf( data->Buf, data->BufSize, console->GetAutoCompleteList()[commandIndex].c_str() );
+			bufDirty = true;
+		}
+		else if ( inDropDown )
+		{
+			// An item in auto complete list is selected, but the user typed something in
+			// So set back to original text recalculate the auto complete list
+			commandIndex = -1;
+			originalTextBuffer = data->Buf;
+			console->CalculateAutoCompleteList( data->Buf );
+			bufDirty = true;
+		}
+	}
+
+	if ( bufDirty )
+	{
+		console->SetTextBuffer( data->Buf, false );
+		data->BufTextLen = console->GetTextBuffer().length();
+		data->CursorPos = console->GetTextBuffer().length();
+		prevTextBuffer = console->GetTextBuffer();
+	}
+
+	return bufDirty;
+}
+
+
+bool CheckEnterPress( char* buf, Console* console, int& lastCommandIndex, int& dropDownCommandIndex )
 {
 	bool isPressed = ImGui::IsKeyPressed( ImGui::GetKeyIndex(ImGuiKey_Enter), false );
 
@@ -93,12 +155,18 @@ bool CheckEnterPress( char* buf, Console* console, int& lastCommandIndex )
 	{
 		console->Add( buf );
 		snprintf( buf, 256, "" );
+		console->SetTextBuffer( buf );
 		ImGui::SetKeyboardFocusHere(  );
 		lastCommandIndex = -1;
+		dropDownCommandIndex = -1;
 	}
 
 	return isPressed;
 }
+
+
+// blech, needed for selecting it in the dropdown
+static int gDropDownCommandIndex = -1;
 
 
 int ConsoleInputCallback( ImGuiInputTextCallbackData* data )
@@ -107,13 +175,22 @@ int ConsoleInputCallback( ImGuiInputTextCallbackData* data )
 
 	Console* console = (Console*)data->UserData;
 
-	data->BufDirty = CheckAddLastCommand( data, console, lastCommandIndex );
+	data->BufDirty = CheckAddDropDownCommand( data, console, gDropDownCommandIndex );
+
+	if ( console->GetAutoCompleteList().empty() )
+	{
+		data->BufDirty = CheckAddLastCommand( data, console, lastCommandIndex );
+	}
 
 	if ( !data->BufDirty )
-		data->BufDirty = CheckEnterPress( data->Buf, console, lastCommandIndex );
+	{
+		data->BufDirty = CheckEnterPress( data->Buf, console, lastCommandIndex, gDropDownCommandIndex );
+	}
 
-	console->SetTextBuffer( data->Buf );
-	data->BufTextLen = console->GetTextBuffer().length();
+	if ( data->BufDirty )
+	{
+		data->BufTextLen = console->GetTextBuffer().length();
+	}
 
 	return 0;
 }
@@ -168,9 +245,11 @@ void GuiSystem::DrawConsole( bool wasConsoleOpen )
 
 		ImGui::BeginListBox( "" );
 
-		for ( std::string item: cvarAutoComplete )
+		for ( int i = 0; i < cvarAutoComplete.size(); i++ )
 		{
-			if ( ImGui::Selectable( item.c_str(), false ) )
+			std::string item = cvarAutoComplete[i];
+
+			if ( ImGui::Selectable( item.c_str(), gDropDownCommandIndex == i ) )
 			{
 				apConsole->SetTextBuffer( item );
 				//break;
