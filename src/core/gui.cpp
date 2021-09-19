@@ -150,6 +150,7 @@ bool CheckAddDropDownCommand( ImGuiInputTextCallbackData* data, Console* console
 bool CheckEnterPress( char* buf, Console* console, int& lastCommandIndex, int& dropDownCommandIndex )
 {
 	bool isPressed = ImGui::IsKeyPressed( ImGui::GetKeyIndex(ImGuiKey_Enter), false );
+	isPressed |= ImGui::IsKeyPressed( ImGui::GetKeyIndex(ImGuiKey_KeyPadEnter), false );
 
 	if ( isPressed )
 	{
