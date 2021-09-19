@@ -136,6 +136,13 @@ void InputSystem::ParseInput(  )
 }
 
 
+void InputSystem::Init(  )
+{
+	BaseSystem::Init(  );
+
+	ResetInputs(  );
+}
+
 void InputSystem::InitConsoleCommands(  )
 {
 	// memory leak from using new, probably not important, will be here for the entire program runtime anyway
@@ -158,12 +165,15 @@ void InputSystem::Update( float frameTime )
 {
 	ResetInputs(  );
 	ParseInput(  );
+	UpdateKeyStates(  );
 }
 
 
 void InputSystem::ResetInputs(  )
 {
 	aMouseDelta = {0, 0};
+
+	aKeyboardState = SDL_GetKeyboardState( NULL );
 }
 
 const glm::vec2& InputSystem::GetMouseDelta(  )
@@ -179,6 +189,112 @@ const glm::vec2& InputSystem::GetMousePos(  )
 bool InputSystem::WindowHasFocus(  )
 {
 	return aHasFocus;
+}
+
+void InputSystem::UpdateKeyStates(  )
+{
+	for ( auto const& [key, val] : aKeyStates )
+		UpdateKeyState( key );
+}
+
+void InputSystem::UpdateKeyState( SDL_Scancode key )
+{
+	bool pressed = aKeyboardState[key];
+	KeyState& state = aKeyStates[key];
+
+	if ( state & KeyState_Pressed )
+	{
+		if ( state & KeyState_JustPressed )
+			state &= ~KeyState_JustPressed;
+
+		if ( !pressed )
+		{
+			state |= KeyState_Released | KeyState_JustReleased;
+			state &= ~(KeyState_Pressed | KeyState_JustPressed);
+		}
+	}
+	else if ( state & KeyState_Released )
+	{
+		if ( state & KeyState_JustReleased )
+			state &= ~KeyState_JustReleased;
+
+		if ( pressed )
+		{
+			state |= KeyState_Pressed | KeyState_JustPressed;
+			state &= ~(KeyState_Released | KeyState_JustReleased);
+		}
+	}
+	else
+	{
+		state |= KeyState_Released | KeyState_JustReleased;
+		state &= ~(KeyState_Pressed | KeyState_JustPressed);
+	}
+
+// old method
+#if 0
+	switch ( state )
+	{
+		case KeyState::Released:
+			if ( pressed )
+				state = KeyState::JustPressed;
+			break;
+
+		case KeyState::JustReleased:
+			if ( pressed )
+				state = KeyState::JustPressed;
+			else
+				state = KeyState::Released;
+			break;
+
+		case KeyState::JustPressed:
+			if ( pressed )
+				state = KeyState::Pressed;
+			else
+				state = KeyState::JustReleased;
+			break;
+
+		case KeyState::Pressed:
+			if ( !pressed )
+				state = KeyState::JustReleased;
+			break;
+	}
+#endif
+}
+
+void InputSystem::RegisterKey( SDL_Scancode key )
+{
+	KeyStates::const_iterator state = aKeyStates.find( key );
+
+	// Already registered
+	if ( state != aKeyStates.end() )
+		return;
+
+	// aKeyStates[key] = aKeyboardState[key] ? KeyState::JustPressed : KeyState::Released;
+	aKeyStates[key] = KeyState_Invalid;
+
+	UpdateKeyState( key );
+}
+
+KeyState InputSystem::GetKeyState( SDL_Scancode key )
+{
+	KeyStates::const_iterator state = aKeyStates.find( key );
+
+	if ( state == aKeyStates.end() )
+	{
+		// Try to register this key
+		RegisterKey( key );
+
+		state = aKeyStates.find( key );
+
+		if ( state == aKeyStates.end() )
+		{
+			// would be odd if this got hit
+			apConsole->Print( "[Input System] Invalid Key: \"%s\"\n", SDL_GetKeyName( SDL_GetKeyFromScancode(key) ) );
+			return KeyState_Invalid;
+		}
+	}
+
+	return state->second;
 }
 
 
