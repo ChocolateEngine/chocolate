@@ -54,12 +54,6 @@ void Renderer::InitVulkan(  )
 {
 	InitImageViews( aSwapChainImageViews );
 	InitRenderPass(  );
-#if SPRITE_SUPPORTED
-	InitDescriptorSetLayout( aSpriteSetLayout, SPRITE_SET_LAYOUT_PARAMETERS );
-        aSpriteLayout 	= InitPipelineLayouts( &aSpriteSetLayout, 1 );
-	InitGraphicsPipeline< vertex_2d_t >( aSpritePipeline, aSpriteLayout, aSpriteSetLayout, "materials/shaders/2dvert.spv",
-							"materials/shaders/2dfrag.spv", NO_CULLING | NO_DEPTH );
-#endif /* SPRITE_SUPPORTED  */
 	InitColorResources( aColorImage, aColorImageMemory, aColorImageView );
 	InitDepthResources( aDepthImage, aDepthImageMemory, aDepthImageView );
 	InitFrameBuffer( aSwapChainFramebuffers, aSwapChainImageViews, aDepthImageView, aColorImageView );
@@ -94,9 +88,8 @@ void Renderer::InitCommandBuffers(  )
 		beginInfo.pInheritanceInfo 	= NULL; // Optional
 
 		if ( vkBeginCommandBuffer( aCommandBuffers[ i ], &beginInfo ) != VK_SUCCESS )
-		{
 			throw std::runtime_error( "Failed to begin recording command buffer!" );
-		}
+		
 		VkRenderPassBeginInfo renderPassInfo{  };
 		renderPassInfo.sType 		 = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
 		renderPassInfo.renderPass 	 = *gpRenderPass;
@@ -118,30 +111,24 @@ void Renderer::InitCommandBuffers(  )
 			model->Bind( aCommandBuffers[ i ], i );
 			model->Draw( aCommandBuffers[ i ], i );
 		}
-#if SPRITE_SUPPORTED
-		vkCmdBindPipeline( aCommandBuffers[ i ], VK_PIPELINE_BIND_POINT_GRAPHICS, aSpritePipeline );
 		for ( auto& sprite : aSprites )
 		{
-			if ( !sprite->aNoDraw )
-			{
-				sprite->Bind( aCommandBuffers[ i ], aSpriteLayout, i );
-				push_constant_t push{  };
-				push.scale	= { 1, 1 };
-				push.translate  = { sprite->aPos.x, sprite->aPos.y };
+			sprite->Bind( aCommandBuffers[ i ], i );
+			push_constant_t push{  };
+			push.scale	= { 1, 1 };
+			push.translate  = { sprite->aPos.x, sprite->aPos.y };
 
-				vkCmdPushConstants
-					(
-						aCommandBuffers[ i ],
-						aSpriteLayout,
-						VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
-						0,
-						sizeof( push_constant_t ),
-						&push
+			vkCmdPushConstants
+				(
+					aCommandBuffers[ i ],
+					sprite->aPipelineLayout,
+					VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
+					0,
+					sizeof( push_constant_t ),
+					&push
 					);
-				sprite->Draw( aCommandBuffers[ i ] );
-			}
+			sprite->Draw( aCommandBuffers[ i ] );
 		}
-#endif /* SPRITE_SUPPORTED  */
 		if ( aImGuiInitialized )
 		{
 			ImGui::Render(  );
@@ -151,9 +138,7 @@ void Renderer::InitCommandBuffers(  )
 		vkCmdEndRenderPass( aCommandBuffers[ i ] );
 
 		if ( vkEndCommandBuffer( aCommandBuffers[ i ] ) != VK_SUCCESS )
-		{
 			throw std::runtime_error( "Failed to record command buffer!" );
-		}
 	}
 }
 
@@ -308,24 +293,14 @@ void Renderer::ReinitSwapChain(  )
 
 	InitImageViews( aSwapChainImageViews );
 	InitRenderPass(  );
-#if SPRITE_SUPPORTED
-	InitDescriptorSetLayout( aSpriteSetLayout, SPRITE_SET_LAYOUT_PARAMETERS );
-	auto spriteLayout 	= InitPipelineLayouts( &aSpriteSetLayout, 1 );
-	InitGraphicsPipeline< vertex_2d_t >( aSpritePipeline, spriteLayout, aSpriteSetLayout, "materials/shaders/2dvert.spv",
-							"materials/shaders/2dfrag.spv", NO_CULLING | NO_DEPTH );
-#endif
 	InitColorResources( aColorImage, aColorImageMemory, aColorImageView );
 	InitDepthResources( aDepthImage, aDepthImageMemory, aDepthImageView );
 	InitFrameBuffer( aSwapChainFramebuffers, aSwapChainImageViews, aDepthImageView, aColorImageView );
 	for ( auto& model : aModels )
 		model->Reinit(  );
 	
-#if SPRITE_SUPPORTED
 	for ( auto& sprite : aSprites )
-	{	        
-		InitDescriptorSets( sprite->aDescriptorSets, aSpriteSetLayout, aDescPool, SPRITE_SET_PARAMETERS( sprite->aTextureImageView ) );	
-	}
-#endif /* SPRITE_SUPPORTED  */
+	        sprite->Reinit(  );
 }
 
 void Renderer::DestroySwapChain(  )
@@ -341,21 +316,14 @@ void Renderer::DestroySwapChain(  )
 	        model->FreeOldResources(  );
 	
 	for ( auto& sprite : aSprites  )
-	{
-
-	}
+		sprite->FreeOldResources(  );
+	
 	for ( auto framebuffer : aSwapChainFramebuffers )
 		vkDestroyFramebuffer( DEVICE, framebuffer, NULL );
 	
 	vkDestroyRenderPass( DEVICE, *gpRenderPass, NULL );
 	for ( auto imageView : aSwapChainImageViews )
 		vkDestroyImageView( DEVICE, imageView, NULL );
-}
-
-template< typename T >
-void Renderer::DestroyRenderable( T &srRenderable )
-{
-
 }
 
 void Renderer::UpdateUniformBuffers( uint32_t sCurrentImage, ModelData &srModelData )
@@ -375,20 +343,17 @@ void Renderer::UpdateUniformBuffers( uint32_t sCurrentImage, ModelData &srModelD
 
 void Renderer::InitModel( ModelData &srModelData, const String &srModelPath, const String &srTexturePath )
 {
-    srModelData.Init(  );
+    	srModelData.Init(  );
 	InitModelVertices( srModelPath, srModelData );
 	aModels.push_back( &srModelData );
 }
 
 void Renderer::InitSprite( SpriteData &srSpriteData, const String &srSpritePath )
 {
-	#if SPRITE_SUPPORTED
-	InitTextureImage( srSpritePath, srSpriteData.aTextureImage, srSpriteData.aTextureImageMem, NULL, NULL );
-	InitTextureImageView( srSpriteData.aTextureImageView, srSpriteData.aTextureImage );
-	InitSpriteVertices( srSpritePath, srSpriteData );
-	InitDescriptorSets( srSpriteData.aDescriptorSets, aSpriteSetLayout, aDescPool, SPRITE_SET_PARAMETERS( srSpriteData.aTextureImageView ), {  } );
+        srSpriteData.Init(  );
+	srSpriteData.SetTexture( srSpritePath, aTextureSampler );
+	InitSpriteVertices( "", srSpriteData );
 	aSprites.push_back( &srSpriteData );
-#endif /* SPRITE_SUPPORTED  */
 }
 
 void Renderer::DrawFrame(  )
@@ -406,19 +371,15 @@ void Renderer::DrawFrame(  )
 		return;
 	}
 	else if ( res != VK_SUCCESS && res != VK_SUBOPTIMAL_KHR )
-	{
 		throw std::runtime_error( "Failed ot acquire swap chain image!" );
-	}
+	
 	if ( aImagesInFlight[ imageIndex ] != VK_NULL_HANDLE )
-	{
 		vkWaitForFences( DEVICE, 1, &aImagesInFlight[ imageIndex ], VK_TRUE, UINT64_MAX );
-	}
+	
 	aImagesInFlight[ imageIndex ] = aInFlightFences[ aCurrentFrame ];
 
 	for ( auto& model : aModels )
-	{
 		UpdateUniformBuffers( imageIndex, *model );
-	}
 
 	VkSubmitInfo submitInfo{  };
 	submitInfo.sType 			= VK_STRUCTURE_TYPE_SUBMIT_INFO;
@@ -436,9 +397,7 @@ void Renderer::DrawFrame(  )
 
 	vkResetFences( DEVICE, 1, &aInFlightFences[ aCurrentFrame ] );
 	if ( vkQueueSubmit( gpDevice->GetGraphicsQueue(  ), 1, &submitInfo, aInFlightFences[ aCurrentFrame ] ) != VK_SUCCESS )
-	{
 		throw std::runtime_error( "Failed to submit draw command buffer!" );
-	}
 	
 	VkPresentInfoKHR presentInfo{  };
 	presentInfo.sType 			= VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
@@ -455,13 +414,10 @@ void Renderer::DrawFrame(  )
 	res = vkQueuePresentKHR( gpDevice->GetPresentQueue(  ), &presentInfo );
 
 	if ( res == VK_ERROR_OUT_OF_DATE_KHR )
-	{
 		ReinitSwapChain(  );
-	}
+	
 	else if ( res != VK_SUCCESS && res != VK_SUBOPTIMAL_KHR )
-	{
 		throw std::runtime_error( "Failed ot present swap chain image!" );
-	}
 	
 	vkQueueWaitIdle( gpDevice->GetPresentQueue(  ) );
 
@@ -474,10 +430,6 @@ void Renderer::Cleanup(  )
 	DestroySwapChain(  );
 	vkDestroySampler( DEVICE, aTextureSampler, NULL );
 	vkDestroyDescriptorPool( DEVICE, *gpPool, NULL );
-	for ( auto& sprite : aSprites )
-	{
-		DestroyRenderable< SpriteData >( *sprite );
-	}
 	for ( int i = 0; i < MAX_FRAMES_PROCESSING; i++ )
 	{
 		vkDestroySemaphore( DEVICE, aRenderFinishedSemaphores[ i ], NULL );

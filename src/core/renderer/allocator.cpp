@@ -160,7 +160,7 @@ void InitImage( VkImageCreateInfo sImageInfo, VkMemoryPropertyFlags sProperties,
 	vkBindImageMemory( DEVICE, srImage, srImageMemory, 0 );
 }
 
-void InitTextureImage( const String &srImagePath, VkImage &srTImage, VkDeviceMemory &srTImageMem, uint32_t &srMipLevels )
+void InitTextureImage( const String &srImagePath, VkImage &srTImage, VkDeviceMemory &srTImageMem, uint32_t &srMipLevels, float *spWidth, float *spHeight )
 {
 	int 		texWidth;
 	int		texHeight;
@@ -196,8 +196,13 @@ void InitTextureImage( const String &srImagePath, VkImage &srTImage, VkDeviceMem
         TransitionImageLayout( srTImage, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, srMipLevels );
 	
         CopyBufferToImage( stagingBuffer, srTImage, ( uint32_t )texWidth, ( uint32_t )texHeight );
-        //TransitionImageLayout( srTImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, srMipLevels );
 	GenerateMipMaps( srTImage, VK_FORMAT_R8G8B8A8_SRGB, texWidth, texHeight, srMipLevels );
+	/* Scale sprite to pixel width/height.  */
+	if ( spWidth && spHeight )
+	{
+		*spWidth 	= ( float )texWidth  / ( float )gpDevice->aWidth   * 2.0f;
+		*spHeight	= ( float )texHeight / ( float )gpDevice->aHeight  * 2.0f;
+	}
 	/* Clean memory  */
 	vkDestroyBuffer( DEVICE, stagingBuffer, NULL );
 	vkFreeMemory( DEVICE, stagingBufferMemory, NULL );
@@ -334,13 +339,16 @@ void InitDescriptorSets( DataBuffer< VkDescriptorSet > &srDescSets, VkDescriptor
 	}
 }
 /* Initializes a texture, view, and appropriate descriptors.  */
-TextureDescriptor *InitTexture( const String &srImagePath, VkDescriptorSetLayout sLayout, VkDescriptorPool sPool, VkSampler sSampler )
+TextureDescriptor *InitTexture( const String &srImagePath, VkDescriptorSetLayout sLayout, VkDescriptorPool sPool, VkSampler sSampler, float *spWidth, float *spHeight )
 {
 	TextureDescriptor	*pTexture = new TextureDescriptor;
 	VkImage 		textureImage;
 	VkDeviceMemory 		textureMem;
 	VkImageView		textureView;
-	InitTextureImage( srImagePath, textureImage, textureMem, pTexture->aMipLevels );
+	if ( spWidth && spHeight )
+		InitTextureImage( srImagePath, textureImage, textureMem, pTexture->aMipLevels, spWidth, spHeight );
+	else
+		InitTextureImage( srImagePath, textureImage, textureMem, pTexture->aMipLevels );
 	InitTextureImageView( textureView, textureImage, pTexture->aMipLevels );
 	InitDescriptorSets( pTexture->aSets, sLayout, sPool,
 			    { { { VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, textureView, sSampler, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER } } }, {  } );
@@ -460,8 +468,7 @@ VkPipelineLayout InitPipelineLayouts( VkDescriptorSetLayout *spSetLayouts, uint3
 }
 /* Refactor to create multiple pipelines for materials, Called whenever a new model is loaded.  */
 template< typename T >
-void InitGraphicsPipeline( VkPipeline &srPipeline, VkPipelineLayout &srLayout, VkDescriptorSetLayout &srDescSetLayout,
-				      const String &srVertShader, const String &srFragShader, int sFlags )
+void InitGraphicsPipeline( VkPipeline &srPipeline, VkPipelineLayout &srLayout, const String &srVertShader, const String &srFragShader, int sFlags )
 {
 	if ( gShaderCache.Exists( srVertShader, srFragShader, srLayout ) )
 	{
@@ -744,5 +751,5 @@ void FreeResources(  )
 template void InitTexBuffer< uint32_t >( const std::vector< uint32_t >&, VkBuffer&, VkDeviceMemory&, VkBufferUsageFlags );
 template void InitTexBuffer< vertex_2d_t >( const std::vector< vertex_2d_t >&, VkBuffer&, VkDeviceMemory&, VkBufferUsageFlags );
 template void InitTexBuffer< vertex_3d_t >( const std::vector< vertex_3d_t >&, VkBuffer&, VkDeviceMemory&, VkBufferUsageFlags );
-template void InitGraphicsPipeline< vertex_2d_t >( VkPipeline&, VkPipelineLayout&, VkDescriptorSetLayout&, const std::string&, const std::string&, int );
-template void InitGraphicsPipeline< vertex_3d_t >( VkPipeline&, VkPipelineLayout&, VkDescriptorSetLayout&, const std::string&, const std::string&, int );
+template void InitGraphicsPipeline< vertex_2d_t >( VkPipeline&, VkPipelineLayout&, const std::string&, const std::string&, int );
+template void InitGraphicsPipeline< vertex_3d_t >( VkPipeline&, VkPipelineLayout&, const std::string&, const std::string&, int );

@@ -85,13 +85,15 @@ void 			InitImageView( VkImageView &sImageView, VkImage sImage, VkFormat sFormat
 /* A.  */
 void 			InitImage( VkImageCreateInfo sImageInfo, VkMemoryPropertyFlags sProperties, VkImage &srImage, VkDeviceMemory &srImageMemory );
 /* A.  */
-void 			InitTextureImage( const String &srImagePath, VkImage &srTImage, VkDeviceMemory &srTImageMem, uint32_t &srMipLevels );
+void 			InitTextureImage( const String &srImagePath, VkImage &srTImage, VkDeviceMemory &srTImageMem, uint32_t &srMipLevels,
+					  float *spWidth = NULL, float *spHeight = NULL );
 /* A.  */
 void 			InitTextureImageView( VkImageView &srTImageView, VkImage sTImage, uint32_t sMipLevels );
 /* Creates the mip maps from a given VkImage.  */
 void			GenerateMipMaps( VkImage sImage, VkFormat sFormat, uint32_t sWidth, uint32_t sHeight, uint32_t sMipLevels );
 /* A.  */
-TextureDescriptor       *InitTexture( const String &srImagePath, VkDescriptorSetLayout sLayout, VkDescriptorPool sPool, VkSampler sSampler );
+TextureDescriptor       *InitTexture( const String &srImagePath, VkDescriptorSetLayout sLayout, VkDescriptorPool sPool, VkSampler sSampler,
+				      float *spWidth = NULL, float *spHeight = NULL );
 /* A.  */
 template< typename T >
 void 	        	InitTexBuffer( const std::vector< T > &srData, VkBuffer &srBuffer, VkDeviceMemory &srBufferMem, VkBufferUsageFlags sUsage );
@@ -112,8 +114,7 @@ VkDescriptorSetLayout   InitDescriptorSetLayout( DescSetLayouts sBindings );
 VkPipelineLayout        InitPipelineLayouts( VkDescriptorSetLayout *spSetLayouts, uint32_t setLayoutsCount );
 /* A.  */
 template< typename T >
-void 			InitGraphicsPipeline( VkPipeline &srPipeline, VkPipelineLayout &srLayout, VkDescriptorSetLayout &srDescSetLayout, const String &srVertShader,
-						      const String &srFragShader, int sFlags );
+void 			InitGraphicsPipeline( VkPipeline &srPipeline, VkPipelineLayout &srLayout, const String &srVertShader, const String &srFragShader, int sFlags );
 /* A.  */
 void 			InitDepthResources( VkImage &srDepthImage, VkDeviceMemory &srDepthImageMemory, VkImageView &srDepthImageView );
 /* Initializes the multisampling image.  */

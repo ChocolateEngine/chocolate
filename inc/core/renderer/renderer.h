@@ -13,6 +13,7 @@ Vulkan.
 #include "../../types/enums.h"
 #include "../../types/renderertypes.h"
 #include "../../types/modeldata.h"
+#include "../../types/spritedata.h"
 #include "../gui.h"
 
 #include "allocator.h"
