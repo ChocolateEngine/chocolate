@@ -183,38 +183,6 @@ struct ubo_2d_t
 	glm::vec2 extent;
 };
 
-class SpriteData
-{
-	typedef std::vector< VkDescriptorSet >  DescriptorSetList;
-public:	
-	VkBuffer 		aVertexBuffer;
-	VkBuffer		aIndexBuffer;
-	VkDeviceMemory 		aVertexBufferMem;
-        VkDeviceMemory		aIndexBufferMem;
-	VkDeviceMemory		aTextureImageMem;
-	VkImage 		aTextureImage;
-	VkImageView 		aTextureImageView;
-	DescriptorSetList 	aDescriptorSets;
-	uint32_t 		aVertexCount;
-	uint32_t		aIndexCount;
-	bool 			aNoDraw = false;
-	glm::vec2 		aPos;
-	float 			aWidth 	= 0.5f;
-	float			aHeight = 0.5f;
-
-	/* Binds the sprite data to the GPU to be submitted for rendering.  */
-	void 		Bind( VkCommandBuffer c, VkPipelineLayout p, uint32_t i )
-		{
-			VkBuffer 	vBuffers[  ]    = { aVertexBuffer };
-			VkDeviceSize 	offsets[  ] 	= { 0 };
-		        vkCmdBindDescriptorSets( c, VK_PIPELINE_BIND_POINT_GRAPHICS, p, 0, 1, &aDescriptorSets[ i ], 0, NULL );
-			vkCmdBindVertexBuffers( c, 0, 1, vBuffers, offsets );
-			vkCmdBindIndexBuffer( c, aIndexBuffer, 0, VK_INDEX_TYPE_UINT32 );
-		}
-	/* Draw the sprite to the screen.  */
-	void 		Draw( VkCommandBuffer c ){ vkCmdDrawIndexed( c, aIndexCount, 1, 0, 0, 0 ); }
-};
-
 class TextureDescriptor
 {
 public:

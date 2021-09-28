@@ -17,8 +17,7 @@ void ModelData::Init(  )
 	InitUniformData( aUniformData, aUniformLayout );
 	VkDescriptorSetLayout layouts[  ] = { aTextureLayout, aUniformLayout };
 	aPipelineLayout = InitPipelineLayouts( layouts, 2 );
-	InitGraphicsPipeline< vertex_3d_t >( aPipeline, aPipelineLayout, aUniformLayout, "materials/shaders/3dvert.spv",
-							 "materials/shaders/3dfrag.spv", 0 );
+	InitGraphicsPipeline< vertex_3d_t >( aPipeline, aPipelineLayout,"materials/shaders/3dvert.spv", "materials/shaders/3dfrag.spv", 0 );
 	
 }
 /* Reinitialize data that is useless after the swapchain becomes outdated.  */
@@ -33,8 +32,7 @@ void ModelData::Reinit(  )
 	InitUniformData( aUniformData, aUniformLayout );
 	VkDescriptorSetLayout layouts[  ] = { aTextureLayout, aUniformLayout };
 	aPipelineLayout = InitPipelineLayouts( layouts, 2 );
-	InitGraphicsPipeline< vertex_3d_t >( aPipeline, aPipelineLayout, aUniformLayout, "materials/shaders/3dvert.spv",
-							 "materials/shaders/3dfrag.spv", 0 );
+	InitGraphicsPipeline< vertex_3d_t >( aPipeline, aPipelineLayout, "materials/shaders/3dvert.spv", "materials/shaders/3dfrag.spv", 0 );
 }
 /* Binds the model data to the GPU to be rendered later.  */
 void ModelData::Bind( VkCommandBuffer c, uint32_t i )
