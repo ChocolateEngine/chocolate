@@ -4,11 +4,10 @@
 #include "../shared/baseaudio.h"
 
 #include <SDL2/SDL.h>
-#include <phonon.h>
-
-
 #define ENABLE_AUDIO 0
-
+#if ENABLE_AUDIO
+#include <phonon.h>
+#endif /* ENABLE_AUDIO  */
 
 struct AudioStreamInternal: public AudioStream
 {

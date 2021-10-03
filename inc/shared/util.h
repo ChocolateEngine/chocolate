@@ -7,6 +7,10 @@
 #include <glm/vec3.hpp>
 #include <glm/gtc/quaternion.hpp>
 
+#if __linux__
+#include <sys/stat.h>
+#endif /* __linux__  */
+
 
 #define MALLOC_NEW( type ) (type*)malloc(sizeof(struct type))
 #define MALLOC_NEW2( type, var ) type* var = (type*)malloc(sizeof(struct type))

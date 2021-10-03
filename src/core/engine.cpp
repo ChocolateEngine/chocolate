@@ -8,12 +8,6 @@ Defines the methods declared in engine.h.
 
 #include <chrono>
 
-<<<<<<< HEAD
-// im sorry
-extern Console* g_console;
-=======
->>>>>>> 62cd0a665d8e01eb472898bb43ee73fdf78f2024
-
 template< typename T, typename... TArgs >
 void Engine::AddSystem( const T *spSystem, TArgs... sSystems )
 {
