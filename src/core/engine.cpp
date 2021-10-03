@@ -8,6 +8,8 @@ Defines the methods declared in engine.h.
 
 #include <chrono>
 
+CONVAR( e_max_frametime, 0.2 );
+
 template< typename T, typename... TArgs >
 void Engine::AddSystem( const T *spSystem, TArgs... sSystems )
 {
@@ -134,6 +136,9 @@ void Engine::UpdateSystems(  )
 
 	auto currentTime = std::chrono::high_resolution_clock::now();
 	float time = std::chrono::duration< float, std::chrono::seconds::period >( currentTime - startTime ).count(  );
+	
+	// don't let the time go too crazy, usually happens when in a breakpoint
+	time = glm::min( time, e_max_frametime.GetFloat() );
 
 	apConsole->Update(  );
 
@@ -154,7 +159,6 @@ Engine::Engine(  ) : BaseSystem(  )
 Engine::~Engine(  )
 {
 	for ( const auto& pSys : apSystemManager->GetSystemList() )
-		//pSys->~BaseSystem(  );
 		delete pSys;
 
 	for ( const auto& handle : aDlHandles )
