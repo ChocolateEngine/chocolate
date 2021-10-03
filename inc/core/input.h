@@ -73,9 +73,10 @@ public:
 	KeyState    GetKeyState( SDL_Scancode key );
 
 	/* Convienence functions  */
-	bool IsKeyPressed( SDL_Scancode key ) { return GetKeyState(key) & KeyState_Pressed; }
-	bool IsKeyJustPressed( SDL_Scancode key ) { return GetKeyState(key) & KeyState_JustPressed; }
-	bool IsKeyJustReleased( SDL_Scancode key ) { return GetKeyState(key) & KeyState_JustReleased; }
+	bool KeyPressed( SDL_Scancode key ) { return GetKeyState(key) & KeyState_Pressed; }
+	bool KeyReleased( SDL_Scancode key ) { return GetKeyState(key) & KeyState_Released; }
+	bool KeyJustPressed( SDL_Scancode key ) { return GetKeyState(key) & KeyState_JustPressed; }
+	bool KeyJustReleased( SDL_Scancode key ) { return GetKeyState(key) & KeyState_JustReleased; }
 
 	/* Constructor.  */
 	explicit        InputSystem(  );
