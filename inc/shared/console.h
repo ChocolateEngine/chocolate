@@ -64,21 +64,21 @@ public:
 
 
 #define CVAR_OP_EQ_SELF( otherType, leftValue, otherValue ) \
-	void    operator*=( otherType& other )    { return SetValue( leftValue * other##otherValue ); } \
-	void    operator/=( otherType& other )    { return SetValue( leftValue / other##otherValue ); } \
-	void    operator+=( otherType& other )    { return SetValue( leftValue + other##otherValue ); } \
-	void    operator-=( otherType& other )    { return SetValue( leftValue - other##otherValue ); }
+	void    operator*=( otherType& other )    { return SetValue( leftValue * otherValue ); } \
+	void    operator/=( otherType& other )    { return SetValue( leftValue / otherValue ); } \
+	void    operator+=( otherType& other )    { return SetValue( leftValue + otherValue ); } \
+	void    operator-=( otherType& other )    { return SetValue( leftValue - otherValue ); }
 
 #define CVAR_OP( outType, otherType, leftValue, otherValue ) \
-	bool    operator<=( otherType& other )    { return leftValue <= other##otherValue; } \
-	bool    operator>=( otherType& other )    { return leftValue >= other##otherValue; } \
-	bool    operator!=( otherType& other )    { return leftValue != other##otherValue; } \
-	bool    operator==( otherType& other )    { return leftValue == other##otherValue; } \
+	bool    operator<=( otherType& other )    { return leftValue <= otherValue; } \
+	bool    operator>=( otherType& other )    { return leftValue >= otherValue; } \
+	bool    operator!=( otherType& other )    { return leftValue != otherValue; } \
+	bool    operator==( otherType& other )    { return leftValue == otherValue; } \
                                                                                          \
-	outType operator*( otherType& other )     { return leftValue * other##otherValue;  } \
-	outType operator/( otherType& other )     { return leftValue / other##otherValue;  } \
-	outType operator+( otherType& other )     { return leftValue + other##otherValue;  } \
-	outType operator-( otherType& other )     { return leftValue - other##otherValue;  }
+	outType operator*( otherType& other )     { return leftValue * otherValue;  } \
+	outType operator/( otherType& other )     { return leftValue / otherValue;  } \
+	outType operator+( otherType& other )     { return leftValue + otherValue;  } \
+	outType operator-( otherType& other )     { return leftValue - otherValue;  }
 
 
 // TODO: allow convars to be able to be linked
@@ -146,11 +146,11 @@ public:
 	void    operator=( const std::string& other )       { SetValue( other ); }
 	void    operator=( const char* other )              { SetValue( other ); }
 
-	CVAR_OP_EQ_SELF(    const float,    aValueFloat, );
-	CVAR_OP_EQ_SELF(    const double,   aValueFloat, );
+	CVAR_OP_EQ_SELF(    const float,    aValueFloat, other );
+	CVAR_OP_EQ_SELF(    const double,   aValueFloat, other );
 
-	CVAR_OP_EQ_SELF(    const ConVar,   GetFloat(), .aValueFloat );
-	CVAR_OP( float,     const ConVar,   GetFloat(), .aValueFloat );
+	CVAR_OP_EQ_SELF(    const ConVar,   GetFloat(), other.aValueFloat );
+	CVAR_OP( float,     const ConVar,   GetFloat(), other.aValueFloat );
 
 	bool    operator<=( ConVarRef& other );
 	bool    operator>=( ConVarRef& other );
@@ -225,14 +225,14 @@ public:
 	void    operator=( const std::string& other )       { SetValue( other ); }
 	void    operator=( const char* other )              { SetValue( other ); }
 
-	CVAR_OP_EQ_SELF(    const float,    GetFloat(), );
-	CVAR_OP_EQ_SELF(    const double,   GetFloat(), );
+	CVAR_OP_EQ_SELF(    const float,    GetFloat(), other );
+	CVAR_OP_EQ_SELF(    const double,   GetFloat(), other );
 
-	CVAR_OP_EQ_SELF(    const ConVar,   GetFloat(), .aValueFloat );
-	CVAR_OP( float,     const ConVar,   GetFloat(), .aValueFloat );
+	CVAR_OP_EQ_SELF(    const ConVar,   GetFloat(), other.aValueFloat );
+	CVAR_OP( float,     const ConVar,   GetFloat(), other.aValueFloat );
 
-	CVAR_OP_EQ_SELF(    ConVarRef,      GetFloat(), .GetFloat() );
-	CVAR_OP( float,     ConVarRef,      GetFloat(), .GetFloat() );
+	CVAR_OP_EQ_SELF(    ConVarRef,      GetFloat(), other.GetFloat() );
+	CVAR_OP( float,     ConVarRef,      GetFloat(), other.GetFloat() );
 
 	friend class Console;
 };
