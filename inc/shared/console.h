@@ -17,6 +17,10 @@ Declares the sdfhuosdfhuiosdfhusdfhuisfhu
 typedef std::function< void( std::vector< std::string > args ) > ConVarFunc;
 
 
+// why do i not need to forward declare the other ones?
+class ConVarRef;
+
+
 class ConVarBase
 {
 public:
@@ -28,6 +32,7 @@ public:
 
 	friend class ConCommand;
 	friend class ConVar;
+	friend class ConVarRef;
 	friend class Console;
 
 private:
@@ -50,15 +55,33 @@ public:
 
 	void Init( const std::string& name, ConVarFunc func );
 
-	std::string GetPrintMessage(  );
+	std::string GetPrintMessage(  ) override;
 
-	std::string aName;
 	ConVarFunc aFunc;
 
 	friend class Console;
 };
 
 
+#define CVAR_OP_EQ_SELF( otherType, leftValue, otherValue ) \
+	void    operator*=( otherType& other )    { return SetValue( leftValue * other##otherValue ); } \
+	void    operator/=( otherType& other )    { return SetValue( leftValue / other##otherValue ); } \
+	void    operator+=( otherType& other )    { return SetValue( leftValue + other##otherValue ); } \
+	void    operator-=( otherType& other )    { return SetValue( leftValue - other##otherValue ); }
+
+#define CVAR_OP( outType, otherType, leftValue, otherValue ) \
+	bool    operator<=( otherType& other )    { return leftValue <= other##otherValue; } \
+	bool    operator>=( otherType& other )    { return leftValue >= other##otherValue; } \
+	bool    operator!=( otherType& other )    { return leftValue != other##otherValue; } \
+	bool    operator==( otherType& other )    { return leftValue == other##otherValue; } \
+                                                                                         \
+	outType operator*( otherType& other )     { return leftValue * other##otherValue;  } \
+	outType operator/( otherType& other )     { return leftValue / other##otherValue;  } \
+	outType operator+( otherType& other )     { return leftValue + other##otherValue;  } \
+	outType operator-( otherType& other )     { return leftValue - other##otherValue;  }
+
+
+// TODO: allow convars to be able to be linked
 class ConVar : public ConVarBase
 {
 public:
@@ -83,23 +106,21 @@ public:
 		Init( name, defaultValue, callback );
 	}
 
-	void Init( const std::string& name, const std::string& defaultValue, ConVarFunc func );
-	void Init( const std::string& name, float defaultValue, ConVarFunc func );
+	void                Init( const std::string& name, const std::string& defaultValue, ConVarFunc func );
+	void                Init( const std::string& name, float defaultValue, ConVarFunc func );
 
-	std::string GetPrintMessage(  );
+	std::string         GetPrintMessage(  ) override;
 
-	void SetValue( const std::string& value );
-	void SetValue( float value );
+	void                SetValue( const std::string& value );
+	void                SetValue( float value );
 
-	void Reset(  );
+	void                Reset(  );
 
-	const std::string& GetName(  );
-	const std::string& GetValue(  );
-	float              GetFloat(  );
-	bool               GetBool(  );  // is aValueFloat equal to 1.f?
+	const std::string&  GetValue(  );
+	float               GetFloat(  );
+	bool                GetBool(  );  // is aValueFloat equal to 1.f?
 
 	// operators !!!!!!
-	// might not use them out of habit lol
 
 	operator float()                                    { return aValueFloat; }
 	//operator double()                                   { return aValueFloat; }
@@ -113,54 +134,38 @@ public:
 	bool    operator==( const std::string& other )      { return other == aValue; }
 	bool    operator==( const char* other )             { return other == aValue; }
 
+	bool    operator!=( const bool& other )             { return other != GetBool(); }
+	float   operator!=( const float& other )            { return other != aValueFloat; }
+	double  operator!=( const double& other )           { return other != aValueFloat; }
+	bool    operator!=( const std::string& other )      { return other != aValue; }
+	bool    operator!=( const char* other )             { return other != aValue; }
+
 	void    operator=( const bool& other )              { SetValue( other ? 1.f : 0.f ); }
 	void    operator=( const float& other )             { SetValue( other ); }
 	void    operator=( const double& other )            { SetValue( other ); }
 	void    operator=( const std::string& other )       { SetValue( other ); }
 	void    operator=( const char* other )              { SetValue( other ); }
 
-	void    operator*=( const float& other )            { SetValue( aValueFloat * other ); }
-	void    operator*=( const double& other )           { SetValue( aValueFloat * other ); }
+	CVAR_OP_EQ_SELF(    const float,    aValueFloat, );
+	CVAR_OP_EQ_SELF(    const double,   aValueFloat, );
 
-	void    operator/=( const float& other )            { SetValue( aValueFloat / other ); }
-	void    operator/=( const double& other )           { SetValue( aValueFloat / other ); }
+	CVAR_OP_EQ_SELF(    const ConVar,   GetFloat(), .aValueFloat );
+	CVAR_OP( float,     const ConVar,   GetFloat(), .aValueFloat );
 
-	void    operator+=( const float& other )            { SetValue( aValueFloat + other ); }
-	void    operator+=( const double& other )           { SetValue( aValueFloat + other ); }
+	bool    operator<=( ConVarRef& other );
+	bool    operator>=( ConVarRef& other );
+	bool    operator==( ConVarRef& other );
+	bool    operator!=( ConVarRef& other );
 
-	void    operator-=( const float& other )            { SetValue( aValueFloat - other ); }
-	void    operator-=( const double& other )           { SetValue( aValueFloat - other ); }
-
-	bool    operator<=( const ConVar& other )           { return aValueFloat <= other.aValueFloat; }
-	bool    operator>=( const ConVar& other )           { return aValueFloat >= other.aValueFloat; }
-	bool    operator==( const ConVar& other )           { return aValueFloat == other.aValueFloat; }
-
-	// useless?
-#if 0
-	float   operator*( const float& other )             { return aValueFloat * other; }
-	double  operator*( const double& other )            { return aValueFloat * other; }
-
-	float   operator/( const float& other )             { return aValueFloat / other; }
-	double  operator/( const double& other )            { return aValueFloat / other; }
-
-	float   operator+( const float& other )             { return aValueFloat + other; }
-	double  operator+( const double& other )            { return aValueFloat + other; }
-
-	float   operator-( const float& other )             { return aValueFloat - other; }
-	double  operator-( const double& other )            { return aValueFloat - other; }
-
-	float   operator*( const ConVar& other )            { return aValueFloat * other.aValueFloat; }
-	float   operator/( const ConVar& other )            { return aValueFloat / other.aValueFloat; }
-	float   operator+( const ConVar& other )            { return aValueFloat + other.aValueFloat; }
-	float   operator-( const ConVar& other )            { return aValueFloat - other.aValueFloat; }
-	float   operator<( const ConVar& other )            { return aValueFloat < other.aValueFloat; }
-	float   operator>( const ConVar& other )            { return aValueFloat > other.aValueFloat; }
-#endif
+	float   operator*( ConVarRef& other );
+	float   operator/( ConVarRef& other );
+	float   operator+( ConVarRef& other );
+	float   operator-( ConVarRef& other );
 
 	friend class Console;
+	friend class ConVarRef;
 
 private:
-	std::string aName;
 	std::string aDefaultValue;
 	std::string aValue;
 	float       aDefaultValueFloat;
@@ -169,8 +174,75 @@ private:
 };
 
 
+class ConVarRef : public ConVarBase
+{
+public:
+
+	ConVarRef( const std::string& name ): ConVarBase( name )
+	{
+		Init(  );
+	}
+
+	void                Init(  );
+	void                SetReference( ConVar* ref );
+	bool                Valid(  );  // do we have a pointer to another cvar or not?
+
+	std::string         GetPrintMessage(  ) override;
+
+	void                SetValue( const std::string& value );
+	void                SetValue( float value );
+
+	const std::string&  GetValue(  );
+	float               GetFloat(  );
+	bool                GetBool(  );  // is aValueFloat equal to 1.f?
+
+	bool aValid = false;
+	ConVar* apRef = nullptr;
+
+	// less operators !!!!!!
+
+	operator float()                                    { return GetFloat(); }
+	//operator double()                                   { return GetFloat(); }
+	//operator bool()                                     { return GetBool(); }
+	operator std::string()                              { return GetValue(); }
+	operator const char*()                              { return GetValue().c_str(); }
+
+	bool    operator==( const bool& other )             { return other == GetBool(); }
+	float   operator==( const float& other )            { return other == GetFloat(); }
+	double  operator==( const double& other )           { return other == GetFloat(); }
+	bool    operator==( const std::string& other )      { return other == GetValue(); }
+	bool    operator==( const char* other )             { return other == GetValue(); }
+
+	bool    operator!=( const bool& other )             { return other != GetBool(); }
+	float   operator!=( const float& other )            { return other != GetFloat(); }
+	double  operator!=( const double& other )           { return other != GetFloat(); }
+	bool    operator!=( const std::string& other )      { return other != GetValue(); }
+	bool    operator!=( const char* other )             { return other != GetValue(); }
+
+	void    operator=( const bool& other )              { SetValue( other ? 1.f : 0.f ); }
+	void    operator=( const float& other )             { SetValue( other ); }
+	void    operator=( const double& other )            { SetValue( other ); }
+	void    operator=( const std::string& other )       { SetValue( other ); }
+	void    operator=( const char* other )              { SetValue( other ); }
+
+	CVAR_OP_EQ_SELF(    const float,    GetFloat(), );
+	CVAR_OP_EQ_SELF(    const double,   GetFloat(), );
+
+	CVAR_OP_EQ_SELF(    const ConVar,   GetFloat(), .aValueFloat );
+	CVAR_OP( float,     const ConVar,   GetFloat(), .aValueFloat );
+
+	CVAR_OP_EQ_SELF(    ConVarRef,      GetFloat(), .GetFloat() );
+	CVAR_OP( float,     ConVarRef,      GetFloat(), .GetFloat() );
+
+	friend class Console;
+};
+
+
 #define CONVAR( name, ... ) \
 	ConVar name( #name, __VA_ARGS__ )
+
+#define CONVARREF( name ) \
+	ConVarRef name( #name )
 
 
 //#define CON_COMMAND( name ) \

@@ -94,11 +94,6 @@ void ConVar::Reset(  )
 }
 
 
-const std::string& ConVar::GetName(  )
-{
-	return aName;
-}
-
 const std::string& ConVar::GetValue(  )
 {
 	return aValue;
@@ -113,6 +108,76 @@ bool ConVar::GetBool(  )
 {
 	return aValueFloat == 1.f;
 }
+
+
+// amazing, have to put these here or i get some ConVarRef undefined error
+// also not const due to the function call
+bool    ConVar::operator<=( ConVarRef& other )              { return aValueFloat <= other.GetFloat(); }
+bool    ConVar::operator>=( ConVarRef& other )              { return aValueFloat >= other.GetFloat(); }
+bool    ConVar::operator==( ConVarRef& other )              { return aValueFloat == other.GetFloat(); }
+bool    ConVar::operator!=( ConVarRef& other )              { return aValueFloat != other.GetFloat(); }
+
+float   ConVar::operator*( ConVarRef& other )               { return aValueFloat * other.GetFloat(); }
+float   ConVar::operator/( ConVarRef& other )               { return aValueFloat / other.GetFloat(); }
+float   ConVar::operator+( ConVarRef& other )               { return aValueFloat + other.GetFloat(); }
+float   ConVar::operator-( ConVarRef& other )               { return aValueFloat - other.GetFloat(); }
+
+
+// ================================================================================
+
+
+void ConVarRef::Init(  )
+{
+	if ( console == nullptr )
+		return;
+
+	// if this is created later, just search for the convar
+	SetReference( console->GetConVar( aName ) );
+}
+
+void ConVarRef::SetReference( ConVar* ref )
+{
+	apRef = ref;
+	aValid = apRef != nullptr;
+}
+
+// should never be called on a ConVarRef really
+std::string ConVarRef::GetPrintMessage(  )
+{
+	return apRef ? apRef->GetPrintMessage(  ) : "Invalid ConVarRef: " + aName + "\n";
+}
+
+void ConVarRef::SetValue( const std::string& value )
+{
+	if ( apRef ) SetValue( value );
+}
+
+void ConVarRef::SetValue( float value )
+{
+	if ( apRef ) SetValue( value );
+}
+
+const std::string& ConVarRef::GetValue(  )
+{
+	static std::string empty = "";
+	return apRef ? apRef->aValue : empty;
+}
+
+float ConVarRef::GetFloat(  )
+{
+	return apRef ? apRef->aValueFloat : 0.f;
+}
+
+bool ConVarRef::GetBool(  )
+{
+	return apRef ? apRef->GetBool(  ) : false;
+}
+
+
+// uhhh
+//bool operator<=( ConVar& left, ConVarRef& other )              { return left.GetFloat() <= other.GetFloat(); }
+//bool operator>=( ConVar& left, ConVarRef& other )              { return left.GetFloat() >= other.GetFloat(); }
+//bool operator==( ConVar& left, ConVarRef& other )              { return left.GetFloat() == other.GetFloat(); }
 
 
 // ================================================================================
@@ -145,15 +210,30 @@ void Console::RegisterConVars(  )
 	ConVarBase *current;
 	ConVarBase *next;
 
+	std::vector< ConVarRef* > cvarRefList;
+
 	current = ConVarBase::spConVarBases;
 	while ( current )
 	{
 		next = current->apNext;
 
-		if ( !vec_contains( aConVarList, current ) )
-			aConVarList.push_back( current );
+		if ( ConVarRef* cvarRef = dynamic_cast< ConVarRef* >(current) )
+		{
+			cvarRefList.push_back( cvarRef );
+		}
+		else
+		{
+			if ( !vec_contains( aConVarList, current ) )
+				aConVarList.push_back( current );
+		}
 
 		current = next;
+	}
+
+	// Now link all cvar references
+	for ( ConVarRef* cvarRef: cvarRefList )
+	{
+		cvarRef->SetReference( GetConVar( cvarRef->GetName() ) );
 	}
 
 	registered = true;
