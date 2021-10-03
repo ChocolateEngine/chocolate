@@ -1,6 +1,6 @@
 cc		:=	g++
-cflags		:=	-Wall -Wextra -std=c++20 -fPIC -c
-lflags		:=	-Wall -Wextra -std=c++20 -shared
+cflags		:=	-std=c++20 -fPIC -c
+lflags		:=	-std=c++20 -shared
 
 src		:=	src
 lib		:=	lib
