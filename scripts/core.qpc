@@ -34,16 +34,20 @@ config
 		inc_dirs
 		{
 			"$VK_DIR$/Include" [$WINDOWS$]
+			
+			"$SCRIPT_DIR$/../inc"
 		}
 		
 		defines
 		{
-			"_X86_"     [$I386$]
-			"_AMD64_"   [$AMD64$]
+			"_X86_" "__i386__"                  [$I386$]
+			"_AMD64_" "__x86_64" "__amd64"       [$AMD64$]
+			
 			"_ARM64_"   [$ARM64$]
 			"_ARM_"     [$ARM$]
 			
 			"NDEBUG=1"  [$RELEASE$]
+			"_DEBUG=1"  [$DEBUG$]
 		}
 
 		// is this needed?
@@ -57,7 +61,7 @@ config
 			"/Od" "/MDd" "/ZI"  [$DEBUG$]
 			"/O2" "/MD"         [$RELEASE$]
 			
-			"/MT" // multi-threaded compilation
+			"/MP" // multi-threaded compilation
 		}
 	}
 	
@@ -66,7 +70,7 @@ config
 		lib_dirs
 		{
 			"$VK_DIR$/Lib" [$WINDOWS$]
-			"../lib"
+			"$SCRIPT_DIR$/../lib"
 		}
 		
 		libs
@@ -74,6 +78,11 @@ config
 			"SDL2"
 			"vulkan-1" [$WINDOWS$]
 			"vulkan" "dl" "pthread" "X11" "Xxf86vm" "Xrandr" "Xi" [$LINUX$]
+		}
+		
+		options [$MSVC$]
+		{
+			"/INCREMENTAL" [$DEBUG$]
 		}
 	}
 }
