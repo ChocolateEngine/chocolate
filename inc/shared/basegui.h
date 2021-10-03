@@ -14,5 +14,7 @@ public:
 	virtual void		ShowConsole(  ) = 0;
 	/* Is the console shown.  */
 	virtual bool		IsConsoleShown(  ) = 0;
+	/* Debug Text on the side of the screen  */
+	virtual void		DebugMessage( size_t index, const char* format, ... ) = 0;
 };
 
