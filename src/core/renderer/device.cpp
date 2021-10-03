@@ -464,8 +464,8 @@ void Device::InitSwapChain(  )
 	VkExtent2D 		extent 		        = ChooseSwapExtent( swapChainSupport.aCapabilities );
 	VkSwapchainKHR		swapChain;
 	ImageSet		swapChainImages;
-
-	uint32_t imageCount 				= swapChainSupport.aCapabilities.minImageCount + 1;
+	/* haha fuck you screen terring!!!  */
+	uint32_t imageCount 				= 1;// swapChainSupport.aCapabilities.minImageCount + 1;
 	if ( swapChainSupport.aCapabilities.maxImageCount > 0 && imageCount > swapChainSupport.aCapabilities.maxImageCount )
 		imageCount = swapChainSupport.aCapabilities.maxImageCount;
 
@@ -503,9 +503,8 @@ void Device::InitSwapChain(  )
 	createInfo.oldSwapchain 	= VK_NULL_HANDLE;
 
 	if ( vkCreateSwapchainKHR( aDevice, &createInfo, NULL, &swapChain ) != VK_SUCCESS )
-	{
 		throw std::runtime_error( "Failed to create swap chain!" );
-	}
+	
 	vkGetSwapchainImagesKHR( aDevice, swapChain, &imageCount, NULL );
 	swapChainImages.resize( imageCount );
 	vkGetSwapchainImagesKHR( aDevice, swapChain, &imageCount, swapChainImages.data(  ) );

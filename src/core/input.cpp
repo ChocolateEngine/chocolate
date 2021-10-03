@@ -11,6 +11,8 @@ input.h
 #include "../../inc/core/engine.h"
 #include "../../inc/core/gui.h"
 
+#include "../../inc/shared/util.h"
+
 #include <fstream>
 #include <iostream>
 
