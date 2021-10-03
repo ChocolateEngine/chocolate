@@ -6,6 +6,8 @@
 FunctionList 			gFreeQueue;
 ShaderCache			gShaderCache;
 DescriptorCache			gDescriptorCache;
+PipelineBuilder			gPipelineBuilder;
+LayoutBuilder			gLayoutBuilder;
 
 Device 				*gpDevice 		= new Device;
 ImageSet 			*gpSwapChainImages 	= NULL;
@@ -468,13 +470,11 @@ VkPipelineLayout InitPipelineLayouts( VkDescriptorSetLayout *spSetLayouts, uint3
 }
 /* Refactor to create multiple pipelines for materials, Called whenever a new model is loaded.  */
 template< typename T >
-void InitGraphicsPipeline( VkPipeline &srPipeline, VkPipelineLayout &srLayout, const String &srVertShader, const String &srFragShader, int sFlags )
+VkPipeline InitGraphicsPipeline( VkPipelineLayout &srLayout, const String &srVertShader, const String &srFragShader, int sFlags )
 {
+	VkPipeline pipeline;
 	if ( gShaderCache.Exists( srVertShader, srFragShader, srLayout ) )
-	{
-		srPipeline 		= gShaderCache.GetPipeline(  );
-		return;
-	}
+		return gShaderCache.GetPipeline(  );
 		
 	auto 		vertShaderCode  	= ReadFile( srVertShader );
 	auto 		fragShaderCode  	= ReadFile( srFragShader );
@@ -608,13 +608,15 @@ void InitGraphicsPipeline( VkPipeline &srPipeline, VkPipelineLayout &srLayout, c
 	pipelineInfo.basePipelineHandle 	= VK_NULL_HANDLE; // Optional, very important for later when making new pipelines. It is less expensive to reference an existing similar pipeline
 	pipelineInfo.basePipelineIndex 		= -1; // Optional
 
-	if ( vkCreateGraphicsPipelines( DEVICE, VK_NULL_HANDLE, 1, &pipelineInfo, NULL, &srPipeline ) != VK_SUCCESS )
+	if ( vkCreateGraphicsPipelines( DEVICE, VK_NULL_HANDLE, 1, &pipelineInfo, NULL, &pipeline ) != VK_SUCCESS )
 		throw std::runtime_error( "Failed to create graphics pipeline!" );
 
-	gShaderCache.AddPipeline( srVertShader, srFragShader, srLayout, srPipeline );
+	gShaderCache.AddPipeline( srVertShader, srFragShader, srLayout, pipeline );
 
 	vkDestroyShaderModule( DEVICE, fragShaderModule, NULL );
 	vkDestroyShaderModule( DEVICE, vertShaderModule, NULL );
+
+	return pipeline;
 }
 
 void InitDepthResources( VkImage &srDepthImage, VkDeviceMemory &srDepthImageMemory, VkImageView &srDepthImageView )
@@ -748,8 +750,8 @@ void FreeResources(  )
 		rFunc(  );
 }
 
-template void InitTexBuffer< uint32_t >( const std::vector< uint32_t >&, VkBuffer&, VkDeviceMemory&, VkBufferUsageFlags );
-template void InitTexBuffer< vertex_2d_t >( const std::vector< vertex_2d_t >&, VkBuffer&, VkDeviceMemory&, VkBufferUsageFlags );
-template void InitTexBuffer< vertex_3d_t >( const std::vector< vertex_3d_t >&, VkBuffer&, VkDeviceMemory&, VkBufferUsageFlags );
-template void InitGraphicsPipeline< vertex_2d_t >( VkPipeline&, VkPipelineLayout&, const std::string&, const std::string&, int );
-template void InitGraphicsPipeline< vertex_3d_t >( VkPipeline&, VkPipelineLayout&, const std::string&, const std::string&, int );
+template void 		InitTexBuffer< uint32_t >( const std::vector< uint32_t >&, VkBuffer&, VkDeviceMemory&, VkBufferUsageFlags );
+template void 		InitTexBuffer< vertex_2d_t >( const std::vector< vertex_2d_t >&, VkBuffer&, VkDeviceMemory&, VkBufferUsageFlags );
+template void 		InitTexBuffer< vertex_3d_t >( const std::vector< vertex_3d_t >&, VkBuffer&, VkDeviceMemory&, VkBufferUsageFlags );
+template VkPipeline 	InitGraphicsPipeline< vertex_2d_t >( VkPipelineLayout&, const std::string&, const std::string&, int );
+template VkPipeline 	InitGraphicsPipeline< vertex_3d_t >( VkPipelineLayout&, const std::string&, const std::string&, int );

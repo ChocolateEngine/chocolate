@@ -34,6 +34,7 @@ class ModelData
 	typedef std::vector< VkDeviceMemory >		MemorySet;
 	typedef std::vector< VkDescriptorSet > 		DescriptorSetList;
 	typedef DataBuffer< Mesh >			Meshes;
+	typedef DataBuffer< VkDescriptorSetLayout >	Layouts;
 public:
 	VkBuffer 		aVertexBuffer;
 	VkBuffer		aIndexBuffer;
@@ -44,6 +45,7 @@ public:
 	VkDescriptorSetLayout	aUniformLayout;
 	VkPipelineLayout	aPipelineLayout;
 	VkPipeline		aPipeline;
+	Layouts			aSetLayouts{  };
 
 	uint32_t 		aVertexCount;
 	uint32_t		aIndexCount;
@@ -52,7 +54,7 @@ public:
 	bool 			aNoDraw = true;
 	
 	Transform		aTransform;
-        Meshes			aMeshes;
+        Meshes			aMeshes{  };
 	/* Allocates the model, and loads its textures etc.  */
 	void		Init(  );
 	/* Reinitialize data that is useless after the swapchain becomes outdated.  */
@@ -68,7 +70,7 @@ public:
 	/* Adds an index group to the model which groups together indices in the same material to be used for multiple draw calls for multiple textures.  */
 	void		AddIndexGroup( std::vector< uint32_t > sVec );
 	/* Default the model and set limits.  */
-			ModelData(  ) : apVertices( NULL ), apIndices( NULL ), aNoDraw( false ){  };
+	ModelData(  ) : apVertices( NULL ), apIndices( NULL ), aNoDraw( false ), aMeshes(  ), aSetLayouts(  ){  };
 	/* Frees the memory used by objects outdated by a new swapchain state.  */
 	void		FreeOldResources(  );
 	/* Frees all memory used by model.  */

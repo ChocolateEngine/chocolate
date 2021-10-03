@@ -26,7 +26,11 @@ public:
 	void			Allocate( uint32_t sSize ){ apBuffers = new T[ sSize + 1 ]; aBufferCount = sSize; }
 	/* Reallocates the buffer.  */
 	void			Reallocate( uint32_t sSize ){ T *pTemp = new T[ sSize + 1 ]; if ( IsValid(  ) ){ for ( uint32_t i = 0; i < aBufferCount && i < sSize; ++i ) pTemp[ i ] = apBuffers[ i ]; delete[  ] apBuffers; } apBuffers = pTemp; aBufferCount = sSize; }
+	/* Add one element to the buffer.  */
 	void			Increment(  ){ Reallocate( aBufferCount + 1 ); }
+	/* Index into the buffer.  */
+	T			&operator[  ]( uint32_t sIndex ){ return apBuffers[ sIndex ]; }
+	explicit		DataBuffer(  ) : apBuffers( NULL ), aBufferCount( 0 ){  }
 	/* Frees the buffer when no longer in use.  */
 				~DataBuffer(  ){ delete[  ] apBuffers; }
 };
