@@ -3,7 +3,7 @@
 
 #include <stdarg.h>
 
-Console* g_console = nullptr;
+Console* console = nullptr;
 
 
 // ================================================================================
@@ -53,9 +53,20 @@ void ConVar::Init( const std::string& name, const std::string& defaultValue, Con
 {
 	aName = name;
 	aDefaultValue = defaultValue;
+	aDefaultValueFloat = ToDouble( defaultValue, 0.f );
 	aFunc = callback;
 
 	SetValue( defaultValue );
+}
+
+void ConVar::Init( const std::string& name, float defaultValue, ConVarFunc callback )
+{
+	aName = name;
+	aDefaultValue = ToString( defaultValue );
+	aDefaultValueFloat = defaultValue;
+	aFunc = callback;
+
+	SetValue( aDefaultValue );
 }
 
 std::string ConVar::GetPrintMessage(  )
@@ -64,30 +75,28 @@ std::string ConVar::GetPrintMessage(  )
 }
 
 
-static float ToFloat( const std::string& value, float prev )
-{
-	if ( value.empty() )
-		return prev;
-
-	char* end;
-	double result = 0;
-
-	result = strtod( value.c_str(), &end );
-
-	if ( end == value.c_str() )
-	{
-		return prev;
-	}
-
-	return result;
-}
-
-
 void ConVar::SetValue( const std::string& value )
 {
 	aValue = value;
+	aValueFloat = ToDouble( value, aValueFloat );
+}
 
-	aValueFloat = ToFloat( value, aValueFloat );
+void ConVar::SetValue( float value )
+{
+	aValue = ToString( value );
+	aValueFloat = value;
+}
+
+
+void ConVar::Reset(  )
+{
+	Init( aName, aDefaultValue, aFunc );
+}
+
+
+const std::string& ConVar::GetName(  )
+{
+	return aName;
 }
 
 const std::string& ConVar::GetValue(  )
@@ -98,6 +107,11 @@ const std::string& ConVar::GetValue(  )
 float ConVar::GetFloat(  )
 {
 	return aValueFloat;
+}
+
+bool ConVar::GetBool(  )
+{
+	return aValueFloat == 1.f;
 }
 
 
@@ -163,12 +177,12 @@ void Console::AddToHistory( const std::string& str )
 	aConsoleHistory += "] " + str + "\n";
 }
 
-const std::string& Console::GetConsoleHistory( )
+const std::string& Console::GetConsoleHistory(  )
 {
 	return aConsoleHistory;
 }
 
-const std::vector< std::string >& Console::GetCommandHistory( )
+const std::vector< std::string >& Console::GetCommandHistory(  )
 {
 	return aCommandHistory;
 }
@@ -181,42 +195,84 @@ void Console::SetTextBuffer( const std::string& str, bool recalculateList )
 		CalculateAutoCompleteList( aTextBuffer );
 }
 
-const std::string& Console::GetTextBuffer( )
+const std::string& Console::GetTextBuffer(  )
 {
 	return aTextBuffer;
 }
 
 
-void Console::PrintAllConVars( )
+ConVar* Console::GetConVar( const std::string& name )
 {
-	Print( "\nConVars:\n--------------------------------------\n" );
+	for ( const auto& cvar : aConVarList )
+	{
+		if ( ConVar* convar = dynamic_cast<ConVar*>(cvar) )
+		{
+			if ( convar->aName == name )
+				return convar;
+		}
+	}
+
+	return nullptr;
+}
+
+
+std::string Console::GetConVarValue( const std::string& name )
+{
+	if ( ConVar* convar = GetConVar(name) )
+		return convar->aValue;
+	
+	return "";
+}
+
+
+float Console::GetConVarFloat( const std::string& name )
+{
+	if ( ConVar* convar = GetConVar(name) )
+		return convar->aValueFloat;
+	
+	return 0.f;
+}
+
+
+void Console::PrintAllConVars(  )
+{
+	std::vector< std::string > ConVarMsgs;
+	std::vector< std::string > ConCommandMsgs;
 
 	for ( const auto& cvar : aConVarList )
 	{
-		Print( cvar->GetPrintMessage().c_str() );
+		if ( dynamic_cast<ConVar*>(cvar) )
+			ConVarMsgs.push_back( cvar->GetPrintMessage() );
+
+		else if ( dynamic_cast<ConCommand*>(cvar) )
+			ConCommandMsgs.push_back( cvar->GetPrintMessage() );
 	}
 
-	/*Print( "\nConCommands:\n--------------------------------------\n" );
+	Print( "\nConVars:\n--------------------------------------\n" );
+	for ( const auto& msg : ConVarMsgs )
+		Print( msg.c_str() );
 
-	for ( const auto& cmd : aConCommandList )
-	{
-		Print( cmd->GetPrintMessage().c_str() );
-	}*/
+	Print( "\nConCommands:\n--------------------------------------\n" );
+	for ( const auto& msg : ConCommandMsgs )
+		Print( msg.c_str() );
 
 	Print( "--------------------------------------\n" );
 }
 
 
-void Console::Print( const char* str, ... )
+void Console::Print( const char* format, ... )
 {
-	char buffer[8192];
-	va_list args;
+	VSTRING( std::string buffer, format );
+	printf( buffer.c_str() );
+	aConsoleHistory += buffer;
+	va_end( args );
+}
 
-	va_start( args, str );
 
-	vsnprintf( buffer, 8192, str, args );
-
-	printf( buffer );
+void Console::Print( Msg type, const char* format, ... )
+{
+	VSTRING( std::string buffer, format );
+	printf( buffer.c_str() );
 	aConsoleHistory += buffer;
 	va_end( args );
 }
@@ -337,7 +393,7 @@ std::string Console::FetchCmd(  )
 
 Console::Console(  )
 {
-	g_console = this;
+	console = this;
 }
 
 Console::~Console(  )

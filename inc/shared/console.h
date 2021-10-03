@@ -54,6 +54,8 @@ public:
 
 	std::string aName;
 	ConVarFunc aFunc;
+
+	friend class Console;
 };
 
 
@@ -61,33 +63,111 @@ class ConVar : public ConVarBase
 {
 public:
 
-	ConVar( const std::string& name, const std::string& defaultValue ):
-		ConVarBase( name )
+	ConVar( const std::string& name, const std::string& defaultValue ): ConVarBase( name )
 	{
 		Init( name, defaultValue, aFunc );
 	}
 
-	ConVar( const std::string& name, const std::string& defaultValue, ConVarFunc callback ):
-		ConVarBase( name )
+	ConVar( const std::string& name, const std::string& defaultValue, ConVarFunc callback ): ConVarBase( name )
+	{
+		Init( name, defaultValue, callback );
+	}
+
+	ConVar( const std::string& name, float defaultValue ): ConVarBase( name )
+	{
+		Init( name, defaultValue, aFunc );
+	}
+
+	ConVar( const std::string& name, float defaultValue, ConVarFunc callback ): ConVarBase( name )
 	{
 		Init( name, defaultValue, callback );
 	}
 
 	void Init( const std::string& name, const std::string& defaultValue, ConVarFunc func );
+	void Init( const std::string& name, float defaultValue, ConVarFunc func );
 
 	std::string GetPrintMessage(  );
 
 	void SetValue( const std::string& value );
+	void SetValue( float value );
 
+	void Reset(  );
+
+	const std::string& GetName(  );
 	const std::string& GetValue(  );
 	float              GetFloat(  );
+	bool               GetBool(  );  // is aValueFloat equal to 1.f?
 
+	// operators !!!!!!
+	// might not use them out of habit lol
+
+	operator float()                                    { return aValueFloat; }
+	//operator double()                                   { return aValueFloat; }
+	//operator bool()                                     { return GetBool(); }
+	operator std::string()                              { return aValue; }
+	operator const char*()                              { return aValue.c_str(); }
+
+	bool    operator==( const bool& other )             { return other == GetBool(); }
+	float   operator==( const float& other )            { return other == aValueFloat; }
+	double  operator==( const double& other )           { return other == aValueFloat; }
+	bool    operator==( const std::string& other )      { return other == aValue; }
+	bool    operator==( const char* other )             { return other == aValue; }
+
+	void    operator=( const bool& other )              { SetValue( other ? 1.f : 0.f ); }
+	void    operator=( const float& other )             { SetValue( other ); }
+	void    operator=( const double& other )            { SetValue( other ); }
+	void    operator=( const std::string& other )       { SetValue( other ); }
+	void    operator=( const char* other )              { SetValue( other ); }
+
+	void    operator*=( const float& other )            { SetValue( aValueFloat * other ); }
+	void    operator*=( const double& other )           { SetValue( aValueFloat * other ); }
+
+	void    operator/=( const float& other )            { SetValue( aValueFloat / other ); }
+	void    operator/=( const double& other )           { SetValue( aValueFloat / other ); }
+
+	void    operator+=( const float& other )            { SetValue( aValueFloat + other ); }
+	void    operator+=( const double& other )           { SetValue( aValueFloat + other ); }
+
+	void    operator-=( const float& other )            { SetValue( aValueFloat - other ); }
+	void    operator-=( const double& other )           { SetValue( aValueFloat - other ); }
+
+	bool    operator<=( const ConVar& other )           { return aValueFloat <= other.aValueFloat; }
+	bool    operator>=( const ConVar& other )           { return aValueFloat >= other.aValueFloat; }
+	bool    operator==( const ConVar& other )           { return aValueFloat == other.aValueFloat; }
+
+	// useless?
+#if 0
+	float   operator*( const float& other )             { return aValueFloat * other; }
+	double  operator*( const double& other )            { return aValueFloat * other; }
+
+	float   operator/( const float& other )             { return aValueFloat / other; }
+	double  operator/( const double& other )            { return aValueFloat / other; }
+
+	float   operator+( const float& other )             { return aValueFloat + other; }
+	double  operator+( const double& other )            { return aValueFloat + other; }
+
+	float   operator-( const float& other )             { return aValueFloat - other; }
+	double  operator-( const double& other )            { return aValueFloat - other; }
+
+	float   operator*( const ConVar& other )            { return aValueFloat * other.aValueFloat; }
+	float   operator/( const ConVar& other )            { return aValueFloat / other.aValueFloat; }
+	float   operator+( const ConVar& other )            { return aValueFloat + other.aValueFloat; }
+	float   operator-( const ConVar& other )            { return aValueFloat - other.aValueFloat; }
+	float   operator<( const ConVar& other )            { return aValueFloat < other.aValueFloat; }
+	float   operator>( const ConVar& other )            { return aValueFloat > other.aValueFloat; }
+#endif
+
+	friend class Console;
+
+private:
 	std::string aName;
 	std::string aDefaultValue;
 	std::string aValue;
+	float       aDefaultValueFloat;
 	float       aValueFloat;
 	ConVarFunc  aFunc;
 };
+
 
 
 //#define CON_COMMAND( name ) \
@@ -102,6 +182,19 @@ public:
 
 #define CON_COMMAND_LAMBDA( name ) \
 	ConCommand* name = new ConCommand( #name, [ & ]( std::vector< std::string > sArgs )
+
+
+// will setup later in the future
+// maybe for a more advanced console than can let you search and filter out these Msg types
+// kind of like source 2 vconsole
+// i also want to setup some logging channel system, so i don't need to do "[System] blah" on everything
+enum class Msg
+{
+	Normal,
+	Dev,
+	Warning,
+	Error
+};
 
 
 class Console
@@ -129,16 +222,20 @@ public:
 	const std::vector< std::string >&   GetCommandHistory(  );
 
 	/* Set and get current user text input.  */
-	void                  SetTextBuffer( const std::string& str, bool recalculateList = true );
-	const std::string&    GetTextBuffer(  );
+	void                                SetTextBuffer( const std::string& str, bool recalculateList = true );
+	const std::string&                  GetTextBuffer(  );
 
-	void                              CalculateAutoCompleteList( const std::string& textBuffer );
+	void                                CalculateAutoCompleteList( const std::string& textBuffer );
+	const std::vector< std::string >&   GetAutoCompleteList(  );
 
-	const std::vector< std::string >& GetAutoCompleteList(  );
+	ConVar*                             GetConVar( const std::string& name );
+	std::string                         GetConVarValue( const std::string& name );
+	float                               GetConVarFloat( const std::string& name );
 
-	void    PrintAllConVars(  );
+	void                                PrintAllConVars(  );
 
-	void    Print( const char* str, ... );
+	void                                Print( const char* format, ... );
+	void                                Print( Msg type, const char* format, ... );
 
 	/* A.  */
 	bool 	Empty(  );
