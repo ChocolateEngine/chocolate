@@ -40,7 +40,6 @@ protected:
 	typedef std::vector< SpriteData* >		SpriteDataList;
 	typedef std::string				String;
 
-	View                        aView;
 	ImageViews                  aSwapChainImageViews;       // View into an image, describing which part to access, one needed for each image
 	Framebuffers                aSwapChainFramebuffers;		//  
 	CommandBuffers              aCommandBuffers;	        // Send commands to these to be executed later, better for concurrency, so many are nice
@@ -91,6 +90,7 @@ protected:
 public:
 	enum class	Commands{ NONE = 0, IMGUI_INITIALIZED, SET_VIEW, GET_WINDOW_SIZE };
 	
+	View            aView;
 	ModelDataList   aModels;
 	SpriteDataList  aSprites;
 
