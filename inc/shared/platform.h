@@ -19,6 +19,9 @@
 
 	#define DLL_EXPORT __declspec(dllexport)
 
+	#undef max
+	#undef min
+
 	typedef HMODULE Module;
 #elif __linux__
 	#include <dlfcn.h>
