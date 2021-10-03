@@ -108,9 +108,13 @@ void Renderer::InitCommandBuffers(  )
 
 		for ( auto& model : aModels )
 		{
+			if ( model->aNoDraw )
+				continue;
+
 			model->Bind( aCommandBuffers[ i ], i );
 			model->Draw( aCommandBuffers[ i ], i );
 		}
+
 		for ( auto& sprite : aSprites )
 		{
 			sprite->Bind( aCommandBuffers[ i ], i );
@@ -129,6 +133,7 @@ void Renderer::InitCommandBuffers(  )
 					);
 			sprite->Draw( aCommandBuffers[ i ] );
 		}
+
 		if ( aImGuiInitialized )
 		{
 			ImGui::Render(  );
