@@ -35,8 +35,9 @@ public:
 	virtual KeyState GetKeyState( SDL_Scancode key ) = 0;
 
 	/* Convienence functions  */
-	virtual bool IsKeyPressed( SDL_Scancode key ) = 0;
-	virtual bool IsKeyJustPressed( SDL_Scancode key ) = 0;
-	virtual bool IsKeyJustReleased( SDL_Scancode key ) = 0;
+	virtual bool KeyPressed( SDL_Scancode key ) = 0;
+	virtual bool KeyReleased( SDL_Scancode key ) = 0;
+	virtual bool KeyJustPressed( SDL_Scancode key ) = 0;
+	virtual bool KeyJustReleased( SDL_Scancode key ) = 0;
 };
 

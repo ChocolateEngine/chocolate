@@ -1,6 +1,11 @@
 #include "../../inc/shared/system.h"
+#include "../../inc/shared/systemmanager.h"
 
 #include <SDL2/SDL.h>
+
+
+SystemManager* systems = nullptr;
+
 
 void BaseSystem::ReadMessage(  )
 {
@@ -19,42 +24,6 @@ void BaseSystem::ReadMessage(  )
 		/* Get rid of the spent message.  */
 		apMsgs->Remove( apMsgs->aLastMsgIndex );
 	}
-}
-
-void BaseSystem::ReadConsole(  )
-{
-#if 0
-	if ( !apConsole || aConsoleCommands.empty(  ) )
-		return;
-	std::string 	command;
-	while ( true )
-	{
-		if ( apConsole->Empty(  ) )
-			return;
-		command = apConsole->FetchCmd(  );
-		/* Exhausted all commands in console.  */
-		if ( command == "" )
-			return;
-		for ( const auto& cmd : aConsoleCommands )
-		{
-			/* Makes sure compound commands are parsed correctly .e.g bind in "bind up ent_create" could not be triggered by "bindyourmomlol".  */
-			if ( cmd.str == command.substr( 0, cmd.str.length(  ) )
-			     && ( command.size(  ) == cmd.str.size(  ) || command[ cmd.str.size(  ) ] == ' ' ) )
-			{
-				std::vector< std::string > args;
-				int start, end = 0;
-				/* Break the input into a vector of strings.  */
-				while ( ( start = command.find_first_not_of( ' ', end ) ) != std::string::npos )
-				{
-					end = command.find( ' ', start );
-					args.push_back( command.substr( start, end - start ) );
-				}
-				cmd.func( args );
-				apConsole->DeleteCommand(  );
-			}
-		}
-	}
-#endif
 }
 
 void BaseSystem::AddUpdateFunction( std::function< void(  ) > sFunction )
@@ -93,7 +62,6 @@ void BaseSystem::InitSubsystems(  )
 void BaseSystem::Update( float dt )
 {
 	ReadMessage(  );
-	ReadConsole(  );
 	ExecuteFunctions( aFunctionList );
 }
 

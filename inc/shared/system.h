@@ -47,8 +47,6 @@ protected:
 
 	/* Reads all messages that can be interpreted by the system.  */
 	void 		ReadMessage(  );
-	/* Reads all console commands that can be interpreted by the system.  */
-	void 		ReadConsole(  );
 	/* Adds a function that will be run on every frame.  */
 	void 		AddUpdateFunction( std::function< void(  ) > sFunction );
 	/* Adds a function to be ran on the destructor to free memory.  */

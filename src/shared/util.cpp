@@ -3,8 +3,12 @@
 
 #include <stdarg.h>
 #include <algorithm>
+#include <stdexcept>
+#include <sstream>
+#include <iomanip>
 
-extern Console* g_console;
+
+extern Console* console;
 
 void str_upper(std::string &string)
 {
@@ -17,23 +21,104 @@ void str_lower(std::string &string)
 }
 
 
-void Print( const char* str, ... )
+// very cool
+// https://stackoverflow.com/questions/55424746/is-there-an-analogous-function-to-vsnprintf-that-works-with-stdstring
+std::string vstring( const char* format, ... )
 {
-	char buffer[8192];
-	va_list args;
-	va_start( args, str );
+	std::string result;
+	va_list args, args_copy;
 
-	vsnprintf( buffer, 8192, str, args );
+	va_start( args, format );
+	va_copy( args_copy, args );
 
-	if ( g_console )
+	int len = vsnprintf( nullptr, 0, format, args );
+	if (len < 0)
 	{
-		g_console->Print( buffer );
+		va_end(args_copy);
+		va_end(args);
+		throw std::runtime_error("vsnprintf error");
+	}
+
+	if ( len > 0 )
+	{
+		result.resize( len );
+		vsnprintf( result.data(), len+1, format, args_copy );
+	}
+
+	va_end( args_copy );
+	va_end( args );
+
+	return result;
+}
+
+std::string vstring( const char* format, va_list args )
+{
+	va_list copy;
+	va_copy( copy, args );
+	int len = std::vsnprintf( nullptr, 0, format, copy );
+	va_end( copy );
+
+	if ( len >= 0 )
+	{
+		std::string s( std::size_t(len) + 1, '\0' );
+		std::vsnprintf( s.data(), s.size(), format, args );
+		s.resize( len );
+		return s;
+	}
+	
+	throw std::runtime_error( "vsnprintf error" );
+
+	//const auto err = errno;
+	//const auto ec = std::error_code(err, std::generic_category());
+	//throw std::system_error(ec);
+}
+
+
+void Print( const char* format, ... )
+{
+	VSTRING( std::string buffer, format );
+
+	if ( console )
+	{
+		console->Print( buffer.c_str() );
 	}
 	else
 	{
-		printf( buffer );
+		printf( buffer.c_str() );
 	}
+}
 
-	va_end( args );
+
+std::string Vec2Str( const glm::vec3& in )
+{
+	return vstring("(%.4f, %.4f, %.4f)", in.x, in.y, in.z);
+}
+
+std::string Quat2Str( const glm::quat& in )
+{
+	return vstring("(%.4f, %.4f, %.4f, %.4f)", in.w, in.x, in.y, in.z);
+}
+
+
+double ToDouble( const std::string& value, double prev )
+{
+	if ( value.empty() )
+		return prev;
+
+	char* end;
+	double result = 0;
+
+	result = strtod( value.c_str(), &end );
+
+	return end == value.c_str() ? prev : result;
+}
+
+
+// very cool: https://stackoverflow.com/a/46424921/12778316
+std::string ToString( float value )
+{
+	std::ostringstream oss;
+	oss << std::setprecision(8) << std::noshowpoint << value;
+	return oss.str();
 }
 

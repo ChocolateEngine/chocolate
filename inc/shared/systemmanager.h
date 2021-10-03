@@ -15,9 +15,9 @@ an interface for getting systems from the engine
 
 // slightly overkill
 #define GET_SYSTEM_CHECK( sVar, sType ) \
-	sVar = GET_SYSTEM( sType ); \
-	if ( sVar == nullptr ) \
-		apCommandManager->Execute( Engine::Commands::EXIT );
+	sVar = GET_SYSTEM( sType ); // \
+	//if ( sVar == nullptr ) \
+	//	apCommandManager->Execute( Engine::Commands::EXIT );
 
 
 class BaseSystem;
@@ -58,3 +58,7 @@ private:
 	SystemList aSystemList;
 	SystemMap aSystemMap;
 };
+
+
+extern SystemManager* systems;
+
