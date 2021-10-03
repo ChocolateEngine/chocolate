@@ -169,6 +169,9 @@ private:
 };
 
 
+#define CONVAR( name, ... ) \
+	ConVar name( #name, __VA_ARGS__ )
+
 
 //#define CON_COMMAND( name ) \
 //	void CC_#name( std::vector< std::string > args ); \
