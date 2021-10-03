@@ -8,6 +8,7 @@ macro PROJECT_NAME "Chocolate"
 macro OUT_NAME "engine"
 
 include "core.qpc"
+include "ffmpeg.qpc"
 
 config
 {
@@ -28,26 +29,43 @@ config
 			"../inc/types"
 			
 			"../inc/SDL2"
-			// "../inc/steamaudio"
+			"../inc/steamaudio"
+			"../thirdparty/speedykeyv"
+			
+			"../thirdparty/libogg/include"      [$WINDOWS$]
+			"../thirdparty/libvorbis/include"   [$WINDOWS$]
+			"../thirdparty/libwav/include"   [$WINDOWS$]
 		}
 		
 		defines
 		{
-			// "SDL_MIXER=1"
+			"__BIG_ENDIAN__" [$ARM$ || $ARM64$] // probably right?
 		}
 	}
 
 	link
 	{
-		// import_lib "$BUILD_DIR$/qpc$EXT_LIB$"
 		lib_dirs
 		{
 			"$VK_DIR$/Lib"
 			"../lib"
 		}
 		
-		libs
+		libs [$WINDOWS$]
 		{
+			"../thirdparty/libvorbis/win32/VS2010/x64/Release/libvorbis_static.lib"
+			"../thirdparty/libvorbis/win32/VS2010/x64/Release/libvorbisfile_static.lib"
+			"../thirdparty/libogg/win32/VS2015\x64/Release/libogg.lib"
+			"phonon.lib"
+			
+			//"Ws2_32.lib"
+		}
+		
+		libs [$POSIX$]
+		{
+			"libvorbis_static"
+			"libvorbisfile_static"
+			"phonon"
 		}
 	}
 }
@@ -62,10 +80,29 @@ files
 		"../inc/shared/*.h"
 	}
 	
-	folder "imgui"
+	folder "thirdparty"
 	{
-		"../src/imgui/*.cpp"
-		"../inc/imgui/*.h"
+		"../thirdparty/speedykeyv/KeyValue.cpp"
+		"../thirdparty/speedykeyv/KeyValue.h"
+		
+		//"../thirdparty/tinywav/tinywav.c"
+		//"../thirdparty/tinywav/tinywav.h"
+		
+		// blech
+		"../thirdparty/libwav/src/wav.c"
+		{
+			// fix this in qpc2
+			// language "c"
+			options [$MSVC$] { "/TC" } // compile as C code
+		}
+		
+		"../thirdparty/libwav/include/wav.h"
+	
+		folder "imgui"
+		{
+			"../src/imgui/*.cpp"
+			"../inc/imgui/*.h"
+		}
 	}
 	
 	folder "core"
