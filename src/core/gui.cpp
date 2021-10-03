@@ -1,5 +1,6 @@
 #include "../../inc/core/gui.h"
 #include "../../inc/core/renderer/renderer.h"
+#include "../../inc/shared/util.h"
 
 #include "../../inc/imgui/imgui.h"
 #include "../../inc/imgui/imgui_impl_vulkan.h"
@@ -44,6 +45,20 @@ void GuiSystem::DrawGui(  )
 	ImGui::Begin( "Dev Info", (bool*)0, devFlags );
 	ImGui::Text("%.1f FPS (%.3f ms/frame)", ImGui::GetIO().Framerate, 1000.0f / ImGui::GetIO().Framerate);
 	//ImGui::Text("%.1f FPS (%.3f ms/frame)", 1000.f / delta, (float)delta);  // ms/frame is inaccurate
+
+	std::string debugMessages;
+	for (int i = 0; i < aDebugMessages.size(); i++)
+	{
+		debugMessages += "\n";
+
+		if (aDebugMessages[i] != "")
+			debugMessages += aDebugMessages[i];
+	}
+
+	aDebugMessages.clear();
+	if ( !debugMessages.empty() )
+		ImGui::Text(debugMessages.c_str());
+
 	ImGui::End(  );
 	prevtick = SDL_GetTicks();
 
@@ -78,7 +93,7 @@ bool CheckAddLastCommand( ImGuiInputTextCallbackData* data, Console* console, in
 
 	if ( keyPressed )
 	{
-		snprintf( data->Buf, 256, (commandIndex == -1) ? "" :console->GetCommandHistory()[commandIndex].c_str() );
+		snprintf( data->Buf, 256, (commandIndex == -1) ? "" : console->GetCommandHistory()[commandIndex].c_str() );
 		console->SetTextBuffer( data->Buf );
 		data->CursorPos = console->GetTextBuffer().length();
 	}
@@ -121,7 +136,8 @@ bool CheckAddDropDownCommand( ImGuiInputTextCallbackData* data, Console* console
 		else if ( keyPressed )
 		{
 			// An arrow key or tab is pressed, so fill the buffer with the selected item from the auto complete list
-			snprintf( data->Buf, data->BufSize, console->GetAutoCompleteList()[commandIndex].c_str() );
+			//snprintf( data->Buf, data->BufSize, console->GetAutoCompleteList()[commandIndex].c_str() );
+			snprintf( data->Buf, data->BufSize, (console->GetAutoCompleteList()[commandIndex] + " ").c_str() );
 			bufDirty = true;
 		}
 		else if ( inDropDown )
@@ -250,9 +266,12 @@ void GuiSystem::DrawConsole( bool wasConsoleOpen )
 		{
 			std::string item = cvarAutoComplete[i];
 
+			item += " " + apConsole->GetConVarValue( item );
+
 			if ( ImGui::Selectable( item.c_str(), gDropDownCommandIndex == i ) )
 			{
-				apConsole->SetTextBuffer( item );
+				// should we keep the value in here too?
+				apConsole->SetTextBuffer( cvarAutoComplete[i] );
 				//break;
 			}
 		}
@@ -289,6 +308,12 @@ void GuiSystem::InitCommands(  )
 void GuiSystem::AssignWindow( SDL_Window* spWindow )
 {
 	apWindow = spWindow;
+}
+
+void GuiSystem::DebugMessage( size_t index, const char* format, ... )
+{
+	aDebugMessages.resize( glm::max(aDebugMessages.size(), index + 1) );
+	VSTRING( aDebugMessages[index], format );
 }
 
 GuiSystem::GuiSystem(  ) : BaseGuiSystem(  )

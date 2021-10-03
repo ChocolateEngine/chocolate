@@ -2,3 +2,6 @@
 	path = qpc
 	url = https://github.com/quiverteam/QuiverProjectCreator.git
 	branch = rename
+[submodule "thirdparty/speedykeyv"]
+	path = thirdparty/speedykeyv
+	url = https://github.com/ozxybox/SpeedyKeyV
