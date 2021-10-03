@@ -11,7 +11,6 @@ Defines the methods declared in engine.h.
 // im sorry
 extern Console* g_console;
 
-
 template< typename T, typename... TArgs >
 void Engine::AddSystem( const T *spSystem, TArgs... sSystems )
 {
@@ -53,6 +52,11 @@ void Engine::InitConsoleCommands(  )
 	CON_COMMAND_LAMBDA( help )
 	{
 		apConsole->PrintAllConVars();
+	});
+
+	CON_COMMAND_LAMBDA( exit )
+	{
+		aActive = false;
 	});
 
 	BaseSystem::InitConsoleCommands(  );

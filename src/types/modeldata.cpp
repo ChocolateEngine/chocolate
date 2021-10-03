@@ -74,6 +74,7 @@ void ModelData::AddMaterial( const std::string &srTexturePath, uint32_t sMateria
 void ModelData::AddMesh( const std::string &srTexturePath, uint32_t sIndexCount, uint32_t sIndexOffset, VkSampler sSampler )
 {
 	aMeshes.Increment(  );
+	/* Construct mesh with index count and offset into index buffer to construct faces, and load material via a file.  */
 	aMeshes.GetTop(  ) = { { sIndexCount, sIndexOffset }, InitTexture( srTexturePath, aTextureLayout, *gpPool, sSampler ) };
 }
 /* Adds an index group to the model which groups together indices in the same material to be used for multiple draw calls for multiple textures.  */
