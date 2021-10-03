@@ -11,6 +11,9 @@ many of the Vk objects used in the renderer.
 #include "device.h"
 #include "shadercache.h"
 #include "descriptorcache.h"
+#include "pipelinebuilder.h"
+#include "layoutbuilder.h"
+
 #include "../../types/renderertypes.h"
 #include "initializers.h"
 
@@ -51,6 +54,8 @@ typedef std::vector< VkFence >				FenceList;
 extern FunctionList 			gFreeQueue;
 extern ShaderCache			gShaderCache;
 extern DescriptorCache			gDescriptorCache;
+extern PipelineBuilder			gPipelineBuilder;
+extern LayoutBuilder			gLayoutBuilder;
 
 extern Device 				*gpDevice;
 extern ImageSet 			*gpSwapChainImages;
@@ -114,7 +119,7 @@ VkDescriptorSetLayout   InitDescriptorSetLayout( DescSetLayouts sBindings );
 VkPipelineLayout        InitPipelineLayouts( VkDescriptorSetLayout *spSetLayouts, uint32_t setLayoutsCount );
 /* A.  */
 template< typename T >
-void 			InitGraphicsPipeline( VkPipeline &srPipeline, VkPipelineLayout &srLayout, const String &srVertShader, const String &srFragShader, int sFlags );
+VkPipeline 	        InitGraphicsPipeline( VkPipelineLayout &srLayout, const String &srVertShader, const String &srFragShader, int sFlags );
 /* A.  */
 void 			InitDepthResources( VkImage &srDepthImage, VkDeviceMemory &srDepthImageMemory, VkImageView &srDepthImageView );
 /* Initializes the multisampling image.  */

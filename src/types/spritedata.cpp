@@ -13,7 +13,7 @@ void SpriteData::Init(  )
 	
 	VkDescriptorSetLayout layouts[  ] = { aTextureLayout };
 	aPipelineLayout = InitPipelineLayouts( layouts, 1 );
-	InitGraphicsPipeline< vertex_2d_t >( aPipeline, aPipelineLayout, "materials/shaders/2dvert.spv", "materials/shaders/2dfrag.spv", NO_CULLING | NO_DEPTH );
+	aPipeline = InitGraphicsPipeline< vertex_2d_t >( aPipelineLayout, "materials/shaders/2dvert.spv", "materials/shaders/2dfrag.spv", NO_CULLING | NO_DEPTH );
 }
 /* Reinitialize data that is useless after the swapchain becomes outdated.  */
 void SpriteData::Reinit(  )
@@ -23,7 +23,7 @@ void SpriteData::Reinit(  )
 	
 	VkDescriptorSetLayout layouts[  ] = { aTextureLayout };
 	aPipelineLayout = InitPipelineLayouts( layouts, 1 );
-	InitGraphicsPipeline< vertex_2d_t >( aPipeline, aPipelineLayout, "materials/shaders/2dvert.spv", "materials/shaders/2dfrag.spv", NO_CULLING | NO_DEPTH );
+	aPipeline = InitGraphicsPipeline< vertex_2d_t >( aPipelineLayout, "materials/shaders/2dvert.spv", "materials/shaders/2dfrag.spv", NO_CULLING | NO_DEPTH );
 }
 /* Binds the model data to the GPU to be rendered later.  */
 void SpriteData::Bind( VkCommandBuffer c, uint32_t i )

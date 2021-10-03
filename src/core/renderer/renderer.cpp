@@ -301,6 +301,8 @@ void Renderer::ReinitSwapChain(  )
 	InitColorResources( aColorImage, aColorImageMemory, aColorImageView );
 	InitDepthResources( aDepthImage, aDepthImageMemory, aDepthImageView );
 	InitFrameBuffer( aSwapChainFramebuffers, aSwapChainImageViews, aDepthImageView, aColorImageView );
+	gLayoutBuilder.BuildLayouts(  );
+	gPipelineBuilder.BuildPipelines(  );
 	for ( auto& model : aModels )
 		model->Reinit(  );
 	

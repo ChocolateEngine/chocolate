@@ -8,31 +8,25 @@ modeldata.h.
 /* Allocates the model, and loads its textures etc.  */
 void ModelData::Init(  )
 {
-	aTextureLayout = InitDescriptorSetLayout( { { DescriptorLayoutBinding( VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1,
-											   VK_SHADER_STAGE_FRAGMENT_BIT, NULL ) } } );
-	
-	aUniformLayout = InitDescriptorSetLayout( { { DescriptorLayoutBinding( VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1,
-											   VK_SHADER_STAGE_VERTEX_BIT, NULL ) } } );
+        gLayoutBuilder.Queue( &aTextureLayout, { { DescriptorLayoutBinding( VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1,
+									    VK_SHADER_STAGE_FRAGMENT_BIT, NULL ) } } );
+        gLayoutBuilder.BuildLayouts( &aTextureLayout );
+
+	gLayoutBuilder.Queue( &aUniformLayout, { { DescriptorLayoutBinding( VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1,
+									    VK_SHADER_STAGE_VERTEX_BIT, NULL ) } } );
+        gLayoutBuilder.BuildLayouts( &aUniformLayout );
 	
 	InitUniformData( aUniformData, aUniformLayout );
-	VkDescriptorSetLayout layouts[  ] = { aTextureLayout, aUniformLayout };
-	aPipelineLayout = InitPipelineLayouts( layouts, 2 );
-	InitGraphicsPipeline< vertex_3d_t >( aPipeline, aPipelineLayout,"materials/shaders/3dvert.spv", "materials/shaders/3dfrag.spv", 0 );
-	
+	aSetLayouts.Allocate( 2 );
+	aSetLayouts[ 0 ] = aTextureLayout;
+	aSetLayouts[ 1 ] = aUniformLayout;
+	gPipelineBuilder.Queue( &aPipeline, &aPipelineLayout, &aSetLayouts, "materials/shaders/3dvert.spv", "materials/shaders/3dfrag.spv", 0 );
+	gPipelineBuilder.BuildPipelines( &aPipeline );
 }
 /* Reinitialize data that is useless after the swapchain becomes outdated.  */
 void ModelData::Reinit(  )
-{
-    	aTextureLayout = InitDescriptorSetLayout( { { DescriptorLayoutBinding( VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1,
-											   VK_SHADER_STAGE_FRAGMENT_BIT, NULL ) } } );
-	
-	aUniformLayout = InitDescriptorSetLayout( { { DescriptorLayoutBinding( VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1,
-											   VK_SHADER_STAGE_VERTEX_BIT, NULL ) } } );
-	
+{	
 	InitUniformData( aUniformData, aUniformLayout );
-	VkDescriptorSetLayout layouts[  ] = { aTextureLayout, aUniformLayout };
-	aPipelineLayout = InitPipelineLayouts( layouts, 2 );
-	InitGraphicsPipeline< vertex_3d_t >( aPipeline, aPipelineLayout, "materials/shaders/3dvert.spv", "materials/shaders/3dfrag.spv", 0 );
 }
 /* Binds the model data to the GPU to be rendered later.  */
 void ModelData::Bind( VkCommandBuffer c, uint32_t i )
