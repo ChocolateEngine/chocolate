@@ -11,7 +11,7 @@ functionality where a STL vector may cause segfaults.
 template< class T >
 class DataBuffer
 {
-	T			*apBuffers 	= NULL;
+	T			*apBuffers 	= nullptr;
 	uint32_t		aBufferCount    = 0;
 public:
 	/* Returns true if there are allocated buffers, false if the memory isn't and should not be accessed.  */
@@ -30,7 +30,7 @@ public:
 	void			Increment(  ){ Reallocate( aBufferCount + 1 ); }
 	/* Index into the buffer.  */
 	T			&operator[  ]( uint32_t sIndex ){ return apBuffers[ sIndex ]; }
-	explicit		DataBuffer(  ) : apBuffers( NULL ), aBufferCount( 0 ){  }
+	explicit		DataBuffer(  ) : apBuffers( nullptr ), aBufferCount( 0 ){  }
 	/* Frees the buffer when no longer in use.  */
 				~DataBuffer(  ){ delete[  ] apBuffers; }
 };

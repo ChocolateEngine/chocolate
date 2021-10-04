@@ -10,6 +10,7 @@ stores all data related to a model.
 #include "../core/renderer/initializers.h"
 #include "transform.h"
 #include "renderertypes.h"
+#include "../core/renderer/shaders.h"
 
 class IndexInfo
 {
@@ -23,6 +24,7 @@ class Mesh
 public:
 	IndexInfo 		        aShape;
         TextureDescriptor		*apTexture;
+        BaseShader			*apShader;
 };
 
 static std::vector< TextureDescriptor* > 	gTextures;
@@ -46,6 +48,7 @@ public:
 	VkPipelineLayout	aPipelineLayout;
 	VkPipeline		aPipeline;
 	Layouts			aSetLayouts{  };
+        BaseShader		*apShader;
 
 	uint32_t 		aVertexCount;
 	uint32_t		aIndexCount;
@@ -65,12 +68,14 @@ public:
 	void 		Draw( VkCommandBuffer c, uint32_t i );
 	/* Adds a material to the model.  */
 	void		AddMaterial( const std::string &srTexturePath, uint32_t sMaterialId, VkSampler sSampler );
+	/* Sets the shader for use at draw time.  */
+	void		SetShader( BaseShader *spShader );
 	/* Adds a mesh to the model.  */
 	void		AddMesh( const std::string &srTexturePath, uint32_t sIndexCount, uint32_t sIndexOffset, VkSampler sSampler );
 	/* Adds an index group to the model which groups together indices in the same material to be used for multiple draw calls for multiple textures.  */
 	void		AddIndexGroup( std::vector< uint32_t > sVec );
 	/* Default the model and set limits.  */
-	ModelData(  ) : apVertices( NULL ), apIndices( NULL ), aNoDraw( false ), aMeshes(  ), aSetLayouts(  ){  };
+			ModelData(  ) : apVertices( NULL ), apIndices( NULL ), aNoDraw( false ), aMeshes(  ), aSetLayouts(  ){  };
 	/* Frees the memory used by objects outdated by a new swapchain state.  */
 	void		FreeOldResources(  );
 	/* Frees all memory used by model.  */

@@ -57,6 +57,7 @@ protected:
 	FenceList                   aImagesInFlight;
 	int                         aCurrentFrame       = 0;
 	bool                        aImGuiInitialized   = false;
+	Basic3D                     *apShader;
 
 	/* A.  */
 	void    InitCommands(  );
@@ -70,6 +71,8 @@ protected:
 	void    LoadObj( const String &srObjPath, ModelData &srModel );
 	/* A.  */
 	void    LoadGltf( const String &srGltfPath, ModelData &srModel );
+	/* Loads all shaders that will be used in rendering.  */
+	void	InitShaders(  );
 	/* A.  */
 	void    InitModelVertices( const String &srModelPath, ModelData &srModel );
 	/* A.  */
