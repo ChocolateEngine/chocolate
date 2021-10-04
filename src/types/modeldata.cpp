@@ -8,20 +8,9 @@ modeldata.h.
 /* Allocates the model, and loads its textures etc.  */
 void ModelData::Init(  )
 {
-        gLayoutBuilder.Queue( &aTextureLayout, { { DescriptorLayoutBinding( VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1,
-									    VK_SHADER_STAGE_FRAGMENT_BIT, NULL ) } } );
-        gLayoutBuilder.BuildLayouts( &aTextureLayout );
-
-	gLayoutBuilder.Queue( &aUniformLayout, { { DescriptorLayoutBinding( VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1,
-									    VK_SHADER_STAGE_VERTEX_BIT, NULL ) } } );
-        gLayoutBuilder.BuildLayouts( &aUniformLayout );
-	
+	aUniformLayout = InitDescriptorSetLayout( { { DescriptorLayoutBinding( VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_VERTEX_BIT, NULL ) } } );
+	aTextureLayout = InitDescriptorSetLayout( { { DescriptorLayoutBinding( VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, NULL ) } } );
 	InitUniformData( aUniformData, aUniformLayout );
-	aSetLayouts.Allocate( 2 );
-	aSetLayouts[ 0 ] = aTextureLayout;
-	aSetLayouts[ 1 ] = aUniformLayout;
-	gPipelineBuilder.Queue( &aPipeline, &aPipelineLayout, &aSetLayouts, "materials/shaders/3dvert.spv", "materials/shaders/3dfrag.spv", 0 );
-	gPipelineBuilder.BuildPipelines( &aPipeline );
 }
 /* Reinitialize data that is useless after the swapchain becomes outdated.  */
 void ModelData::Reinit(  )
@@ -36,7 +25,6 @@ void ModelData::Bind( VkCommandBuffer c, uint32_t i )
 	{
 		VkBuffer 	vBuffers[  ] 	= { aVertexBuffer };
 		VkDeviceSize 	offsets[  ] 	= { 0 };
-		vkCmdBindPipeline( c, VK_PIPELINE_BIND_POINT_GRAPHICS, aPipeline );
 		vkCmdBindVertexBuffers( c, 0, 1, vBuffers, offsets );
 		vkCmdBindIndexBuffer( c, aIndexBuffer, 0, VK_INDEX_TYPE_UINT32 );
 	}
@@ -50,9 +38,10 @@ void ModelData::Draw( VkCommandBuffer c, uint32_t i )
 		{
 			if ( aMeshes.IsValid(  ) )
 			{
-				VkDescriptorSet sets[  ] = { aMeshes.GetBuffer(  )[ j ].apTexture->aSets.GetBuffer(  )[ i ], aUniformData.aSets.GetBuffer(  )[ i ] };
-				vkCmdBindDescriptorSets( c, VK_PIPELINE_BIND_POINT_GRAPHICS, aPipelineLayout, 0, 2, sets, 0, NULL );
-				vkCmdDrawIndexed( c, aMeshes.GetBuffer(  )[ j ].aShape.aIndexCount, 1, aMeshes.GetBuffer(  )[ j ].aShape.aOffset, 0, 0 );
+				vkCmdBindPipeline( c, VK_PIPELINE_BIND_POINT_GRAPHICS, aMeshes[ j ].apShader->GetPipeline(  ) );
+				VkDescriptorSet sets[  ] = { aMeshes[ j ].apTexture->aSets[ i ], aUniformData.aSets[ i ] };
+				vkCmdBindDescriptorSets( c, VK_PIPELINE_BIND_POINT_GRAPHICS, aMeshes[ j ].apShader->GetPipelineLayout(  ), 0, 2, sets, 0, NULL );
+				vkCmdDrawIndexed( c, aMeshes[ j ].aShape.aIndexCount, 1, aMeshes[ j ].aShape.aOffset, 0, 0 );
 			}
 		}
 	}
@@ -64,12 +53,17 @@ void ModelData::AddMaterial( const std::string &srTexturePath, uint32_t sMateria
 	aMeshes.GetBuffer(  )[ aMeshes.GetSize(  ) ].aTexture = InitTexture( srTexturePath, aTextureLayout, *gpPool, sSampler ); */
 	/* add material draw thingy */
 }
+/* Sets the shader for use at draw time.  */
+void ModelData::SetShader( BaseShader *spShader )
+{
+	apShader = spShader;
+}
 /* Adds a mesh to the model.  */
 void ModelData::AddMesh( const std::string &srTexturePath, uint32_t sIndexCount, uint32_t sIndexOffset, VkSampler sSampler )
 {
 	aMeshes.Increment(  );
 	/* Construct mesh with index count and offset into index buffer to construct faces, and load material via a file.  */
-	aMeshes.GetTop(  ) = { { sIndexCount, sIndexOffset }, InitTexture( srTexturePath, aTextureLayout, *gpPool, sSampler ) };
+	aMeshes.GetTop(  ) = { { sIndexCount, sIndexOffset }, InitTexture( srTexturePath, aTextureLayout, *gpPool, sSampler ), apShader };
 }
 /* Adds an index group to the model which groups together indices in the same material to be used for multiple draw calls for multiple textures.  */
 void ModelData::AddIndexGroup( std::vector< uint32_t > sVec )

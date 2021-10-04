@@ -190,8 +190,6 @@ public:
 	VkDeviceMemory			aTextureImageMem;
 	VkImage 			aTextureImage;
 	VkImageView 			aTextureImageView;
-	VkPipelineLayout		aPiplineLayout;
-	VkPipeline			aPipeline;
         DataBuffer< VkDescriptorSet >	aSets;
 };
 

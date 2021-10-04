@@ -21,7 +21,7 @@ public:
 class LayoutBuilder
 {
 	typedef std::vector< QueuedLayout >	LayoutQueue;
-protected:
+protected:x
 	LayoutQueue	aQueue;
 public:
 	/* Queues a descriptor set layout to be built.  */

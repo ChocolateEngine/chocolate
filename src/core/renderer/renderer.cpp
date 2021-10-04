@@ -61,6 +61,9 @@ void Renderer::InitVulkan(  )
 	InitDescPool( { { { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 2000 }, { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 2000 } } } );
 	InitImguiPool( gpDevice->GetWindow(  ) );
 	InitSync( aImageAvailableSemaphores, aRenderFinishedSemaphores, aInFlightFences, aImagesInFlight );
+	InitShaders(  );
+	gLayoutBuilder.BuildLayouts(  );
+	gPipelineBuilder.BuildPipelines(  );
 }
 
 bool Renderer::HasStencilComponent( VkFormat sFmt )
@@ -249,6 +252,12 @@ void Renderer::LoadGltf( const String &srGltfPath, ModelData &srModel )
 {
 	/* ... */
 }
+/* Loads all shaders that will be used in rendering.  */
+void Renderer::InitShaders(  )
+{
+	apShader = new Basic3D;
+	apShader->Init(  );
+}
 
 void Renderer::InitModelVertices( const String &srModelPath, ModelData &srModel )
 {
@@ -350,7 +359,8 @@ void Renderer::UpdateUniformBuffers( uint32_t sCurrentImage, ModelData &srModelD
 
 void Renderer::InitModel( ModelData &srModelData, const String &srModelPath, const String &srTexturePath )
 {
-    	srModelData.Init(  );
+	srModelData.Init(  );
+	srModelData.SetShader( apShader );
 	InitModelVertices( srModelPath, srModelData );
 	aModels.push_back( &srModelData );
 }
