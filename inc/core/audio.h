@@ -37,6 +37,7 @@ public:
 	                                ~AudioSystem();
 
 	virtual void                    SetListenerTransform( const glm::vec3& pos, const glm::quat& rot ) override;
+	virtual void                    SetListenerTransform( const glm::vec3& pos, const glm::vec3& ang ) override;
 	virtual void                    SetPaused( bool paused ) override;
 	virtual void                    SetGlobalSpeed( float speed ) override;
 

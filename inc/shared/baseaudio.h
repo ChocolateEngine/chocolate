@@ -75,6 +75,7 @@ class BaseAudioSystem: public BaseSystem
 {
 public:
 	virtual void            SetListenerTransform( const glm::vec3& pos, const glm::quat& rot ) = 0;
+	virtual void            SetListenerTransform( const glm::vec3& pos, const glm::vec3& ang ) = 0;
 	virtual void            SetPaused( bool paused ) = 0;
 	virtual void            SetGlobalSpeed( float speed ) = 0;
 

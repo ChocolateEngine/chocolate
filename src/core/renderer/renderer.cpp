@@ -346,10 +346,9 @@ void Renderer::UpdateUniformBuffers( uint32_t sCurrentImage, ModelData &srModelD
 {
 	ubo_3d_t ubo{  };
 
-	ubo.model = glm::scale( glm::translate( glm::mat4( 1.0f ), srModelData.aTransform.aPos ) * glm::rotate( glm::mat4( 1.0f ), glm::radians( 0.0f ), glm::vec3( 1.0f, 1.0f, 1.0f ) ), srModelData.aTransform.aScale );
-	
+	ubo.model = srModelData.aTransform.ToMatrix(  );
 	ubo.view  = aView.viewMatrix;
-	ubo.proj  = aView.GetProjection();
+	ubo.proj  = aView.GetProjection(  );
 
 	void* data;
 	vkMapMemory( DEVICE, srModelData.aUniformData.aMem.GetBuffer(  )[ sCurrentImage ], 0, sizeof( ubo ), 0, &data );
