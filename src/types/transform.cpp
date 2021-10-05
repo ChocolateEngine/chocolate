@@ -5,9 +5,9 @@ glm::mat4 Transform::LocalMatrix() const
 {
 	glm::mat4 matrix = {};
 
-	matrix = glm::translate(matrix, position);
+	matrix = glm::translate(matrix, aPos);
 	matrix *= glm::mat4_cast(rotation);
-	matrix = glm::scale(matrix, scale);
+	matrix = glm::scale(matrix, aScale);
 
 	return matrix;
 }
@@ -29,6 +29,23 @@ glm::mat4 Transform::GlobalMatrix() const
 	} while (transform);
 
 	return matrix;
+}
+
+
+glm::mat4 Transform::ToViewMatrix(  )
+{
+	glm::mat4 viewMatrix(1.0f);
+
+	/* Y Rotation (Mouse X) */
+	viewMatrix = glm::rotate( viewMatrix, glm::radians(aAng[YAW]), glm::vec3(0,1,0) );
+
+	/* X Rotation (Mouse Y) */
+	viewMatrix = glm::rotate( viewMatrix, glm::radians(aAng[PITCH]), glm::vec3(viewMatrix[0][0], viewMatrix[1][0], viewMatrix[2][0]) );
+
+	/* Z Rotation */
+	viewMatrix = glm::rotate( viewMatrix, glm::radians(aAng[ROLL]), glm::vec3(viewMatrix[0][2], viewMatrix[1][2], viewMatrix[2][2]) );
+
+	return glm::translate( viewMatrix, -aPos );
 }
 
 
@@ -56,13 +73,13 @@ void DecomposeMatrix( const glm::mat4& m, glm::vec3& pos, glm::quat& rot )
 }
 
 
-void Transform::GlobalDecomposed( glm::vec3* position, glm::quat* rotation, glm::vec3* scale ) const
+void Transform::GlobalDecomposed( glm::vec3* aPos, glm::quat* rotation, glm::vec3* scale ) const
 {
 	glm::vec3 tempPosition = {};
 	glm::quat tempRotation = {};
 
-	if (!position)
-		position = &tempPosition;
+	if (!aPos)
+		aPos = &tempPosition;
 	if (!rotation)
 		rotation = &tempRotation;
 
@@ -70,12 +87,31 @@ void Transform::GlobalDecomposed( glm::vec3* position, glm::quat* rotation, glm:
 	// glm::decompose( GlobalMatrix(), *scale, *rotation, *position, glm::vec3(), glm::vec4() );
 	if ( scale )
 		//DecomposeMatrix( GlobalMatrix(), *position, *rotation, *scale );
-		DecomposeMatrix( ToTransformation(*this), *position, *rotation, *scale );
+		DecomposeMatrix( ToTransformation(*this), *aPos, *rotation, *scale );
 	else
 		//DecomposeMatrix( GlobalMatrix(), *position, *rotation );
-		DecomposeMatrix( ToTransformation(*this), *position, *rotation );
+		DecomposeMatrix( ToTransformation(*this), *aPos, *rotation );
 
 	//*rotation = glm::inverse(*rotation); // not sure why, goes crazy without???
+}
+
+
+inline glm::mat4 ToFirstPersonCameraTransformation( const Transform &transform )
+{
+	// test
+	//glm::mat4 viewMatrix = glm::lookAt( transform.aPos, transform.aAng, glm::vec3(0,1,0));
+	//return viewMatrix * glm::scale(transform.scale);
+
+
+	glm::mat4 translation = glm::translate(-transform.aPos);
+	// glm::mat4 rotation = glm::toMat4(transform.rotation);
+
+	glm::quat rotFromAng = glm::toQuat( glm::orientate3(transform.aAng) );
+	glm::mat4 rotation = glm::toMat4( rotFromAng );
+
+	glm::mat4 scale = glm::scale( transform.aScale );
+
+	return rotation * translation * scale;
 }
 
 

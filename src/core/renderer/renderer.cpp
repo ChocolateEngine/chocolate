@@ -346,7 +346,7 @@ void Renderer::UpdateUniformBuffers( uint32_t sCurrentImage, ModelData &srModelD
 {
 	ubo_3d_t ubo{  };
 
-	ubo.model = glm::scale( glm::translate( glm::mat4( 1.0f ), srModelData.aTransform.position ) * glm::rotate( glm::mat4( 1.0f ), glm::radians( 0.0f ), glm::vec3( 1.0f, 1.0f, 1.0f ) ), srModelData.aTransform.scale );
+	ubo.model = glm::scale( glm::translate( glm::mat4( 1.0f ), srModelData.aTransform.aPos ) * glm::rotate( glm::mat4( 1.0f ), glm::radians( 0.0f ), glm::vec3( 1.0f, 1.0f, 1.0f ) ), srModelData.aTransform.aScale );
 	
 	ubo.view  = aView.viewMatrix;
 	ubo.proj  = aView.GetProjection();
@@ -474,7 +474,7 @@ void Renderer::Init(  )
 	aView.Set(0, 0, w, h, 0.1, 100, 90);
 
 	Transform transform = {};
-	aView.viewMatrix = ToFirstPersonCameraTransformation(transform);
+	aView.viewMatrix = transform.ToViewMatrix(  );
 }
 
 void Renderer::SendMessages(  )
