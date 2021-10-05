@@ -8,8 +8,8 @@ Defines the methods declared in engine.h.
 
 #include <chrono>
 
-CONVAR( e_max_frametime, 0.2 );
-CONVAR( e_timescale, 1 );
+CONVAR( en_max_frametime, 0.2 );
+CONVAR( en_timescale, 1 );
 
 template< typename T, typename... TArgs >
 void Engine::AddSystem( const T *spSystem, TArgs... sSystems )
@@ -54,10 +54,8 @@ void Engine::InitConsoleCommands(  )
 		apConsole->PrintAllConVars();
 	});
 
-	CON_COMMAND_LAMBDA( exit )
-	{
-		aActive = false;
-	});
+	CON_COMMAND_LAMBDA( exit ) { aActive = false; });
+	CON_COMMAND_LAMBDA( quit ) { aActive = false; });
 
 	BaseSystem::InitConsoleCommands(  );
 }
@@ -139,7 +137,7 @@ void Engine::UpdateSystems(  )
 	float time = std::chrono::duration< float, std::chrono::seconds::period >( currentTime - startTime ).count(  );
 	
 	// don't let the time go too crazy, usually happens when in a breakpoint
-	time = glm::min( time, e_max_frametime.GetFloat() );
+	time = glm::min( time, en_max_frametime.GetFloat() );
 
 	apConsole->Update(  );
 
