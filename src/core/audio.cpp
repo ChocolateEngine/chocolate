@@ -334,6 +334,13 @@ void AudioSystem::SetListenerTransform( const glm::vec3& pos, const glm::quat& r
 }
 
 
+void AudioSystem::SetListenerTransform( const glm::vec3& pos, const glm::vec3& ang )
+{
+	aListenerPos = pos;
+	aListenerRot = AngToQuat(ang);
+}
+
+
 void AudioSystem::SetPaused( bool paused )
 {
 	aPaused = paused;
