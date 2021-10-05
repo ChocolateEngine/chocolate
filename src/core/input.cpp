@@ -117,17 +117,25 @@ void InputSystem::ParseInput(  )
 				break;
 			}
 
-			case SDL_WINDOWEVENT_FOCUS_GAINED:
+			case SDL_WINDOWEVENT:
 			{
-				aHasFocus = true;
-				break;
-			}
+				switch (aEvent.window.event)
+				{
+					case SDL_WINDOWEVENT_FOCUS_GAINED:
+					{
+						aHasFocus = true;
+						break;
+					}
 
-			case SDL_WINDOWEVENT_FOCUS_LOST:
-			{
-				aHasFocus = false;
+					case SDL_WINDOWEVENT_FOCUS_LOST:
+					{
+						aHasFocus = false;
+						break;
+					}
+				}
 				break;
 			}
+			
 		}
 
 		for ( BaseSystem* sys: apSystemManager->GetSystemList() )
