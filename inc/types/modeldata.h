@@ -13,6 +13,10 @@ stores all data related to a model.
 #include "../core/renderer/material.h"
 
 
+/* This is broken right now and idk why, so it's disabled for now. */
+#define MESH_UNIFORM_DATA 0
+
+
 class Mesh
 {
 public:
@@ -22,27 +26,28 @@ public:
 	/* Reinitialize data that is useless after the swapchain becomes outdated.  */
 	void                            ReInit(  );
 
-	inline BaseShader*              GetShader() const           { return aMaterial.apShader; }
-	//inline UniformDescriptor&       GetUniformData()            { return aUniformData; }
-	//inline VkDescriptorSetLayout    GetUniformLayout()    { return aUniformLayout; }
+	inline BaseShader*              GetShader() const           { return apMaterial->apShader; }
+
+#if MESH_UNIFORM_DATA
+	UniformDescriptor               aUniformData;
+	VkDescriptorSetLayout           aUniformLayout = nullptr;
+
+	inline UniformDescriptor&       GetUniformData()            { return aUniformData; }
+	inline VkDescriptorSetLayout    GetUniformLayout()          { return aUniformLayout; }
+#endif
 
 	std::vector< vertex_3d_t >		aVertices;
 	std::vector< uint32_t >         aIndices;
-
-	TextureDescriptor              *apTexture;  // should probably be in the material for when have stuff like emmision or normal maps
-	Material                        aMaterial;  // TODO: setup the mesh to use this
-	//BaseShader*                     apShader;  // TODO: remove this and place it in the material
-	//UniformDescriptor               aUniformData;
-	//VkDescriptorSetLayout           aUniformLayout = nullptr;
 
 	VkBuffer                        aVertexBuffer;
 	VkBuffer                        aIndexBuffer;
 	VkDeviceMemory                  aVertexBufferMem;
 	VkDeviceMemory                  aIndexBufferMem;
 
-	size_t                          aMaterialIndex = SIZE_MAX;
+	Material*                       apMaterial = nullptr;
 	glm::vec3                       aMinSize = {};
 	glm::vec3                       aMaxSize = {};
+	float                           aRadius = 0.f;
 };
 
 
@@ -59,16 +64,21 @@ public:
 	vertex_3d_t     *apVertices;
 	uint32_t        *apIndices;
 
-	// blech, move this later
-	UniformDescriptor               aUniformData;
-	VkDescriptorSetLayout           aUniformLayout = nullptr;
-
 	bool 			aNoDraw = true;
 	Transform		aTransform;
 	Meshes			aMeshes{  };
 
-	inline UniformDescriptor&       GetUniformData()        { return aUniformData; }
-	inline VkDescriptorSetLayout    GetUniformLayout()      { return aUniformLayout; }
+#if MESH_UNIFORM_DATA
+	inline UniformDescriptor&       GetUniformData( size_t mesh )        { return aMeshes[mesh].GetUniformData(); }
+	inline VkDescriptorSetLayout    GetUniformLayout( size_t mesh )      { return aMeshes[mesh].GetUniformLayout(); }
+#else
+	// blech, move this later
+	UniformDescriptor               aUniformData;
+	VkDescriptorSetLayout           aUniformLayout = nullptr;
+
+	inline UniformDescriptor&       GetUniformData( size_t mesh )        { return aUniformData; }
+	inline VkDescriptorSetLayout    GetUniformLayout( size_t mesh )      { return aUniformLayout; }
+#endif
 
 	/* Allocates the model, and loads its textures etc.  */
 	void        Init(  );

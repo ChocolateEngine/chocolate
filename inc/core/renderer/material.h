@@ -20,14 +20,23 @@ class ModelData;
 class Material
 {
 public:
-	                    Material(  );
-	virtual            ~Material(  );
+	                    Material(  ) {}
+	virtual            ~Material(  ) {}
 
 	//virtual void        Init(  ) = 0;
 
 	std::string                 aName;
-	std::filesystem::path       aDiffuseTexture;
-	std::filesystem::path       aNormalTexture;
+
+	// TODO: remove these parameters, maybe do that "MaterialVar" thing source has
+	// as shaders would all use different paramters
+	std::filesystem::path       aDiffusePath;
+	std::filesystem::path       aNormalPath;
+	// std::filesystem::path       aEmissionPath;
+
+	TextureDescriptor*          apDiffuse;
+	//TextureDescriptor*          apNormal;
+	//TextureDescriptor*          apEmission;
+
 	BaseShader*                 apShader = nullptr;
 };
 

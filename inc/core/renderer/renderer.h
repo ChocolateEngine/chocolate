@@ -58,7 +58,9 @@ protected:
 	FenceList                   aImagesInFlight;
 	int                         aCurrentFrame       = 0;
 	bool                        aImGuiInitialized   = false;
-	Basic3D                     *apShader;
+
+	MaterialSystem*             apMaterialSystem;
+	friend class MaterialSystem;  // maybe temporary?
 
 	/* A.  */
 	void    InitCommands(  );

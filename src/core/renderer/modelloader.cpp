@@ -6,6 +6,7 @@ Class dedicated for loading models, and caches them too for multiple uses
 
 //#include "../../../inc/core/renderer/modelloader.h"
 #include "renderer/modelloader.h"
+#include "renderer/materialsystem.h"
 #include "types/modeldata.h"
 
 #include "util.h"
@@ -17,6 +18,7 @@ Class dedicated for loading models, and caches them too for multiple uses
 
 #include "../../../lib/io/tiny_obj_loader.h"
 
+extern MaterialSystem* materialsystem;
 
 std::string GetBaseDir( const std::string &srPath )
 {
@@ -27,7 +29,7 @@ std::string GetBaseDir( const std::string &srPath )
 
 
 // TODO: use std::filesystem::path
-void LoadObj( const std::string &srPath, std::vector<Mesh> &meshes, std::vector<Material> &materials )
+void LoadObj( const std::string &srPath, std::vector<Mesh> &meshes )
 {
 	tinyobj::ObjReader reader;
 	tinyobj::ObjReaderConfig reader_config;
@@ -50,36 +52,35 @@ void LoadObj( const std::string &srPath, std::vector<Mesh> &meshes, std::vector<
 	auto &objAttrib = reader.GetAttrib();
 	auto &objShapes = reader.GetShapes();
 	auto &objMaterials = reader.GetMaterials();
-
-	materials.resize( objMaterials.size() );
+	
 	meshes.resize( objMaterials.size() );
 
 	for (std::size_t i = 0; i < meshes.size(); ++i)
 	{
 		meshes[i].Init();
-		meshes[i].aMaterialIndex = i;
+		meshes[i].apMaterial = materialsystem->CreateMaterial();
 	}
 
 	for (std::size_t i = 0; i < objMaterials.size(); ++i)
 	{
 		const tinyobj::material_t &objMaterial = objMaterials[i];
-		Material &material = materials[i];
+		Material &material = *meshes[i].apMaterial;
 		material.aName = objMaterial.name;
 
 		if (!objMaterial.diffuse_texname.empty())
 		{
-			material.aDiffuseTexture = objMaterial.diffuse_texname;
+			material.aDiffusePath = objMaterial.diffuse_texname;
 
-			if (material.aDiffuseTexture.is_relative())
-				material.aDiffuseTexture = baseDir / material.aDiffuseTexture;
+			if (material.aDiffusePath.is_relative())
+				material.aDiffusePath = baseDir / material.aDiffusePath;
 		}
 
 		if (!objMaterial.normal_texname.empty())
 		{
-			material.aNormalTexture = objMaterial.normal_texname;
+			material.aNormalPath = objMaterial.normal_texname;
 
-			if (material.aNormalTexture.is_relative())
-				material.aNormalTexture = baseDir / material.aNormalTexture;
+			if (material.aNormalPath.is_relative())
+				material.aNormalPath = baseDir / material.aNormalPath;
 		}
 	}
 
@@ -95,8 +96,8 @@ void LoadObj( const std::string &srPath, std::vector<Mesh> &meshes, std::vector<
 				//Log::FatalError("Model is not trianglated!\n");
 			}
 
-			const std::size_t materialIndex = objShapes[shapeIndex].mesh.material_ids[faceIndex] < 0 ? materials.size() - 1 : objShapes[shapeIndex].mesh.material_ids[faceIndex];
-			assert(materialIndex < materials.size());
+			const std::size_t materialIndex = objShapes[shapeIndex].mesh.material_ids[faceIndex] < 0 ? objMaterials.size() - 1 : objShapes[shapeIndex].mesh.material_ids[faceIndex];
+			assert(materialIndex < objMaterials.size());
 
 			Mesh& mesh = meshes[materialIndex];
 
@@ -176,7 +177,7 @@ void LoadObj( const std::string &srPath, std::vector<Mesh> &meshes, std::vector<
 }
 
 
-void LoadGltf( const std::string &srPath, std::vector<Mesh> &meshes, std::vector<Material> &materials )
+void LoadGltf( const std::string &srPath, std::vector<Mesh> &meshes )
 {
 }
 

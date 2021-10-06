@@ -12,6 +12,7 @@ Declares shader effect stuff.
 #include <vulkan/vulkan.hpp>
 
 class Renderer;
+class MaterialSystem;
 class ModelData;
 class Mesh;
 
@@ -28,10 +29,13 @@ public:
 	VkPipelineLayout                   aPipelineLayout = nullptr;
 	Layouts                            aSetLayouts;
 	ShaderModules                      aModules;
+
+	std::string                        aName;
 	Renderer*                          apRenderer = nullptr;
+	MaterialSystem*                    apMaterialSystem = nullptr;
 
 public:
-	                                   BaseShader( Renderer* renderer );
+	                                   BaseShader();
 	virtual                            ~BaseShader();
 
 	virtual void                       Init();
@@ -54,7 +58,7 @@ protected:
 	const char *pVShader = "materials/shaders/3dvert.spv";
 	const char *pFShader = "materials/shaders/3dfrag.spv";
 public:	
-	                    Basic3D( Renderer* renderer ): BaseShader( renderer ) {}
+	                    Basic3D(): BaseShader() {}
 
 	virtual void        Init() override;
 	virtual void        UpdateUniformBuffers( uint32_t sCurrentImage, ModelData &srModelData, Mesh &srMesh ) override;

@@ -32,6 +32,12 @@ draw to the screen.
 
 #define SWAPCHAIN gpDevice->GetSwapChain(  )
 
+CONVAR( r_showDrawCalls, 1 );
+
+size_t gModelDrawCalls = 0;
+
+extern GuiSystem* gui;
+
 void Renderer::InitCommands(  )
 {
 	apCommandManager->Add( Renderer::Commands::IMGUI_INITIALIZED, Command<  >( std::bind( &Renderer::EnableImgui, this ) ) );  
@@ -169,8 +175,9 @@ void Renderer::InitSpriteVertices( const String &srSpritePath, SpriteData &srSpr
 /* Loads all shaders that will be used in rendering.  */
 void Renderer::InitShaders(  )
 {
-	apShader = new Basic3D( this );
-	apShader->Init(  );
+	apMaterialSystem = new MaterialSystem;
+	apMaterialSystem->apRenderer = this;
+	apMaterialSystem->Init();
 }
 
 void Renderer::ReinitSwapChain(  )
@@ -194,11 +201,10 @@ void Renderer::ReinitSwapChain(  )
 	gLayoutBuilder.BuildLayouts(  );
 	gPipelineBuilder.BuildPipelines(  );
 
+	apMaterialSystem->ReInitSwapChain();
+
 	for ( auto& model : aModels )
 		model->ReInit(  );
-
-	// TODO: remove this once we have a materialsystem/shadersystem
-	apShader->ReInit();
 	
 	for ( auto& sprite : aSprites )
 	        sprite->Reinit(  );
@@ -214,7 +220,7 @@ void Renderer::DestroySwapChain(  )
 	vkDestroyImage( DEVICE, aColorImage, nullptr );
 	vkFreeMemory( DEVICE, aColorImageMemory, nullptr );
 
-	apShader->Destroy();
+	apMaterialSystem->DestroySwapChain();
 
 	for ( auto& model : aModels )
 		model->FreeOldResources(  );
@@ -235,15 +241,16 @@ void Renderer::InitModel( ModelData &srModelData, const String &srModelPath, con
 {
 	srModelData.Init(  );
 	std::vector< Mesh > meshes;
-	std::vector< Material > materials;
 
 	if ( srModelPath.substr(srModelPath.size() - 4) == ".obj" )
 	{
-		LoadObj( srModelPath, meshes, materials );
+		LoadObj( srModelPath, meshes );
 	}
 	else if ( srModelPath.substr(srModelPath.size() - 4) == ".glb" || srModelPath.substr(srModelPath.size() - 5) == ".gltf" )
 	{
-		//LoadGltf( srModelPath, meshes, materials );
+		//LoadGltf( srModelPath, meshes );
+		Print( "[Renderer] GLTF currently not supported, on TODO list\n" );
+		return;
 	}
 
 	// TODO: load in an error model here somehow?
@@ -252,36 +259,17 @@ void Renderer::InitModel( ModelData &srModelData, const String &srModelPath, con
 
 	for (std::size_t i = 0; i < meshes.size(); ++i)
 	{
-		auto &mesh = meshes[i];
-		const auto &material = materials[ mesh.aMaterialIndex ];
+		Mesh &mesh = meshes[i];
 
 		srModelData.aMeshes.Increment();
 
-		mesh.aMaterial = material;
-		mesh.aMaterial.apShader = apShader;
-		//mesh.apShader = apShader;
+		mesh.apMaterial->apShader = apMaterialSystem->GetShader( "basic_3d" );
+		mesh.apMaterial->apDiffuse = apMaterialSystem->CreateTexture( mesh.apMaterial->aDiffusePath.string(), mesh.GetShader() );
 
-		mesh.apTexture = InitTexture( material.aDiffuseTexture.string(), mesh.GetShader()->GetTextureLayout(), *gpPool, aTextureSampler );
-		//mesh.apTexture = InitTexture( material.aDiffuseTexture.string(), mesh.apShader->aTextureLayout, *gpPool, aTextureSampler );
+		apMaterialSystem->CreateVertexBuffer( mesh );
+		apMaterialSystem->CreateIndexBuffer( mesh );
 
-		InitTexBuffer( mesh.aVertices, mesh.aVertexBuffer, mesh.aVertexBufferMem, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT );
-
-		if (mesh.aIndices.size() > 0)
-			InitTexBuffer( mesh.aIndices, mesh.aIndexBuffer, mesh.aIndexBufferMem, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT );
-
-		// call init here?
-		//mesh.Init();
-
-		//meshVK->radius = glm::distance(meshVK->mins, meshVK->maxs) / 2.0f;
-
-		/*meshVK->materialInstance = std::make_unique<CMaterialInstanceVK>();
-
-		CMaterialInstanceVK* materialInstance = meshVK->materialInstance.get();
-		materialInstance->graphics = graphics;
-		materialInstance->material = materialVK;
-
-		shader->InitMaterialInstance(owner->textureCache, lightState, materialInstance);
-		graphics->SetupMaterialInstance(materialInstance);*/
+		mesh.aRadius = glm::distance( mesh.aMinSize, mesh.aMaxSize ) / 2.0f;
 
 		srModelData.aMeshes.GetTop(  ) = mesh;
 	}
@@ -301,6 +289,16 @@ void Renderer::InitSprite( SpriteData &srSpriteData, const String &srSpritePath 
 void Renderer::DrawFrame(  )
 {
 	InitCommandBuffers(  );	//	Fucky wucky!!
+
+	if ( r_showDrawCalls.GetBool() )
+	{
+		gui->InsertDebugMessage( 0, "Model Draw Calls: %u (%u / %u Command Buffers)",
+								gModelDrawCalls / aCommandBuffers.size(), gModelDrawCalls, aCommandBuffers.size() );
+
+		gui->InsertDebugMessage( 1, "" );  // spacer
+	}
+
+	gModelDrawCalls = 0;
 	
 	vkWaitForFences( DEVICE, 1, &aInFlightFences[ aCurrentFrame ], VK_TRUE, UINT64_MAX );
 	
