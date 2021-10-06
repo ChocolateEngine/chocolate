@@ -6,6 +6,8 @@
 #include "../../inc/imgui/imgui_impl_vulkan.h"
 #include "../../inc/imgui/imgui_impl_sdl.h"
 
+GuiSystem* gui = nullptr;
+
 void GuiSystem::Update( float dt )
 {
 	BaseSystem::Update( dt );
@@ -228,7 +230,7 @@ void GuiSystem::DrawConsole( bool wasConsoleOpen )
 		ImGui::SetKeyboardFocusHere(0);
 
 	ImGui::BeginChild("ConsoleOutput", ImVec2( ImGui::GetWindowSize().x - 32, ImGui::GetWindowSize().y - 64 ), true);
-	ImGui::Text( apConsole->GetConsoleHistory().c_str() );
+	ImGui::Text( apConsole->GetConsoleHistoryStr().c_str() );
 	ImGui::EndChild();
 
 	snprintf( buf, 256, apConsole->GetTextBuffer(  ).c_str() );
@@ -316,9 +318,19 @@ void GuiSystem::DebugMessage( size_t index, const char* format, ... )
 	VSTRING( aDebugMessages[index], format );
 }
 
+void GuiSystem::InsertDebugMessage( size_t index, const char* format, ... )
+{
+	va_list args;
+	va_start( args, format );
+	//std::string out = vstring( format, args );
+	aDebugMessages.insert( aDebugMessages.begin() + index, vstring( format, args ) );
+	va_end( args );
+}
+
 GuiSystem::GuiSystem(  ) : BaseGuiSystem(  )
 {
 	aSystemType = GUI_C;
+	gui = this;
 }
 
 GuiSystem::~GuiSystem(  )

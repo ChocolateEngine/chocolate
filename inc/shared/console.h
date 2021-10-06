@@ -276,23 +276,25 @@ class Console
 {
 	typedef std::string 			String;
 	typedef std::vector< std::string >	StringList;
-protected:
-	int 				aCmdIndex = -1;
-	StringList 			aQueue;
-	std::vector< ConVarBase* >	aConVarList;
-	std::string         aConsoleHistory;
-	StringList 			aCommandHistory;
-	std::string         aTextBuffer;
-	StringList          aAutoCompleteList;
 
-	void    AddToHistory( const std::string& str );
+protected:
+	int                                 aCmdIndex = -1;
+	StringList                          aQueue;
+	std::vector< ConVarBase* >	        aConVarList;
+	std::vector< std::string >          aConsoleHistory;
+	StringList                          aCommandHistory;
+	std::string                         aTextBuffer;
+	StringList                          aAutoCompleteList;
+
+	void                                AddToHistory( const std::string& str );
 
 public:
 
 	/* Register all the ConCommands and ConVars created from static initialization.  */
 	void 	RegisterConVars(  );
 	/* A.  */
-	const std::string&                  GetConsoleHistory(  );
+	const std::vector<std::string>&     GetConsoleHistory(  );
+	std::string                         GetConsoleHistoryStr(  );
 
 	const std::vector< std::string >&   GetCommandHistory(  );
 
