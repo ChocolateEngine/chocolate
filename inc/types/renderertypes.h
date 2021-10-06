@@ -68,6 +68,7 @@ struct vertex_3d_t
 	glm::vec3 pos;
 	glm::vec3 color;
 	glm::vec2 texCoord;
+	glm::vec3 normal;
 
 	static VkVertexInputBindingDescription get_binding_desc
 		(  )
@@ -186,19 +187,19 @@ struct ubo_2d_t
 class TextureDescriptor
 {
 public:
-	uint32_t			aMipLevels;
-	VkDeviceMemory			aTextureImageMem;
-	VkImage 			aTextureImage;
-	VkImageView 			aTextureImageView;
-        DataBuffer< VkDescriptorSet >	aSets;
+	uint32_t                        aMipLevels;
+	VkDeviceMemory                  aTextureImageMem;
+	VkImage                         aTextureImage;
+	VkImageView                     aTextureImageView;
+	DataBuffer< VkDescriptorSet >   aSets;
 };
 
 class UniformDescriptor
 {	
 public:
-        DataBuffer< VkBuffer >  	aData;
-        DataBuffer< VkDeviceMemory >    aMem;
-	DataBuffer< VkDescriptorSet >	aSets;
+	DataBuffer< VkBuffer >          aData;
+	DataBuffer< VkDeviceMemory >    aMem;
+	DataBuffer< VkDescriptorSet >   aSets;
 };
 
 // =================================================================

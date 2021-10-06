@@ -7,15 +7,14 @@ draw to the screen.
  */
 #include "../../../inc/core/renderer/renderer.h"
 #include "../../../inc/core/renderer/initializers.h"
+#include "../../../inc/core/renderer/material.h"
+#include "../../../inc/core/renderer/modelloader.h"
 #include "../../../inc/types/transform.h"
+#include "../../../inc/shared/util.h"
 
 #define GLM_FORCE_RADIANS
 #define STB_IMAGE_IMPLEMENTATION
 #define STB_IMAGE_WRITE_IMPLEMENTATION
-#define TINYOBJLOADER_IMPLEMENTATION
-#define TINYGLTF_IMPLEMENTATION
-#define TINYGLTF_NO_INCLUDE_STB_IMAGE
-#define TINYGLTF_NO_INCLUDE_STB_IMAGE_WRITE
 
 #include <set>
 #include <fstream>
@@ -23,8 +22,6 @@ draw to the screen.
 #include <chrono>
 #include <glm/gtc/matrix_transform.hpp>
 #include <unordered_map>
-
-#include "../../../lib/io/tiny_obj_loader.h"
 
 #include "../../../inc/imgui/imgui.h"
 #include "../../../inc/imgui/imgui_impl_vulkan.h"
@@ -150,129 +147,6 @@ void Renderer::InitCommandBuffers(  )
 	}
 }
 
-/* A.  */
-std::string Renderer::GetBaseDir( const String &srPath )
-{
-	if ( srPath.find_last_of( "/\\" ) != std::string::npos )
-		return srPath.substr( 0, srPath.find_last_of( "/\\" ) );
-	return "";
-}
-
-void Renderer::LoadObj( const String &srObjPath, ModelData &srModel )
-{
-	tinyobj::attrib_t 				attrib;
-	std::vector< tinyobj::shape_t > 		shapes;
-	std::vector< tinyobj::material_t > 		materials;
-	std::string 					warn;
-	std::string					err;
-	std::vector< vertex_3d_t > 			vertices;
-	std::vector< uint32_t > 			indices;
-	std::vector< uint32_t >				materialIndices;
-        std::unordered_map< vertex_3d_t, uint32_t  >	uniqueVertices{  };
-	std::string					baseDir = GetBaseDir( srObjPath );
-	std::vector< Mesh >				meshes;
-	int loops = 0;
-
-	if ( baseDir.empty(  ) )
-		baseDir = ".";
-	baseDir += "/";
-	
-	if ( !tinyobj::LoadObj( &attrib, &shapes, &materials, &warn, &err, srObjPath.c_str(  ), baseDir.c_str(  ) ) )
-		throw std::runtime_error( warn + err );
-
-	for ( const auto& shape : shapes )
-	{
-		uint32_t indexOffset = 0;
-		/* TODO: Figure out what this variable does, I have no idea what it does, but it is needed.  */
-		uint32_t onion_ring = 0;
-
-		for ( const auto& index : shape.mesh.num_face_vertices )
-		{		      
-			vertex_3d_t vertex{  };
-			uint32_t faceVertices = index;
-
-			for ( uint32_t i = 0; i < faceVertices; ++i )
-			{
-			        std::vector< uint32_t > shapeIndices;
-				tinyobj::index_t tempIndex = shape.mesh.indices[ indexOffset + i ];
-
-				vertex.pos = {
-					attrib.vertices[ 3 * tempIndex.vertex_index + 0 ],
-					attrib.vertices[ 3 * tempIndex.vertex_index + 1 ],
-					attrib.vertices[ 3 * tempIndex.vertex_index + 2 ]
-				};
-
-				vertex.texCoord = {
-					attrib.texcoords[ 2 * tempIndex.texcoord_index + 0 ],
-					1.0f - attrib.texcoords[ 2 * tempIndex.texcoord_index + 1 ]
-				};
-
-				vertex.color = { 1.0f, 1.0f, 1.0f };
-				if ( uniqueVertices.count( vertex ) == 0 )
-				{
-					uniqueVertices[ vertex ] = ( uint32_t )vertices.size(  );
-					vertices.push_back( vertex );
-				}
-				shapeIndices.push_back( uniqueVertices[ vertex ] );
-				indices.push_back( uniqueVertices[ vertex ] );
-				materialIndices.push_back( shape.mesh.material_ids[ onion_ring ] );
-				loops = i;
-			}
-			onion_ring++;
-			indexOffset += faceVertices;
-		}
-		srModel.AddIndexGroup( materialIndices );
-	}
-
-	uint32_t search = 0;
-	uint32_t numIndices = 0;
-	uint32_t j = 0;
-	if ( materials.size(  ) )
-		for ( j = 0; j < materialIndices.size(  ); )
-		{
-			for ( numIndices = 0, search = materialIndices[ j ]; j < materialIndices.size(  ) && search == materialIndices[ j ]; ++j, ++numIndices );
-			srModel.AddMesh( baseDir + materials[ search ].diffuse_texname, numIndices, j - numIndices, aTextureSampler );
-		}
-	
-	srModel.aVertexCount 	= ( uint32_t )vertices.size(  );
-	srModel.aIndexCount 	= ( uint32_t )indices.size(  );
-	InitTexBuffer( vertices, srModel.aVertexBuffer, srModel.aVertexBufferMem, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT );
-	InitTexBuffer( indices, srModel.aIndexBuffer, srModel.aIndexBufferMem, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT );
-
-	srModel.apVertices = new vertex_3d_t[ vertices.size(  ) ];
-	srModel.apIndices  = new uint32_t[ indices.size(  ) ];
-	
-	for ( int i = 0; i < vertices.size(  ); ++i )
-		srModel.apVertices[ i ] = vertices[ i ];
-	for ( int i = 0; i < indices.size(  ); ++i )
-		srModel.apIndices[ i ] = indices[ i ];
-}
-
-void Renderer::LoadGltf( const String &srGltfPath, ModelData &srModel )
-{
-	/* ... */
-}
-/* Loads all shaders that will be used in rendering.  */
-void Renderer::InitShaders(  )
-{
-	apShader = new Basic3D;
-	apShader->Init(  );
-}
-
-void Renderer::InitModelVertices( const String &srModelPath, ModelData &srModel )
-{
-	if ( srModelPath.substr( srModelPath.size(  ) - 4 ) == ".obj" )
-	{
-		LoadObj( srModelPath, srModel );
-		return;
-	}
-	if ( srModelPath.substr( srModelPath.size(  ) - 4 ) == ".glb" )
-	{
-		LoadGltf( srModelPath, srModel );
-		return;
-	}
-}
-
 void Renderer::InitSpriteVertices( const String &srSpritePath, SpriteData &srSprite )
 {
 	std::vector< vertex_2d_t > vertices =
@@ -290,6 +164,13 @@ void Renderer::InitSpriteVertices( const String &srSpritePath, SpriteData &srSpr
 	srSprite.aIndexCount = ( uint32_t )indices.size(  );
 	InitTexBuffer( vertices, srSprite.aVertexBuffer, srSprite.aVertexBufferMem, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT );
 	InitTexBuffer( indices, srSprite.aIndexBuffer, srSprite.aIndexBufferMem, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT );
+}
+
+/* Loads all shaders that will be used in rendering.  */
+void Renderer::InitShaders(  )
+{
+	apShader = new Basic3D( this );
+	apShader->Init(  );
 }
 
 void Renderer::ReinitSwapChain(  )
@@ -312,8 +193,12 @@ void Renderer::ReinitSwapChain(  )
 	InitFrameBuffer( aSwapChainFramebuffers, aSwapChainImageViews, aDepthImageView, aColorImageView );
 	gLayoutBuilder.BuildLayouts(  );
 	gPipelineBuilder.BuildPipelines(  );
+
 	for ( auto& model : aModels )
-		model->Reinit(  );
+		model->ReInit(  );
+
+	// TODO: remove this once we have a materialsystem/shadersystem
+	apShader->ReInit();
 	
 	for ( auto& sprite : aSprites )
 	        sprite->Reinit(  );
@@ -328,8 +213,11 @@ void Renderer::DestroySwapChain(  )
 	vkDestroyImageView( DEVICE, aColorImageView, nullptr );
 	vkDestroyImage( DEVICE, aColorImage, nullptr );
 	vkFreeMemory( DEVICE, aColorImageMemory, nullptr );
+
+	apShader->Destroy();
+
 	for ( auto& model : aModels )
-	        model->FreeOldResources(  );
+		model->FreeOldResources(  );
 	
 	for ( auto& sprite : aSprites  )
 		sprite->FreeOldResources(  );
@@ -342,28 +230,66 @@ void Renderer::DestroySwapChain(  )
 		vkDestroyImageView( DEVICE, imageView, NULL );
 }
 
-void Renderer::UpdateUniformBuffers( uint32_t sCurrentImage, ModelData &srModelData )
-{
-	ubo_3d_t ubo{  };
-
-	ubo.model = srModelData.aTransform.ToMatrix(  );
-	ubo.view  = aView.viewMatrix;
-	ubo.proj  = aView.GetProjection(  );
-
-	void* data;
-	vkMapMemory( DEVICE, srModelData.aUniformData.aMem.GetBuffer(  )[ sCurrentImage ], 0, sizeof( ubo ), 0, &data );
-	memcpy( data, &ubo, sizeof( ubo ) );
-	vkUnmapMemory( DEVICE, srModelData.aUniformData.aMem.GetBuffer(  )[ sCurrentImage ] );
-}
-
+// TODO: change to LoadModel
 void Renderer::InitModel( ModelData &srModelData, const String &srModelPath, const String &srTexturePath )
 {
 	srModelData.Init(  );
-	srModelData.SetShader( apShader );
-	InitModelVertices( srModelPath, srModelData );
+	std::vector< Mesh > meshes;
+	std::vector< Material > materials;
+
+	if ( srModelPath.substr(srModelPath.size() - 4) == ".obj" )
+	{
+		LoadObj( srModelPath, meshes, materials );
+	}
+	else if ( srModelPath.substr(srModelPath.size() - 4) == ".glb" || srModelPath.substr(srModelPath.size() - 5) == ".gltf" )
+	{
+		//LoadGltf( srModelPath, meshes, materials );
+	}
+
+	// TODO: load in an error model here somehow?
+	if (meshes.empty())
+		return;
+
+	for (std::size_t i = 0; i < meshes.size(); ++i)
+	{
+		auto &mesh = meshes[i];
+		const auto &material = materials[ mesh.aMaterialIndex ];
+
+		srModelData.aMeshes.Increment();
+
+		mesh.aMaterial = material;
+		mesh.aMaterial.apShader = apShader;
+		//mesh.apShader = apShader;
+
+		mesh.apTexture = InitTexture( material.aDiffuseTexture.string(), mesh.GetShader()->GetTextureLayout(), *gpPool, aTextureSampler );
+		//mesh.apTexture = InitTexture( material.aDiffuseTexture.string(), mesh.apShader->aTextureLayout, *gpPool, aTextureSampler );
+
+		InitTexBuffer( mesh.aVertices, mesh.aVertexBuffer, mesh.aVertexBufferMem, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT );
+
+		if (mesh.aIndices.size() > 0)
+			InitTexBuffer( mesh.aIndices, mesh.aIndexBuffer, mesh.aIndexBufferMem, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT );
+
+		// call init here?
+		//mesh.Init();
+
+		//meshVK->radius = glm::distance(meshVK->mins, meshVK->maxs) / 2.0f;
+
+		/*meshVK->materialInstance = std::make_unique<CMaterialInstanceVK>();
+
+		CMaterialInstanceVK* materialInstance = meshVK->materialInstance.get();
+		materialInstance->graphics = graphics;
+		materialInstance->material = materialVK;
+
+		shader->InitMaterialInstance(owner->textureCache, lightState, materialInstance);
+		graphics->SetupMaterialInstance(materialInstance);*/
+
+		srModelData.aMeshes.GetTop(  ) = mesh;
+	}
+
 	aModels.push_back( &srModelData );
 }
 
+// TODO: change to LoadSprite
 void Renderer::InitSprite( SpriteData &srSpriteData, const String &srSpritePath )
 {
         srSpriteData.Init(  );
@@ -395,7 +321,12 @@ void Renderer::DrawFrame(  )
 	aImagesInFlight[ imageIndex ] = aInFlightFences[ aCurrentFrame ];
 
 	for ( auto& model : aModels )
-		UpdateUniformBuffers( imageIndex, *model );
+	{
+		for ( int i = 0; i < model->aMeshes.GetSize(); i++ )
+		{
+			model->aMeshes[i].GetShader()->UpdateUniformBuffers( imageIndex, *model, model->aMeshes[i] );
+		}
+	}
 
 	VkSubmitInfo submitInfo{  };
 	submitInfo.sType 			= VK_STRUCTURE_TYPE_SUBMIT_INFO;
