@@ -15,6 +15,7 @@ Vulkan.
 #include "../../types/modeldata.h"
 #include "../../types/spritedata.h"
 #include "../gui.h"
+#include "materialsystem.h"
 
 #include "allocator.h"
 
@@ -65,16 +66,8 @@ protected:
 	void	EnableImgui(  );
 	/* A.  */
 	void    InitCommandBuffers(  );
-	/* A.  */
-        String	GetBaseDir( const String &srPath );
-	/* A.  */
-	void    LoadObj( const String &srObjPath, ModelData &srModel );
-	/* A.  */
-	void    LoadGltf( const String &srGltfPath, ModelData &srModel );
 	/* Loads all shaders that will be used in rendering.  */
 	void	InitShaders(  );
-	/* A.  */
-	void    InitModelVertices( const String &srModelPath, ModelData &srModel );
 	/* A.  */
 	void    InitSpriteVertices( const String &srSpritePath, SpriteData &srSprite );
 	/* A.  */
@@ -86,8 +79,6 @@ protected:
 	/* A.  */
 	template< typename T >
 	void    DestroyRenderable( T &srRenderable );
-	/* A.  */
-	void    UpdateUniformBuffers( uint32_t sCurrentImage, ModelData &srModelData );
 	/* A.  */
 	void 	Cleanup(  );
 public:
