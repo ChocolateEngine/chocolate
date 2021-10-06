@@ -254,12 +254,25 @@ void Console::Clear(  )
 
 void Console::AddToHistory( const std::string& str )
 {
-	aConsoleHistory += "] " + str + "\n";
+	std::string cmd = "] " + str + "\n";
+	aConsoleHistory.push_back( cmd );
+	printf( cmd.c_str() );
 }
 
-const std::string& Console::GetConsoleHistory(  )
+const std::vector<std::string>& Console::GetConsoleHistory(  )
 {
 	return aConsoleHistory;
+}
+
+std::string Console::GetConsoleHistoryStr(  )
+{
+	// make this static?
+	std::string output;
+
+	for (int i = 0; i < aConsoleHistory.size(); i++)
+		output += aConsoleHistory[i];
+
+	return output;
 }
 
 const std::vector< std::string >& Console::GetCommandHistory(  )
@@ -344,7 +357,7 @@ void Console::Print( const char* format, ... )
 {
 	VSTRING( std::string buffer, format );
 	printf( buffer.c_str() );
-	aConsoleHistory += buffer;
+	aConsoleHistory.push_back( buffer );
 	va_end( args );
 }
 
@@ -353,7 +366,7 @@ void Console::Print( Msg type, const char* format, ... )
 {
 	VSTRING( std::string buffer, format );
 	printf( buffer.c_str() );
-	aConsoleHistory += buffer;
+	aConsoleHistory.push_back( buffer );
 	va_end( args );
 }
 
