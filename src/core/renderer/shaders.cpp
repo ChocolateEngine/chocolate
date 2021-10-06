@@ -8,9 +8,8 @@ Defines shader effect stuff.
 
 // =========================================================
 
-BaseShader::BaseShader( Renderer* renderer )
+BaseShader::BaseShader()
 {
-	apRenderer = renderer;
 }
 
 BaseShader::~BaseShader()
@@ -67,10 +66,15 @@ void Basic3D::UpdateUniformBuffers( uint32_t sCurrentImage, ModelData &srModelDa
 	ubo.proj  = apRenderer->aView.GetProjection(  );
 
 	void* data;
-	//vkMapMemory( DEVICE, srMesh.GetUniformData().aMem.GetBuffer(  )[ sCurrentImage ], 0, sizeof( ubo ), 0, &data );
-	vkMapMemory( DEVICE, srModelData.aUniformData.aMem.GetBuffer(  )[ sCurrentImage ], 0, sizeof( ubo ), 0, &data );
+
+#if MESH_UNIFORM_DATA
+	vkMapMemory( DEVICE, srMesh.GetUniformData().aMem[ sCurrentImage ], 0, sizeof( ubo ), 0, &data );
 	memcpy( data, &ubo, sizeof( ubo ) );
-	//vkUnmapMemory( DEVICE, srMesh.GetUniformData().aMem.GetBuffer(  )[ sCurrentImage ] );
-	vkUnmapMemory( DEVICE, srModelData.aUniformData.aMem.GetBuffer(  )[ sCurrentImage ] );
+	vkUnmapMemory( DEVICE, srMesh.GetUniformData().aMem[ sCurrentImage ] );
+#else
+	vkMapMemory( DEVICE, srModelData.aUniformData.aMem[ sCurrentImage ], 0, sizeof( ubo ), 0, &data );
+	memcpy( data, &ubo, sizeof( ubo ) );
+	vkUnmapMemory( DEVICE, srModelData.aUniformData.aMem[ sCurrentImage ] );
+#endif
 }
 

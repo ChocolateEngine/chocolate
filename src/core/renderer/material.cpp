@@ -9,10 +9,4 @@ material.cpp ( Authored by Demez )
 
 // =========================================================
 
-Material::Material(  )
-{
-}
 
-Material::~Material(  )
-{
-}
