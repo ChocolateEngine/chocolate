@@ -117,7 +117,6 @@ void Renderer::InitCommandBuffers(  )
 			if ( model->aNoDraw )
 				continue;
 
-			model->Bind( aCommandBuffers[ i ], i );
 			model->Draw( aCommandBuffers[ i ], i );
 		}
 
@@ -198,16 +197,17 @@ void Renderer::ReinitSwapChain(  )
 	InitColorResources( aColorImage, aColorImageMemory, aColorImageView );
 	InitDepthResources( aDepthImage, aDepthImageMemory, aDepthImageView );
 	InitFrameBuffer( aSwapChainFramebuffers, aSwapChainImageViews, aDepthImageView, aColorImageView );
-	gLayoutBuilder.BuildLayouts(  );
-	gPipelineBuilder.BuildPipelines(  );
 
 	apMaterialSystem->ReInitSwapChain();
+
+	gLayoutBuilder.BuildLayouts(  );
+	gPipelineBuilder.BuildPipelines(  );
 
 	for ( auto& model : aModels )
 		model->ReInit(  );
 	
 	for ( auto& sprite : aSprites )
-	        sprite->Reinit(  );
+		sprite->Reinit(  );
 }
 
 void Renderer::DestroySwapChain(  )
@@ -240,7 +240,7 @@ void Renderer::DestroySwapChain(  )
 void Renderer::InitModel( ModelData &srModelData, const String &srModelPath, const String &srTexturePath )
 {
 	srModelData.Init(  );
-	std::vector< Mesh > meshes;
+	std::vector< Mesh* > meshes;
 
 	if ( srModelPath.substr(srModelPath.size() - 4) == ".obj" )
 	{
@@ -259,19 +259,17 @@ void Renderer::InitModel( ModelData &srModelData, const String &srModelPath, con
 
 	for (std::size_t i = 0; i < meshes.size(); ++i)
 	{
-		Mesh &mesh = meshes[i];
+		Mesh* mesh = meshes[i];
 
-		srModelData.aMeshes.Increment();
-
-		mesh.apMaterial->apShader = apMaterialSystem->GetShader( "basic_3d" );
-		mesh.apMaterial->apDiffuse = apMaterialSystem->CreateTexture( mesh.apMaterial->aDiffusePath.string(), mesh.GetShader() );
+		mesh->apMaterial->apShader = apMaterialSystem->GetShader( "basic_3d" );
+		mesh->apMaterial->apDiffuse = apMaterialSystem->CreateTexture( mesh->apMaterial->aDiffusePath.string(), mesh->GetShader() );
 
 		apMaterialSystem->CreateVertexBuffer( mesh );
 		apMaterialSystem->CreateIndexBuffer( mesh );
 
-		mesh.aRadius = glm::distance( mesh.aMinSize, mesh.aMaxSize ) / 2.0f;
+		mesh->aRadius = glm::distance( mesh->aMinSize, mesh->aMaxSize ) / 2.0f;
 
-		srModelData.aMeshes.GetTop(  ) = mesh;
+		srModelData.aMeshes.push_back( mesh );
 	}
 
 	aModels.push_back( &srModelData );
@@ -280,7 +278,7 @@ void Renderer::InitModel( ModelData &srModelData, const String &srModelPath, con
 // TODO: change to LoadSprite
 void Renderer::InitSprite( SpriteData &srSpriteData, const String &srSpritePath )
 {
-        srSpriteData.Init(  );
+	srSpriteData.Init(  );
 	srSpriteData.SetTexture( srSpritePath, aTextureSampler );
 	InitSpriteVertices( "", srSpriteData );
 	aSprites.push_back( &srSpriteData );
@@ -320,9 +318,9 @@ void Renderer::DrawFrame(  )
 
 	for ( auto& model : aModels )
 	{
-		for ( int i = 0; i < model->aMeshes.GetSize(); i++ )
+		for ( int i = 0; i < model->aMeshes.size(); i++ )
 		{
-			model->aMeshes[i].GetShader()->UpdateUniformBuffers( imageIndex, *model, model->aMeshes[i] );
+			model->aMeshes[i]->GetShader()->UpdateUniformBuffers( imageIndex, *model, model->aMeshes[i] );
 		}
 	}
 
@@ -402,7 +400,7 @@ void Renderer::Init(  )
 	aView.Set(0, 0, w, h, 0.1, 100, 90);
 
 	Transform transform = {};
-	aView.viewMatrix = transform.ToViewMatrix(  );
+	aView.viewMatrix = transform.ToViewMatrixZ(  );
 }
 
 void Renderer::SendMessages(  )

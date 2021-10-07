@@ -13,11 +13,12 @@ glm::mat4 Transform::ToMatrix( bool useScale ) const
 }
 
 
-glm::mat4 Transform::ToViewMatrix(  ) const
+/* Y Up version of the ViewMatrix */
+glm::mat4 Transform::ToViewMatrixY(  ) const
 {
 	glm::mat4 viewMatrix(1.0f);
 
-	/* Y Rotation - YAW (Mouse X) */
+	/* Y Rotation - YAW (Mouse X for Y up) */
 	viewMatrix = glm::rotate( viewMatrix, glm::radians(aAng[YAW]), glm::vec3(0, 1, 0) );
 
 	/* X Rotation - PITCH (Mouse Y) */
@@ -25,6 +26,27 @@ glm::mat4 Transform::ToViewMatrix(  ) const
 
 	/* Z Rotation - ROLL */
 	viewMatrix = glm::rotate( viewMatrix, glm::radians(aAng[ROLL]), glm::vec3(viewMatrix[0][2], viewMatrix[1][2], viewMatrix[2][2]) );
+
+	return glm::translate( viewMatrix, -aPos );
+}
+
+
+/* Z Up version of the view matrix */
+glm::mat4 Transform::ToViewMatrixZ(  ) const
+{
+	//glm::mat4 viewMatrix(1.0f);
+
+	// do base rotation to get Z up
+	glm::mat4 viewMatrix = glm::rotate( glm::radians(-90.f), glm::vec3(1, 0, 0) );
+
+	/* Y Rotation - YAW */
+	viewMatrix = glm::rotate( viewMatrix, glm::radians(aAng[YAW]), glm::vec3(viewMatrix[0][1], viewMatrix[1][1], viewMatrix[2][1]) );
+
+	/* X Rotation - PITCH (Mouse Y) */
+	viewMatrix = glm::rotate( viewMatrix, glm::radians(aAng[PITCH]), glm::vec3(viewMatrix[0][0], viewMatrix[1][0], viewMatrix[2][0]) );
+
+	/* Z Rotation - ROLL (Mouse X for Z up)*/
+	viewMatrix = glm::rotate( viewMatrix, glm::radians(aAng[ROLL]), glm::vec3(0, 0, 1) );
 
 	return glm::translate( viewMatrix, -aPos );
 }

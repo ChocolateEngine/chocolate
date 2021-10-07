@@ -33,8 +33,8 @@ public:
 	TextureDescriptor*			CreateTexture( const std::string path, BaseShader* shader );
 
 	/* Create a Vertex and Index buffer for a Mesh. */
-	void                        CreateVertexBuffer( Mesh& mesh );
-	void                        CreateIndexBuffer( Mesh& mesh );
+	void                        CreateVertexBuffer( Mesh* mesh );
+	void                        CreateIndexBuffer( Mesh* mesh );
 
 	void                        ReInitSwapChain();
 	void                        DestroySwapChain();

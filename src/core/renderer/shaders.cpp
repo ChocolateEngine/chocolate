@@ -30,6 +30,8 @@ void BaseShader::ReInit()
 
 void BaseShader::Destroy()
 {
+	gPipelineBuilder.RemovePipeline( &aPipeline );
+
 	vkDestroyPipeline( DEVICE, aPipeline, NULL );
 	vkDestroyPipelineLayout( DEVICE, aPipelineLayout, NULL );
 
@@ -57,7 +59,21 @@ void Basic3D::Init()
 	gPipelineBuilder.Queue( &aPipeline, &aPipelineLayout, &aSetLayouts, pVShader, pFShader, 0 );
 }
 
-void Basic3D::UpdateUniformBuffers( uint32_t sCurrentImage, ModelData &srModelData, Mesh &srMesh )
+
+void Basic3D::ReInit()
+{
+	BaseShader::ReInit();
+
+	gLayoutBuilder.Queue( &aSetLayouts[0], { { DescriptorLayoutBinding( VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1,
+									     VK_SHADER_STAGE_FRAGMENT_BIT, NULL ) } } );
+
+	gLayoutBuilder.Queue( &aSetLayouts[1], { { DescriptorLayoutBinding( VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1,
+									    VK_SHADER_STAGE_VERTEX_BIT, NULL ) } } );
+
+	gPipelineBuilder.Queue( &aPipeline, &aPipelineLayout, &aSetLayouts, pVShader, pFShader, 0 );
+}
+
+void Basic3D::UpdateUniformBuffers( uint32_t sCurrentImage, ModelData &srModelData, Mesh* srMesh )
 {
 	ubo_3d_t ubo{  };
 
@@ -66,15 +82,8 @@ void Basic3D::UpdateUniformBuffers( uint32_t sCurrentImage, ModelData &srModelDa
 	ubo.proj  = apRenderer->aView.GetProjection(  );
 
 	void* data;
-
-#if MESH_UNIFORM_DATA
-	vkMapMemory( DEVICE, srMesh.GetUniformData().aMem[ sCurrentImage ], 0, sizeof( ubo ), 0, &data );
+	vkMapMemory( DEVICE, srMesh->GetUniformData().aMem[ sCurrentImage ], 0, sizeof( ubo ), 0, &data );
 	memcpy( data, &ubo, sizeof( ubo ) );
-	vkUnmapMemory( DEVICE, srMesh.GetUniformData().aMem[ sCurrentImage ] );
-#else
-	vkMapMemory( DEVICE, srModelData.aUniformData.aMem[ sCurrentImage ], 0, sizeof( ubo ), 0, &data );
-	memcpy( data, &ubo, sizeof( ubo ) );
-	vkUnmapMemory( DEVICE, srModelData.aUniformData.aMem[ sCurrentImage ] );
-#endif
+	vkUnmapMemory( DEVICE, srMesh->GetUniformData().aMem[ sCurrentImage ] );
 }
 

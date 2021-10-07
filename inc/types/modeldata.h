@@ -13,10 +13,6 @@ stores all data related to a model.
 #include "../core/renderer/material.h"
 
 
-/* This is broken right now and idk why, so it's disabled for now. */
-#define MESH_UNIFORM_DATA 0
-
-
 class Mesh
 {
 public:
@@ -28,13 +24,11 @@ public:
 
 	inline BaseShader*              GetShader() const           { return apMaterial->apShader; }
 
-#if MESH_UNIFORM_DATA
 	UniformDescriptor               aUniformData;
 	VkDescriptorSetLayout           aUniformLayout = nullptr;
 
 	inline UniformDescriptor&       GetUniformData()            { return aUniformData; }
 	inline VkDescriptorSetLayout    GetUniformLayout()          { return aUniformLayout; }
-#endif
 
 	std::vector< vertex_3d_t >		aVertices;
 	std::vector< uint32_t >         aIndices;
@@ -56,7 +50,8 @@ class ModelData
 	typedef std::vector< VkBuffer >			BufferSet;
 	typedef std::vector< VkDeviceMemory >		MemorySet;
 	typedef std::vector< VkDescriptorSet > 		DescriptorSetList;
-	typedef DataBuffer< Mesh >			Meshes;
+	// typedef DataBuffer< Mesh >			Meshes;
+	typedef std::vector< Mesh* >			Meshes;
 	typedef DataBuffer< VkDescriptorSetLayout >	Layouts;
 public:
 	uint32_t        aVertexCount;
@@ -68,25 +63,14 @@ public:
 	Transform		aTransform;
 	Meshes			aMeshes{  };
 
-#if MESH_UNIFORM_DATA
-	inline UniformDescriptor&       GetUniformData( size_t mesh )        { return aMeshes[mesh].GetUniformData(); }
-	inline VkDescriptorSetLayout    GetUniformLayout( size_t mesh )      { return aMeshes[mesh].GetUniformLayout(); }
-#else
-	// blech, move this later
-	UniformDescriptor               aUniformData;
-	VkDescriptorSetLayout           aUniformLayout = nullptr;
-
-	inline UniformDescriptor&       GetUniformData( size_t mesh )        { return aUniformData; }
-	inline VkDescriptorSetLayout    GetUniformLayout( size_t mesh )      { return aUniformLayout; }
-#endif
+	inline UniformDescriptor&       GetUniformData( size_t mesh )        { return aMeshes[mesh]->GetUniformData(); }
+	inline VkDescriptorSetLayout    GetUniformLayout( size_t mesh )      { return aMeshes[mesh]->GetUniformLayout(); }
 
 	/* Allocates the model, and loads its textures etc.  */
 	void        Init(  );
 	/* Reinitialize data that is useless after the swapchain becomes outdated.  */
 	void        ReInit(  );
-	/* Binds the model data to the GPU to be rendered later.  */
-	void        Bind( VkCommandBuffer c, uint32_t i );
-	/* Draws the model to the screen.  */
+	/* Bind and Draws the model to the screen.  */
 	void        Draw( VkCommandBuffer c, uint32_t i );
 	/* Default the model and set limits.  */
 				ModelData(  ) : apVertices( NULL ), apIndices( NULL ), aNoDraw( false ), aMeshes(  ){  };

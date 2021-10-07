@@ -35,4 +35,6 @@ public:
 	void	Queue( VkPipeline *spPipeline, VkPipelineLayout *spLayout, Layouts *spLayouts, const String &srVertShader, const String &srFragShader, int sFlags );
 	/* Asynchronously builds all descriptor set layouts in aQueue.  */
 	void	BuildPipelines( VkPipeline *spSinglePipeline = NULL );
+	/* Remove a pipeline from the queue. */
+	void	RemovePipeline( VkPipeline *spSinglePipeline );
 };

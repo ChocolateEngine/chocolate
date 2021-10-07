@@ -57,16 +57,16 @@ TextureDescriptor* MaterialSystem::CreateTexture( const std::string path, BaseSh
 }
 
 
-void MaterialSystem::CreateVertexBuffer( Mesh& mesh )
+void MaterialSystem::CreateVertexBuffer( Mesh* mesh )
 {
-	InitTexBuffer( mesh.aVertices, mesh.aVertexBuffer, mesh.aVertexBufferMem, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT );
+	InitTexBuffer( mesh->aVertices, mesh->aVertexBuffer, mesh->aVertexBufferMem, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT );
 }
 
 
-void MaterialSystem::CreateIndexBuffer( Mesh& mesh )
+void MaterialSystem::CreateIndexBuffer( Mesh* mesh )
 {
-	if ( mesh.aIndices.size() > 0 )
-		InitTexBuffer( mesh.aIndices, mesh.aIndexBuffer, mesh.aIndexBufferMem, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT );
+	if ( mesh->aIndices.size() > 0 )
+		InitTexBuffer( mesh->aIndices, mesh->aIndexBuffer, mesh->aIndexBufferMem, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT );
 }
 
 
