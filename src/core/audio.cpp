@@ -65,7 +65,7 @@ AudioSystem::~AudioSystem(  )
 
 
 // dumb
-BaseGuiSystem* gui = nullptr;
+//BaseGuiSystem* gui = nullptr;
 
 void AudioSystem::Init(  )
 {
