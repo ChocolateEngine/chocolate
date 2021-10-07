@@ -106,9 +106,7 @@ double ToDouble( const std::string& value, double prev )
 		return prev;
 
 	char* end;
-	double result = 0;
-
-	result = strtod( value.c_str(), &end );
+	double result = strtod( value.c_str(), &end );
 
 	return end == value.c_str() ? prev : result;
 }

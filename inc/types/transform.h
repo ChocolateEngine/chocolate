@@ -45,6 +45,8 @@ struct Transform
 			return translation * rotation;
 	}
 
+	#define VIEWMAT_ANG( axis ) glm::vec3(viewMatrix[0][axis], viewMatrix[1][axis], viewMatrix[2][axis])
+	
 	/* Y Up version of the ViewMatrix */
 	inline glm::mat4 ToViewMatrixY(  ) const
 	{
@@ -54,10 +56,10 @@ struct Transform
 		viewMatrix = glm::rotate( viewMatrix, glm::radians(aAng[YAW]), glm::vec3(0, 1, 0) );
 
 		/* X Rotation - PITCH (Mouse Y) */
-		viewMatrix = glm::rotate( viewMatrix, glm::radians(aAng[PITCH]), glm::vec3(viewMatrix[0][0], viewMatrix[1][0], viewMatrix[2][0]) );
+		viewMatrix = glm::rotate( viewMatrix, glm::radians(aAng[PITCH]), VIEWMAT_ANG(0) );
 
 		/* Z Rotation - ROLL */
-		viewMatrix = glm::rotate( viewMatrix, glm::radians(aAng[ROLL]), glm::vec3(viewMatrix[0][2], viewMatrix[1][2], viewMatrix[2][2]) );
+		viewMatrix = glm::rotate( viewMatrix, glm::radians(aAng[ROLL]), VIEWMAT_ANG(2) );
 
 		return glm::translate( viewMatrix, -aPos );
 	}
@@ -69,16 +71,18 @@ struct Transform
 		glm::mat4 viewMatrix = glm::rotate( glm::radians(-90.f), glm::vec3(1, 0, 0) );
 
 		/* Y Rotation - YAW */
-		viewMatrix = glm::rotate( viewMatrix, glm::radians(aAng[YAW]), glm::vec3(viewMatrix[0][1], viewMatrix[1][1], viewMatrix[2][1]) );
+		viewMatrix = glm::rotate( viewMatrix, glm::radians(aAng[YAW]), VIEWMAT_ANG(1) );
 
 		/* X Rotation - PITCH (Mouse Y) */
-		viewMatrix = glm::rotate( viewMatrix, glm::radians(aAng[PITCH]), glm::vec3(viewMatrix[0][0], viewMatrix[1][0], viewMatrix[2][0]) );
+		viewMatrix = glm::rotate( viewMatrix, glm::radians(aAng[PITCH]), VIEWMAT_ANG(0) );
 
 		/* Z Rotation - ROLL (Mouse X for Z up)*/
-		viewMatrix = glm::rotate( viewMatrix, glm::radians(aAng[ROLL]), glm::vec3(viewMatrix[0][2], viewMatrix[1][2], viewMatrix[2][2]) );
+		viewMatrix = glm::rotate( viewMatrix, glm::radians(aAng[ROLL]), VIEWMAT_ANG(2) );
 
 		return glm::translate( viewMatrix, -aPos );
 	}
+
+	#undef VIEWMAT_ANG
 };
 
 

@@ -8,7 +8,7 @@ TODO: move this to graphics level abstraction so the game can use this
 #pragma once
 
 #include "../../types/databuffer.hh"
-#include "../core/renderer/shaders.h"
+#include "shaders.h"
 #include "allocator.h"
 #include "material.h"
 
