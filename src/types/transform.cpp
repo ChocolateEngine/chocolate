@@ -46,7 +46,7 @@ glm::mat4 Transform::ToViewMatrixZ(  ) const
 	viewMatrix = glm::rotate( viewMatrix, glm::radians(aAng[PITCH]), glm::vec3(viewMatrix[0][0], viewMatrix[1][0], viewMatrix[2][0]) );
 
 	/* Z Rotation - ROLL (Mouse X for Z up)*/
-	viewMatrix = glm::rotate( viewMatrix, glm::radians(aAng[ROLL]), glm::vec3(0, 0, 1) );
+	viewMatrix = glm::rotate( viewMatrix, glm::radians(aAng[ROLL]), glm::vec3(viewMatrix[0][2], viewMatrix[1][2], viewMatrix[2][2]) );
 
 	return glm::translate( viewMatrix, -aPos );
 }
