@@ -29,7 +29,7 @@ std::string GetBaseDir( const std::string &srPath )
 
 
 // TODO: use std::filesystem::path
-void LoadObj( const std::string &srPath, std::vector<Mesh> &meshes )
+void LoadObj( const std::string &srPath, std::vector<Mesh*> &meshes )
 {
 	tinyobj::ObjReader reader;
 	tinyobj::ObjReaderConfig reader_config;
@@ -57,14 +57,15 @@ void LoadObj( const std::string &srPath, std::vector<Mesh> &meshes )
 
 	for (std::size_t i = 0; i < meshes.size(); ++i)
 	{
-		meshes[i].Init();
-		meshes[i].apMaterial = materialsystem->CreateMaterial();
+		meshes[i] = new Mesh;
+		meshes[i]->Init();
+		meshes[i]->apMaterial = materialsystem->CreateMaterial();
 	}
 
 	for (std::size_t i = 0; i < objMaterials.size(); ++i)
 	{
 		const tinyobj::material_t &objMaterial = objMaterials[i];
-		Material &material = *meshes[i].apMaterial;
+		Material &material = *meshes[i]->apMaterial;
 		material.aName = objMaterial.name;
 
 		if (!objMaterial.diffuse_texname.empty())
@@ -99,7 +100,7 @@ void LoadObj( const std::string &srPath, std::vector<Mesh> &meshes )
 			const std::size_t materialIndex = objShapes[shapeIndex].mesh.material_ids[faceIndex] < 0 ? objMaterials.size() - 1 : objShapes[shapeIndex].mesh.material_ids[faceIndex];
 			assert(materialIndex < objMaterials.size());
 
-			Mesh& mesh = meshes[materialIndex];
+			Mesh& mesh = *meshes[materialIndex];
 
 			struct tinyobj_vec2 { tinyobj::real_t x, y; };
 			struct tinyobj_vec3 { tinyobj::real_t x, y, z; };
@@ -177,7 +178,7 @@ void LoadObj( const std::string &srPath, std::vector<Mesh> &meshes )
 }
 
 
-void LoadGltf( const std::string &srPath, std::vector<Mesh> &meshes )
+void LoadGltf( const std::string &srPath, std::vector<Mesh*> &meshes )
 {
 }
 

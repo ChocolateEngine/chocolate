@@ -34,3 +34,15 @@ void PipelineBuilder::BuildPipelines( VkPipeline *spSinglePipeline )
 	for ( auto&& pipeline : aQueue )
 	        buildFunction( pipeline );//std::async( std::launch::async, buildFunction, pipeline );
 }
+
+void PipelineBuilder::RemovePipeline( VkPipeline *spPipeline )
+{
+	int index = 0;
+	for ( index = 0; index < aQueue.size(); index++ )
+	{
+		if ( aQueue[index].apPipeline == spPipeline )
+			break;
+	}
+
+	aQueue.erase( aQueue.begin() + index );
+}

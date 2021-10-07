@@ -436,8 +436,8 @@ VkDescriptorSetLayout InitDescriptorSetLayout( DescSetLayouts sBindings )
 	LayoutInfoList	info{  };
 	for ( auto&& binding : sBindings )
 		info.push_back( { binding.descriptorType, binding.stageFlags } );
-	if ( gDescriptorCache.Exists( info ) )
-	        return gDescriptorCache.GetLayout(  );
+	//if ( gDescriptorCache.Exists( info ) )
+	//        return gDescriptorCache.GetLayout(  );
 	
         uint32_t 	        i = -1;
 	VkDescriptorSetLayout   layout;
@@ -451,7 +451,7 @@ VkDescriptorSetLayout InitDescriptorSetLayout( DescSetLayouts sBindings )
 	if ( vkCreateDescriptorSetLayout( DEVICE, &layoutInfo, NULL, &layout ) != VK_SUCCESS )
 		throw std::runtime_error( "Failed to create descriptor set layout!" );
 
-	gDescriptorCache.AddLayout( layout, info );
+	//gDescriptorCache.AddLayout( layout, info );
 	return layout;
 }
 /* Creates graphics pipeline layouts using the specified descriptor set layouts.  */
