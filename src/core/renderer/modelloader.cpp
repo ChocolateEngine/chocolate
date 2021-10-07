@@ -41,13 +41,13 @@ void LoadObj( const std::string &srPath, std::vector<Mesh*> &meshes )
 	if ( !reader.ParseFromFile( srPath, reader_config ) )
 	{
 		if ( !reader.Error().empty() )
-			Print( "[LoadObj] Error: %s\n", reader.Error() );
+			Print( "[LoadObj] Error: %s\n", reader.Error().c_str() );
 
 		return;
 	}
 
 	if ( !reader.Warning().empty() )
-		Print( "%s\n", reader.Warning() );
+		Print( "%s\n", reader.Warning().c_str() );
 
 	auto &objAttrib = reader.GetAttrib();
 	auto &objShapes = reader.GetShapes();
