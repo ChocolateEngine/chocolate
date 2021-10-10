@@ -10,7 +10,7 @@ Defines the methods declared in engine.h.
 
 CONVAR( en_max_frametime, 0.2 );
 CONVAR( en_timescale, 1 );
-CONVAR( en_fps_max, 120 );
+CONVAR( en_fps_max, 0 );
 
 template< typename T, typename... TArgs >
 void Engine::AddSystem( const T *spSystem, TArgs... sSystems )
