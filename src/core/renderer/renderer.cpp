@@ -270,6 +270,12 @@ void Renderer::InitModel( ModelData &srModelData, const String &srModelPath, con
 		mesh->aRadius = glm::distance( mesh->aMinSize, mesh->aMaxSize ) / 2.0f;
 
 		srModelData.aMeshes.push_back( mesh );
+
+		for (const auto& vert: mesh->aVertices)
+			srModelData.aVertices.push_back(vert);
+
+		for (const auto& ind: mesh->aIndices)
+			srModelData.aIndices.push_back(ind);
 	}
 
 	aModels.push_back( &srModelData );

@@ -99,7 +99,4 @@ ModelData::~ModelData(  )
 		vkDestroyBuffer( DEVICE, mesh.aIndexBuffer, NULL );
 		vkFreeMemory( DEVICE, mesh.aIndexBufferMem, NULL );
 	}
-
-	delete[  ] apVertices;
-	delete[  ] apIndices;
 }

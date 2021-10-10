@@ -46,6 +46,8 @@ void LoadObj( const std::string &srPath, std::vector<Mesh*> &meshes )
 		return;
 	}
 
+	Print( "Parsed Obj: %s\n", srPath.c_str() );
+
 	if ( !reader.Warning().empty() )
 		Print( "%s\n", reader.Warning().c_str() );
 
@@ -87,6 +89,8 @@ void LoadObj( const std::string &srPath, std::vector<Mesh*> &meshes )
 
 	for (std::size_t shapeIndex = 0; shapeIndex < objShapes.size(); ++shapeIndex)
 	{
+		Print( "Obj Shape Index: %u\n", shapeIndex );
+
 		std::size_t indexOffset = 0;
 		for (std::size_t faceIndex = 0; faceIndex < objShapes[shapeIndex].mesh.num_face_vertices.size(); ++faceIndex)
 		{

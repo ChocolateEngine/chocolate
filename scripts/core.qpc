@@ -49,6 +49,12 @@ config
 			"NDEBUG=1"  [$RELEASE$]
 			"_DEBUG=1"  [$DEBUG$]
 		}
+		
+		defines [$MSVC$]
+		{
+			//"_ITERATOR_DEBUG_LEVEL=0"  [$DEBUG$]
+			"_ALLOW_RUNTIME_LIBRARY_MISMATCH" "_ALLOW_ITERATOR_DEBUG_LEVEL_MISMATCH" "_ALLOW_MSC_VER_MISMATCH"
+		}
 
 		// is this needed?
 		options [$GCC$ || $CLANG$]
@@ -59,9 +65,11 @@ config
 		options [$MSVC$]
 		{
 			"/Od" "/MDd" "/ZI"  [$DEBUG$]
+			//"/Od" "/MD" "/ZI"  [$DEBUG$]
 			"/O2" "/MD"         [$RELEASE$]
 			
 			"/MP" // multi-threaded compilation
+			"/permissive-" // make MSVC very compliant
 		}
 	}
 	
@@ -76,7 +84,7 @@ config
 		libs
 		{
 			"SDL2"
-			"vulkan-1" [$WINDOWS$]
+			"vulkan-1" [$WINDOWS$ && !$LAUNCHER$]
 			"vulkan" "dl" "pthread" "X11" "Xxf86vm" "Xrandr" "Xi" [$LINUX$]
 		}
 		
