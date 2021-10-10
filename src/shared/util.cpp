@@ -112,6 +112,7 @@ double ToDouble( const std::string& value, double prev )
 }
 
 
+
 // very cool: https://stackoverflow.com/a/46424921/12778316
 std::string ToString( float value )
 {

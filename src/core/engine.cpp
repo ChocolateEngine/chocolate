@@ -10,6 +10,7 @@ Defines the methods declared in engine.h.
 
 CONVAR( en_max_frametime, 0.2 );
 CONVAR( en_timescale, 1 );
+CONVAR( en_fps_max, 120 );
 
 template< typename T, typename... TArgs >
 void Engine::AddSystem( const T *spSystem, TArgs... sSystems )
@@ -139,13 +140,35 @@ void Engine::UpdateSystems(  )
 	// don't let the time go too crazy, usually happens when in a breakpoint
 	time = glm::min( time, en_max_frametime.GetFloat() );
 
+	// rendering is actually half the framerate for some reason, odd
+	if ( en_fps_max.GetFloat() > 0.f )
+	{
+		float maxFps = glm::clamp( en_fps_max.GetFloat(), 20.f, 5000.f );
+
+		// check if we still have more than 2ms till next frame and if so, wait for "1ms"
+		float minFrameTime = 1.0f / maxFps;
+		if ( (minFrameTime - time) > (2.0f/1000.f))
+			SDL_Delay(1);
+
+		// framerate is above max
+		if (time < minFrameTime)
+			return;
+	}
+
 	apConsole->Update(  );
+
+	static GraphicsSystem* graphics = GET_SYSTEM( GraphicsSystem );
 
 	/* Update self.  */
 	Update( time );
 
 	for ( const auto& pSys : apSystemManager->GetSystemList() )
-		pSys->Update( time );
+	{
+		if ( pSys != graphics )
+			pSys->Update( time );
+	}
+
+	graphics->Update( time );
 
 	startTime = currentTime;
 }

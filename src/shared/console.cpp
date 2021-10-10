@@ -106,7 +106,7 @@ float ConVar::GetFloat(  )
 
 bool ConVar::GetBool(  )
 {
-	return aValueFloat == 1.f;
+	return aValueFloat >= 1.f;
 }
 
 

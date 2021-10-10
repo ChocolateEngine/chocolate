@@ -7,8 +7,13 @@
 macro PROJECT_NAME "Chocolate"
 macro OUT_NAME "engine"
 
+macro ENABLE_AUDIO 0
+macro AUDIO_FFMPEG 0
+macro AUDIO_VORBIS 0
+macro AUDIO_WAV 0
+
 include "core.qpc"
-include "ffmpeg.qpc"
+include "ffmpeg.qpc" [$AUDIO_FFMPEG$]
 
 config
 {
@@ -53,19 +58,17 @@ config
 		
 		libs [$WINDOWS$]
 		{
-			"../thirdparty/libvorbis/win32/VS2010/x64/Release/libvorbis_static.lib"
-			"../thirdparty/libvorbis/win32/VS2010/x64/Release/libvorbisfile_static.lib"
-			"../thirdparty/libogg/win32/VS2015\x64/Release/libogg.lib"
-			"phonon.lib"
-			
-			//"Ws2_32.lib"
+			"../thirdparty/libvorbis/win32/VS2010/x64/Release/libvorbis_static.lib"         [$AUDIO_FFMPEG$]
+			"../thirdparty/libvorbis/win32/VS2010/x64/Release/libvorbisfile_static.lib"     [$AUDIO_FFMPEG$]
+			"../thirdparty/libogg/win32/VS2015\x64/Release/libogg.lib"                      [$AUDIO_FFMPEG$]
+			"phonon.lib"                                                                    [$ENABLE_AUDIO$]
 		}
 		
 		libs [$POSIX$]
 		{
-			"libvorbis_static"
-			"libvorbisfile_static"
-			"phonon"
+			"libvorbis_static"      [$AUDIO_FFMPEG$]
+			"libvorbisfile_static"  [$AUDIO_FFMPEG$]
+			"phonon"                [$ENABLE_AUDIO$]
 		}
 	}
 }
@@ -89,14 +92,14 @@ files
 		//"../thirdparty/tinywav/tinywav.h"
 		
 		// blech
-		"../thirdparty/libwav/src/wav.c"
+		"../thirdparty/libwav/src/wav.c" [$AUDIO_WAV$]
 		{
 			// fix this in qpc2
 			// language "c"
 			options [$MSVC$] { "/TC" } // compile as C code
 		}
 		
-		"../thirdparty/libwav/include/wav.h"
+		"../thirdparty/libwav/include/wav.h" [$AUDIO_WAV$]
 	
 		folder "imgui"
 		{

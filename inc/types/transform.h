@@ -27,6 +27,12 @@ inline glm::quat AngToQuat( const glm::vec3& ang )
 	return glm::toQuat( glm::yawPitchRoll( ang[YAW], ang[PITCH], ang[ROLL] ) );
 }
 
+inline glm::vec3 QuatToAng( const glm::quat& quat )
+{
+	glm::vec3 ang = glm::eulerAngles( quat );
+	return ang; // glm::degrees(
+}
+
 
 struct Transform
 {
