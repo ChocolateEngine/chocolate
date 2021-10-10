@@ -10,3 +10,13 @@ material.cpp ( Authored by Demez )
 // =========================================================
 
 
+void Material::Init()
+{
+	apTextureLayout = InitDescriptorSetLayout( { { DescriptorLayoutBinding( VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, NULL ) } } );
+}
+
+
+void Material::Destroy()
+{
+	vkDestroyDescriptorSetLayout( DEVICE, apTextureLayout, NULL );
+}

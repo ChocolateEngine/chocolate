@@ -18,9 +18,6 @@ BaseShader::~BaseShader()
 
 void BaseShader::Init()
 {
-	//aUniformLayout = InitDescriptorSetLayout( { { DescriptorLayoutBinding( VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_VERTEX_BIT, NULL ) } } );
-	aTextureLayout = InitDescriptorSetLayout( { { DescriptorLayoutBinding( VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, NULL ) } } );
-	//InitUniformData( aUniformData, aUniformLayout );
 }
 
 void BaseShader::ReInit()
@@ -34,9 +31,6 @@ void BaseShader::Destroy()
 
 	vkDestroyPipeline( DEVICE, aPipeline, NULL );
 	vkDestroyPipelineLayout( DEVICE, aPipelineLayout, NULL );
-
-	//vkDestroyDescriptorSetLayout( DEVICE, aUniformLayout, NULL );
-	vkDestroyDescriptorSetLayout( DEVICE, aTextureLayout, NULL );
 }
 
 // =========================================================

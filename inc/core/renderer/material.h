@@ -20,10 +20,11 @@ class ModelData;
 class Material
 {
 public:
-	                    Material(  ) {}
-	virtual            ~Material(  ) {}
+	                    Material() {}
+	virtual            ~Material() {}
 
-	//virtual void        Init(  ) = 0;
+	void                Init();
+	void                Destroy();
 
 	std::string                 aName;
 
@@ -36,7 +37,12 @@ public:
 	TextureDescriptor*          apDiffuse;
 	//TextureDescriptor*          apNormal;
 	//TextureDescriptor*          apEmission;
+	
+	// TODO: make a "MaterialInternal" like class when the client is able to create materials
+	VkDescriptorSetLayout       apTextureLayout = nullptr;
 
 	BaseShader*                 apShader = nullptr;
+
+	inline VkDescriptorSetLayout       GetTextureLayout() const   { return apTextureLayout; }
 };
 

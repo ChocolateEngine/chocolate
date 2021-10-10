@@ -262,7 +262,7 @@ void Renderer::InitModel( ModelData &srModelData, const String &srModelPath, con
 		Mesh* mesh = meshes[i];
 
 		mesh->apMaterial->apShader = apMaterialSystem->GetShader( "basic_3d" );
-		mesh->apMaterial->apDiffuse = apMaterialSystem->CreateTexture( mesh->apMaterial->aDiffusePath.string(), mesh->GetShader() );
+		mesh->apMaterial->apDiffuse = apMaterialSystem->CreateTexture( mesh->apMaterial, mesh->apMaterial->aDiffusePath.string() );
 
 		apMaterialSystem->CreateVertexBuffer( mesh );
 		apMaterialSystem->CreateIndexBuffer( mesh );
