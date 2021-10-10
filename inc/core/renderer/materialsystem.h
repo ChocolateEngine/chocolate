@@ -30,7 +30,7 @@ public:
 
 	// ideally this shouldn't need a path, should really be reworked to be closer to thermite, more flexible design
 	// also this probably shouldn't use a shader for a parameter
-	TextureDescriptor*			CreateTexture( const std::string path, BaseShader* shader );
+	TextureDescriptor*			CreateTexture( Material* material, const std::string path );
 
 	/* Create a Vertex and Index buffer for a Mesh. */
 	void                        CreateVertexBuffer( Mesh* mesh );

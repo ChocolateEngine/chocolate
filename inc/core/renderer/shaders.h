@@ -24,7 +24,6 @@ class BaseShader
 
 // protected:
 public:
-	VkDescriptorSetLayout              aTextureLayout = nullptr;
 	VkPipeline                         aPipeline = nullptr;
 	VkPipelineLayout                   aPipelineLayout = nullptr;
 	Layouts                            aSetLayouts;
@@ -48,7 +47,6 @@ public:
 
 	inline VkPipeline                  GetPipeline() const        { return aPipeline; }
 	inline VkPipelineLayout            GetPipelineLayout() const  { return aPipelineLayout; }
-	inline VkDescriptorSetLayout       GetTextureLayout() const   { return aTextureLayout; }
 };
 
 

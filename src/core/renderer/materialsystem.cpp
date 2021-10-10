@@ -29,13 +29,14 @@ void MaterialSystem::Init()
 	apErrorMaterial->aName = "ERROR";
 	apErrorMaterial->apShader = basic_3d;
 	apErrorMaterial->aDiffusePath = "";
-	apErrorMaterial->apDiffuse = CreateTexture( "", apErrorMaterial->apShader );
+	apErrorMaterial->apDiffuse = CreateTexture( apErrorMaterial, "" );
 }
 
 
 Material* MaterialSystem::CreateMaterial()
 {
 	Material* mat = new Material;
+	mat->Init();
 	aMaterials.push_back( mat );
 	return mat;
 }
@@ -46,14 +47,16 @@ void MaterialSystem::DeleteMaterial( Material* mat )
 	if ( vec_contains( aMaterials, mat ) )
 	{
 		vec_remove( aMaterials, mat );
+		mat->Destroy();
 		delete mat;
 	}
 }
 
 
-TextureDescriptor* MaterialSystem::CreateTexture( const std::string path, BaseShader* shader )
+// this really should not have a Material input, it should have a Texture class input, right? idk
+TextureDescriptor* MaterialSystem::CreateTexture( Material* material, const std::string path )
 {
-	return InitTexture( path, shader->GetTextureLayout(), *gpPool, apRenderer->aTextureSampler );
+	return InitTexture( path, material->GetTextureLayout(), *gpPool, apRenderer->aTextureSampler );
 }
 
 
