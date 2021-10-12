@@ -11,17 +11,24 @@ class BaseCodec;
 class BaseAudioSystem;
 
 
+enum
+{
+	AudioEffect_None = (1 << 1),
+	//AudioEffect_Panning = (1 << 2),
+	AudioEffect_Direct = (1 << 3),
+	AudioEffect_Binaural = (1 << 4),
+};
+
+constexpr size_t AudioEffectPreset_World = AudioEffect_Direct | AudioEffect_Binaural;
+
+
 // maybe change to Sound?
 // also hide a few more things from normal game code probably? idk
 struct AudioStream
 {
-	bool Valid() { return codec; }
-
-	BaseCodec *codec = nullptr;
-	void* data;  // data for the codec only
+	bool Valid() { return valid; }
 
 	const char* name;
-	unsigned int frameSize = 0;
 	size_t frame = 0;
 
 	unsigned char channels;
@@ -36,38 +43,19 @@ struct AudioStream
 	float radius = 100.0f;
 	float falloff = 16.f;
 
-	// TODO: set these up
-#if 0
 	bool loop = false;      // should we loop the file when it ends?
-	size_t time = 0;        // time in ms in the file
-	size_t startTime = 0;   // time in ms to start playback
-	size_t endTime = 0;     // time in ms to end playback
-	float speed = 1.0f;
-#endif
+	//double time = 0;        // time in seconds in the file
+	double startTime = 0;   // time in seconds to start playback
+	//double endTime = 0;     // time in seconds to end playback
+	//float speed = 1.0f;
+
+	// must be set before playing a sound
+	size_t effects = AudioEffect_None;
 
 	bool paused = false;
-	bool inWorld = true;  // is this a sound in the world? if so, run steam audio effects on it
+	bool valid = false;
 
 	glm::vec3 pos;
-};
-
-
-class BaseCodec
-{
-protected:
-	virtual                 ~BaseCodec() = default;
-
-public:
-	virtual bool            Init() = 0;
-	virtual const char*     GetName() = 0;
-	virtual bool            CheckExt( const char* ext ) = 0;
-
-	virtual bool            OpenStream( const char* soundPath, AudioStream *stream ) = 0;
-	virtual long            ReadStream( AudioStream *stream, size_t size, std::vector<float> &data ) = 0;
-	virtual void            CloseStream( AudioStream *stream ) = 0;
-
-	virtual void            SetAudioSystem( BaseAudioSystem* system ) { apAudio = system; };
-	BaseAudioSystem*        apAudio;
 };
 
 
@@ -82,8 +70,9 @@ public:
 	virtual bool            LoadSound( const char* soundPath, AudioStream** stream ) = 0;
 	virtual bool            PlaySound( AudioStream *stream ) = 0;
 	virtual void            FreeSound( AudioStream** stream ) = 0;
+	virtual int             Seek( AudioStream *streamPublic, double pos ) = 0;
 
-	virtual bool            RegisterCodec( BaseCodec *codec ) = 0;
+	//virtual bool            RegisterCodec( BaseCodec *codec ) = 0;
 };
 
 

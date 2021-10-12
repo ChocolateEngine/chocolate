@@ -2,8 +2,6 @@
 
 #include "../core/audio.h"
 
-#define ENABLE_VORBIS 0
-
 #if ENABLE_VORBIS
 class CodecVorbis: public BaseCodec
 {
@@ -15,10 +13,11 @@ public:
 	virtual const char*     GetName() override { return "Vorbis Audio Codec"; }
 	virtual bool            CheckExt( const char* ext ) override;
 
-	virtual bool            OpenStream( const char* soundPath, AudioStream *stream ) override;
-	virtual long            ReadPacket( AudioStream *stream, std::vector<float> &data );
-	virtual long            ReadStream( AudioStream *stream, size_t size, std::vector<float> &data ) override;
-	virtual void            CloseStream( AudioStream *stream ) override;
+	virtual bool            Open( const char* soundPath, AudioStreamInternal *stream ) override;
+	//virtual long            ReadPacket( AudioStreamInternal *stream, std::vector<float> &data );
+	virtual long            Read( AudioStreamInternal *stream, size_t size, std::vector<float> &data ) override;
+	virtual int             Seek( AudioStreamInternal *stream, double pos ) override;
+	virtual void            Close( AudioStreamInternal *stream ) override;
 };
 #endif
 
