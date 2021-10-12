@@ -4,16 +4,29 @@
 #include "../shared/baseaudio.h"
 
 #include <SDL2/SDL.h>
-#define ENABLE_AUDIO 0
+
 #if ENABLE_AUDIO
 #include <phonon.h>
 #endif /* ENABLE_AUDIO  */
 
+class BaseCodec;
+
 struct AudioStreamInternal: public AudioStream
 {
 #if ENABLE_AUDIO
-	// audio stream for any conversion potentially needed
-	SDL_AudioStream *convertStream = nullptr;
+	BaseCodec *codec = nullptr;
+	void* data;  // data for the codec only
+
+	// other stuff
+	SDL_AudioFormat format = AUDIO_F32;
+	unsigned int frameSize = 0;
+	unsigned int size;
+	unsigned int samples;
+	unsigned int bits;
+	unsigned char width;  // ???
+
+	// audio stream to store audio from the codec and covert it
+	SDL_AudioStream *audioStream = nullptr;
 
 	// maybe std::vector will work here? try later
 	float *inBufferAudio = nullptr;
@@ -27,6 +40,26 @@ struct AudioStreamInternal: public AudioStream
 	IPLhandle directSoundEffect = {};
 	IPLhandle binauralEffect = {};
 #endif
+};
+
+
+class BaseCodec
+{
+protected:
+	virtual                 ~BaseCodec() = default;
+
+public:
+	virtual bool            Init() = 0;
+	virtual const char*     GetName() = 0;
+	virtual bool            CheckExt( const char* ext ) = 0;
+
+	virtual bool            Open( const char* soundPath, AudioStreamInternal *stream ) = 0;
+	virtual long            Read( AudioStreamInternal *stream, size_t size, std::vector<float> &data ) = 0;
+	virtual int             Seek( AudioStreamInternal *stream, double pos ) = 0;
+	virtual void            Close( AudioStreamInternal *stream ) = 0;
+
+	virtual void            SetAudioSystem( BaseAudioSystem* system ) { apAudio = system; };
+	BaseAudioSystem*        apAudio;
 };
 
 
@@ -44,8 +77,10 @@ public:
 	virtual bool                    LoadSound( const char* soundPath, AudioStream** stream ) override;
 	virtual bool                    PlaySound( AudioStream *stream ) override;
 	virtual void                    FreeSound( AudioStream** stream ) override;
+	virtual int                     Seek( AudioStream *streamPublic, double pos ) override;
 
-	virtual bool                    RegisterCodec( BaseCodec *codec ) override;
+	//virtual bool                    RegisterCodec( BaseCodec *codec ) override;
+	bool                            RegisterCodec( BaseCodec *codec );
 
 #if ENABLE_AUDIO
 	bool                            UpdateStream( AudioStreamInternal* stream );

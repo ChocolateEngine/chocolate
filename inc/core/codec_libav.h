@@ -2,8 +2,6 @@
 
 #include "../core/audio.h"
 
-#define ENABLE_LIBAV 0
-
 #if ENABLE_LIBAV
 class CodecLibAV: public BaseCodec
 {

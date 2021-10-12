@@ -21,7 +21,7 @@ bool CodecWav::CheckExt( const char* ext )
 }
 
 
-bool CodecWav::OpenStream( const char* soundPath, AudioStream *stream )
+bool CodecWav::Open( const char* soundPath, AudioStreamInternal *stream )
 {
     WavFile* wav = wav_open( soundPath, WAV_OPEN_READ );
     if ( wav == NULL )
@@ -43,7 +43,7 @@ bool CodecWav::OpenStream( const char* soundPath, AudioStream *stream )
 }
 
 
-long CodecWav::ReadStream( AudioStream *stream, size_t size, std::vector<float> &data )
+long CodecWav::Read( AudioStreamInternal *stream, size_t size, std::vector<float> &data )
 {
     WavFile* wav = (WavFile*)stream->data;
 
@@ -55,7 +55,18 @@ long CodecWav::ReadStream( AudioStream *stream, size_t size, std::vector<float> 
 }
 
 
-void CodecWav::CloseStream( AudioStream *stream )
+// TODO: check if this is done correctly
+int CodecWav::Seek( AudioStreamInternal *stream, double pos )
+{
+    WavFile* wav = (WavFile*)stream->data;
+
+    int ret = wav_seek( wav, pos * 100, 0 );
+
+    return ret;
+}
+
+
+void CodecWav::Close( AudioStreamInternal *stream )
 {
     wav_close((WavFile*)stream->data);
 }

@@ -50,5 +50,12 @@ call download-unzip.bat https://github.com/g-truc/glm/releases/download/0.9.9.8 
 :GLM_COPY
 robocopy glm\glm %inc_dir%\glm /S
 
+:OGG
+IF EXIST libogg GOTO OGG_COPY
+echo Downloading OGG
+call download-unzip.bat https://github.com/g-truc/glm/releases/download/0.9.9.8 glm-0.9.9.8.7z .
+:OGG_COPY
+robocopy libogg\include\ogg %inc_dir%\ogg /S
+
 
 :DONE

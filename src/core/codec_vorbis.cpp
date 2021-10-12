@@ -31,7 +31,7 @@ bool CodecVorbis::CheckExt( const char* ext )
 }
 
 
-bool CodecVorbis::OpenStream( const char* soundPath, AudioStream *stream )
+bool CodecVorbis::Open( const char* soundPath, AudioStreamInternal *stream )
 {
     FILE *soundFileHandle;
     errno_t err = fopen_s(&soundFileHandle, soundPath, "rb");
@@ -93,29 +93,7 @@ bool CodecVorbis::OpenStream( const char* soundPath, AudioStream *stream )
 }
 
 
-static void
-vorbis_interleave(float *dest, const float *const*src,
-		  unsigned nframes, unsigned channels)
-{
-	for (const float *const*src_end = src + channels;
-	     src != src_end; ++src, ++dest) {
-		float *d = dest;
-		for (const float *s = *src, *s_end = s + nframes;
-		     s != s_end; ++s, d += channels)
-			*d = *s;
-	}
-}
-
-
-//extern size_t SOUND_BYTES;
-
-
-#define NQR_INT16_MAX 32767.f
-#define int16_to_float32(s) ((float) (s) / NQR_INT16_MAX)
-#define float32_to_int16(s) ((float) (s) * NQR_INT16_MAX)
-
-
-CONVAR( vorbis_packet_size, 1024 );
+/*CONVAR( vorbis_packet_size, 1024 );
 
 
 long CodecVorbis::ReadPacket( AudioStream *stream, std::vector<float> &data )
@@ -149,10 +127,10 @@ long CodecVorbis::ReadPacket( AudioStream *stream, std::vector<float> &data )
     }
 
     return totalFramesRead;
-}
+}*/
 
 
-long CodecVorbis::ReadStream( AudioStream *stream, size_t size, std::vector<float> &data )
+long CodecVorbis::Read( AudioStreamInternal *stream, size_t size, std::vector<float> &data )
 {
     CodecVorbisData *vorbisData = (CodecVorbisData*)stream->data;
     OggVorbis_File *oggFile = vorbisData->oggFile;
@@ -208,7 +186,20 @@ long CodecVorbis::ReadStream( AudioStream *stream, size_t size, std::vector<floa
 }
 
 
-void CodecVorbis::CloseStream( AudioStream *stream )
+int CodecVorbis::Seek( AudioStreamInternal *stream, double pos )
+{
+    CodecVorbisData* vorbisData = (CodecVorbisData*)stream->data;
+    OggVorbis_File *oggFile = vorbisData->oggFile;
+
+    long seekable = ov_seekable( oggFile );
+    if ( !seekable )
+        return -1;
+
+    return ov_time_seek( oggFile, pos );
+}
+
+
+void CodecVorbis::Close( AudioStreamInternal *stream )
 {
     CodecVorbisData* vorbisData = (CodecVorbisData*)stream->data;
     ov_clear(vorbisData->oggFile);
