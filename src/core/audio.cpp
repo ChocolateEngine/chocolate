@@ -16,10 +16,11 @@
 #include "../../inc/shared/basegraphics.h"
 #include "../../inc/shared/basegui.h"
 
+extern GuiSystem* gui;
 
 namespace fs = std::filesystem;
 
-constexpr size_t SOUND_BYTES = 1024;
+constexpr size_t SOUND_BYTES = 2048;
 constexpr size_t SOUND_RATE = 48000;
 constexpr size_t THR_MAX_STREAMS = 32;
 
@@ -28,15 +29,13 @@ IPLAudioFormat g_formatMono = {};
 IPLAudioFormat g_formatStereo = {};
 #endif
 
-ConVar snd_volume("snd_volume", "0.1");
-ConVar snd_volume_3d("snd_volume_3d", "1");
-ConVar snd_volume_2d("snd_volume_2d", "1");
-
-// 8 times is the bare minumum here to get consistent audio playback without any skipping (used to be 3?)
-ConVar snd_audio_buffer_size("snd_audio_buffer_size", "8");
+CONVAR( snd_volume, 0.5 );
+CONVAR( snd_volume_3d, 1 );
+CONVAR( snd_volume_2d, 1 );
+CONVAR( snd_buffer_size, 2 );
 
 
-#if ENABLE_SOUND
+#if ENABLE_AUDIO
 bool HandleSteamAudioReturn(IPLerror ret, const char* msg)
 {
 	if (ret == IPL_STATUS_OUTOFMEMORY)
@@ -70,8 +69,6 @@ AudioSystem::~AudioSystem(  )
 void AudioSystem::Init(  )
 {
 #if ENABLE_AUDIO
-	GET_SYSTEM_CHECK( gui, BaseGuiSystem );
-	
 	SDL_AudioSpec wantedSpec;
 
 	wantedSpec.callback = NULL;
@@ -259,8 +256,11 @@ bool AudioSystem::PlaySound( AudioStream *streamPublic )
 	AudioStreamInternal* stream = (AudioStreamInternal*)streamPublic;
 
 	IPLerror ret;
-	IPLAudioFormat audioFormat = (stream->channels == 1 ? g_formatMono: g_formatStereo);
-	ret = iplCreateDirectSoundEffect(envRenderer, audioFormat, g_formatStereo, &stream->directSoundEffect);
+	// SDL_AudioStream will convert it to stereo for us
+	//IPLAudioFormat inAudioFormat = (stream->channels == 1 ? g_formatMono: g_formatStereo);
+	IPLAudioFormat inAudioFormat = g_formatStereo;
+	//IPLAudioFormat inAudioFormat = g_formatMono;
+	ret = iplCreateDirectSoundEffect(envRenderer, inAudioFormat, g_formatStereo, &stream->directSoundEffect);
 	if (!HandleSteamAudioReturn(ret, "Error creating direct sound effect"))
 		return false;
 
@@ -273,10 +273,10 @@ bool AudioSystem::PlaySound( AudioStream *streamPublic )
 
 	// if ( (!stream->inWorld && stream->channels != 2) || stream->rate != aAudioSpec.freq || stream->format != aAudioSpec.format )
 	{
-		// stream->convertStream = SDL_NewAudioStream(AUDIO_F32, stream->channels, streamPublic->rate, AUDIO_F32, 2, aAudioSpec.freq);
-		// stream->convertStream = SDL_NewAudioStream(AUDIO_F32, stream->channels, streamPublic->rate / 2, AUDIO_F32, 2, aAudioSpec.freq);
-		// stream->convertStream = SDL_NewAudioStream(AUDIO_F32, stream->channels, streamPublic->rate, AUDIO_F32, 2, aAudioSpec.freq);
-		stream->convertStream = SDL_NewAudioStream(stream->format, stream->channels, streamPublic->rate, aAudioSpec.format, 2, aAudioSpec.freq);
+		// stream->convertStream = SDL_NewAudioStream(AUDIO_F32, stream->channels, stream->rate, AUDIO_F32, 2, aAudioSpec.freq);
+		// stream->convertStream = SDL_NewAudioStream(AUDIO_F32, stream->channels, stream->rate / 2, AUDIO_F32, 2, aAudioSpec.freq);
+		// stream->convertStream = SDL_NewAudioStream(AUDIO_F32, stream->channels, stream->rate, AUDIO_F32, 2, aAudioSpec.freq);
+		stream->convertStream = SDL_NewAudioStream(stream->format, stream->channels, stream->rate, aAudioSpec.format, 2, aAudioSpec.freq);
 		if (stream->convertStream == nullptr)
 		{
 			apConsole->Print( "[AudioSystem] SDL_NewAudioStream failed: %s\n", SDL_GetError() );
@@ -296,7 +296,7 @@ bool AudioSystem::PlaySound( AudioStream *streamPublic )
 	stream->midBuffer.interleavedBuffer = stream->midBufferAudio;
 	stream->outBuffer.interleavedBuffer = stream->outBufferAudio;
 
-	stream->inBuffer.format = stream->channels == 2 ? g_formatStereo : g_formatMono;
+	stream->inBuffer.format = inAudioFormat;
 	stream->midBuffer.format = g_formatStereo;
 	stream->outBuffer.format = g_formatStereo;
 
@@ -307,7 +307,7 @@ bool AudioSystem::PlaySound( AudioStream *streamPublic )
 
 void AudioSystem::FreeSound( AudioStream** streamPublic )
 {
-#if ENABLE_SOUND
+#if ENABLE_AUDIO
 	AudioStreamInternal* stream = (AudioStreamInternal*)*streamPublic;
 
 	if ( vec_contains(aStreams, stream) )
@@ -355,7 +355,7 @@ void AudioSystem::SetGlobalSpeed( float speed )
 
 void AudioSystem::Update( float frameTime )
 {
-#if ENABLE_SOUND
+#if ENABLE_AUDIO
 	// not really needed tbh
 	// SDL_PauseAudioDevice( aOutputDeviceID, aPaused );
 
@@ -364,17 +364,25 @@ void AudioSystem::Update( float frameTime )
 
 	unmixedBuffers.clear();
 
-	// this might work well for multithreading
-	for (int i = 0; i < aStreams.size(); i++)
-	{
-		if (aStreams[i]->paused)
-			continue;
+	int remainingAudio = SDL_GetQueuedAudioSize( aOutputDeviceID );
+	static int read = remainingAudio;
 
-		if ( !UpdateStream( aStreams[i] ) )
+	// if remaining audio is too low, update streams
+	// maybe a bad idea for new streams?
+	if ( remainingAudio < SOUND_BYTES * snd_buffer_size.GetFloat() )
+	{
+		// this might work well for multithreading
+		for (int i = 0; i < aStreams.size(); i++)
 		{
-			FreeSound( (AudioStream**)&aStreams[i] );
-			i--;
-			continue;
+			if (aStreams[i]->paused)
+				continue;
+
+			if ( !UpdateStream( aStreams[i] ) )
+			{
+				FreeSound( (AudioStream**)&aStreams[i] );
+				i--;
+				continue;
+			}
 		}
 	}
 
@@ -387,45 +395,17 @@ void AudioSystem::Update( float frameTime )
 }
 
 
-#define TEST_DIRECT_SOUND 1
+#if ENABLE_AUDIO
 
-
-#if ENABLE_SOUND
+CONVAR( snd_audio_stream_available, 2 );
 
 bool AudioSystem::UpdateStream( AudioStreamInternal* stream )
 {
-	// might cause issues as this is the global mixed output, idk, might be fine
-	int remainingAudio = SDL_GetQueuedAudioSize( aOutputDeviceID );
-	// int remainingAudio = SDL_AudioStreamAvailable( stream->convertStream );
-	int read = remainingAudio;
-
-	//gui->DebugMessage( 6, ("Remaining Audio In Buffer: " + std::to_string(remainingAudio)).c_str() );
-	gui->DebugMessage( 6, "Remaining Audio In Buffer: %d", remainingAudio );
-
-	if ( remainingAudio > aAudioSpec.samples * snd_audio_buffer_size.GetFloat() )
-		// goto HACK;
-		return true;
-
-	// needs to be twice the amount of fileBytes (idk why)
-	//float rawAudio[SOUND_BYTES * 2];
-	float rawAudio[SOUND_BYTES];
-
-	// int fileSamples = SOUND_BYTES;
-
-	// max buffer size
-	// int fileBytes = fileSamples * (stream->width * stream->channels);
-
-	// read = stream->codec->ReadStream( stream, SOUND_BYTES * (stream->width * stream->channels), rawAudio );
-	// int read = stream->codec->ReadStream( stream, SOUND_BYTES / 2, rawAudio );
-
-	// skipping ahead too far in stream?
-
-	//as-o9dia9i0
-	//int read2 = 0;
-	
-	//read = SDL_AudioStreamAvailable( stream->convertStream );
-	//if ( read == 0 )
+	int read = SDL_AudioStreamAvailable( stream->convertStream );
+	if ( read < SOUND_BYTES * snd_audio_stream_available.GetFloat() )
 	{
+		std::vector<float> rawAudio;
+
 		read = stream->codec->ReadStream( stream, SOUND_BYTES, rawAudio );
 
 		// should just put silence in the stream if this is true
@@ -434,91 +414,46 @@ bool AudioSystem::UpdateStream( AudioStreamInternal* stream )
 
 		if (read == 0)
 			return false;
-	}
-	//else
-	{
-		// halves the amount of audio?
-		//read = SDL_AudioStreamGet( stream->convertStream, rawAudio, SOUND_BYTES * 2 );
-		//read = read / 2;
-		//goto QUEUE;
-	}
 
-	//if ( stream->convertStream )
-	//if ( false )
-	{
-		if ( SDL_AudioStreamPut( stream->convertStream, rawAudio, read ) == -1 )
+		// NOTE: "read" NEEDS TO BE 4 TIMES THE AMOUNT FOR SOME REASON, no clue why
+		if ( SDL_AudioStreamPut( stream->convertStream, rawAudio.data(), read*4 ) == -1 )
 		{
 			apConsole->Print( "[AudioSystem] SDL_AudioStreamPut - Failed to put samples in stream: %s\n", SDL_GetError() );
 			return false;
 		}
+	}
 
-//HACK:
-		// this is in bytes, not samples!
-		//read = SDL_AudioStreamGet( stream->convertStream, rawAudio, read );
-		read = SDL_AudioStreamGet( stream->convertStream, rawAudio, read );
+	// this is in bytes, not samples!
+	std::vector<float> outAudio;
+	outAudio.resize( SOUND_BYTES );
+	//outAudio = rawAudio;
+	read = SDL_AudioStreamGet( stream->convertStream, outAudio.data(), SOUND_BYTES );
+	//read = SOUND_BYTES;
 
-		// bruh
-		//if ( read2 > aAudioSpec.samples * snd_audio_buffer_size.GetFloat() )
-		//	return true;
-		//
-		// uhhhh
-		//read2 = read2 / 2;
-		//
-		if (read == -1)
-		{
-			apConsole->Print( "[AudioSystem] SDL_AudioStreamGet - Failed to get converted data: %s\n", SDL_GetError() );
-			return false;
-		}
+	if (read == -1)
+	{
+		apConsole->Print( "[AudioSystem] SDL_AudioStreamGet - Failed to get converted data: %s\n", SDL_GetError() );
+		return false;
 	}
 
 	// apply stream volume
-	// for (uint32_t i = 0; i < read; i++) rawAudio[i] *= stream->vol;
-	//for (uint32_t i = 0; i < read; i++) rawAudio[i] *= stream->vol * snd_volume.GetFloat();
-	//for (uint32_t i = 0; i < read; i++) rawAudio[i] *= snd_volume.GetFloat();
-
-QUEUE:
-//#if TEST_DIRECT_SOUND
-#if 0
-	if ( SDL_QueueAudio( aOutputDeviceID, rawAudio, read ) == -1 )
-	{
-		apConsole->Print( "SDL_QueueAudio Error: %s\n", SDL_GetError() );
-		return false;
-	}
-#endif
-//#else
-
-	// breaks audio??
+	for (uint32_t i = 0; i < read; i++)
+		outAudio[i] *= stream->vol;
 
 	if ( stream->inWorld )
 	{
-		ApplySpatialEffects( stream, rawAudio, read );
+		ApplySpatialEffects( stream, outAudio.data(), read );
 	}
 	else
 	{
 		SDL_memset( stream->outBufferAudio, 0, sizeof( stream->outBufferAudio ) );
 
 		// copy over samples
-		// for (uint32_t i = 0; i < read; i+=2)
 		for (uint32_t i = 0; i < read; i++)
-		{
-			// stream->outBufferAudio[i] = rawAudio[i] * snd_volume_2d.GetFloat();
-			stream->outBufferAudio[i] = rawAudio[i];
-			//stream->outBufferAudio[i+1] = rawAudio[i] * snd_volume_2d.GetFloat();
-		}
+			stream->outBufferAudio[i] = outAudio[i] * snd_volume_2d.GetFloat();
 	}
 
 	unmixedBuffers.push_back(stream->outBuffer);
-
-#if TEST_DIRECT_SOUND
-	for (uint32_t i = 0; i < read; i++) unmixedBuffers[0].interleavedBuffer[i] *= snd_volume.GetFloat();
-
-	if ( SDL_QueueAudio( aOutputDeviceID, unmixedBuffers[0].interleavedBuffer, read ) == -1 )
-	{
-		apConsole->Print( "[AudioSystem] SDL_QueueAudio Error: %s\n", SDL_GetError() );
-		return false;
-	}
-
-#endif
 
 	stream->frame += read;
 	return true;
@@ -530,27 +465,17 @@ QUEUE:
 
 bool AudioSystem::MixAudio()
 {
-#if 1 // TEST_DIRECT_SOUND
-	return true;
-#endif
-
 	if (!unmixedBuffers.size())
 		return true;
 
-#if 0
-	iplMixAudioBuffers( unmixedBuffers.size(), &unmixedBuffers[0], mixBufferContext );
+	iplMixAudioBuffers( unmixedBuffers.size(), unmixedBuffers.data(), mixBufferContext );
 
-#if USE_MASTER_STREAM
-	if ( SDL_AudioStreamPut( aMasterStream, mixBufferContext.interleavedBuffer, SOUND_BYTES ) == -1 )
-#endif
-#else
 #if USE_MASTER_STREAM
 	if ( SDL_AudioStreamPut( aMasterStream, unmixedBuffers[0].interleavedBuffer, SOUND_BYTES ) == -1 )
 	{
 		apConsole->Print( "SDL_AudioStreamPut - Failed to put samples in stream: %s\n", SDL_GetError() );
 		return false;
 	}
-#endif
 #endif
 
 	return true;
@@ -559,15 +484,6 @@ bool AudioSystem::MixAudio()
 
 bool AudioSystem::QueueAudio()
 {
-#if TEST_DIRECT_SOUND
-	return true;
-#endif
-
-	static float* converted = new float[SOUND_BYTES * 2];
-
-	// wipe any previous data
-	SDL_memset( converted, 0, sizeof( converted ) );
-
 #if USE_MASTER_STREAM
 	// this is in bytes, not samples!
 	int gotten = SDL_AudioStreamGet( aMasterStream, converted, SOUND_BYTES );
@@ -600,12 +516,10 @@ bool AudioSystem::QueueAudio()
 	// apply global volume to stream
 	for (uint32_t i = 0; i < SOUND_BYTES; i++)
 	{
-		//mixBufferContext.interleavedBuffer[i] *= snd_volume.GetFloat();
-		//unmixedBuffers[0].interleavedBuffer[i] *= snd_volume.GetFloat();
+		mixBufferContext.interleavedBuffer[i] *= snd_volume.GetFloat();
 	}
 
-	//if ( SDL_QueueAudio( aOutputDeviceID, mixBufferContext.interleavedBuffer, SOUND_BYTES ) == -1 )
-	if ( SDL_QueueAudio( aOutputDeviceID, unmixedBuffers[0].interleavedBuffer, SOUND_BYTES ) == -1 )
+	if ( SDL_QueueAudio( aOutputDeviceID, mixBufferContext.interleavedBuffer, SOUND_BYTES ) == -1 )
 	{
 		apConsole->Print( "[AudioSystem] SDL_QueueAudio Error: %s\n", SDL_GetError() );
 		return false;
@@ -651,12 +565,18 @@ int AudioSystem::ApplySpatialEffects( AudioStreamInternal* stream, float* data, 
 	IPLDirectSoundPath soundPath = {};
 	soundPath.distanceAttenuation = calculateDistanceAttenutation( aListenerPos, stream->pos, stream->radius, stream->falloff );
 
+	IPLVector3 direction = toPhonon(aListenerRot * glm::normalize(stream->pos - aListenerPos));
+	// uh
+	//soundPath.direction = direction;
+
 	// sound is too far away to hear
 	if ( soundPath.distanceAttenuation == 0.f )
 		return 0;
 
 	IPLDirectSoundEffectOptions directSoundOptions = {IPL_TRUE, IPL_FALSE, IPL_FALSE, IPL_DIRECTOCCLUSION_NONE};
 
+	// TODO: split each effect up into it's own function in the audio system
+	// also this isn't working at the moment so that's cool
 	iplApplyDirectSoundEffect(
 		stream->directSoundEffect,
 		stream->inBuffer,
@@ -665,9 +585,9 @@ int AudioSystem::ApplySpatialEffects( AudioStreamInternal* stream, float* data, 
 		stream->midBuffer
 	);
 
-	IPLVector3 direction = toPhonon(aListenerRot * glm::normalize(stream->pos - aListenerPos));
+	//iplGetDirectSoundPath
 
-	gui->DebugMessage( 4, "Sound Dir: %s", Vec2Str({direction.x, direction.y, direction.z}).c_str() );
+	gui->DebugMessage( 11, "Sound Dir: %s", Vec2Str({direction.x, direction.y, direction.z}).c_str() );
 
 	// now, why does this sound so glitchy?
 	iplApplyBinauralEffect(

@@ -43,13 +43,15 @@ bool CodecWav::OpenStream( const char* soundPath, AudioStream *stream )
 }
 
 
-long CodecWav::ReadStream( AudioStream *stream, size_t size, float* data )
+long CodecWav::ReadStream( AudioStream *stream, size_t size, std::vector<float> &data )
 {
     WavFile* wav = (WavFile*)stream->data;
 
-    size_t ret = wav_read(wav, data, size);
+    data.resize(size);
+    size_t ret = wav_read(wav, data.data(), size);
 
-    return ret;
+    // HACK: maybe not a hack? idk
+    return stream->channels == 2 ? ret : ret / 2;
 }
 
 

@@ -63,7 +63,7 @@ public:
 	virtual bool            CheckExt( const char* ext ) = 0;
 
 	virtual bool            OpenStream( const char* soundPath, AudioStream *stream ) = 0;
-	virtual long            ReadStream( AudioStream *stream, size_t size, float* data ) = 0;
+	virtual long            ReadStream( AudioStream *stream, size_t size, std::vector<float> &data ) = 0;
 	virtual void            CloseStream( AudioStream *stream ) = 0;
 
 	virtual void            SetAudioSystem( BaseAudioSystem* system ) { apAudio = system; };

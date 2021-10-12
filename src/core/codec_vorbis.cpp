@@ -14,6 +14,8 @@ struct CodecVorbisData
 {
     OggVorbis_File* oggFile = nullptr;
     FILE* file = nullptr;
+    float **buffer = nullptr;
+    long result = 0;
 };
 
 
@@ -76,72 +78,132 @@ bool CodecVorbis::OpenStream( const char* soundPath, AudioStream *stream )
     CodecVorbisData* vorbisData = MALLOC_NEW( CodecVorbisData );
     vorbisData->file = soundFileHandle;
     vorbisData->oggFile = oggFile;
+    vorbisData->buffer = nullptr;
+    vorbisData->result = 0;
 
     stream->data = (void*)vorbisData;
     stream->rate = ovfInfo->rate;
     stream->channels = ovfInfo->channels;
     stream->bits = 16;
     stream->width = 2;
-    stream->frameSize = stream->channels * 32;  // Float 32
+    //stream->frameSize = stream->channels * 32;  // Float 32
+    //stream->format = AUDIO_S16;
 
     return true;
 }
 
 
-long CodecVorbis::ReadStream( AudioStream *stream, size_t size, float* data )
+static void
+vorbis_interleave(float *dest, const float *const*src,
+		  unsigned nframes, unsigned channels)
 {
-    OggVorbis_File *oggFile = (OggVorbis_File*)((CodecVorbisData*)stream->data)->oggFile;
-    // static int currentSection;
-    int bitStream;
+	for (const float *const*src_end = src + channels;
+	     src != src_end; ++src, ++dest) {
+		float *d = dest;
+		for (const float *s = *src, *s_end = s + nframes;
+		     s != s_end; ++s, d += channels)
+			*d = *s;
+	}
+}
+
+
+//extern size_t SOUND_BYTES;
+
+
+#define NQR_INT16_MAX 32767.f
+#define int16_to_float32(s) ((float) (s) / NQR_INT16_MAX)
+#define float32_to_int16(s) ((float) (s) * NQR_INT16_MAX)
+
+
+CONVAR( vorbis_packet_size, 1024 );
+
+
+long CodecVorbis::ReadPacket( AudioStream *stream, std::vector<float> &data )
+{
+    CodecVorbisData *vorbisData = (CodecVorbisData*)stream->data;
+    OggVorbis_File *oggFile = vorbisData->oggFile;
+
+    // AAAA
+    static int bitStream = 0;
 
     size_t totalFramesRead = 0;
 
-    //size_t remain = size; // stream->channels;
-    size_t remain = size / stream->channels;
+    long result;
+    float** buffer = nullptr;
+
+    result = ov_read_float(oggFile, &buffer, vorbis_packet_size, &bitStream);
+
+    if (result == 0)
+        return totalFramesRead;  // EOF
+
+    else if (result < 0)
+        return result;  // error in the stream.
+
+    for (int i = 0; i < result; ++i)
+    {
+        for(int ch = 0; ch < stream->channels; ch++)
+        {
+            data.push_back(buffer[ch][i]);
+            totalFramesRead++;
+        }
+    }
+
+    return totalFramesRead;
+}
+
+
+long CodecVorbis::ReadStream( AudioStream *stream, size_t size, std::vector<float> &data )
+{
+    CodecVorbisData *vorbisData = (CodecVorbisData*)stream->data;
+    OggVorbis_File *oggFile = vorbisData->oggFile;
+
+    //float buffer[8192];
+    //const int frames_per_buffer = 8192 / stream->channels;
+   // const unsigned frame_size = sizeof(buffer[0]) * stream->channels;
+
+    //long &result = vorbisData->result;
+    // static int currentSection;
+    int bitStream = 0;
+
+    size_t totalFramesRead = 0;
+
+    //size_t remain = size;
+    size_t remain = size * stream->channels;
+    //size_t remain = size / stream->channels;
     long result;
     float** buffer = nullptr;
 
     while(1)
     {
-        // uhhhh what if we have more than needed
         result = ov_read_float(oggFile, &buffer, remain, &bitStream);
-        if (result == 0)
-        {
-            return totalFramesRead;  // EOF
-        }
-        else if (result < 0)
-        {
-            return result;  // error in the stream.
-        }
 
-        remain -= result;
-        // totalFramesRead += result;
+        if (result == 0)
+            return totalFramesRead;  // EOF
+
+        else if (result < 0)
+            return result;  // error in the stream.
 
         // for (int i = 0; i < count; ++i)
         for (int i = 0; i < result; ++i)
         {
             for(int ch = 0; ch < stream->channels; ch++)
             {
-                data[totalFramesRead] = buffer[ch][i];
+                //data[totalFramesRead] = buffer[ch][i];
+                data.push_back(buffer[ch][i]);
                 totalFramesRead++;
+
+                if (remain != 0)
+                    remain--;
+                else
+                    Print("WHAT!!!\n");
             }
         }
 
-        if (remain <= 0)
+        if (totalFramesRead >= size)
             break;
-
-        // buffer += result;
     }
 
-    /*for (int ch = 0; ch < stream->channels; ch++)
-    {
-        for(int i = 0; i < result; ++i)
-        {
-            data[totalFramesRead] = buffer[ch][i];
-            totalFramesRead++;
-        }
-    }*/
-
+    // remain doesn't have to be 0???
     return totalFramesRead;
 }
 
