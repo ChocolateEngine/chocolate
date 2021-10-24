@@ -60,6 +60,7 @@ public:
 	bool 			aNoDraw = true;
 	Transform		aTransform;
 	Meshes			aMeshes{  };
+	std::string     aPath;
 
 	inline UniformDescriptor&       GetUniformData( size_t mesh )        { return aMeshes[mesh]->GetUniformData(); }
 	inline VkDescriptorSetLayout    GetUniformLayout( size_t mesh )      { return aMeshes[mesh]->GetUniformLayout(); }

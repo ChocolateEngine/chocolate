@@ -240,17 +240,46 @@ void Renderer::DestroySwapChain(  )
 void Renderer::InitModel( ModelData &srModelData, const String &srModelPath, const String &srTexturePath )
 {
 	srModelData.Init(  );
+	srModelData.aPath = srModelPath;
 	std::vector< Mesh* > meshes;
 
-	if ( srModelPath.substr(srModelPath.size() - 4) == ".obj" )
+	ModelData* dupeModel = nullptr;
+
+	// shitty cache system
+	for ( const auto& modelData: aModels )
 	{
-		LoadObj( srModelPath, meshes );
+		if (modelData->aPath == srModelPath )
+		{
+			dupeModel = modelData;
+			break;
+		}
 	}
-	else if ( srModelPath.substr(srModelPath.size() - 4) == ".glb" || srModelPath.substr(srModelPath.size() - 5) == ".gltf" )
+
+	if ( dupeModel )  // copy over stuf from the other loaded model
 	{
-		//LoadGltf( srModelPath, meshes );
-		Print( "[Renderer] GLTF currently not supported, on TODO list\n" );
-		return;
+		meshes.resize( dupeModel->aMeshes.size() );
+
+		for (std::size_t i = 0; i < meshes.size(); ++i)
+		{
+			meshes[i] = new Mesh;
+			meshes[i]->Init();
+			meshes[i]->apMaterial = dupeModel->aMeshes[i]->apMaterial;
+			meshes[i]->aIndices = dupeModel->aMeshes[i]->aIndices;
+			meshes[i]->aVertices = dupeModel->aMeshes[i]->aVertices;
+		}
+	}
+	else  // we haven't loaded this model yet
+	{
+		if ( srModelPath.substr(srModelPath.size() - 4) == ".obj" )
+		{
+			LoadObj( srModelPath, meshes );
+		}
+		else if ( srModelPath.substr(srModelPath.size() - 4) == ".glb" || srModelPath.substr(srModelPath.size() - 5) == ".gltf" )
+		{
+			//LoadGltf( srModelPath, meshes );
+			Print( "[Renderer] GLTF currently not supported, on TODO list\n" );
+			return;
+		}
 	}
 
 	// TODO: load in an error model here somehow?
@@ -262,7 +291,9 @@ void Renderer::InitModel( ModelData &srModelData, const String &srModelPath, con
 		Mesh* mesh = meshes[i];
 
 		mesh->apMaterial->apShader = apMaterialSystem->GetShader( "basic_3d" );
-		mesh->apMaterial->apDiffuse = apMaterialSystem->CreateTexture( mesh->apMaterial, mesh->apMaterial->aDiffusePath.string() );
+
+		if ( !dupeModel )
+			mesh->apMaterial->apDiffuse = apMaterialSystem->CreateTexture( mesh->apMaterial, mesh->apMaterial->aDiffusePath.string() );
 
 		apMaterialSystem->CreateVertexBuffer( mesh );
 		apMaterialSystem->CreateIndexBuffer( mesh );
