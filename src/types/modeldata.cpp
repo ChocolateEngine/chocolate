@@ -86,8 +86,9 @@ void ModelData::FreeOldResources(  )
 	}
 }
 
+
 /* Frees all memory used by model.  */
-ModelData::~ModelData(  )
+void ModelData::Destroy(  )
 {
 	FreeOldResources(  );
 
@@ -100,3 +101,4 @@ ModelData::~ModelData(  )
 		vkFreeMemory( DEVICE, mesh.aIndexBufferMem, NULL );
 	}
 }
+
