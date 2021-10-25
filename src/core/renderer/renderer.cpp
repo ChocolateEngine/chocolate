@@ -420,7 +420,7 @@ void Renderer::Cleanup(  )
 
 Renderer::Renderer(  ) :
 	BaseSystem(  ),
-	aView(0, 0, 640, 480, 0.1, 100, 90)
+	aView(0, 0, 640, 480, 0.1, 1000, 90)
 {
 	aSystemType = RENDERER_C;
 }
@@ -434,7 +434,7 @@ void Renderer::Init(  )
 	uint32_t w, h;
 	GetWindowSize( &w, &h );
 
-	aView.Set(0, 0, w, h, 0.1, 100, 90);
+	aView.Set(0, 0, w, h, 0.1, 1000, 90);
 
 	Transform transform = {};
 	aView.viewMatrix = transform.ToViewMatrixZ(  );
