@@ -76,6 +76,8 @@ public:
 	/* Frees the memory used by objects outdated by a new swapchain state.  */
 	void        FreeOldResources(  );
 	/* Frees all memory used by model.  */
-			~ModelData(  );
+	void        Destroy(  );
+
+				~ModelData(  ) {}
 };
 
