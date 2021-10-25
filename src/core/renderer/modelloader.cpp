@@ -31,6 +31,8 @@ std::string GetBaseDir( const std::string &srPath )
 // TODO: use std::filesystem::path
 void LoadObj( const std::string &srPath, std::vector<Mesh*> &meshes )
 {
+	auto startTime = std::chrono::high_resolution_clock::now(  );
+
 	tinyobj::ObjReader reader;
 	tinyobj::ObjReaderConfig reader_config;
 
@@ -46,7 +48,7 @@ void LoadObj( const std::string &srPath, std::vector<Mesh*> &meshes )
 		return;
 	}
 
-	Print( "Parsed Obj: %s\n", srPath.c_str() );
+	startTime = std::chrono::high_resolution_clock::now(  );
 
 	if ( !reader.Warning().empty() )
 		Print( "%s\n", reader.Warning().c_str() );
@@ -63,6 +65,8 @@ void LoadObj( const std::string &srPath, std::vector<Mesh*> &meshes )
 		meshes[i]->Init();
 		meshes[i]->apMaterial = materialsystem->CreateMaterial();
 	}
+
+	assert(objMaterials.size() > 0);
 
 	for (std::size_t i = 0; i < objMaterials.size(); ++i)
 	{
@@ -144,14 +148,12 @@ void LoadObj( const std::string &srPath, std::vector<Mesh*> &meshes )
 
 				#undef ToVec3
 
-				mesh.aMinSize = glm::min( pos, mesh.aMinSize );
-				mesh.aMaxSize = glm::max( pos, mesh.aMaxSize );
-
 				bool uniqueVertex = true;
 				uint32_t newIndex = static_cast<uint32_t>(mesh.aVertices.size());
 				assert(mesh.aVertices.size() < std::numeric_limits<uint32_t>::max());
 
 				// Is this a duplicate vertex?
+#if SLOW_DUP_VERTEX_CHECK
 				for (std::size_t i = 0; i < mesh.aVertices.size(); ++i)
 				{
 					const vertex_3d_t& vertex = mesh.aVertices[i];
@@ -163,6 +165,7 @@ void LoadObj( const std::string &srPath, std::vector<Mesh*> &meshes )
 						break;
 					}
 				}
+#endif
 
 				if ( uniqueVertex )
 				{
@@ -171,6 +174,9 @@ void LoadObj( const std::string &srPath, std::vector<Mesh*> &meshes )
 					vert.normal = norm;
 					vert.texCoord = uv;  // change to UV?
 					vert.color = col;
+
+					mesh.aMinSize = glm::min( pos, mesh.aMinSize );
+					mesh.aMaxSize = glm::max( pos, mesh.aMaxSize );
 				}
 
 				mesh.aIndices.emplace_back(newIndex);
@@ -179,6 +185,11 @@ void LoadObj( const std::string &srPath, std::vector<Mesh*> &meshes )
 			indexOffset += faceVertexCount;
 		}
 	}
+
+	auto currentTime = std::chrono::high_resolution_clock::now();
+	float time = std::chrono::duration< float, std::chrono::seconds::period >( currentTime - startTime ).count(  );
+
+	Print( "Parsed Obj in %.6f sec: %s\n", time, srPath.c_str() );
 }
 
 
