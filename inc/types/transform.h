@@ -30,7 +30,7 @@ inline glm::quat AngToQuat( const glm::vec3& ang )
 inline glm::vec3 QuatToAng( const glm::quat& quat )
 {
 	glm::vec3 ang = glm::eulerAngles( quat );
-	return ang; // glm::degrees(
+	return ang;
 }
 
 
@@ -42,13 +42,14 @@ struct Transform
 
 	inline glm::mat4 ToMatrix( bool useScale = true ) const
 	{
-		glm::mat4 translation = glm::translate( aPos );
-		glm::mat4 rotation = PitchYawRoll( aAng );
+		glm::mat4 matrix = glm::translate( aPos );
 
-		if ( useScale )
-			return translation * rotation * glm::scale( aScale );
-		else
-			return translation * rotation;
+		matrix *= glm::rotate( glm::radians(aAng[YAW]), glm::vec3(0, 0, 1) );
+		//matrix *= glm::rotate( glm::radians(-aAng[PITCH]), glm::vec3(0, 1, 0) );
+		matrix *= glm::rotate( glm::radians(aAng[PITCH]), glm::vec3(0, 1, 0) );
+		matrix *= glm::rotate( glm::radians(aAng[ROLL]), glm::vec3(1, 0, 0) );
+
+		return ( useScale ) ? matrix * glm::scale( aScale ) : matrix;
 	}
 
 	#define VIEWMAT_ANG( axis ) glm::vec3(viewMatrix[0][axis], viewMatrix[1][axis], viewMatrix[2][axis])
