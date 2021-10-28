@@ -73,7 +73,7 @@ void ModelData::FreeOldResources(  )
 	/* Ugly, fix later.  */
 	for ( uint32_t mesh = 0; mesh < aMeshes.size(  ); ++mesh )
 	{
-		aMesh[mesh]->FreeOldResources(  );
+		aMeshes[mesh]->FreeOldResources(  );
 	}
 }
 

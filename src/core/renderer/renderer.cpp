@@ -294,15 +294,11 @@ void Renderer::InitModel( ModelData &srModelData, const String &srModelPath, con
 	{
 		Mesh* mesh = meshes[i];
 
-		//mesh->apModel = &srModelData;
-
 		if ( !dupeModel )
 		{
 			mesh->apMaterial->apShader = apMaterialSystem->GetShader( "basic_3d" );
 			mesh->apMaterial->apDiffuse = apMaterialSystem->CreateTexture( mesh->apMaterial, mesh->apMaterial->aDiffusePath.string() );
 		}
-
-		mesh->apMaterial->aMeshes.push_back( mesh );
 
 		apMaterialSystem->CreateVertexBuffer( mesh );
 
