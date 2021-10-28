@@ -47,7 +47,8 @@ config
 			"_ARM_"     [$ARM$]
 			
 			"NDEBUG=1"  [$RELEASE$]
-			"_DEBUG=1"  [$DEBUG$]
+			
+			"GLM_FORCE_XYZW_ONLY=GLM_ENABLE"
 		}
 		
 		defines [$MSVC$]
@@ -64,12 +65,12 @@ config
 		
 		options [$MSVC$]
 		{
-			"/Od" "/MDd" "/ZI"  [$DEBUG$]
-			//"/Od" "/MD" "/ZI"  [$DEBUG$]
+			"/Od" "/MD" "/ZI"   [$DEBUG$]
 			"/O2" "/MD"         [$RELEASE$]
 			
 			"/MP" // multi-threaded compilation
 			"/permissive-" // make MSVC very compliant
+			"/Zc:__cplusplus" // make MSVC very compliant
 		}
 	}
 	

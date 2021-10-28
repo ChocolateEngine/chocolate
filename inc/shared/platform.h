@@ -32,7 +32,7 @@
 	#define LOAD_FUNC dlsym
 	#define EXT_DLL ".so"
 
-	#define DLL_EXPORT
+	#define DLL_EXPORT __attribute__((__visibility__("default")))
 
 #else
 	#error "Library loading not setup for this platform"

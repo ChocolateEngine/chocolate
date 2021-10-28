@@ -8,11 +8,13 @@ TODO: move this to graphics level abstraction so the game can use this
 #pragma once
 
 #include "../../types/databuffer.hh"
+#include "../../shared/imaterialsystem.h"
 #include "shaders.h"
 #include "allocator.h"
 #include "material.h"
 
-class MaterialSystem
+
+class MaterialSystem: public IMaterialSystem
 {
 public:
 
@@ -23,23 +25,33 @@ public:
 
 	void                        Init();
 
-	Material*	                CreateMaterial();
-	void                        DeleteMaterial( Material* mat );
+	Material*	                CreateMaterial() override;
+	void                        DeleteMaterial( Material* mat ) override;
 
-	Material*	                GetErrorMaterial() { return apErrorMaterial; }
+	Material*	                GetErrorMaterial() override { return apErrorMaterial; }
 
 	// ideally this shouldn't need a path, should really be reworked to be closer to thermite, more flexible design
 	// also this probably shouldn't use a shader for a parameter
-	TextureDescriptor*			CreateTexture( Material* material, const std::string path );
+	TextureDescriptor*			CreateTexture( Material* material, const std::string path ) override;
 
 	/* Create a Vertex and Index buffer for a Mesh. */
-	void                        CreateVertexBuffer( Mesh* mesh );
-	void                        CreateIndexBuffer( Mesh* mesh );
+	void                        CreateVertexBuffer( IMesh* mesh ) override;
+	void                        CreateIndexBuffer( IMesh* mesh ) override;
+
+	/* Free a Vertex and Index buffer for a Mesh. */
+	void                        FreeVertexBuffer( IMesh* mesh ) override;
+	void                        FreeIndexBuffer( IMesh* mesh ) override;
 
 	void                        ReInitSwapChain();
 	void                        DestroySwapChain();
 
-	BaseShader*                 GetShader( const std::string& name );
+	// BLECH
+	void                        InitUniformBuffer( IMesh* mesh );
+
+	inline UniformDescriptor&       GetUniformData( size_t id )            { return aUniformDataMap[id]; }
+	inline VkDescriptorSetLayout    GetUniformLayout( size_t id )          { return aUniformLayoutMap[id]; }
+
+	BaseShader*                 GetShader( const std::string& name ) override;
 
 	template <typename T>
 	BaseShader* CreateShader( const std::string& name )
@@ -59,12 +71,33 @@ public:
 		return shader;
 	}
 
+	// Call this on renderable creation to assign it an Id
+	void                        RegisterRenderable( BaseRenderable* renderable ) override;
+
+	// Add a Renderable to be drawn next frame, list is cleared after drawing
+	void                        AddRenderable( BaseRenderable* renderable ) override;
+
+	// Get the Renderable ID
+	size_t                      GetRenderableID( BaseRenderable* renderable ) override;
+
+	// Draw a renderable
+	void                        DrawRenderable( BaseRenderable* renderable, VkCommandBuffer c, uint32_t commandBufferIndex );
+
+	// This really should be part of the shader
+	void                        DrawMesh( IMesh* mesh, VkCommandBuffer c, uint32_t commandBufferIndex );
+	// void                        DrawSprite( IMesh* mesh, VkCommandBuffer c, uint32_t commandBufferIndex );
+
 private:
 	// this REALLY should be a global at this point
 	// we don't need to be passing this around to like everything in here
 	Renderer* apRenderer = nullptr;
 
-	std::unordered_map< std::string, BaseShader* > aShaders;
+	std::unordered_map< std::string, BaseShader* >          aShaders;
+
+	std::unordered_map< size_t, UniformDescriptor >         aUniformDataMap;
+	std::unordered_map< size_t, VkDescriptorSetLayout >     aUniformLayoutMap;
+
+	std::vector< BaseRenderable* > aDrawList;
 
 	std::vector< Material* > aMaterials;
 	Material* apErrorMaterial = nullptr;

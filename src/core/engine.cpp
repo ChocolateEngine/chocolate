@@ -143,7 +143,8 @@ void Engine::UpdateSystems(  )
 	// rendering is actually half the framerate for some reason, odd
 	if ( en_fps_max.GetFloat() > 0.f )
 	{
-		float maxFps = glm::clamp( en_fps_max.GetFloat(), 20.f, 5000.f );
+		// HACK: fps is doubled for some reason, so multiple by 2
+		float maxFps = glm::clamp( en_fps_max.GetFloat() * 2.f, 20.f, 5000.f );
 
 		// check if we still have more than 2ms till next frame and if so, wait for "1ms"
 		float minFrameTime = 1.0f / maxFps;

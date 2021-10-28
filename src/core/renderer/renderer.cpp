@@ -35,8 +35,11 @@ draw to the screen.
 CONVAR( r_showDrawCalls, 1 );
 
 size_t gModelDrawCalls = 0;
+size_t gVertsDrawn = 0;
 
 extern GuiSystem* gui;
+
+Renderer* renderer = nullptr;
 
 void Renderer::InitCommands(  )
 {
@@ -112,14 +115,14 @@ void Renderer::InitCommandBuffers(  )
 
 		vkCmdBeginRenderPass( aCommandBuffers[ i ], &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE );
 
-		for ( auto& model : aModels )
-		{
-			if ( model->aNoDraw )
-				continue;
+		// IDEA: make a batched mesh vector so that way we can bind everything needed, and then just draw draw draw draw
 
-			model->Draw( aCommandBuffers[ i ], i );
+		for ( auto& renderable : apMaterialSystem->aDrawList )
+		{
+			apMaterialSystem->DrawRenderable( renderable, aCommandBuffers[i], i );
 		}
 
+		// TODO: make this a BaseRenderable
 		for ( auto& sprite : aSprites )
 		{
 			sprite->Bind( aCommandBuffers[ i ], i );
@@ -262,6 +265,7 @@ void Renderer::InitModel( ModelData &srModelData, const String &srModelPath, con
 		for (std::size_t i = 0; i < meshes.size(); ++i)
 		{
 			meshes[i] = new Mesh;
+			apMaterialSystem->RegisterRenderable( meshes[i] );
 			meshes[i]->Init();
 			meshes[i]->apMaterial = dupeModel->aMeshes[i]->apMaterial;
 			meshes[i]->aIndices = dupeModel->aMeshes[i]->aIndices;
@@ -290,15 +294,23 @@ void Renderer::InitModel( ModelData &srModelData, const String &srModelPath, con
 	{
 		Mesh* mesh = meshes[i];
 
-		mesh->apMaterial->apShader = apMaterialSystem->GetShader( "basic_3d" );
+		//mesh->apModel = &srModelData;
 
 		if ( !dupeModel )
+		{
+			mesh->apMaterial->apShader = apMaterialSystem->GetShader( "basic_3d" );
 			mesh->apMaterial->apDiffuse = apMaterialSystem->CreateTexture( mesh->apMaterial, mesh->apMaterial->aDiffusePath.string() );
+		}
+
+		mesh->apMaterial->aMeshes.push_back( mesh );
 
 		apMaterialSystem->CreateVertexBuffer( mesh );
-		apMaterialSystem->CreateIndexBuffer( mesh );
 
-		mesh->aRadius = glm::distance( mesh->aMinSize, mesh->aMaxSize ) / 2.0f;
+		// if the vertex count is different than the index count, use the index buffer
+		if ( mesh->aVertices.size() != mesh->aIndices.size() )
+			apMaterialSystem->CreateIndexBuffer( mesh );
+
+		//mesh->aRadius = glm::distance( mesh->aMinSize, mesh->aMaxSize ) / 2.0f;
 
 		srModelData.aMeshes.push_back( mesh );
 
@@ -330,10 +342,14 @@ void Renderer::DrawFrame(  )
 		gui->InsertDebugMessage( 0, "Model Draw Calls: %u (%u / %u Command Buffers)",
 								gModelDrawCalls / aCommandBuffers.size(), gModelDrawCalls, aCommandBuffers.size() );
 
-		gui->InsertDebugMessage( 1, "" );  // spacer
+		gui->InsertDebugMessage( 1, "Vertices Drawn: %u (%u / %u Command Buffers)",
+								gVertsDrawn / aCommandBuffers.size(), gVertsDrawn, aCommandBuffers.size() );
+
+		gui->InsertDebugMessage( 2, "" );  // spacer
 	}
 
 	gModelDrawCalls = 0;
+	gVertsDrawn = 0;
 	
 	vkWaitForFences( DEVICE, 1, &aInFlightFences[ aCurrentFrame ], VK_TRUE, UINT64_MAX );
 	
@@ -353,13 +369,27 @@ void Renderer::DrawFrame(  )
 	
 	aImagesInFlight[ imageIndex ] = aInFlightFences[ aCurrentFrame ];
 
-	for ( auto& model : aModels )
+	for ( auto& renderable : apMaterialSystem->aDrawList )
 	{
+		if ( renderable->GetShader()->UsesUniformBuffers() )
+			renderable->GetShader()->UpdateUniformBuffers( imageIndex, renderable );
+	}
+
+	apMaterialSystem->aDrawList.clear();
+
+	/*for ( auto& model : aModels )
+	{
+		if ( model->aNoDraw )
+			continue;
+
 		for ( int i = 0; i < model->aMeshes.size(); i++ )
 		{
+			if ( model->aMeshes[i]->aNoDraw )
+				continue;
+
 			model->aMeshes[i]->GetShader()->UpdateUniformBuffers( imageIndex, *model, model->aMeshes[i] );
 		}
-	}
+	}*/
 
 	VkSubmitInfo submitInfo{  };
 	submitInfo.sType 			= VK_STRUCTURE_TYPE_SUBMIT_INFO;
@@ -422,6 +452,7 @@ Renderer::Renderer(  ) :
 	BaseSystem(  ),
 	aView(0, 0, 640, 480, 0.1, 1000, 90)
 {
+	renderer = this;
 	aSystemType = RENDERER_C;
 }
 

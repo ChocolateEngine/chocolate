@@ -85,8 +85,13 @@ BaseSystem::BaseSystem(  )
 
 }
 
+extern Console* console;
+
 void BaseSystem::Init(  )
 {
+	// TODO: move this later
+	console = apConsole;
+
 	InitCommands(  );
 	InitConsoleCommands(  );
 	InitSubsystems(  );

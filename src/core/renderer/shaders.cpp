@@ -67,17 +67,18 @@ void Basic3D::ReInit()
 	gPipelineBuilder.Queue( &aPipeline, &aPipelineLayout, &aSetLayouts, pVShader, pFShader, 0 );
 }
 
-void Basic3D::UpdateUniformBuffers( uint32_t sCurrentImage, ModelData &srModelData, Mesh* srMesh )
+// void Basic3D::UpdateUniformBuffers( uint32_t sCurrentImage, ModelData &srModelData, Mesh* srMesh )
+void Basic3D::UpdateUniformBuffers( uint32_t sCurrentImage, BaseRenderable* spRenderable )
 {
 	ubo_3d_t ubo{  };
 
-	ubo.model = srModelData.aTransform.ToMatrix(  );
+	ubo.model = spRenderable->GetModelMatrix(  );
 	ubo.view  = apRenderer->aView.viewMatrix;
 	ubo.proj  = apRenderer->aView.GetProjection(  );
 
 	void* data;
-	vkMapMemory( DEVICE, srMesh->GetUniformData().aMem[ sCurrentImage ], 0, sizeof( ubo ), 0, &data );
+	vkMapMemory( DEVICE, apMaterialSystem->GetUniformData( spRenderable->GetID() ).aMem[ sCurrentImage ], 0, sizeof( ubo ), 0, &data );
 	memcpy( data, &ubo, sizeof( ubo ) );
-	vkUnmapMemory( DEVICE, srMesh->GetUniformData().aMem[ sCurrentImage ] );
+	vkUnmapMemory( DEVICE, apMaterialSystem->GetUniformData( spRenderable->GetID() ).aMem[ sCurrentImage ] );
 }
 
