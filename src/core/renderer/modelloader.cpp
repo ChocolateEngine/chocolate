@@ -62,6 +62,7 @@ void LoadObj( const std::string &srPath, std::vector<Mesh*> &meshes )
 	for (std::size_t i = 0; i < meshes.size(); ++i)
 	{
 		meshes[i] = new Mesh;
+		materialsystem->RegisterRenderable( meshes[i] );
 		meshes[i]->Init();
 		meshes[i]->apMaterial = materialsystem->CreateMaterial();
 	}
@@ -90,6 +91,8 @@ void LoadObj( const std::string &srPath, std::vector<Mesh*> &meshes )
 				material.aNormalPath = baseDir / material.aNormalPath;
 		}
 	}
+
+	std::unordered_map< vertex_3d_t, uint32_t > vertIndexes;
 
 	for (std::size_t shapeIndex = 0; shapeIndex < objShapes.size(); ++shapeIndex)
 	{
@@ -142,7 +145,7 @@ void LoadObj( const std::string &srPath, std::vector<Mesh*> &meshes )
 					uv = {texcoord.x, 1.0f - texcoord.y};
 				}
 
-				ToVec3( col, objAttrib.colors[colStride * static_cast<int>(idx.vertex_index)] );
+				ToVec3( col, objAttrib.colors[colStride * idx.vertex_index] );
 				//const tinyobj_vec3& color = reinterpret_cast<const tinyobj_vec3&>(objAttrib.colors[colStride * static_cast<std::size_t>(idx.vertex_index)]);
 				//vColor = {color.x, color.y, color.z, /*1.0f*/ };
 
@@ -152,33 +155,30 @@ void LoadObj( const std::string &srPath, std::vector<Mesh*> &meshes )
 				uint32_t newIndex = static_cast<uint32_t>(mesh.aVertices.size());
 				assert(mesh.aVertices.size() < std::numeric_limits<uint32_t>::max());
 
-				// Is this a duplicate vertex?
-#if SLOW_DUP_VERTEX_CHECK
-				for (std::size_t i = 0; i < mesh.aVertices.size(); ++i)
-				{
-					const vertex_3d_t& vertex = mesh.aVertices[i];
+				vertex_3d_t vert;
 
-					if ( vertex.pos == pos && vertex.normal == norm && vertex.texCoord == uv && vertex.color == col )
-					{
-						uniqueVertex = false;
-						newIndex = static_cast<uint32_t>(i);
-						break;
-					}
+				vert.pos = pos;
+				vert.normal = norm;
+				vert.texCoord = uv;
+				vert.color = col;
+
+				auto iterSavedIndex = vertIndexes.find(vert);
+
+				// Is this a duplicate vertex?
+				if ( iterSavedIndex != vertIndexes.end() )
+				{
+					uniqueVertex = false;
+					newIndex = iterSavedIndex->second;
 				}
-#endif
 
 				if ( uniqueVertex )
 				{
-					vertex_3d_t &vert = mesh.aVertices.emplace_back();
-					vert.pos = pos;
-					vert.normal = norm;
-					vert.texCoord = uv;  // change to UV?
-					vert.color = col;
-
-					mesh.aMinSize = glm::min( pos, mesh.aMinSize );
-					mesh.aMaxSize = glm::max( pos, mesh.aMaxSize );
+					mesh.aVertices.push_back( vert );
+					//mesh.aMinSize = glm::min( pos, mesh.aMinSize );
+					//mesh.aMaxSize = glm::max( pos, mesh.aMaxSize );
 				}
 
+				vertIndexes[ vert ] = newIndex;
 				mesh.aIndices.emplace_back(newIndex);
 			}
 

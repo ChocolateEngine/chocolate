@@ -494,7 +494,10 @@ VkPipeline InitGraphicsPipeline( VkPipelineLayout &srLayout, const String &srVer
 	fragShaderStageInfo.module = fragShaderModule;
 	fragShaderStageInfo.pName  = "main";
 
-	VkPipelineShaderStageCreateInfo shaderStages[  ] = { vertShaderStageInfo, fragShaderStageInfo };
+	/* Stack overflow lol.  */
+	VkPipelineShaderStageCreateInfo *pShaderStages = new VkPipelineShaderStageCreateInfo[ 2 ];
+	pShaderStages[ 0 ] = vertShaderStageInfo;
+	pShaderStages[ 1 ] = fragShaderStageInfo;
 
 	auto attributeDescriptions 	= T::get_attribute_desc(  );
 	auto bindingDescription 	= T::get_binding_desc(  );      
@@ -593,7 +596,7 @@ VkPipeline InitGraphicsPipeline( VkPipelineLayout &srLayout, const String &srVer
 	VkGraphicsPipelineCreateInfo pipelineInfo{  };	//	Combine all the objects above into one parameter for graphics pipeline creation
 	pipelineInfo.sType 			= VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
 	pipelineInfo.stageCount 		= 2;
-	pipelineInfo.pStages 			= shaderStages;
+	pipelineInfo.pStages 			= pShaderStages;
 	pipelineInfo.pVertexInputState 		= &vertexInputInfo;
 	pipelineInfo.pInputAssemblyState 	= &inputAssembly;
 	pipelineInfo.pViewportState 		= &viewportState;

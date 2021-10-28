@@ -358,7 +358,6 @@ void Console::Print( const char* format, ... )
 	VSTRING( std::string buffer, format );
 	printf( buffer.c_str() );
 	aConsoleHistory.push_back( buffer );
-	va_end( args );
 }
 
 
@@ -367,7 +366,6 @@ void Console::Print( Msg type, const char* format, ... )
 	VSTRING( std::string buffer, format );
 	printf( buffer.c_str() );
 	aConsoleHistory.push_back( buffer );
-	va_end( args );
 }
 
 

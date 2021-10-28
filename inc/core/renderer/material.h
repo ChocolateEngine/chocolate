@@ -17,6 +17,7 @@ class ModelData;
 
 
 // basically tied to obj files right now
+// 152 bytes
 class Material
 {
 public:

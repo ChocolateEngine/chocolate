@@ -6,15 +6,13 @@ Declares shader effect stuff.
 #pragma once
 
 #include "../../types/databuffer.hh"
-#include "../core/renderer/shaders.h"
 #include "allocator.h"
 
 #include <vulkan/vulkan.hpp>
 
 class Renderer;
 class MaterialSystem;
-class ModelData;
-class Mesh;
+class BaseRenderable;
 
 
 class BaseShader
@@ -43,7 +41,9 @@ public:
 	/* Reinitialize data that is useless after the swapchain becomes outdated.  */
 	virtual void                       ReInit();
 
-	virtual void                       UpdateUniformBuffers( uint32_t sCurrentImage, ModelData &srModelData, Mesh* srMesh ) = 0;
+	virtual void                       UpdateUniformBuffers( uint32_t sCurrentImage, BaseRenderable* spRenderable ) = 0;
+
+	virtual bool                       UsesUniformBuffers(  ) = 0;
 
 	inline VkPipeline                  GetPipeline() const        { return aPipeline; }
 	inline VkPipelineLayout            GetPipelineLayout() const  { return aPipelineLayout; }
@@ -60,6 +60,8 @@ public:
 
 	virtual void        Init() override;
 	virtual void        ReInit() override;
-	virtual void        UpdateUniformBuffers( uint32_t sCurrentImage, ModelData &srModelData, Mesh* srMesh ) override;
+	virtual void        UpdateUniformBuffers( uint32_t sCurrentImage, BaseRenderable* spRenderable ) override;
+
+	virtual inline bool        UsesUniformBuffers(  ) { return true; };
 };
 

@@ -45,7 +45,8 @@ void GuiSystem::DrawGui(  )
 
 	// NOTE: imgui framerate is a rough estimate, might wanna have our own fps counter?
 	ImGui::Begin( "Dev Info", (bool*)0, devFlags );
-	ImGui::Text("%.1f FPS (%.3f ms/frame)", ImGui::GetIO().Framerate, 1000.0f / ImGui::GetIO().Framerate);
+	float frameRate = ImGui::GetIO().Framerate / 2.f;  // HACK
+	ImGui::Text("%.1f FPS (%.3f ms/frame)", frameRate, 1000.0f / frameRate);
 	//ImGui::Text("%.1f FPS (%.3f ms/frame)", 1000.f / delta, (float)delta);  // ms/frame is inaccurate
 
 	std::string debugMessages;

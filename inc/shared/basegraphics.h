@@ -9,6 +9,7 @@ by the renderer.
 
 #include "../shared/system.h"
 #include "../core/renderer/renderer.h"
+#include "../core/renderer/materialsystem.h"
 
 class Sprite
 {
@@ -34,10 +35,6 @@ private:
 public:
 	/* Returns aModelData, in case it is needed, usually not.  */
 	ModelData	&GetModelData(  ){ return aModelData; }
-	/* Sets the position of the model to a given x and y.  */
-	void 		SetPosition( const glm::vec3 &srPos ){ aModelData.aTransform.aPos = srPos; }
-	/* Translates the model by x y, and z.  */
-	void 		Translate( const glm::vec3 &srPos ){ aModelData.aTransform.aPos += srPos; }
 	/* Sets the visibility of the model.  */
 	void 		SetVisibility( bool sVisible ){ aModelData.aNoDraw = !sVisible; }
 };
@@ -70,4 +67,13 @@ public:
 
 	/* Get the SDL_Window  */
 	virtual SDL_Window  *GetWindow(  ) = 0;
+
+	/*  */
+	virtual IMaterialSystem *GetMaterialSystem(  ) = 0;
+
+	/* Creates a model and stores it for drawing use */
+	virtual Model *CreateModel(  ) = 0;
+
+	// HACK HACK - need to make an IMesh class
+	virtual void InitMesh( IMesh* mesh ) = 0;
 };

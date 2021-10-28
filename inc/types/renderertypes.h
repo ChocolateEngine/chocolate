@@ -66,7 +66,7 @@ struct push_constant_t
 struct vertex_3d_t
 {
 	glm::vec3 pos;
-	glm::vec3 color;
+	glm::vec3 color;  // this probably isn't needed anymore, right?
 	glm::vec2 texCoord;
 	glm::vec3 normal;
 
@@ -81,10 +81,10 @@ struct vertex_3d_t
 		return bindingDescription;
 	}
 
-	static std::array< VkVertexInputAttributeDescription, 3 > get_attribute_desc
+	static std::array< VkVertexInputAttributeDescription, 4 > get_attribute_desc
 		(  )
 	{
-		std::array< VkVertexInputAttributeDescription, 3 >attributeDescriptions{  };
+		std::array< VkVertexInputAttributeDescription, 4 >attributeDescriptions{  };
 		attributeDescriptions[ 0 ].binding  = 0;
 		attributeDescriptions[ 0 ].location = 0;
 		attributeDescriptions[ 0 ].format   = VK_FORMAT_R32G32B32_SFLOAT;
@@ -100,11 +100,17 @@ struct vertex_3d_t
 		attributeDescriptions[ 2 ].format   = VK_FORMAT_R32G32_SFLOAT;
 		attributeDescriptions[ 2 ].offset   = offsetof( vertex_3d_t, texCoord );
 
+		attributeDescriptions[ 3 ].binding  = 0;
+		attributeDescriptions[ 3 ].location = 3;
+		attributeDescriptions[ 3 ].format   = VK_FORMAT_R32G32B32_SFLOAT;
+		attributeDescriptions[ 3 ].offset   = offsetof( vertex_3d_t, normal );
+
 		return attributeDescriptions;
 	}
 	bool operator==( const vertex_3d_t& other ) const
 	{
-		return pos == other.pos && color == other.color && texCoord == other.texCoord;
+		//return pos == other.pos && color == other.color && texCoord == other.texCoord && normal == other.normal;
+		return pos == other.pos && texCoord == other.texCoord && normal == other.normal;
 	}
 };
 
@@ -159,7 +165,9 @@ namespace std	//	Black magic!! don't touch!!!!
 		size_t operator(  )( vertex_3d_t const& vertex ) const
 		{
 			return  ( ( hash< glm::vec3 >(  )( vertex.pos ) ^
-                   		( hash< glm::vec3 >(  )( vertex.color ) << 1 ) ) >> 1 ) ^
+               //    		( hash< glm::vec3 >(  )( vertex.color ) << 1 ) ) >> 1 ) ^
+               //    		( hash< glm::vec3 >(  )( vertex.normal ) << 1 ) ) >> 1 ) ^
+                   		( hash< glm::vec3 >(  )( vertex.normal ) << 1 ) ) ) ^
 				( hash< glm::vec2 >(  )( vertex.texCoord ) << 1 );
 		}
 	};
@@ -197,6 +205,8 @@ public:
 class UniformDescriptor
 {	
 public:
+	UniformDescriptor() {}
+
 	DataBuffer< VkBuffer >          aData;
 	DataBuffer< VkDeviceMemory >    aMem;
 	DataBuffer< VkDescriptorSet >   aSets;

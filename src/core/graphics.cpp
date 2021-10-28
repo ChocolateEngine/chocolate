@@ -9,7 +9,7 @@ void GraphicsSystem::LoadModel( const std::string& srModelPath, const std::strin
 	if ( spModel == NULL )
 		spModel = new Model;
 
-	spModel->SetPosition( { 0.f, 0.f, 0.f } );
+	spModel->GetModelData().SetPos( { 0.f, 0.f, 0.f } );
 	aRenderer.InitModel( spModel->GetModelData(  ), srModelPath, srTexturePath );
 	
 	aModels.push_back( spModel );
@@ -105,4 +105,18 @@ void GraphicsSystem::InitSubsystems(  )
 	SyncRenderer(  );
 	aRenderer.Init(  );
 	aRenderer.SendMessages(  );
+}
+
+extern MaterialSystem* materialsystem;
+
+IMaterialSystem* GraphicsSystem::GetMaterialSystem(  )
+{
+	return materialsystem;
+}
+
+Model* GraphicsSystem::CreateModel(  )
+{
+	Model* model = new Model;
+	aRenderer.aModels.push_back( &model->GetModelData() );
+	return model;
 }

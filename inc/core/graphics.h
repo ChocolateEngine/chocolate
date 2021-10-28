@@ -50,7 +50,7 @@ public:
 	   spModel is optional for external management.  */
 	void 		LoadModel( const std::string& srModelPath,
 				   const std::string& srTexturePath,
-				   Model *spModel = NULL );
+				   Model *spModel = NULL ) override;
 	/* Unload a model.  */
 	void 		UnloadModel( Model *spModel );
 
@@ -62,11 +62,17 @@ public:
 	void 		UnloadSprite( Sprite *spSprite );
 
 	/* Sets the view  */
-	void        SetView( View& view );
+	void        SetView( View& view ) override;
 	/* Get the window width and height  */
-	void        GetWindowSize( uint32_t* width, uint32_t* height );
+	void        GetWindowSize( uint32_t* width, uint32_t* height ) override;
 	/* Get the SDL_Window  */
-	SDL_Window  *GetWindow(  );
+	SDL_Window  *GetWindow(  ) override;
+
+	IMaterialSystem *GetMaterialSystem(  ) override;
+	Model *CreateModel(  ) override;
+
+	// HACK HACK - need to make an IMesh class
+	inline void InitMesh( IMesh* mesh ) override { mesh->Init(); }
 
 	/* Sets some renderer parameters.  */
 	explicit 	GraphicsSystem(  );
