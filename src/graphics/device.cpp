@@ -1,6 +1,7 @@
 #include "device.h"
 #include "util.h"
 #include "core/console.h"
+#include "core/commandline.h"
 
 #include <set>
 
@@ -14,6 +15,9 @@ VKAPI_ATTR VkBool32 VKAPI_CALL Device::DebugCallback( VkDebugUtilsMessageSeverit
 
 void Device::InitWindow(  )
 {
+	aWidth = cmd->GetValue( "-w", aWidth ); 
+	aHeight = cmd->GetValue( "-h", aHeight ); 
+
 	if ( SDL_Init( SDL_INIT_VIDEO | SDL_INIT_EVENTS | SDL_INIT_AUDIO ) != 0 )
 		throw std::runtime_error( "Unable to initialize SDL2!" );
 	apWindow = SDL_CreateWindow( " - Chocolate Engine - Compiled on " __DATE__, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
