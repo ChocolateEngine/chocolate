@@ -98,8 +98,10 @@ void Engine::InitSystems(  )
 {
 	systems->Add( new InputSystem );
 
-	LoadModule( "bin/aduio" );
 	LoadModule( "bin/graphics" );
+	LoadModule( "bin/aduio" );
+
+	console->RegisterConVars(  );
 
 	for ( const auto& pSys : systems->GetSystemList() )
 		pSys->Init(  );
