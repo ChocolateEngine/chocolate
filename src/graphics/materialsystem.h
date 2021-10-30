@@ -62,8 +62,6 @@ public:
 
 		BaseShader* shader = new T;
 		shader->aName = name;
-		shader->apMaterialSystem = this;
-		shader->apRenderer = apRenderer;
 		shader->Init();
 
 		aShaders[name] = shader;
@@ -94,10 +92,6 @@ public:
 	void                        MeshDestroy( IMesh* mesh ) override;
 
 private:
-	// this REALLY should be a global at this point
-	// we don't need to be passing this around to like everything in here
-	Renderer* apRenderer = nullptr;
-
 	std::unordered_map< std::string, BaseShader* >          aShaders;
 
 	std::unordered_map< size_t, UniformDescriptor >         aUniformDataMap;
@@ -108,4 +102,6 @@ private:
 	std::vector< Material* > aMaterials;
 	Material* apErrorMaterial = nullptr;
 };
+
+extern MaterialSystem* materialsystem;
 

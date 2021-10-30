@@ -72,44 +72,7 @@ struct vertex_3d_t
 	glm::vec3 color;  // this probably isn't needed anymore, right?
 	glm::vec2 texCoord;
 	glm::vec3 normal;
-
-	static VkVertexInputBindingDescription get_binding_desc
-		(  )
-	{
-		VkVertexInputBindingDescription bindingDescription{};
-		bindingDescription.binding = 0;
-		bindingDescription.stride = sizeof( vertex_3d_t );
-		bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
-
-		return bindingDescription;
-	}
-
-	static std::array< VkVertexInputAttributeDescription, 4 > get_attribute_desc
-		(  )
-	{
-		std::array< VkVertexInputAttributeDescription, 4 >attributeDescriptions{  };
-		attributeDescriptions[ 0 ].binding  = 0;
-		attributeDescriptions[ 0 ].location = 0;
-		attributeDescriptions[ 0 ].format   = VK_FORMAT_R32G32B32_SFLOAT;
-		attributeDescriptions[ 0 ].offset   = offsetof( vertex_3d_t, pos );
-
-		attributeDescriptions[ 1 ].binding  = 0;
-		attributeDescriptions[ 1 ].location = 1;
-		attributeDescriptions[ 1 ].format   = VK_FORMAT_R32G32B32_SFLOAT;
-		attributeDescriptions[ 1 ].offset   = offsetof( vertex_3d_t, color );
-
-		attributeDescriptions[ 2 ].binding  = 0;
-		attributeDescriptions[ 2 ].location = 2;
-		attributeDescriptions[ 2 ].format   = VK_FORMAT_R32G32_SFLOAT;
-		attributeDescriptions[ 2 ].offset   = offsetof( vertex_3d_t, texCoord );
-
-		attributeDescriptions[ 3 ].binding  = 0;
-		attributeDescriptions[ 3 ].location = 3;
-		attributeDescriptions[ 3 ].format   = VK_FORMAT_R32G32B32_SFLOAT;
-		attributeDescriptions[ 3 ].offset   = offsetof( vertex_3d_t, normal );
-
-		return attributeDescriptions;
-	}
+	
 	bool operator==( const vertex_3d_t& other ) const
 	{
 		//return pos == other.pos && color == other.color && texCoord == other.texCoord && normal == other.normal;

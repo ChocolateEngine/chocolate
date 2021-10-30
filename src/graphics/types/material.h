@@ -51,7 +51,6 @@ public:
 	//TextureDescriptor*          apNormal = nullptr;
 	//TextureDescriptor*          apEmission = nullptr;
 	
-	// TODO: make a "MaterialInternal" like class when the client is able to create materials
 	VkDescriptorSetLayout       apTextureLayout = nullptr;
 
 	BaseShader*                 apShader = nullptr;

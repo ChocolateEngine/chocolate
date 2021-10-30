@@ -57,7 +57,10 @@ void Renderer::InitVulkan(  )
 	InitDescPool( { { { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 2000 }, { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 2000 } } } );
 	InitImguiPool( gpDevice->GetWindow(  ) );
 	InitSync( aImageAvailableSemaphores, aRenderFinishedSemaphores, aInFlightFences, aImagesInFlight );
-	InitShaders(  );
+
+	materialsystem = new MaterialSystem;
+	materialsystem->Init();
+
 	gLayoutBuilder.BuildLayouts(  );
 	gPipelineBuilder.BuildPipelines(  );
 }
@@ -107,9 +110,9 @@ void Renderer::InitCommandBuffers(  )
 
 		// IDEA: make a batched mesh vector so that way we can bind everything needed, and then just draw draw draw draw
 
-		for ( auto& renderable : apMaterialSystem->aDrawList )
+		for ( auto& renderable : materialsystem->aDrawList )
 		{
-			apMaterialSystem->DrawRenderable( renderable, aCommandBuffers[i], i );
+			materialsystem->DrawRenderable( renderable, aCommandBuffers[i], i );
 		}
 
 		// TODO: make this a BaseRenderable
@@ -164,14 +167,6 @@ void Renderer::InitSpriteVertices( const String &srSpritePath, SpriteData &srSpr
 	InitTexBuffer( indices, srSprite.aIndexBuffer, srSprite.aIndexBufferMem, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT );
 }
 
-/* Loads all shaders that will be used in rendering.  */
-void Renderer::InitShaders(  )
-{
-	apMaterialSystem = new MaterialSystem;
-	apMaterialSystem->apRenderer = this;
-	apMaterialSystem->Init();
-}
-
 void Renderer::ReinitSwapChain(  )
 {
 	int width = 0, height = 0;
@@ -191,7 +186,7 @@ void Renderer::ReinitSwapChain(  )
 	InitDepthResources( aDepthImage, aDepthImageMemory, aDepthImageView );
 	InitFrameBuffer( aSwapChainFramebuffers, aSwapChainImageViews, aDepthImageView, aColorImageView );
 
-	apMaterialSystem->ReInitSwapChain();
+	materialsystem->ReInitSwapChain();
 
 	gLayoutBuilder.BuildLayouts(  );
 	gPipelineBuilder.BuildPipelines(  );
@@ -200,7 +195,7 @@ void Renderer::ReinitSwapChain(  )
 	{
 		for ( auto& mesh : model->aMeshes )
 		{
-			apMaterialSystem->MeshReInit( mesh );
+			materialsystem->MeshReInit( mesh );
 		}
 	}
 	
@@ -218,13 +213,13 @@ void Renderer::DestroySwapChain(  )
 	vkDestroyImage( DEVICE, aColorImage, nullptr );
 	vkFreeMemory( DEVICE, aColorImageMemory, nullptr );
 
-	apMaterialSystem->DestroySwapChain();
+	materialsystem->DestroySwapChain();
 
 	for ( auto& model : aModels )
 	{
 		for ( auto& mesh : model->aMeshes )
 		{
-			apMaterialSystem->MeshFreeOldResources( mesh );
+			materialsystem->MeshFreeOldResources( mesh );
 		}
 	}
 
@@ -265,8 +260,8 @@ void Renderer::InitModel( ModelData &srModelData, const String &srModelPath, con
 		for (std::size_t i = 0; i < meshes.size(); ++i)
 		{
 			meshes[i] = new Mesh;
-			apMaterialSystem->RegisterRenderable( meshes[i] );
-			apMaterialSystem->MeshInit( meshes[i] );
+			materialsystem->RegisterRenderable( meshes[i] );
+			materialsystem->MeshInit( meshes[i] );
 			meshes[i]->apMaterial = dupeModel->aMeshes[i]->apMaterial;
 			meshes[i]->aIndices = dupeModel->aMeshes[i]->aIndices;
 			meshes[i]->aVertices = dupeModel->aMeshes[i]->aVertices;
@@ -297,15 +292,15 @@ void Renderer::InitModel( ModelData &srModelData, const String &srModelPath, con
 		if ( !dupeModel )
 		{
 			Material* mat = (Material*)mesh->apMaterial;
-			mat->apShader = apMaterialSystem->GetShader( "basic_3d" );
-			mat->apDiffuse = apMaterialSystem->CreateTexture( mesh->apMaterial, mat->aDiffusePath.string() );
+			mat->apShader = materialsystem->GetShader( "basic_3d" );
+			mat->apDiffuse = materialsystem->CreateTexture( mesh->apMaterial, mat->aDiffusePath.string() );
 		}
 
-		apMaterialSystem->CreateVertexBuffer( mesh );
+		materialsystem->CreateVertexBuffer( mesh );
 
 		// if the vertex count is different than the index count, use the index buffer
 		if ( mesh->aVertices.size() != mesh->aIndices.size() )
-			apMaterialSystem->CreateIndexBuffer( mesh );
+			materialsystem->CreateIndexBuffer( mesh );
 
 		//mesh->aRadius = glm::distance( mesh->aMinSize, mesh->aMaxSize ) / 2.0f;
 
@@ -366,14 +361,13 @@ void Renderer::DrawFrame(  )
 	
 	aImagesInFlight[ imageIndex ] = aInFlightFences[ aCurrentFrame ];
 
-	for ( auto& renderable : apMaterialSystem->aDrawList )
+	for ( auto& renderable : materialsystem->aDrawList )
 	{
 		Material* mat = (Material*)renderable->apMaterial;
-		if ( mat->apShader->UsesUniformBuffers() )
-			mat->apShader->UpdateUniformBuffers( imageIndex, renderable );
+		mat->apShader->UpdateBuffers( imageIndex, renderable );
 	}
 
-	apMaterialSystem->aDrawList.clear();
+	materialsystem->aDrawList.clear();
 
 	VkSubmitInfo submitInfo{  };
 	submitInfo.sType 			= VK_STRUCTURE_TYPE_SUBMIT_INFO;

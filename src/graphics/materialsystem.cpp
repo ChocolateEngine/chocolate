@@ -9,6 +9,8 @@ Maybe the shadersystem could be inside this material system?
 #include "renderer.h"
 #include "util.h"
 
+#include "shaders/shader_basic_3d.h"
+
 
 extern size_t gModelDrawCalls;
 extern size_t gVertsDrawn;
@@ -60,7 +62,7 @@ void MaterialSystem::DeleteMaterial( IMaterial* matPublic )
 // this really should not have a Material input, it should have a Texture class input, right? idk
 TextureDescriptor* MaterialSystem::CreateTexture( IMaterial* material, const std::string path )
 {
-	return InitTexture( path, ((Material*)material)->GetTextureLayout(), *gpPool, apRenderer->aTextureSampler );
+	return InitTexture( path, ((Material*)material)->GetTextureLayout(), *gpPool, renderer->aTextureSampler );
 }
 
 

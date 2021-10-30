@@ -58,13 +58,10 @@ protected:
 	int                         aCurrentFrame       = 0;
 	bool                        aImGuiInitialized   = false;
 
-	MaterialSystem*             apMaterialSystem;
-	friend class MaterialSystem;  // maybe temporary?
+	friend class MaterialSystem;
 
 	/* A.  */
 	void    InitCommandBuffers(  );
-	/* Loads all shaders that will be used in rendering.  */
-	void	InitShaders(  );
 	/* A.  */
 	void    InitSpriteVertices( const String &srSpritePath, SpriteData &srSprite );
 	/* A.  */
@@ -110,3 +107,5 @@ public:
 	/* A.  */
 		~Renderer(  );
 };
+
+extern Renderer* renderer;
