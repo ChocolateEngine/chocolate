@@ -30,7 +30,6 @@ void BaseShader::ReInit()
 
 void BaseShader::Destroy()
 {
-	// TODO: materialsystem can handle this
 	for ( int i = 0; i < aModules.GetSize(); i++ )
 		vkDestroyShaderModule( DEVICE, aModules[i], nullptr );
 
