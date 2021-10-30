@@ -160,57 +160,12 @@ size_t MaterialSystem::GetRenderableID( BaseRenderable* renderable )
 
 void MaterialSystem::DrawRenderable( BaseRenderable* renderable, VkCommandBuffer c, uint32_t commandBufferIndex )
 {
-	// certified bruh moment
-	if ( IMesh* mesh = dynamic_cast<IMesh*>(renderable) )
-	{
-		DrawMesh( mesh, c, commandBufferIndex );
-	}
+	Material* mat = (Material*)renderable->apMaterial;
+	mat->apShader->Draw( renderable, c, commandBufferIndex );
 }
 
 
-// TODO: move to Basic3D Shader!!!!
-void MaterialSystem::DrawMesh( IMesh* mesh, VkCommandBuffer c, uint32_t commandBufferIndex )
-{
-	//if ( mesh->aNoDraw )
-	//	return;
-
-#if MESH_USE_PUSH_CONSTANTS
-	// mesh.GetShader()->UpdateUniformBuffers( imageIndex, *model, model->aMeshes[i] );
-
-	// AWFUL
-#endif
-
-	// Bind the mesh's vertex and index buffers
-	VkBuffer 	vBuffers[  ] 	= { mesh->aVertexBuffer };
-	VkDeviceSize 	offsets[  ] 	= { 0 };
-	vkCmdBindVertexBuffers( c, 0, 1, vBuffers, offsets );
-
-	if ( mesh->aIndexBuffer )
-		vkCmdBindIndexBuffer( c, mesh->aIndexBuffer, 0, VK_INDEX_TYPE_UINT32 );
-
-	// BLECH, need to move this whole draw function later
-	BaseShader* shader = GetShader( mesh->apMaterial->GetShaderName() );
-
-	// Now draw it
-	vkCmdBindPipeline( c, VK_PIPELINE_BIND_POINT_GRAPHICS, shader->GetPipeline(  ) );
-
-	VkDescriptorSet sets[  ] = {
-		((Material*)mesh->apMaterial)->apDiffuse->aSets[ commandBufferIndex ],
-		materialsystem->GetUniformData( mesh->GetID() ).aSets[ commandBufferIndex ]
-	};
-
-	vkCmdBindDescriptorSets( c, VK_PIPELINE_BIND_POINT_GRAPHICS, shader->GetPipelineLayout(  ), 0, 2, sets, 0, NULL );
-
-	if ( mesh->aIndexBuffer )
-		vkCmdDrawIndexed( c, (uint32_t)mesh->aIndices.size(), 1, 0, 0, 0 );
-	else
-		vkCmdDraw( c, (uint32_t)mesh->aVertices.size(), 1, 0, 0 );
-
-	gModelDrawCalls++;
-	gVertsDrawn += mesh->aVertices.size();
-}
-
-
+// TODO: move these to Basic3D
 void MaterialSystem::MeshInit( IMesh* mesh )
 {
 	InitUniformBuffer( mesh );

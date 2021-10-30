@@ -7,6 +7,10 @@ The Basic 3D Shader, starting point shader
 #include "shader_basic_3d.h"
 
 
+extern size_t gModelDrawCalls;
+extern size_t gVertsDrawn;
+
+
 // =========================================================
 
 
@@ -231,3 +235,45 @@ std::array< VkVertexInputAttributeDescription, 4 > Basic3D::GetAttributeDesc(  )
 	return attributeDescriptions;
 }
 
+
+void Basic3D::Draw( BaseRenderable* renderable, VkCommandBuffer c, uint32_t commandBufferIndex )
+{
+	//if ( mesh->aNoDraw )
+	//	return;
+
+#if MESH_USE_PUSH_CONSTANTS
+	// mesh.GetShader()->UpdateUniformBuffers( imageIndex, *model, model->aMeshes[i] );
+
+	// AWFUL
+#endif
+
+	IMesh* mesh = dynamic_cast<IMesh*>(renderable);
+
+	assert(mesh != nullptr);
+
+	// Bind the mesh's vertex and index buffers
+	VkBuffer 	vBuffers[  ] 	= { mesh->aVertexBuffer };
+	VkDeviceSize 	offsets[  ] 	= { 0 };
+	vkCmdBindVertexBuffers( c, 0, 1, vBuffers, offsets );
+
+	if ( mesh->aIndexBuffer )
+		vkCmdBindIndexBuffer( c, mesh->aIndexBuffer, 0, VK_INDEX_TYPE_UINT32 );
+
+	// Now draw it
+	vkCmdBindPipeline( c, VK_PIPELINE_BIND_POINT_GRAPHICS, aPipeline );
+
+	VkDescriptorSet sets[  ] = {
+		((Material*)mesh->apMaterial)->apDiffuse->aSets[ commandBufferIndex ],
+		materialsystem->GetUniformData( mesh->GetID() ).aSets[ commandBufferIndex ]
+	};
+
+	vkCmdBindDescriptorSets( c, VK_PIPELINE_BIND_POINT_GRAPHICS, aPipelineLayout, 0, 2, sets, 0, NULL );
+
+	if ( mesh->aIndexBuffer )
+		vkCmdDrawIndexed( c, (uint32_t)mesh->aIndices.size(), 1, 0, 0, 0 );
+	else
+		vkCmdDraw( c, (uint32_t)mesh->aVertices.size(), 1, 0, 0 );
+
+	gModelDrawCalls++;
+	gVertsDrawn += mesh->aVertices.size();
+}

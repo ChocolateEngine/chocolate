@@ -25,6 +25,8 @@ public:
 
 	virtual void        UpdateBuffers( uint32_t sCurrentImage, BaseRenderable* spRenderable ) override;
 
+	virtual void        Draw( BaseRenderable* renderable, VkCommandBuffer c, uint32_t commandBufferIndex ) override;
+
 	//inline bool         UsesUniformBuffers(  ) override { return true; };
 
 	VkVertexInputBindingDescription                             GetBindingDesc(  );
