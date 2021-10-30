@@ -11,10 +11,15 @@ set( CMAKE_CXX_STANDARD 20 )
 set( CMAKE_RUNTIME_OUTPUT_DIRECTORY ${GAME_DIR}/bin )
 set( CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG ${GAME_DIR}/bin )
 set( CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE ${GAME_DIR}/bin )
+
+set( CMAKE_LIBRARY_OUTPUT_DIRECTORY ${GAME_DIR}/bin )
+set( CMAKE_LIBRARY_OUTPUT_DIRECTORY_DEBUG ${GAME_DIR}/bin )
+set( CMAKE_LIBRARY_OUTPUT_DIRECTORY_RELEASE ${GAME_DIR}/bin )
 	
 set( CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CH_ROOT}/obj )
 set( CMAKE_ARCHIVE_OUTPUT_DIRECTORY_DEBUG ${CH_ROOT}/obj/Debug )
 set( CMAKE_ARCHIVE_OUTPUT_DIRECTORY_RELEASE ${CH_ROOT}/obj/Release )
+set( CMAKE_SHARED_LIBRARY_PREFIX "" )
 
 set_property( GLOBAL PROPERTY PREFIX "" )
 
@@ -82,12 +87,12 @@ else()  # linux
 
 	set( CMAKE_CXX_COMPILER g++ )
 	
-	add_include_directories(
+	include_directories(
 		"/usr/include/SDL2"
 	)
 
 	# idk what's needed here or not
-	add_link_libraries( dl pthread X11 Xxf86vm Xrandr Xi )
+	link_libraries( dl pthread X11 Xxf86vm Xrandr Xi )
 	
 	if ( CMAKE_BUILD_TYPE STREQUAL Debug )
 		add_compile_options( -g )

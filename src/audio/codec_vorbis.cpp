@@ -27,15 +27,14 @@ bool CodecVorbis::Init(  )
 
 bool CodecVorbis::CheckExt( const char* ext )
 {
-	return (_stricmp( ".ogg", ext) == 0);
+	return (strncmp( ".ogg", ext, 3) == 0);
 }
 
 
 bool CodecVorbis::Open( const char* soundPath, AudioStreamInternal *stream )
 {
-    FILE *soundFileHandle;
-    errno_t err = fopen_s(&soundFileHandle, soundPath, "rb");
-    if (err != 0)
+    FILE *soundFileHandle = fopen(soundPath, "rb");
+    if (!soundFileHandle)
     {
         Print( "File does not exist: \"%s\"\n", soundPath );
         return false;

@@ -10,6 +10,7 @@ an interface for getting systems from the engine
 #include <unordered_map>
 #include <typeindex>
 #include <any>
+#include <vector>
 
 #include "core/platform.h"
 
