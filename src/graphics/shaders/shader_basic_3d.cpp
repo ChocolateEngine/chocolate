@@ -22,6 +22,9 @@ void Basic3D::Init()
 
 void Basic3D::ReInit()
 {
+	aModules[0] = CreateShaderModule( ReadFile( pVShader ) ); // Processes incoming verticies, taking world position, color, and texture coordinates as an input
+	aModules[1] = CreateShaderModule( ReadFile( pFShader ) ); // Fills verticies with fragments to produce color, and depth
+
 	BaseShader::ReInit();
 }
 
