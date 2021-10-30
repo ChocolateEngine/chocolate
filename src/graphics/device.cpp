@@ -8,9 +8,10 @@
 VKAPI_ATTR VkBool32 VKAPI_CALL Device::DebugCallback( VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, VkDebugUtilsMessageTypeFlagsEXT messageType,
 					      const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData )
 {
-	std::cerr << "validation layer: " << pCallbackData->pMessage << std::endl;
+	if ( cmd->Find("-dump-vlayers") )
+		std::cerr << "validation layer: " << pCallbackData->pMessage << std::endl;
 
-        return VK_FALSE;
+	return VK_FALSE;
 }
 
 void Device::InitWindow(  )
