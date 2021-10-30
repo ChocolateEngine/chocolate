@@ -757,4 +757,4 @@ template void 		InitTexBuffer< uint32_t >( const std::vector< uint32_t >&, VkBuf
 template void 		InitTexBuffer< vertex_2d_t >( const std::vector< vertex_2d_t >&, VkBuffer&, VkDeviceMemory&, VkBufferUsageFlags );
 template void 		InitTexBuffer< vertex_3d_t >( const std::vector< vertex_3d_t >&, VkBuffer&, VkDeviceMemory&, VkBufferUsageFlags );
 template VkPipeline 	InitGraphicsPipeline< vertex_2d_t >( VkPipelineLayout&, const std::string&, const std::string&, int );
-template VkPipeline 	InitGraphicsPipeline< vertex_3d_t >( VkPipelineLayout&, const std::string&, const std::string&, int );
+//template VkPipeline 	InitGraphicsPipeline< vertex_3d_t >( VkPipelineLayout&, const std::string&, const std::string&, int );

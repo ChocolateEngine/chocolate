@@ -24,12 +24,10 @@ class BaseShader
 public:
 	VkPipeline                         aPipeline = nullptr;
 	VkPipelineLayout                   aPipelineLayout = nullptr;
-	Layouts                            aSetLayouts;
+	Layouts                            aLayouts;
 	ShaderModules                      aModules;
 
 	std::string                        aName;
-	Renderer*                          apRenderer = nullptr;
-	MaterialSystem*                    apMaterialSystem = nullptr;
 
 public:
 	                                   BaseShader();
@@ -41,27 +39,17 @@ public:
 	/* Reinitialize data that is useless after the swapchain becomes outdated.  */
 	virtual void                       ReInit();
 
-	virtual void                       UpdateUniformBuffers( uint32_t sCurrentImage, BaseRenderable* spRenderable ) = 0;
+	void                                              CreateDescriptorSetLayout(  );
+	virtual std::vector<VkDescriptorSetLayoutBinding> GetDescriptorSetLayoutBindings(  ) = 0;
 
-	virtual bool                       UsesUniformBuffers(  ) = 0;
+	virtual void                       CreateGraphicsPipeline(  ) = 0;
+
+	virtual void                       UpdateBuffers( uint32_t sCurrentImage, BaseRenderable* spRenderable ) = 0;
+
+	//virtual bool                       UsesUniformBuffers(  ) = 0;
 
 	inline VkPipeline                  GetPipeline() const        { return aPipeline; }
 	inline VkPipelineLayout            GetPipelineLayout() const  { return aPipelineLayout; }
 };
 
-
-class Basic3D : public BaseShader
-{
-protected:
-	const char *pVShader = "materials/shaders/3dvert.spv";
-	const char *pFShader = "materials/shaders/3dfrag.spv";
-public:	
-	                    Basic3D(): BaseShader() {}
-
-	virtual void        Init() override;
-	virtual void        ReInit() override;
-	virtual void        UpdateUniformBuffers( uint32_t sCurrentImage, BaseRenderable* spRenderable ) override;
-
-	virtual inline bool        UsesUniformBuffers(  ) { return true; };
-};
 
