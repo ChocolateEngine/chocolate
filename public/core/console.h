@@ -304,7 +304,7 @@ public:
 	void 	RegisterConVars(  );
 	/* A.  */
 	const std::vector<std::string>&     GetConsoleHistory(  );
-	std::string                         GetConsoleHistoryStr(  );
+	std::string                         GetConsoleHistoryStr( int maxSize );
 
 	const std::vector< std::string >&   GetCommandHistory(  );
 

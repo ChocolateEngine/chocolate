@@ -281,13 +281,34 @@ const std::vector<std::string>& Console::GetConsoleHistory(  )
 	return aConsoleHistory;
 }
 
-std::string Console::GetConsoleHistoryStr(  )
+std::string Console::GetConsoleHistoryStr( int maxSize )
 {
 	// make this static?
 	std::string output;
 
-	for (int i = 0; i < aConsoleHistory.size(); i++)
-		output += aConsoleHistory[i];
+	// No limit
+	if ( maxSize == -1 )
+	{
+		for (auto& str: aConsoleHistory)
+			output += str;
+
+		return output;
+	}
+
+	// go from latest to oldest
+	for (int i = aConsoleHistory.size() - 1; i > 0; i--)
+	{
+		int strLen = glm::min(maxSize, (int)aConsoleHistory[i].length());
+		int strStart = aConsoleHistory[i].length() - strLen;
+
+		// if the length wanted is less then the string length, then start at an offset
+		output = aConsoleHistory[i].substr(strStart, strLen) + output;
+
+		maxSize -= strLen;
+
+		if ( maxSize == 0 )
+			break;
+	}
 
 	return output;
 }
@@ -395,7 +416,7 @@ void Console::CalculateAutoCompleteList( const std::string& textBuffer )
 
 	for ( const auto& cvar : aConVarList )
 	{
-		if ( cvar->aName.starts_with( textBuffer ) )
+		if ( str_lower2(cvar->aName).starts_with( str_lower2(textBuffer) ) )
 		{
 			aAutoCompleteList.push_back( cvar->aName );
 		}
@@ -443,11 +464,13 @@ void Console::Update(  )
 				args.push_back( command.substr( start, end - start ) );
 		}
 
+		str_lower( commandName );
+
 		bool commandCalled = false;
 
 		for ( const auto& cvar : aConVarList )
 		{
-			if ( cvar->aName == commandName )
+			if ( str_lower2(cvar->aName) == commandName )
 			{
 				if ( ConVar* convar = dynamic_cast<ConVar*>(cvar) )
 				{
