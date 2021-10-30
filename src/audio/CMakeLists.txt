@@ -20,7 +20,7 @@ link_libraries( Core )
 
 add_compile_definitions(
 	"ENABLE_AUDIO=1"
-	"ENABLE_WAV=1"
+	"ENABLE_WAV=0"
 	"ENABLE_VORBIS=1"
 )
 
@@ -70,6 +70,7 @@ add_dependencies( Aduio "Core" )
 set_target_properties(
 	Aduio PROPERTIES
 	OUTPUT_NAME aduio
+	PREFIX ""
 )
 
 # copy phonon over
@@ -78,6 +79,6 @@ message( "Copying Steam Audio DLL (phonon)" )
 if( MSVC )
 	configure_file( "${STEAMAUDIO_DIR}/bin/Windows/x64/phonon.dll" "${GAME_DIR}/bin/phonon.dll" COPYONLY )
 else()
-	configure_file( "${STEAMAUDIO_DIR}/bin/Linux/x64/libphonon.so" "${GAME_DIR}/bin/libphonon.so" COPYONLY )
+	configure_file( "${STEAMAUDIO_DIR}/lib/Linux/x64/libphonon.so" "${GAME_DIR}/bin/libphonon.so" COPYONLY )
 endif()
 

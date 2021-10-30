@@ -1,4 +1,4 @@
-cmake_minimum_required( VERSION 3.20 FATAL_ERROR )
+cmake_minimum_required( VERSION 3.18 FATAL_ERROR )
 
 # make these global for all projects, though they need to use get_property to get these
 set_property( GLOBAL PROPERTY CH_ROOT           ${CMAKE_CURRENT_LIST_DIR} )
