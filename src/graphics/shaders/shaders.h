@@ -46,6 +46,8 @@ public:
 
 	virtual void                       UpdateBuffers( uint32_t sCurrentImage, BaseRenderable* spRenderable ) = 0;
 
+	virtual void                       Draw( BaseRenderable* renderable, VkCommandBuffer c, uint32_t commandBufferIndex ) = 0;
+
 	//virtual bool                       UsesUniformBuffers(  ) = 0;
 
 	inline VkPipeline                  GetPipeline() const        { return aPipeline; }

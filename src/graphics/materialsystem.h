@@ -78,12 +78,8 @@ public:
 	// Get the Renderable ID
 	size_t                      GetRenderableID( BaseRenderable* renderable ) override;
 
-	// Draw a renderable
+	// Draw a renderable (just calls shader draw lmao)
 	void                        DrawRenderable( BaseRenderable* renderable, VkCommandBuffer c, uint32_t commandBufferIndex );
-
-	// This really should be part of the shader
-	void                        DrawMesh( IMesh* mesh, VkCommandBuffer c, uint32_t commandBufferIndex );
-	// void                        DrawSprite( IMesh* mesh, VkCommandBuffer c, uint32_t commandBufferIndex );
 
 	// Awful Mesh Functions, here until i abstract what's used in it
 	void                        MeshInit( IMesh* mesh ) override;
