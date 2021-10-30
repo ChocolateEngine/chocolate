@@ -20,9 +20,11 @@ set "inc_dir=..\public"
 
 :SDL2
 set "SDL2_VER=2.0.16"
-IF EXIST SDL2-%SDL2_VER% GOTO STEAMAUDIO
+IF EXIST SDL2-%SDL2_VER% GOTO SDL2_COPY
 echo Downloading SDL2
 call download-unzip.bat https://www.libsdl.org/release SDL2-devel-%SDL2_VER%-VC.zip .
+:SDL2_COPY
+robocopy SDL2-%SDL2_VER%\include %inc_dir%\SDL2 /S
 
 :STEAMAUDIO
 IF EXIST steamaudio_api GOTO GLM
@@ -36,11 +38,6 @@ echo Downloading GLM
 call download-unzip.bat https://github.com/g-truc/glm/releases/download/0.9.9.8 glm-0.9.9.8.7z .
 :GLM_COPY
 robocopy glm\glm %inc_dir%\glm /S
-
-:OGG
-IF EXIST libogg GOTO DONE
-echo Downloading OGG
-call download-unzip.bat https://github.com/g-truc/glm/releases/download/0.9.9.8 glm-0.9.9.8.7z .
 
 
 :DONE
