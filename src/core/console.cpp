@@ -5,22 +5,11 @@
 
 DLL_EXPORT Console* console = nullptr;
 
-// ================================================================================
-
 
 void Print( const char* format, ... )
 {
 	VSTRING( std::string buffer, format );
 	console->Print( buffer.c_str() );
-}
-
-
-extern "C"
-{
-	void DLL_EXPORT init_console(  )
-	{
-		console = new Console;
-	}
 }
 
 

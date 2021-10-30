@@ -330,7 +330,7 @@ public:
 	void 	Add( const String &srCmd );
 	/* A.  */
 	void 	DeleteCommand(  );
-	/* A.  */
+	/* Go through and run every command inputed into the console last frame  */
 	void 	Update(  );
 	/* A.  */
 	void 	Clear(  );
