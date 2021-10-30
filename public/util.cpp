@@ -7,14 +7,29 @@
 #include <iomanip>
 
 
-void str_upper(std::string &string)
+void str_upper( std::string &string )
 {
-	std::transform(string.begin(), string.end(), string.begin(), ::toupper);
+	std::transform( string.begin(), string.end(), string.begin(), ::toupper );
 }
 
-void str_lower(std::string &string)
+void str_lower( std::string &string )
 {
-	std::transform(string.begin(), string.end(), string.begin(), ::tolower);
+	std::transform( string.begin(), string.end(), string.begin(), ::tolower);
+}
+
+
+std::string str_upper2( const std::string &in )
+{
+	std::string string = in;
+	std::transform( string.begin(), string.end(), string.begin(), ::toupper );
+	return string;
+}
+
+std::string str_lower2( const std::string &in )
+{
+	std::string string = in;
+	std::transform( string.begin(), string.end(), string.begin(), ::tolower );
+	return string;
 }
 
 

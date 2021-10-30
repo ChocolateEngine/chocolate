@@ -63,8 +63,12 @@ bool vec_contains(const std::vector<T> &vec, T item)
 }
 
 
-void str_upper(std::string &string);
-void str_lower(std::string &string);
+void str_upper( std::string &string );
+void str_lower( std::string &string );
+
+// would like better names for this, but oh well
+std::string str_upper2( const std::string &in );
+std::string str_lower2( const std::string &in );
 
 // don't need to worry about any resizing with these
 std::string vstring( const char* format, ... );

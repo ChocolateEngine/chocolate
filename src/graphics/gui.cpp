@@ -216,8 +216,15 @@ int ConsoleInputCallback( ImGuiInputTextCallbackData* data )
 }
 
 
+CONVAR( con_spam_test, 0 );
+CONVAR( con_gui_max_history, -1 );  // idk
+
+
 void GuiSystem::DrawConsole( bool wasConsoleOpen )
 {
+	if ( con_spam_test.GetBool() )
+		Print( "TEST\n" );
+
 	// blech
 	static bool wasUpArrowPressed = false;
 	//static bool wasUpArrowPressed = false;
@@ -231,7 +238,14 @@ void GuiSystem::DrawConsole( bool wasConsoleOpen )
 		ImGui::SetKeyboardFocusHere(0);
 
 	ImGui::BeginChild("ConsoleOutput", ImVec2( ImGui::GetWindowSize().x - 32, ImGui::GetWindowSize().y - 64 ), true);
-	ImGui::Text( console->GetConsoleHistoryStr().c_str() );
+	static int scrollMax = ImGui::GetScrollMaxY();
+
+	ImGui::TextUnformatted( console->GetConsoleHistoryStr( con_gui_max_history.GetFloat() ).c_str() );
+
+	if ( scrollMax == ImGui::GetScrollY() )
+		ImGui::SetScrollY( ImGui::GetScrollMaxY() );
+
+	scrollMax = ImGui::GetScrollMaxY();
 	ImGui::EndChild();
 
 	snprintf( buf, 256, console->GetTextBuffer(  ).c_str() );
