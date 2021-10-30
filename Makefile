@@ -10,7 +10,7 @@ bin		:=	bin
 out		:=	engine.so
 
 libraries	:=	-lSDL2 -lvulkan -ldl -lpthread -lX11 -lXxf86vm -lXrandr -lXi -lSDL2_mixer
-includepaths	:=	-I $(inc)/imgui/ -I /usr/include/SDL2
+includepaths	:=	-I $(inc)/imgui/ -I /usr/include/SDL2 -I$(inc) -I$(inc)/core -I$(inc)/shared -Ithirdparty/steamaudio_api/include/
 
 sources		:= 	$(shell find $(src) -name "*.cpp")
 objects		:=	$(sources:.cpp=.o)
