@@ -4,7 +4,8 @@ shader_basic_3d.cpp ( Authored by Demez )
 The Basic 3D Shader, starting point shader
 */
 #include "../renderer.h"
-#include "shader_basic_3d.h"
+#include "shader_basic_2d.h"
+#include "graphics/sprite.h"
 
 
 extern size_t gModelDrawCalls;
@@ -14,7 +15,17 @@ extern size_t gVertsDrawn;
 // =========================================================
 
 
-void Basic3D::Init()
+/*
+aTextureLayout = InitDescriptorSetLayout( { { DescriptorLayoutBinding( VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1,
+VK_SHADER_STAGE_FRAGMENT_BIT, NULL ) } } );
+
+VkDescriptorSetLayout layouts[  ] = { aTextureLayout };
+aPipelineLayout = InitPipelineLayouts( layouts, 1 );
+aPipeline = InitGraphicsPipeline< vertex_2d_t >( aPipelineLayout, "materials/shaders/2dvert.spv", "materials/shaders/2dfrag.spv" );
+*/
+
+
+void Basic2D::Init()
 {
 	aModules.Allocate(2);
 	aModules[0] = CreateShaderModule( ReadFile( pVShader ) ); // Processes incoming verticies, taking world position, color, and texture coordinates as an input
@@ -24,7 +35,7 @@ void Basic3D::Init()
 }
 
 
-void Basic3D::ReInit()
+void Basic2D::ReInit()
 {
 	aModules[0] = CreateShaderModule( ReadFile( pVShader ) ); // Processes incoming verticies, taking world position, color, and texture coordinates as an input
 	aModules[1] = CreateShaderModule( ReadFile( pFShader ) ); // Fills verticies with fragments to produce color, and depth
@@ -33,16 +44,15 @@ void Basic3D::ReInit()
 }
 
 
-std::vector<VkDescriptorSetLayoutBinding> Basic3D::GetDescriptorSetLayoutBindings(  )
+std::vector<VkDescriptorSetLayoutBinding> Basic2D::GetDescriptorSetLayoutBindings(  )
 {
 	return {
-		DescriptorLayoutBinding( VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr ),
-		DescriptorLayoutBinding( VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_VERTEX_BIT, nullptr )
+		DescriptorLayoutBinding( VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr )
 	};
 }
 
 
-void Basic3D::CreateGraphicsPipeline(  )
+void Basic2D::CreateGraphicsPipeline(  )
 {
 	aPipelineLayout = InitPipelineLayouts( aLayouts.GetBuffer(  ), aLayouts.GetSize(  ) );
 
@@ -98,8 +108,7 @@ void Basic3D::CreateGraphicsPipeline(  )
 	rasterizer.rasterizerDiscardEnable 	= VK_FALSE;
 	rasterizer.polygonMode 			= VK_POLYGON_MODE_FILL;		//	Fill with fragments, can optionally use VK_POLYGON_MODE_LINE for a wireframe
 	rasterizer.lineWidth 			= 1.0f;
-	// rasterizer.cullMode 			= ( sFlags & NO_CULLING ) ? VK_CULL_MODE_NONE : VK_CULL_MODE_BACK_BIT;	//	FIX FOR MAKING 2D SPRITES WORK!!! WOOOOO!!!!
-	rasterizer.cullMode 			= VK_CULL_MODE_BACK_BIT;
+	rasterizer.cullMode 			= VK_CULL_MODE_NONE;
 	rasterizer.frontFace 			= VK_FRONT_FACE_COUNTER_CLOCKWISE;
 	rasterizer.depthBiasEnable 		= VK_FALSE;
 	rasterizer.depthBiasConstantFactor 	= 0.0f; // Optional
@@ -127,10 +136,8 @@ void Basic3D::CreateGraphicsPipeline(  )
 
 	VkPipelineDepthStencilStateCreateInfo depthStencil{  };
 	depthStencil.sType 			= VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
-	//depthStencil.depthTestEnable 		= ( sFlags & NO_DEPTH ) ? VK_FALSE : VK_TRUE;
-	//depthStencil.depthWriteEnable		= ( sFlags & NO_DEPTH ) ? VK_FALSE : VK_TRUE;
-	depthStencil.depthTestEnable 		= VK_TRUE;
-	depthStencil.depthWriteEnable		= VK_TRUE;
+	depthStencil.depthTestEnable 		= VK_FALSE;  // SPRITE THING?
+	depthStencil.depthWriteEnable		= VK_FALSE;  // SPRITE THING?
 	depthStencil.depthCompareOp 		= VK_COMPARE_OP_LESS;
 	depthStencil.depthBoundsTestEnable 	= VK_FALSE;
 	depthStencil.minDepthBounds 		= 0.0f; // Optional
@@ -183,103 +190,79 @@ void Basic3D::CreateGraphicsPipeline(  )
 }
 
 
-void Basic3D::UpdateBuffers( uint32_t sCurrentImage, BaseRenderable* spRenderable )
+void Basic2D::UpdateBuffers( uint32_t sCurrentImage, BaseRenderable* spRenderable )
 {
-	ubo_3d_t ubo{  };
-
-	IMesh* mesh = dynamic_cast<IMesh*>(spRenderable);
-	assert(mesh != nullptr);
-
-	ubo.model = mesh->GetModelMatrix(  );
-	ubo.view  = renderer->aView.viewMatrix;
-	ubo.proj  = renderer->aView.GetProjection(  );
-
-	auto& uniformData = materialsystem->GetUniformData( spRenderable->GetID() );
-	auto& uniformDataMem = materialsystem->GetUniformData( spRenderable->GetID() ).aMem[ sCurrentImage ];
-
-	void* data;
-	vkMapMemory( DEVICE, uniformDataMem, 0, sizeof( ubo ), 0, &data );
-	memcpy( data, &ubo, sizeof( ubo ) );
-	vkUnmapMemory( DEVICE, uniformDataMem );
 }
 
 
-VkVertexInputBindingDescription Basic3D::GetBindingDesc(  )
+VkVertexInputBindingDescription Basic2D::GetBindingDesc(  )
 {
 	VkVertexInputBindingDescription bindingDescription{};
 	bindingDescription.binding = 0;
-	bindingDescription.stride = sizeof( vertex_3d_t );
+	bindingDescription.stride = sizeof( vertex_2d_t );
 	bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
 
 	return bindingDescription;
 }
 
 
-std::array< VkVertexInputAttributeDescription, 4 > Basic3D::GetAttributeDesc(  )
+std::array< VkVertexInputAttributeDescription, 3 > Basic2D::GetAttributeDesc(  )
 {
-	std::array< VkVertexInputAttributeDescription, 4 >attributeDescriptions{  };
+	std::array< VkVertexInputAttributeDescription, 3 >attributeDescriptions{  };
 	attributeDescriptions[ 0 ].binding  = 0;
 	attributeDescriptions[ 0 ].location = 0;
 	attributeDescriptions[ 0 ].format   = VK_FORMAT_R32G32B32_SFLOAT;
-	attributeDescriptions[ 0 ].offset   = offsetof( vertex_3d_t, pos );
+	attributeDescriptions[ 0 ].offset   = offsetof( vertex_2d_t, pos );
 
 	attributeDescriptions[ 1 ].binding  = 0;
 	attributeDescriptions[ 1 ].location = 1;
 	attributeDescriptions[ 1 ].format   = VK_FORMAT_R32G32B32_SFLOAT;
-	attributeDescriptions[ 1 ].offset   = offsetof( vertex_3d_t, color );
+	attributeDescriptions[ 1 ].offset   = offsetof( vertex_2d_t, color );
 
 	attributeDescriptions[ 2 ].binding  = 0;
 	attributeDescriptions[ 2 ].location = 2;
 	attributeDescriptions[ 2 ].format   = VK_FORMAT_R32G32_SFLOAT;
-	attributeDescriptions[ 2 ].offset   = offsetof( vertex_3d_t, texCoord );
-
-	attributeDescriptions[ 3 ].binding  = 0;
-	attributeDescriptions[ 3 ].location = 3;
-	attributeDescriptions[ 3 ].format   = VK_FORMAT_R32G32B32_SFLOAT;
-	attributeDescriptions[ 3 ].offset   = offsetof( vertex_3d_t, normal );
+	attributeDescriptions[ 2 ].offset   = offsetof( vertex_2d_t, texCoord );
 
 	return attributeDescriptions;
 }
 
 
-void Basic3D::Draw( BaseRenderable* renderable, VkCommandBuffer c, uint32_t commandBufferIndex )
+void Basic2D::Draw( BaseRenderable* renderable, VkCommandBuffer c, uint32_t commandBufferIndex )
 {
-	//if ( mesh->aNoDraw )
-	//	return;
+	Sprite* sprite = dynamic_cast<Sprite*>(renderable);
+	assert( sprite != nullptr );
 
-#if MESH_USE_PUSH_CONSTANTS
-	// mesh.GetShader()->UpdateUniformBuffers( imageIndex, *model, model->aMeshes[i] );
-
-	// AWFUL
-#endif
-
-	IMesh* mesh = dynamic_cast<IMesh*>(renderable);
-
-	assert(mesh != nullptr);
-
-	// Bind the mesh's vertex and index buffers
-	VkBuffer 	vBuffers[  ] 	= { mesh->aVertexBuffer };
+	VkBuffer 	vBuffers[  ] 	= { renderable->aVertexBuffer };
 	VkDeviceSize 	offsets[  ] 	= { 0 };
+	VkDescriptorSet sets[  ] = { ((Material*)sprite->apMaterial)->apDiffuse->aSets[ commandBufferIndex ] };
+
+	vkCmdBindPipeline( c, VK_PIPELINE_BIND_POINT_GRAPHICS, aPipeline );
 	vkCmdBindVertexBuffers( c, 0, 1, vBuffers, offsets );
 
-	if ( mesh->aIndexBuffer )
-		vkCmdBindIndexBuffer( c, mesh->aIndexBuffer, 0, VK_INDEX_TYPE_UINT32 );
+	if ( renderable->aIndexBuffer )
+		vkCmdBindIndexBuffer( c, renderable->aIndexBuffer, 0, VK_INDEX_TYPE_UINT32 );
 
-	// Now draw it
-	vkCmdBindPipeline( c, VK_PIPELINE_BIND_POINT_GRAPHICS, aPipeline );
+	vkCmdBindDescriptorSets( c, VK_PIPELINE_BIND_POINT_GRAPHICS, aPipelineLayout, 0, 1, sets, 0, NULL );
 
-	VkDescriptorSet sets[  ] = {
-		((Material*)mesh->apMaterial)->apDiffuse->aSets[ commandBufferIndex ],
-		materialsystem->GetUniformData( mesh->GetID() ).aSets[ commandBufferIndex ]
-	};
+	push_constant_t push{  };
+	push.scale	= sprite->aTransform.aScale;
+	push.translate  = sprite->aTransform.aPos;
 
-	vkCmdBindDescriptorSets( c, VK_PIPELINE_BIND_POINT_GRAPHICS, aPipelineLayout, 0, 2, sets, 0, NULL );
+	vkCmdPushConstants
+	(
+		c,
+		aPipelineLayout,
+		VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
+		0,
+		sizeof( push_constant_t ),
+		&push
+	);
 
-	if ( mesh->aIndexBuffer )
-		vkCmdDrawIndexed( c, (uint32_t)mesh->aIndices.size(), 1, 0, 0, 0 );
+	if ( sprite->aIndexBuffer )
+		vkCmdDrawIndexed( c, (uint32_t)sprite->aIndices.size(), 1, 0, 0, 0 );
 	else
-		vkCmdDraw( c, (uint32_t)mesh->aVertices.size(), 1, 0, 0 );
+		vkCmdDraw( c, (uint32_t)sprite->aVertices.size(), 1, 0, 0 );
 
-	gModelDrawCalls++;
-	gVertsDrawn += mesh->aVertices.size();
+	gVertsDrawn += sprite->aVertices.size();
 }

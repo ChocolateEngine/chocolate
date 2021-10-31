@@ -13,8 +13,6 @@ stores multiple Meshes.
 #define MESH_USE_PUSH_CONSTANTS 0
 
 
-// TODO: the functions in here are really for renderer use only so i might want to get rid of them soon
-// 96 bytes
 class IMesh: public BaseRenderable
 {
 public:
@@ -22,29 +20,7 @@ public:
 
 	virtual glm::mat4               GetModelMatrix(  ) = 0;
 
-	/* Allocates the model, and loads its textures etc.  */
-	//void                    Init(  );
-
-	/* Reinitialize data that is useless after the swapchain becomes outdated.  */
-	//void                    ReInit(  );
-
-	/* Frees the memory used by objects outdated by a new swapchain state.  */
-	//void                    FreeOldResources(  );
-
-	/* Frees all memory used by model.  */
-	//void                    Destroy(  );
-
-	// 48 bytes (24 + 24)
 	std::vector< vertex_3d_t >		aVertices;
-	std::vector< uint32_t >         aIndices;
-
-	// TODO: remove this from IMesh, really shouldn't have this,
-	// gonna have to have some base types for this so game can use this
-	// 32 bytes
-	VkBuffer                        aVertexBuffer = nullptr;
-	VkBuffer                        aIndexBuffer = nullptr;
-	VkDeviceMemory                  aVertexBufferMem = nullptr;
-	VkDeviceMemory                  aIndexBufferMem = nullptr;
 
 	// could move elsewhere, takes up too much space (12+12+4 = 28 bytes)
 	//glm::vec3                       aMinSize = {};

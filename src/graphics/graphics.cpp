@@ -7,7 +7,7 @@
 void GraphicsSystem::LoadModel( const std::string& srModelPath, const std::string& srTexturePath, Model *spModel )
 {
 	if ( spModel == NULL )
-		spModel = new Model;
+		return;
 
 	spModel->GetModelData().SetPos( { 0.f, 0.f, 0.f } );
 	aRenderer.InitModel( spModel->GetModelData(  ), srModelPath, srTexturePath );
@@ -20,23 +20,20 @@ void GraphicsSystem::UnloadModel( Model *spModel )
 	vec_remove( aModels, spModel );
 }
 
-#if SPRITES
 void GraphicsSystem::LoadSprite( const std::string& srSpritePath, Sprite *spSprite )
 {
 	if ( spSprite == NULL )
-		spSprite = new Sprite;
+		return;
 
-	spSprite->SetPosition( 0.f, 0.f );
-	aRenderer.InitSprite( spSprite->GetSpriteData(  ), srSpritePath );
+	aRenderer.InitSprite( *spSprite, srSpritePath );
 	
 	aSprites.push_back( spSprite );
 }
 
-void GraphicsSystem::UnloadSprite( Sprite *spSprite )
+void GraphicsSystem::FreeSprite( Sprite *spSprite )
 {
 	vec_remove( aSprites, spSprite );
 }
-#endif
 
 SDL_Window *GraphicsSystem::GetWindow(  )
 {

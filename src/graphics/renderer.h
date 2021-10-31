@@ -11,8 +11,8 @@ Vulkan.
 
 #include "system.h"
 #include "graphics/renderertypes.h"
-#include "types/modeldata.h"
-#include "types/spritedata.h"
+#include "graphics/imesh.h"
+#include "graphics/sprite.h"
 #include "gui.h"
 #include "materialsystem.h"
 
@@ -37,7 +37,7 @@ protected:
 	typedef std::vector< VkSemaphore >		SemaphoreList;
 	typedef std::vector< VkFence >			FenceList;
 	typedef std::vector< ModelData* >		ModelDataList;
-	typedef std::vector< SpriteData* >		SpriteDataList;
+	typedef std::vector< Sprite* >		SpriteDataList;
 	typedef std::string				String;
 
 	ImageViews                  aSwapChainImageViews;       // View into an image, describing which part to access, one needed for each image
@@ -63,7 +63,7 @@ protected:
 	/* A.  */
 	void    InitCommandBuffers(  );
 	/* A.  */
-	void    InitSpriteVertices( const String &srSpritePath, SpriteData &srSprite );
+	void    InitSpriteVertices( const String &srSpritePath, Sprite &srSprite );
 	/* A.  */
 	void    ReinitSwapChain(  );
 	/* A.  */
@@ -91,7 +91,7 @@ public:
 	/* A.  */
 	void 	InitModel( ModelData &srModelData, const String &srModelPath, const String &srTexturePath );
 	/* A.  */
-	void 	InitSprite( SpriteData &srSpriteData, const String &srSpritePath );
+	void 	InitSprite( Sprite &srSpriteData, const String &srSpritePath );
 	/* A.  */
 	void 	DrawFrame(  );
 

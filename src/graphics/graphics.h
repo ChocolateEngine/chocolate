@@ -18,15 +18,11 @@ public:
 	typedef BaseSystem BaseClass;
 
 protected:
-#if SPRITES
 	typedef std::vector< Sprite* > 	SpriteList;
-#endif
 	typedef std::vector< Model* >	ModelList;
 
 	int 		aRandom = time( 0 );
-#if SPRITES
 	SpriteList 	aSprites;
-#endif
 	ModelList 	aModels;
 	Renderer 	aRenderer;
 
@@ -52,16 +48,14 @@ public:
 				   const std::string& srTexturePath,
 				   Model *spModel = NULL ) override;
 	/* Unload a model.  */
-	void 		UnloadModel( Model *spModel );
+	void 		UnloadModel( Model *spModel ) override;
 
-#if SPRITES
 	/* Loads a sprite given a path to the sprite,
 	   spSprite is optional for external management.  */
 	void 		LoadSprite( const std::string& srSpritePath,
-				    Sprite *spSprite = NULL );
+				    Sprite *spSprite = NULL ) override;
 	/* Unload a sprite.  */
-	void 		UnloadSprite( Sprite *spSprite );
-#endif
+	void 		FreeSprite( Sprite *spSprite ) override;
 
 	/* Sets the view  */
 	void        SetView( View& view ) override;
