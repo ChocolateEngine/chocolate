@@ -13,25 +13,6 @@ by the renderer.
 
 #include <SDL2/SDL.h>
 
-// uhhh
-#if SPRITES
-class Sprite
-{
-private:
-	SpriteData aSpriteData;
-public:
-	/* Returns aSpriteData, in case it is needed, usually not.  */
-	SpriteData      &GetSpriteData(  ) { return aSpriteData; }
-	/* Sets the position of the sprite to a given x and y.  */
-	void 		SetPosition( float sX, float sY ){ aSpriteData.aPos.x = sX;
-						   aSpriteData.aPos.y = sY; }
-	/* Translates the sprite by x and y.  */
-	void 		Translate( float sX, float sY ){ aSpriteData.aPos.x += sX;
-					         aSpriteData.aPos.y += sY; }
-	/* Sets the visibility of the sprite.  */
-	void 		SetVisibility( bool sVisible ){ aSpriteData.aNoDraw = !sVisible; }
-};
-#endif
 
 class Model
 {
@@ -56,15 +37,13 @@ public:
 	/* Unload a model. (Change to FreeModel)  */
 	virtual void 		UnloadModel( Model *spModel ) = 0;
 
-#if SPRITES
 	/* Loads a sprite given a path to the sprite,
 	   spSprite is optional for external management.  */
 	virtual void 		LoadSprite( const std::string& srSpritePath,
 				    Sprite *spSprite = NULL ) = 0;
 
-	/* Unload a sprite. (Change to FreeSprite) */
-	virtual void 		UnloadSprite( Sprite *spSprite ) = 0;
-#endif
+	/* Fre a sprite. */
+	virtual void 		FreeSprite( Sprite *spSprite ) = 0;
 
 	/* Sets the view  */
 	virtual void        SetView( View& view ) = 0;

@@ -10,6 +10,7 @@ draw to the screen.
 #include "types/material.h"
 #include "util/modelloader.h"
 #include "types/transform.h"
+#include "graphics/sprite.h"
 #include "util.h"
 
 #define GLM_FORCE_RADIANS
@@ -115,26 +116,6 @@ void Renderer::InitCommandBuffers(  )
 			materialsystem->DrawRenderable( renderable, aCommandBuffers[i], i );
 		}
 
-		// TODO: make this a BaseRenderable
-		for ( auto& sprite : aSprites )
-		{
-			sprite->Bind( aCommandBuffers[ i ], i );
-			push_constant_t push{  };
-			push.scale	= { 1, 1 };
-			push.translate  = { sprite->aPos.x, sprite->aPos.y };
-
-			vkCmdPushConstants
-				(
-					aCommandBuffers[ i ],
-					sprite->aPipelineLayout,
-					VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
-					0,
-					sizeof( push_constant_t ),
-					&push
-					);
-			sprite->Draw( aCommandBuffers[ i ] );
-		}
-
 		if ( aImGuiInitialized )
 		{
 			ImGui::Render(  );
@@ -148,23 +129,23 @@ void Renderer::InitCommandBuffers(  )
 	}
 }
 
-void Renderer::InitSpriteVertices( const String &srSpritePath, SpriteData &srSprite )
+void Renderer::InitSpriteVertices( const String &srSpritePath, Sprite &srSprite )
 {
-	std::vector< vertex_2d_t > vertices =
+	srSprite.aVertices =
 	{
 		{{-1 * ( srSprite.aWidth / 2.0f ), -1 * ( srSprite.aHeight / 2.0f )}, {1.0f, 0.0f, 0.0f}, {1.0f, 0.0f}},
 		{{( srSprite.aWidth / 2.0f ), -1 * ( srSprite.aHeight / 2.0f )}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f}},
 		{{( srSprite.aWidth / 2.0f ), ( srSprite.aHeight / 2.0f )}, {0.0f, 0.0f, 1.0f}, {0.0f, 1.0f}},
 		{{-1 * ( srSprite.aWidth / 2.0f ), ( srSprite.aHeight / 2.0f )}, {1.0f, 1.0f, 1.0f}, {1.0f, 1.0f}}
 	};
-	std::vector< uint32_t > indices =
+
+	srSprite.aIndices =
 	{
 		0, 1, 2, 2, 3, 0	
 	};
-	srSprite.aVertexCount = ( uint32_t )vertices.size(  );
-	srSprite.aIndexCount = ( uint32_t )indices.size(  );
-	InitTexBuffer( vertices, srSprite.aVertexBuffer, srSprite.aVertexBufferMem, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT );
-	InitTexBuffer( indices, srSprite.aIndexBuffer, srSprite.aIndexBufferMem, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT );
+
+	materialsystem->CreateVertexBuffer( &srSprite );
+	materialsystem->CreateIndexBuffer( &srSprite );
 }
 
 void Renderer::ReinitSwapChain(  )
@@ -198,9 +179,6 @@ void Renderer::ReinitSwapChain(  )
 			materialsystem->MeshReInit( mesh );
 		}
 	}
-	
-	for ( auto& sprite : aSprites )
-		sprite->Reinit(  );
 }
 
 void Renderer::DestroySwapChain(  )
@@ -222,9 +200,6 @@ void Renderer::DestroySwapChain(  )
 			materialsystem->MeshFreeOldResources( mesh );
 		}
 	}
-
-	for ( auto& sprite : aSprites  )
-		sprite->FreeOldResources(  );
 	
 	for ( auto framebuffer : aSwapChainFramebuffers )
 		vkDestroyFramebuffer( DEVICE, framebuffer, NULL );
@@ -317,12 +292,15 @@ void Renderer::InitModel( ModelData &srModelData, const String &srModelPath, con
 }
 
 // TODO: change to LoadSprite
-void Renderer::InitSprite( SpriteData &srSpriteData, const String &srSpritePath )
+void Renderer::InitSprite( Sprite &srSprite, const String &srSpritePath )
 {
-	srSpriteData.Init(  );
-	srSpriteData.SetTexture( srSpritePath, aTextureSampler );
-	InitSpriteVertices( "", srSpriteData );
-	aSprites.push_back( &srSpriteData );
+	srSprite.apMaterial = materialsystem->CreateMaterial(  );
+	srSprite.apMaterial->SetShader( "basic_2d" );
+	srSprite.apMaterial->SetDiffusePath( srSpritePath );
+	srSprite.apMaterial->SetDiffuse( materialsystem->CreateTexture(srSprite.apMaterial, srSpritePath) );
+
+	InitSpriteVertices( "", srSprite );
+	aSprites.push_back( &srSprite );
 }
 
 void Renderer::DrawFrame(  )

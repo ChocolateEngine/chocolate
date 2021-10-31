@@ -28,19 +28,19 @@ public:
 	IMaterial*	                CreateMaterial() override;
 	void                        DeleteMaterial( IMaterial* mat ) override;
 
-	IMaterial*	                GetErrorMaterial() override { return apErrorMaterial; }
+	IMaterial*	                GetErrorMaterial( const std::string& shader ) override;
 
 	// ideally this shouldn't need a path, should really be reworked to be closer to thermite, more flexible design
 	// also this probably shouldn't use a shader for a parameter
 	TextureDescriptor*          CreateTexture( IMaterial* material, const std::string path ) override;
 
-	/* Create a Vertex and Index buffer for a Mesh. */
-	void                        CreateVertexBuffer( IMesh* mesh ) override;
-	void                        CreateIndexBuffer( IMesh* mesh ) override;
+	/* Create a Vertex and Index buffer for a Renderable. */
+	void                        CreateVertexBuffer( BaseRenderable* renderable ) override;
+	void                        CreateIndexBuffer( BaseRenderable* renderable ) override;
 
-	/* Free a Vertex and Index buffer for a Mesh. */
-	void                        FreeVertexBuffer( IMesh* mesh ) override;
-	void                        FreeIndexBuffer( IMesh* mesh ) override;
+	/* Free a Vertex and Index buffer for a Renderable. */
+	void                        FreeVertexBuffer( BaseRenderable* renderable ) override;
+	void                        FreeIndexBuffer( BaseRenderable* renderable ) override;
 
 	void                        ReInitSwapChain();
 	void                        DestroySwapChain();
@@ -72,6 +72,9 @@ public:
 	// Call this on renderable creation to assign it an Id
 	void                        RegisterRenderable( BaseRenderable* renderable ) override;
 
+	// Destroy a Renderable's Vertex and Index buffers, and anything else it may use
+	void                        DestroyRenderable( BaseRenderable* renderable ) override;
+
 	// Add a Renderable to be drawn next frame, list is cleared after drawing
 	void                        AddRenderable( BaseRenderable* renderable ) override;
 
@@ -85,7 +88,6 @@ public:
 	void                        MeshInit( IMesh* mesh ) override;
 	void                        MeshReInit( IMesh* mesh ) override;
 	void                        MeshFreeOldResources( IMesh* mesh ) override;
-	void                        MeshDestroy( IMesh* mesh ) override;
 
 private:
 	std::unordered_map< std::string, BaseShader* >          aShaders;
@@ -93,10 +95,11 @@ private:
 	std::unordered_map< size_t, UniformDescriptor >         aUniformDataMap;
 	std::unordered_map< size_t, VkDescriptorSetLayout >     aUniformLayoutMap;
 
+	std::vector< BaseRenderable* > aRenderables;
 	std::vector< BaseRenderable* > aDrawList;
 
 	std::vector< Material* > aMaterials;
-	Material* apErrorMaterial = nullptr;
+	std::vector< Material* > aErrorMaterials;
 };
 
 extern MaterialSystem* materialsystem;

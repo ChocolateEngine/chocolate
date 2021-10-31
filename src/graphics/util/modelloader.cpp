@@ -7,7 +7,7 @@ Class dedicated for loading models, and caches them too for multiple uses
 //#include "../../../inc/core/renderer/modelloader.h"
 #include "modelloader.h"
 #include "../materialsystem.h"
-#include "../types/modeldata.h"
+#include "graphics/imesh.h"
 
 #include "util.h"
 #include "core/console.h"
