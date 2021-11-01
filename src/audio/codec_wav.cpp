@@ -1,11 +1,11 @@
 #include "codec_wav.h"
-#include "util.h"
+#include "../public/util.h"
 
 #include <SDL2/SDL.h>
 #include <filesystem>
 
 #if ENABLE_WAV
-#include "libwav/include/wav.h"
+#include "../../thirdparty/libwav/include/wav.h"
 
 
 

@@ -1,8 +1,7 @@
 #pragma once
-
-#include "audio.h"
-
 #if ENABLE_LIBAV
+
+#include "../core/audio.h"
 class CodecLibAV: public BaseCodec
 {
 protected:

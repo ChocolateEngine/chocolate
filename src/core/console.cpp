@@ -5,7 +5,6 @@
 
 DLL_EXPORT Console* console = nullptr;
 
-
 void Print( const char* format, ... )
 {
 	VSTRING( std::string buffer, format );

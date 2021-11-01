@@ -1,19 +1,16 @@
 #pragma once
 
-#include "system.h"
 #include "iaudio.h"
 
 #include <SDL2/SDL.h>
+#include <vector>
 
-#if ENABLE_AUDIO
-#include <phonon.h>
-#endif /* ENABLE_AUDIO  */
+#include "phonon.h"
 
 class BaseCodec;
 
 struct AudioStreamInternal: public AudioStream
 {
-#if ENABLE_AUDIO
 	BaseCodec *codec = nullptr;
 	void* data;  // data for the codec only
 
@@ -39,7 +36,6 @@ struct AudioStreamInternal: public AudioStream
 
 	IPLhandle directSoundEffect = {};
 	IPLhandle binauralEffect = {};
-#endif
 };
 
 
@@ -57,78 +53,38 @@ public:
 	virtual long            Read( AudioStreamInternal *stream, size_t size, std::vector<float> &data ) = 0;
 	virtual int             Seek( AudioStreamInternal *stream, double pos ) = 0;
 	virtual void            Close( AudioStreamInternal *stream ) = 0;
-
-	virtual void            SetAudioSystem( BaseAudioSystem* system ) { apAudio = system; };
-	BaseAudioSystem*        apAudio;
 };
 
-
-class AudioSystem : public BaseAudioSystem
+extern "C"
 {
-public:
-	                                AudioSystem();
-	                                ~AudioSystem();
 
-	virtual void                    SetListenerTransform( const glm::vec3& pos, const glm::quat& rot ) override;
-	virtual void                    SetListenerTransform( const glm::vec3& pos, const glm::vec3& ang ) override;
-	virtual void                    SetPaused( bool paused ) override;
-	virtual void                    SetGlobalSpeed( float speed ) override;
+	//void                    SetListenerTraRot( const glm::vec3& pos, const glm::quat& rot );
+	void                    SetListenerTransformAng( const glm::vec3* pos, const glm::vec3* ang );
+	void                    SetPaused( bool paused );
+	void                    SetGlobalSpeed( float speed );
 
-	virtual bool                    LoadSound( const char* soundPath, AudioStream** stream ) override;
-	virtual bool                    PlaySound( AudioStream *stream ) override;
-	virtual void                    FreeSound( AudioStream** stream ) override;
-	virtual int                     Seek( AudioStream *streamPublic, double pos ) override;
+	bool                    LoadSound( const char* soundPath, AudioStream** stream );
+	bool                    PlaySound( AudioStream *stream );
+	void                    FreeSound( AudioStream** stream );
+	int                     Seek( AudioStream *streamPublic, double pos );
 
-	//virtual bool                    RegisterCodec( BaseCodec *codec ) override;
+//virtual bool                    RegisterCodec( BaseCodec *codec );
 	bool                            RegisterCodec( BaseCodec *codec );
 
-#if ENABLE_AUDIO
 	bool                            UpdateStream( AudioStreamInternal* stream );
 	bool                            MixAudio();
 	bool                            QueueAudio();
 
 	bool                            InitSteamAudio();
 	int                             ApplySpatialEffects( AudioStreamInternal* stream, float* data, size_t frameSize );
-#endif
 
-	virtual void                 	Init(  ) override;
-	virtual void                 	Update( float frameTime ) override;
+/* Initialize system.  */
+	void                 	Init(  );
 
-	// --------------------------------------------------
-	// steam audio settings
+/* Initialize system.  */
+	void                 	Update( float frameTime );
 
-#if ENABLE_AUDIO
-	IPLhandle                       rendererBinaural = nullptr;
+// --------------------------------------------------
+// steam audio settings
 
-	IPLhandle                       context {nullptr};
-
-	IPLhandle                       computeDevice {nullptr};
-	IPLhandle                       scene {nullptr};
-	IPLhandle                       probeManager {nullptr};
-	IPLhandle                       environment {nullptr};
-	IPLSimulationSettings           simulationSettings {};
-
-	IPLhandle                       envRenderer = {};
-	IPLhandle                       renderer = {};
-
-	// memory buffer for phonon rendering final mix
-	float*                          mixBufferAudio = nullptr;
-	IPLAudioBuffer                  mixBufferContext;
-	std::vector<IPLAudioBuffer>     unmixedBuffers;
-
-	// --------------------------------------------------
-
-	std::vector< BaseCodec* >       aCodecs;
-	std::vector< AudioStreamInternal* > aStreams;
-
-	SDL_AudioDeviceID               aOutputDeviceID;
-	SDL_AudioSpec                   aAudioSpec;
-	SDL_AudioStream*                aMasterStream = nullptr;
-#endif
-
-	glm::vec3                       aListenerPos = {0, 0, 0};
-	glm::quat                       aListenerRot = {0, 0, 0, 0};
-	bool                            aPaused = false;
-	float                           aSpeed = 1.f;
-};
-
+}

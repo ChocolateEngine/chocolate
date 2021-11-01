@@ -137,3 +137,5 @@ public:
 	/* A.  */
 						~Device(  );
 };
+
+extern Device *gpDevice;

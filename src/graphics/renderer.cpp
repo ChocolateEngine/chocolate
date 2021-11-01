@@ -37,8 +37,6 @@ CONVAR( r_showDrawCalls, 1 );
 size_t gModelDrawCalls = 0;
 size_t gVertsDrawn = 0;
 
-extern GuiSystem* gui;
-
 Renderer* renderer = nullptr;
 
 void Renderer::EnableImgui(  )
@@ -135,11 +133,8 @@ void Renderer::InitCommandBuffers(  )
 			sprite->Draw( aCommandBuffers[ i ] );
 		}
 
-		if ( aImGuiInitialized )
-		{
-			ImGui::Render(  );
-			ImGui_ImplVulkan_RenderDrawData( ImGui::GetDrawData(  ), aCommandBuffers[ i ] );
-		}
+		ImGui::Render(  );
+		ImGui_ImplVulkan_RenderDrawData( ImGui::GetDrawData(  ), aCommandBuffers[ i ] );
 		
 		vkCmdEndRenderPass( aCommandBuffers[ i ] );
 
@@ -331,13 +326,13 @@ void Renderer::DrawFrame(  )
 
 	if ( r_showDrawCalls.GetBool() )
 	{
-		gui->InsertDebugMessage( 0, "Model Draw Calls: %u (%u / %u Command Buffers)",
+		InsertDebugMessage( 0, "Model Draw Calls: %u (%u / %u Command Buffers)",
 								gModelDrawCalls / aCommandBuffers.size(), gModelDrawCalls, aCommandBuffers.size() );
 
-		gui->InsertDebugMessage( 1, "Vertices Drawn: %u (%u / %u Command Buffers)",
+		InsertDebugMessage( 1, "Vertices Drawn: %u (%u / %u Command Buffers)",
 								gVertsDrawn / aCommandBuffers.size(), gVertsDrawn, aCommandBuffers.size() );
 
-		gui->InsertDebugMessage( 2, "" );  // spacer
+		InsertDebugMessage( 2, "" );  // spacer
 	}
 
 	gModelDrawCalls = 0;
@@ -427,7 +422,6 @@ void Renderer::Cleanup(  )
 }
 
 Renderer::Renderer(  ) :
-	BaseSystem(  ),
 	aView(0, 0, 640, 480, 0.1, 1000, 90)
 {
 	renderer = this;
@@ -435,13 +429,8 @@ Renderer::Renderer(  ) :
 
 void Renderer::Init(  )
 {
-	BaseSystem::Init(  );
-
 	gpDevice = new Device;
 	gpDevice->InitDevice(  );
-
-	auto gui = GET_SYSTEM( BaseGuiSystem );
-	gui->AssignWindow( gpDevice->GetWindow(  ) );
 
 	uint32_t w, h;
 	GetWindowSize( &w, &h );

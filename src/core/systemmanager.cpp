@@ -3,7 +3,6 @@
 
 DLL_EXPORT SystemManager* systems = new SystemManager;
 
-
 #if 0
 void SystemManager::Add( BaseSystem* sys )
 {

@@ -6,7 +6,6 @@
 
 DLL_EXPORT CommandLine* cmd = nullptr;
 
-
 extern "C"
 {
 	void DLL_EXPORT core_init( int argc, char *argv[] )

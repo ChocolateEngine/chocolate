@@ -1,7 +1,7 @@
-#include "codec_libav.h"
-#include "util.h"
-
 #if ENABLE_LIBAV
+
+#include "../../inc/core/codec_libav.h"
+#include "../../inc/shared/util.h"
 
 extern "C"
 {

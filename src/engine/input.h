@@ -19,12 +19,11 @@ public:
 	std::string	aCmd;
 };
 
-
-class InputSystem : public BaseInputSystem
+extern "C"
 {
-protected:
 	typedef std::vector< KeyAlias > KeyAliases;
 	typedef std::vector< KeyBind >	KeyBinds;
+	using Events = std::vector< SDL_Event >;
 	typedef std::unordered_map< SDL_Scancode, KeyState >	KeyStates;
 	
 	SDL_Event 	aEvent;
@@ -32,6 +31,7 @@ protected:
 	KeyBinds 	aKeyBinds;
 	KeyStates 	aKeyStates;
 	const Uint8*      aKeyboardState;
+	Events          aEvents;
 
 	/* Parse the key aliases that can be bound to.  */
 	void 		MakeAliases(  );
@@ -55,8 +55,6 @@ protected:
 	glm::ivec2  aMouseDelta = {0, 0};
 	glm::ivec2  aMousePos = {0, 0};
 	bool        aHasFocus = false;
-
-public:
 	/* Parses SDL inputs and if there is a valid input, execute the console command.  */
 	void 		ParseInput(  );
 
@@ -72,13 +70,11 @@ public:
 	/* Get the current KeyState value.  */
 	KeyState    GetKeyState( SDL_Scancode key );
 
+        std::vector< SDL_Event >* GetEvents(  );
+
 	/* Convienence functions  */
 	bool KeyPressed( SDL_Scancode key ) { return GetKeyState(key) & KeyState_Pressed; }
 	bool KeyReleased( SDL_Scancode key ) { return GetKeyState(key) & KeyState_Released; }
 	bool KeyJustPressed( SDL_Scancode key ) { return GetKeyState(key) & KeyState_JustPressed; }
 	bool KeyJustReleased( SDL_Scancode key ) { return GetKeyState(key) & KeyState_JustReleased; }
-
-	/* Constructor.  */
-	explicit        InputSystem(  );
-};
-
+}

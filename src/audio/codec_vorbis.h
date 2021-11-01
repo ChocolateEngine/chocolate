@@ -5,8 +5,8 @@
 #if ENABLE_VORBIS
 class CodecVorbis: public BaseCodec
 {
-protected:
-	virtual ~CodecVorbis() = default;
+public:
+	virtual ~CodecVorbis(){};
 
 public:
 	virtual bool            Init() override;

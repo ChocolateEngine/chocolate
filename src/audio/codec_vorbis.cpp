@@ -1,5 +1,5 @@
 #include "codec_vorbis.h"
-#include "util.h"
+#include "../public/util.h"
 
 #include <SDL2/SDL.h>
 #include <filesystem>
@@ -27,14 +27,14 @@ bool CodecVorbis::Init(  )
 
 bool CodecVorbis::CheckExt( const char* ext )
 {
-	return (strncmp( ".ogg", ext, 3) == 0);
+	return (strncmp( ".ogg", ext, 4) == 0);
 }
 
 
 bool CodecVorbis::Open( const char* soundPath, AudioStreamInternal *stream )
 {
     FILE *soundFileHandle = fopen(soundPath, "rb");
-    if (!soundFileHandle)
+    if ( !soundFileHandle )
     {
         Print( "File does not exist: \"%s\"\n", soundPath );
         return false;
