@@ -11,7 +11,8 @@ bool 		aConsoleShown 	= true;
 bool		aDrawnFrame	= false;
 bool		aCursorLocked	= false;
 
-std::vector< std::string > aDebugMessages;
+std::vector< std::string >               aDebugMessages;
+std::vector< std::function< void(  ) > > gGuiCalls;
 
 extern "C"
 {
@@ -30,6 +31,9 @@ extern "C"
 
 		if ( !aDrawnFrame )
 			renderer->EnableImgui(  );
+
+		for ( const auto& rGuiElement : gGuiCalls )
+			rGuiElement(  );
 
 		if ( aConsoleShown )
 			DrawConsole( wasConsoleOpen );
@@ -66,6 +70,8 @@ extern "C"
 		prevtick = SDL_GetTicks();
 
 		aDrawnFrame = true;
+
+		gGuiCalls.clear(  );
 	}
 
 
@@ -300,6 +306,12 @@ extern "C"
 			//ImGui::EndPopup(  );
 		}
 
+	}
+	/* Enqueues a new gui element.  */
+	void Queue( void *spFcn )
+	{
+		/* Woah!!!  */
+		gGuiCalls.push_back( *( std::function< void(  ) >* )( spFcn ) );
 	}
 
 	void ShowConsole(  )

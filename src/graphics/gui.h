@@ -11,6 +11,8 @@ extern "C"
 	void 		DrawGui(  );
 /* Draw the console, move to it's own class later  */
 	void 		DrawConsole( bool wasConsoleOpen );
+/* Enqueues a new gui element.  */
+	void		Queue( void *spFcn );
 /* Shows the console window.  */
 	void		ShowConsole(  );
 /* Is the console shown.  */

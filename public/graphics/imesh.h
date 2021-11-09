@@ -12,9 +12,6 @@ stores multiple Meshes.
 
 #define MESH_USE_PUSH_CONSTANTS 0
 
-
-// TODO: the functions in here are really for renderer use only so i might want to get rid of them soon
-// 96 bytes
 class IMesh: public BaseRenderable
 {
 public:
@@ -22,29 +19,7 @@ public:
 
 	virtual glm::mat4               GetModelMatrix(  ) = 0;
 
-	/* Allocates the model, and loads its textures etc.  */
-	//void                    Init(  );
-
-	/* Reinitialize data that is useless after the swapchain becomes outdated.  */
-	//void                    ReInit(  );
-
-	/* Frees the memory used by objects outdated by a new swapchain state.  */
-	//void                    FreeOldResources(  );
-
-	/* Frees all memory used by model.  */
-	//void                    Destroy(  );
-
-	// 48 bytes (24 + 24)
 	std::vector< vertex_3d_t >		aVertices;
-	std::vector< uint32_t >         aIndices;
-
-	// TODO: remove this from IMesh, really shouldn't have this,
-	// gonna have to have some base types for this so game can use this
-	// 32 bytes
-	VkBuffer                        aVertexBuffer = nullptr;
-	VkBuffer                        aIndexBuffer = nullptr;
-	VkDeviceMemory                  aVertexBufferMem = nullptr;
-	VkDeviceMemory                  aIndexBufferMem = nullptr;
 
 	// could move elsewhere, takes up too much space (12+12+4 = 28 bytes)
 	//glm::vec3                       aMinSize = {};
@@ -66,6 +41,15 @@ public:
 	Transform                       aTransform;
 };
 
+class ModelAttributes
+{
+public:
+	bool                        aNoDraw = true;
+	std::vector<vertex_3d_t>    aVertices;
+	std::vector<uint32_t>       aIndices;
+	std::vector< Mesh* >        aMeshes{  };
+	std::string                 aPath;
+};
 
 // this really should only be used for models loaded in or grouping meshes together
 // IDEA: make this a template class with a base of IMesh somehow?
@@ -73,13 +57,9 @@ class ModelData
 {
 private:
 	Transform                   aTransform;
-
+	ModelAttributes		    aAttributes;
 public:
-	bool                        aNoDraw = true;
-	std::vector<vertex_3d_t>    aVertices;
-	std::vector<uint32_t>       aIndices;
-	std::vector< Mesh* >        aMeshes{  };
-	std::string                 aPath;
+	
 
 	// awful, need to do this better somehow, so that meshes can be offset from this model position,
 	// and the offset stay the same when changing this
@@ -87,7 +67,7 @@ public:
 	{
 		aTransform = transform;
 
-		for ( auto& mesh: aMeshes )
+		for ( auto& mesh: aAttributes.aMeshes )
 			mesh->aTransform = transform;
 	}
 
@@ -95,7 +75,7 @@ public:
 	{
 		aTransform.aPos = pos;
 
-		for ( auto& mesh: aMeshes )
+		for ( auto& mesh: aAttributes.aMeshes )
 			mesh->aTransform.aPos = pos;
 	}
 
@@ -103,7 +83,7 @@ public:
 	{
 		aTransform.aAng = ang;
 
-		for ( auto& mesh: aMeshes )
+		for ( auto& mesh: aAttributes.aMeshes )
 			mesh->aTransform.aAng = ang;
 	}
 
@@ -111,7 +91,7 @@ public:
 	{
 		aTransform.aScale = scale;
 
-		for ( auto& mesh: aMeshes )
+		for ( auto& mesh: aAttributes.aMeshes )
 			mesh->aTransform.aScale = scale;
 	}
 
@@ -120,6 +100,16 @@ public:
 		return aTransform;
 	}
 
+	inline ModelAttributes& GetAttributes(  )
+        {
+	        return aAttributes;
+        }
+
+	inline void SetAttributes( ModelAttributes sAttributes )
+        {
+		aAttributes = sAttributes;
+        }
+
 	/* Allocates the model, and loads its textures etc.  */
 	//void        Init(  );
 	/* Reinitialize data that is useless after the swapchain becomes outdated.  */
@@ -127,7 +117,7 @@ public:
 	/* Bind and Draws the model to the screen.  */
 	//void        Draw( VkCommandBuffer c, uint32_t i );
 	/* Default the model and set limits.  */
-	ModelData(  ) : aNoDraw( false ), aMeshes(  ){  };
+	ModelData(  ) : aAttributes(  ){  };
 	/* Frees the memory used by objects outdated by a new swapchain state.  */
 	//void        FreeOldResources(  );
 	/* Frees all memory used by model.  */

@@ -17,15 +17,15 @@ class BaseShader;
 class IMaterial
 {
 public:
+	float                       aWidth = 0.f;
+	float                       aHeight= 0.f;
 	virtual                    ~IMaterial() = default;
 
 	std::string                 aName;
 
 	/* Set the shader for the material by the shader name */
 	virtual void                SetShader( const char* name ) = 0;
-
-	// This REALLY SHOULD NOT BE HERE
-	//virtual BaseShader*         GetShader(  ) = 0;
+	
 	virtual std::string         GetShaderName(  ) = 0;
 
 	// TODO: make an IMaterialVar class after this refactor is done,

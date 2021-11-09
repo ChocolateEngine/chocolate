@@ -13,6 +13,7 @@ get_property( CH_PUBLIC GLOBAL PROPERTY CH_PUBLIC )
 get_property( CH_THIRDPARTY GLOBAL PROPERTY CH_THIRDPARTY )
 
 set( CMAKE_EXPORT_COMPILE_COMMANDS ON )
+set( BUILD_CHOCOLATE ON )
 
 
 if( NOT DEFINED GAME_DIR )
@@ -22,8 +23,10 @@ endif()
 include( scripts/core.cmake )
 
 # Chocolate Shared Objects
-add_subdirectory( ${CH_SRC}/core )
-add_subdirectory( ${CH_SRC}/imgui )
-add_subdirectory( ${CH_SRC}/engine )
-add_subdirectory( ${CH_SRC}/audio )
-add_subdirectory( ${CH_SRC}/graphics )
+if ( BUILD_CHOCOLATE STREQUAL ON ) 
+  add_subdirectory( ${CH_SRC}/core )
+  add_subdirectory( ${CH_SRC}/imgui )
+  add_subdirectory( ${CH_SRC}/engine )
+  add_subdirectory( ${CH_SRC}/audio )
+  add_subdirectory( ${CH_SRC}/graphics )
+  endif()

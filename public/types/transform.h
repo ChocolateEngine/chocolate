@@ -147,8 +147,20 @@ struct Transform
 	}
 };
 
-
 #undef VIEWMAT_ANG
+
+struct Transform2D
+{
+	glm::vec2 aPos = {};
+        float     aAng = 0.f;
+	glm::vec2 aScale = { 1.0f, 1.0f };
+};
+
+struct Transform2DSmall
+{
+	glm::vec2 aPos = {};
+        float     aAng = 0.f;
+};
 
 void DecomposeMatrix( const glm::mat4& m, glm::vec3& pos, glm::quat& rot, glm::vec3& scale );
 void DecomposeMatrix( const glm::mat4& m, glm::vec3& pos, glm::quat& rot );

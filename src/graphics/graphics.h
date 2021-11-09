@@ -15,15 +15,11 @@ by the renderer.
 
 typedef BaseSystem BaseClass;
 
-#if SPRITES
 typedef std::vector< Sprite* > 	SpriteList;
-#endif
 typedef std::vector< Model* >	ModelList;
 
 int 		aRandom = time( 0 );
-#if SPRITES
 SpriteList 	aSprites;
-#endif
 ModelList 	aModels;
 Renderer 	aRenderer;
 
@@ -41,15 +37,12 @@ extern "C"
 				   Model *spModel = NULL );
 /* Unload a model.  */
 	void 		UnloadModel( Model *spModel );
-
-#if SPRITES
 /* Loads a sprite given a path to the sprite,
    spSprite is optional for external management.  */
-	void 		LoadSprite( const std::string& srSpritePath,
+	void 		LoadSprite( const char *srSpritePath,
 				    Sprite *spSprite = NULL );
 /* Unload a sprite.  */
-	void 		UnloadSprite( Sprite *spSprite );
-#endif
+	void 		FreeSprite( Sprite *spSprite );
 
 /* Sets the view  */
 	void        SetView( View* view );

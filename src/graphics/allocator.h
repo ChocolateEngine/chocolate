@@ -118,9 +118,6 @@ VkDescriptorSetLayout   InitDescriptorSetLayout( DescSetLayouts sBindings );
 /* Creates graphics pipeline layouts using the specified descriptor set layouts.  */
 VkPipelineLayout        InitPipelineLayouts( VkDescriptorSetLayout *spSetLayouts, uint32_t setLayoutsCount );
 /* A.  */
-template< typename T >
-VkPipeline 	        InitGraphicsPipeline( VkPipelineLayout &srLayout, const String &srVertShader, const String &srFragShader, int sFlags );
-/* A.  */
 void 			InitDepthResources( VkImage &srDepthImage, VkDeviceMemory &srDepthImageMemory, VkImageView &srDepthImageView );
 /* Initializes the multisampling image.  */
 void			InitColorResources( VkImage &srColorImage, VkDeviceMemory &srColorImageMemory, VkImageView &srColorImageView );

@@ -8,8 +8,10 @@ Maybe the shadersystem could be inside this material system?
 #include "materialsystem.h"
 #include "renderer.h"
 #include "util.h"
+#include "graphics/sprite.h"
 
 #include "shaders/shader_basic_3d.h"
+#include "shaders/shader_basic_2d.h"
 
 
 extern size_t gModelDrawCalls;
@@ -28,13 +30,15 @@ void MaterialSystem::Init()
 {
 	// Setup built in shaders
 	BaseShader* basic_3d = CreateShader<Basic3D>( "basic_3d" );
+	BaseShader* basic_2d = CreateShader<Basic2D>( "basic_2d" );
 
 	// Create Error Material
-	apErrorMaterial = (Material*)CreateMaterial();
+	// TODO: move to GetErrorMaterial and make it have a shader name as an input
+	/*apErrorMaterial = (Material*)CreateMaterial();
 	apErrorMaterial->aName = "ERROR";
 	apErrorMaterial->apShader = basic_3d;
 	apErrorMaterial->aDiffusePath = "";
-	apErrorMaterial->apDiffuse = CreateTexture( apErrorMaterial, "" );
+	apErrorMaterial->apDiffuse = CreateTexture( apErrorMaterial, "" );*/
 }
 
 
@@ -58,44 +62,80 @@ void MaterialSystem::DeleteMaterial( IMaterial* matPublic )
 	}
 }
 
+// stupid, we really should just have one error material with a shader that can do both 2d and 3d (wonder if basic_3d can already do that...)
+IMaterial* MaterialSystem::GetErrorMaterial( const std::string& shaderName )
+{
+	for (auto& matPublic: aErrorMaterials)
+	{
+		Material* mat = (Material*)matPublic;
+
+		if ( mat->apShader->aName == shaderName )
+			return matPublic;
+	}
+
+	auto shader = GetShader( shaderName );
+	assert( shader != nullptr );
+
+	// Create a new error material with this shader (why??)
+	Material* mat = (Material*)CreateMaterial();
+	mat->aName = "ERROR_" + shaderName;
+	mat->apShader = shader;
+	mat->aDiffusePath = "";
+	mat->apDiffuse = CreateTexture( mat, "" );
+
+	aErrorMaterials.push_back( mat );
+	return mat;
+}
 
 // this really should not have a Material input, it should have a Texture class input, right? idk
 TextureDescriptor* MaterialSystem::CreateTexture( IMaterial* material, const std::string path )
 {
-	return InitTexture( path, ((Material*)material)->GetTextureLayout(), *gpPool, renderer->aTextureSampler );
+        Material *pMat = ( Material* )material;
+	if ( pMat->GetShaderName(  ) == "basic_2d" )
+		return InitTexture( path, ((Material*)material)->GetTextureLayout(), *gpPool, renderer->aTextureSampler, &material->aWidth, &material->aHeight );
+	else
+		return InitTexture( path, ((Material*)material)->GetTextureLayout(), *gpPool, renderer->aTextureSampler );
 }
 
 
-void MaterialSystem::CreateVertexBuffer( IMesh* mesh )
+// TODO: i need to make BaseRenderable a template for the vertex type which i don't feel like doing right now so
+void MaterialSystem::CreateVertexBuffer( BaseRenderable* itemBase )
 {
-	InitTexBuffer( mesh->aVertices, mesh->aVertexBuffer, mesh->aVertexBufferMem, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT );
+	if ( IMesh* item = dynamic_cast<IMesh*>(itemBase) )
+		InitTexBuffer( item->aVertices, item->aVertexBuffer, item->aVertexBufferMem, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT );
+
+	else if ( Sprite* item = dynamic_cast<Sprite*>(itemBase) )
+		InitTexBuffer( item->aVertices, item->aVertexBuffer, item->aVertexBufferMem, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT );
+
+	// just fucking exit
+	else throw std::runtime_error( "[MaterialSystem::CreateVertexBuffer] oh god oh fuck how the fuck do i design this properly\n  JUST USE IMesh or Sprite AAAAA\n" );
 }
 
 
-void MaterialSystem::CreateIndexBuffer( IMesh* mesh )
+void MaterialSystem::CreateIndexBuffer( BaseRenderable* item )
 {
-	if ( mesh->aIndices.size() > 0 )
-		InitTexBuffer( mesh->aIndices, mesh->aIndexBuffer, mesh->aIndexBufferMem, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT );
+	if ( item->aIndices.size() > 0 )
+		InitTexBuffer( item->aIndices, item->aIndexBuffer, item->aIndexBufferMem, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT );
 }
 
 
-void MaterialSystem::FreeVertexBuffer( IMesh* mesh )
+void MaterialSystem::FreeVertexBuffer( BaseRenderable* item )
 {
-	vkDestroyBuffer( DEVICE, mesh->aVertexBuffer, NULL );
-	vkFreeMemory( DEVICE, mesh->aVertexBufferMem, NULL );
+	vkDestroyBuffer( DEVICE, item->aVertexBuffer, NULL );
+	vkFreeMemory( DEVICE, item->aVertexBufferMem, NULL );
 
-	mesh->aVertexBuffer = nullptr;
-	mesh->aVertexBufferMem = nullptr;
+	item->aVertexBuffer = nullptr;
+	item->aVertexBufferMem = nullptr;
 }
 
 
-void MaterialSystem::FreeIndexBuffer( IMesh* mesh )
+void MaterialSystem::FreeIndexBuffer( BaseRenderable* item )
 {
-	vkDestroyBuffer( DEVICE, mesh->aIndexBuffer, NULL );
-	vkFreeMemory( DEVICE, mesh->aIndexBufferMem, NULL );
+	vkDestroyBuffer( DEVICE, item->aIndexBuffer, NULL );
+	vkFreeMemory( DEVICE, item->aIndexBufferMem, NULL );
 
-	mesh->aIndexBuffer = nullptr;
-	mesh->aIndexBufferMem = nullptr;
+	item->aIndexBuffer = nullptr;
+	item->aIndexBufferMem = nullptr;
 }
 
 
@@ -143,6 +183,7 @@ void MaterialSystem::RegisterRenderable( BaseRenderable* renderable )
 	// eh
 	//static size_t id = 0;
 	//renderable->aId = id++;
+	aRenderables.push_back( renderable );
 }
 
 
@@ -164,6 +205,17 @@ void MaterialSystem::DrawRenderable( BaseRenderable* renderable, VkCommandBuffer
 	mat->apShader->Draw( renderable, c, commandBufferIndex );
 }
 
+void MaterialSystem::DestroyRenderable( BaseRenderable* renderable )
+{
+	// blech
+	if ( IMesh* mesh = dynamic_cast<IMesh*>( renderable ) )
+		MeshFreeOldResources( mesh );
+
+	FreeVertexBuffer( renderable );
+
+	if ( renderable->aIndexBuffer )
+		FreeIndexBuffer( renderable );
+}
 
 // TODO: move these to Basic3D
 void MaterialSystem::MeshInit( IMesh* mesh )
@@ -190,14 +242,3 @@ void MaterialSystem::MeshFreeOldResources( IMesh* mesh )
 		vkDestroyDescriptorSetLayout( DEVICE, GetUniformLayout( mesh->GetID() ), NULL );
 	}
 }
-
-void MaterialSystem::MeshDestroy( IMesh* mesh )
-{
-	MeshFreeOldResources( mesh );
-
-	FreeVertexBuffer( mesh );
-
-	if ( mesh->aIndexBuffer )
-		FreeIndexBuffer( mesh );
-}
-
