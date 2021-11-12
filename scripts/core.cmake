@@ -28,14 +28,15 @@ include_directories( "." ${CH_PUBLIC} ${CH_THIRDPARTY} )
 link_libraries( SDL2 )
 
 add_compile_definitions(
-	# GLM_FORCE_DEPTH_ZERO_TO_ONE
-	#GLM_FORCE_XYZW_ONLY=GLM_ENABLE
+	# GLM_FORCE_DEPTH_ZERO_TO_ONE  # what does even this do internally
+	# glm is SHIT and can't do this with AVX2, ugh
+	# GLM_FORCE_XYZW_ONLY=GLM_ENABLE
 	
 	GLM_FORCE_AVX2
-	#GLM_CONFIG_SIMD
-
-	GLM_FORCE_INLINE
-	##GLM_FORCE_SSE2 # or GLM_FORCE_SSE42 if your processor supports it
+	#GLM_CONFIG_SIMD  # defined in GLM_FORCE_AVX2
+	
+	#GLM_FORCE_INLINE
+	#GLM_FORCE_SSE2 # or GLM_FORCE_SSE42 if your processor supports it
 	#GLM_FORCE_SSE42
 	#GLM_FORCE_ALIGNED
 )
