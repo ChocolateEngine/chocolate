@@ -74,7 +74,7 @@ public:
 	virtual void                    SetPaused( bool paused ) override;
 	virtual void                    SetGlobalSpeed( float speed ) override;
 
-	virtual bool                    LoadSound( const char* soundPath, AudioStream** stream ) override;
+	virtual AudioStream*            LoadSound( const char* soundPath ) override;
 	virtual bool                    PlaySound( AudioStream *stream ) override;
 	virtual void                    FreeSound( AudioStream** stream ) override;
 	virtual int                     Seek( AudioStream *streamPublic, double pos ) override;

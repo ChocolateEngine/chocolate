@@ -111,4 +111,7 @@ inline float Round( float val, size_t precision = 100 )
 	return roundf( val * precision ) / precision;
 }
 
+bool FileExists( const std::string& path );
+bool DirExists( const std::string& path);
+bool ItemExists( const std::string& path );
 

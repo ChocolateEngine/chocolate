@@ -5,6 +5,27 @@
 #include <stdexcept>
 #include <sstream>
 #include <iomanip>
+#include <filesystem>
+
+#include <sys/stat.h>
+
+
+#ifdef _WIN32
+	//#include <direct.h>
+	//#include <sysinfoapi.h>
+	#include <io.h>
+
+	// get rid of the dumb windows posix depreciation warnings
+	#define mkdir _mkdir
+	#define chdir _chdir
+	#define access _access
+#elif __linux__
+	#include <stdlib.h>
+	#include <unistd.h>
+
+	// windows-specific mkdir() is used
+	#define mkdir(f) mkdir(f, 666)
+#endif
 
 
 void str_upper( std::string &string )
@@ -127,5 +148,21 @@ std::string ToString( float value )
 	std::ostringstream oss;
 	oss << std::setprecision(8) << std::noshowpoint << value;
 	return oss.str();
+}
+
+
+bool FileExists( const std::string& path )
+{
+	return std::filesystem::is_regular_file(path);
+}
+
+bool DirExists( const std::string& path)
+{
+	return std::filesystem::is_directory(path);
+}
+
+bool ItemExists( const std::string& path )
+{
+	return (access(path.c_str(), 0) != -1);
 }
 
