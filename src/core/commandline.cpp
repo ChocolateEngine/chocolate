@@ -15,6 +15,20 @@ extern "C"
 		cmd->Init( argc, argv );
 
 		console = new Console;
+
+		if ( FileExists( "cfg/autoexec.cfg" ) )
+			console->Add( "exec autoexec" );
+		
+		std::string execCfg;
+		while ( true )
+		{
+			execCfg = cmd->GetValue( "-exec" );
+
+			if ( execCfg == "" )
+				break;
+
+			console->Add( "exec " + execCfg );
+		}
 	}
 }
 

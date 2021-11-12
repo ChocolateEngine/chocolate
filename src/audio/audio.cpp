@@ -1,6 +1,7 @@
 #include "audio.h"
 #include "util.h"
 #include "core/systemmanager.h"
+#include "types/transform.h"
 
 #if ENABLE_AUDIO
 #include "codec_vorbis.h"
@@ -11,24 +12,21 @@
 #include <SDL2/SDL.h>
 #include <glm/gtx/transform.hpp>
 #include <filesystem>
+#include <thread>         // std::thread
+#include <mutex>
 
 // debugging
-#include "core/systemmanager.h"
-#include "types/transform.h"
 #include "igui.h"
 
 AudioSystem* audio = new AudioSystem;
 
 namespace fs = std::filesystem;
 
+// WHY DOES THIS BREAK WHEN I CHANGE IT FROM 2048??? I HATE WORKING WITH AUDIO
 constexpr size_t SOUND_BYTES = 2048;
+//constexpr size_t SOUND_BYTES = 4096;
 constexpr size_t SOUND_RATE = 48000;
 constexpr size_t THR_MAX_STREAMS = 32;
-
-#if ENABLE_AUDIO
-IPLAudioFormat g_formatMono = {};
-IPLAudioFormat g_formatStereo = {};
-#endif
 
 CONVAR( snd_volume, 0.5 );
 CONVAR( snd_volume_3d, 1 );
@@ -36,6 +34,9 @@ CONVAR( snd_volume_2d, 1 );
 CONVAR( snd_buffer_size, 2 );
 
 #if ENABLE_AUDIO
+IPLAudioFormat g_formatMono = {};
+IPLAudioFormat g_formatStereo = {};
+
 bool HandleSteamAudioReturn(IPLerror ret, const char* msg)
 {
 	if (ret == IPL_STATUS_OUTOFMEMORY)
@@ -62,6 +63,14 @@ AudioSystem::~AudioSystem(  )
 {
 }
 
+#define AUDIO_THREAD 0
+
+#if AUDIO_THREAD
+
+std::mutex g_audioMutex;
+std::condition_variable g_cv;
+
+#endif
 
 void AudioSystem::Init(  )
 {
@@ -121,6 +130,33 @@ void AudioSystem::Init(  )
 #endif
 
 	SDL_PauseAudioDevice( aOutputDeviceID, 0 );
+
+#if AUDIO_THREAD
+
+	std::thread* update = new std::thread(
+	[&]()
+	{
+		while ( true )
+		{
+			std::unique_lock<std::mutex> lock(g_audioMutex);
+
+			//std::lock_guard<std::mutex> guard(g_audioMutex);
+
+			if ( aStreams.size() )
+			{
+				MixAudio();
+				QueueAudio();
+
+				unmixedBuffers.clear();
+			}
+
+			g_cv.notify_one();
+		}
+	}
+	);
+	
+#endif
+
 #endif
 }
 
@@ -201,21 +237,21 @@ bool AudioSystem::InitSteamAudio()
 
 
 
-// OpenStream?
-bool AudioSystem::LoadSound( const char* soundPath, AudioStream** streamPublic )
+// OpenSound?
+AudioStream* AudioSystem::LoadSound( const char* soundPath )
 {
 #if ENABLE_AUDIO
 	// check for too many streams
 	if ( aStreams.size() == THR_MAX_STREAMS )
 	{
-		Print( "[AudioSystem] At Max Audio Streams: \"%d\"", THR_MAX_STREAMS );
-		return false;
+		Print( "[AudioSystem] At Max Audio Streams: \"%d\"\n", THR_MAX_STREAMS );
+		return nullptr;
 	}
 
 	if ( !FileExists( soundPath ) )
 	{
-		Print( "[AudioSystem] Sound does not exist: \"%s\"", soundPath );
-		return false;
+		Print( "[AudioSystem] Sound does not exist: \"%s\"\n", soundPath );
+		return nullptr;
 	}
 
 	std::string ext = fs::path(soundPath).extension().string();
@@ -234,15 +270,13 @@ bool AudioSystem::LoadSound( const char* soundPath, AudioStream** streamPublic )
 		stream->codec = codec;
 		stream->valid = true;
 		aStreams.push_back(stream);
-
-		*streamPublic = (AudioStream*)stream;
-		return true;
+		return stream;
 	}
 
-	Print("[AudioSystem] No known codecs to play sound: \"%s\"", soundPath);
+	Print("[AudioSystem] Could not load sound: \"%s\"\n", soundPath);
 	delete stream;
 #endif
-	return false;
+	return nullptr;
 }
 
 
@@ -383,7 +417,12 @@ void AudioSystem::Update( float frameTime )
 	if ( aPaused )
 		return;
 
+#if AUDIO_THREAD
+	std::unique_lock<std::mutex> lock(g_audioMutex);
+	g_cv.wait(lock);
+#else
 	unmixedBuffers.clear();
+#endif
 
 	//gui->DebugMessage( 14, "Audio Streams: %u", aStreams.size() );
 
@@ -409,17 +448,20 @@ void AudioSystem::Update( float frameTime )
 		}
 	}
 
+#if !AUDIO_THREAD
 	if ( aStreams.size() )
 	{
 		MixAudio();
 		QueueAudio();
 	}
 #endif
+#endif
 }
 
 
 #if ENABLE_AUDIO
 
+CONVAR( snd_read_mult, 4 );  // 4
 CONVAR( snd_audio_stream_available, 2 );
 
 bool AudioSystem::UpdateStream( AudioStreamInternal* stream )
@@ -453,7 +495,7 @@ bool AudioSystem::UpdateStream( AudioStreamInternal* stream )
 		}
 
 		// NOTE: "read" NEEDS TO BE 4 TIMES THE AMOUNT FOR SOME REASON, no clue why
-		if ( SDL_AudioStreamPut( stream->audioStream, rawAudio.data(), read*4 ) == -1 )
+		if ( SDL_AudioStreamPut( stream->audioStream, rawAudio.data(), read*snd_read_mult ) == -1 )
 		{
 			Print( "[AudioSystem] SDL_AudioStreamPut - Failed to put samples in stream: %s\n", SDL_GetError() );
 			return false;

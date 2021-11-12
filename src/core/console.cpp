@@ -2,6 +2,8 @@
 #include "util.h"
 
 #include <stdarg.h>
+#include <iostream>
+#include <fstream>
 
 DLL_EXPORT Console* console = nullptr;
 
@@ -188,15 +190,109 @@ bool ConVarRef::GetBool(  )
 
 // ================================================================================
 
-bool Console::Empty(  )
-{
-	if ( aQueue.empty() )
-		aCmdIndex = -1;
 
-	return aQueue.empty(  ) ? true : false;
+// built in ConCommands
+
+CONCMD( exec )
+{
+	if ( args.size() == 0 )
+	{
+		Print( "No Path Specified for exec!\n" );
+		return;
+	}
+
+	std::string path = "cfg/" + args[0] + ".cfg";
+
+	if ( !FileExists( path ) )
+	{
+		Print( "Warning: File does not exist: \"%s\"\n", path );
+		return;
+	}
+
+	std::ifstream fileStream = std::ifstream(path, std::ios::in | std::ios::binary | std::ios::ate);
+
+	int fileLen = fileStream.tellg();
+	fileStream.seekg(0, fileStream.beg);
+
+	char* buf = new char[fileLen];
+	fileStream.read(buf, fileLen);
+	fileStream.close();
+
+	int ch = 0;
+	bool inComment = false;
+	std::string line;
+
+	// parse it
+	while ( ch < fileLen )
+	{
+#ifdef _WIN32
+		if ( buf[ch] == '\r' )
+		{
+			ch++;
+			continue;
+		}
+		else
+#endif
+		if ( buf[ch] == '\n' || buf[ch] == ';' )
+		{
+			if ( line != "" )
+			{
+				if ( line == "exec " + args[0] )
+					Print( "[Console] Warning: cfg file trying to exec itself and cause infinite recursion\n" );
+				else
+					console->RunCommand( line );
+
+				line = "";
+			}
+
+			inComment = false;
+		}
+		// check for a comment
+		else if ( buf[ch] == '/' && ch + 1 < fileLen && buf[ch + 1] == '/' )
+		{
+			inComment = true;
+			ch++;
+		}
+		else if ( !inComment )
+		{
+			line += buf[ch];
+		}
+
+		ch++;
+	}
+
+	if ( line != "" )
+		console->RunCommand( line );
+
+	delete[fileLen] buf;
 }
 
-void Console::Add( const String &srCmd )
+CONCMD( echo )
+{
+	std::string msg = "";
+
+	for ( int i = 0; i < args.size(); i++ )
+	{
+		//const auto& str = args[i];
+
+		if ( i + 1 < args.size() )
+			msg += args[i] + " ";
+		else
+			msg += args[i] + "\n";
+	}
+
+	Print( msg.c_str() );
+}
+
+
+// ================================================================================
+
+void Console::ReadConfig( const std::string& name )
+{
+	
+}
+
+void Console::Add( const std::string &srCmd )
 {
 	aQueue.push_back( srCmd );
 
@@ -206,57 +302,43 @@ void Console::Add( const String &srCmd )
 	AddToHistory( srCmd );
 }
 
+void Console::AddSilent( const std::string &srCmd )
+{
+	aQueue.push_back( srCmd );
+
+	if ( aCommandHistory.empty() || aCommandHistory.back() != srCmd )
+		aCommandHistory.push_back( srCmd );
+}
+
+// Only registers cvar refs
 void Console::RegisterConVars(  )
 {
-	static bool registered = false;
+	// static bool registered = false;
 
 	//if ( registered )
 	//	return;
 
-	ConVarBase *current;
-	ConVarBase *next;
-
 	std::vector< ConVarRef* > cvarRefList;
 
-	current = ConVarBase::spConVarBases;
+	ConVarBase* current = ConVarBase::spConVarBases;
 	while ( current )
 	{
-		next = current->apNext;
-
 		if ( ConVarRef* cvarRef = dynamic_cast< ConVarRef* >(current) )
 		{
-			cvarRefList.push_back( cvarRef );
-		}
-		else
-		{
-			if ( !vec_contains( aConVarList, current ) )
-				aConVarList.push_back( current );
+			if ( cvarRef->apRef == nullptr )
+				cvarRefList.push_back( cvarRef );
 		}
 
-		current = next;
+		current = current->apNext;
 	}
 
 	// Now link all cvar references
 	for ( ConVarRef* cvarRef: cvarRefList )
-	{
 		cvarRef->SetReference( GetConVar( cvarRef->GetName() ) );
-	}
 
-	registered = true;
-
-	ConVarBase::spConVarBases = nullptr;
+	// registered = true;
 }
 
-
-void Console::DeleteCommand(  )
-{
-	aQueue.erase( aQueue.begin(  ) + aCmdIndex );
-}
-
-void Console::Clear(  )
-{
-	aQueue.clear(  );
-}
 
 void Console::AddToHistory( const std::string& str )
 {
@@ -323,25 +405,31 @@ const std::string& Console::GetTextBuffer(  )
 
 ConVar* Console::GetConVar( const std::string& name )
 {
-	for ( const auto& cvar : aConVarList )
+	ConVarBase* cvar = ConVarBase::spConVarBases;
+	while ( cvar )
 	{
 		if ( ConVar* convar = dynamic_cast<ConVar*>(cvar) )
 		{
 			if ( convar->aName == name )
 				return convar;
 		}
+
+		cvar = cvar->apNext;
 	}
 
 	return nullptr;
 }
 
 
-std::string Console::GetConVarValue( const std::string& name )
+static std::string g_strEmpty = "";
+
+
+const std::string& Console::GetConVarValue( const std::string& name )
 {
 	if ( ConVar* convar = GetConVar(name) )
 		return convar->aValue;
 	
-	return "";
+	return g_strEmpty;
 }
 
 
@@ -359,13 +447,16 @@ void Console::PrintAllConVars(  )
 	std::vector< std::string > ConVarMsgs;
 	std::vector< std::string > ConCommandMsgs;
 
-	for ( const auto& cvar : aConVarList )
+	ConVarBase* cvar = ConVarBase::spConVarBases;
+	while ( cvar )
 	{
 		if ( dynamic_cast<ConVar*>(cvar) )
 			ConVarMsgs.push_back( cvar->GetPrintMessage() );
 
 		else if ( dynamic_cast<ConCommand*>(cvar) )
 			ConCommandMsgs.push_back( cvar->GetPrintMessage() );
+
+		cvar = cvar->apNext;
 	}
 
 	Print( "\nConVars:\n--------------------------------------\n" );
@@ -403,12 +494,13 @@ void Console::CalculateAutoCompleteList( const std::string& textBuffer )
 	if ( textBuffer.empty() )
 		return;
 
-	for ( const auto& cvar : aConVarList )
+	ConVarBase* cvar = ConVarBase::spConVarBases;
+	while ( cvar )
 	{
 		if ( str_lower2(cvar->aName).starts_with( str_lower2(textBuffer) ) )
-		{
 			aAutoCompleteList.push_back( cvar->aName );
-		}
+
+		cvar = cvar->apNext;
 	}
 }
 
@@ -427,89 +519,81 @@ void Console::Update(  )
 
 	std::string command;
 
-	while ( true )
+	for ( const auto& command: aQueue )
 	{
-		if ( Empty(  ) )
-			return;
-
-		command = FetchCmd(  );
-
-		/* Exhausted all commands in console.  */
 		if ( command == "" )
-			return;
-
-		std::string commandName;
-		std::vector< std::string > args;
-		int start, end = 0;
-
-		/* Break the input into a vector of strings.  */
-		while ( ( start = command.find_first_not_of( ' ', end ) ) != std::string::npos )
-		{
-			end = command.find( ' ', start );
-
-			if ( start == 0 )
-				commandName = command.substr( start, end - start );
-			else
-				args.push_back( command.substr( start, end - start ) );
-		}
-
-		str_lower( commandName );
-
-		bool commandCalled = false;
-
-		for ( const auto& cvar : aConVarList )
-		{
-			if ( str_lower2(cvar->aName) == commandName )
-			{
-				if ( ConVar* convar = dynamic_cast<ConVar*>(cvar) )
-				{
-					commandCalled = true;
-
-					if ( !args.empty() )
-					{
-						convar->SetValue( args[0] );
-
-						// TODO: convar callbacks should have different parameters
-						if ( convar->aFunc )
-							convar->aFunc( args );
-					}
-					else
-					{
-						Print( convar->GetPrintMessage().c_str() );
-					}
-				}
-				else if ( ConCommand* cmd = dynamic_cast<ConCommand*>(cvar) )
-				{
-					commandCalled = true;
-					cmd->aFunc( args );
-				}
-
-				DeleteCommand(  );
-				break;
-			}
-		}
-
-		if ( commandCalled )
 			continue;
 
-		// command wasn't used?
+		RunCommand( command );
+	}
+
+	// clear the queue
+	aQueue.clear();
+}
+
+
+bool Console::RunCommand( const std::string& command )
+{
+	std::string commandName;
+	std::vector< std::string > args;
+	int start, end = 0;
+
+	/* Break the input into a vector of strings.  */
+	while ( ( start = command.find_first_not_of( ' ', end ) ) != std::string::npos )
+	{
+		end = command.find( ' ', start );
+
+		if ( start == 0 )
+			commandName = command.substr( start, end - start );
+		else
+			args.push_back( command.substr( start, end - start ) );
+	}
+
+	str_lower( commandName );
+
+	bool commandCalled = false;
+
+	ConVarBase* cvar = ConVarBase::spConVarBases;
+	while ( cvar )
+	{
+		if ( str_lower2(cvar->aName) == commandName )
+		{
+			if ( ConVar* convar = dynamic_cast<ConVar*>(cvar) )
+			{
+				commandCalled = true;
+
+				if ( !args.empty() )
+				{
+					convar->SetValue( args[0] );
+
+					// TODO: convar callbacks should have different parameters
+					if ( convar->aFunc )
+						convar->aFunc( args );
+				}
+				else
+				{
+					Print( convar->GetPrintMessage().c_str() );
+				}
+			}
+			else if ( ConCommand* cmd = dynamic_cast<ConCommand*>(cvar) )
+			{
+				commandCalled = true;
+				cmd->aFunc( args );
+			}
+
+			break;
+		}
+
+		cvar = cvar->apNext;
+	}
+
+	// command wasn't used?
+	if ( !commandCalled )
 		Print( "Command \"%s\" is undefined\n", commandName.c_str() );
 
-		DeleteCommand(  );
-	}
+	return commandCalled;
 }
 
-
-std::string Console::FetchCmd(  )
-{
-	aCmdIndex++;
-	if ( Empty(  ) || aCmdIndex >= aQueue.size(  ) )
-	{
-		aCmdIndex = 0;
-		return "";
-	}
-	return aQueue[ aCmdIndex ];
-}
 
 Console::Console(  )
 {

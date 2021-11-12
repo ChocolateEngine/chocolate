@@ -67,7 +67,7 @@ public:
 	virtual void            SetPaused( bool paused ) = 0;
 	virtual void            SetGlobalSpeed( float speed ) = 0;
 
-	virtual bool            LoadSound( const char* soundPath, AudioStream** stream ) = 0;
+	virtual AudioStream*    LoadSound( const char* soundPath ) = 0;
 	virtual bool            PlaySound( AudioStream *stream ) = 0;
 	virtual void            FreeSound( AudioStream** stream ) = 0;
 	virtual int             Seek( AudioStream *streamPublic, double pos ) = 0;

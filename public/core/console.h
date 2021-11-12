@@ -260,6 +260,11 @@ public:
 //	ConCommand2 name( #name, CC_#name );              \
 //	void CC_#name( std::vector< std::string > args )
 
+#define CONCMD( name ) \
+	void name( std::vector< std::string > args ); \
+	ConCommand name##_cmd( #name, name );              \
+	void name( std::vector< std::string > args )
+
 #define CON_COMMAND( name ) \
 	void name( std::vector< std::string > args ); \
 	ConCommand name##_cmd( #name, name );              \
@@ -290,7 +295,6 @@ class CORE_API Console
 protected:
 	int                                 aCmdIndex = -1;
 	StringList                          aQueue;
-	std::vector< ConVarBase* >	        aConVarList;
 	std::vector< std::string >          aConsoleHistory;
 	StringList                          aCommandHistory;
 	std::string                         aTextBuffer;
@@ -301,7 +305,7 @@ protected:
 public:
 
 	/* Register all the ConCommands and ConVars created from static initialization.  */
-	void 	RegisterConVars(  );
+	void                                RegisterConVars(  );
 	/* A.  */
 	const std::vector<std::string>&     GetConsoleHistory(  );
 	std::string                         GetConsoleHistoryStr( int maxSize );
@@ -316,7 +320,7 @@ public:
 	const std::vector< std::string >&   GetAutoCompleteList(  );
 
 	ConVar*                             GetConVar( const std::string& name );
-	std::string                         GetConVarValue( const std::string& name );
+	const std::string&                  GetConVarValue( const std::string& name );
 	float                               GetConVarFloat( const std::string& name );
 
 	void                                PrintAllConVars(  );
@@ -324,20 +328,19 @@ public:
 	void                                Print( const char* format, ... );
 	void                                Print( Msg type, const char* format, ... );
 
-	/* A.  */
-	bool 	Empty(  );
-	/* A.  */
-	void 	Add( const String &srCmd );
-	/* A.  */
-	void 	DeleteCommand(  );
+	/* Read a cfg file and run all the cvars in it.  */
+	void                                ReadConfig( const std::string& name );
+
+	/* Add a command to the queue  */
+	void                                Add( const std::string& srCmd );
+	void                                AddSilent( const std::string& srCmd );
+
 	/* Go through and run every command inputed into the console last frame  */
-	void 	Update(  );
-	/* A.  */
-	void 	Clear(  );
-	/* A.  */
-	void 	MoveCommands(  );
-	/* A.  */
-	String 	FetchCmd(  );
+	void                                Update(  );
+
+	/* Find and run a command, returns true if a command was found  */
+	bool                                RunCommand( const std::string& command );
+
 	/* A.  */
 		Console(  );
 	/* A.  */

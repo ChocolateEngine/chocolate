@@ -6,7 +6,7 @@ get_property( CH_THIRDPARTY GLOBAL PROPERTY CH_THIRDPARTY )
 
 set( CMAKE_POSITION_INDEPENDENT_CODE ON )
 
-set( CMAKE_CXX_STANDARD 20 )
+set( CMAKE_CXX_STANDARD 20 )  # could do 23
 
 set( CMAKE_RUNTIME_OUTPUT_DIRECTORY ${GAME_DIR}/bin )
 set( CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG ${GAME_DIR}/bin )
@@ -29,7 +29,15 @@ link_libraries( SDL2 )
 
 add_compile_definitions(
 	# GLM_FORCE_DEPTH_ZERO_TO_ONE
-	GLM_FORCE_XYZW_ONLY=GLM_ENABLE
+	#GLM_FORCE_XYZW_ONLY=GLM_ENABLE
+	
+	GLM_FORCE_AVX2
+	#GLM_CONFIG_SIMD
+
+	GLM_FORCE_INLINE
+	##GLM_FORCE_SSE2 # or GLM_FORCE_SSE42 if your processor supports it
+	#GLM_FORCE_SSE42
+	#GLM_FORCE_ALIGNED
 )
 
 if( CMAKE_BUILD_TYPE STREQUAL Debug )
@@ -61,17 +69,24 @@ if( MSVC )
 		add_compile_options( "/Od" )  # no optimizations
 		string ( REGEX REPLACE "/Zi" "/ZI" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}" )  # Use Edit and Continue on Debug
 	elseif( CMAKE_BUILD_TYPE STREQUAL Release )
-		add_compile_options( "/O2"  )  # level 2 optimizations (max in msvc)
+		add_compile_options( "/O2" )  # level 2 optimizations (max in msvc)
 	endif()
 	
 	# Use these runtime libraries for both so it doesn't crash smh my head
+	# actually this is useless right now because of core.dll, god dammit
 	set_property( GLOBAL PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreadedDLL" )
+
+	set( MSVC_VERSION 1939 )
 
 	add_compile_options(
 		"/W3"               # Warning Level 3
 		"/MP"               # multi-threaded compilation
 		"/permissive-"      # make MSVC very compliant
 		"/Zc:__cplusplus"   # set the __cplusplus macro to be the correct version
+		"/fp:fast"          # fast floating point model
+		"/GF"               # string pooling: allows compiler to create a single copy of identical strings in the program image and in memory during execution
+		
+		"/arch:AVX2"
 		
 		# disable stupid warnings
 		"/wd4244"  # conversion from 'X' to 'X', possible loss of data
