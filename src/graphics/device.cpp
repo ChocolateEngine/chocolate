@@ -8,7 +8,7 @@
 VKAPI_ATTR VkBool32 VKAPI_CALL Device::DebugCallback( VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, VkDebugUtilsMessageTypeFlagsEXT messageType,
 					      const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData )
 {
-	if ( cmd->Find("-dump-vlayers") )
+	if ( cmdline->Find("-dump-vlayers") )
 		std::cerr << "validation layer: " << pCallbackData->pMessage << std::endl;
 
 	return VK_FALSE;
@@ -16,8 +16,8 @@ VKAPI_ATTR VkBool32 VKAPI_CALL Device::DebugCallback( VkDebugUtilsMessageSeverit
 
 void Device::InitWindow(  )
 {
-	aWidth = cmd->GetValue( "-w", aWidth ); 
-	aHeight = cmd->GetValue( "-h", aHeight ); 
+	aWidth = cmdline->GetValue( "-w", aWidth ); 
+	aHeight = cmdline->GetValue( "-h", aHeight ); 
 
 	if ( SDL_Init( SDL_INIT_VIDEO | SDL_INIT_EVENTS | SDL_INIT_AUDIO ) != 0 )
 		throw std::runtime_error( "Unable to initialize SDL2!" );

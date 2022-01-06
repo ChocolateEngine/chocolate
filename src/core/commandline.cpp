@@ -4,15 +4,15 @@
 
 #include <stdarg.h>
 
-DLL_EXPORT CommandLine* cmd = nullptr;
+DLL_EXPORT CommandLine* cmdline = nullptr;
 
 
 extern "C"
 {
 	void DLL_EXPORT core_init( int argc, char *argv[] )
 	{
-		cmd = new CommandLine;
-		cmd->Init( argc, argv );
+		cmdline = new CommandLine;
+		cmdline->Init( argc, argv );
 
 		console = new Console;
 
@@ -22,7 +22,7 @@ extern "C"
 		std::string execCfg;
 		while ( true )
 		{
-			execCfg = cmd->GetValue( "-exec" );
+			execCfg = cmdline->GetValue( "-exec" );
 
 			if ( execCfg == "" )
 				break;

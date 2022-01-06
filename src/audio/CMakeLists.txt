@@ -40,6 +40,7 @@ if( MSVC )
 		"${CH_THIRDPARTY}/libvorbis/win32/VS2010/x64/Release/libvorbisfile_static.lib"
 		"${CH_THIRDPARTY}/libogg/win32/VS2015/x64/Release/libogg.lib"
 	)
+	add_link_options( "/LTCG" )
 else()
 	link_directories( "${STEAMAUDIO_DIR}/lib/Linux/x64" )
 	link_libraries(
