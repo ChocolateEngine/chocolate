@@ -44,7 +44,7 @@ public:
 };
 
 
-CORE_API extern CommandLine* cmd;
+CORE_API extern CommandLine* cmdline;
 
 
 #ifdef _MSC_VER
