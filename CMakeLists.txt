@@ -27,3 +27,11 @@ add_subdirectory( ${CH_SRC}/imgui )
 add_subdirectory( ${CH_SRC}/engine )
 add_subdirectory( ${CH_SRC}/audio )
 add_subdirectory( ${CH_SRC}/graphics )
+
+# copy SDL2 over on windows
+
+if( MSVC )
+	message( "Copying SDL2" )
+	configure_file( "${CH_THIRDPARTY}/SDL2/lib/x64/SDL2.dll" "${GAME_DIR}/bin/SDL2.dll" COPYONLY )
+	configure_file( "${CH_THIRDPARTY}/SDL2/lib/x64/SDL2.dll" "${GAME_DIR}/SDL2.dll" COPYONLY )  # dumb launcher thing, blech
+endif()

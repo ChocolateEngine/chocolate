@@ -18,3 +18,5 @@ else()
 	
 endif()
 
+include( ${CH_ROOT}/scripts/ktx.cmake )
+

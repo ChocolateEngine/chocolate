@@ -53,7 +53,7 @@ if( MSVC )
 
 	# TODO: figure out vcpkg
 	link_directories(
-		${CH_THIRDPARTY}/SDL2-2.0.16/lib/x64
+		${CH_THIRDPARTY}/SDL2/lib/x64
 	)
 	
 	add_compile_definitions(
