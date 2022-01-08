@@ -181,10 +181,11 @@ void InitTextureImage( const String &srImagePath, VkImage &srTImage, VkDeviceMem
 		noTexture 			= true;
 	}
 	VkDeviceSize 	imageSize = texWidth * texHeight * 4;
+
 	/* Divides res by 2 each level.  */
 	srMipLevels 	= ( uint32_t )std::floor( std::log2( std::max( texWidth, texHeight ) ) ) + 1;
 	
-        InitBuffer( imageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+	InitBuffer( imageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
 		    stagingBuffer, stagingBufferMemory );
 	
 	MapMemory( stagingBufferMemory, imageSize, pPixels );
@@ -195,16 +196,18 @@ void InitTextureImage( const String &srImagePath, VkImage &srTImage, VkDeviceMem
 			  VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT, srMipLevels, VK_SAMPLE_COUNT_1_BIT ),
 		   VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, srTImage, srTImageMem );
 	
-        TransitionImageLayout( srTImage, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, srMipLevels );
+	TransitionImageLayout( srTImage, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, srMipLevels );
 	
-        CopyBufferToImage( stagingBuffer, srTImage, ( uint32_t )texWidth, ( uint32_t )texHeight );
+	CopyBufferToImage( stagingBuffer, srTImage, ( uint32_t )texWidth, ( uint32_t )texHeight );
 	GenerateMipMaps( srTImage, VK_FORMAT_R8G8B8A8_SRGB, texWidth, texHeight, srMipLevels );
+
 	/* Scale sprite to pixel width/height.  */
 	if ( spWidth && spHeight )
 	{
 		*spWidth 	= ( float )texWidth  / ( float )gpDevice->aWidth   * 2.0f;
 		*spHeight	= ( float )texHeight / ( float )gpDevice->aHeight  * 2.0f;
 	}
+
 	/* Clean memory  */
 	vkDestroyBuffer( DEVICE, stagingBuffer, NULL );
 	vkFreeMemory( DEVICE, stagingBufferMemory, NULL );
@@ -347,10 +350,12 @@ TextureDescriptor *InitTexture( const String &srImagePath, VkDescriptorSetLayout
 	VkImage 		textureImage;
 	VkDeviceMemory 		textureMem;
 	VkImageView		textureView;
+
 	if ( spWidth && spHeight )
 		InitTextureImage( srImagePath, textureImage, textureMem, pTexture->aMipLevels, spWidth, spHeight );
 	else
 		InitTextureImage( srImagePath, textureImage, textureMem, pTexture->aMipLevels );
+
 	InitTextureImageView( textureView, textureImage, pTexture->aMipLevels );
 	InitDescriptorSets( pTexture->aSets, sLayout, sPool,
 			    { { { VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, textureView, sSampler, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER } } }, {  } );

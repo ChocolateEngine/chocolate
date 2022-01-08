@@ -92,6 +92,10 @@ void LoadModule( const std::string& srDlPath )
 		Print( "Error: %s\n", SDL_GetError() );
 		throw std::runtime_error( "Unable to load shared librarys!" );
 	}
+	else
+	{
+		Print( "Loaded Module: %s\n", srDlPath.c_str() );
+	}
 }
 
 void Engine::InitSystems(  )
