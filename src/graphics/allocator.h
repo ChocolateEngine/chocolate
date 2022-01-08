@@ -90,6 +90,9 @@ void 			InitImageView( VkImageView &sImageView, VkImage sImage, VkFormat sFormat
 /* A.  */
 void 			InitImage( VkImageCreateInfo sImageInfo, VkMemoryPropertyFlags sProperties, VkImage &srImage, VkDeviceMemory &srImageMemory );
 /* A.  */
+void 			LoadKTXTexture( TextureDescriptor* texture, const String &srImagePath, VkImage &srTImage, VkDeviceMemory &srTImageMem, uint32_t &srMipLevels,
+					  float *spWidth = NULL, float *spHeight = NULL );
+/* A.  */
 void 			InitTextureImage( const String &srImagePath, VkImage &srTImage, VkDeviceMemory &srTImageMem, uint32_t &srMipLevels,
 					  float *spWidth = NULL, float *spHeight = NULL );
 /* A.  */

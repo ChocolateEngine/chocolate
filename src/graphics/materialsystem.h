@@ -34,6 +34,8 @@ public:
 	// also this probably shouldn't use a shader for a parameter
 	TextureDescriptor*          CreateTexture( IMaterial* material, const std::string path ) override;
 
+	bool                        LoadKTXTexture( TextureDescriptor* texture, const String &srImagePath, VkImage &srTImage, VkDeviceMemory &srTImageMem, uint32_t &srMipLevels );
+
 	/* Create a Vertex and Index buffer for a Renderable. */
 	void                        CreateVertexBuffer( BaseRenderable* renderable ) override;
 	void                        CreateIndexBuffer( BaseRenderable* renderable ) override;

@@ -18,7 +18,11 @@ file(
 
 include( ${CH_ROOT}/scripts/vulkan.cmake )
 
-link_libraries( Core ImGui )
+link_libraries(
+	Core
+	ImGui
+)
+
 
 add_library( Graphics SHARED ${SRC_FILES} ${PUBLIC_FILES} )
 
