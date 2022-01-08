@@ -13,9 +13,10 @@ Maybe the shadersystem could be inside this material system?
 #include "shaders/shader_basic_3d.h"
 #include "shaders/shader_basic_2d.h"
 
+#ifdef KTX
 #include "ktx/ktx.h"
 #include "ktx/ktxvulkan.h"
-
+#endif
 
 extern size_t gModelDrawCalls;
 extern size_t gVertsDrawn;
@@ -95,51 +96,44 @@ IMaterial* MaterialSystem::GetErrorMaterial( const std::string& shaderName )
 // this really should not have a Material input, it should have a Texture class input, right? idk
 TextureDescriptor* MaterialSystem::CreateTexture( IMaterial* material, const std::string path )
 {
-	// return InitTexture( path, ((Material*)material)->GetTextureLayout(), *gpPool, renderer->aTextureSampler );
-
 	TextureDescriptor	*pTexture = new TextureDescriptor;
-
-	/*if ( spWidth && spHeight )
-	InitTextureImage( srImagePath, textureImage, textureMem, pTexture->aMipLevels, spWidth, spHeight );
-	else
-	InitTextureImage( srImagePath, textureImage, textureMem, pTexture->aMipLevels );*/
 
 	if ( !LoadKTXTexture( pTexture, path, pTexture->aTextureImage, pTexture->aTextureImageMem, pTexture->aMipLevels ) )
 	{
+		// fallback to stbi
 		InitTextureImage( path, pTexture->aTextureImage, pTexture->aTextureImageMem, pTexture->aMipLevels );
-
 		InitTextureImageView( pTexture->aTextureImageView, pTexture->aTextureImage, pTexture->aMipLevels );
 	}
 
 	VkDescriptorSetLayout layout = ((Material*)material)->GetTextureLayout();
 
-	InitDescriptorSets( pTexture->aSets, layout, *gpPool,
-					   { { { VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, pTexture->aTextureImageView, renderer->aTextureSampler, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER } } }, {  } );
+	InitDescriptorSets(
+		pTexture->aSets,
+		layout,
+		*gpPool,
+		{ { {
+			VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+			pTexture->aTextureImageView,
+			renderer->aTextureSampler,
+			VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER
+		} } },
+		{  }
+	);
 
 	return pTexture;
-
-	/*TextureDescriptor	*pTexture = new TextureDescriptor;
-	KTX_error_code result;
-
-	result = ktxTexture_CreateFromNamedFile(path.c_str(), KTX_TEXTURE_CREATE_NO_FLAGS, &pTexture->kTexture);
-
-	result = ktxTexture_VkUploadEx(pTexture->kTexture, &vdi, &pTexture->texture,
-									  VK_IMAGE_TILING_OPTIMAL,
-									  VK_IMAGE_USAGE_SAMPLED_BIT,
-									  VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-
-	return pTexture;*/
 }
 
 
 bool MaterialSystem::LoadKTXTexture( TextureDescriptor* pTexture, const String &srImagePath, VkImage &srTImage, VkDeviceMemory &srTImageMem, uint32_t &srMipLevels )
 {
+#ifndef KTX
+	return false;
+#else
 	int 		texWidth;
 	int		texHeight;
 	int		texChannels;
 	VkBuffer 	stagingBuffer;
 	VkDeviceMemory 	stagingBufferMemory;
-	//stbi_uc 	*pPixels = stbi_load( srImagePath.c_str(  ), &texWidth, &texHeight, &texChannels, STBI_rgb_alpha );
 	bool		noTexture = false;
 
 	ktxVulkanDeviceInfo vdi;
@@ -148,13 +142,17 @@ bool MaterialSystem::LoadKTXTexture( TextureDescriptor* pTexture, const String &
 														  gpDevice->GetGraphicsQueue(), gpDevice->GetCommandPool(), nullptr);
 
 	if ( result != KTX_SUCCESS )
-		Print("wha\n");
+	{
+		Print( "KTX Error %d: %s - Failed to Construct KTX Vulkan Device\n", result, ktxErrorString(result) );
+		return false;
+	}
 
 	result = ktxTexture_CreateFromNamedFile(srImagePath.c_str(), KTX_TEXTURE_CREATE_NO_FLAGS, &pTexture->kTexture);
 
 	if ( result != KTX_SUCCESS )
 	{
-		Print( "Failed to open texture: %s\n", srImagePath.c_str(  ) );
+		Print( "KTX Error %d: %s - Failed to open texture: %s\n", result, ktxErrorString(result), srImagePath.c_str(  ) );
+		ktxVulkanDeviceInfo_Destruct( &vdi );
 		return false;
 	}
 
@@ -165,7 +163,9 @@ bool MaterialSystem::LoadKTXTexture( TextureDescriptor* pTexture, const String &
 
 	if ( result != KTX_SUCCESS )
 	{
-		Print( "Failed to upload texture: %s\n", srImagePath.c_str(  ) );
+		Print( "KTX Error %d: %s - Failed to upload texture: %s\n", result, ktxErrorString(result), srImagePath.c_str(  ) );
+		ktxTexture_Destroy( pTexture->kTexture );
+		ktxVulkanDeviceInfo_Destruct( &vdi );
 		return false;
 	}
 
@@ -181,6 +181,7 @@ bool MaterialSystem::LoadKTXTexture( TextureDescriptor* pTexture, const String &
 	InitImageView( pTexture->aTextureImageView, pTexture->aTextureImage, pTexture->texture.imageFormat, VK_IMAGE_ASPECT_COLOR_BIT, pTexture->aMipLevels );
 
 	return true;
+#endif
 }
 
 

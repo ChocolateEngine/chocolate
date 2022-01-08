@@ -16,6 +16,11 @@
 
 #include "types/databuffer.hh"
 
+#ifdef KTX
+#include "ktx/ktx.h"
+#include "ktx/ktxvulkan.h"
+#endif
+
 //#define MODEL_SET_PARAMETERS_TEMP( tImageView, uBuffers ) { { { VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, tImageView, srTextureSampler, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER } } }, { { { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, uBuffers, sizeof( ubo_3d_t ) } } }
 
 class QueueFamilyIndices
@@ -129,11 +134,23 @@ struct ubo_2d_t
 class TextureDescriptor
 {
 public:
+#ifdef KTX
+	VkImage                         GetVkImage() { return texture.image; }
+	VkDeviceMemory                  GetDeviceMemory() { return texture.deviceMemory; }
+	uint32_t                        GetMipLevels() { return kTexture ? kTexture->numLevels : 0; }
+#endif
+
 	uint32_t                        aMipLevels;
 	VkDeviceMemory                  aTextureImageMem;
 	VkImage                         aTextureImage;
 	VkImageView                     aTextureImageView;
 	DataBuffer< VkDescriptorSet >   aSets;
+
+#ifdef KTX
+	// TEMP: just shove ktx data here for now
+	ktxTexture* kTexture;
+	ktxVulkanTexture texture;
+#endif
 };
 
 class UniformDescriptor

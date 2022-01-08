@@ -25,11 +25,26 @@ echo Downloading SDL2
 call download-unzip.bat https://www.libsdl.org/release SDL2-devel-%SDL2_VER%-VC.zip .
 :SDL2_COPY
 robocopy SDL2-%SDL2_VER%\include %inc_dir%\SDL2 /S
+mv SDL2-%SDL2_VER% SDL2
 
 :STEAMAUDIO
-IF EXIST steamaudio_api GOTO GLM
+IF EXIST steamaudio_api GOTO VORBIS
 echo Downloading Steam Audio
 call download-unzip.bat https://github.com/ValveSoftware/steam-audio/releases/download/v2.0-beta.17 steamaudio_api_2.0-beta.17.zip .
+
+@REM should add as submodule later
+:VORBIS
+IF EXIST libvorbis GOTO OGG
+echo Downloading libvorbis
+call download-unzip.bat https://github.com/xiph/vorbis/releases/download/v1.3.7 libvorbis-1.3.7.zip .
+mv libvorbis-1.3.7 libvorbis
+
+:OGG
+@REM curl fails to download this?
+@REM IF EXIST libogg GOTO GLM
+@REM echo Downloading libogg
+@REM call download-unzip.bat https://downloads.xiph.org/releases/ogg libogg-1.3.5.zip .
+@REM mv libogg-1.3.5 libogg
 
 @REM should add as submodule later
 :GLM
@@ -39,5 +54,11 @@ call download-unzip.bat https://github.com/g-truc/glm/releases/download/0.9.9.8 
 :GLM_COPY
 robocopy glm\glm %inc_dir%\glm /S
 
+:KTX
+IF EXIST KTX-Software-4.0.0 GOTO KTX_COPY
+echo Downloading KTX
+call download-unzip.bat https://github.com/KhronosGroup/KTX-Software/archive/refs/tags v4.0.0.zip .
+:KTX_COPY
+@REM robocopy KTX-Software-4.0.0\include %inc_dir%\ktx /S
 
 :DONE
