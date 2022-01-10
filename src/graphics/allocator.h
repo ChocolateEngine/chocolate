@@ -64,8 +64,6 @@ extern VkDescriptorPool			*gpPool;
 
 /* A.  */
 VkFormat 		FindDepthFormat(  );
-/* Reads a file into a byte array.  */
-ByteArray     		ReadFile( const String &srFilePath );
 /* Wraps bytecode into objects for the pipeline to use.  */
 VkShaderModule 		CreateShaderModule( const ByteArray &srCode );
 /* A.  */

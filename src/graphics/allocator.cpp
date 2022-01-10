@@ -1,5 +1,6 @@
 #include "allocator.h"
 #include "debug.h"
+#include "core/filesystem.h"
 
 FunctionList 			gFreeQueue;
 ShaderCache			gShaderCache;
@@ -27,22 +28,6 @@ void Submit( const auto&& sFunction )
 	sFunction( c );
 	/* Complete command recording.  */
 	gpDevice->EndSingleTimeCommands( c );
-}
-/* Reads a file into a byte array.  */
-ByteArray ReadFile( const String &srFilePath )
-{
-	/* Open file.  */
-	std::ifstream file( srFilePath, std::ios::ate | std::ios::binary );
-	if ( !file.is_open(  ) )
-		throw std::runtime_error( "Failed to open file!" );
-	int fileSize = ( int )file.tellg(  );
-        ByteArray buffer( fileSize );
-	file.seekg( 0 );
-	/* Read contents.  */
-	file.read( buffer.data(  ), fileSize );
-	file.close(  );
-
-	return buffer;
 }
 /* Wraps bytecode into objects for the pipeline to use.  */
 VkShaderModule CreateShaderModule( const ByteArray &srCode )
