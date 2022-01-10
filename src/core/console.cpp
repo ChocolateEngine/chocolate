@@ -264,7 +264,7 @@ CONCMD( exec )
 	if ( line != "" )
 		console->RunCommand( line );
 
-	delete[fileLen] buf;
+	delete[] buf;
 }
 
 CONCMD( echo )
