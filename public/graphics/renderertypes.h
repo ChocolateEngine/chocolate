@@ -19,8 +19,8 @@
 #define KTX
 
 #ifdef KTX
-#include "ktx/ktx.h"
-#include "ktx/ktxvulkan.h"
+#include "ktx.h"
+#include "ktxvulkan.h"
 #endif
 
 //#define MODEL_SET_PARAMETERS_TEMP( tImageView, uBuffers ) { { { VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, tImageView, srTextureSampler, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER } } }, { { { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, uBuffers, sizeof( ubo_3d_t ) } } }

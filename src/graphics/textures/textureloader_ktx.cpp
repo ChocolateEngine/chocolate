@@ -10,8 +10,8 @@ Load KTX Textures
 #include "util.h"
 
 #ifdef KTX
-#include "ktx/ktx.h"
-#include "ktx/ktxvulkan.h"
+#include "ktx.h"
+#include "ktxvulkan.h"
 #endif
 
 
