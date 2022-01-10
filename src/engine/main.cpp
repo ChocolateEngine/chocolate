@@ -4,11 +4,11 @@
 extern "C"
 {
 	void DLL_EXPORT engine_start
-		(  )
+		( const char* gamePath )
 	{
 	        Engine 	engine;
 
-		engine.EngineMain(  );
+		engine.EngineMain( gamePath );
 
 		return;
 	}
