@@ -11,7 +11,10 @@ DLL_EXPORT Console* console = nullptr;
 void Print( const char* format, ... )
 {
 	VSTRING( std::string buffer, format );
-	console->Print( buffer.c_str() );
+	if ( console )
+		console->Print( buffer.c_str() );
+	else
+		printf( buffer.c_str() );
 }
 
 
@@ -284,6 +287,26 @@ CONCMD( echo )
 	Print( msg.c_str() );
 }
 
+CONCMD( help )
+{
+	if ( args.size() == 0 )
+	{
+		console->PrintAllConVars();
+		return;
+	}
+
+	ConVarBase* cvar = console->GetConVar( args[0] );
+
+	if ( cvar )
+	{
+		Print( cvar->GetPrintMessage().c_str() );
+	}
+	else
+	{
+		Print( "Convar not found: %s\n", args[0].c_str() );
+	}
+}
+
 
 // ================================================================================
 
@@ -487,6 +510,25 @@ void Console::Print( Msg type, const char* format, ... )
 }
 
 
+// Checks if the current convar is a reference, if so, then return what it's pointing to
+// return nullptr if it doesn't point to anything, and return the normal cvar if it's not a convarref
+ConVarBase* CheckForConVarRef( ConVarBase* cvar )
+{
+	if ( ConVarRef* cvarRef = dynamic_cast< ConVarRef* >(cvar) )
+	{
+		if ( cvarRef->apRef == nullptr )
+		{
+			Print( "[CONSOLE] Found unlinked cvar ref: %s\n", cvarRef->GetName().c_str() );
+			return nullptr;
+		}
+
+		return cvarRef->apRef;
+	}
+
+	return cvar;
+}
+
+
 void Console::CalculateAutoCompleteList( const std::string& textBuffer )
 {
 	aAutoCompleteList.clear();
@@ -497,6 +539,10 @@ void Console::CalculateAutoCompleteList( const std::string& textBuffer )
 	ConVarBase* cvar = ConVarBase::spConVarBases;
 	while ( cvar )
 	{
+		cvar = CheckForConVarRef( cvar );
+		if ( !cvar )
+			continue;
+
 		if ( str_lower2(cvar->aName).starts_with( str_lower2(textBuffer) ) )
 			aAutoCompleteList.push_back( cvar->aName );
 
@@ -558,6 +604,10 @@ bool Console::RunCommand( const std::string& command )
 	{
 		if ( str_lower2(cvar->aName) == commandName )
 		{
+			cvar = CheckForConVarRef( cvar );
+			if ( !cvar )
+				continue;
+
 			if ( ConVar* convar = dynamic_cast<ConVar*>(cvar) )
 			{
 				commandCalled = true;
