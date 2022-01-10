@@ -166,11 +166,11 @@ void LoadObj( const std::string &srPath, std::vector<Mesh*> &meshes )
 				auto iterSavedIndex = vertIndexes.find(vert);
 
 				// Is this a duplicate vertex?
-				if ( iterSavedIndex != vertIndexes.end() )
+				/*if ( iterSavedIndex != vertIndexes.end() )
 				{
 					uniqueVertex = false;
 					newIndex = iterSavedIndex->second;
-				}
+				}*/
 
 				if ( uniqueVertex )
 				{
