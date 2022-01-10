@@ -8,6 +8,12 @@ Defines the methods declared in engine.h.
 #include "core/console.h"
 #include "util.h"
 
+#ifdef _WIN32
+	#include <direct.h>
+#else
+	#include <unistd.h>
+#endif
+
 #include <SDL2/SDL_loadso.h>
 #include <chrono>
 
@@ -66,11 +72,16 @@ void Engine::LoadObject( const std::string& srDlPath, const std::string& srEntry
 	aDlHandles.push_back( handle );
 }
 
-void Engine::EngineMain(  )
+void Engine::EngineMain( const char* gamePath )
 {
 	static CommandManager			   	commandManager;
 
 	aActive 		= true;
+	aGamePath       = gamePath;
+	aExePath        = SDL_GetBasePath();
+
+	// change to game directory
+	chdir( gamePath );
 
 	LoadObject( "bin/client" EXT_DLL, "game_init" );
 	InitSystems(  );
@@ -82,11 +93,11 @@ void Engine::EngineMain(  )
 		UpdateSystems(  );
 }
 
-void LoadModule( const std::string& srDlPath )
+void Engine::LoadModule( const std::string& srDlPath )
 {
 	Module handle = NULL;
 
-	handle = SDL_LoadObject( (srDlPath + EXT_DLL).c_str(  ) );
+	handle = SDL_LoadObject( (aExePath + srDlPath + EXT_DLL).c_str(  ) );
 	if ( !handle )
 	{
 		Print( "Error: %s\n", SDL_GetError() );
