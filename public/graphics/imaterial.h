@@ -14,6 +14,18 @@ Interface for the material class to be used outside graphics
 
 class BaseShader;
 
+
+// types of material vars needed:
+//  texture
+//  string
+//  float
+//  int
+//  range (just a min and max value)?
+//  RGB color/vector
+//  RGBA color/vector
+
+
+
 class IMaterial
 {
 public:

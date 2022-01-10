@@ -12,6 +12,7 @@ TODO: move this to graphics level abstraction so the game can use this
 #include "shaders/shaders.h"
 #include "allocator.h"
 #include "types/material.h"
+#include "textures/itextureloader.h"
 
 
 class MaterialSystem: public IMaterialSystem
@@ -97,11 +98,14 @@ private:
 	std::unordered_map< size_t, UniformDescriptor >         aUniformDataMap;
 	std::unordered_map< size_t, VkDescriptorSetLayout >     aUniformLayoutMap;
 
-	std::vector< BaseRenderable* > aRenderables;
-	std::vector< BaseRenderable* > aDrawList;
+	std::vector< BaseRenderable* >                          aRenderables;
+	std::vector< BaseRenderable* >                          aDrawList;  // REMOVE THIS CRINGE
 
-	std::vector< Material* > aMaterials;
-	std::vector< Material* > aErrorMaterials;
+	std::vector< Material* >                                aMaterials;
+	std::vector< Material* >                                aErrorMaterials;
+
+	std::vector< ITextureLoader* >                          aTextureLoaders;
+	std::unordered_map< std::string, TextureDescriptor* >   aTextures;
 };
 
 extern MaterialSystem* materialsystem;

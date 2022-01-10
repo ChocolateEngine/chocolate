@@ -13,10 +13,8 @@ Maybe the shadersystem could be inside this material system?
 #include "shaders/shader_basic_3d.h"
 #include "shaders/shader_basic_2d.h"
 
-#ifdef KTX
-#include "ktx/ktx.h"
-#include "ktx/ktxvulkan.h"
-#endif
+#include "textures/textureloader_ktx.h"
+#include "textures/textureloader_stbi.h"
 
 extern size_t gModelDrawCalls;
 extern size_t gVertsDrawn;
@@ -32,6 +30,10 @@ MaterialSystem::MaterialSystem()
 
 void MaterialSystem::Init()
 {
+	// Create Texture Loaders
+	aTextureLoaders.push_back( new KTXTextureLoader );
+	aTextureLoaders.push_back( new STBITextureLoader );
+
 	// Setup built in shaders
 	BaseShader* basic_3d = CreateShader<Basic3D>( "basic_3d" );
 	BaseShader* basic_2d = CreateShader<Basic2D>( "basic_2d" );
@@ -93,97 +95,44 @@ IMaterial* MaterialSystem::GetErrorMaterial( const std::string& shaderName )
 }
 
 
+const char *get_file_ext( const char *filename )
+{
+	const char *dot = strrchr(filename, '.');
+	if(!dot || dot == filename) return "";
+	return dot + 1;
+}
+
+
 // this really should not have a Material input, it should have a Texture class input, right? idk
 TextureDescriptor* MaterialSystem::CreateTexture( IMaterial* material, const std::string path )
 {
-	TextureDescriptor	*pTexture = new TextureDescriptor;
+	// Check if texture was already loaded
+	std::unordered_map< std::string, TextureDescriptor* >::iterator it;
 
-	if ( !LoadKTXTexture( pTexture, path, pTexture->aTextureImage, pTexture->aTextureImageMem, pTexture->aMipLevels ) )
+	it = aTextures.find( path );
+
+	if ( it != aTextures.end() )
+		return it->second;
+
+	// Not found, so try to load it
+	const char* fileExt = get_file_ext( path.c_str() );
+
+	for ( ITextureLoader* loader: aTextureLoaders )
 	{
-		// fallback to stbi
-		InitTextureImage( path, pTexture->aTextureImage, pTexture->aTextureImageMem, pTexture->aMipLevels );
-		InitTextureImageView( pTexture->aTextureImageView, pTexture->aTextureImage, pTexture->aMipLevels );
+		if ( !loader->CheckExt( fileExt ) )
+			continue;
+
+		if ( TextureDescriptor* texture = loader->LoadTexture( material, path ) )
+		{
+			aTextures[path] = texture;
+			return texture;
+		}
 	}
 
-	VkDescriptorSetLayout layout = ((Material*)material)->GetTextureLayout();
+	// error print is handled in STBI texture loader
 
-	InitDescriptorSets(
-		pTexture->aSets,
-		layout,
-		*gpPool,
-		{ { {
-			VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-			pTexture->aTextureImageView,
-			renderer->aTextureSampler,
-			VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER
-		} } },
-		{  }
-	);
-
-	return pTexture;
+	return nullptr;
 }
-
-
-bool MaterialSystem::LoadKTXTexture( TextureDescriptor* pTexture, const String &srImagePath, VkImage &srTImage, VkDeviceMemory &srTImageMem, uint32_t &srMipLevels )
-{
-#ifndef KTX
-	return false;
-#else
-	int 		texWidth;
-	int		texHeight;
-	int		texChannels;
-	VkBuffer 	stagingBuffer;
-	VkDeviceMemory 	stagingBufferMemory;
-	bool		noTexture = false;
-
-	ktxVulkanDeviceInfo vdi;
-
-	KTX_error_code result = ktxVulkanDeviceInfo_Construct(&vdi, gpDevice->GetPhysicalDevice(), DEVICE,
-														  gpDevice->GetGraphicsQueue(), gpDevice->GetCommandPool(), nullptr);
-
-	if ( result != KTX_SUCCESS )
-	{
-		Print( "KTX Error %d: %s - Failed to Construct KTX Vulkan Device\n", result, ktxErrorString(result) );
-		return false;
-	}
-
-	result = ktxTexture_CreateFromNamedFile(srImagePath.c_str(), KTX_TEXTURE_CREATE_NO_FLAGS, &pTexture->kTexture);
-
-	if ( result != KTX_SUCCESS )
-	{
-		Print( "KTX Error %d: %s - Failed to open texture: %s\n", result, ktxErrorString(result), srImagePath.c_str(  ) );
-		ktxVulkanDeviceInfo_Destruct( &vdi );
-		return false;
-	}
-
-	result = ktxTexture_VkUploadEx(pTexture->kTexture, &vdi, &pTexture->texture,
-								   VK_IMAGE_TILING_OPTIMAL,
-								   VK_IMAGE_USAGE_SAMPLED_BIT,
-								   VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-
-	if ( result != KTX_SUCCESS )
-	{
-		Print( "KTX Error %d: %s - Failed to upload texture: %s\n", result, ktxErrorString(result), srImagePath.c_str(  ) );
-		ktxTexture_Destroy( pTexture->kTexture );
-		ktxVulkanDeviceInfo_Destruct( &vdi );
-		return false;
-	}
-
-	Print( "Loaded Image: %s - dataSize: %d\n", srImagePath.c_str(  ), pTexture->kTexture->dataSize );
-
-	ktxTexture_Destroy( pTexture->kTexture );
-	ktxVulkanDeviceInfo_Destruct( &vdi );
-
-	pTexture->aMipLevels = pTexture->kTexture->numLevels;
-	pTexture->aTextureImage = pTexture->texture.image;
-	pTexture->aTextureImageMem = pTexture->texture.deviceMemory;
-
-	InitImageView( pTexture->aTextureImageView, pTexture->aTextureImage, pTexture->texture.imageFormat, VK_IMAGE_ASPECT_COLOR_BIT, pTexture->aMipLevels );
-
-	return true;
-#endif
-}
-
 
 
 // TODO: i need to make BaseRenderable a template for the vertex type which i don't feel like doing right now so
