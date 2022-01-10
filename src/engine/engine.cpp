@@ -40,11 +40,6 @@ void Engine::InitCommands(  )
 
 void Engine::InitConsoleCommands(  )
 {
-	CON_COMMAND_LAMBDA( help )
-	{
-		console->PrintAllConVars();
-	});
-
 	CON_COMMAND_LAMBDA( exit ) { aActive = false; });
 	CON_COMMAND_LAMBDA( quit ) { aActive = false; });
 
