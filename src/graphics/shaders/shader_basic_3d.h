@@ -10,8 +10,8 @@ The Basic 3D Shader, starting point shader
 class Basic3D : public BaseShader
 {
 protected:
-	const char *pVShader = "materials/shaders/3dvert.spv";
-	const char *pFShader = "materials/shaders/3dfrag.spv";
+	const char *pVShader = "shaders/3dvert.spv";
+	const char *pFShader = "shaders/3dfrag.spv";
 
 public:	
 	                    Basic3D(): BaseShader() {}
