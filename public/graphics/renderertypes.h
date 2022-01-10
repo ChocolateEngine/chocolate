@@ -16,6 +16,8 @@
 
 #include "types/databuffer.hh"
 
+#define KTX
+
 #ifdef KTX
 #include "ktx/ktx.h"
 #include "ktx/ktxvulkan.h"

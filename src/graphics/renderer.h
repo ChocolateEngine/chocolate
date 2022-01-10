@@ -95,6 +95,9 @@ public:
 	/* A.  */
 	void 	DrawFrame(  );
 
+	/* A.  */
+	VkSampler       GetTextureSampler(  ) { return aTextureSampler; }
+
 	/* Sets the view  */
 	void    SetView( View& view );
 	/* Get the window width and height  */

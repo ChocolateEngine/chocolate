@@ -1,7 +1,5 @@
 #include "allocator.h"
-#include "io/stb_image.h"
 #include "debug.h"
-#include "types/missingtexture.h"
 
 FunctionList 			gFreeQueue;
 ShaderCache			gShaderCache;
@@ -162,57 +160,6 @@ void InitImage( VkImageCreateInfo sImageInfo, VkMemoryPropertyFlags sProperties,
 	vkBindImageMemory( DEVICE, srImage, srImageMemory, 0 );
 }
 
-void InitTextureImage( const String &srImagePath, VkImage &srTImage, VkDeviceMemory &srTImageMem, uint32_t &srMipLevels, float *spWidth, float *spHeight )
-{
-	int 		texWidth;
-	int		texHeight;
-	int		texChannels;
-	VkBuffer 	stagingBuffer;
-	VkDeviceMemory 	stagingBufferMemory;
-	stbi_uc 	*pPixels = stbi_load( srImagePath.c_str(  ), &texWidth, &texHeight, &texChannels, STBI_rgb_alpha );
-	bool		noTexture = false;
-
-	if ( !pPixels )
-	{
-	        IDPF( "Failed to open texture: %s\n", srImagePath.c_str(  ) );
-		texWidth 			= gMissingTextureWidth;
-		texHeight 			= gMissingTextureHeight;
-		pPixels				= ( stbi_uc* )gpMissingTexture;
-		noTexture 			= true;
-	}
-	VkDeviceSize 	imageSize = texWidth * texHeight * 4;
-
-	/* Divides res by 2 each level.  */
-	srMipLevels 	= ( uint32_t )std::floor( std::log2( std::max( texWidth, texHeight ) ) ) + 1;
-	
-	InitBuffer( imageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-		    stagingBuffer, stagingBufferMemory );
-	
-	MapMemory( stagingBufferMemory, imageSize, pPixels );
-	if ( !noTexture )
-		stbi_image_free( pPixels );
-	
-	InitImage( Image( texWidth, texHeight, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_TILING_OPTIMAL,
-			  VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT, srMipLevels, VK_SAMPLE_COUNT_1_BIT ),
-		   VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, srTImage, srTImageMem );
-	
-	TransitionImageLayout( srTImage, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, srMipLevels );
-	
-	CopyBufferToImage( stagingBuffer, srTImage, ( uint32_t )texWidth, ( uint32_t )texHeight );
-	GenerateMipMaps( srTImage, VK_FORMAT_R8G8B8A8_SRGB, texWidth, texHeight, srMipLevels );
-
-	/* Scale sprite to pixel width/height.  */
-	if ( spWidth && spHeight )
-	{
-		*spWidth 	= ( float )texWidth  / ( float )gpDevice->aWidth   * 2.0f;
-		*spHeight	= ( float )texHeight / ( float )gpDevice->aHeight  * 2.0f;
-	}
-
-	/* Clean memory  */
-	vkDestroyBuffer( DEVICE, stagingBuffer, NULL );
-	vkFreeMemory( DEVICE, stagingBufferMemory, NULL );
-}
-
 void InitTextureImageView( VkImageView &srTImageView, VkImage sTImage, uint32_t sMipLevels )
 {
 	InitImageView( srTImageView, sTImage, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT, sMipLevels );
@@ -346,7 +293,7 @@ void InitDescriptorSets( DataBuffer< VkDescriptorSet > &srDescSets, VkDescriptor
 /* Initializes a texture, view, and appropriate descriptors.  */
 TextureDescriptor *InitTexture( const String &srImagePath, VkDescriptorSetLayout sLayout, VkDescriptorPool sPool, VkSampler sSampler, float *spWidth, float *spHeight )
 {
-	TextureDescriptor	*pTexture = new TextureDescriptor;
+	/*TextureDescriptor	*pTexture = new TextureDescriptor;
 	VkImage 		textureImage;
 	VkDeviceMemory 		textureMem;
 	VkImageView		textureView;
@@ -362,9 +309,9 @@ TextureDescriptor *InitTexture( const String &srImagePath, VkDescriptorSetLayout
 
 	pTexture->aTextureImage 	= textureImage;
 	pTexture->aTextureImageMem	= textureMem;
-	pTexture->aTextureImageView     = textureView;
+	pTexture->aTextureImageView     = textureView;*/
 
-	return pTexture;
+	return nullptr;
 }
 /* Initializes the uniform data, such as uniform buffers.  */
 void InitUniformData( UniformDescriptor &srDescriptor, VkDescriptorSetLayout sLayout )

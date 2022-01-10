@@ -13,12 +13,21 @@ extern size_t gVertsDrawn;
 
 // =========================================================
 
+// =========================================================
+
 
 void Basic3D::Init()
 {
 	aModules.Allocate(2);
 	aModules[0] = CreateShaderModule( ReadFile( pVShader ) ); // Processes incoming verticies, taking world position, color, and texture coordinates as an input
 	aModules[1] = CreateShaderModule( ReadFile( pFShader ) ); // Fills verticies with fragments to produce color, and depth
+
+	// very rough idea for now for material parameters for this shader:
+	// AddParameter<TextureDescriptor*>( "MainTexture", DEFAULT_TYPE );
+	// AddParameter<glm::vec3>( "VectorTest", glm::vec3(1, 1, 1) );
+	
+	// other thing for range only
+	// AddRangeParameter<TextureDescriptor*>( "MainTexture", DEFAULT_TYPE );
 
 	BaseShader::Init();
 }
