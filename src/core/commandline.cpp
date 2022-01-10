@@ -1,5 +1,6 @@
 #include "core/commandline.h"
 #include "core/console.h"
+#include "core/filesystem.h"
 #include "util.h"
 
 #include <stdarg.h>
@@ -9,10 +10,13 @@ DLL_EXPORT CommandLine* cmdline = nullptr;
 
 extern "C"
 {
-	void DLL_EXPORT core_init( int argc, char *argv[] )
+	void DLL_EXPORT core_init( int argc, char *argv[], const char* gamePath )
 	{
 		cmdline = new CommandLine;
 		cmdline->Init( argc, argv );
+
+		filesys = new FileSystem;
+		filesys->Init( gamePath );
 
 		console = new Console;
 

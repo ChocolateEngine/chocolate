@@ -67,16 +67,11 @@ void Engine::LoadObject( const std::string& srDlPath, const std::string& srEntry
 	aDlHandles.push_back( handle );
 }
 
-void Engine::EngineMain( const char* gamePath )
+void Engine::EngineMain(  )
 {
 	static CommandManager			   	commandManager;
 
 	aActive 		= true;
-	aGamePath       = gamePath;
-	aExePath        = SDL_GetBasePath();
-
-	// change to game directory
-	chdir( gamePath );
 
 	LoadObject( "bin/client" EXT_DLL, "game_init" );
 	InitSystems(  );

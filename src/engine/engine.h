@@ -45,7 +45,7 @@ public:
 	void        LoadModule( const std::string& srDlPath );
 
 	/* The engine update cycle is stored here.  */
-	void 		EngineMain( const char* gamePath );
+	void 		EngineMain(  );
 	/* Initializes engine systems.  */
 	void 	       	InitSystems(  );
 	/* Updates all systems.  */

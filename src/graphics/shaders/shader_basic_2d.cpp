@@ -1,8 +1,9 @@
 /*
-shader_basic_3d.cpp ( Authored by Demez )
+shader_basic_2d.cpp ( Authored by Demez )
 
-The Basic 3D Shader, starting point shader
+The Basic 2D Shader, starting point shader
 */
+#include "core/filesystem.h"
 #include "../renderer.h"
 #include "shader_basic_2d.h"
 #include "graphics/sprite.h"
@@ -28,8 +29,8 @@ aPipeline = InitGraphicsPipeline< vertex_2d_t >( aPipelineLayout, "materials/sha
 void Basic2D::Init()
 {
 	aModules.Allocate(2);
-	aModules[0] = CreateShaderModule( ReadFile( pVShader ) ); // Processes incoming verticies, taking world position, color, and texture coordinates as an input
-	aModules[1] = CreateShaderModule( ReadFile( pFShader ) ); // Fills verticies with fragments to produce color, and depth
+	aModules[0] = CreateShaderModule( filesys->ReadFile( pVShader ) ); // Processes incoming verticies, taking world position, color, and texture coordinates as an input
+	aModules[1] = CreateShaderModule( filesys->ReadFile( pFShader ) ); // Fills verticies with fragments to produce color, and depth
 
 	BaseShader::Init();
 }
@@ -37,8 +38,8 @@ void Basic2D::Init()
 
 void Basic2D::ReInit()
 {
-	aModules[0] = CreateShaderModule( ReadFile( pVShader ) ); // Processes incoming verticies, taking world position, color, and texture coordinates as an input
-	aModules[1] = CreateShaderModule( ReadFile( pFShader ) ); // Fills verticies with fragments to produce color, and depth
+	aModules[0] = CreateShaderModule( filesys->ReadFile( pVShader ) ); // Processes incoming verticies, taking world position, color, and texture coordinates as an input
+	aModules[1] = CreateShaderModule( filesys->ReadFile( pFShader ) ); // Fills verticies with fragments to produce color, and depth
 
 	BaseShader::ReInit();
 }
