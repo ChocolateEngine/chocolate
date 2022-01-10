@@ -90,7 +90,8 @@ void InputSystem::ParseInput(  )
 		{
 			case SDL_QUIT:
 			{
-				// tell engine to quit somehow
+				// lazy way to tell engine to quit
+				console->RunCommand( "quit" );
 				break;
 			}
 
