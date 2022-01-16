@@ -78,20 +78,13 @@ GraphicsSystem::GraphicsSystem(  ) : BaseGraphicsSystem(  )
 
 void GraphicsSystem::Init(  )
 {
-	BaseClass::Init(  );
+	aRenderer.Init();
 	aRenderer.InitVulkan(  );
 }
 
 void GraphicsSystem::Update( float dt )
 {
-	BaseClass::Update( dt );
-	aRenderer.Update( dt );
 	DrawFrame(  );
-}
-
-void GraphicsSystem::InitSubsystems(  )
-{
-	aRenderer.Init(  );
 }
 
 extern MaterialSystem* materialsystem;

@@ -20,26 +20,11 @@ union SDL_Event;
 class BaseSystem
 {
 protected:
-	//typedef std::vector< Message > 				EngineCommands;
-	typedef std::vector< ConCommand > 			ConsoleCommands;
-	typedef std::vector< std::function< void(  ) > > 	FunctionList;
-
-	FunctionList		aFreeQueue;
-
-	/* Initializes all console commands the system can respond to.  */
-	virtual void 	InitConsoleCommands(  );
-	/* Initializes any member systems of the base system.  */
-	virtual void    InitSubsystems(  );
 public:
-	/* Updates the system, performing all neccesary tasks.  */
-	virtual void 		Update( float dt );
-	/* Handle an SDL Event.  */
-	virtual void 		HandleSDLEvent( SDL_Event* e );
-
-	/* Constructor which will initialize the needed member variables.  */
-	explicit	BaseSystem(  );
+	/* Self explanatory.  */
+	virtual void     Update( float sDT ) = 0;
 	/* Initialize system.  */
-	virtual void 	Init(  );
+	virtual void 	 Init()              = 0;
 	/* Destructs the system, freeing any used memory.  */
-	virtual 	~BaseSystem(  ) = 0;
+	virtual 	~BaseSystem()        = 0;
 };

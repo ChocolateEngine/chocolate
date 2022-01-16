@@ -35,6 +35,8 @@ public:
 	void		DebugMessage( size_t index, const char* format, ... ) override;
 	void		InsertDebugMessage( size_t index, const char* format, ... ) override;
 
+	void            Init();
+
 	/* Constructor.  */
 	explicit	GuiSystem(  );
 	/* A.  */

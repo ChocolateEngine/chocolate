@@ -411,7 +411,6 @@ void Renderer::Cleanup(  )
 }
 
 Renderer::Renderer(  ) :
-	BaseSystem(  ),
 	aView(0, 0, 640, 480, 0.1, 1000, 90)
 {
 	renderer = this;
@@ -419,8 +418,6 @@ Renderer::Renderer(  ) :
 
 void Renderer::Init(  )
 {
-	BaseSystem::Init(  );
-
 	gpDevice = new Device;
 	gpDevice->InitDevice(  );
 

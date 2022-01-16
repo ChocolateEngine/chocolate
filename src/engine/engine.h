@@ -17,7 +17,7 @@ various systems and synchronizations
 #define CRY_ABOUT_IT() \
 	apCommandManager->Execute( Engine::Commands::EXIT );
 
-class Engine : public BaseSystem
+class Engine
 {
 protected:
 	typedef std::vector< BaseSystem* >      SystemList;
@@ -30,10 +30,6 @@ protected:
 
 	/* Adds the game systems to aSystems.  */
 	void 		AddGameSystems(  );
-	/* Initializes all commands the system can respond to.  */
-	void 		InitCommands(  );
-	/* Initializes all console commands the system can respond to.  */
-	void 		InitConsoleCommands(  );
 public:
 	enum class	Commands{ NONE = 0, PING, EXIT };
 	
@@ -41,6 +37,8 @@ public:
 	/* Loads a shared object containing the game code.  */
 	void 		LoadObject( const std::string& srDlPath,
 				    const std::string& srEntry );
+
+	void            Update( float sDT );
 
 	void        LoadModule( const std::string& srDlPath );
 

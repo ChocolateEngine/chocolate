@@ -10,10 +10,8 @@ GuiSystem* gui = new GuiSystem;
 
 extern Renderer* renderer;
 
-void GuiSystem::Update( float dt )
+void GuiSystem::Update( float sDT )
 {
-	BaseSystem::Update( dt );
-
 	DrawGui(  );
 }
 
@@ -332,6 +330,11 @@ void GuiSystem::InsertDebugMessage( size_t index, const char* format, ... )
 	//std::string out = vstring( format, args );
 	aDebugMessages.insert( aDebugMessages.begin() + index, vstring( format, args ) );
 	va_end( args );
+}
+
+void GuiSystem::Init()
+{
+	
 }
 
 GuiSystem::GuiSystem(  ) : BaseGuiSystem(  )
