@@ -34,18 +34,6 @@ void Engine::AddGameSystems(  )
 		pSys->Init(  );
 }
 
-void Engine::InitCommands(  )
-{
-}
-
-void Engine::InitConsoleCommands(  )
-{
-	CON_COMMAND_LAMBDA( exit ) { aActive = false; });
-	CON_COMMAND_LAMBDA( quit ) { aActive = false; });
-
-	BaseSystem::InitConsoleCommands(  );
-}
-
 void Engine::LoadObject( const std::string& srDlPath, const std::string& srEntry )
 {
 	Module handle = NULL;
@@ -69,18 +57,21 @@ void Engine::LoadObject( const std::string& srDlPath, const std::string& srEntry
 
 void Engine::EngineMain(  )
 {
-	static CommandManager			   	commandManager;
-
+	CON_COMMAND_LAMBDA( exit ) { aActive = false; });
+	CON_COMMAND_LAMBDA( quit ) { aActive = false; });	
 	aActive 		= true;
 
 	LoadObject( "bin/client" EXT_DLL, "game_init" );
 	InitSystems(  );
 	AddGameSystems(  );
-	InitCommands(  );
-	InitConsoleCommands(  );
 	
 	while ( aActive )
 		UpdateSystems(  );
+}
+
+void Engine::Update( float sDT )
+{
+	/* Ball.  */
 }
 
 void Engine::LoadModule( const std::string& srDlPath )
@@ -156,7 +147,7 @@ void Engine::UpdateSystems(  )
 	startTime = currentTime;
 }
 
-Engine::Engine(  ) : BaseSystem(  )
+Engine::Engine(  )
 {
 }
 

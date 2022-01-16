@@ -134,39 +134,14 @@ void InputSystem::ParseInput(  )
 			}
 			
 		}
-
-		for ( BaseSystem* sys: systems->GetSystemList() )
-		{
-			sys->HandleSDLEvent( &aEvent );
-		}
 	}
 }
 
 
 void InputSystem::Init(  )
 {
-	BaseSystem::Init(  );
-
 	ResetInputs(  );
 }
-
-void InputSystem::InitConsoleCommands(  )
-{
-	// memory leak from using new, probably not important, will be here for the entire program runtime anyway
-	// also slightly odd syntax, idk
-	CON_COMMAND_LAMBDA( bind )
-	{
-		if ( sArgs.size(  ) < 3 )
-		{
-			Print( "Insufficient arguments for bind\n" );
-			return;
-		}
-		Bind( sArgs[ 1 ], sArgs[ 2 ] );
-	});
-
-	BaseSystem::InitConsoleCommands(  );
-}
-
 
 void InputSystem::Update( float frameTime )
 {

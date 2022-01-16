@@ -27,7 +27,7 @@ Vulkan.
 
 #include <optional>
 
-class Renderer : public BaseSystem	//	Most of these objects are used to make new objects by initializing them with certain parameters, then creating and storing them
+class Renderer	//	Most of these objects are used to make new objects by initializing them with certain parameters, then creating and storing them
 {
 protected:
 	typedef std::vector< VkImageView >		ImageViews;
