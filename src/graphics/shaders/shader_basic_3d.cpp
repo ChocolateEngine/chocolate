@@ -267,6 +267,9 @@ void Basic3D::Draw( BaseRenderable* renderable, VkCommandBuffer c, uint32_t comm
 
 	assert(mesh != nullptr);
 
+	if ( !((Material*)mesh->apMaterial)->apDiffuse )
+		return;
+
 	// Bind the mesh's vertex and index buffers
 	VkBuffer 	vBuffers[  ] 	= { mesh->aVertexBuffer };
 	VkDeviceSize 	offsets[  ] 	= { 0 };
