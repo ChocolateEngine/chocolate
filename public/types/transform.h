@@ -152,7 +152,7 @@ struct Transform
 struct Transform2D
 {
 	glm::vec2 aPos = {};
-	glm::vec2 aAng = {};
+        float     aAng = 0.f;
 	glm::vec2 aScale = { 1.0f, 1.0f };
 };
 

@@ -21,8 +21,9 @@ typedef unsigned char KeyState;
 
 class BaseInputSystem : public BaseSystem
 {
+	using Inputs = std::vector< SDL_Event >;
+protected:
 public:
-
 	virtual const glm::ivec2& GetMouseDelta(  ) = 0;
 	virtual const glm::ivec2& GetMousePos(  ) = 0;
 
@@ -35,9 +36,11 @@ public:
 	virtual KeyState GetKeyState( SDL_Scancode key ) = 0;
 
 	/* Convienence functions  */
-	virtual bool KeyPressed( SDL_Scancode key ) = 0;
-	virtual bool KeyReleased( SDL_Scancode key ) = 0;
-	virtual bool KeyJustPressed( SDL_Scancode key ) = 0;
-	virtual bool KeyJustReleased( SDL_Scancode key ) = 0;
+	virtual bool    KeyPressed( SDL_Scancode key ) = 0;
+	virtual bool    KeyReleased( SDL_Scancode key ) = 0;
+	virtual bool    KeyJustPressed( SDL_Scancode key ) = 0;
+	virtual bool    KeyJustReleased( SDL_Scancode key ) = 0;
+	/* Accessors.  */
+	virtual Inputs *GetEvents() = 0;
 };
 

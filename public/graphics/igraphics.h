@@ -59,4 +59,7 @@ public:
 
 	/* Creates a model and stores it for drawing use */
 	virtual Model *CreateModel(  ) = 0;
+
+	/* Draws to the screen.  */
+	virtual void   DrawFrame() = 0;
 };

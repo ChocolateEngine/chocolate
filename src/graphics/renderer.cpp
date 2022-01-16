@@ -28,6 +28,8 @@ draw to the screen.
 #include "imgui/imgui_impl_vulkan.h"
 #include "imgui/imgui_impl_sdl.h"
 
+#include "filemonitor.h"
+
 #include "gui.h"
 #define SPRITE_SUPPORTED 0
 
@@ -41,6 +43,8 @@ size_t gVertsDrawn = 0;
 extern GuiSystem* gui;
 
 Renderer* renderer = nullptr;
+
+static FileMonitor gFileMonitor;
 
 void Renderer::EnableImgui(  )
 {
@@ -73,6 +77,8 @@ bool Renderer::HasStencilComponent( VkFormat sFmt )
 
 void Renderer::InitCommandBuffers(  )
 {
+	gFileMonitor.Update();
+	
 	aCommandBuffers.resize( aSwapChainFramebuffers.size(  ) );
 	VkCommandBufferAllocateInfo allocInfo{  };
 	allocInfo.sType 		= VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
@@ -268,7 +274,7 @@ void Renderer::InitModel( ModelData &srModelData, const String &srModelPath, con
 		{
 			Material* mat = (Material*)mesh->apMaterial;
 			mat->apShader = materialsystem->GetShader( "basic_3d" );
-			mat->apDiffuse = materialsystem->CreateTexture( mesh->apMaterial, mat->aDiffusePath.string() );
+			gFileMonitor.AddOperation( mat->aDiffusePath.string(), [ = ](){ mat->apDiffuse = materialsystem->CreateTexture( mesh->apMaterial, mat->aDiffusePath.string() ); } );
 		}
 
 		materialsystem->CreateVertexBuffer( mesh );

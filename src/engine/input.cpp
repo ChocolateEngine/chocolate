@@ -81,9 +81,11 @@ void InputSystem::Bind( const std::string& srKey, const std::string& srCmd )
 void InputSystem::ParseInput(  )
 {
 	static BaseGuiSystem* gui = GET_SYSTEM( BaseGuiSystem );
+	aEvents.clear();
 
 	for ( ; SDL_PollEvent( &aEvent ) ; )
 	{
+		aEvents.push_back( aEvent );
 		ImGui_ImplSDL2_ProcessEvent( &aEvent );
 
 		switch (aEvent.type)

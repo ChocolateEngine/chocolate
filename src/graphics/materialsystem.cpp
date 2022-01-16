@@ -15,6 +15,7 @@ Maybe the shadersystem could be inside this material system?
 
 #include "textures/textureloader_ktx.h"
 #include "textures/textureloader_stbi.h"
+#include "textures/textureloader_ctx.h"
 
 extern size_t gModelDrawCalls;
 extern size_t gVertsDrawn;
@@ -32,6 +33,7 @@ void MaterialSystem::Init()
 {
 	// Create Texture Loaders
 	aTextureLoaders.push_back( new KTXTextureLoader );
+	aTextureLoaders.push_back( new CTXTextureLoader );
 	aTextureLoaders.push_back( new STBITextureLoader );
 
 	// Setup built in shaders
