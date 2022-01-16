@@ -7,10 +7,7 @@ systems inherit.
 #pragma once
 
 #include "core/console.h"
-#include "commandmanager.h"
 #include "core/systemmanager.h"
-
-#include "command.h"
 #include "types/databuffer.hh"
 
 #include <functional>

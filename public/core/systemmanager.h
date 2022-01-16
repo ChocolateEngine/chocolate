@@ -35,9 +35,7 @@ class BaseSystem;
 
 class CORE_API SystemManager
 {
-	// typedef std::vector< std::any > 	SystemList;
 	typedef std::vector< BaseSystem* > 	SystemList;
-	typedef std::unordered_map< std::type_index, std::any > 	SystemMap;
 public:
 
 	void Add( BaseSystem* sys )
@@ -66,7 +64,6 @@ public:
 
 private:
 	SystemList aSystemList;
-	SystemMap aSystemMap;
 };
 
 

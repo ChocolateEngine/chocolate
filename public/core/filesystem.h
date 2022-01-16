@@ -19,7 +19,7 @@ public:
 	FileSystem();
 	~FileSystem();
 
-	int			                        	Init( const char* workingDir );
+	int                                     Init( const char* workingDir );
 
 	const std::string&                      GetWorkingDir(  );
 	void                                    SetWorkingDir( const std::string& workingDir );
