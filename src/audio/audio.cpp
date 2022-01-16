@@ -37,6 +37,12 @@ CONVAR( snd_buffer_size, 2 );
 IPLAudioFormat g_formatMono = {};
 IPLAudioFormat g_formatStereo = {};
 
+extern "C" {
+	void* DLL_EXPORT cframework_get() {
+		return audio;
+	}
+}
+
 bool HandleSteamAudioReturn(IPLerror ret, const char* msg)
 {
 	if (ret == IPL_STATUS_OUTOFMEMORY)
@@ -55,7 +61,6 @@ bool HandleSteamAudioReturn(IPLerror ret, const char* msg)
 
 AudioSystem::AudioSystem(  ) : BaseAudioSystem(  )
 {
-	systems->Add( this );
 }
 
 

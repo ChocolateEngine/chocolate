@@ -24,6 +24,7 @@ add_subdirectory( ${CH_SRC}/imgui )
 add_subdirectory( ${CH_SRC}/engine )
 add_subdirectory( ${CH_SRC}/audio )
 add_subdirectory( ${CH_SRC}/graphics )
+add_subdirectory( ${CH_SRC}/input )
 
 # copy SDL2 over on windows
 

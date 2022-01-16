@@ -82,6 +82,7 @@ void FileSystem::ClearSearchPaths(  )
 void FileSystem::DefaultSearchPaths(  )
 {
     aSearchPaths.clear();
+    aSearchPaths.push_back( aExePath + "/bin" );
     aSearchPaths.push_back( aExePath + "/" + aWorkingDir );
     aSearchPaths.push_back( aExePath );
     aSearchPaths.push_back( aExePath + "/core" );  // always add core as a search path, at least for now

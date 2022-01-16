@@ -4,6 +4,14 @@
 #include <cstdlib>
 #include <ctime>
 
+GraphicsSystem* graphics = new GraphicsSystem;
+
+extern "C" {
+	void* DLL_EXPORT cframework_get() {
+		return graphics;
+	}
+}
+
 void GraphicsSystem::LoadModel( const std::string& srModelPath, const std::string& srTexturePath, Model *spModel )
 {
 	if ( spModel == NULL )
@@ -69,11 +77,8 @@ void GraphicsSystem::DrawFrame(  )
 	aRenderer.DrawFrame(  );
 }
 
-GraphicsSystem* graphics = new GraphicsSystem;
-
 GraphicsSystem::GraphicsSystem(  ) : BaseGraphicsSystem(  )
 {
-	systems->Add( this );
 }
 
 void GraphicsSystem::Init(  )
@@ -84,7 +89,7 @@ void GraphicsSystem::Init(  )
 
 void GraphicsSystem::Update( float dt )
 {
-	DrawFrame(  );
+	DrawFrame();
 }
 
 extern MaterialSystem* materialsystem;

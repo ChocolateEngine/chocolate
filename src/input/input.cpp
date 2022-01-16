@@ -8,13 +8,20 @@ input.h
 #include "imgui/imgui.h"
 #include "imgui/imgui_impl_sdl.h"
 
-#include "engine.h"
 #include "igui.h"
 
 #include "util.h"
 
 #include <fstream>
 #include <iostream>
+
+InputSystem *input = new InputSystem;
+
+extern "C" {
+	void* DLL_EXPORT cframework_get() {
+		return input;
+	}
+}
 
 InputSystem::InputSystem(  ) : BaseInputSystem(  )
 {
