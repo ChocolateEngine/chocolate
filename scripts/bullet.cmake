@@ -1,9 +1,11 @@
 
-# yeah, i could use FindVulkan, but i don't like cmake's automated things so...
-
 set( BULLET_DIR ${CH_THIRDPARTY}/bullet3 )
 
 message( "Bullet = " ${BULLET_DIR} )
+
+add_compile_definitions(
+	"BULLET_PHYSICS=1"
+)
 
 include_directories( ${BULLET_DIR}/src )
 
@@ -16,6 +18,6 @@ if( MSVC )
 		link_libraries( LinearMath_Debug BulletCollision_Debug BulletDynamics_Debug )
 	endif()
 else()
-		message( "NO BULLET ON LINUX SETUP YET AAAAA" )
+	message( "NO BULLET ON LINUX SETUP YET AAAAA" )
 endif()
 
