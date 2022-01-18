@@ -48,24 +48,64 @@ enum class MatVar
 // TODO: really should remove this std::string parameter probably, idk
 class MaterialVar
 {
-public:
-	MaterialVar( const std::string &name, MatVar type, const std::string &raw, void *data ):
-		aName( name ), aType( type ), aRaw(raw), apData( data )
+private:
+	MaterialVar( const std::string &name, MatVar type, const std::string &raw ):
+		aName( name ), aType( type ), aRaw(raw)
 	{
-
 	}
+
+public:
+	MaterialVar( const std::string &name, const std::string &raw, Texture *data ):
+		MaterialVar( name, MatVar::Texture, raw )
+	{ aDataTexture = data; }
+
+	MaterialVar( const std::string &name, const std::string &raw, float data ):
+		MaterialVar( name, MatVar::Float, raw )
+	{ aDataFloat = data; }
+
+	MaterialVar( const std::string &name, const std::string &raw, int data ):
+		MaterialVar( name, MatVar::Int, raw )
+	{ aDataInt = data; }
+
+	MaterialVar( const std::string &name, const std::string &raw, const glm::vec2 &data ):
+		MaterialVar( name, MatVar::Vec2, raw )
+	{ aDataVec2 = data; }
+
+	MaterialVar( const std::string &name, const std::string &raw, const glm::vec3 &data ):
+		MaterialVar( name, MatVar::Vec3, raw )
+	{ aDataVec3 = data; }
+
+	MaterialVar( const std::string &name, const std::string &raw, const glm::vec4 &data ):
+		MaterialVar( name, MatVar::Vec4, raw )
+	{ aDataVec4 = data; }
 
 	std::string aName;
 	MatVar      aType;
 	std::string aRaw;
-	void       *apData;
+	
+	union
+	{
+		Texture*    aDataTexture;
+		float       aDataFloat;
+		int         aDataInt;
+		glm::vec2   aDataVec2;
+		glm::vec3   aDataVec3;
+		glm::vec4   aDataVec4;
+	};
 
-	inline Texture*    GetTexture()		{ return (apData != nullptr) ? (Texture *)apData : nullptr; }
-	inline float       GetFloat()       { return (apData != nullptr) ? *(float *)&apData : 0.f; }
-	inline int         GetInt()         { return (apData != nullptr) ? *(int *)&apData : 0; }
-	inline glm::vec2   GetVec2()        { return (apData != nullptr) ? *(glm::vec2 *)&apData : glm::vec2(); }
-	inline glm::vec3   GetVec3()        { return (apData != nullptr) ? *(glm::vec3 *)&apData : glm::vec3(); }
-	inline glm::vec4   GetVec4()        { return (apData != nullptr) ? *(glm::vec4 *)&apData : glm::vec4(); }
+	inline void        SetTexture( Texture *val )                   { aType = MatVar::Texture; aDataTexture = val; }
+	inline void        SetFloat( float val )                        { aType = MatVar::Float; aDataFloat = val; }
+	inline void        SetInt( int val )                            { aType = MatVar::Int; aDataInt = val; }
+	inline void        SetVec2( const glm::vec2 &val )              { aType = MatVar::Vec2; aDataVec2 = val; }
+	inline void        SetVec3( const glm::vec3 &val )              { aType = MatVar::Vec3; aDataVec3 = val; }
+	inline void        SetVec4( const glm::vec4 &val )              { aType = MatVar::Vec4; aDataVec4 = val; }
+
+	inline Texture*    GetTexture( Texture *fallback = nullptr )	{ return (aType == MatVar::Texture) ? aDataTexture : fallback; }
+	inline float       GetFloat( float fallback = 0.f )             { return (aType == MatVar::Float) ? aDataFloat : fallback; }
+	inline int         GetInt( int fallback = 0 )                   { return (aType == MatVar::Int) ? aDataInt : fallback; }
+	inline glm::vec2   GetVec2( const glm::vec2 &fallback )         { return (aType == MatVar::Vec2) ? aDataVec2 : fallback; }
+	inline glm::vec3   GetVec3( const glm::vec3 &fallback )         { return (aType == MatVar::Vec3) ? aDataVec3 : fallback; }
+	inline glm::vec4   GetVec4( const glm::vec4 &fallback )         { return (aType == MatVar::Vec4) ? aDataVec4 : fallback; }
 };
 
 
@@ -77,15 +117,20 @@ public:
 	std::string                 aName;
 
 	/* Set the shader for the material by the shader name */
-	virtual void                SetShader( const char* name ) = 0;
+	virtual bool                SetShader( const char* name ) = 0;
 
 	// eh
 	virtual std::string         GetShaderName(  ) = 0;
 
 	virtual MaterialVar*        GetVar( const std::string& name ) = 0;
-	virtual MaterialVar*        AddVar( const std::string& name, MatVar type, void* data ) = 0;
-	virtual MaterialVar*        AddVar( const std::string& name, MatVar type, const std::string &raw, void* data ) = 0;
 	virtual MaterialVar*        AddVar( MaterialVar* var ) = 0;
+
+	virtual MaterialVar*        AddVar( const std::string& name, const std::string &raw, Texture* data ) = 0;
+	virtual MaterialVar*        AddVar( const std::string& name, const std::string &raw, float data ) = 0;
+	virtual MaterialVar*        AddVar( const std::string& name, const std::string &raw, int data ) = 0;
+	virtual MaterialVar*        AddVar( const std::string& name, const std::string &raw, const glm::vec2 &data ) = 0;
+	virtual MaterialVar*        AddVar( const std::string& name, const std::string &raw, const glm::vec3 &data ) = 0;
+	virtual MaterialVar*        AddVar( const std::string& name, const std::string &raw, const glm::vec4 &data ) = 0;
 	
 	// Quicker Access to getting the data from the material vars stored for the shader
 	// So it doesn't need to check for if MaterialVar is null and can get a quick fallback in the 2nd default parameter

@@ -61,6 +61,9 @@ public:
 	/* Delete a material */
 	virtual void                        DeleteMaterial( IMaterial* mat ) = 0;
 
+	/* Parse a Chocolate Material File (cmt) */
+	virtual IMaterial*                  ParseMaterial( const std::string &path ) = 0;
+
 	/* Get Error Material */
 	virtual IMaterial*	                GetErrorMaterial( const std::string& shader ) = 0;
 

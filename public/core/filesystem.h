@@ -40,6 +40,9 @@ public:
 	/* Reads a file into a byte array.  */
 	std::vector< char >                     ReadFile( const std::string& file );
 
+	/* Is path an absolute path?  */
+	bool                                    IsAbsolute( const std::string &path );
+
 private:
 
 	std::string                             aWorkingDir;

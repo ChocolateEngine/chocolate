@@ -14,6 +14,8 @@ file(
 	${CH_PUBLIC}/core/*.h
 	${CH_PUBLIC}/graphics/*.h
 	${CH_THIRDPARTY}/io/*.h
+	${CH_THIRDPARTY}/speedykeyv/KeyValue.cpp
+	${CH_THIRDPARTY}/speedykeyv/KeyValue.h
 )
 
 include( ${CH_ROOT}/scripts/vulkan.cmake )

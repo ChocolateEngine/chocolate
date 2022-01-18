@@ -3,6 +3,7 @@
 
 #include <array>
 #include <fstream>
+#include <filesystem>
 
 #include <sys/stat.h>
 
@@ -107,6 +108,10 @@ void FileSystem::InsertSearchPath( size_t index, const std::string& path )
 
 std::string FileSystem::FindFile( const std::string& file )
 {
+    // if it's an absolute path already, don't bother to look in the search paths for it
+    if ( IsAbsolute( file ) )
+        return file;
+
     for ( auto searchPath : aSearchPaths )
     {
         std::string fullPath = searchPath + "/" + file;
@@ -147,4 +152,9 @@ std::vector< char > FileSystem::ReadFile( const std::string& srFilePath )
     return buffer;
 }
 
+
+bool FileSystem::IsAbsolute( const std::string &path )
+{
+    return std::filesystem::path(path).is_absolute();
+}
 

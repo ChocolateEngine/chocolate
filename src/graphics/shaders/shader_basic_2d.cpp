@@ -234,13 +234,13 @@ void Basic2D::Draw( BaseRenderable* renderable, VkCommandBuffer c, uint32_t comm
 	Sprite* sprite = dynamic_cast<Sprite*>(renderable);
 	assert( sprite != nullptr );
 
-	Texture *albedo = sprite->apMaterial->GetTexture( "albedo" );
-	if ( albedo == nullptr )
+	Texture *diffuse = sprite->apMaterial->GetTexture( "diffuse" );
+	if ( diffuse == nullptr )
 		return;
 
 	VkBuffer 	vBuffers[  ] 	= { renderable->aVertexBuffer };
 	VkDeviceSize 	offsets[  ] 	= { 0 };
-	VkDescriptorSet sets[  ] = { albedo->aSets[ commandBufferIndex ] };
+	VkDescriptorSet sets[  ] = { diffuse->aSets[ commandBufferIndex ] };
 
 	vkCmdBindPipeline( c, VK_PIPELINE_BIND_POINT_GRAPHICS, aPipeline );
 	vkCmdBindVertexBuffers( c, 0, 1, vBuffers, offsets );

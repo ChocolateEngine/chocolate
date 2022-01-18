@@ -5,10 +5,12 @@ Manages all the materials.
 Maybe the shadersystem could be inside this material system?
 */
 
+#include "core/filesystem.h"
 #include "materialsystem.h"
 #include "renderer.h"
 #include "util.h"
 #include "graphics/sprite.h"
+#include "speedykeyv/KeyValue.h"
 
 #include "shaders/shader_basic_3d.h"
 #include "shaders/shader_basic_2d.h"
@@ -87,6 +89,139 @@ void MaterialSystem::DeleteMaterial( IMaterial* matPublic )
 }
 
 
+bool ToDouble2( const std::string &value, double &out )
+{
+	if ( value.empty() )
+		return false;
+
+	char *end;
+	out = strtod( value.c_str(), &end );
+
+	return end != value.c_str();
+}
+
+
+bool ToLong2( const std::string &value, long &out )
+{
+	if ( value.empty() )
+		return false;
+
+	char *end;
+	out = strtol( value.c_str(), &end, 10 );
+
+	return end != value.c_str();
+}
+
+
+IMaterial* MaterialSystem::ParseMaterial( const std::string &path )
+{
+	std::string fullPath = path;
+
+	if ( !fullPath.ends_with( ".cmt" ) )
+		fullPath += ".cmt";
+
+	fullPath = filesys->FindFile( fullPath );
+
+	if ( fullPath.empty() )
+	{
+		Print( "[Graphics] Failed to find file: %s\n", path.c_str() );
+		return nullptr;
+	}
+
+	std::vector< char > rawData = filesys->ReadFile( fullPath );
+
+	if ( rawData.empty() )
+	{
+		Print( "[Graphics] Failed to read file: %s\n", fullPath.c_str() );
+		return nullptr;
+	}
+
+	KeyValueRoot kvRoot;
+	KeyValueErrorCode err = kvRoot.Parse( rawData.data() );
+
+	kvRoot.Solidify();
+
+	if ( err != KeyValueErrorCode::NO_ERROR )
+	{
+		Print( "[Graphics] Failed to parse file: %s\n", fullPath.c_str() );
+		return nullptr;
+	}
+
+	// parsing time
+	
+	KeyValue* kvShader = kvRoot.children;
+
+	IMaterial *mat = CreateMaterial();
+	mat->aName = std::filesystem::path( path ).filename().string();
+	mat->SetShader( kvShader->key.string );
+
+	KeyValue *kv = kvShader->children;
+	for ( int i = 0; i < kvShader->childCount; i++ )
+	{
+		if ( kv->hasChildren )
+		{
+			Print( "[Graphics] Skipping extra children in kv file: %s", fullPath.c_str() );
+			kv = kv->next;
+			continue;
+		}
+
+		// awful and lazy
+		double valFloat = 0.f;
+		long valInt = 0;
+
+		if ( ToDouble2( kv->value.string, valFloat ) )
+		{
+			mat->AddVar( kv->key.string, kv->value.string, (float)valFloat );
+		}
+		else if ( ToLong2( kv->value.string, valInt ) )
+		{
+			mat->AddVar( kv->key.string, kv->value.string, (int)valInt );
+		}
+		else if ( kv->value.string == "" )
+		{
+			// empty string case, just an int with 0 as the value, idk
+			mat->AddVar( kv->key.string, kv->value.string, 0 );
+		}
+
+		// TODO: check if a vec and parse it somehow
+
+		// assume it's a texture?
+		else
+		{
+			// TODO: check for ctx, png, and jpg
+			std::string texPath = kv->value.string;
+			if ( !texPath.ends_with( ".ktx" ) )
+				texPath += ".ktx";
+
+			if ( !filesys->IsAbsolute( texPath ) && !texPath.starts_with("materials") )
+				texPath = "materials/" + texPath;
+
+			std::string absTexPath = filesys->FindFile( texPath );
+			if ( absTexPath == "" )
+			{
+				Print( "[Graphics] \"%s\":\n\tCan't Find Texture: \"%s\": \"%s\"\n", fullPath.c_str(), kv->key.string, kv->value.string );
+				mat->AddVar( kv->key.string, kv->value.string, CreateTexture( mat, "" ) );
+			}
+
+			Texture *texture = CreateTexture( mat, absTexPath );
+			if ( texture != nullptr )
+			{
+				mat->AddVar( kv->key.string, texPath, texture );
+			}
+			else
+			{
+				Print( "[Graphics] \"%s\":n\tUnknown Material Var Type: \"%s\": \"%s\"\n", fullPath.c_str(), kv->key.string, kv->value.string );
+				mat->AddVar( kv->key.string, kv->value.string, 0 );
+			}
+		}
+
+		kv = kv->next;
+	}
+
+	return mat;
+}
+
+
 // stupid, we really should just have one error material with a shader that can do both 2d and 3d (wonder if basic_3d can already do that...)
 IMaterial* MaterialSystem::GetErrorMaterial( const std::string& shaderName )
 {
@@ -105,7 +240,7 @@ IMaterial* MaterialSystem::GetErrorMaterial( const std::string& shaderName )
 	Material* mat = (Material*)CreateMaterial();
 	mat->aName = "ERROR_" + shaderName;
 	mat->apShader = shader;
-	mat->AddVar( "albedo", MatVar::Texture, CreateTexture(mat, "") );
+	mat->AddVar( "diffuse", "", CreateTexture(mat, "") );
 
 	aErrorMaterials.push_back( mat );
 	return mat;
@@ -134,12 +269,19 @@ TextureDescriptor* MaterialSystem::CreateTexture( IMaterial* material, const std
 	// Not found, so try to load it
 	const char* fileExt = get_file_ext( path.c_str() );
 
+	std::string absPath = filesys->FindFile( path );
+	if ( absPath == "" )
+	{
+		Print( "[Graphics] Failed to Find Texture \"%s\"\n", path );
+		return nullptr;
+	}
+
 	for ( ITextureLoader* loader: aTextureLoaders )
 	{
 		if ( !loader->CheckExt( fileExt ) )
 			continue;
 
-		if ( TextureDescriptor* texture = loader->LoadTexture( material, path ) )
+		if ( TextureDescriptor* texture = loader->LoadTexture( material, absPath ) )
 		{
 			aTextures[path] = texture;
 			return texture;
@@ -218,6 +360,7 @@ BaseShader* MaterialSystem::GetShader( const std::string& name )
 	if (search != aShaders.end())
 		return search->second;
 
+	Print( "[Graphics] Shader not found: %s", name.c_str() );
 	return nullptr;
 }
 

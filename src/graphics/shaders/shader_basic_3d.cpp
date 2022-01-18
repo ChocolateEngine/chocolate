@@ -46,8 +46,10 @@ void Basic3D::ReInit()
 std::vector<VkDescriptorSetLayoutBinding> Basic3D::GetDescriptorSetLayoutBindings(  )
 {
 	return {
-		DescriptorLayoutBinding( VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr ),
-		DescriptorLayoutBinding( VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_VERTEX_BIT, nullptr )
+		DescriptorLayoutBinding( VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_VERTEX_BIT, nullptr ),
+		DescriptorLayoutBinding( VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr ),  // diffuse
+		DescriptorLayoutBinding( VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr ),  // emission
+		DescriptorLayoutBinding( VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr ),  // ao
 	};
 }
 
@@ -252,6 +254,11 @@ std::array< VkVertexInputAttributeDescription, 4 > Basic3D::GetAttributeDesc(  )
 }
 
 
+// KTX fails to load this and i don't feel like figuring out why right now
+constexpr const char* gFallbackEmissive = "materials/base/black.png";
+constexpr const char* gFallbackAO = "materials/base/white.png";
+
+
 void Basic3D::Draw( BaseRenderable* renderable, VkCommandBuffer c, uint32_t commandBufferIndex )
 {
 	//if ( mesh->aNoDraw )
@@ -267,9 +274,17 @@ void Basic3D::Draw( BaseRenderable* renderable, VkCommandBuffer c, uint32_t comm
 
 	assert(mesh != nullptr);
 
-	Texture *albedo = mesh->apMaterial->GetTexture( "albedo" );
-	if ( albedo == nullptr )
+	Texture *diffuse = mesh->apMaterial->GetTexture( "diffuse" );
+	if ( diffuse == nullptr )
 		return;
+
+	Texture *emissive = mesh->apMaterial->GetTexture( "emissive" );
+	if ( emissive == nullptr )
+		emissive = materialsystem->CreateTexture( mesh->apMaterial, gFallbackEmissive );
+
+	Texture *ao = mesh->apMaterial->GetTexture( "ao" );
+	if ( ao == nullptr )
+		ao = materialsystem->CreateTexture( mesh->apMaterial, gFallbackAO );
 
 	// Bind the mesh's vertex and index buffers
 	VkBuffer 	vBuffers[  ] 	= { mesh->aVertexBuffer };
@@ -282,12 +297,16 @@ void Basic3D::Draw( BaseRenderable* renderable, VkCommandBuffer c, uint32_t comm
 	// Now draw it
 	vkCmdBindPipeline( c, VK_PIPELINE_BIND_POINT_GRAPHICS, aPipeline );
 
+	UniformDescriptor& uniformData = materialsystem->GetUniformData( mesh->GetID() );
+
 	VkDescriptorSet sets[  ] = {
-		albedo->aSets[ commandBufferIndex ],
-		materialsystem->GetUniformData( mesh->GetID() ).aSets[ commandBufferIndex ]
+		uniformData.aSets[ commandBufferIndex ],
+		diffuse->aSets[ commandBufferIndex ],
+		emissive->aSets[ commandBufferIndex ],
+		ao->aSets[ commandBufferIndex ],
 	};
 
-	vkCmdBindDescriptorSets( c, VK_PIPELINE_BIND_POINT_GRAPHICS, aPipelineLayout, 0, 2, sets, 0, NULL );
+	vkCmdBindDescriptorSets( c, VK_PIPELINE_BIND_POINT_GRAPHICS, aPipelineLayout, 0, 4, sets, 0, NULL );
 
 	if ( mesh->aIndexBuffer )
 		vkCmdDrawIndexed( c, (uint32_t)mesh->aIndices.size(), 1, 0, 0, 0 );

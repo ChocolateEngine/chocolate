@@ -35,6 +35,9 @@ public:
 	/* Delete a material */
 	void                        DeleteMaterial( IMaterial* mat ) override;
 
+	/* Parse a Chocolate Material File (cmt) */
+	IMaterial*                  ParseMaterial( const std::string &path ) override;
+
 	/* Get Error Material */
 	IMaterial*	                GetErrorMaterial( const std::string& shader ) override;
 

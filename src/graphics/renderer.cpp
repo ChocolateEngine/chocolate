@@ -12,7 +12,6 @@ draw to the screen.
 #include "types/transform.h"
 #include "graphics/sprite.h"
 #include "util.h"
-#include "speedykeyv/KeyValue.h"
 
 #define GLM_FORCE_RADIANS
 #define STB_IMAGE_IMPLEMENTATION
@@ -217,12 +216,6 @@ void Renderer::DestroySwapChain(  )
 }
 
 
-/*Material *Renderer::ParseMaterial(const std::string &path)
-{
-
-}*/
-
-
 // TODO: change to LoadModel
 void Renderer::InitModel( ModelData &srModelData, const String &srModelPath, const String &srTexturePath )
 {
@@ -305,10 +298,7 @@ void Renderer::InitSprite( Sprite &srSprite, const String &srSpritePath )
 	srSprite.apMaterial->SetShader( "basic_2d" );
 
 	// long, holy shit
-	srSprite.apMaterial->AddVar(
-		"albedo", MatVar::Texture, srSpritePath, 
-		materialsystem->CreateTexture( srSprite.apMaterial, srSpritePath )
-	);
+	srSprite.apMaterial->AddVar( "diffuse", srSpritePath, materialsystem->CreateTexture( srSprite.apMaterial, srSpritePath ) );
 
 	//srSprite.apMaterial->SetDiffusePath( srSpritePath );
 	//srSprite.apMaterial->SetDiffuse( materialsystem->CreateTexture(srSprite.apMaterial, srSpritePath) );

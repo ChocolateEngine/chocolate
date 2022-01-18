@@ -78,37 +78,33 @@ void LoadObj( const std::string &srPath, std::vector<Mesh*> &meshes )
 
 		if ( material == nullptr )
 		{
+			material = matsys->ParseMaterial( baseDir + "/" + objMaterial.name );
+		}
+
+		// fallback if there is no cmt file
+		if ( material == nullptr )
+		{
 			material = materialsystem->CreateMaterial();
 			material->aName = objMaterial.name;
 			material->SetShader( "basic_3d" );
 
-			// uhhhh
-			if ( !objMaterial.diffuse_texname.empty() )
+			auto SetTexture = [&]( const std::string &param, const std::string &texname )
 			{
-				std::filesystem::path path = objMaterial.diffuse_texname;
+				if ( !texname.empty() )
+				{
+					std::filesystem::path path = texname;
 
-				if ( path.is_relative() )
-					path = baseDir / path;
+					if ( path.is_relative() )
+						path = baseDir / path;
 
-				Texture *diffuse = materialsystem->CreateTexture( material, path.string() );
+					Texture *tex = materialsystem->CreateTexture( material, path.string() );
 
-				// only temporary until i get our own format fully parsing
-				material->AddVar( "albedo", MatVar::Texture, path.string(), diffuse );
-			}
+					material->AddVar( param, path.string(), tex );
+				}
+			};
 
-			// Disabled for now, not sure how well this will even work
-			/*if ( !objMaterial.normal_texname.empty() )
-			{
-				std::filesystem::path path = objMaterial.normal_texname;
-
-				if ( path.is_relative() )
-					path = baseDir / path;
-
-				Texture *normal = materialsystem->CreateTexture( material, path.string() );
-
-				// only temporary until i get our own format fully parsing
-				material->AddVar( "normal", MatVar::Texture, path.string(), normal );
-			}*/
+			SetTexture( "diffuse", objMaterial.diffuse_texname );
+			SetTexture( "emissive", objMaterial.emissive_texname );
 		}
 
 		meshes[i]->apMaterial = material;

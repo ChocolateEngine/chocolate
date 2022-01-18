@@ -267,8 +267,8 @@ void ShaderUnlit::Draw( BaseRenderable* renderable, VkCommandBuffer c, uint32_t 
 
 	assert(mesh != nullptr);
 
-	Texture *albedo = mesh->apMaterial->GetTexture( "albedo" );
-	if ( albedo == nullptr )
+	Texture *diffuse = mesh->apMaterial->GetTexture( "diffuse" );
+	if ( diffuse == nullptr )
 		return;
 
 	// Bind the mesh's vertex and index buffers
@@ -283,7 +283,7 @@ void ShaderUnlit::Draw( BaseRenderable* renderable, VkCommandBuffer c, uint32_t 
 	vkCmdBindPipeline( c, VK_PIPELINE_BIND_POINT_GRAPHICS, aPipeline );
 
 	VkDescriptorSet sets[  ] = {
-		albedo->aSets[ commandBufferIndex ],
+		diffuse->aSets[ commandBufferIndex ],
 		materialsystem->GetUniformData( mesh->GetID() ).aSets[ commandBufferIndex ]
 	};
 

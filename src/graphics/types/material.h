@@ -28,17 +28,21 @@ public:
 	void                Init();
 	void                Destroy();
 
-	void                SetShader( const char* name ) override;
+	bool                SetShader( const char* name ) override;
 	std::string         GetShaderName(  ) override { return apShader->aName; }
 
 	MaterialVar        *GetVar( const std::string &name ) override;
-	MaterialVar        *AddVar( const std::string &name, MatVar type, void *data ) override;
-	MaterialVar        *AddVar( const std::string &name, MatVar type, const std::string &raw, void *data ) override;
 	MaterialVar        *AddVar( MaterialVar* var ) override;
 	
-	// internal version
 	template <typename T>
-	T GetVarData( const std::string &name, T fallback );
+	MaterialVar        *AddVarInternal( const std::string &name, const std::string &raw, T data );
+
+	MaterialVar        *AddVar( const std::string &name, const std::string &raw, Texture *data ) override;
+	MaterialVar        *AddVar( const std::string &name, const std::string &raw, float data ) override;
+	MaterialVar        *AddVar( const std::string &name, const std::string &raw, int data ) override;
+	MaterialVar        *AddVar( const std::string &name, const std::string &raw, const glm::vec2 &data ) override;
+	MaterialVar        *AddVar( const std::string &name, const std::string &raw, const glm::vec3 &data ) override;
+	MaterialVar        *AddVar( const std::string &name, const std::string &raw, const glm::vec4 &data ) override;
 
 	Texture            *GetTexture( const std::string &name, Texture *fallback = nullptr ) override;
 	float               GetFloat( const std::string &name, float fallback = 0.f ) override;
@@ -49,7 +53,6 @@ public:
 
 	std::string                 aName;
 	
-	// uh, this may need to be moved lol
 	VkDescriptorSetLayout       apTextureLayout = nullptr;
 
 	BaseShader*                 apShader = nullptr;
