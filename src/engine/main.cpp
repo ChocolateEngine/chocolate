@@ -5,7 +5,7 @@ Engine *engine = new Engine;
 
 extern "C"
 {
-	void* DLL_EXPORT cengine_get(  )
+	DLL_EXPORT void* cengine_get(  )
 	{
 		return engine;
 	}

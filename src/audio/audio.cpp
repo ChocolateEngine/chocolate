@@ -38,7 +38,7 @@ IPLAudioFormat g_formatMono = {};
 IPLAudioFormat g_formatStereo = {};
 
 extern "C" {
-	void* DLL_EXPORT cframework_get() {
+	DLL_EXPORT void* cframework_get() {
 		return audio;
 	}
 }

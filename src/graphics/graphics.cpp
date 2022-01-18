@@ -7,7 +7,7 @@
 GraphicsSystem* graphics = new GraphicsSystem;
 
 extern "C" {
-	void* DLL_EXPORT cframework_get() {
+	DLL_EXPORT void* cframework_get() {
 		return graphics;
 	}
 }
@@ -58,23 +58,8 @@ void GraphicsSystem::GetWindowSize( uint32_t* width, uint32_t* height )
 	aRenderer.GetWindowSize( width, height );
 }
 
-void GraphicsSystem::InitCommands(  )
-{
-	//auto loadSprite = std::bind( &GraphicsSystem::LoadSprite, this, std::placeholders::_1, std::placeholders::_2 );
-	//apCommandManager->Add( GraphicsSystem::Commands::INIT_SPRITE, Command< const std::string&, Sprite* >( loadSprite ) );
-	
-	//auto loadModel = std::bind( &GraphicsSystem::LoadModel, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3 );       
-	//apCommandManager->Add( GraphicsSystem::Commands::INIT_MODEL, Command< const std::string&, const std::string&, Model* >( loadModel ) );
-}
-
-void GraphicsSystem::InitConsoleCommands(  )
-{
-	
-}
-
 void GraphicsSystem::DrawFrame(  )
 {
-	aRenderer.DrawFrame(  );
 }
 
 GraphicsSystem::GraphicsSystem(  ) : BaseGraphicsSystem(  )
@@ -89,7 +74,7 @@ void GraphicsSystem::Init(  )
 
 void GraphicsSystem::Update( float dt )
 {
-	DrawFrame();
+	aRenderer.DrawFrame();
 }
 
 extern MaterialSystem* materialsystem;

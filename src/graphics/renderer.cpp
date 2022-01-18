@@ -311,21 +311,23 @@ void Renderer::InitSprite( Sprite &srSprite, const String &srSpritePath )
 
 void Renderer::DrawFrame(  )
 {
-	InitCommandBuffers(  );	//	Fucky wucky!!
-
-	if ( r_showDrawCalls.GetBool() )
+	if ( aCommandBuffers.size() > 0 && r_showDrawCalls.GetBool() )
 	{
 		gui->InsertDebugMessage( 0, "Model Draw Calls: %u (%u / %u Command Buffers)",
-								gModelDrawCalls / aCommandBuffers.size(), gModelDrawCalls, aCommandBuffers.size() );
+			gModelDrawCalls / aCommandBuffers.size(), gModelDrawCalls, aCommandBuffers.size() );
 
 		gui->InsertDebugMessage( 1, "Vertices Drawn: %u (%u / %u Command Buffers)",
-								gVertsDrawn / aCommandBuffers.size(), gVertsDrawn, aCommandBuffers.size() );
+			gVertsDrawn / aCommandBuffers.size(), gVertsDrawn, aCommandBuffers.size() );
 
 		gui->InsertDebugMessage( 2, "" );  // spacer
 	}
 
 	gModelDrawCalls = 0;
 	gVertsDrawn = 0;
+
+	gui->Update( 0.f );
+
+	InitCommandBuffers(  );	//	Fucky wucky!!
 	
 	vkWaitForFences( DEVICE, 1, &aInFlightFences[ aCurrentFrame ], VK_TRUE, UINT64_MAX );
 	

@@ -4,6 +4,7 @@ input.cpp ( Authored by p0lyh3dron )
 Defines the methods declared in
 input.h
 */
+#include "core/platform.h"
 #include "input.h"
 #include "imgui/imgui.h"
 #include "imgui/imgui_impl_sdl.h"
@@ -18,7 +19,7 @@ input.h
 InputSystem *input = new InputSystem;
 
 extern "C" {
-	void* DLL_EXPORT cframework_get() {
+	DLL_EXPORT void* cframework_get() {
 		return input;
 	}
 }

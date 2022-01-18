@@ -20,9 +20,9 @@ void GuiSystem::DrawGui(  )
 	if ( !apWindow )
 		return;
 
-	ImGui_ImplVulkan_NewFrame(  );
+	ImGui_ImplVulkan_NewFrame();
 	ImGui_ImplSDL2_NewFrame( apWindow );
-	ImGui::NewFrame(  );
+	ImGui::NewFrame();
 
 	static bool wasConsoleOpen = false;
 	static Uint32 prevtick = 0;
@@ -317,17 +317,27 @@ void GuiSystem::AssignWindow( SDL_Window* spWindow )
 	apWindow = spWindow;
 }
 
+// Append a Debug Message
+void GuiSystem::DebugMessage( const char* format, ... )
+{
+	va_list args;
+	va_start(args, format);
+	aDebugMessages.push_back( vstring( format, args ) );
+	va_end(args);
+}
+
+// Place a Debug Message in a specific spot
 void GuiSystem::DebugMessage( size_t index, const char* format, ... )
 {
 	aDebugMessages.resize( glm::max(aDebugMessages.size(), index + 1) );
 	VSTRING( aDebugMessages[index], format );
 }
 
+// Insert a debug message in-between one
 void GuiSystem::InsertDebugMessage( size_t index, const char* format, ... )
 {
 	va_list args;
 	va_start( args, format );
-	//std::string out = vstring( format, args );
 	aDebugMessages.insert( aDebugMessages.begin() + index, vstring( format, args ) );
 	va_end( args );
 }

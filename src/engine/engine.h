@@ -9,6 +9,8 @@
 #include <vector>
 #include <functional>
 
+#include "core/platform.h"
+
 #include "system.h"
 #include "graphics/igraphics.h"
 #include "iinput.h"
@@ -38,9 +40,9 @@ public:
 	};
 	void            LoadModule( const std::string& srDlPath );
 	/* Initializes engine systems.  */
-	void 	       	InitSystems(  );
+	void DLL_EXPORT	       	InitSystems(  );
 	/* Updates all systems.  */
-	void 		UpdateSystems( float sDT );
+	void DLL_EXPORT		UpdateSystems( float sDT );
 	/* Initialize the engine, creating systems, etc.  */
 	explicit 	Engine(  ) : aActive( true ){};
 			~Engine(  ){

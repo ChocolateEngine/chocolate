@@ -23,5 +23,5 @@ public:
 	/* Initialize system.  */
 	virtual void 	 Init()              = 0;
 	/* Destructs the system, freeing any used memory.  */
-	virtual 	~BaseSystem()        = 0;
+	virtual 	~BaseSystem()            = 0;
 };

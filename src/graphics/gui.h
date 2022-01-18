@@ -32,6 +32,7 @@ public:
 	/* Is the console shown.  */
 	bool		IsConsoleShown(  ) override;
 	/* Debug Text on the side of the screen  */
+	void		DebugMessage( const char* format, ... ) override;
 	void		DebugMessage( size_t index, const char* format, ... ) override;
 	void		InsertDebugMessage( size_t index, const char* format, ... ) override;
 
