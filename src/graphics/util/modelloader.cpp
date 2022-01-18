@@ -137,7 +137,8 @@ void LoadObj( const std::string &srPath, std::vector<Mesh*> &meshes )
 				const tinyobj::index_t idx = objShapes[shapeIndex].mesh.indices[indexOffset + v];
 				ToVec3( pos, objAttrib.vertices[posStride * idx.vertex_index] );
 
-				if (idx.normal_index >= 0)
+				// wtf do i do if there is no normals (like in the bsp2obj thing)
+				if ( objAttrib.normals.size() > 0 && idx.normal_index >= 0 )
 					ToVec3( norm, objAttrib.normals[normStride * idx.normal_index] );
 
 				if (idx.texcoord_index >= 0)
