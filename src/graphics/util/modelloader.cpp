@@ -65,7 +65,7 @@ void LoadObj( const std::string &srPath, std::vector<Mesh*> &meshes )
 		meshes[i] = new Mesh;
 		materialsystem->RegisterRenderable( meshes[i] );
 		materialsystem->MeshInit( meshes[i] );
-		meshes[i]->apMaterial = materialsystem->CreateMaterial();
+		meshes[i]->apMaterial = nullptr;
 	}
 
 	assert(objMaterials.size() > 0);
@@ -73,24 +73,45 @@ void LoadObj( const std::string &srPath, std::vector<Mesh*> &meshes )
 	for (std::size_t i = 0; i < objMaterials.size(); ++i)
 	{
 		const tinyobj::material_t &objMaterial = objMaterials[i];
-		Material &material = *(Material*)meshes[i]->apMaterial;
-		material.aName = objMaterial.name;
 
-		if (!objMaterial.diffuse_texname.empty())
+		IMaterial* material = materialsystem->FindMaterial( objMaterial.name );
+
+		if ( material == nullptr )
 		{
-			material.aDiffusePath = objMaterial.diffuse_texname;
+			material = materialsystem->CreateMaterial();
+			material->aName = objMaterial.name;
+			material->SetShader( "basic_3d" );
 
-			if (material.aDiffusePath.is_relative())
-				material.aDiffusePath = baseDir / material.aDiffusePath;
+			// uhhhh
+			if ( !objMaterial.diffuse_texname.empty() )
+			{
+				std::filesystem::path path = objMaterial.diffuse_texname;
+
+				if ( path.is_relative() )
+					path = baseDir / path;
+
+				Texture *diffuse = materialsystem->CreateTexture( material, path.string() );
+
+				// only temporary until i get our own format fully parsing
+				material->AddVar( "albedo", MatVar::Texture, path.string(), diffuse );
+			}
+
+			// Disabled for now, not sure how well this will even work
+			/*if ( !objMaterial.normal_texname.empty() )
+			{
+				std::filesystem::path path = objMaterial.normal_texname;
+
+				if ( path.is_relative() )
+					path = baseDir / path;
+
+				Texture *normal = materialsystem->CreateTexture( material, path.string() );
+
+				// only temporary until i get our own format fully parsing
+				material->AddVar( "normal", MatVar::Texture, path.string(), normal );
+			}*/
 		}
 
-		if (!objMaterial.normal_texname.empty())
-		{
-			material.aNormalPath = objMaterial.normal_texname;
-
-			if (material.aNormalPath.is_relative())
-				material.aNormalPath = baseDir / material.aNormalPath;
-		}
+		meshes[i]->apMaterial = material;
 	}
 
 	std::unordered_map< vertex_3d_t, uint32_t > vertIndexes;

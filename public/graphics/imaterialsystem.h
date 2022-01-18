@@ -52,14 +52,25 @@ public:
 
 	virtual ~IMaterialSystem() = default;
 
+	/* Create a new empty material */
 	virtual IMaterial*	                CreateMaterial() = 0;
+
+	/* Find an already loaded material by it's name if it exists */
+	virtual IMaterial*	                FindMaterial( const std::string& name ) = 0;
+
+	/* Delete a material */
 	virtual void                        DeleteMaterial( IMaterial* mat ) = 0;
 
+	/* Get Error Material */
 	virtual IMaterial*	                GetErrorMaterial( const std::string& shader ) = 0;
 
 	// ideally this shouldn't need a path, should really be reworked to be closer to thermite, more flexible design
 	// also this probably shouldn't use a Material for a parameter, but it's needed right now
-	virtual TextureDescriptor*			CreateTexture( IMaterial* material, const std::string path ) = 0;
+	// Creates a texture if it doesn't exist yet
+	virtual TextureDescriptor          *CreateTexture( IMaterial* material, const std::string &path ) = 0;
+
+	/* Find an already loaded texture in vram (useless, use the above func, it will do the check for you) */
+	// virtual TextureDescriptor          *FindTexture( const std::string &path ) = 0;
 
 	/* Create a Vertex and Index buffer for a Renderable. */
 	virtual void                        CreateVertexBuffer( BaseRenderable* renderable ) = 0;

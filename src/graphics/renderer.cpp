@@ -12,6 +12,7 @@ draw to the screen.
 #include "types/transform.h"
 #include "graphics/sprite.h"
 #include "util.h"
+#include "speedykeyv/KeyValue.h"
 
 #define GLM_FORCE_RADIANS
 #define STB_IMAGE_IMPLEMENTATION
@@ -215,6 +216,13 @@ void Renderer::DestroySwapChain(  )
 		vkDestroyImageView( DEVICE, imageView, NULL );
 }
 
+
+/*Material *Renderer::ParseMaterial(const std::string &path)
+{
+
+}*/
+
+
 // TODO: change to LoadModel
 void Renderer::InitModel( ModelData &srModelData, const String &srModelPath, const String &srTexturePath )
 {
@@ -270,18 +278,11 @@ void Renderer::InitModel( ModelData &srModelData, const String &srModelPath, con
 	{
 		Mesh* mesh = meshes[i];
 
-		if ( !dupeModel )
-		{
-			Material* mat = (Material*)mesh->apMaterial;
-			mat->apShader = materialsystem->GetShader( "basic_3d" );
-			gFileMonitor.AddOperation( mat->aDiffusePath.string(), [ = ](){ mat->apDiffuse = materialsystem->CreateTexture( mesh->apMaterial, mat->aDiffusePath.string() ); } );
-		}
-
-		materialsystem->CreateVertexBuffer( mesh );
+		matsys->CreateVertexBuffer( mesh );
 
 		// if the vertex count is different than the index count, use the index buffer
 		if ( mesh->aVertices.size() != mesh->aIndices.size() )
-			materialsystem->CreateIndexBuffer( mesh );
+			matsys->CreateIndexBuffer( mesh );
 
 		//mesh->aRadius = glm::distance( mesh->aMinSize, mesh->aMaxSize ) / 2.0f;
 
@@ -302,8 +303,15 @@ void Renderer::InitSprite( Sprite &srSprite, const String &srSpritePath )
 {
 	srSprite.apMaterial = materialsystem->CreateMaterial(  );
 	srSprite.apMaterial->SetShader( "basic_2d" );
-	srSprite.apMaterial->SetDiffusePath( srSpritePath );
-	srSprite.apMaterial->SetDiffuse( materialsystem->CreateTexture(srSprite.apMaterial, srSpritePath) );
+
+	// long, holy shit
+	srSprite.apMaterial->AddVar(
+		"albedo", MatVar::Texture, srSpritePath, 
+		materialsystem->CreateTexture( srSprite.apMaterial, srSpritePath )
+	);
+
+	//srSprite.apMaterial->SetDiffusePath( srSpritePath );
+	//srSprite.apMaterial->SetDiffuse( materialsystem->CreateTexture(srSprite.apMaterial, srSpritePath) );
 
 	InitSpriteVertices( "", srSprite );
 	aSprites.push_back( &srSprite );

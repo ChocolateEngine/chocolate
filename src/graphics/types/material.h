@@ -29,31 +29,32 @@ public:
 	void                Destroy();
 
 	void                SetShader( const char* name ) override;
-
-	// This REALLY SHOULD NOT BE HERE
-	//virtual BaseShader*         GetShader(  ) = 0;
 	std::string         GetShaderName(  ) override { return apShader->aName; }
 
-	// TODO: make an IMaterialVar class after this refactor is done,
-	//  cause this is NOT flexible for different shaders at all
-	void                SetDiffusePath( const std::filesystem::path& path ) override { aDiffusePath = path; }
-	void                SetDiffuse( TextureDescriptor* texture ) override { apDiffuse = texture; }
+	MaterialVar        *GetVar( const std::string &name ) override;
+	MaterialVar        *AddVar( const std::string &name, MatVar type, void *data ) override;
+	MaterialVar        *AddVar( const std::string &name, MatVar type, const std::string &raw, void *data ) override;
+	MaterialVar        *AddVar( MaterialVar* var ) override;
+	
+	// internal version
+	template <typename T>
+	T GetVarData( const std::string &name, T fallback );
+
+	Texture            *GetTexture( const std::string &name, Texture *fallback = nullptr ) override;
+	float               GetFloat( const std::string &name, float fallback = 0.f ) override;
+	int                 GetInt( const std::string &name, int fallback = 0 ) override;
+	glm::vec2           GetVec2( const std::string &name, glm::vec2 fallback = {} ) override;
+	glm::vec3           GetVec3( const std::string &name, glm::vec3 fallback = {} ) override;
+	glm::vec4           GetVec4( const std::string &name, glm::vec4 fallback = {} ) override;
 
 	std::string                 aName;
-
-	// TODO: remove these parameters, maybe do that "MaterialVar" thing source has
-	// as shaders would all use different paramters
-	std::filesystem::path       aDiffusePath;
-	std::filesystem::path       aNormalPath;
-	// std::filesystem::path       aEmissionPath;
-
-	TextureDescriptor*          apDiffuse = nullptr;
-	//TextureDescriptor*          apNormal = nullptr;
-	//TextureDescriptor*          apEmission = nullptr;
 	
+	// uh, this may need to be moved lol
 	VkDescriptorSetLayout       apTextureLayout = nullptr;
 
 	BaseShader*                 apShader = nullptr;
+
+	std::vector< MaterialVar * > aVars;
 
 	inline VkDescriptorSetLayout       GetTextureLayout() const   { return apTextureLayout; }
 };

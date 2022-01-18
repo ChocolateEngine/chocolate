@@ -155,6 +155,9 @@ public:
 #endif
 };
 
+// TODO: rename this stupid thing
+using Texture = TextureDescriptor;
+
 class UniformDescriptor
 {	
 public:

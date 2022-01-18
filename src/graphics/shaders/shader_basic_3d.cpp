@@ -267,7 +267,8 @@ void Basic3D::Draw( BaseRenderable* renderable, VkCommandBuffer c, uint32_t comm
 
 	assert(mesh != nullptr);
 
-	if ( !((Material*)mesh->apMaterial)->apDiffuse )
+	Texture *albedo = mesh->apMaterial->GetTexture( "albedo" );
+	if ( albedo == nullptr )
 		return;
 
 	// Bind the mesh's vertex and index buffers
@@ -282,7 +283,7 @@ void Basic3D::Draw( BaseRenderable* renderable, VkCommandBuffer c, uint32_t comm
 	vkCmdBindPipeline( c, VK_PIPELINE_BIND_POINT_GRAPHICS, aPipeline );
 
 	VkDescriptorSet sets[  ] = {
-		((Material*)mesh->apMaterial)->apDiffuse->aSets[ commandBufferIndex ],
+		albedo->aSets[ commandBufferIndex ],
 		materialsystem->GetUniformData( mesh->GetID() ).aSets[ commandBufferIndex ]
 	};
 

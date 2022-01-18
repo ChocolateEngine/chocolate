@@ -12,6 +12,7 @@ Maybe the shadersystem could be inside this material system?
 
 #include "shaders/shader_basic_3d.h"
 #include "shaders/shader_basic_2d.h"
+#include "shaders/shader_unlit.h"
 
 #include "textures/textureloader_ktx.h"
 #include "textures/textureloader_stbi.h"
@@ -21,11 +22,13 @@ extern size_t gModelDrawCalls;
 extern size_t gVertsDrawn;
 
 MaterialSystem* materialsystem = nullptr;
+MaterialSystem* matsys = nullptr;
 
 
 MaterialSystem::MaterialSystem()
 {
 	materialsystem = this;
+	matsys = this;
 }
 
 
@@ -39,6 +42,7 @@ void MaterialSystem::Init()
 	// Setup built in shaders
 	BaseShader* basic_3d = CreateShader<Basic3D>( "basic_3d" );
 	BaseShader* basic_2d = CreateShader<Basic2D>( "basic_2d" );
+	BaseShader* unlit    = CreateShader<ShaderUnlit>( "unlit" );
 
 	// Create Error Material
 	// TODO: move to GetErrorMaterial and make it have a shader name as an input
@@ -56,6 +60,18 @@ IMaterial* MaterialSystem::CreateMaterial()
 	mat->Init();
 	aMaterials.push_back( mat );
 	return mat;
+}
+
+
+IMaterial* MaterialSystem::FindMaterial( const std::string &name )
+{
+	for ( Material *mat : aMaterials )
+	{
+		if ( mat->aName == name )
+			return mat;
+	}
+
+	return nullptr;
 }
 
 
@@ -89,8 +105,7 @@ IMaterial* MaterialSystem::GetErrorMaterial( const std::string& shaderName )
 	Material* mat = (Material*)CreateMaterial();
 	mat->aName = "ERROR_" + shaderName;
 	mat->apShader = shader;
-	mat->aDiffusePath = "";
-	mat->apDiffuse = CreateTexture( mat, "" );
+	mat->AddVar( "albedo", MatVar::Texture, CreateTexture(mat, "") );
 
 	aErrorMaterials.push_back( mat );
 	return mat;
@@ -106,7 +121,7 @@ const char *get_file_ext( const char *filename )
 
 
 // this really should not have a Material input, it should have a Texture class input, right? idk
-TextureDescriptor* MaterialSystem::CreateTexture( IMaterial* material, const std::string path )
+TextureDescriptor* MaterialSystem::CreateTexture( IMaterial* material, const std::string &path )
 {
 	// Check if texture was already loaded
 	std::unordered_map< std::string, TextureDescriptor* >::iterator it;

@@ -26,16 +26,24 @@ public:
 
 	void                        Init();
 
+	/* Create a new empty material */
 	IMaterial*	                CreateMaterial() override;
+
+	/* Find an already loaded material by it's name if it exists */
+	IMaterial*                  FindMaterial( const std::string &name ) override;
+
+	/* Delete a material */
 	void                        DeleteMaterial( IMaterial* mat ) override;
 
+	/* Get Error Material */
 	IMaterial*	                GetErrorMaterial( const std::string& shader ) override;
 
 	// ideally this shouldn't need a path, should really be reworked to be closer to thermite, more flexible design
 	// also this probably shouldn't use a shader for a parameter
-	TextureDescriptor*          CreateTexture( IMaterial* material, const std::string path ) override;
+	TextureDescriptor          *CreateTexture( IMaterial* material, const std::string &path ) override;
 
-	bool                        LoadKTXTexture( TextureDescriptor* texture, const String &srImagePath, VkImage &srTImage, VkDeviceMemory &srTImageMem, uint32_t &srMipLevels );
+	/* Find an already loaded texture in vram */
+	//TextureDescriptor          *FindTexture( const std::string &path ) override;
 
 	/* Create a Vertex and Index buffer for a Renderable. */
 	void                        CreateVertexBuffer( BaseRenderable* renderable ) override;
@@ -109,4 +117,5 @@ private:
 };
 
 extern MaterialSystem* materialsystem;
+extern MaterialSystem* matsys;
 
