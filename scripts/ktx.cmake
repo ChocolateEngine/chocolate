@@ -3,13 +3,24 @@ set( KTX_DIR ${CH_THIRDPARTY}/KTX-Software )
 
 if( MSVC )
 	include_directories( "${KTX_DIR}/include" )
-	set( KTX_LIB_DIR ${KTX_DIR}/out/build/x64-Debug )
+	
+	if( (CMAKE_BUILD_TYPE STREQUAL Debug) )
+		set( KTX_LIB_DIR ${KTX_DIR}/build/Debug )
+	else()
+		set( KTX_LIB_DIR ${KTX_DIR}/build/Release )
+	endif()
+	
 	link_libraries( ${KTX_LIB_DIR}/ktx.lib ${KTX_LIB_DIR}/ktx_read.lib )
 	
 	configure_file( "${KTX_LIB_DIR}/ktx.dll" "${CH_BUILD}/ktx.dll" COPYONLY )
-	configure_file( "${KTX_LIB_DIR}/ktx.pdb" "${CH_BUILD}/ktx.pdb" COPYONLY )
 	configure_file( "${KTX_LIB_DIR}/ktx_read.dll" "${CH_BUILD}/ktx_read.dll" COPYONLY )
-	configure_file( "${KTX_LIB_DIR}/ktx_read.pdb" "${CH_BUILD}/ktx_read.pdb" COPYONLY )
+	
+	# uhh
+	if( (CMAKE_BUILD_TYPE STREQUAL Debug) )
+		configure_file( "${KTX_LIB_DIR}/ktx.pdb" "${CH_BUILD}/ktx.pdb" COPYONLY )
+		configure_file( "${KTX_LIB_DIR}/ktx_read.pdb" "${CH_BUILD}/ktx_read.pdb" COPYONLY )
+	endif()
+	
 else()
   # idfk
 	include_directories( "${KTX_DIR}/include" )
