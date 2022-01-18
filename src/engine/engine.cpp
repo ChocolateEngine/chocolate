@@ -53,8 +53,8 @@ void Engine::LoadModule( const std::string& srDlPath )
 void Engine::InitSystems(  )
 {
 	LoadModule( "input" );
-	LoadModule( "aduio" );
 	LoadModule( "graphics" );
+	LoadModule( "aduio" );
 }
 
 void Engine::UpdateSystems( float sDT )

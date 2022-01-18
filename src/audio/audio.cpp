@@ -1,6 +1,7 @@
 #include "audio.h"
 #include "util.h"
 #include "core/systemmanager.h"
+#include "core/filesystem.h"
 #include "types/transform.h"
 
 #if ENABLE_AUDIO
@@ -255,8 +256,15 @@ AudioStream* AudioSystem::LoadSound( const char* soundPath )
 
 	if ( !FileExists( soundPath ) )
 	{
-		Print( "[AudioSystem] Sound does not exist: \"%s\"\n", soundPath );
-		return nullptr;
+		std::string tmp = soundPath;
+
+		soundPath = filesys->FindFile( soundPath ).c_str();
+
+		if ( !FileExists( soundPath ) )
+		{
+			Print( "[AudioSystem] Sound does not exist: \"%s\"\n", tmp.c_str() );
+			return nullptr;
+		}
 	}
 
 	std::string ext = fs::path(soundPath).extension().string();
