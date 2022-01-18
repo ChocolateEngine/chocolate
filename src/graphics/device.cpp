@@ -397,6 +397,7 @@ VkSurfaceFormatKHR Device::ChooseSwapSurfaceFormat( const SurfaceFormats &srAvai
 
 VkPresentModeKHR Device::ChooseSwapPresentMode( const PresentModes &srAvailablePresentModes )
 {
+	return VK_PRESENT_MODE_IMMEDIATE_KHR;
 	for ( const auto& availablePresentMode : srAvailablePresentModes )
 	{
 		if ( availablePresentMode == VK_PRESENT_MODE_MAILBOX_KHR )

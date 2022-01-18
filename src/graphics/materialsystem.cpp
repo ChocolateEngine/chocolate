@@ -241,6 +241,8 @@ size_t MaterialSystem::GetRenderableID( BaseRenderable* renderable )
 void MaterialSystem::DrawRenderable( BaseRenderable* renderable, VkCommandBuffer c, uint32_t commandBufferIndex )
 {
 	Material* mat = (Material*)renderable->apMaterial;
+	if ( !mat )
+		return;
 	mat->apShader->Draw( renderable, c, commandBufferIndex );
 }
 
