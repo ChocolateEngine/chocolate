@@ -10,8 +10,7 @@ The Basic 3D Shader, starting point shader
 class ShaderUnlit : public BaseShader
 {
 protected:
-	const char *pVShader = "shaders/unlit_v.spv";
-	const char *pFShader = "shaders/unlit_f.spv";
+
 
 public:	
 	                    ShaderUnlit(): BaseShader() {}

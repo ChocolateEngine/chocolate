@@ -71,8 +71,10 @@ public:
 	BaseShader* CreateShader( const std::string& name )
 	{
 		// check if we already made this shader
-		if ( BaseShader* shader = GetShader(name) )
-			return shader;
+		auto search = aShaders.find( name );
+
+		if ( search != aShaders.end() )
+			return search->second;
 
 		BaseShader* shader = new T;
 		shader->aName = name;

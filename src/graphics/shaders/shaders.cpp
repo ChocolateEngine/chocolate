@@ -30,7 +30,7 @@ void BaseShader::ReInit()
 
 void BaseShader::Destroy()
 {
-	for ( int i = 0; i < aModules.GetSize(); i++ )
+	for ( uint32_t i = 0; i < aModules.GetSize(); i++ )
 		vkDestroyShaderModule( DEVICE, aModules[i], nullptr );
 
 	vkDestroyPipeline( DEVICE, aPipeline, NULL );

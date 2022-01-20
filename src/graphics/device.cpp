@@ -8,9 +8,9 @@
 VKAPI_ATTR VkBool32 VKAPI_CALL Device::DebugCallback( VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, VkDebugUtilsMessageTypeFlagsEXT messageType,
 					      const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData )
 {
-	if ( cmdline->Find("-dump-vlayers") )
+	static bool dumpVLayers = cmdline->Find( "-dump-vlayers" );
+	if ( dumpVLayers )
 		std::cerr << "\n[Validation Layer] " << pCallbackData->pMessage << "\n\n";
-	// std::cerr << "validation layer: " << pCallbackData->pMessage << std::endl;
 
 	return VK_FALSE;
 }
@@ -120,9 +120,9 @@ void Device::InitDebugMessengerInfo( VkDebugUtilsMessengerCreateInfoEXT &srCreat
 {
 	srCreateInfo = {  };
 	srCreateInfo.sType 	   		= VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
-        srCreateInfo.messageSeverity  		= VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
-        srCreateInfo.messageType 	   	= VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
-        srCreateInfo.pfnUserCallback  		= DebugCallback;
+	srCreateInfo.messageSeverity  		= VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
+	srCreateInfo.messageType 	   	= VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
+	srCreateInfo.pfnUserCallback  		= DebugCallback;
 }
 
 VkResult Device::InitDebugMessenger( VkInstance sInstance, const VkDebugUtilsMessengerCreateInfoEXT *spCreateInfo,

@@ -17,6 +17,10 @@ extern size_t gVertsDrawn;
 // =========================================================
 
 
+constexpr const char *pVShader = "shaders/unlit.vert.spv";
+constexpr const char *pFShader = "shaders/unlit.frag.spv";
+
+
 void ShaderUnlit::Init()
 {
 	aModules.Allocate(2);

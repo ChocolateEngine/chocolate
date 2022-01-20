@@ -454,7 +454,8 @@ void InitDescPool( std::vector< VkDescriptorPoolSize > sPoolSizes )
 	poolInfo.sType 			= VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
 	poolInfo.poolSizeCount  	= ( uint32_t )sPoolSizes.size(  );
 	poolInfo.pPoolSizes 		= sPoolSizes.data(  );
-	poolInfo.maxSets 		= 200000;//( uint32_t )swapChainImages.size(  );
+	// poolInfo.maxSets 		= 200000;//( uint32_t )swapChainImages.size(  );
+	poolInfo.maxSets 		= 10000;
 
 	if ( vkCreateDescriptorPool( DEVICE, &poolInfo, NULL, gpPool ) != VK_SUCCESS )
 		throw std::runtime_error( "Failed to create descriptor pool!" );

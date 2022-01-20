@@ -16,14 +16,8 @@ extern size_t gVertsDrawn;
 // =========================================================
 
 
-/*
-aTextureLayout = InitDescriptorSetLayout( { { DescriptorLayoutBinding( VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1,
-VK_SHADER_STAGE_FRAGMENT_BIT, NULL ) } } );
-
-VkDescriptorSetLayout layouts[  ] = { aTextureLayout };
-aPipelineLayout = InitPipelineLayouts( layouts, 1 );
-aPipeline = InitGraphicsPipeline< vertex_2d_t >( aPipelineLayout, "materials/shaders/2dvert.spv", "materials/shaders/2dfrag.spv" );
-*/
+constexpr const char *pVShader = "shaders/basic2d.vert.spv";
+constexpr const char *pFShader = "shaders/basic2d.frag.spv";
 
 
 void Basic2D::Init()

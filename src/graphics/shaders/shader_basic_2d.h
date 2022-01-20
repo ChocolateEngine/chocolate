@@ -9,10 +9,6 @@ The Basic 3D Shader, starting point shader
 
 class Basic2D : public BaseShader
 {
-protected:
-	const char *pVShader = "shaders/2dvert.spv";
-	const char *pFShader = "shaders/2dfrag.spv";
-
 public:	
 	                    Basic2D(): BaseShader() {}
 

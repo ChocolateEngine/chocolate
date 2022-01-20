@@ -295,6 +295,8 @@ FILE_LIST = {
             "bullet3",              # folder to check for if it exists already
             "bullet3-3.17",         # folder it extracts as to rename to the folder above (optional)
             ".",                    # extract into this folder (optional)
+            # TODO: set this up
+            # cmake -DBUILD_EGL=Off -DBUILD_OPENGL3_DEMOS=Off -DBUILD_BULLET3=Off -DUSE_GRAPHICAL_BENCHMARK=Off -DBUILD_EXTRAS=Off -DBUILD_CPU_DEMOS=Off -DBUILD_BULLET2_DEMOS=Off -DBUILD_UNIT_TESTS=Off -DUSE_MSVC_RUNTIME_LIBRARY_DLL=On ..
         ],
     ],
 

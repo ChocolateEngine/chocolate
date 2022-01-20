@@ -61,12 +61,6 @@ bool KTXTextureLoader::LoadKTXTexture( TextureDescriptor* pTexture, const String
 #ifndef KTX
 	return false;
 #else
-	int 		texWidth;
-	int		texHeight;
-	int		texChannels;
-	VkBuffer 	stagingBuffer;
-	VkDeviceMemory 	stagingBufferMemory;
-	bool		noTexture = false;
 
 	ktxVulkanDeviceInfo vdi;
 

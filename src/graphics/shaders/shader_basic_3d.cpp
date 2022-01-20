@@ -17,6 +17,10 @@ extern size_t gVertsDrawn;
 // =========================================================
 
 
+constexpr const char *pVShader = "shaders/basic3d.vert.spv";
+constexpr const char *pFShader = "shaders/basic3d.frag.spv";
+
+
 void Basic3D::Init()
 {
 	aModules.Allocate(2);
@@ -261,16 +265,8 @@ constexpr const char* gFallbackAO = "materials/base/white.png";
 
 void Basic3D::Draw( BaseRenderable* renderable, VkCommandBuffer c, uint32_t commandBufferIndex )
 {
-	//if ( mesh->aNoDraw )
-	//	return;
-
-#if MESH_USE_PUSH_CONSTANTS
-	// mesh.GetShader()->UpdateUniformBuffers( imageIndex, *model, model->aMeshes[i] );
-
-	// AWFUL
-#endif
-
-	IMesh* mesh = dynamic_cast<IMesh*>(renderable);
+	// why did i do this, remove this ASAP
+	IMesh* mesh = static_cast<IMesh*>(renderable);
 
 	assert(mesh != nullptr);
 
@@ -285,6 +281,8 @@ void Basic3D::Draw( BaseRenderable* renderable, VkCommandBuffer c, uint32_t comm
 	Texture *ao = mesh->apMaterial->GetTexture( "ao" );
 	if ( ao == nullptr )
 		ao = materialsystem->CreateTexture( mesh->apMaterial, gFallbackAO );
+
+	// float aoPower = mesh->apMaterial->GetFloat( "ao_power", 1.f );
 
 	// Bind the mesh's vertex and index buffers
 	VkBuffer 	vBuffers[  ] 	= { mesh->aVertexBuffer };

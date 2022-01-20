@@ -177,7 +177,7 @@ IMaterial* MaterialSystem::ParseMaterial( const std::string &path )
 		{
 			mat->AddVar( kv->key.string, kv->value.string, (int)valInt );
 		}
-		else if ( kv->value.string == "" )
+		else if ( strncmp(kv->value.string, "", kv->value.length) == 0 )
 		{
 			// empty string case, just an int with 0 as the value, idk
 			mat->AddVar( kv->key.string, kv->value.string, 0 );

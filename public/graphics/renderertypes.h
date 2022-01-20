@@ -133,6 +133,7 @@ struct ubo_2d_t
 	glm::vec2 extent;
 };
 
+
 class TextureDescriptor
 {
 public:
