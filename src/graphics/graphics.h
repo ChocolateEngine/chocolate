@@ -47,6 +47,8 @@ public:
 	void 		LoadModel( const std::string& srModelPath,
 				   const std::string& srTexturePath,
 				   Model *spModel = NULL ) override;
+
+	void            DrawLine( glm::vec3 sX, glm::vec3 sY, glm::vec3 sColor ) override;
 	/* Unload a model.  */
 	void 		UnloadModel( Model *spModel ) override;
 

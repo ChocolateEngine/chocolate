@@ -397,6 +397,11 @@ void Renderer::DrawFrame(  )
 	vkFreeCommandBuffers( DEVICE, gpDevice->GetCommandPool(  ), ( uint32_t )aCommandBuffers.size(  ), aCommandBuffers.data(  ) );
 }
 
+/* Create a line and add it to drawing.  */
+void Renderer::CreateLine( glm::vec3 sX, glm::vec3 sY, glm::vec3 sColor ) {
+	aDbgDrawer.CreateLine( sX, sY, sColor );
+}
+
 void Renderer::Cleanup(  )
 {
 	DestroySwapChain(  );

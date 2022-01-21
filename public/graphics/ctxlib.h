@@ -18,8 +18,6 @@
 
 #define SIG ( 'X' << 24 | 'E' << 16 | 'T' << 8 | 'C' )
 
-#define VK_FORMAT_R32G32B32_SFLOAT 106
-
 typedef unsigned int  u32;
 typedef unsigned char byte;
 

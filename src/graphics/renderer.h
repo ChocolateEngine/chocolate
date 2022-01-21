@@ -15,6 +15,7 @@ Vulkan.
 #include "graphics/sprite.h"
 #include "gui.h"
 #include "materialsystem.h"
+#include "debugprims/primcreator.h"
 
 #include "allocator.h"
 
@@ -58,6 +59,8 @@ protected:
 	int                         aCurrentFrame       = 0;
 	bool                        aImGuiInitialized   = false;
 
+	DebugRenderer               aDbgDrawer;
+
 	friend class MaterialSystem;
 
 	/* A.  */
@@ -94,6 +97,8 @@ public:
 	void 	InitSprite( Sprite &srSpriteData, const String &srSpritePath );
 	/* A.  */
 	void 	DrawFrame(  );
+	/* Create a line and add it to drawing.  */
+	void    CreateLine( glm::vec3 sX, glm::vec3 sY, glm::vec3 sColor );
 
 	/* A.  */
 	VkSampler       GetTextureSampler(  ) { return aTextureSampler; }
