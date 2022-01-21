@@ -449,6 +449,15 @@ void AudioSystem::Update( float frameTime )
 		// this might work well for multithreading
 		for (int i = 0; i < aStreams.size(); i++)
 		{
+			// um
+			if ( aStreams[i] == nullptr )
+			{
+				Print( "[Audio] WARNING: nullptr audio stream ????\n" );
+				vec_remove( aStreams, aStreams[i]);
+				i--;
+				continue;
+			}
+
 			if (aStreams[i]->paused)
 				continue;
 
