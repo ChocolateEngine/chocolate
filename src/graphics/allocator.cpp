@@ -1,6 +1,7 @@
 #include "allocator.h"
 #include "debug.h"
 #include "core/filesystem.h"
+#include "graphics/primvtx.hh"
 
 FunctionList 			gFreeQueue;
 ShaderCache			gShaderCache;
@@ -214,6 +215,15 @@ void InitTexBuffer( const std::vector< T > &srData, VkBuffer &srBuffer, VkDevice
 	VkBuffer 	stagingBuffer;
 	VkDeviceMemory 	stagingBufferMemory;
 	VkDeviceSize 	bufferSize = sizeof( srData[ 0 ] ) * srData.size(  );
+
+	if ( !bufferSize ) {
+		srBuffer    = 0;
+		srBufferMem = 0;
+
+	        IDPF( "Tried to create a vertex buffer / index buffer with no size!\n" );
+
+		return;
+	}
 	
 	InitBuffer( bufferSize, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
 		    VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer, stagingBufferMemory );
@@ -392,12 +402,12 @@ VkDescriptorSetLayout InitDescriptorSetLayout( DescSetLayouts sBindings )
 	return layout;
 }
 /* Creates graphics pipeline layouts using the specified descriptor set layouts.  */
-VkPipelineLayout InitPipelineLayouts( VkDescriptorSetLayout *spSetLayouts, uint32_t setLayoutsCount )
+VkPipelineLayout InitPipelineLayouts( VkDescriptorSetLayout *spSetLayouts, uint32_t setLayoutsCount, uint32_t sPushExtent )
 {
 	VkPipelineLayout		pipelineLayout;
 	VkPipelineLayoutCreateInfo 	pipelineInfo = PipelineLayout( spSetLayouts, setLayoutsCount );
 	VkPushConstantRange		pushConstantRange = PushConstantRange( VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
-									       sizeof( push_constant_t ), 0 );
+									       sPushExtent, 0 );
 
         pipelineInfo.pushConstantRangeCount 	= 1;
 	pipelineInfo.pPushConstantRanges 	= &pushConstantRange;
@@ -541,3 +551,4 @@ void FreeResources(  )
 template void 		InitTexBuffer< uint32_t >( const std::vector< uint32_t >&, VkBuffer&, VkDeviceMemory&, VkBufferUsageFlags );
 template void 		InitTexBuffer< vertex_2d_t >( const std::vector< vertex_2d_t >&, VkBuffer&, VkDeviceMemory&, VkBufferUsageFlags );
 template void 		InitTexBuffer< vertex_3d_t >( const std::vector< vertex_3d_t >&, VkBuffer&, VkDeviceMemory&, VkBufferUsageFlags );
+template void           InitTexBuffer< PrimVtx >( const std::vector< PrimVtx >&, VkBuffer&, VkDeviceMemory&, VkBufferUsageFlags );

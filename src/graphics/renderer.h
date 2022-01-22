@@ -98,7 +98,8 @@ public:
 	/* A.  */
 	void 	DrawFrame(  );
 	/* Create a line and add it to drawing.  */
-	void    CreateLine( glm::vec3 sX, glm::vec3 sY, glm::vec3 sColor );
+	void   *CreateLine( glm::vec3 sX, glm::vec3 sY, glm::vec3 sColor );
+	void    DestroyLine( void *spLine );
 
 	/* A.  */
 	VkSampler       GetTextureSampler(  ) { return aTextureSampler; }

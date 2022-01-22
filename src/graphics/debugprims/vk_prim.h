@@ -9,40 +9,12 @@
  */
 #pragma once
 
-#include <vulkan/vulkan.hpp>
-#include <glm/glm.hpp>
+#include "graphics/primvtx.hh"
+#include "graphics/renderertypes.h"
 
-class PrimVtx {
-	using Attributes = std::array< VkVertexInputAttributeDescription, 2 >;
+class PrimPushConstant {
 public:
-	glm::vec3 aPos;
-	glm::vec3 aColor;
-
-	static VkVertexInputBindingDescription GetBindings() {
-		VkVertexInputBindingDescription b;
-
-		b.binding   = 0;
-		b.stride    = sizeof( PrimVtx );
-		b.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
-
-		return b;
-	}
-
-	static Attributes GetAttribute() {
-	        Attributes a{};
-
-		a[ 0 ].binding  = 0;
-		a[ 0 ].location = 0;
-		a[ 0 ].format   = VK_FORMAT_R32G32B32_SFLOAT;
-		a[ 0 ].offset   = offsetof( PrimVtx, aPos );
-
-	        a[ 0 ].binding  = 0;
-		a[ 0 ].location = 1;
-		a[ 0 ].format   = VK_FORMAT_R32G32B32_SFLOAT;
-		a[ 0 ].offset   = offsetof( PrimVtx, aColor );
-
-		return a;
-	}
+	glm::mat4 aTransform;
 };
 
 class Primitive {
@@ -71,12 +43,14 @@ protected:
 	Primitives            aPrimitives;
 public:
 	/* Update function to draw all loaded primitives.  */
-	void DrawPrimitives( VkCommandBuffer c );
+	void   DrawPrimitives( VkCommandBuffer c, View v );
 	/* Creates a new line.  */
-	void InitLine( glm::vec3 sX, glm::vec3 sY, glm::vec3 sColor );
+        Line  *InitLine( glm::vec3 sX, glm::vec3 sY, glm::vec3 sColor );
+	/* Removes a line from the debug draw list.  */
+	void   RemoveLine( Line *spLine );
 	/* Creates a new pipeline for rendering primitives.  */
-	void InitPrimPipeline();
+	void   InitPrimPipeline();
 	/* Initializes the general stuff required for rendering.  */
-	void Init();
-	    ~VulkanPrimitiveMaterials();
+	void   Init();
+	      ~VulkanPrimitiveMaterials();
 };

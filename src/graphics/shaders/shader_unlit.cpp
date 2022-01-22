@@ -58,7 +58,7 @@ std::vector<VkDescriptorSetLayoutBinding> ShaderUnlit::GetDescriptorSetLayoutBin
 
 void ShaderUnlit::CreateGraphicsPipeline(  )
 {
-	aPipelineLayout = InitPipelineLayouts( aLayouts.GetBuffer(  ), aLayouts.GetSize(  ) );
+	aPipelineLayout = InitPipelineLayouts( aLayouts.GetBuffer(  ), aLayouts.GetSize(  ), sizeof( push_constant_t ) );
 
 	VkPipelineShaderStageCreateInfo vertShaderStageInfo{  };
 	vertShaderStageInfo.sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;	//	Tells Vulkan which stage the shader is going to be used

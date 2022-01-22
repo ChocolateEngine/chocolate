@@ -19,10 +19,16 @@ class DebugRenderer {
 protected:
 #if VULKAN
 	VulkanPrimitiveMaterials aMaterials;
-#endif
+#endif	/* VULKAN  */
 public:
 	/* Draws a line from sX to sY until program exit.  */
-        void CreateLine( glm::vec3 sX, glm::vec3 sY, glm::vec3 sColor );
+        Line *CreateLine( glm::vec3 sX, glm::vec3 sY, glm::vec3 sColor );
+	/* Clears a line from the list of lines.  */
+	void  DestroyLine( Line *spLine );
+	/* Initializes the debug drawer.  */
+	void Init();
 	/* Draws all the loaded primitives.  */
-	void RenderPrims( VkCommandBuffer c );
+#if VULKAN
+	void RenderPrims( VkCommandBuffer c, View v );
+#endif  /* VULKAN  */
 };

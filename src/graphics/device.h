@@ -19,9 +19,9 @@ functions that utilize GPU functionality.
 typedef std::vector< const char* > 	StringList;
 
 #ifdef NDEBUG
-    constexpr bool 	gEnableValidationLayers = false;
+    constexpr bool 	gEnableValidationLayers = true;
 #else
-    constexpr bool 	gEnableValidationLayers = false;
+    constexpr bool 	gEnableValidationLayers = true;
 #endif
 
 class Device

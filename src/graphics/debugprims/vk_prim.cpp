@@ -13,8 +13,12 @@
 
 #include "core/filesystem.h"
 
+#include "public/util.h"
+
 void Primitive::Draw( VkCommandBuffer c ) {
-	vkCmdBindVertexBuffers( c, 0, 1, &aVBuf, 0 );
+	VkBuffer     buffers[] = { aVBuf };
+	VkDeviceSize offsets[] = { 0 };
+	vkCmdBindVertexBuffers( c, 0, 1, buffers, offsets );
 	vkCmdDraw( c, aVtxCnt, 1, 0, 0 );
 }
 
@@ -34,27 +38,45 @@ void Line::Init( glm::vec3 sX, glm::vec3 sY, glm::vec3 sColor ) {
 	v1.aPos   = sY;
 	v1.aColor = sColor;
 
+	v.push_back( v0 );
+	v.push_back( v1 );
+
 	aVtxCnt = 2;
 	
 	InitTexBuffer( v, aVBuf, aVMem, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT );
 }
 
-void VulkanPrimitiveMaterials::DrawPrimitives( VkCommandBuffer c ) {
-        vkCmdBindPipeline( c, VK_PIPELINE_BIND_POINT_GRAPHICS, aPipe );
+void VulkanPrimitiveMaterials::DrawPrimitives( VkCommandBuffer c, View v ) {
+	PrimPushConstant p{};
+	p.aTransform = v.GetProjection() * v.viewMatrix * glm::mat4( 1.0f );
+
+	vkCmdBindPipeline( c, VK_PIPELINE_BIND_POINT_GRAPHICS, aPipe );
 	for ( const auto &rpPrim : aPrimitives ) {
+		vkCmdPushConstants(
+			c, aPipeLayout, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
+			0, sizeof( PrimPushConstant ), &p
+	        );
 		rpPrim->Draw( c );
 	}
 }
 
-void VulkanPrimitiveMaterials::InitLine( glm::vec3 sX, glm::vec3 sY, glm::vec3 sColor ) {
+Line *VulkanPrimitiveMaterials::InitLine( glm::vec3 sX, glm::vec3 sY, glm::vec3 sColor ) {
 	auto *pLine = new Line;
 	pLine->Init( sX, sY, sColor );
 
 	aPrimitives.push_back( pLine );
+
+	return pLine;
+}
+/* Removes a line from the debug draw list.  */
+void VulkanPrimitiveMaterials::RemoveLine( Line *spLine ) {
+	if ( vec_contains( aPrimitives, ( Primitive* )spLine ) )
+		vec_remove( aPrimitives, ( Primitive* )spLine );
+	delete spLine;
 }
 /* Creates a new pipeline for rendering primitives.  */
 void VulkanPrimitiveMaterials::InitPrimPipeline() {
-	aPipeLayout = InitPipelineLayouts( nullptr, 0 );
+	aPipeLayout = InitPipelineLayouts( nullptr, 0, sizeof( PrimPushConstant ) );
 
 	VkPipelineShaderStageCreateInfo vertShaderStageInfo{  };
 	vertShaderStageInfo.sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;	//	Tells Vulkan which stage the shader is going to be used
@@ -109,7 +131,7 @@ void VulkanPrimitiveMaterials::InitPrimPipeline() {
 	rasterizer.polygonMode 			= VK_POLYGON_MODE_FILL;		//	Fill with fragments, can optionally use VK_POLYGON_MODE_LINE for a wireframe
 	rasterizer.lineWidth 			= 1.0f;
 	// rasterizer.cullMode 			= ( sFlags & NO_CULLING ) ? VK_CULL_MODE_NONE : VK_CULL_MODE_BACK_BIT;	//	FIX FOR MAKING 2D SPRITES WORK!!! WOOOOO!!!!
-	rasterizer.cullMode 			= VK_CULL_MODE_BACK_BIT;
+	rasterizer.cullMode 			= VK_CULL_MODE_NONE;
 	rasterizer.frontFace 			= VK_FRONT_FACE_COUNTER_CLOCKWISE;
 	rasterizer.depthBiasEnable 		= VK_FALSE;
 	rasterizer.depthBiasConstantFactor 	= 0.0f; // Optional

@@ -111,7 +111,7 @@ void 			InitRenderPass(  );
 /* A.  */
 VkDescriptorSetLayout   InitDescriptorSetLayout( DescSetLayouts sBindings );
 /* Creates graphics pipeline layouts using the specified descriptor set layouts.  */
-VkPipelineLayout        InitPipelineLayouts( VkDescriptorSetLayout *spSetLayouts, uint32_t setLayoutsCount );
+VkPipelineLayout        InitPipelineLayouts( VkDescriptorSetLayout *spSetLayouts, uint32_t setLayoutsCount, uint32_t sPushExtent );
 /* A.  */
 void 			InitDepthResources( VkImage &srDepthImage, VkDeviceMemory &srDepthImageMemory, VkImageView &srDepthImageView );
 /* Initializes the multisampling image.  */

@@ -68,6 +68,8 @@ void Renderer::InitVulkan(  )
 
 	gLayoutBuilder.BuildLayouts(  );
 	gPipelineBuilder.BuildPipelines(  );
+
+	aDbgDrawer.Init();
 }
 
 bool Renderer::HasStencilComponent( VkFormat sFmt )
@@ -122,6 +124,8 @@ void Renderer::InitCommandBuffers(  )
 			materialsystem->DrawRenderable( renderable, aCommandBuffers[i], i );
 		}
 
+	        aDbgDrawer.RenderPrims( aCommandBuffers[ i ], aView );
+				
 		if ( aImGuiInitialized )
 		{
 			ImGui::Render(  );
@@ -398,8 +402,12 @@ void Renderer::DrawFrame(  )
 }
 
 /* Create a line and add it to drawing.  */
-void Renderer::CreateLine( glm::vec3 sX, glm::vec3 sY, glm::vec3 sColor ) {
-	aDbgDrawer.CreateLine( sX, sY, sColor );
+void *Renderer::CreateLine( glm::vec3 sX, glm::vec3 sY, glm::vec3 sColor ) {
+	return aDbgDrawer.CreateLine( sX, sY, sColor );
+}
+
+void Renderer::DestroyLine( void *spLine ) {
+	aDbgDrawer.DestroyLine( ( Line* )spLine );
 }
 
 void Renderer::Cleanup(  )

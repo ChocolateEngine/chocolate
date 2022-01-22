@@ -18,6 +18,11 @@ Defines the methods declared in engine.h.
 #include <SDL2/SDL_loadso.h>
 #include <chrono>
 
+#include <dlfcn.h>
+
+/* Note: SDL_LoadLibrary is a little broken on linux; it seems like SDL_GetError()
+ * has a fixed length, so error reporting is a little flawed. For now, just temporarily
+ * use dlopen() to get the full message.  */
 void Engine::LoadModule( const std::string& srDlPath )
 {
 	Module handle = NULL;

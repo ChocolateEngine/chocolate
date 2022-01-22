@@ -22,14 +22,14 @@ void PipelineBuilder::BuildPipelines( VkPipeline *spSinglePipeline )
 		for ( auto&& pipeline : aQueue )
 			if ( pipeline.apPipeline == spSinglePipeline )
 			{
-				*pipeline.apLayout = InitPipelineLayouts( pipeline.apSetLayouts->GetBuffer(  ), pipeline.apSetLayouts->GetSize(  ) );
+				*pipeline.apLayout = InitPipelineLayouts( pipeline.apSetLayouts->GetBuffer(  ), pipeline.apSetLayouts->GetSize(  ), sizeof( push_constant_t ) );
 				//*spSinglePipeline = InitGraphicsPipeline< vertex_3d_t >( *pipeline.apLayout, pipeline.aVShader, pipeline.aFShader, pipeline.aFlags );
 				return;
 			}
 	
 	auto buildFunction = [ & ]( QueuedPipeline sPipeline )
 		{
-			*sPipeline.apLayout   = InitPipelineLayouts( sPipeline.apSetLayouts->GetBuffer(  ), sPipeline.apSetLayouts->GetSize(  ) );
+			*sPipeline.apLayout   = InitPipelineLayouts( sPipeline.apSetLayouts->GetBuffer(  ), sPipeline.apSetLayouts->GetSize(  ), sizeof( push_constant_t ) );
 			//*sPipeline.apPipeline = InitGraphicsPipeline< vertex_3d_t >( *sPipeline.apLayout, sPipeline.aVShader, sPipeline.aFShader, sPipeline.aFlags );
 		};
 
