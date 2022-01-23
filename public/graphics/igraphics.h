@@ -34,8 +34,7 @@ public:
 				   const std::string& srTexturePath,
 				   Model *spModel = NULL ) = 0;
 
-	virtual void           *DrawLine( glm::vec3 sX, glm::vec3 sY, glm::vec3 sColor ) = 0;
-	virtual void            FreeLine( void *spLine ) = 0;
+	virtual void            DrawLine( glm::vec3 sX, glm::vec3 sY, glm::vec3 sColor ) = 0;
 
 	/* Unload a model. (Change to FreeModel)  */
 	virtual void 		UnloadModel( Model *spModel ) = 0;

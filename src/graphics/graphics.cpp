@@ -23,12 +23,8 @@ void GraphicsSystem::LoadModel( const std::string& srModelPath, const std::strin
 	aModels.push_back( spModel );
 }
 
-void *GraphicsSystem::DrawLine( glm::vec3 sX, glm::vec3 sY, glm::vec3 sColor ) {
-	return aRenderer.CreateLine( sX, sY, sColor );
-}
-
-void GraphicsSystem::FreeLine( void *spLine ) {
-	aRenderer.DestroyLine( spLine );
+void GraphicsSystem::DrawLine( glm::vec3 sX, glm::vec3 sY, glm::vec3 sColor ) {
+	aRenderer.CreateLine( sX, sY, sColor );
 }
 
 void GraphicsSystem::UnloadModel( Model *spModel )

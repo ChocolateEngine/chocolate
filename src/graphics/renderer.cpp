@@ -330,6 +330,7 @@ void Renderer::DrawFrame(  )
 	gui->Update( 0.f );
 
 	InitCommandBuffers(  );	//	Fucky wucky!!
+	aDbgDrawer.RemovePrims();
 	
 	vkWaitForFences( DEVICE, 1, &aInFlightFences[ aCurrentFrame ], VK_TRUE, UINT64_MAX );
 	
@@ -402,12 +403,8 @@ void Renderer::DrawFrame(  )
 }
 
 /* Create a line and add it to drawing.  */
-void *Renderer::CreateLine( glm::vec3 sX, glm::vec3 sY, glm::vec3 sColor ) {
-	return aDbgDrawer.CreateLine( sX, sY, sColor );
-}
-
-void Renderer::DestroyLine( void *spLine ) {
-	aDbgDrawer.DestroyLine( ( Line* )spLine );
+void Renderer::CreateLine( glm::vec3 sX, glm::vec3 sY, glm::vec3 sColor ) {
+	aDbgDrawer.CreateLine( sX, sY, sColor );
 }
 
 void Renderer::Cleanup(  )

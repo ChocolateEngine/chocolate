@@ -22,11 +22,11 @@ protected:
 #endif	/* VULKAN  */
 public:
 	/* Draws a line from sX to sY until program exit.  */
-        Line *CreateLine( glm::vec3 sX, glm::vec3 sY, glm::vec3 sColor );
-	/* Clears a line from the list of lines.  */
-	void  DestroyLine( Line *spLine );
+        void  CreateLine( glm::vec3 sX, glm::vec3 sY, glm::vec3 sColor );
 	/* Initializes the debug drawer.  */
 	void Init();
+	/* Clears old primitives.  */
+	void RemovePrims();
 	/* Draws all the loaded primitives.  */
 #if VULKAN
 	void RenderPrims( VkCommandBuffer c, View v );

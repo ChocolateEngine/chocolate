@@ -16,42 +16,25 @@
 #include "public/util.h"
 
 void Primitive::Draw( VkCommandBuffer c ) {
-	VkBuffer     buffers[] = { aVBuf };
-	VkDeviceSize offsets[] = { 0 };
-	vkCmdBindVertexBuffers( c, 0, 1, buffers, offsets );
-	vkCmdDraw( c, aVtxCnt, 1, 0, 0 );
+	vkCmdDraw( c, 2, 1, 0, 0 );
 }
 
 Primitive::~Primitive() {
-	vkDestroyBuffer( DEVICE, aVBuf, nullptr );
-	vkFreeMemory( DEVICE, aVMem, nullptr );
+	
 }
 
 void Line::Init( glm::vec3 sX, glm::vec3 sY, glm::vec3 sColor ) {
-        PrimVtx                 v0{};
-	PrimVtx                 v1{};
-	std::vector< PrimVtx >  v;
-
-	v0.aPos   = sX;
-	v0.aColor = sColor;
-
-	v1.aPos   = sY;
-	v1.aColor = sColor;
-
-	v.push_back( v0 );
-	v.push_back( v1 );
-
-	aVtxCnt = 2;
-	
-	InitTexBuffer( v, aVBuf, aVMem, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT );
+	aPush.a      = sX;
+	aPush.b      = sY;
+	aPush.aColor = sColor;
 }
 
 void VulkanPrimitiveMaterials::DrawPrimitives( VkCommandBuffer c, View v ) {
 	PrimPushConstant p{};
-	p.aTransform = v.GetProjection() * v.viewMatrix * glm::mat4( 1.0f );
-
 	vkCmdBindPipeline( c, VK_PIPELINE_BIND_POINT_GRAPHICS, aPipe );
 	for ( const auto &rpPrim : aPrimitives ) {
+		PrimPushConstant p = rpPrim->aPush;
+		p.aTransform = v.GetProjection() * v.viewMatrix * glm::mat4( 1.0f );
 		vkCmdPushConstants(
 			c, aPipeLayout, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
 			0, sizeof( PrimPushConstant ), &p
@@ -60,19 +43,17 @@ void VulkanPrimitiveMaterials::DrawPrimitives( VkCommandBuffer c, View v ) {
 	}
 }
 
-Line *VulkanPrimitiveMaterials::InitLine( glm::vec3 sX, glm::vec3 sY, glm::vec3 sColor ) {
-	auto *pLine = new Line;
+void VulkanPrimitiveMaterials::InitLine( glm::vec3 sX, glm::vec3 sY, glm::vec3 sColor ) {
+        auto *pLine = new Line;
 	pLine->Init( sX, sY, sColor );
 
 	aPrimitives.push_back( pLine );
-
-	return pLine;
 }
-/* Removes a line from the debug draw list.  */
-void VulkanPrimitiveMaterials::RemoveLine( Line *spLine ) {
-	if ( vec_contains( aPrimitives, ( Primitive* )spLine ) )
-		vec_remove( aPrimitives, ( Primitive* )spLine );
-	delete spLine;
+/* Clears the lines that were queued.  */
+void VulkanPrimitiveMaterials::RemoveLines() {
+	for ( const auto& rpPrim : aPrimitives )
+		delete rpPrim;
+	aPrimitives.clear();
 }
 /* Creates a new pipeline for rendering primitives.  */
 void VulkanPrimitiveMaterials::InitPrimPipeline() {
@@ -95,15 +76,10 @@ void VulkanPrimitiveMaterials::InitPrimPipeline() {
 	pShaderStages[ 0 ] = vertShaderStageInfo;
 	pShaderStages[ 1 ] = fragShaderStageInfo;
 
-	auto attributeDescriptions 	= PrimVtx::GetAttribute(  );
-	auto bindingDescription 	= PrimVtx::GetBindings(  );      
-
 	VkPipelineVertexInputStateCreateInfo vertexInputInfo{  };	//	Format of vertex data
 	vertexInputInfo.sType 				= VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-	vertexInputInfo.vertexBindingDescriptionCount 	= 1;
-	vertexInputInfo.pVertexBindingDescriptions 	= &bindingDescription;			//	Contains details for loading vertex data
-	vertexInputInfo.vertexAttributeDescriptionCount = ( uint32_t )( attributeDescriptions.size(  ) );
-	vertexInputInfo.pVertexAttributeDescriptions 	= attributeDescriptions.data(  );	//	Same as above
+	vertexInputInfo.vertexBindingDescriptionCount 	= 0;
+	vertexInputInfo.vertexAttributeDescriptionCount = 0;	//	Same as above
 
 	VkPipelineInputAssemblyStateCreateInfo inputAssembly{  };	//	Collects raw vertex data from buffers
 	inputAssembly.sType 			= VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;

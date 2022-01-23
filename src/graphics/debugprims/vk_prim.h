@@ -14,17 +14,16 @@
 
 class PrimPushConstant {
 public:
-	glm::mat4 aTransform;
+	alignas( 16 ) glm::mat4 aTransform;
+        alignas( 16 ) glm::vec3 a;
+	alignas( 16 ) glm::vec3 b;
+	alignas( 16 ) glm::vec3 aColor;
 };
 
 class Primitive {
 protected:
-	VkBuffer       aVBuf;
-	VkDeviceMemory aVMem;
-	uint32_t       aVtxCnt;
 public:
-	VkBuffer       &GetBuffer() { return aVBuf; }
-	VkDeviceMemory &GetMem()    { return aVMem; }
+	PrimPushConstant aPush;
 	void            Draw( VkCommandBuffer c );
 	               ~Primitive();
 };
@@ -45,9 +44,9 @@ public:
 	/* Update function to draw all loaded primitives.  */
 	void   DrawPrimitives( VkCommandBuffer c, View v );
 	/* Creates a new line.  */
-        Line  *InitLine( glm::vec3 sX, glm::vec3 sY, glm::vec3 sColor );
-	/* Removes a line from the debug draw list.  */
-	void   RemoveLine( Line *spLine );
+        void   InitLine( glm::vec3 sX, glm::vec3 sY, glm::vec3 sColor );
+        /* Clears the lines that were queued.  */
+	void   RemoveLines();
 	/* Creates a new pipeline for rendering primitives.  */
 	void   InitPrimPipeline();
 	/* Initializes the general stuff required for rendering.  */

@@ -10,18 +10,18 @@
 #include "primcreator.h"
 
 /* Draws a line from sX to sY until program exit.  */
-Line *DebugRenderer::CreateLine( glm::vec3 sX, glm::vec3 sY, glm::vec3 sColor ) {
-	return aMaterials.InitLine( sX, sY, sColor );
-}
-
-/* Clears a line from the list of lines.  */
-void DebugRenderer::DestroyLine( Line *spLine ) {
-	aMaterials.RemoveLine( spLine );
+void DebugRenderer::CreateLine( glm::vec3 sX, glm::vec3 sY, glm::vec3 sColor ) {
+	aMaterials.InitLine( sX, sY, sColor );
 }
 
 /* Initializes the debug drawer.  */
 void DebugRenderer::Init() {
 	aMaterials.Init();
+}
+
+/* Clears old primitives.  */
+void DebugRenderer::RemovePrims() {
+	aMaterials.RemoveLines();
 }
 
 /* Draws all the loaded primitives.  */
