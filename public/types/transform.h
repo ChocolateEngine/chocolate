@@ -11,6 +11,36 @@ constexpr int YAW = 1;    // left / right
 constexpr int ROLL = 2;   // fall over on your side and start crying about it https://cdn.discordapp.com/attachments/282679155345195018/895458645763031061/walterdeath.gif
 
 
+// https://en.wikipedia.org/wiki/Conversion_between_quaternions_and_Euler_angles
+#ifndef M_PI
+#define M_PI    3.14159265358979323846264338327950288   /**< pi */
+#endif
+
+inline glm::vec3 ToEulerAngles( const glm::quat& q )
+{
+	glm::vec3 angles;
+
+	// roll (x-axis rotation)
+	double sinr_cosp = 2 * (q.w * q.x + q.y * q.z);
+	double cosr_cosp = 1 - 2 * (q.x * q.x + q.y * q.y);
+	angles[ROLL] = std::atan2( sinr_cosp, cosr_cosp );
+
+	// pitch (y-axis rotation)
+	double sinp = 2 * (q.w * q.y - q.z * q.x);
+	if ( std::abs( sinp ) >= 1 )
+		angles[PITCH] = std::copysign( M_PI / 2, sinp ); // use 90 degrees if out of range
+	else
+		angles[PITCH] = std::asin( sinp );
+
+	// yaw (z-axis rotation)
+	double siny_cosp = 2 * (q.w * q.z + q.x * q.y);
+	double cosy_cosp = 1 - 2 * (q.y * q.y + q.z * q.z);
+	angles[YAW] = std::atan2( siny_cosp, cosy_cosp );
+
+	return angles;
+}
+
+
 /* !!! USE THIS INSTEAD OF glm::yawPitchRoll() SO IT FITS WITH HOW THE ENGINE WORKS ATM !!! */
 inline glm::mat4 PitchYawRoll( const glm::vec3& ang )
 {
@@ -29,8 +59,7 @@ inline glm::quat AngToQuat( const glm::vec3& ang )
 
 inline glm::vec3 QuatToAng( const glm::quat& quat )
 {
-	glm::vec3 ang = glm::eulerAngles( quat );
-	return ang;
+	return ToEulerAngles( quat );
 }
 
 
