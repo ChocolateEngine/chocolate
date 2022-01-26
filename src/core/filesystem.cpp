@@ -1,4 +1,5 @@
 #include "core/filesystem.h"
+#include "core/console.h"
 #include "util.h"
 
 #include <array>
@@ -108,9 +109,10 @@ void FileSystem::InsertSearchPath( size_t index, const std::string& path )
 
 std::string FileSystem::FindFile( const std::string& file )
 {
-    // if it's an absolute path already, don't bother to look in the search paths for it
+    // if it's an absolute path already,
+    // don't bother to look in the search paths for it, and make sure it exists
     if ( IsAbsolute( file ) )
-        return file;
+        return FileExists( file ) ? file : "";
 
     for ( auto searchPath : aSearchPaths )
     {
@@ -134,12 +136,18 @@ std::vector< char > FileSystem::ReadFile( const std::string& srFilePath )
     // Find path first
     std::string fullPath = FindFile( srFilePath );
     if ( fullPath == "" )
-        throw std::runtime_error( "[Filesystem] Failed to find file: " + srFilePath );
+    {
+        Print( "[Filesystem] Failed to find file: %s", srFilePath.c_str() );
+        return {};
+    }
 
     /* Open file.  */
     std::ifstream file( fullPath, std::ios::ate | std::ios::binary );
-    if ( !file.is_open(  ) )
-        throw std::runtime_error( "[Filesystem] Failed to open file: " + srFilePath );
+    if ( !file.is_open() )
+    {
+        Print( "[Filesystem] Failed to open file: %s", srFilePath.c_str() );
+        return {};
+    }
 
     int fileSize = ( int )file.tellg(  );
     std::vector< char > buffer( fileSize );
