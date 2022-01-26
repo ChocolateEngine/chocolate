@@ -39,6 +39,7 @@ CONVAR( r_showDrawCalls, 1 );
 
 size_t gModelDrawCalls = 0;
 size_t gVertsDrawn = 0;
+size_t gLinesDrawn = 0;
 
 extern GuiSystem* gui;
 
@@ -124,7 +125,7 @@ void Renderer::InitCommandBuffers(  )
 			materialsystem->DrawRenderable( renderable, aCommandBuffers[i], i );
 		}
 
-	        aDbgDrawer.RenderPrims( aCommandBuffers[ i ], aView );
+		aDbgDrawer.RenderPrims( aCommandBuffers[ i ], aView );
 				
 		if ( aImGuiInitialized )
 		{
@@ -315,17 +316,22 @@ void Renderer::DrawFrame(  )
 {
 	if ( aCommandBuffers.size() > 0 && r_showDrawCalls.GetBool() )
 	{
-		gui->InsertDebugMessage( 0, "Model Draw Calls: %u (%u / %u Command Buffers)",
+		int buh = 0;
+		gui->InsertDebugMessage( buh++, "Model Draw Calls: %u (%u / %u Command Buffers)",
 			gModelDrawCalls / aCommandBuffers.size(), gModelDrawCalls, aCommandBuffers.size() );
 
-		gui->InsertDebugMessage( 1, "Vertices Drawn: %u (%u / %u Command Buffers)",
+		gui->InsertDebugMessage( buh++, "Vertices Drawn: %u (%u / %u Command Buffers)",
 			gVertsDrawn / aCommandBuffers.size(), gVertsDrawn, aCommandBuffers.size() );
 
-		gui->InsertDebugMessage( 2, "" );  // spacer
+		gui->InsertDebugMessage( buh++, "Prims Drawn: %u (%u / %u Command Buffers)",
+			gLinesDrawn / aCommandBuffers.size(), gLinesDrawn, aCommandBuffers.size() );
+
+		gui->InsertDebugMessage( buh++, "" );  // spacer
 	}
 
 	gModelDrawCalls = 0;
 	gVertsDrawn = 0;
+	gLinesDrawn = 0;
 
 	gui->Update( 0.f );
 

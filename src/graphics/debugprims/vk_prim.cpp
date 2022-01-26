@@ -15,6 +15,8 @@
 
 #include "public/util.h"
 
+extern size_t gLinesDrawn;
+
 void Primitive::Draw( VkCommandBuffer c ) {
 	vkCmdDraw( c, 2, 1, 0, 0 );
 }
@@ -23,27 +25,33 @@ Primitive::~Primitive() {
 	
 }
 
-void Line::Init( glm::vec3 sX, glm::vec3 sY, glm::vec3 sColor ) {
+void Line::Init( glm::vec3 sX, glm::vec3 sY, glm::vec3 sColor )
+{
 	aPush.a      = sX;
 	aPush.b      = sY;
 	aPush.aColor = sColor;
 }
 
-void VulkanPrimitiveMaterials::DrawPrimitives( VkCommandBuffer c, View v ) {
+void VulkanPrimitiveMaterials::DrawPrimitives( VkCommandBuffer c, View v )
+{
 	PrimPushConstant p{};
 	vkCmdBindPipeline( c, VK_PIPELINE_BIND_POINT_GRAPHICS, aPipe );
-	for ( const auto &rpPrim : aPrimitives ) {
-		PrimPushConstant p = rpPrim->aPush;
-		p.aTransform = v.GetProjection() * v.viewMatrix * glm::mat4( 1.0f );
+	glm::mat4 transform = v.GetProjection() * v.viewMatrix;
+	for ( const auto &rpPrim : aPrimitives )
+	{
+		PrimPushConstant& p = rpPrim->aPush;
+		p.aTransform = transform;
 		vkCmdPushConstants(
 			c, aPipeLayout, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
 			0, sizeof( PrimPushConstant ), &p
 	        );
 		rpPrim->Draw( c );
+		gLinesDrawn++;
 	}
 }
 
-void VulkanPrimitiveMaterials::InitLine( glm::vec3 sX, glm::vec3 sY, glm::vec3 sColor ) {
+void VulkanPrimitiveMaterials::InitLine( glm::vec3 sX, glm::vec3 sY, glm::vec3 sColor )
+{
         auto *pLine = new Line;
 	pLine->Init( sX, sY, sColor );
 
