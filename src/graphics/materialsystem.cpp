@@ -138,8 +138,9 @@ IMaterial* MaterialSystem::ParseMaterial( const std::string &path )
 
 	KeyValueRoot kvRoot;
 	KeyValueErrorCode err = kvRoot.Parse( rawData.data() );
-
-	kvRoot.Solidify();
+	
+	// append a null terminator for c strings
+	rawData.push_back( '\0' );
 
 	if ( err != KeyValueErrorCode::NO_ERROR )
 	{
@@ -148,6 +149,7 @@ IMaterial* MaterialSystem::ParseMaterial( const std::string &path )
 	}
 
 	// parsing time
+	kvRoot.Solidify();
 	
 	KeyValue* kvShader = kvRoot.children;
 
