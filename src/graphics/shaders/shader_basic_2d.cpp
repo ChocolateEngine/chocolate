@@ -245,8 +245,7 @@ void Basic2D::Draw( BaseRenderable* renderable, VkCommandBuffer c, uint32_t comm
 	vkCmdBindDescriptorSets( c, VK_PIPELINE_BIND_POINT_GRAPHICS, aPipelineLayout, 0, 1, sets, 0, NULL );
 
 	push_constant_t push{  };
-	push.scale	= sprite->aTransform.aScale;
-	push.translate  = sprite->aTransform.aPos;
+	push.aMatrix	= sprite->GetMatrix();
 
 	vkCmdPushConstants
 	(

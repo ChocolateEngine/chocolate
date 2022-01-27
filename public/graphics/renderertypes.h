@@ -70,7 +70,7 @@ struct desc_set_layout_t
 
 struct push_constant_t
 {
-	glm::vec2 scale, translate;
+	glm::mat4 aMatrix;
 };
 
 struct vertex_3d_t
