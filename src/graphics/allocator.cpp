@@ -391,8 +391,17 @@ VkDescriptorSetLayout InitDescriptorSetLayout( DescSetLayouts sBindings )
 	for ( auto&& binding : sBindings )
 	        binding.binding = ++i;
 
+	VkDescriptorBindingFlagsEXT bindFlag = VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT_EXT;
+
+	VkDescriptorSetLayoutBindingFlagsCreateInfoEXT extend{};
+	extend.sType         = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO_EXT;
+	extend.pNext         = nullptr;
+	extend.bindingCount  = 1;
+	extend.pBindingFlags = &bindFlag;
+
 	VkDescriptorSetLayoutCreateInfo layoutInfo{  };
 	layoutInfo.sType 			= VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+	layoutInfo.pNext                        = &extend;
 	layoutInfo.bindingCount 		= ( uint32_t )sBindings.size(  );
 	layoutInfo.pBindings 			= sBindings.data(  );
 	if ( vkCreateDescriptorSetLayout( DEVICE, &layoutInfo, NULL, &layout ) != VK_SUCCESS )

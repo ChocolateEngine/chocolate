@@ -226,8 +226,15 @@ void Device::InitLogicalDevice(  )
 	VkPhysicalDeviceFeatures deviceFeatures{  };
 	deviceFeatures.samplerAnisotropy = VK_FALSE;	//	Temporarily disabled for PBP builds
 
+	VkPhysicalDeviceDescriptorIndexingFeaturesEXT indexing{};
+	indexing.sType                           = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES_EXT;
+	indexing.pNext                           = nullptr;
+	indexing.descriptorBindingPartiallyBound = VK_TRUE;
+	indexing.runtimeDescriptorArray          = VK_TRUE;
+
 	VkDeviceCreateInfo createInfo{  };
 	createInfo.sType 			= VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
+	createInfo.pNext                        = &indexing;
 	createInfo.pQueueCreateInfos 		= queueCreateInfos.data(  );
 	createInfo.queueCreateInfoCount 	= ( uint32_t )queueCreateInfos.size(  );
 

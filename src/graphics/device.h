@@ -33,7 +33,7 @@ protected:
 	typedef std::vector< VkFormat >			FormatSet;
 
 	const StringList 		aValidationLayers = { "VK_LAYER_KHRONOS_validation" };
-	const StringList 		aDeviceExtensions = { VK_KHR_SWAPCHAIN_EXTENSION_NAME };
+	const StringList 		aDeviceExtensions = { VK_KHR_SWAPCHAIN_EXTENSION_NAME, "VK_EXT_descriptor_indexing" };
 	
 	SDL_Window  			*apWindow;		        	//	Window to display stuff
 	VkSurfaceKHR 			aSurface;				//	Allows window to display stuff	
