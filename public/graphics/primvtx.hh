@@ -28,14 +28,14 @@ public:
 	}
 	/* Returns the binding information about the vertex.  */
 	static Attributes GetAttribute() {
-	        Attributes a{};
+		Attributes a{};
 
 		a[ 0 ].binding  = 0;
 		a[ 0 ].location = 0;
 		a[ 0 ].format   = VK_FORMAT_R32G32B32_SFLOAT;
 		a[ 0 ].offset   = offsetof( PrimVtx, aPos );
 
-	        a[ 1 ].binding  = 0;
+		a[ 1 ].binding  = 0;
 		a[ 1 ].location = 1;
 		a[ 1 ].format   = VK_FORMAT_R32G32B32_SFLOAT;
 		a[ 1 ].offset   = offsetof( PrimVtx, aColor );

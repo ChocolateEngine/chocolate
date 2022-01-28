@@ -19,12 +19,12 @@ void DebugRenderer::Init() {
 	aMaterials.Init();
 }
 
-/* Clears old primitives.  */
-void DebugRenderer::RemovePrims() {
-	aMaterials.RemoveLines();
+/* Build full debug mesh */
+void DebugRenderer::ResetMesh() {
+	aMaterials.ResetMesh();
 }
 
-/* Draws all the loaded primitives.  */
-void DebugRenderer::RenderPrims( VkCommandBuffer c, View v ) {
-	aMaterials.DrawPrimitives( c, v );
+/* Create Vertex Buffer */
+void DebugRenderer::PrepareMeshForDraw() {
+	aMaterials.PrepareMeshForDraw();
 }

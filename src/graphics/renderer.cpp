@@ -81,6 +81,8 @@ bool Renderer::HasStencilComponent( VkFormat sFmt )
 void Renderer::InitCommandBuffers(  )
 {
 	gFileMonitor.Update();
+
+	aDbgDrawer.PrepareMeshForDraw();
 	
 	aCommandBuffers.resize( aSwapChainFramebuffers.size(  ) );
 	VkCommandBufferAllocateInfo allocInfo{  };
@@ -125,7 +127,7 @@ void Renderer::InitCommandBuffers(  )
 			materialsystem->DrawRenderable( renderable, aCommandBuffers[i], i );
 		}
 
-		aDbgDrawer.RenderPrims( aCommandBuffers[ i ], aView );
+	//	aDbgDrawer.RenderPrims( aCommandBuffers[ i ], aView );
 				
 		if ( aImGuiInitialized )
 		{
@@ -221,21 +223,19 @@ void Renderer::DestroySwapChain(  )
 }
 
 
-// TODO: change to LoadModel
-void Renderer::InitModel( ModelData &srModelData, const String &srModelPath, const String &srTexturePath )
+bool Renderer::LoadModel( Model* sModel, const String &srPath )
 {
-	// srModelData.Init(  );
-	srModelData.aPath = srModelPath;
+	sModel->aPath = srPath;
 	std::vector< Mesh* > meshes;
 
-	ModelData* dupeModel = nullptr;
+	Model* dupeModel = nullptr;
 
 	// shitty cache system
-	for ( const auto& modelData: aModels )
+	for ( const auto& model: aModels )
 	{
-		if (modelData->aPath == srModelPath )
+		if ( model->aPath == srPath )
 		{
-			dupeModel = modelData;
+			dupeModel = model;
 			break;
 		}
 	}
@@ -247,6 +247,7 @@ void Renderer::InitModel( ModelData &srModelData, const String &srModelPath, con
 		for (std::size_t i = 0; i < meshes.size(); ++i)
 		{
 			meshes[i] = new Mesh;
+			meshes[i]->apModel = sModel;
 			materialsystem->RegisterRenderable( meshes[i] );
 			materialsystem->MeshInit( meshes[i] );
 			meshes[i]->apMaterial = dupeModel->aMeshes[i]->apMaterial;
@@ -256,25 +257,25 @@ void Renderer::InitModel( ModelData &srModelData, const String &srModelPath, con
 	}
 	else  // we haven't loaded this model yet
 	{
-		if ( srModelPath.substr(srModelPath.size() - 4) == ".obj" )
+		if ( srPath.substr(srPath.size() - 4) == ".obj" )
 		{
-			LoadObj( srModelPath, meshes );
+			LoadObj( srPath, meshes );
 		}
-		else if ( srModelPath.substr(srModelPath.size() - 4) == ".glb" || srModelPath.substr(srModelPath.size() - 5) == ".gltf" )
+		else if ( srPath.substr(srPath.size() - 4) == ".glb" || srPath.substr(srPath.size() - 5) == ".gltf" )
 		{
-			//LoadGltf( srModelPath, meshes );
 			Print( "[Renderer] GLTF currently not supported, on TODO list\n" );
-			return;
+			return false;
 		}
 	}
 
 	// TODO: load in an error model here somehow?
 	if (meshes.empty())
-		return;
+		return false;
 
 	for (std::size_t i = 0; i < meshes.size(); ++i)
 	{
 		Mesh* mesh = meshes[i];
+		mesh->apModel = sModel;
 
 		matsys->CreateVertexBuffer( mesh );
 
@@ -284,32 +285,30 @@ void Renderer::InitModel( ModelData &srModelData, const String &srModelPath, con
 
 		//mesh->aRadius = glm::distance( mesh->aMinSize, mesh->aMaxSize ) / 2.0f;
 
-		srModelData.aMeshes.push_back( mesh );
+		sModel->aMeshes.push_back( mesh );
 
-		for (const auto& vert: mesh->aVertices)
-			srModelData.aVertices.push_back(vert);
+		sModel->aVertices.insert( sModel->aVertices.end(), mesh->aVertices.begin(), mesh->aVertices.end() );
 
-		for (const auto& ind: mesh->aIndices)
-			srModelData.aIndices.push_back(ind);
+		size_t indCount = sModel->aIndices.size();
+		for ( uint32_t ind: mesh->aIndices )
+			sModel->aIndices.push_back( ind + indCount );
 	}
 
-	aModels.push_back( &srModelData );
+	aModels.push_back( sModel );
+	return true;
 }
 
-// TODO: change to LoadSprite
-void Renderer::InitSprite( Sprite &srSprite, const String &srSpritePath )
+bool Renderer::LoadSprite( Sprite &srSprite, const String &srSpritePath )
 {
-	srSprite.apMaterial = materialsystem->CreateMaterial(  );
+	srSprite.apMaterial = matsys->CreateMaterial(  );
 	srSprite.apMaterial->SetShader( "basic_2d" );
 
-	// long, holy shit
-	srSprite.apMaterial->AddVar( "diffuse", srSpritePath, materialsystem->CreateTexture( srSprite.apMaterial, srSpritePath ) );
-
-	//srSprite.apMaterial->SetDiffusePath( srSpritePath );
-	//srSprite.apMaterial->SetDiffuse( materialsystem->CreateTexture(srSprite.apMaterial, srSpritePath) );
+	srSprite.apMaterial->AddVar( "diffuse", srSpritePath, matsys->CreateTexture( srSprite.apMaterial, srSpritePath ) );
 
 	InitSpriteVertices( "", srSprite );
 	aSprites.push_back( &srSprite );
+
+	return true;
 }
 
 void Renderer::DrawFrame(  )
@@ -335,8 +334,13 @@ void Renderer::DrawFrame(  )
 
 	gui->Update( 0.f );
 
+	for ( auto& renderable : materialsystem->aDrawList )
+	{
+		Material* mat = (Material*)renderable->apMaterial;
+		mat->apShader->UpdateBuffers( aCurrentFrame, renderable );
+	}
+
 	InitCommandBuffers(  );	//	Fucky wucky!!
-	aDbgDrawer.RemovePrims();
 	
 	vkWaitForFences( DEVICE, 1, &aInFlightFences[ aCurrentFrame ], VK_TRUE, UINT64_MAX );
 	
@@ -355,14 +359,6 @@ void Renderer::DrawFrame(  )
 		vkWaitForFences( DEVICE, 1, &aImagesInFlight[ imageIndex ], VK_TRUE, UINT64_MAX );
 	
 	aImagesInFlight[ imageIndex ] = aInFlightFences[ aCurrentFrame ];
-
-	for ( auto& renderable : materialsystem->aDrawList )
-	{
-		Material* mat = (Material*)renderable->apMaterial;
-		mat->apShader->UpdateBuffers( imageIndex, renderable );
-	}
-
-	materialsystem->aDrawList.clear();
 
 	VkSubmitInfo submitInfo{  };
 	submitInfo.sType 			= VK_STRUCTURE_TYPE_SUBMIT_INFO;
@@ -406,6 +402,9 @@ void Renderer::DrawFrame(  )
 
 	aCurrentFrame = ( aCurrentFrame + 1 ) % MAX_FRAMES_PROCESSING;
 	vkFreeCommandBuffers( DEVICE, gpDevice->GetCommandPool(  ), ( uint32_t )aCommandBuffers.size(  ), aCommandBuffers.data(  ) );
+
+	materialsystem->aDrawList.clear();
+	aDbgDrawer.ResetMesh();
 }
 
 /* Create a line and add it to drawing.  */

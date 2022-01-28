@@ -21,14 +21,12 @@ protected:
 	VulkanPrimitiveMaterials aMaterials;
 #endif	/* VULKAN  */
 public:
-	/* Draws a line from sX to sY until program exit.  */
-        void  CreateLine( glm::vec3 sX, glm::vec3 sY, glm::vec3 sColor );
+	/* Draws a line from sX to sY on current frame */
+	void  CreateLine( glm::vec3 sX, glm::vec3 sY, glm::vec3 sColor );
 	/* Initializes the debug drawer.  */
 	void Init();
-	/* Clears old primitives.  */
-	void RemovePrims();
-	/* Draws all the loaded primitives.  */
-#if VULKAN
-	void RenderPrims( VkCommandBuffer c, View v );
-#endif  /* VULKAN  */
+	/* Reset the debug mesh */
+	void ResetMesh();
+	/* Create Vertex Buffer */
+	void PrepareMeshForDraw();
 };

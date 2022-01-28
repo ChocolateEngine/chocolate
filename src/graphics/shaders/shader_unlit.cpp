@@ -258,15 +258,6 @@ std::array< VkVertexInputAttributeDescription, 4 > ShaderUnlit::GetAttributeDesc
 
 void ShaderUnlit::Draw( BaseRenderable* renderable, VkCommandBuffer c, uint32_t commandBufferIndex )
 {
-	//if ( mesh->aNoDraw )
-	//	return;
-
-#if MESH_USE_PUSH_CONSTANTS
-	// mesh.GetShader()->UpdateUniformBuffers( imageIndex, *model, model->aMeshes[i] );
-
-	// AWFUL
-#endif
-
 	IMesh* mesh = dynamic_cast<IMesh*>(renderable);
 
 	assert(mesh != nullptr);

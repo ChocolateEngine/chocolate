@@ -104,6 +104,10 @@ inline bool FileExists( const char* path )
 
 double          ToDouble( const std::string& value, double prev );
 long            ToLong( const std::string& value, int prev );
+
+bool            ToDouble2( const std::string &value, double &out );
+bool            ToLong2( const std::string &value, long &out );
+
 std::string     ToString( float value );
 
 inline float Round( float val, size_t precision = 100 )

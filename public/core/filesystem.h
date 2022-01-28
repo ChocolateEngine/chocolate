@@ -37,6 +37,9 @@ public:
 	/* Find the path to a file within the search paths.  */
 	std::string                             FindFile( const std::string& file );
 
+	/* Find the path to a directory within the search paths.  */
+	std::string                             FindDir( const std::string& dir );
+
 	/* Reads a file into a byte array.  */
 	std::vector< char >                     ReadFile( const std::string& file );
 

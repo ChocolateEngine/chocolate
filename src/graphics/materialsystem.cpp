@@ -15,6 +15,7 @@ Maybe the shadersystem could be inside this material system?
 #include "shaders/shader_basic_3d.h"
 #include "shaders/shader_basic_2d.h"
 #include "shaders/shader_unlit.h"
+#include "shaders/shader_debug.h"
 
 #include "textures/textureloader_ktx.h"
 #include "textures/textureloader_stbi.h"
@@ -45,6 +46,7 @@ void MaterialSystem::Init()
 	BaseShader* basic_3d = CreateShader<Basic3D>( "basic_3d" );
 	BaseShader* basic_2d = CreateShader<Basic2D>( "basic_2d" );
 	BaseShader* unlit    = CreateShader<ShaderUnlit>( "unlit" );
+	BaseShader* debug    = CreateShader<ShaderDebug>( "debug" );
 
 	// Create Error Material
 	// TODO: move to GetErrorMaterial and make it have a shader name as an input
@@ -89,30 +91,6 @@ void MaterialSystem::DeleteMaterial( IMaterial* matPublic )
 }
 
 
-bool ToDouble2( const std::string &value, double &out )
-{
-	if ( value.empty() )
-		return false;
-
-	char *end;
-	out = strtod( value.c_str(), &end );
-
-	return end != value.c_str();
-}
-
-
-bool ToLong2( const std::string &value, long &out )
-{
-	if ( value.empty() )
-		return false;
-
-	char *end;
-	out = strtol( value.c_str(), &end, 10 );
-
-	return end != value.c_str();
-}
-
-
 IMaterial* MaterialSystem::ParseMaterial( const std::string &path )
 {
 	std::string fullPath = path;
@@ -136,11 +114,11 @@ IMaterial* MaterialSystem::ParseMaterial( const std::string &path )
 		return nullptr;
 	}
 
-	KeyValueRoot kvRoot;
-	KeyValueErrorCode err = kvRoot.Parse( rawData.data() );
-	
 	// append a null terminator for c strings
 	rawData.push_back( '\0' );
+
+	KeyValueRoot kvRoot;
+	KeyValueErrorCode err = kvRoot.Parse( rawData.data() );
 
 	if ( err != KeyValueErrorCode::NO_ERROR )
 	{
@@ -391,6 +369,12 @@ void MaterialSystem::AddRenderable( BaseRenderable* renderable )
 	aDrawList.push_back( renderable );
 }
 
+void MaterialSystem::AddRenderable( BaseRenderableGroup *group )
+{
+	for ( auto renderable : group->GetRenderables() )
+		aDrawList.push_back( renderable );
+}
+
 
 size_t MaterialSystem::GetRenderableID( BaseRenderable* renderable )
 {
@@ -417,6 +401,13 @@ void MaterialSystem::DestroyRenderable( BaseRenderable* renderable )
 
 	if ( renderable->aIndexBuffer )
 		FreeIndexBuffer( renderable );
+}
+
+
+void MaterialSystem::DestroyRenderable( BaseRenderableGroup* group )
+{
+	for ( auto renderable : group->GetRenderables() )
+		DestroyRenderable( renderable );
 }
 
 

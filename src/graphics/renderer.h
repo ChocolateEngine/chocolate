@@ -37,8 +37,8 @@ protected:
 	typedef std::vector< VkCommandBuffer >		CommandBuffers;
 	typedef std::vector< VkSemaphore >		SemaphoreList;
 	typedef std::vector< VkFence >			FenceList;
-	typedef std::vector< ModelData* >		ModelDataList;
-	typedef std::vector< Sprite* >		SpriteDataList;
+	typedef std::vector< Model* >		ModelList;
+	typedef std::vector< Sprite* >		SpriteList;
 	typedef std::string				String;
 
 	ImageViews                  aSwapChainImageViews;       // View into an image, describing which part to access, one needed for each image
@@ -82,8 +82,8 @@ public:
 	enum class	Commands{ NONE = 0, IMGUI_INITIALIZED, SET_VIEW, GET_WINDOW_SIZE };
 	
 	View            aView;
-	ModelDataList   aModels;
-	SpriteDataList  aSprites;
+	ModelList       aModels;
+	SpriteList      aSprites;
 
 	/* A.  */
 	void    Init(  );
@@ -92,9 +92,9 @@ public:
 	/* Waaaaah!!!  */
 	void	EnableImgui(  );
 	/* A.  */
-	void 	InitModel( ModelData &srModelData, const String &srModelPath, const String &srTexturePath );
+	bool 	LoadModel( Model* sModel, const String &srPath );
 	/* A.  */
-	void 	InitSprite( Sprite &srSpriteData, const String &srSpritePath );
+	bool 	LoadSprite( Sprite &srSprite, const String &srPath );
 	/* A.  */
 	void 	DrawFrame(  );
 	/* Create a line and add it to drawing.  */

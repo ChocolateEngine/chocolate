@@ -39,6 +39,16 @@ public:
 	std::vector< uint32_t >         aIndices;
 };
 
+
+class BaseRenderableGroup
+{
+public:
+	virtual ~BaseRenderableGroup() = default;
+
+	virtual std::vector< BaseRenderable * > GetRenderables() = 0;
+};
+
+
 //template class BaseRenderable< vertex_2d_t >;
 //template class BaseRenderable< vertex_3d_t >;
 
@@ -88,9 +98,11 @@ public:
 
 	// Destroy a Renderable's Vertex and Index buffers, and anything else it may use
 	virtual void                        DestroyRenderable( BaseRenderable* renderable ) = 0;
+	virtual void                        DestroyRenderable( BaseRenderableGroup* group ) = 0;
 
 	// Add a Renderable to be drawn next frame, list is cleared after drawing
 	virtual void                        AddRenderable( BaseRenderable* renderable ) = 0;
+	virtual void                        AddRenderable( BaseRenderableGroup* group ) = 0;
 
 	// Get the Renderable ID
 	virtual size_t                      GetRenderableID( BaseRenderable* renderable ) = 0;

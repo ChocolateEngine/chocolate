@@ -42,20 +42,16 @@ public:
 	/* Draws all loaded models and sprites to screen.  */
 	void 		DrawFrame(  );
 
-	/* Loads a model given a path for the model and texture, 
-	   spModel is optional for external management.  */
-	void 		LoadModel( const std::string& srModelPath,
-				   const std::string& srTexturePath,
-				   Model *spModel = NULL ) override;
-
 	void            DrawLine( glm::vec3 sX, glm::vec3 sY, glm::vec3 sColor ) override;
-	/* Unload a model.  */
-	void 		UnloadModel( Model *spModel ) override;
 
-	/* Loads a sprite given a path to the sprite,
-	   spSprite is optional for external management.  */
-	void 		LoadSprite( const std::string& srSpritePath,
-				    Sprite *spSprite = NULL ) override;
+	/* Loads a model given a path */
+	Model* 		LoadModel( const std::string& srModelPath ) override;
+	/* Unload a model.  */
+	void 		FreeModel( Model *spModel ) override;
+
+	/* Loads a sprite given a path to the sprite */
+	Sprite*    LoadSprite( const std::string& srSpritePath ) override;
+
 	/* Unload a sprite.  */
 	void 		FreeSprite( Sprite *spSprite ) override;
 

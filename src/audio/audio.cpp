@@ -27,12 +27,14 @@ namespace fs = std::filesystem;
 constexpr size_t SOUND_BYTES = 2048;
 //constexpr size_t SOUND_BYTES = 4096;
 constexpr size_t SOUND_RATE = 48000;
-constexpr size_t THR_MAX_STREAMS = 32;
+constexpr size_t MAX_STREAMS = 32;
 
 CONVAR( snd_volume, 0.5 );
 CONVAR( snd_volume_3d, 1 );
 CONVAR( snd_volume_2d, 1 );
 CONVAR( snd_buffer_size, 2 );
+CONVAR( snd_read_mult, 4 );  // 4
+CONVAR( snd_audio_stream_available, 2 );
 
 #if ENABLE_AUDIO
 IPLAudioFormat g_formatMono = {};
@@ -69,7 +71,7 @@ AudioSystem::~AudioSystem(  )
 {
 }
 
-#define AUDIO_THREAD 0
+#define AUDIO_THREAD 1
 
 #if AUDIO_THREAD
 
@@ -144,11 +146,36 @@ void AudioSystem::Init(  )
 	{
 		while ( true )
 		{
-			std::unique_lock<std::mutex> lock(g_audioMutex);
+			if ( aPaused )
+			{
+				SDL_Delay( 5 );
+				continue;
+			}
 
-			//std::lock_guard<std::mutex> guard(g_audioMutex);
+			// TODO: use this for functions to modify how the stream is played during playback
+			// std::unique_lock<std::mutex> lock(g_audioMutex);
 
-			if ( aStreams.size() )
+			int remainingAudio = SDL_GetQueuedAudioSize( aOutputDeviceID );
+			static int read = remainingAudio;
+
+			if ( remainingAudio < SOUND_BYTES * snd_buffer_size.GetFloat() )
+			{
+				// this might work well for multithreading
+				for ( int i = 0; i < aStreamsPlaying.size(); i++ )
+				{
+					if ( aStreamsPlaying[i]->paused )
+						continue;
+
+					if ( !UpdateStream( aStreamsPlaying[i] ) )
+					{
+						FreeSound( (AudioStream *)aStreamsPlaying[i] );
+						i--;
+						continue;
+					}
+				}
+			}
+
+			if ( aStreamsPlaying.size() )
 			{
 				MixAudio();
 				QueueAudio();
@@ -156,7 +183,7 @@ void AudioSystem::Init(  )
 				unmixedBuffers.clear();
 			}
 
-			g_cv.notify_one();
+			// g_cv.notify_one();
 		}
 	}
 	);
@@ -244,21 +271,21 @@ bool AudioSystem::InitSteamAudio()
 
 
 // OpenSound?
-AudioStream* AudioSystem::LoadSound( const char* soundPath )
+AudioStream* AudioSystem::LoadSound( std::string soundPath )
 {
 #if ENABLE_AUDIO
 	// check for too many streams
-	if ( aStreams.size() == THR_MAX_STREAMS )
+	/*if ( aStreams.size() == MAX_STREAMS )
 	{
-		Print( "[AudioSystem] At Max Audio Streams: \"%d\"\n", THR_MAX_STREAMS );
+		Print( "[AudioSystem] At Max Audio Streams: \"%d\"\n", MAX_STREAMS );
 		return nullptr;
-	}
+	}*/
 
 	if ( !FileExists( soundPath ) )
 	{
 		std::string tmp = soundPath;
 
-		soundPath = filesys->FindFile( soundPath ).c_str();
+		soundPath = filesys->FindFile( soundPath );
 
 		if ( !FileExists( soundPath ) )
 		{
@@ -277,13 +304,22 @@ AudioStream* AudioSystem::LoadSound( const char* soundPath )
 		if ( !codec->CheckExt(ext.c_str()) )
 			continue;
 
-		if ( !codec->Open(soundPath, stream) )
+		if ( !codec->Open( soundPath.c_str(), stream ) )
 			continue;
 
 		stream->codec = codec;
-		stream->valid = true;
-		aStreams.push_back(stream);
-		return stream;
+
+		if ( !(stream->valid = LoadSoundInternal( stream )) )
+		{
+			Print( "[AudioSystem] Could not load sound: \"%s\"\n", soundPath );
+			delete stream;
+			return nullptr;
+		}
+		else
+		{
+			aStreams.push_back( stream );
+			return stream;
+		}
 	}
 
 	Print("[AudioSystem] Could not load sound: \"%s\"\n", soundPath);
@@ -293,13 +329,11 @@ AudioStream* AudioSystem::LoadSound( const char* soundPath )
 }
 
 
-bool AudioSystem::PlaySound( AudioStream *streamPublic )
+bool AudioSystem::LoadSoundInternal( AudioStreamInternal *stream )
 {
 #if !ENABLE_AUDIO
 	return false;
 #else
-	AudioStreamInternal* stream = (AudioStreamInternal*)streamPublic;
-
 	IPLerror ret;
 	// SDL_AudioStream will convert it to stereo for us
 	//IPLAudioFormat inAudioFormat = (stream->channels == 1 ? g_formatMono: g_formatStereo);
@@ -362,23 +396,85 @@ bool AudioSystem::PlaySound( AudioStream *streamPublic )
 }
 
 
-void AudioSystem::FreeSound( AudioStream** streamPublic )
+// TODO: this preloading does work, but it's only valid for playing it once
+// only because we remove data from it's SDL_AudioStream during playback
+// we'll need to store the audio converted from SDL_AudioStream in a separate location
+// and then store a long for the index in the audio data array for reading audio
+
+// probably have ReadAudio check if we're preloaded or not, if it is,
+// then it returns data from the preload cache instead of reading from the file
+
+bool AudioSystem::PreloadSound( AudioStream *streamPublic )
+{
+	AudioStreamInternal *stream = (AudioStreamInternal *)streamPublic;
+
+	while ( true )
+	{
+		std::vector<float> rawAudio;
+
+		long read = stream->codec->Read( stream, SOUND_BYTES, rawAudio );
+
+		// should just put silence in the stream if this is true
+		if ( read < 0 )
+			break;
+
+		// End of File
+		if ( read == 0 )
+		{
+			if ( !stream->loop )
+				break;
+
+			// go back to the starting point
+			if ( stream->codec->Seek( stream, stream->startTime ) == -1 )
+				return false; // failed to seek back, stop the sound
+
+			read = stream->codec->Read( stream, SOUND_BYTES, rawAudio );
+
+			// should just put silence in the stream if this is true
+			if ( read < 0 )
+				break;
+		}
+
+		// NOTE: "read" NEEDS TO BE 4 TIMES THE AMOUNT FOR SOME REASON, no clue why
+		if ( SDL_AudioStreamPut( stream->audioStream, rawAudio.data(), read * snd_read_mult ) == -1 )
+		{
+			Print( "[AudioSystem] SDL_AudioStreamPut - Failed to put samples in stream: %s\n", SDL_GetError() );
+			return false;
+		}
+	}
+
+	stream->preloaded = true;
+	return true;
+}
+
+
+bool AudioSystem::PlaySound( AudioStream *streamPublic )
+{
+	aStreamsPlaying.push_back( (AudioStreamInternal *)streamPublic );
+	return true;
+}
+
+
+void AudioSystem::FreeSound( AudioStream* streamPublic )
 {
 #if ENABLE_AUDIO
-	AudioStreamInternal* stream = (AudioStreamInternal*)*streamPublic;
+	AudioStreamInternal* stream = (AudioStreamInternal*)streamPublic;
 
-	if ( vec_contains(aStreams, stream) )
+	if ( vec_contains( aStreamsPlaying, stream ) )
+	{
+		vec_remove( aStreamsPlaying, stream );
+	}
+
+	if ( vec_contains( aStreams, stream ) )
 	{
 		stream->codec->Close( stream );
-		vec_remove(aStreams, stream);
+		vec_remove( aStreams, stream );
 
 		delete[] stream->inBufferAudio;
 		delete[] stream->midBufferAudio;
 		delete[] stream->outBufferAudio;
 
 		delete stream;
-
-		*streamPublic = nullptr;
 	}
 #endif
 }
@@ -405,7 +501,7 @@ void AudioSystem::SetListenerTransform( const glm::vec3& pos, const glm::quat& r
 void AudioSystem::SetListenerTransform( const glm::vec3& pos, const glm::vec3& ang )
 {
 	aListenerPos = pos;
-	aListenerRot = AngToQuat(ang);
+	aListenerRot = ang;
 }
 
 
@@ -431,14 +527,15 @@ void AudioSystem::Update( float frameTime )
 		return;
 
 #if AUDIO_THREAD
-	std::unique_lock<std::mutex> lock(g_audioMutex);
-	g_cv.wait(lock);
+	// std::unique_lock<std::mutex> lock(g_audioMutex);
+	// g_cv.wait(lock);
 #else
 	unmixedBuffers.clear();
 #endif
 
 	//gui->DebugMessage( 14, "Audio Streams: %u", aStreams.size() );
 
+#if !AUDIO_THREAD
 	int remainingAudio = SDL_GetQueuedAudioSize( aOutputDeviceID );
 	static int read = remainingAudio;
 
@@ -447,31 +544,30 @@ void AudioSystem::Update( float frameTime )
 	if ( remainingAudio < SOUND_BYTES * snd_buffer_size.GetFloat() )
 	{
 		// this might work well for multithreading
-		for (int i = 0; i < aStreams.size(); i++)
+		for (int i = 0; i < aStreamsPlaying.size(); i++)
 		{
 			// um
-			if ( aStreams[i] == nullptr )
+			if ( aStreamsPlaying[i] == nullptr )
 			{
-				Print( "[Audio] WARNING: nullptr audio stream ????\n" );
-				vec_remove( aStreams, aStreams[i]);
+				Print( "[AudioSystem] WARNING: nullptr audio stream ????\n" );
+				vec_remove( aStreamsPlaying, aStreamsPlaying[i] );
 				i--;
 				continue;
 			}
 
-			if (aStreams[i]->paused)
+			if ( aStreamsPlaying[i]->paused )
 				continue;
 
-			if ( !UpdateStream( aStreams[i] ) )
+			if ( !UpdateStream( aStreamsPlaying[i] ) )
 			{
-				FreeSound( (AudioStream**)&aStreams[i] );
+				FreeSound( (AudioStream*)aStreamsPlaying[i] );
 				i--;
 				continue;
 			}
 		}
 	}
 
-#if !AUDIO_THREAD
-	if ( aStreams.size() )
+	if ( aStreamsPlaying.size() )
 	{
 		MixAudio();
 		QueueAudio();
@@ -483,10 +579,22 @@ void AudioSystem::Update( float frameTime )
 
 #if ENABLE_AUDIO
 
-CONVAR( snd_read_mult, 4 );  // 4
-CONVAR( snd_audio_stream_available, 2 );
-
 bool AudioSystem::UpdateStream( AudioStreamInternal* stream )
+{
+	if ( !stream->preloaded )
+	{
+		if ( !ReadAudio( stream ) )
+			return false;
+	}
+
+	if ( !ApplyEffects( stream ) )
+		return false;
+
+	return true;
+}
+
+
+bool AudioSystem::ReadAudio( AudioStreamInternal *stream )
 {
 	int read = SDL_AudioStreamAvailable( stream->audioStream );
 	if ( read < SOUND_BYTES * snd_audio_stream_available.GetFloat() )
@@ -496,11 +604,11 @@ bool AudioSystem::UpdateStream( AudioStreamInternal* stream )
 		read = stream->codec->Read( stream, SOUND_BYTES, rawAudio );
 
 		// should just put silence in the stream if this is true
-		if (read < 0)
+		if ( read < 0 )
 			return true;
 
 		// End of File
-		if (read == 0)
+		if ( read == 0 )
 		{
 			if ( !stream->loop )
 				return false;
@@ -512,33 +620,43 @@ bool AudioSystem::UpdateStream( AudioStreamInternal* stream )
 			read = stream->codec->Read( stream, SOUND_BYTES, rawAudio );
 
 			// should just put silence in the stream if this is true
-			if (read < 0)
+			if ( read < 0 )
 				return true;
 		}
 
 		// NOTE: "read" NEEDS TO BE 4 TIMES THE AMOUNT FOR SOME REASON, no clue why
-		if ( SDL_AudioStreamPut( stream->audioStream, rawAudio.data(), read*snd_read_mult ) == -1 )
+		if ( SDL_AudioStreamPut( stream->audioStream, rawAudio.data(), read * snd_read_mult ) == -1 )
 		{
 			Print( "[AudioSystem] SDL_AudioStreamPut - Failed to put samples in stream: %s\n", SDL_GetError() );
 			return false;
 		}
 	}
 
+	return true;
+}
+
+
+bool AudioSystem::ApplyEffects( AudioStreamInternal *stream )
+{
 	// this is in bytes, not samples!
 	std::vector<float> outAudio;
 	outAudio.resize( SOUND_BYTES );
 	//outAudio = rawAudio;
-	read = SDL_AudioStreamGet( stream->audioStream, outAudio.data(), SOUND_BYTES );
+	long read = SDL_AudioStreamGet( stream->audioStream, outAudio.data(), SOUND_BYTES );
 	//read = SOUND_BYTES;
 
-	if (read == -1)
+	if ( read == -1 )
 	{
 		Print( "[AudioSystem] SDL_AudioStreamGet - Failed to get converted data: %s\n", SDL_GetError() );
 		return false;
 	}
 
+	// no audio data available
+	if ( read == 0 )
+		return false;
+
 	// apply stream volume
-	for (int i = 0; i < read; i++)
+	for ( int i = 0; i < read; i++ )
 		outAudio[i] *= stream->vol;
 
 	// TODO: split these effects up
@@ -551,13 +669,14 @@ bool AudioSystem::UpdateStream( AudioStreamInternal* stream )
 		SDL_memset( stream->outBufferAudio, 0, sizeof( stream->outBufferAudio ) );
 
 		// copy over samples
-		for (int i = 0; i < read; i++)
+		for ( int i = 0; i < read; i++ )
 			stream->outBufferAudio[i] = outAudio[i] * snd_volume_2d.GetFloat();
 	}
 
-	unmixedBuffers.push_back(stream->outBuffer);
+	unmixedBuffers.push_back( stream->outBuffer );
 
 	stream->frame += read;
+
 	return true;
 }
 

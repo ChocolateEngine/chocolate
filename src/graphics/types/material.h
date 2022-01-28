@@ -14,7 +14,6 @@ material.h ( Authored by Demez )
 #include <filesystem>
 
 class Renderer;
-class ModelData;
 
 
 // basically tied to obj files right now

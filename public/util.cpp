@@ -142,6 +142,30 @@ long ToLong( const std::string& value, int prev )
 }
 
 
+bool ToDouble2( const std::string &value, double &out )
+{
+	if ( value.empty() )
+		return false;
+
+	char *end;
+	out = strtod( value.c_str(), &end );
+
+	return end != value.c_str();
+}
+
+
+bool ToLong2( const std::string &value, long &out )
+{
+	if ( value.empty() )
+		return false;
+
+	char *end;
+	out = strtol( value.c_str(), &end, 10 );
+
+	return end != value.c_str();
+}
+
+
 // very cool: https://stackoverflow.com/a/46424921/12778316
 std::string ToString( float value )
 {

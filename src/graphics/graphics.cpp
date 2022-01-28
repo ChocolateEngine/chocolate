@@ -12,39 +12,50 @@ extern "C" {
 	}
 }
 
-void GraphicsSystem::LoadModel( const std::string& srModelPath, const std::string& srTexturePath, Model *spModel )
+Model *GraphicsSystem::LoadModel( const std::string&srPath )
 {
-	if ( spModel == NULL )
-		return;
+	Model *model = new Model;
 
-	spModel->GetModelData().SetPos( { 0.f, 0.f, 0.f } );
-	aRenderer.InitModel( spModel->GetModelData(  ), srModelPath, srTexturePath );
+	if ( !aRenderer.LoadModel( model, srPath ) )
+	{
+		delete model;
+		return nullptr;
+	}
 	
-	aModels.push_back( spModel );
+	aModels.push_back( model );
+
+	return model;
 }
 
 void GraphicsSystem::DrawLine( glm::vec3 sX, glm::vec3 sY, glm::vec3 sColor ) {
 	aRenderer.CreateLine( sX, sY, sColor );
 }
 
-void GraphicsSystem::UnloadModel( Model *spModel )
+void GraphicsSystem::FreeModel( Model *spModel )
 {
 	vec_remove( aModels, spModel );
+	delete spModel;
 }
 
-void GraphicsSystem::LoadSprite( const std::string& srSpritePath, Sprite *spSprite )
+Sprite *GraphicsSystem::LoadSprite( const std::string& srPath )
 {
-	if ( spSprite == NULL )
-		return;
+	Sprite *sprite = new Sprite;
 
-	aRenderer.InitSprite( *spSprite, srSpritePath );
-	
-	aSprites.push_back( spSprite );
+	if ( !aRenderer.LoadSprite( *sprite, srPath ) )
+	{
+		delete sprite;
+		return nullptr;
+	}
+
+	aSprites.push_back( sprite );
+
+	return sprite;
 }
 
 void GraphicsSystem::FreeSprite( Sprite *spSprite )
 {
 	vec_remove( aSprites, spSprite );
+	delete spSprite;
 }
 
 SDL_Window *GraphicsSystem::GetWindow(  )
@@ -91,6 +102,6 @@ IMaterialSystem* GraphicsSystem::GetMaterialSystem(  )
 Model* GraphicsSystem::CreateModel(  )
 {
 	Model* model = new Model;
-	aRenderer.aModels.push_back( &model->GetModelData() );
+	aRenderer.aModels.push_back( model );
 	return model;
 }

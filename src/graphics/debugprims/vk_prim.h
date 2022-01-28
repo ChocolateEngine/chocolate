@@ -9,46 +9,31 @@
  */
 #pragma once
 
+#include "graphics/imesh.h"
 #include "graphics/primvtx.hh"
 #include "graphics/renderertypes.h"
 
-class PrimPushConstant {
-public:
-	alignas( 16 ) glm::mat4 aTransform;
-        alignas( 16 ) glm::vec3 a;
-	alignas( 16 ) glm::vec3 b;
-	alignas( 16 ) glm::vec3 aColor;
-};
+#include "../types/material.h"
 
-class Primitive {
-protected:
+class PrimitiveMesh: public IMesh
+{
 public:
-	PrimPushConstant aPush;
-	void            Draw( VkCommandBuffer c );
-	               ~Primitive();
-};
-
-class Line : public Primitive {
-public:
-	void Init( glm::vec3 sX, glm::vec3 sY, glm::vec3 sColor );
+	virtual glm::mat4               GetModelMatrix() override { return glm::mat4( 1.f ); }
 };
 
 class VulkanPrimitiveMaterials {
 	using Sets       = std::vector< VkDescriptorSet >;
-	using Primitives = std::vector< Primitive* >;
 protected:
-	VkPipelineLayout      aPipeLayout;
-	VkPipeline            aPipe;
-	Primitives            aPrimitives;
+	PrimitiveMesh*        aFinalMesh = nullptr;
+	Material*             apMaterial = nullptr;
+
 public:
-	/* Update function to draw all loaded primitives.  */
-	void   DrawPrimitives( VkCommandBuffer c, View v );
+	/* Create one large primative for one draw call  */
+	void   ResetMesh();
+	/* Creates Vertex Buffer */
+	void   PrepareMeshForDraw();
 	/* Creates a new line.  */
-        void   InitLine( glm::vec3 sX, glm::vec3 sY, glm::vec3 sColor );
-        /* Clears the lines that were queued.  */
-	void   RemoveLines();
-	/* Creates a new pipeline for rendering primitives.  */
-	void   InitPrimPipeline();
+	void   InitLine( glm::vec3 sX, glm::vec3 sY, glm::vec3 sColor );
 	/* Initializes the general stuff required for rendering.  */
 	void   Init();
 	      ~VulkanPrimitiveMaterials();

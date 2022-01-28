@@ -130,6 +130,29 @@ std::string FileSystem::FindFile( const std::string& file )
 }
 
 
+std::string FileSystem::FindDir( const std::string &dir )
+{
+    // if it's an absolute path already,
+    // don't bother to look in the search paths for it, and make sure it exists
+    if ( IsAbsolute( dir ) )
+        return DirExists( dir ) ? dir : "";
+
+    for ( auto searchPath : aSearchPaths )
+    {
+        std::string fullPath = searchPath + "/" + dir;
+
+        // does item exist?
+        if ( access( fullPath.c_str(), 0 ) != -1 )
+        {
+            return fullPath;
+        }
+    }
+
+    // file not found
+    return "";
+}
+
+
 /* Reads a file into a byte array.  */
 std::vector< char > FileSystem::ReadFile( const std::string& srFilePath )
 {

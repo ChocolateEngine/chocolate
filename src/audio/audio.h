@@ -74,16 +74,21 @@ public:
 	virtual void                    SetPaused( bool paused ) override;
 	virtual void                    SetGlobalSpeed( float speed ) override;
 
-	virtual AudioStream*            LoadSound( const char* soundPath ) override;
+	virtual AudioStream*            LoadSound( std::string soundPath ) override;
+	virtual bool                    PreloadSound( AudioStream *stream ) override;
 	virtual bool                    PlaySound( AudioStream *stream ) override;
-	virtual void                    FreeSound( AudioStream** stream ) override;
+	virtual void                    FreeSound( AudioStream* stream ) override;
 	virtual int                     Seek( AudioStream *streamPublic, double pos ) override;
+
+	bool                            LoadSoundInternal( AudioStreamInternal *stream );
 
 	//virtual bool                    RegisterCodec( BaseCodec *codec ) override;
 	bool                            RegisterCodec( BaseCodec *codec );
 
 #if ENABLE_AUDIO
 	bool                            UpdateStream( AudioStreamInternal* stream );
+	bool                            ReadAudio( AudioStreamInternal* stream );
+	bool                            ApplyEffects( AudioStreamInternal* stream );
 	bool                            MixAudio();
 	bool                            QueueAudio();
 
@@ -119,7 +124,8 @@ public:
 	// --------------------------------------------------
 
 	std::vector< BaseCodec* >       aCodecs;
-	std::vector< AudioStreamInternal* > aStreams;
+	std::vector< AudioStreamInternal* > aStreams;         // all streams loaded into memory
+	std::vector< AudioStreamInternal* > aStreamsPlaying;  // streams currently playing audio for
 
 	SDL_AudioDeviceID               aOutputDeviceID;
 	SDL_AudioSpec                   aAudioSpec;

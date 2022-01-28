@@ -200,12 +200,13 @@ public:
 		SetViewMatrix(view.viewMatrix);
 	}
 
-	void SetViewMatrix(glm::mat4 viewMatrix)
+	void SetViewMatrix(const glm::mat4& viewMatrix)
 	{
 		this->viewMatrix = viewMatrix;
+		this->projViewMatrix = projMatrix * viewMatrix;
 	}
 
-	const glm::mat4 &GetProjection() const { return projectionMatrix; }
+	const glm::mat4 &GetProjection() const { return projMatrix; }
 
 	void ComputeProjection()
 	{
@@ -214,7 +215,9 @@ public:
 
 		float V = 2.0f * atanf(tanf(glm::radians(fieldOfView) / 2.0f) * vAspect);
 
-		projectionMatrix = glm::perspective(V, hAspect, zNear, zFar);
+		projMatrix = glm::perspective(V, hAspect, zNear, zFar);
+
+		projViewMatrix = projMatrix * viewMatrix;
 	}
 
 	int32_t x;
@@ -227,8 +230,9 @@ public:
 	float fieldOfView;
 
 	glm::mat4 viewMatrix;
+	glm::mat4 projMatrix;
 
-private:
-	glm::mat4 projectionMatrix;
+	// view matrix times projection matrix
+	glm::mat4 projViewMatrix;
 };
 

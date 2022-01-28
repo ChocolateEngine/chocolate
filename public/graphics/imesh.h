@@ -29,66 +29,54 @@ public:
 };
 
 
-// Simple Mesh Class, can be moved, rotated, and scaled
-// 140 bytes - 36 bytes + 8 bytes for vtable + 96 bytes from IMesh
-class Mesh: public IMesh
-{
-public:
-	virtual ~Mesh() {}
-
-	inline glm::mat4                GetModelMatrix(  ) override { return aTransform.ToMatrix(); }
-
-	// takes up 36 bytes
-	Transform                       aTransform;
-};
+class Mesh;
 
 
-// this really should only be used for models loaded in or grouping meshes together
-// IDEA: make this a template class with a base of IMesh somehow?
-class ModelData
+// Simple Model Class, can be moved, rotated, and scaled
+class Model: public BaseRenderableGroup
 {
 private:
-	Transform                   aTransform;
 
 public:
-	bool                        aNoDraw = true;
 	std::vector<vertex_3d_t>    aVertices;
 	std::vector<uint32_t>       aIndices;
+
 	std::vector< Mesh* >        aMeshes{  };
 	std::string                 aPath;
 
-	// awful, need to do this better somehow, so that meshes can be offset from this model position,
-	// and the offset stay the same when changing this
+	Transform                   aTransform;
+
+	inline std::vector< BaseRenderable * > GetRenderables() override
+	{
+		std::vector< BaseRenderable * > items;
+
+		// blech
+		for ( auto mesh : aMeshes )
+			items.push_back( (BaseRenderable*)mesh );
+
+		// std::copy( items.begin(), items.end(), aMeshes );
+
+		return items;
+	}
+
 	inline void SetTransform( const Transform& transform )
 	{
 		aTransform = transform;
-
-		for ( auto& mesh: aMeshes )
-			mesh->aTransform = transform;
 	}
 
 	inline void SetPos( const glm::vec3& pos )
 	{
 		aTransform.aPos = pos;
-
-		for ( auto& mesh: aMeshes )
-			mesh->aTransform.aPos = pos;
 	}
 
 	inline void SetAng( const glm::vec3& ang )
 	{
 		aTransform.aAng = ang;
-
-		for ( auto& mesh: aMeshes )
-			mesh->aTransform.aAng = ang;
 	}
 
 	inline void SetScale( const glm::vec3& scale )
 	{
 		aTransform.aScale = scale;
-
-		for ( auto& mesh: aMeshes )
-			mesh->aTransform.aScale = scale;
 	}
 
 	inline Transform& GetTransform(  )
@@ -96,19 +84,18 @@ public:
 		return aTransform;
 	}
 
-	/* Allocates the model, and loads its textures etc.  */
-	//void        Init(  );
-	/* Reinitialize data that is useless after the swapchain becomes outdated.  */
-	//void        ReInit(  );
-	/* Bind and Draws the model to the screen.  */
-	//void        Draw( VkCommandBuffer c, uint32_t i );
-	/* Default the model and set limits.  */
-	ModelData(  ) : aNoDraw( false ), aMeshes(  ){  };
-	/* Frees the memory used by objects outdated by a new swapchain state.  */
-	//void        FreeOldResources(  );
-	/* Frees all memory used by model.  */
-	//void        Destroy(  );
+	Model(  ) : aMeshes(  ){  };
+	~Model(  ) {}
+};
 
-	~ModelData(  ) {}
+
+class Mesh: public IMesh
+{
+public:
+	virtual ~Mesh() {}
+
+	inline glm::mat4                GetModelMatrix() override { return apModel->aTransform.ToMatrix(); }
+
+	Model *apModel;
 };
 
