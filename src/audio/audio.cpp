@@ -32,7 +32,7 @@ constexpr size_t MAX_STREAMS = 32;
 CONVAR( snd_volume, 0.5 );
 CONVAR( snd_volume_3d, 1 );
 CONVAR( snd_volume_2d, 1 );
-CONVAR( snd_buffer_size, 2 );
+CONVAR( snd_buffer_size, 4 );
 CONVAR( snd_read_mult, 4 );  // 4
 CONVAR( snd_audio_stream_available, 2 );
 
@@ -76,7 +76,6 @@ AudioSystem::~AudioSystem(  )
 #if AUDIO_THREAD
 
 std::mutex g_audioMutex;
-std::condition_variable g_cv;
 
 #endif
 

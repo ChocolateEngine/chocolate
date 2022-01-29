@@ -332,8 +332,6 @@ void Renderer::DrawFrame(  )
 	gVertsDrawn = 0;
 	gLinesDrawn = 0;
 
-	gui->Update( 0.f );
-
 	for ( auto& renderable : materialsystem->aDrawList )
 	{
 		Material* mat = (Material*)renderable->apMaterial;
