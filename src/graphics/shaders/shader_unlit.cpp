@@ -21,6 +21,14 @@ constexpr const char *pVShader = "shaders/unlit.vert.spv";
 constexpr const char *pFShader = "shaders/unlit.frag.spv";
 
 
+struct UnlitPushConstant
+{
+	glm::mat4 aProjView;
+	glm::mat4 aModel;
+};
+
+
+
 void ShaderUnlit::Init()
 {
 	aModules.Allocate(2);
@@ -51,14 +59,13 @@ std::vector<VkDescriptorSetLayoutBinding> ShaderUnlit::GetDescriptorSetLayoutBin
 {
 	return {
 		DescriptorLayoutBinding( VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr ),
-		DescriptorLayoutBinding( VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_VERTEX_BIT, nullptr )
 	};
 }
 
 
 void ShaderUnlit::CreateGraphicsPipeline(  )
 {
-	aPipelineLayout = InitPipelineLayouts( aLayouts.GetBuffer(  ), aLayouts.GetSize(  ), sizeof( push_constant_t ) );
+	aPipelineLayout = InitPipelineLayouts( aLayouts.GetBuffer(  ), aLayouts.GetSize(  ), sizeof( UnlitPushConstant ) );
 
 	VkPipelineShaderStageCreateInfo vertShaderStageInfo{  };
 	vertShaderStageInfo.sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;	//	Tells Vulkan which stage the shader is going to be used
@@ -199,22 +206,6 @@ void ShaderUnlit::CreateGraphicsPipeline(  )
 
 void ShaderUnlit::UpdateBuffers( uint32_t sCurrentImage, BaseRenderable* spRenderable )
 {
-	ubo_3d_t ubo{  };
-
-	IMesh* mesh = dynamic_cast<IMesh*>(spRenderable);
-	assert(mesh != nullptr);
-
-	ubo.model = mesh->GetModelMatrix(  );
-	ubo.view  = renderer->aView.viewMatrix;
-	ubo.proj  = renderer->aView.GetProjection(  );
-
-	auto& uniformData = materialsystem->GetUniformData( spRenderable->GetID() );
-	auto& uniformDataMem = materialsystem->GetUniformData( spRenderable->GetID() ).aMem[ sCurrentImage ];
-
-	void* data;
-	vkMapMemory( DEVICE, uniformDataMem, 0, sizeof( ubo ), 0, &data );
-	memcpy( data, &ubo, sizeof( ubo ) );
-	vkUnmapMemory( DEVICE, uniformDataMem );
 }
 
 
@@ -277,12 +268,18 @@ void ShaderUnlit::Draw( BaseRenderable* renderable, VkCommandBuffer c, uint32_t 
 	// Now draw it
 	vkCmdBindPipeline( c, VK_PIPELINE_BIND_POINT_GRAPHICS, aPipeline );
 
+	UnlitPushConstant p = {renderer->aView.projViewMatrix, mesh->GetModelMatrix()};
+
+	vkCmdPushConstants(
+		c, aPipelineLayout, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
+		0, sizeof( UnlitPushConstant ), &p
+	);
+
 	VkDescriptorSet sets[  ] = {
 		diffuse->aSets[ commandBufferIndex ],
-		materialsystem->GetUniformData( mesh->GetID() ).aSets[ commandBufferIndex ]
 	};
 
-	vkCmdBindDescriptorSets( c, VK_PIPELINE_BIND_POINT_GRAPHICS, aPipelineLayout, 0, 2, sets, 0, NULL );
+	vkCmdBindDescriptorSets( c, VK_PIPELINE_BIND_POINT_GRAPHICS, aPipelineLayout, 0, 1, sets, 0, NULL );
 
 	if ( mesh->aIndexBuffer )
 		vkCmdDrawIndexed( c, (uint32_t)mesh->aIndices.size(), 1, 0, 0, 0 );
