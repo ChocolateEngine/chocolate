@@ -95,13 +95,6 @@ std::string Vec2Str( const glm::vec3& in );
 std::string Quat2Str( const glm::quat& in );
 
 
-inline bool FileExists( const char* path )
-{
-	struct stat buffer;   
-	return (stat (path, &buffer) == 0); 
-}
-
-
 double          ToDouble( const std::string& value, double prev );
 long            ToLong( const std::string& value, int prev );
 
@@ -115,7 +108,4 @@ inline float Round( float val, size_t precision = 100 )
 	return roundf( val * precision ) / precision;
 }
 
-bool FileExists( const std::string& path );
-bool DirExists( const std::string& path);
-bool ItemExists( const std::string& path );
 

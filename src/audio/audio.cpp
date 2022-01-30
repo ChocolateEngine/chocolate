@@ -280,13 +280,13 @@ AudioStream* AudioSystem::LoadSound( std::string soundPath )
 		return nullptr;
 	}*/
 
-	if ( !FileExists( soundPath ) )
+	if ( !filesys->Exists( soundPath ) )
 	{
 		std::string tmp = soundPath;
 
 		soundPath = filesys->FindFile( soundPath );
 
-		if ( !FileExists( soundPath ) )
+		if ( soundPath == "" )
 		{
 			Print( "[AudioSystem] Sound does not exist: \"%s\"\n", tmp.c_str() );
 			return nullptr;

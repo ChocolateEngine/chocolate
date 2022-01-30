@@ -347,6 +347,9 @@ BaseShader* MaterialSystem::GetShader( const std::string& name )
 
 void MaterialSystem::InitUniformBuffer( IMesh* mesh )
 {
+	if ( !((Material*)mesh->apMaterial)->apShader->UsesUniformBuffers() )
+		return;
+
 	aUniformLayoutMap[ mesh->GetID() ] = InitDescriptorSetLayout( { { DescriptorLayoutBinding( VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_VERTEX_BIT, NULL ) } } );
 
 	aUniformDataMap[ mesh->GetID() ] = UniformDescriptor{};

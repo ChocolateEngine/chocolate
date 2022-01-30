@@ -19,6 +19,10 @@ add_compile_definitions( "CORE_DLL" )
 
 add_library( Core SHARED ${SRC_FILES} ${PUBLIC_FILES} )
 
+if( MSVC )
+	target_link_libraries( Core Shlwapi )
+endif()
+
 set_target_properties(
 	Core PROPERTIES
 	LINKER_LANGUAGE CXX

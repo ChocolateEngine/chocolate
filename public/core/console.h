@@ -341,6 +341,8 @@ public:
 	/* Find and run a command, returns true if a command was found  */
 	bool                                RunCommand( const std::string& command );
 
+	void                                ParseCommandLine( const std::string& command, std::string &name, std::vector< std::string > &args );
+
 	/* A.  */
 		Console(  );
 	/* A.  */

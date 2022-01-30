@@ -175,18 +175,3 @@ std::string ToString( float value )
 }
 
 
-bool FileExists( const std::string& path )
-{
-	return std::filesystem::is_regular_file(path);
-}
-
-bool DirExists( const std::string& path)
-{
-	return std::filesystem::is_directory(path);
-}
-
-bool ItemExists( const std::string& path )
-{
-	return (access(path.c_str(), 0) != -1);
-}
-

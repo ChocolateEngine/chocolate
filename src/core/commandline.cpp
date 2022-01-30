@@ -20,7 +20,7 @@ extern "C"
 
 		console = new Console;
 
-		if ( FileExists( "cfg/autoexec.cfg" ) )
+		if ( filesys->Exists( "cfg/autoexec.cfg" ) )
 			console->Add( "exec autoexec" );
 		
 		std::string execCfg;

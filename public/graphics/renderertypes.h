@@ -75,10 +75,10 @@ struct push_constant_t
 
 struct vertex_3d_t
 {
-	glm::vec3 pos;
-	glm::vec3 color;  // this probably isn't needed anymore, right?
-	glm::vec2 texCoord;
-	glm::vec3 normal;
+	glm::vec3 pos{};
+	glm::vec3 color{};  // this probably isn't needed anymore, right?
+	glm::vec2 texCoord{};
+	glm::vec3 normal{};
 	
 	bool operator==( const vertex_3d_t& other ) const
 	{
