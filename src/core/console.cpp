@@ -12,10 +12,19 @@ DLL_EXPORT Console* console = nullptr;
 void Print( const char* format, ... )
 {
 	VSTRING( std::string buffer, format );
+	printf( buffer.c_str() );
+
 	if ( console )
-		console->Print( buffer.c_str() );
-	else
-		printf( buffer.c_str() );
+		console->AddToBuffer( buffer );
+}
+
+
+void PrintFast( const char* buffer )
+{
+	printf( buffer );
+
+	if ( console )
+		console->AddToBuffer( buffer );
 }
 
 
@@ -271,6 +280,7 @@ CONCMD( exec )
 	delete[] buf;
 }
 
+
 CONCMD( echo )
 {
 	std::string msg = "";
@@ -287,6 +297,7 @@ CONCMD( echo )
 
 	Print( msg.c_str() );
 }
+
 
 CONCMD( help )
 {
@@ -309,7 +320,90 @@ CONCMD( help )
 }
 
 
+void FindStr( bool andSearch, ConVarBase* cvar, const std::vector< std::string >& args, std::vector< std::string >& results )
+{
+	for ( auto arg : args )
+	{
+		if ( cvar->GetName().find( arg ) != std::string::npos )
+		{
+			results.push_back( "\t" + cvar->GetPrintMessage() );
+
+			if ( !andSearch )
+				return;
+		}
+	}
+}
+
+
+void CmdFind( bool andSearch, std::vector< std::string >& args )
+{
+	std::vector< std::string > resultsCvar;
+	std::vector< std::string > resultsCCmd;
+
+	ConVarBase* cvar = ConVarBase::spConVarBases;
+	while ( cvar )
+	{
+		// ugly but probably faster than doing an extra dynamic cast to check if not a cvarref
+		// or doing the string search on a cvarref
+		if ( dynamic_cast<ConVar*>(cvar) )
+		{
+			FindStr( andSearch, cvar, args, resultsCvar );
+		}
+		else if ( dynamic_cast<ConCommand*>(cvar) )
+		{
+			FindStr( andSearch, cvar, args, resultsCCmd );
+		}
+
+		cvar = cvar->apNext;
+	}
+
+	Print( "Search Results: %zu\n", resultsCvar.size() + resultsCCmd.size() );
+
+	Print( "\nConVars: %zu\n--------------------------------------\n", resultsCvar.size() );
+	for ( const auto& msg : resultsCvar )
+		PrintFast( msg.c_str() );
+
+	Print( "\nConCommands: %zu\n--------------------------------------\n", resultsCCmd.size() );
+	for ( const auto& msg : resultsCCmd )
+		PrintFast( msg.c_str() );
+
+	PrintFast( "--------------------------------------\n" );
+}
+
+
+// IDEA: later when you add in ConVar flags and descriptions, make a findex cmd that you can choose specific parts to search
+// like only desc, or only name, or both, and probably the rest of the args for flag searching
+// and if search string is empty but flags isn't, just list all for those flags
+CONCMD( find )
+{
+	if ( args.size() == 0 )
+	{
+		PrintFast( "Search if cvar name contains any of the search arguments\n" );
+		return;
+	}
+
+	CmdFind( false, args );
+}
+
+CONCMD( findand )
+{
+	if ( args.size() == 0 )
+	{
+		PrintFast( "Search if cvar name contains all of the search arguments\n" );
+		return;
+	}
+
+	CmdFind( true, args );
+}
+
+
 // ================================================================================
+
+
+void Console::AddToBuffer( const std::string& buffer )
+{
+	aConsoleHistory.push_back( buffer );
+}
 
 void Console::ReadConfig( const std::string& name )
 {
@@ -483,15 +577,15 @@ void Console::PrintAllConVars(  )
 		cvar = cvar->apNext;
 	}
 
-	Print( "\nConVars:\n--------------------------------------\n" );
+	PrintFast( "\nConVars:\n--------------------------------------\n" );
 	for ( const auto& msg : ConVarMsgs )
-		Print( msg.c_str() );
+		PrintFast( msg.c_str() );
 
-	Print( "\nConCommands:\n--------------------------------------\n" );
+	PrintFast( "\nConCommands:\n--------------------------------------\n" );
 	for ( const auto& msg : ConCommandMsgs )
-		Print( msg.c_str() );
+		PrintFast( msg.c_str() );
 
-	Print( "--------------------------------------\n" );
+	PrintFast( "--------------------------------------\n" );
 }
 
 

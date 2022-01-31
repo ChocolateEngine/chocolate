@@ -22,6 +22,7 @@ Declares the sdfhuosdfhuiosdfhusdfhuisfhu
 
 
 void CORE_API Print( const char* str, ... );
+void CORE_API PrintFast( const char* str );
 
 
 typedef std::function< void( std::vector< std::string > args ) > ConVarFunc;
@@ -45,11 +46,11 @@ public:
 	friend class ConVarRef;
 	friend class Console;
 
-private:
-	std::string             aName;
+	static ConVarBase*      spConVarBases;
 	ConVarBase*             apNext = nullptr;
 
-	static ConVarBase*      spConVarBases;
+private:
+	std::string             aName;
 };
 
 
@@ -303,6 +304,8 @@ protected:
 	void                                AddToHistory( const std::string& str );
 
 public:
+
+	void                                AddToBuffer( const std::string& str );
 
 	/* Register all the ConCommands and ConVars created from static initialization.  */
 	void                                RegisterConVars(  );
