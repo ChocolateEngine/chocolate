@@ -109,3 +109,15 @@ inline float Round( float val, size_t precision = 100 )
 }
 
 
+// temp until speedykeyv can parse lists
+std::vector< std::string >	KV_GetVec( const std::string& value );
+
+std::vector< int >          KV_GetVecInt( const std::string& value );
+std::vector< float >        KV_GetVecFloat( const std::string& value );
+
+glm::vec2                   KV_GetVec2( const std::string& value, const glm::vec2& fallback = {} );
+glm::vec3                   KV_GetVec3( const std::string& value, const glm::vec3& fallback = {} );
+glm::vec4                   KV_GetVec4( const std::string& value, const glm::vec4& fallback = {} );
+
+
+

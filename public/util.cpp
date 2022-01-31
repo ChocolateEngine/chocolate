@@ -1,3 +1,4 @@
+#include "core/console.h"
 #include "util.h"
 
 #include <stdarg.h>
@@ -174,4 +175,200 @@ std::string ToString( float value )
 	return oss.str();
 }
 
+
+// temp until speedykeyv can parse lists
+std::vector< std::string > KV_GetVec( const std::string& value )
+{
+	if ( value.empty() )
+		return {};
+
+	if ( value.size() == 1 || value[0] != '[' )
+	{
+		Print( "[KV] Error: not a list: %s\n", value.c_str() );
+		return {};
+	}
+
+	std::vector< std::string > strVec;
+
+	std::string curVal;
+	bool inQuote = false;
+
+	for ( int i = 1; i < value.size(); i++ )
+	{
+		char ch = value[i];
+
+		if ( !inQuote )
+		{
+			if ( ch == ']' )
+			{
+				if ( curVal.size() )
+					strVec.push_back( curVal );
+
+				break;
+			}
+
+			else if ( ch == ' ' || ch == ',' )
+			{
+				if ( curVal.size() )
+				{
+					strVec.push_back( curVal );
+					curVal = "";
+				}
+
+				continue;
+			}
+		}
+
+		curVal += ch;
+	}
+
+	return strVec;
+}
+
+
+std::vector< int > KV_GetVecInt( const std::string& value )
+{
+	std::vector< std::string > strVec = KV_GetVec( value );
+	if ( strVec.empty() )
+		return {};
+
+	std::vector< int > vec;
+
+	for ( auto strVal: strVec )
+	{
+		long val = 0;
+		if ( !ToLong2( strVal, val ) )
+		{
+			Print( "[KV] Warning: Failed to convert to long: %s - From %s\n", value.c_str() );
+			return {};
+		}
+
+		vec.push_back(val);
+	}
+
+	return vec;
+}
+
+
+std::vector< float > KV_GetVecFloat( const std::string& value )
+{
+	std::vector< std::string > strVec = KV_GetVec( value );
+	if ( strVec.empty() )
+		return {};
+
+	std::vector< float > vec;
+
+	for ( auto strVal: strVec )
+	{
+		double val = 0;
+		if ( !ToDouble2( strVal, val ) )
+		{
+			Print( "[KV] Warning: Failed to convert to double: %s - From %s\n", value.c_str() );
+			return {};
+		}
+
+		vec.push_back(val);
+	}
+
+	return vec;
+}
+
+
+glm::vec2 KV_GetVec2( const std::string& value, const glm::vec2& fallback )
+{
+	std::vector< std::string > strVec = KV_GetVec( value );
+	if ( strVec.empty() )
+		return fallback;
+
+	glm::vec3 vec{};
+	int i = 0;
+	while ( i < strVec.size() )
+	{
+		double val = 0;
+		if ( !ToDouble2( strVec[i], val ) )
+		{
+			Print( "[KV] Warning: Failed to convert to double: %s - From %s\n", value.c_str() );
+			return fallback;
+		}
+
+		vec[i] = val;
+
+		if ( ++i == 3 )
+			break;
+	}
+
+	if ( i < 3 )
+	{
+		Print( "[KV] Warning: List does contains less or more than 2 values: %s\n", value.c_str() );
+		return fallback;
+	}
+
+	return vec;
+}
+
+
+glm::vec3 KV_GetVec3( const std::string& value, const glm::vec3& fallback )
+{
+	std::vector< std::string > strVec = KV_GetVec( value );
+	if ( strVec.empty() )
+		return fallback;
+
+	glm::vec3 vec{};
+	int i = 0;
+	while ( i < strVec.size() )
+	{
+		double val = 0;
+		if ( !ToDouble2( strVec[i], val ) )
+		{
+			Print( "[KV] Warning: Failed to convert to double: %s - From %s\n", value.c_str() );
+			return fallback;
+		}
+
+		vec[i] = val;
+
+		if ( ++i == 3 )
+			break;
+	}
+
+	if ( i < 3 )
+	{
+		Print( "[KV] Warning: List does contains less or more than 3 values: %s\n", value.c_str() );
+		return fallback;
+	}
+
+	return vec;
+}
+
+
+glm::vec4 KV_GetVec4( const std::string& value, const glm::vec4& fallback )
+{
+	std::vector< std::string > strVec = KV_GetVec( value );
+	if ( strVec.empty() )
+		return fallback;
+
+	glm::vec4 vec{};
+	int i = 0;
+	while ( i < strVec.size() )
+	{
+		double val = 0;
+		if ( !ToDouble2( strVec[i], val ) )
+		{
+			Print( "[KV] Warning: Failed to convert to double: %s - From %s\n", value.c_str() );
+			return fallback;
+		}
+
+		vec[i] = val;
+
+		if ( ++i == 4 )
+			break;
+	}
+
+	if ( i < 4 )
+	{
+		Print( "[KV] Warning: List does contains less or more than 4 values: %s\n", value.c_str() );
+		return fallback;
+	}
+
+	return vec;
+}
 
