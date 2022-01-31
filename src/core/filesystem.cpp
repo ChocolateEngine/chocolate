@@ -97,7 +97,7 @@ void FileSystem::DefaultSearchPaths(  )
 
 void FileSystem::AddSearchPath( const std::string& path )
 {
-	aSearchPaths.push_back( CleanPath( path ) );
+	aSearchPaths.push_back( path );
 }
 
 void FileSystem::RemoveSearchPath( const std::string& path )
@@ -241,7 +241,7 @@ bool FileSystem::Exists( const std::string &path, bool noPaths )
     if ( noPaths || IsAbsolute( path ) )
         return (access( path.c_str(), 0 ) != -1);
     else
-        return (access( FindFile(path).c_str(), 0 ) != -1);
+        return (access( path.c_str(), 0 ) != -1);
 }
 
 int FileSystem::Access( const std::string &path, int mode )
