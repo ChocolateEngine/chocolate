@@ -42,7 +42,13 @@ TextureDescriptor* STBITextureLoader::LoadTexture( const std::string path )
 
 	if ( !pPixels )
 	{
-		Print( "Failed to open texture: %s\n", path.c_str(  ) );
+		// This texture loader handles missing texture creation, i know, awful right?
+		if ( matsys->GetMissingTexture() )
+		{
+			Print( "Failed to open texture: %s\n", path.c_str() );
+			return matsys->GetMissingTexture();
+		}
+
 		texWidth 			= gMissingTextureWidth;
 		texHeight 			= gMissingTextureHeight;
 		pPixels				= ( stbi_uc* )gpMissingTexture;

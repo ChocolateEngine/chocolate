@@ -76,7 +76,7 @@ struct push_constant_t
 struct vertex_3d_t
 {
 	glm::vec3 pos{};
-	glm::vec3 color{};  // this probably isn't needed anymore, right?
+	glm::vec3 color{};
 	glm::vec2 texCoord{};
 	glm::vec3 normal{};
 	
@@ -84,6 +84,80 @@ struct vertex_3d_t
 	{
 		//return pos == other.pos && color == other.color && texCoord == other.texCoord && normal == other.normal;
 		return pos == other.pos && texCoord == other.texCoord && normal == other.normal;
+	}
+
+	static inline VkVertexInputBindingDescription GetBindingDesc()
+	{
+		VkVertexInputBindingDescription bindingDescription{};
+		bindingDescription.binding = 0;
+		bindingDescription.stride = sizeof( vertex_3d_t );
+		bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+
+		return bindingDescription;
+	}
+
+	static inline std::array< VkVertexInputAttributeDescription, 4 > GetAttributeDesc()
+	{
+		std::array< VkVertexInputAttributeDescription, 4 >attributeDescriptions{  };
+		attributeDescriptions[0].binding = 0;
+		attributeDescriptions[0].location = 0;
+		attributeDescriptions[0].format = VK_FORMAT_R32G32B32_SFLOAT;
+		attributeDescriptions[0].offset = offsetof( vertex_3d_t, pos );
+
+		attributeDescriptions[1].binding = 0;
+		attributeDescriptions[1].location = 1;
+		attributeDescriptions[1].format = VK_FORMAT_R32G32B32_SFLOAT;
+		attributeDescriptions[1].offset = offsetof( vertex_3d_t, color );
+
+		attributeDescriptions[2].binding = 0;
+		attributeDescriptions[2].location = 2;
+		attributeDescriptions[2].format = VK_FORMAT_R32G32_SFLOAT;
+		attributeDescriptions[2].offset = offsetof( vertex_3d_t, texCoord );
+
+		attributeDescriptions[3].binding = 0;
+		attributeDescriptions[3].location = 3;
+		attributeDescriptions[3].format = VK_FORMAT_R32G32B32_SFLOAT;
+		attributeDescriptions[3].offset = offsetof( vertex_3d_t, normal );
+
+		return attributeDescriptions;
+	}
+};
+
+// TODO: have models made with the debug shader use this when i improve meshes
+struct vertex_line_3d_t
+{
+	glm::vec3 pos{};
+	glm::vec3 color{};
+	
+	bool operator==( const vertex_3d_t& other ) const
+	{
+		return pos == other.pos && color == other.color;
+	}
+
+	static inline VkVertexInputBindingDescription GetBindingDesc()
+	{
+		VkVertexInputBindingDescription bindingDescription{};
+		bindingDescription.binding = 0;
+		bindingDescription.stride = sizeof( vertex_line_3d_t );
+		bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+
+		return bindingDescription;
+	}
+
+	static inline std::array< VkVertexInputAttributeDescription, 2 > GetAttributeDesc()
+	{
+		std::array< VkVertexInputAttributeDescription, 2 >attributeDescriptions{  };
+		attributeDescriptions[0].binding = 0;
+		attributeDescriptions[0].location = 0;
+		attributeDescriptions[0].format = VK_FORMAT_R32G32B32_SFLOAT;
+		attributeDescriptions[0].offset = offsetof( vertex_line_3d_t, pos );
+
+		attributeDescriptions[1].binding = 0;
+		attributeDescriptions[1].location = 1;
+		attributeDescriptions[1].format = VK_FORMAT_R32G32B32_SFLOAT;
+		attributeDescriptions[1].offset = offsetof( vertex_line_3d_t, color );
+
+		return attributeDescriptions;
 	}
 };
 
@@ -96,6 +170,37 @@ struct vertex_2d_t
 	bool operator==( const vertex_2d_t& other ) const
 	{
 		return pos == other.pos && color == other.color && texCoord == other.texCoord;
+	}
+
+	static inline VkVertexInputBindingDescription GetBindingDesc()
+	{
+		VkVertexInputBindingDescription bindingDescription{};
+		bindingDescription.binding = 0;
+		bindingDescription.stride = sizeof( vertex_2d_t );
+		bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+
+		return bindingDescription;
+	}
+
+	static inline std::array< VkVertexInputAttributeDescription, 3 > GetAttributeDesc()
+	{
+		std::array< VkVertexInputAttributeDescription, 3 >attributeDescriptions{  };
+		attributeDescriptions[0].binding = 0;
+		attributeDescriptions[0].location = 0;
+		attributeDescriptions[0].format = VK_FORMAT_R32G32_SFLOAT;
+		attributeDescriptions[0].offset = offsetof( vertex_2d_t, pos );
+
+		attributeDescriptions[1].binding = 0;
+		attributeDescriptions[1].location = 1;
+		attributeDescriptions[1].format = VK_FORMAT_R32G32B32_SFLOAT;
+		attributeDescriptions[1].offset = offsetof( vertex_2d_t, color );
+
+		attributeDescriptions[2].binding = 0;
+		attributeDescriptions[2].location = 2;
+		attributeDescriptions[2].format = VK_FORMAT_R32G32_SFLOAT;
+		attributeDescriptions[2].offset = offsetof( vertex_2d_t, texCoord );
+
+		return attributeDescriptions;
 	}
 };
 
@@ -122,11 +227,6 @@ namespace std	//	Black magic!! don't touch!!!!
 		}
 	};
 }
-
-struct ubo_3d_t
-{
-	glm::mat4 model, view, proj;
-};
 
 struct ubo_2d_t
 {

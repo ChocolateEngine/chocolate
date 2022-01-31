@@ -43,5 +43,5 @@ void BaseShader::CreateDescriptorSetLayout(  )
 
 	aLayouts.Allocate( 1 );
 
-        aLayouts[0] = matsys->aImageLayout;
+	aLayouts[0] = matsys->aImageLayout;
 }

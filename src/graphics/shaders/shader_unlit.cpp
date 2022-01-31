@@ -21,9 +21,9 @@ constexpr const char *pVShader = "shaders/unlit.vert.spv";
 constexpr const char *pFShader = "shaders/unlit.frag.spv";
 
 
-struct UnlitArrayPushConstant
+struct UnlitPushConstant
 {
-        alignas( 16 )glm::mat4 trans;
+	alignas( 16 )glm::mat4 trans;
 	alignas( 16 )int       index;
 };
 
@@ -65,7 +65,7 @@ std::vector<VkDescriptorSetLayoutBinding> ShaderUnlit::GetDescriptorSetLayoutBin
 
 void ShaderUnlit::CreateGraphicsPipeline(  )
 {
-	aPipelineLayout = InitPipelineLayouts( aLayouts.GetBuffer(  ), aLayouts.GetSize(  ), sizeof( UnlitArrayPushConstant ) );
+	aPipelineLayout = InitPipelineLayouts( aLayouts.GetBuffer(  ), aLayouts.GetSize(  ), sizeof( UnlitPushConstant ) );
 
 	VkPipelineShaderStageCreateInfo vertShaderStageInfo{  };
 	vertShaderStageInfo.sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;	//	Tells Vulkan which stage the shader is going to be used
@@ -266,11 +266,11 @@ void ShaderUnlit::Draw( BaseRenderable* renderable, VkCommandBuffer c, uint32_t 
 	// Now draw it
 	vkCmdBindPipeline( c, VK_PIPELINE_BIND_POINT_GRAPHICS, aPipeline );
 	
-	UnlitArrayPushConstant p = {renderer->aView.projViewMatrix * mesh->GetModelMatrix(), diffuse};
+	UnlitPushConstant p = {renderer->aView.projViewMatrix * mesh->GetModelMatrix(), diffuse};
 
 	vkCmdPushConstants(
 		c, aPipelineLayout, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
-		0, sizeof( UnlitArrayPushConstant ), &p
+		0, sizeof( UnlitPushConstant ), &p
 	);
 
 	VkDescriptorSet sets[  ] = {

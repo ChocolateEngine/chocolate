@@ -77,6 +77,9 @@ public:
 	/* Get Error Material */
 	virtual IMaterial*	                GetErrorMaterial( const std::string& shader ) = 0;
 
+	/* Get Error Texture */
+	virtual Texture*                    GetMissingTexture() = 0;
+
 	// ideally this shouldn't need a path, should really be reworked to be closer to thermite, more flexible design
 	// also this probably shouldn't use a Material for a parameter, but it's needed right now
 	// Creates a texture if it doesn't exist yet

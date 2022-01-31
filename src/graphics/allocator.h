@@ -99,14 +99,14 @@ TextureDescriptor       *InitTexture( const String &srImagePath, VkDescriptorSet
 template< typename T >
 void 	        	InitTexBuffer( const std::vector< T > &srData, VkBuffer &srBuffer, VkDeviceMemory &srBufferMem, VkBufferUsageFlags sUsage );
 /* A.  */
-void 			InitUniformBuffers( DataBuffer< VkBuffer > &srUBuffers, DataBuffer< VkDeviceMemory > &srUBuffersMem );
+void 			InitUniformBuffers( DataBuffer< VkBuffer > &srUBuffers, DataBuffer< VkDeviceMemory > &srUBuffersMem, size_t uboSize );
 /* A.  */
 void 			InitDescriptorSets( DataBuffer< VkDescriptorSet > &srDescSets, VkDescriptorSetLayout &srDescSetLayout,
-					    VkDescriptorPool &srDescPool, ImageInfoSets sDescImageInfos, BufferInfoSets sDescBufferInfos );
+					    ImageInfoSets sDescImageInfos, BufferInfoSets sDescBufferInfos );
 void                    UpdateImageSets( std::vector< VkDescriptorSet > &srSets, VkDescriptorSetLayout &srLayout,
 					 VkDescriptorPool &srPool, std::vector< TextureDescriptor* > &srImages, VkSampler &srSampler );
 /* Initializes the uniform data, such as uniform buffers.  */
-void			InitUniformData( UniformDescriptor &srDescriptor, VkDescriptorSetLayout sLayout );
+void			InitUniformData( UniformDescriptor &srDescriptor, VkDescriptorSetLayout sLayout, unsigned int uboSize );
 /* A.  */
 void 			InitImageViews( ImageViews &srSwapChainImageViews );
 /* A.  */

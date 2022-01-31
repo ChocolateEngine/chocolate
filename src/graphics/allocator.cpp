@@ -237,9 +237,9 @@ void InitTexBuffer( const std::vector< T > &srData, VkBuffer &srBuffer, VkDevice
         vkFreeMemory( DEVICE, stagingBufferMemory, NULL );
 }
 
-void InitUniformBuffers( DataBuffer< VkBuffer > &srUBuffers, DataBuffer< VkDeviceMemory > &srUBuffersMem )
+void InitUniformBuffers( DataBuffer< VkBuffer > &srUBuffers, DataBuffer< VkDeviceMemory > &srUBuffersMem, size_t uboSize )
 {
-	VkDeviceSize bufferSize = sizeof( ubo_3d_t );
+	VkDeviceSize bufferSize = uboSize;
 		
 	srUBuffers.Allocate( PSWAPCHAIN.GetImages(  ).size(  ) );
 	srUBuffersMem.Allocate( PSWAPCHAIN.GetImages(  ).size(  ) );
@@ -249,10 +249,11 @@ void InitUniformBuffers( DataBuffer< VkBuffer > &srUBuffers, DataBuffer< VkDevic
 			    srUBuffers.GetBuffer(  )[ i ], srUBuffersMem.GetBuffer(  )[ i ] );
 }
 
-void InitDescriptorSets( DataBuffer< VkDescriptorSet > &srDescSets, VkDescriptorSetLayout &srDescSetLayout, VkDescriptorPool &srDescPool,
+// Still needed for uniform buffers for now
+void InitDescriptorSets( DataBuffer< VkDescriptorSet > &srDescSets, VkDescriptorSetLayout &srDescSetLayout,
 			 ImageInfoSets sDescImageInfos, BufferInfoSets sDescBufferInfos )
 {
-	/*std::vector< VkDescriptorSetLayout > 	layouts( PSWAPCHAIN.GetImages(  ).size(  ), srDescSetLayout );
+	std::vector< VkDescriptorSetLayout > 	layouts( PSWAPCHAIN.GetImages(  ).size(  ), srDescSetLayout );
 	std::vector< VkWriteDescriptorSet > 	descriptorWrites{  };
 	VkDescriptorSetAllocateInfo 		allocInfo{  };
 	allocInfo.sType 		= VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
@@ -282,7 +283,7 @@ void InitDescriptorSets( DataBuffer< VkDescriptorSet > &srDescSets, VkDescriptor
 			++bindingCount;
 		}
 		vkUpdateDescriptorSets( DEVICE, ( uint32_t )descriptorWrites.size(  ), descriptorWrites.data(  ), 0, NULL );
-		}*/
+	}
 }
 void UpdateImageSets( std::vector< VkDescriptorSet > &srSets, VkDescriptorSetLayout &srLayout, VkDescriptorPool &srPool, std::vector< TextureDescriptor* > &srImages, VkSampler &srSampler ) {
 	if ( !srImages.size() )
@@ -357,11 +358,17 @@ TextureDescriptor *InitTexture( const String &srImagePath, VkDescriptorSetLayout
 }
 
 /* Initializes the uniform data, such as uniform buffers.  */
-void InitUniformData( UniformDescriptor &srDescriptor, VkDescriptorSetLayout sLayout )
+void InitUniformData( UniformDescriptor &srDescriptor, VkDescriptorSetLayout sLayout, unsigned int uboSize )
 {
-	InitUniformBuffers( srDescriptor.aData, srDescriptor.aMem );
-	InitDescriptorSets( srDescriptor.aSets, sLayout, *gpPool, {  },
-			    { { { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, srDescriptor.aData.GetBuffer(  ), sizeof( ubo_3d_t ) } } } );
+	InitUniformBuffers( srDescriptor.aData, srDescriptor.aMem, uboSize );
+
+	InitDescriptorSets( srDescriptor.aSets, sLayout, {},
+		{{{
+			VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+			srDescriptor.aData.GetBuffer(),
+			(unsigned int)uboSize
+		}}}
+	);
 }
 
 void InitImageViews( ImageViews &srSwapChainImageViews )

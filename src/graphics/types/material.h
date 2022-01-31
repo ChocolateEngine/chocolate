@@ -31,17 +31,16 @@ public:
 	std::string         GetShaderName(  ) override { return apShader->aName; }
 
 	MaterialVar        *GetVar( const std::string &name ) override;
-	MaterialVar        *AddVar( MaterialVar* var ) override;
 	
 	template <typename T>
-	MaterialVar        *AddVarInternal( const std::string &name, const std::string &raw, T data );
+	MaterialVar        *CreateVar( const std::string &name, T data );
 
-	MaterialVar        *AddVar( const std::string &name, const std::string &raw, Texture *data ) override;
-	MaterialVar        *AddVar( const std::string &name, const std::string &raw, float data ) override;
-	MaterialVar        *AddVar( const std::string &name, const std::string &raw, int data ) override;
-	MaterialVar        *AddVar( const std::string &name, const std::string &raw, const glm::vec2 &data ) override;
-	MaterialVar        *AddVar( const std::string &name, const std::string &raw, const glm::vec3 &data ) override;
-	MaterialVar        *AddVar( const std::string &name, const std::string &raw, const glm::vec4 &data ) override;
+	void                SetVar( const std::string &name, Texture *data ) override;
+	void                SetVar( const std::string &name, float data ) override;
+	void                SetVar( const std::string &name, int data ) override;
+	void                SetVar( const std::string &name, const glm::vec2 &data ) override;
+	void                SetVar( const std::string &name, const glm::vec3 &data ) override;
+	void                SetVar( const std::string &name, const glm::vec4 &data ) override;
 
 	Texture            *GetTexture( const std::string &name, Texture *fallback = nullptr ) override;
 	float               GetFloat( const std::string &name, float fallback = 0.f ) override;
@@ -51,9 +50,7 @@ public:
 	glm::vec4           GetVec4( const std::string &name, glm::vec4 fallback = {} ) override;
 
 	std::string                 aName;
-
 	BaseShader*                 apShader = nullptr;
-
-	std::vector< MaterialVar * > aVars;
+	std::vector< MaterialVar* > aVars;
 };
 

@@ -21,6 +21,28 @@ constexpr const char *pVShader = "shaders/basic3d.vert.spv";
 constexpr const char *pFShader = "shaders/basic3d.frag.spv";
 
 
+struct Basic3D_PushConst
+{
+	glm::mat4 projView;
+	glm::mat4 model;
+};
+
+
+struct Basic3D_UBO
+{
+	int diffuse, ao, emissive;
+	float aoPower, emissivePower;
+};
+
+
+// KTX fails to load this and i don't feel like figuring out why right now
+constexpr const char* gFallbackEmissivePath = "materials/base/black.png";
+constexpr const char* gFallbackAOPath = "materials/base/white.png";
+
+Texture* gFallbackEmissive = nullptr;
+Texture* gFallbackAO = nullptr;
+
+
 void Basic3D::Init()
 {
 	aModules.Allocate(2);
@@ -33,6 +55,9 @@ void Basic3D::Init()
 	
 	// other thing for range only
 	// AddRangeParameter<TextureDescriptor*>( "MainTexture", DEFAULT_TYPE );
+
+	gFallbackEmissive = matsys->CreateTexture( gFallbackEmissivePath );
+	gFallbackAO       = matsys->CreateTexture( gFallbackAOPath );
 
 	BaseShader::Init();
 }
@@ -47,20 +72,24 @@ void Basic3D::ReInit()
 }
 
 
+void Basic3D::CreateDescriptorSetLayout()
+{
+	aLayouts.Allocate( 2 );
+	aLayouts[0] = InitDescriptorSetLayout( DescriptorLayoutBinding( VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr ) );
+	aLayouts[1] = matsys->aImageLayout;
+}
+
+
+// this is stupid
 std::vector<VkDescriptorSetLayoutBinding> Basic3D::GetDescriptorSetLayoutBindings(  )
 {
-	return {
-		DescriptorLayoutBinding( VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_VERTEX_BIT, nullptr ),
-		DescriptorLayoutBinding( VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr ),  // diffuse
-		DescriptorLayoutBinding( VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr ),  // emission
-		DescriptorLayoutBinding( VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr ),  // ao
-	};
+	return {};
 }
 
 
 void Basic3D::CreateGraphicsPipeline(  )
 {
-	aPipelineLayout = InitPipelineLayouts( aLayouts.GetBuffer(  ), aLayouts.GetSize(  ), sizeof( push_constant_t ) );
+	aPipelineLayout = InitPipelineLayouts( aLayouts.GetBuffer(  ), aLayouts.GetSize(  ), sizeof( Basic3D_PushConst ) );
 
 	VkPipelineShaderStageCreateInfo vertShaderStageInfo{  };
 	vertShaderStageInfo.sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;	//	Tells Vulkan which stage the shader is going to be used
@@ -79,8 +108,8 @@ void Basic3D::CreateGraphicsPipeline(  )
 	pShaderStages[ 0 ] = vertShaderStageInfo;
 	pShaderStages[ 1 ] = fragShaderStageInfo;
 
-	auto attributeDescriptions 	= GetAttributeDesc(  );
-	auto bindingDescription 	= GetBindingDesc(  );      
+	auto attributeDescriptions 	= vertex_3d_t::GetAttributeDesc(  );
+	auto bindingDescription 	= vertex_3d_t::GetBindingDesc(  );
 
 	VkPipelineVertexInputStateCreateInfo vertexInputInfo{  };	//	Format of vertex data
 	vertexInputInfo.sType 				= VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
@@ -199,19 +228,40 @@ void Basic3D::CreateGraphicsPipeline(  )
 }
 
 
+void Basic3D::InitUniformBuffer( IMesh* mesh )
+{
+	matsys->aUniformLayoutMap[mesh->GetID()] = InitDescriptorSetLayout( {{ DescriptorLayoutBinding( VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, NULL ) }} );
+
+	matsys->aUniformDataMap[mesh->GetID()] = UniformDescriptor{};
+
+	InitUniformData( matsys->aUniformDataMap[mesh->GetID()], matsys->aUniformLayoutMap[mesh->GetID()], sizeof( Basic3D_UBO ) );
+}
+
+
+// TODO: only update this during init or swapchain recreation if needed
 void Basic3D::UpdateBuffers( uint32_t sCurrentImage, BaseRenderable* spRenderable )
 {
-	ubo_3d_t ubo{  };
+#if 0
+	static char init = 0;
+	if ( init == 2 )
+		return;
 
-	IMesh* mesh = dynamic_cast<IMesh*>(spRenderable);
-	assert(mesh != nullptr);
+	init++;
+#endif
 
-	ubo.model = mesh->GetModelMatrix(  );
-	ubo.view  = renderer->aView.viewMatrix;
-	ubo.proj  = renderer->aView.GetProjection(  );
+	Basic3D_UBO ubo { };
 
-	auto& uniformData = materialsystem->GetUniformData( spRenderable->GetID() );
-	auto& uniformDataMem = materialsystem->GetUniformData( spRenderable->GetID() ).aMem[ sCurrentImage ];
+	auto mat = spRenderable->apMaterial;
+
+	ubo.diffuse         = matsys->GetTextureId( mat->GetTexture( "diffuse" ) );
+	ubo.emissive        = matsys->GetTextureId( mat->GetTexture( "emissive", gFallbackEmissive ) );
+	ubo.ao              = matsys->GetTextureId( mat->GetTexture( "ao", gFallbackAO ) );
+
+	ubo.aoPower         = mat->GetFloat( "ao_power", 1.f );
+	ubo.emissivePower   = mat->GetFloat( "emissive_power", 1.f );
+
+	auto& uniformData = matsys->GetUniformData( spRenderable->GetID() );
+	auto& uniformDataMem = uniformData.aMem[ sCurrentImage ];
 
 	void* data;
 	vkMapMemory( DEVICE, uniformDataMem, 0, sizeof( ubo ), 0, &data );
@@ -220,67 +270,12 @@ void Basic3D::UpdateBuffers( uint32_t sCurrentImage, BaseRenderable* spRenderabl
 }
 
 
-VkVertexInputBindingDescription Basic3D::GetBindingDesc(  )
-{
-	VkVertexInputBindingDescription bindingDescription{};
-	bindingDescription.binding = 0;
-	bindingDescription.stride = sizeof( vertex_3d_t );
-	bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
-
-	return bindingDescription;
-}
-
-
-std::array< VkVertexInputAttributeDescription, 4 > Basic3D::GetAttributeDesc(  )
-{
-	std::array< VkVertexInputAttributeDescription, 4 >attributeDescriptions{  };
-	attributeDescriptions[ 0 ].binding  = 0;
-	attributeDescriptions[ 0 ].location = 0;
-	attributeDescriptions[ 0 ].format   = VK_FORMAT_R32G32B32_SFLOAT;
-	attributeDescriptions[ 0 ].offset   = offsetof( vertex_3d_t, pos );
-
-	attributeDescriptions[ 1 ].binding  = 0;
-	attributeDescriptions[ 1 ].location = 1;
-	attributeDescriptions[ 1 ].format   = VK_FORMAT_R32G32B32_SFLOAT;
-	attributeDescriptions[ 1 ].offset   = offsetof( vertex_3d_t, color );
-
-	attributeDescriptions[ 2 ].binding  = 0;
-	attributeDescriptions[ 2 ].location = 2;
-	attributeDescriptions[ 2 ].format   = VK_FORMAT_R32G32_SFLOAT;
-	attributeDescriptions[ 2 ].offset   = offsetof( vertex_3d_t, texCoord );
-
-	attributeDescriptions[ 3 ].binding  = 0;
-	attributeDescriptions[ 3 ].location = 3;
-	attributeDescriptions[ 3 ].format   = VK_FORMAT_R32G32B32_SFLOAT;
-	attributeDescriptions[ 3 ].offset   = offsetof( vertex_3d_t, normal );
-
-	return attributeDescriptions;
-}
-
-
-// KTX fails to load this and i don't feel like figuring out why right now
-constexpr const char* gFallbackEmissive = "materials/base/black.png";
-constexpr const char* gFallbackAO = "materials/base/white.png";
-
-
-void Basic3D::Draw( BaseRenderable* renderable, VkCommandBuffer c, uint32_t commandBufferIndex )
+void Basic3D::Draw( BaseRenderable* renderable, VkCommandBuffer c, uint32_t i )
 {
 	// why did i do this, remove this ASAP
 	IMesh* mesh = static_cast<IMesh*>(renderable);
 
 	assert(mesh != nullptr);
-
-	int diffuse = matsys->GetTextureId( mesh->apMaterial->GetTexture( "diffuse" ) );
-
-	int emissive = matsys->GetTextureId( mesh->apMaterial->GetTexture( "emissive" ) );
-	if ( emissive == 0 )
-		emissive = matsys->GetTextureId( materialsystem->CreateTexture( gFallbackEmissive ) );
-
-	int ao = matsys->GetTextureId( mesh->apMaterial->GetTexture( "ao" ) );
-	if ( ao == 0 )
-		ao = matsys->GetTextureId( materialsystem->CreateTexture( gFallbackAO ) );
-
-	// float aoPower = mesh->apMaterial->GetFloat( "ao_power", 1.f );
 
 	// Bind the mesh's vertex and index buffers
 	VkBuffer 	vBuffers[  ] 	= { mesh->aVertexBuffer };
@@ -293,17 +288,22 @@ void Basic3D::Draw( BaseRenderable* renderable, VkCommandBuffer c, uint32_t comm
 	// Now draw it
 	vkCmdBindPipeline( c, VK_PIPELINE_BIND_POINT_GRAPHICS, aPipeline );
 
-	UniformDescriptor& uniformData = materialsystem->GetUniformData( mesh->GetID() );
+	Basic3D_PushConst p = {renderer->aView.projViewMatrix, mesh->GetModelMatrix()};
+
+	// we don't need this in the fragment shader aaaa
+	vkCmdPushConstants(
+		c, aPipelineLayout, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
+		0, sizeof( Basic3D_PushConst ), &p
+	);
+
+	UniformDescriptor& uniformData = matsys->GetUniformData( mesh->GetID() );
 
 	VkDescriptorSet sets[  ] = {
-		/*uniformData.aSets[ commandBufferIndex ],
-		diffuse->aSets[ commandBufferIndex ],
-		emissive->aSets[ commandBufferIndex ],
-		ao->aSets[ commandBufferIndex ],*/
-		0
+		uniformData.aSets[i],
+		matsys->aImageSets[i],
 	};
 
-	vkCmdBindDescriptorSets( c, VK_PIPELINE_BIND_POINT_GRAPHICS, aPipelineLayout, 0, 4, sets, 0, NULL );
+	vkCmdBindDescriptorSets( c, VK_PIPELINE_BIND_POINT_GRAPHICS, aPipelineLayout, 0, 2, sets, 0, NULL );
 
 	if ( mesh->aIndexBuffer )
 		vkCmdDrawIndexed( c, (uint32_t)mesh->aIndices.size(), 1, 0, 0, 0 );

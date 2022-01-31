@@ -25,13 +25,11 @@ Maybe the shadersystem could be inside this material system?
 extern size_t gModelDrawCalls;
 extern size_t gVertsDrawn;
 
-MaterialSystem* materialsystem = nullptr;
 MaterialSystem* matsys = nullptr;
 
 
 MaterialSystem::MaterialSystem()
 {
-	materialsystem = this;
 	matsys = this;
 }
 
@@ -43,22 +41,18 @@ void MaterialSystem::Init()
 	aTextureLoaders.push_back( new CTXTextureLoader );
 	aTextureLoaders.push_back( new STBITextureLoader );
 
-        aImageLayout = InitDescriptorSetLayout( DescriptorLayoutBinding( VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1000, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr ) );
+	aImageLayout = InitDescriptorSetLayout( DescriptorLayoutBinding( VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1000, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr ) );
+	// aUniformLayout = InitDescriptorSetLayout( DescriptorLayoutBinding( VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1000, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, nullptr ) );
+
+	// Create Missing Texture
+	apMissingTex = CreateTexture( "" );
 
 	// Setup built in shaders
-	//BaseShader* basic_3d = CreateShader<Basic3D>( "basic_3d" );
-	//BaseShader* basic_2d = CreateShader<Basic2D>( "basic_2d" );
+	BaseShader* basic_3d   = CreateShader<Basic3D>( "basic_3d" );
+	BaseShader* basic_2d   = CreateShader<Basic2D>( "basic_2d" );
 	BaseShader* unlit      = CreateShader<ShaderUnlit>( "unlit" );
 	BaseShader* debug      = CreateShader<ShaderDebug>( "debug" );
 	BaseShader* unlitarray = CreateShader<ShaderUnlitArray>( "unlitarray" );
-
-	// Create Error Material
-	// TODO: move to GetErrorMaterial and make it have a shader name as an input
-	/*apErrorMaterial = (Material*)CreateMaterial();
-	apErrorMaterial->aName = "ERROR";
-	apErrorMaterial->apShader = basic_3d;
-	apErrorMaterial->aDiffusePath = "";
-	apErrorMaterial->apDiffuse = CreateTexture( apErrorMaterial, "" );*/
 }
 
 
@@ -155,16 +149,16 @@ IMaterial* MaterialSystem::ParseMaterial( const std::string &path )
 
 		if ( ToDouble2( kv->value.string, valFloat ) )
 		{
-			mat->AddVar( kv->key.string, kv->value.string, (float)valFloat );
+			mat->SetVar( kv->key.string, (float)valFloat );
 		}
 		else if ( ToLong2( kv->value.string, valInt ) )
 		{
-			mat->AddVar( kv->key.string, kv->value.string, (int)valInt );
+			mat->SetVar( kv->key.string, (int)valInt );
 		}
 		else if ( strncmp(kv->value.string, "", kv->value.length) == 0 )
 		{
 			// empty string case, just an int with 0 as the value, idk
-			mat->AddVar( kv->key.string, kv->value.string, 0 );
+			mat->SetVar( kv->key.string, 0 );
 		}
 
 		// TODO: check if a vec and parse it somehow
@@ -177,25 +171,32 @@ IMaterial* MaterialSystem::ParseMaterial( const std::string &path )
 			if ( !texPath.ends_with( ".ktx" ) )
 				texPath += ".ktx";
 
-			if ( !filesys->IsAbsolute( texPath ) && !texPath.starts_with("materials") )
-				texPath = "materials/" + texPath;
-
 			std::string absTexPath = filesys->FindFile( texPath );
 			if ( absTexPath == "" )
 			{
-				Print( "[Graphics] \"%s\":\n\tCan't Find Texture: \"%s\": \"%s\"\n", fullPath.c_str(), kv->key.string, kv->value.string );
-				mat->AddVar( kv->key.string, kv->value.string, CreateTexture( "" ) );
+				if ( !filesys->IsAbsolute( texPath ) && !texPath.starts_with( "materials" ) )
+					texPath = "materials/" + texPath;
+
+				absTexPath = filesys->FindFile( texPath );
 			}
 
-			Texture *texture = CreateTexture( absTexPath );
-			if ( texture != nullptr )
+			if ( absTexPath == "" )
 			{
-				mat->AddVar( kv->key.string, texPath, texture );
+				Print( "[Graphics] \"%s\":\n\tCan't Find Texture: \"%s\": \"%s\"\n", fullPath.c_str(), kv->key.string, kv->value.string );
+				mat->SetVar( kv->key.string, CreateTexture( kv->value.string ) );
 			}
 			else
 			{
-				Print( "[Graphics] \"%s\":n\tUnknown Material Var Type: \"%s\": \"%s\"\n", fullPath.c_str(), kv->key.string, kv->value.string );
-				mat->AddVar( kv->key.string, kv->value.string, 0 );
+				Texture *texture = CreateTexture( absTexPath );
+				if ( texture != nullptr )
+				{
+					mat->SetVar( kv->key.string, texture );
+				}
+				else
+				{
+					Print( "[Graphics] \"%s\":n\tUnknown Material Var Type: \"%s\": \"%s\"\n", fullPath.c_str(), kv->key.string, kv->value.string );
+					mat->SetVar( kv->key.string, 0 );
+				}
 			}
 		}
 
@@ -224,22 +225,19 @@ IMaterial* MaterialSystem::GetErrorMaterial( const std::string& shaderName )
 	Material* mat = (Material*)CreateMaterial();
 	mat->aName = "ERROR_" + shaderName;
 	mat->apShader = shader;
-	mat->AddVar( "diffuse", "", CreateTexture("") );
+	mat->SetVar( "diffuse", apMissingTex );
 
 	aErrorMaterials.push_back( mat );
 	return mat;
 }
 
 
-const char *get_file_ext( const char *filename )
+Texture* MaterialSystem::GetMissingTexture()
 {
-	const char *dot = strrchr(filename, '.');
-	if(!dot || dot == filename) return "";
-	return dot + 1;
+	return apMissingTex;
 }
 
 
-// this really should not have a Material input, it should have a Texture class input, right? idk
 Texture *MaterialSystem::CreateTexture( const std::string &path )
 {
 	// Check if texture was already loaded
@@ -251,29 +249,35 @@ Texture *MaterialSystem::CreateTexture( const std::string &path )
 		return it->second;
 
 	// Not found, so try to load it
-	const char* fileExt = get_file_ext( path.c_str() );
-
 	std::string absPath = filesys->FindFile( path );
-	if ( absPath == "" )
+	if ( absPath == "" && apMissingTex )
 	{
 		Print( "[Graphics] Failed to Find Texture \"%s\"\n", path );
 		return nullptr;
 	}
 
+	std::string fileExt = filesys->GetFileExt( path );
+
 	for ( ITextureLoader* loader: aTextureLoaders )
 	{
-		if ( !loader->CheckExt( fileExt ) )
+		if ( !loader->CheckExt( fileExt.c_str() ) )
 			continue;
 
 		if ( TextureDescriptor* texture = loader->LoadTexture( absPath ) )
 		{
 			aTextures[path] = texture;
+
 			std::vector< TextureDescriptor* > v;
 			v.reserve( aTextures.size() );
+
 			for ( const auto &rTex : aTextures )
 				v.push_back( rTex.second );
 
 			UpdateImageSets( aImageSets, aImageLayout, *gpPool, v, *apSampler );
+
+			// reassign the missing texture id due to order shifting
+			aMissingTexId = GetTextureId( apMissingTex );
+
 			return texture;
 		}
 	}
@@ -293,7 +297,7 @@ int MaterialSystem::GetTextureId( Texture *spTexture )
 			return i;
 		++i;
 	}
-	return 0;
+	return aMissingTexId;
 }
 
 
@@ -370,14 +374,15 @@ BaseShader* MaterialSystem::GetShader( const std::string& name )
 
 void MaterialSystem::InitUniformBuffer( IMesh* mesh )
 {
-	if ( !((Material*)mesh->apMaterial)->apShader->UsesUniformBuffers() )
+	if ( !mesh->apMaterial )
 		return;
 
-	aUniformLayoutMap[ mesh->GetID() ] = InitDescriptorSetLayout( { { DescriptorLayoutBinding( VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_VERTEX_BIT, NULL ) } } );
+	Material* mat = (Material*)mesh->apMaterial;
 
-	aUniformDataMap[ mesh->GetID() ] = UniformDescriptor{};
+	if ( !mat->apShader->UsesUniformBuffers() )
+		return;
 
-	InitUniformData( aUniformDataMap[ mesh->GetID() ], aUniformLayoutMap[ mesh->GetID() ] );
+	mat->apShader->InitUniformBuffer( mesh );
 }
 
 

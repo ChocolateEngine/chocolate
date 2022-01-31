@@ -29,7 +29,6 @@ struct UnlitArrayPushConstant
 };
 
 
-
 void ShaderUnlitArray::Init()
 {
 	aModules.Allocate(2);

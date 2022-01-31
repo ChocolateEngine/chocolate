@@ -43,6 +43,9 @@ public:
 	/* Get Error Material */
 	IMaterial*	                GetErrorMaterial( const std::string& shader ) override;
 
+	/* Get Error Texture */
+	Texture*                    GetMissingTexture() override;
+
 	// ideally this shouldn't need a path, should really be reworked to be closer to thermite, more flexible design
 	// also this probably shouldn't use a shader for a parameter
 	Texture*                    CreateTexture( const std::string &path ) override;
@@ -119,12 +122,13 @@ public:
 
 	VkDescriptorSetLayout       aUniformLayout;
 	Sets                        aUniformSets;
+
+	// TODO: remove this
+	std::unordered_map< size_t, UniformDescriptor >         aUniformDataMap;
+	std::unordered_map< size_t, VkDescriptorSetLayout >     aUniformLayoutMap;
 	
 private:
 	std::unordered_map< std::string, BaseShader* >          aShaders;
-
-	std::unordered_map< size_t, UniformDescriptor >         aUniformDataMap;
-	std::unordered_map< size_t, VkDescriptorSetLayout >     aUniformLayoutMap;
 
 	std::vector< BaseRenderable* >                          aRenderables;
 	std::vector< BaseRenderable* >                          aDrawList;  // REMOVE THIS CRINGE
@@ -134,8 +138,10 @@ private:
 
 	std::vector< ITextureLoader* >                          aTextureLoaders;
 	std::unordered_map< std::string, TextureDescriptor* >   aTextures;
+
+	TextureDescriptor*                                      apMissingTex = nullptr;
+	size_t                                                  aMissingTexId = 0;
 };
 
-extern MaterialSystem* materialsystem;
 extern MaterialSystem* matsys;
 

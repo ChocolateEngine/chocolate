@@ -8,9 +8,13 @@
 VKAPI_ATTR VkBool32 VKAPI_CALL Device::DebugCallback( VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, VkDebugUtilsMessageTypeFlagsEXT messageType,
 					      const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData )
 {
-	static bool dumpVLayers = cmdline->Find( "-dump-vlayers" );
+	static bool dumpVLayers = cmdline->Find( "-dump-vlayers" ) || cmdline->Find( "-vlayers" );
 	if ( dumpVLayers )
-		std::cerr << "\n[Validation Layer] " << pCallbackData->pMessage << "\n\n";
+	{
+		fprintf( stderr, "\n[Validation Layer]%s\n\n", pCallbackData->pMessage );
+
+		// std::cerr << "\n[Validation Layer] " << pCallbackData->pMessage << "\n\n";
+	}
 
 	return VK_FALSE;
 }

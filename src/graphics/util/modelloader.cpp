@@ -19,8 +19,6 @@ Class dedicated for loading models, and caches them too for multiple uses
 
 #include "io/tiny_obj_loader.h"
 
-extern MaterialSystem* materialsystem;
-
 std::string GetBaseDir( const std::string &srPath )
 {
 	if ( srPath.find_last_of( "/\\" ) != std::string::npos )
@@ -63,7 +61,7 @@ void LoadObj( const std::string &srPath, std::vector<Mesh*> &meshes )
 	for (std::size_t i = 0; i < meshes.size(); ++i)
 	{
 		meshes[i] = new Mesh;
-		materialsystem->RegisterRenderable( meshes[i] );
+		matsys->RegisterRenderable( meshes[i] );
 		meshes[i]->apMaterial = nullptr;
 	}
 
@@ -73,7 +71,7 @@ void LoadObj( const std::string &srPath, std::vector<Mesh*> &meshes )
 	{
 		const tinyobj::material_t &objMaterial = objMaterials[i];
 
-		IMaterial* material = materialsystem->FindMaterial( objMaterial.name );
+		IMaterial* material = matsys->FindMaterial( objMaterial.name );
 
 		if ( material == nullptr )
 		{
@@ -83,7 +81,7 @@ void LoadObj( const std::string &srPath, std::vector<Mesh*> &meshes )
 		// fallback if there is no cmt file
 		if ( material == nullptr )
 		{
-			material = materialsystem->CreateMaterial();
+			material = matsys->CreateMaterial();
 			material->aName = objMaterial.name;
 			material->SetShader( "basic_3d" );
 
@@ -96,9 +94,7 @@ void LoadObj( const std::string &srPath, std::vector<Mesh*> &meshes )
 					if ( path.is_relative() )
 						path = baseDir / path;
 
-					int tex = matsys->GetTextureId( materialsystem->CreateTexture( path.string() ) );
-
-					material->AddVar( param, path.string(), tex );
+					material->SetVar( param, matsys->CreateTexture( path.string() ) );
 				}
 			};
 
@@ -108,7 +104,7 @@ void LoadObj( const std::string &srPath, std::vector<Mesh*> &meshes )
 
 		meshes[i]->apMaterial = material;
 		
-		materialsystem->MeshInit( meshes[i] );
+		matsys->MeshInit( meshes[i] );
 	}
 
 	std::unordered_map< vertex_3d_t, uint32_t > vertIndexes;

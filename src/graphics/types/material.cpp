@@ -7,7 +7,7 @@ material.cpp ( Authored by Demez )
 #include "../shaders/shaders.h"
 #include "material.h"
 
-extern MaterialSystem* materialsystem;
+extern MaterialSystem* matsys;
 
 // =========================================================
 
@@ -26,7 +26,7 @@ void Material::Destroy()
 
 bool Material::SetShader( const char* name )
 {
-	return (apShader = materialsystem->GetShader( name ));
+	return (apShader = matsys->GetShader( name ));
 }
 
 
@@ -42,93 +42,47 @@ MaterialVar* Material::GetVar( const std::string &name )
 }
 
 
-MaterialVar *Material::AddVar( MaterialVar *var )
-{
-	aVars.push_back( var );
-	return var;
-}
-
-
 template <typename T>
-MaterialVar* Material::AddVarInternal( const std::string &name, const std::string &raw, T data )
+MaterialVar* Material::CreateVar( const std::string &name, T data )
 {
-	MaterialVar *var = new MaterialVar( name, raw, data );
+	MaterialVar *var = new MaterialVar( name, data );
 	aVars.push_back( var );
 	return var;
 }
 
-MaterialVar *Material::AddVar( const std::string &name, const std::string &raw, Texture *data )
-{
-	return AddVarInternal( name, raw, data );
-}
 
-MaterialVar *Material::AddVar( const std::string &name, const std::string &raw, float data )
-{
-	return AddVarInternal( name, raw, data );
-}
+// below is some compact stuff
 
-MaterialVar *Material::AddVar( const std::string &name, const std::string &raw, int data )
-{
-	return AddVarInternal( name, raw, data );
-}
+#define SET_VAR( func ) \
+	for ( auto var : aVars ) { \
+		if ( var->aName == name ) { \
+			var->func( data ); \
+		} \
+	} \
+	CreateVar( name, data )
 
-MaterialVar *Material::AddVar( const std::string &name, const std::string &raw, const glm::vec2 &data )
-{
-	return AddVarInternal( name, raw, data );
-}
+void Material::SetVar( const std::string &name, Texture *data )           { SET_VAR( SetTexture ); }
+void Material::SetVar( const std::string &name, float data )              { SET_VAR( SetFloat );   }
+void Material::SetVar( const std::string &name, int data )                { SET_VAR( SetInt );     }
+void Material::SetVar( const std::string &name, const glm::vec2 &data )   { SET_VAR( SetVec2 );    }
+void Material::SetVar( const std::string &name, const glm::vec3 &data )   { SET_VAR( SetVec3 );    }
+void Material::SetVar( const std::string &name, const glm::vec4 &data )   { SET_VAR( SetVec4 );    }
 
-MaterialVar *Material::AddVar( const std::string &name, const std::string &raw, const glm::vec3 &data )
-{
-	return AddVarInternal( name, raw, data );
-}
-
-MaterialVar *Material::AddVar( const std::string &name, const std::string &raw, const glm::vec4 &data )
-{
-	return AddVarInternal( name, raw, data );
-}
+#undef SET_VAR
 
 
-#define GET_VAR( name ) \
+#define GET_VAR( func ) \
 	MaterialVar *var = GetVar( name ); \
 	if ( var == nullptr ) \
-		return fallback
+		return fallback; \
+	return var->func( fallback )
 
-
-Texture *Material::GetTexture( const std::string &name, Texture *fallback )
-{
-	GET_VAR( name );
-	return var->GetTexture( fallback );
-}
-
-float Material::GetFloat( const std::string &name, float fallback )
-{
-	GET_VAR( name );
-	return var->GetFloat( fallback );
-}
-
-int Material::GetInt( const std::string &name, int fallback )
-{
-	GET_VAR( name );
-	return var->GetInt( fallback );
-}
-
-glm::vec2 Material::GetVec2( const std::string &name, glm::vec2 fallback )
-{
-	GET_VAR( name );
-	return var->GetVec2( fallback );
-}
-
-glm::vec3 Material::GetVec3( const std::string &name, glm::vec3 fallback )
-{
-	GET_VAR( name );
-	return var->GetVec3( fallback );
-}
-
-glm::vec4 Material::GetVec4( const std::string &name, glm::vec4 fallback )
-{
-	GET_VAR( name );
-	return var->GetVec4( fallback );
-}
+Texture*    Material::GetTexture( const std::string &name, Texture *fallback )    { GET_VAR( GetTexture ); }
+float       Material::GetFloat(   const std::string &name, float fallback )       { GET_VAR( GetFloat );   }
+int         Material::GetInt(     const std::string &name, int fallback )         { GET_VAR( GetInt );     }
+glm::vec2   Material::GetVec2(    const std::string &name, glm::vec2 fallback )   { GET_VAR( GetVec2 );    }
+glm::vec3   Material::GetVec3(    const std::string &name, glm::vec3 fallback )   { GET_VAR( GetVec3 );    }
+glm::vec4   Material::GetVec4(    const std::string &name, glm::vec4 fallback )   { GET_VAR( GetVec4 );    }
 
 #undef GET_VAR
 

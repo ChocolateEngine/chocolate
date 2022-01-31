@@ -7,6 +7,7 @@ The Basic 3D Shader, starting point shader
 
 #include "shaders.h"
 
+
 class Basic3D : public BaseShader
 {
 public:	
@@ -15,17 +16,17 @@ public:
 	virtual void        Init() override;
 	virtual void        ReInit() override;
 
+	virtual void                                      CreateDescriptorSetLayout() override;
 	virtual std::vector<VkDescriptorSetLayoutBinding> GetDescriptorSetLayoutBindings(  ) override;
 
 	virtual void        CreateGraphicsPipeline(  ) override;
+
+	virtual void        InitUniformBuffer( IMesh* mesh ) override;
 
 	virtual void        UpdateBuffers( uint32_t sCurrentImage, BaseRenderable* spRenderable ) override;
 
 	virtual void        Draw( BaseRenderable* renderable, VkCommandBuffer c, uint32_t commandBufferIndex ) override;
 
 	inline bool         UsesUniformBuffers(  ) override { return true; };
-
-	VkVertexInputBindingDescription                             GetBindingDesc(  );
-	std::array< VkVertexInputAttributeDescription, 4 >          GetAttributeDesc(  );
 };
 

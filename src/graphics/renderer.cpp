@@ -64,9 +64,9 @@ void Renderer::InitVulkan(  )
 	InitImguiPool( gpDevice->GetWindow(  ) );
 	InitSync( aImageAvailableSemaphores, aRenderFinishedSemaphores, aInFlightFences, aImagesInFlight );
 
-	materialsystem = new MaterialSystem;
-	materialsystem->Init();
-	materialsystem->apSampler = &aTextureSampler;
+	matsys = new MaterialSystem;
+	matsys->apSampler = &aTextureSampler;
+	matsys->Init();
 
 	gLayoutBuilder.BuildLayouts(  );
 	gPipelineBuilder.BuildPipelines(  );
@@ -123,9 +123,9 @@ void Renderer::InitCommandBuffers(  )
 
 		// IDEA: make a batched mesh vector so that way we can bind everything needed, and then just draw draw draw draw
 
-		for ( auto& renderable : materialsystem->aDrawList )
+		for ( auto& renderable : matsys->aDrawList )
 		{
-			materialsystem->DrawRenderable( renderable, aCommandBuffers[i], i );
+			matsys->DrawRenderable( renderable, aCommandBuffers[i], i );
 		}
 
 	//	aDbgDrawer.RenderPrims( aCommandBuffers[ i ], aView );
@@ -158,8 +158,8 @@ void Renderer::InitSpriteVertices( const String &srSpritePath, Sprite &srSprite 
 		0, 1, 2, 2, 3, 0	
 	};
 
-	materialsystem->CreateVertexBuffer( &srSprite );
-	materialsystem->CreateIndexBuffer( &srSprite );
+	matsys->CreateVertexBuffer( &srSprite );
+	matsys->CreateIndexBuffer( &srSprite );
 }
 
 void Renderer::ReinitSwapChain(  )
@@ -181,7 +181,7 @@ void Renderer::ReinitSwapChain(  )
 	InitDepthResources( aDepthImage, aDepthImageMemory, aDepthImageView );
 	InitFrameBuffer( aSwapChainFramebuffers, aSwapChainImageViews, aDepthImageView, aColorImageView );
 
-	materialsystem->ReInitSwapChain();
+	matsys->ReInitSwapChain();
 
 	gLayoutBuilder.BuildLayouts(  );
 	gPipelineBuilder.BuildPipelines(  );
@@ -190,7 +190,7 @@ void Renderer::ReinitSwapChain(  )
 	{
 		for ( auto& mesh : model->aMeshes )
 		{
-			materialsystem->MeshReInit( mesh );
+			matsys->MeshReInit( mesh );
 		}
 	}
 }
@@ -205,13 +205,13 @@ void Renderer::DestroySwapChain(  )
 	vkDestroyImage( DEVICE, aColorImage, nullptr );
 	vkFreeMemory( DEVICE, aColorImageMemory, nullptr );
 
-	materialsystem->DestroySwapChain();
+	matsys->DestroySwapChain();
 
 	for ( auto& model : aModels )
 	{
 		for ( auto& mesh : model->aMeshes )
 		{
-			materialsystem->MeshFreeOldResources( mesh );
+			matsys->MeshFreeOldResources( mesh );
 		}
 	}
 	
@@ -249,9 +249,9 @@ bool Renderer::LoadModel( Model* sModel, const String &srPath )
 		{
 			meshes[i] = new Mesh;
 			meshes[i]->apModel = sModel;
-			materialsystem->RegisterRenderable( meshes[i] );
+			matsys->RegisterRenderable( meshes[i] );
 			meshes[i]->apMaterial = dupeModel->aMeshes[i]->apMaterial;
-			materialsystem->MeshInit( meshes[i] );
+			matsys->MeshInit( meshes[i] );
 			meshes[i]->aIndices = dupeModel->aMeshes[i]->aIndices;
 			meshes[i]->aVertices = dupeModel->aMeshes[i]->aVertices;
 		}
@@ -304,7 +304,7 @@ bool Renderer::LoadSprite( Sprite &srSprite, const String &srSpritePath )
 	srSprite.apMaterial = matsys->CreateMaterial(  );
 	srSprite.apMaterial->SetShader( "basic_2d" );
 
-	srSprite.apMaterial->AddVar( "diffuse", srSpritePath, matsys->CreateTexture( srSpritePath ) );
+	srSprite.apMaterial->SetVar( "diffuse", matsys->CreateTexture( srSpritePath ) );
 
 	InitSpriteVertices( "", srSprite );
 	aSprites.push_back( &srSprite );
@@ -333,7 +333,7 @@ void Renderer::DrawFrame(  )
 	gVertsDrawn = 0;
 	gLinesDrawn = 0;
 
-	for ( auto& renderable : materialsystem->aDrawList )
+	for ( auto& renderable : matsys->aDrawList )
 	{
 		Material* mat = (Material*)renderable->apMaterial;
 		mat->apShader->UpdateBuffers( aCurrentFrame, renderable );
@@ -402,7 +402,7 @@ void Renderer::DrawFrame(  )
 	aCurrentFrame = ( aCurrentFrame + 1 ) % MAX_FRAMES_PROCESSING;
 	vkFreeCommandBuffers( DEVICE, gpDevice->GetCommandPool(  ), ( uint32_t )aCommandBuffers.size(  ), aCommandBuffers.data(  ) );
 
-	materialsystem->aDrawList.clear();
+	matsys->aDrawList.clear();
 	aDbgDrawer.ResetMesh();
 }
 

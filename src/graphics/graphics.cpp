@@ -92,11 +92,11 @@ void GraphicsSystem::Update( float dt )
 	aRenderer.DrawFrame();
 }
 
-extern MaterialSystem* materialsystem;
+extern MaterialSystem* matsys;
 
 IMaterialSystem* GraphicsSystem::GetMaterialSystem(  )
 {
-	return materialsystem;
+	return matsys;
 }
 
 Model* GraphicsSystem::CreateModel(  )
