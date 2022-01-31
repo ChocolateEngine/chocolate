@@ -26,7 +26,7 @@ public:
 
 	virtual void        Draw( BaseRenderable* renderable, VkCommandBuffer c, uint32_t commandBufferIndex ) override;
 
-	//inline bool         UsesUniformBuffers(  ) override { return true; };
+	inline bool         UsesUniformBuffers(  ) override { return false; };
 
 	VkVertexInputBindingDescription                             GetBindingDesc(  );
 	std::array< VkVertexInputAttributeDescription, 4 >          GetAttributeDesc(  );

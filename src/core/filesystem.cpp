@@ -26,6 +26,7 @@
 	#define getcwd _getcwd
 #else
 	#include <unistd.h>
+    #include <dirent.h>
 #endif
 
 
@@ -437,7 +438,7 @@ bool FileSystem::ReadClose( DirHandle dirh )
     return FindClose( dirh );
 
 #elif __linux__
-    return closedir( dirh );
+    return closedir( ( DIR* )dirh );
 
 #else
 #endif
@@ -464,7 +465,7 @@ bool sys_scandir( const std::string& root, const std::string& path, std::vector<
 
     return true;
 #else
-    if ( !DirExists( path ) )
+    if ( !filesys->IsDir( path ) )
         return false;
 
     // NOTE: the _WIN32 one adds ".." to the path, while the directory iterator doesn't
