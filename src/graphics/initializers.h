@@ -98,18 +98,18 @@ static inline VkBufferImageCopy BufferImageCopy( uint32_t sWidth, uint32_t sHeig
 	return region;
 }
 /* Create a structure specifying parameters of a newly created image view.  */
-static inline VkImageViewCreateInfo ImageView( VkImage sImage, VkFormat sFormat, VkImageAspectFlags sAspectFlags, uint32_t sMipLevels )
+static inline VkImageViewCreateInfo ImageView( VkImage sImage, VkFormat sFormat, VkImageAspectFlags sAspectFlags, uint32_t sMipLevels, VkImageViewType sType = VK_IMAGE_VIEW_TYPE_2D, uint32_t sLayerCount = 1 )
 {
 	VkImageViewCreateInfo viewInfo{  };
 	viewInfo.sType 				 = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
 	viewInfo.image 				 = sImage;
-	viewInfo.viewType 			 = VK_IMAGE_VIEW_TYPE_2D;
+	viewInfo.viewType 			 = sType;
 	viewInfo.format 			 = sFormat;
 	viewInfo.subresourceRange.aspectMask 	 = sAspectFlags;
 	viewInfo.subresourceRange.baseMipLevel 	 = 0;
 	viewInfo.subresourceRange.levelCount 	 = sMipLevels;
 	viewInfo.subresourceRange.baseArrayLayer = 0;
-	viewInfo.subresourceRange.layerCount 	 = 1;
+	viewInfo.subresourceRange.layerCount 	 = sLayerCount;
 
 	return viewInfo;
 }

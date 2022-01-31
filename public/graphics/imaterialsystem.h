@@ -80,7 +80,8 @@ public:
 	// ideally this shouldn't need a path, should really be reworked to be closer to thermite, more flexible design
 	// also this probably shouldn't use a Material for a parameter, but it's needed right now
 	// Creates a texture if it doesn't exist yet
-	virtual TextureDescriptor          *CreateTexture( IMaterial* material, const std::string &path ) = 0;
+	virtual Texture*                    CreateTexture( const std::string &path ) = 0;
+	virtual int                         GetTextureId( Texture *spTexture ) = 0;
 
 	/* Find an already loaded texture in vram (useless, use the above func, it will do the check for you) */
 	// virtual TextureDescriptor          *FindTexture( const std::string &path ) = 0;

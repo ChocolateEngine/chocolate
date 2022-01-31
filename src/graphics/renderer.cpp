@@ -66,6 +66,7 @@ void Renderer::InitVulkan(  )
 
 	materialsystem = new MaterialSystem;
 	materialsystem->Init();
+	materialsystem->apSampler = &aTextureSampler;
 
 	gLayoutBuilder.BuildLayouts(  );
 	gPipelineBuilder.BuildPipelines(  );
@@ -303,7 +304,7 @@ bool Renderer::LoadSprite( Sprite &srSprite, const String &srSpritePath )
 	srSprite.apMaterial = matsys->CreateMaterial(  );
 	srSprite.apMaterial->SetShader( "basic_2d" );
 
-	srSprite.apMaterial->AddVar( "diffuse", srSpritePath, matsys->CreateTexture( srSprite.apMaterial, srSpritePath ) );
+	srSprite.apMaterial->AddVar( "diffuse", srSpritePath, matsys->CreateTexture( srSpritePath ) );
 
 	InitSpriteVertices( "", srSprite );
 	aSprites.push_back( &srSprite );

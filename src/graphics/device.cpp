@@ -3,6 +3,8 @@
 #include "core/console.h"
 #include "core/commandline.h"
 
+#include "unistd.h"
+
 #include <set>
 
 VKAPI_ATTR VkBool32 VKAPI_CALL Device::DebugCallback( VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, VkDebugUtilsMessageTypeFlagsEXT messageType,
@@ -63,7 +65,7 @@ void Device::InitInstance(  )
 	if ( gEnableValidationLayers && !CheckValidationLayerSupport(  ) )
 	{
 		throw std::runtime_error( "Validation layers requested, but not available!" );
-	}
+        }
 	VkApplicationInfo appInfo{  };
 	appInfo.sType 			= VK_STRUCTURE_TYPE_APPLICATION_INFO;
 	appInfo.pApplicationName 	= "Test";
@@ -227,10 +229,11 @@ void Device::InitLogicalDevice(  )
 	deviceFeatures.samplerAnisotropy = VK_FALSE;	//	Temporarily disabled for PBP builds
 
 	VkPhysicalDeviceDescriptorIndexingFeaturesEXT indexing{};
-	indexing.sType                           = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES_EXT;
-	indexing.pNext                           = nullptr;
-	indexing.descriptorBindingPartiallyBound = VK_TRUE;
-	indexing.runtimeDescriptorArray          = VK_TRUE;
+	indexing.sType                                    = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES_EXT;
+	indexing.pNext                                    = nullptr;
+	indexing.descriptorBindingPartiallyBound          = VK_TRUE;
+	indexing.runtimeDescriptorArray                   = VK_TRUE;
+	indexing.descriptorBindingVariableDescriptorCount = VK_TRUE;
 
 	VkDeviceCreateInfo createInfo{  };
 	createInfo.sType 			= VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;

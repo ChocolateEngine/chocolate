@@ -17,6 +17,8 @@ TODO: move this to graphics level abstraction so the game can use this
 
 class MaterialSystem: public IMaterialSystem
 {
+	using Sets   = std::vector< VkDescriptorSet >;
+	using Images = std::vector< TextureDescriptor* >;
 public:
 
 	MaterialSystem();
@@ -43,7 +45,8 @@ public:
 
 	// ideally this shouldn't need a path, should really be reworked to be closer to thermite, more flexible design
 	// also this probably shouldn't use a shader for a parameter
-	TextureDescriptor          *CreateTexture( IMaterial* material, const std::string &path ) override;
+	Texture*                    CreateTexture( const std::string &path ) override;
+	int                         GetTextureId( Texture *spTexture ) override;
 
 	/* Find an already loaded texture in vram */
 	//TextureDescriptor          *FindTexture( const std::string &path ) override;
@@ -107,7 +110,12 @@ public:
 	void                        MeshInit( IMesh* mesh ) override;
 	void                        MeshReInit( IMesh* mesh ) override;
 	void                        MeshFreeOldResources( IMesh* mesh ) override;
+	VkSampler *apSampler;
 
+	VkDescriptorSetLayout       aImageLayout;
+	Sets                        aImageSets;
+	VkDescriptorSetLayout       aUniformLayout;
+	Sets                        aUniformSets;
 private:
 	std::unordered_map< std::string, BaseShader* >          aShaders;
 

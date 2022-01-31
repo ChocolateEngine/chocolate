@@ -16,6 +16,7 @@ Vulkan.
 #include "gui.h"
 #include "materialsystem.h"
 #include "debugprims/primcreator.h"
+#include "types/databuffer.hh"
 
 #include "allocator.h"
 

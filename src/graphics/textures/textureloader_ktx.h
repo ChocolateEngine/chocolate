@@ -27,7 +27,7 @@ public:
 
 	// ideally this shouldn't need a path, should really be reworked to be closer to thermite, more flexible design
 	// also this probably shouldn't use a shader for a parameter
-	TextureDescriptor*          LoadTexture( IMaterial* material, const std::string path ) override;
+	TextureDescriptor*          LoadTexture( const std::string path ) override;
 
 	bool                        LoadKTXTexture( TextureDescriptor* texture, const String &srImagePath, VkImage &srTImage, VkDeviceMemory &srTImageMem, uint32_t &srMipLevels );
 };

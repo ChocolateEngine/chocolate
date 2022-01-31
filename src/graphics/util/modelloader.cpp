@@ -97,7 +97,7 @@ void LoadObj( const std::string &srPath, std::vector<Mesh*> &meshes )
 					if ( path.is_relative() )
 						path = baseDir / path;
 
-					Texture *tex = materialsystem->CreateTexture( material, path.string() );
+					int tex = matsys->GetTextureId( materialsystem->CreateTexture( path.string() ) );
 
 					material->AddVar( param, path.string(), tex );
 				}

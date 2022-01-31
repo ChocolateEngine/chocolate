@@ -147,13 +147,19 @@ public:
 	VkDeviceMemory                  aTextureImageMem;
 	VkImage                         aTextureImage;
 	VkImageView                     aTextureImageView;
-	DataBuffer< VkDescriptorSet >   aSets;
 
 #ifdef KTX
 	// TEMP: just shove ktx data here for now
 	ktxTexture* kTexture;
 	ktxVulkanTexture texture;
 #endif
+};
+
+class SampledImage {
+public:
+	VkDeviceMemory aMem;
+	VkImage        aImg;
+	VkImageView    aView;
 };
 
 // TODO: rename this stupid thing

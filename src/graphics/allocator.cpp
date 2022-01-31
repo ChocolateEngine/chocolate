@@ -3,6 +3,8 @@
 #include "core/filesystem.h"
 #include "graphics/primvtx.hh"
 
+#include <csignal>
+
 FunctionList 			gFreeQueue;
 ShaderCache			gShaderCache;
 DescriptorCache			gDescriptorCache;
@@ -122,11 +124,9 @@ void CopyBufferToImage( VkBuffer sBuffer, VkImage sImage, uint32_t sWidth, uint3
 	Submit( [ & ]( VkCommandBuffer c ){ vkCmdCopyBufferToImage( c, sBuffer, sImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region ); } );
 }
 
-void InitImageView( VkImageView& sImageView, VkImage sImage, VkFormat sFormat, VkImageAspectFlags sAspectFlags, uint32_t sMipLevels )
+void InitImageView( VkImageView& sImageView, VkImageViewCreateInfo &srInfo )
 {
-	VkImageViewCreateInfo viewInfo = ImageView( sImage, sFormat, sAspectFlags, sMipLevels );
-
-	if ( vkCreateImageView( DEVICE, &viewInfo, NULL, &sImageView ) != VK_SUCCESS )
+	if ( vkCreateImageView( DEVICE, &srInfo, NULL, &sImageView ) != VK_SUCCESS )
 		throw std::runtime_error( "Failed to create texture image view!" );
 }
 
@@ -148,7 +148,8 @@ void InitImage( VkImageCreateInfo sImageInfo, VkMemoryPropertyFlags sProperties,
 
 void InitTextureImageView( VkImageView &srTImageView, VkImage sTImage, uint32_t sMipLevels )
 {
-	InitImageView( srTImageView, sTImage, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT, sMipLevels );
+	auto i = ImageView( sTImage, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT, sMipLevels );
+	InitImageView( srTImageView, i );
 }
 
 /* Creates the mip maps from a given VkImage.  */
@@ -253,7 +254,7 @@ void InitUniformBuffers( DataBuffer< VkBuffer > &srUBuffers, DataBuffer< VkDevic
 void InitDescriptorSets( DataBuffer< VkDescriptorSet > &srDescSets, VkDescriptorSetLayout &srDescSetLayout, VkDescriptorPool &srDescPool,
 			 ImageInfoSets sDescImageInfos, BufferInfoSets sDescBufferInfos )
 {
-	std::vector< VkDescriptorSetLayout > 	layouts( PSWAPCHAIN.GetImages(  ).size(  ), srDescSetLayout );
+	/*std::vector< VkDescriptorSetLayout > 	layouts( PSWAPCHAIN.GetImages(  ).size(  ), srDescSetLayout );
 	std::vector< VkWriteDescriptorSet > 	descriptorWrites{  };
 	VkDescriptorSetAllocateInfo 		allocInfo{  };
 	allocInfo.sType 		= VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
@@ -283,6 +284,54 @@ void InitDescriptorSets( DataBuffer< VkDescriptorSet > &srDescSets, VkDescriptor
 			++bindingCount;
 		}
 		vkUpdateDescriptorSets( DEVICE, ( uint32_t )descriptorWrites.size(  ), descriptorWrites.data(  ), 0, NULL );
+		}*/
+}
+void UpdateImageSets( std::vector< VkDescriptorSet > &srSets, VkDescriptorSetLayout &srLayout, VkDescriptorPool &srPool, std::vector< TextureDescriptor* > &srImages, VkSampler &srSampler ) {
+	if ( !srImages.size() )
+		return;
+	
+	std::vector< VkDescriptorSetLayout > layouts( PSWAPCHAIN.GetImages().size(), srLayout );
+
+	uint32_t counts[] = { 1000, 1000, 1000 };
+	VkDescriptorSetVariableDescriptorCountAllocateInfo dc{};
+	dc.sType              = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_VARIABLE_DESCRIPTOR_COUNT_ALLOCATE_INFO;
+	dc.descriptorSetCount = PSWAPCHAIN.GetImages().size();
+	dc.pDescriptorCounts  = counts;
+	
+	VkDescriptorSetAllocateInfo a{};
+	a.sType              = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+	a.pNext              = &dc;
+	a.descriptorPool     = srPool;
+	a.descriptorSetCount = PSWAPCHAIN.GetImages().size();
+	a.pSetLayouts        = layouts.data();
+
+
+	srSets.resize( PSWAPCHAIN.GetImages().size() );
+	if ( vkAllocateDescriptorSets( DEVICE, &a, srSets.data() ) != VK_SUCCESS )
+		throw std::runtime_error( "Failed to allocate descriptor sets!" );
+
+	for ( uint32_t i = 0; i < srSets.size(); ++i ) {
+		std::vector< VkDescriptorImageInfo > infos;
+		for ( uint32_t j = 0; j < srImages.size(); ++j ) {
+			VkDescriptorImageInfo img{};
+			img.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+			img.imageView   = srImages[ j ]->aTextureImageView;
+			img.sampler     = srSampler;
+			
+			infos.push_back( img );
+		}
+		
+		VkWriteDescriptorSet w{};
+		w.sType            = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		w.dstBinding       = 0;
+		w.dstArrayElement  = 0;
+		w.descriptorType   = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		w.descriptorCount  = srImages.size();
+		w.pBufferInfo      = 0;
+		w.dstSet           = srSets[ i ];
+		w.pImageInfo       = infos.data();
+		
+		vkUpdateDescriptorSets( DEVICE, 1, &w, 0, nullptr );
 	}
 }
 /* Initializes a texture, view, and appropriate descriptors.  */
@@ -308,6 +357,7 @@ TextureDescriptor *InitTexture( const String &srImagePath, VkDescriptorSetLayout
 
 	return nullptr;
 }
+
 /* Initializes the uniform data, such as uniform buffers.  */
 void InitUniformData( UniformDescriptor &srDescriptor, VkDescriptorSetLayout sLayout )
 {
@@ -319,8 +369,12 @@ void InitUniformData( UniformDescriptor &srDescriptor, VkDescriptorSetLayout sLa
 void InitImageViews( ImageViews &srSwapChainImageViews )
 {
 	srSwapChainImageViews.resize( PSWAPCHAIN.GetImages(  ).size(  ) );
-	for ( int i = 0; i < PSWAPCHAIN.GetImages(  ).size(  ); i++ )
-	        InitImageView( srSwapChainImageViews[ i ], PSWAPCHAIN.GetImages(  ).at( i ), PSWAPCHAIN.GetFormat(  ), VK_IMAGE_ASPECT_COLOR_BIT, 1 );
+
+	for ( int i = 0; i < PSWAPCHAIN.GetImages(  ).size(  ); i++ ) {
+		auto info = ImageView( PSWAPCHAIN.GetImages(  ).at( i ), PSWAPCHAIN.GetFormat(  ), VK_IMAGE_ASPECT_COLOR_BIT, 1 );
+
+	    InitImageView( srSwapChainImageViews[ i ], info );
+	}
 }
 
 void InitRenderPass(  )
@@ -391,7 +445,7 @@ VkDescriptorSetLayout InitDescriptorSetLayout( DescSetLayouts sBindings )
 	for ( auto&& binding : sBindings )
 	        binding.binding = ++i;
 
-	VkDescriptorBindingFlagsEXT bindFlag = VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT_EXT;
+	VkDescriptorBindingFlagsEXT bindFlag = VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT_EXT | VK_DESCRIPTOR_BINDING_VARIABLE_DESCRIPTOR_COUNT_BIT_EXT;
 
 	VkDescriptorSetLayoutBindingFlagsCreateInfoEXT extend{};
 	extend.sType         = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO_EXT;
@@ -408,6 +462,29 @@ VkDescriptorSetLayout InitDescriptorSetLayout( DescSetLayouts sBindings )
 		throw std::runtime_error( "Failed to create descriptor set layout!" );
 
 	//gDescriptorCache.AddLayout( layout, info );
+	return layout;
+}
+/* A.  */
+VkDescriptorSetLayout InitDescriptorSetLayout( VkDescriptorSetLayoutBinding sBinding ) {
+	VkDescriptorSetLayout layout;
+        sBinding.binding = 0;
+
+	VkDescriptorBindingFlagsEXT bindFlag = VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT_EXT | VK_DESCRIPTOR_BINDING_VARIABLE_DESCRIPTOR_COUNT_BIT_EXT;
+
+	VkDescriptorSetLayoutBindingFlagsCreateInfoEXT extend{};
+	extend.sType         = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO_EXT;
+	extend.pNext         = nullptr;
+	extend.bindingCount  = 1;
+	extend.pBindingFlags = &bindFlag;
+
+	VkDescriptorSetLayoutCreateInfo layoutInfo{  };
+	layoutInfo.sType 			= VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+	layoutInfo.pNext                        = &extend;
+	layoutInfo.bindingCount 		= 1;
+	layoutInfo.pBindings 			= &sBinding;
+	if ( vkCreateDescriptorSetLayout( DEVICE, &layoutInfo, NULL, &layout ) != VK_SUCCESS )
+		throw std::runtime_error( "Failed to create descriptor set layout!" );
+	
 	return layout;
 }
 /* Creates graphics pipeline layouts using the specified descriptor set layouts.  */
@@ -428,22 +505,25 @@ VkPipelineLayout InitPipelineLayouts( VkDescriptorSetLayout *spSetLayouts, uint3
 void InitDepthResources( VkImage &srDepthImage, VkDeviceMemory &srDepthImageMemory, VkImageView &srDepthImageView )
 {
 	VkFormat depthFormat = gpDevice->FindDepthFormat(  );
-        InitImage( Image( PSWAPCHAIN.GetExtent(  ).width, PSWAPCHAIN.GetExtent(  ).height, depthFormat,
-			  VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, 1, gpDevice->GetSamples(  ) ),
-		   VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, srDepthImage, srDepthImageMemory );
-	
-        InitImageView( srDepthImageView, srDepthImage, depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT, 1 );
-        TransitionImageLayout( srDepthImage, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, 1 );
+    InitImage( Image( PSWAPCHAIN.GetExtent(  ).width, PSWAPCHAIN.GetExtent(  ).height, depthFormat,
+			   VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, 1, gpDevice->GetSamples(  ) ),
+		        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, srDepthImage, srDepthImageMemory );
+
+	auto i = ImageView( srDepthImage, depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT, 1 );
+    InitImageView( srDepthImageView, i );
+    TransitionImageLayout( srDepthImage, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, 1 );
 }
 /* Initializes the multisampling image.  */
 void InitColorResources( VkImage &srColorImage, VkDeviceMemory &srColorImageMemory, VkImageView &srColorImageView )
 {
 	VkFormat colorFormat = PSWAPCHAIN.GetFormat(  );
 
-        InitImage( Image( PSWAPCHAIN.GetExtent(  ).width, PSWAPCHAIN.GetExtent(  ).height, colorFormat, VK_IMAGE_TILING_OPTIMAL,
-			  VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, 1, gpDevice->GetSamples(  ) ),
-		   VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, srColorImage, srColorImageMemory );
-        InitImageView( srColorImageView, srColorImage, colorFormat, VK_IMAGE_ASPECT_COLOR_BIT, 1 );
+    InitImage( Image( PSWAPCHAIN.GetExtent(  ).width, PSWAPCHAIN.GetExtent(  ).height, colorFormat, VK_IMAGE_TILING_OPTIMAL,
+			   VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, 1, gpDevice->GetSamples(  ) ),
+		       VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, srColorImage, srColorImageMemory );
+
+	auto i = ImageView( srColorImage, colorFormat, VK_IMAGE_ASPECT_COLOR_BIT, 1 );
+    InitImageView( srColorImageView, i );
 }
 
 void InitFrameBuffer( FrameBuffers &srSwapChainFramebuffers, ImageViews &srSwapChainImageViews, VkImageView &srDepthImageView, VkImageView &srColorImageView )

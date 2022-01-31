@@ -270,17 +270,15 @@ void Basic3D::Draw( BaseRenderable* renderable, VkCommandBuffer c, uint32_t comm
 
 	assert(mesh != nullptr);
 
-	Texture *diffuse = mesh->apMaterial->GetTexture( "diffuse" );
-	if ( diffuse == nullptr )
-		return;
+	int diffuse = matsys->GetTextureId( mesh->apMaterial->GetTexture( "diffuse" ) );
 
-	Texture *emissive = mesh->apMaterial->GetTexture( "emissive" );
-	if ( emissive == nullptr )
-		emissive = materialsystem->CreateTexture( mesh->apMaterial, gFallbackEmissive );
+	int emissive = matsys->GetTextureId( mesh->apMaterial->GetTexture( "emissive" ) );
+	if ( emissive == 0 )
+		emissive = matsys->GetTextureId( materialsystem->CreateTexture( gFallbackEmissive ) );
 
-	Texture *ao = mesh->apMaterial->GetTexture( "ao" );
-	if ( ao == nullptr )
-		ao = materialsystem->CreateTexture( mesh->apMaterial, gFallbackAO );
+	int ao = matsys->GetTextureId( mesh->apMaterial->GetTexture( "ao" ) );
+	if ( ao == 0 )
+		ao = matsys->GetTextureId( materialsystem->CreateTexture( gFallbackAO ) );
 
 	// float aoPower = mesh->apMaterial->GetFloat( "ao_power", 1.f );
 
@@ -298,10 +296,11 @@ void Basic3D::Draw( BaseRenderable* renderable, VkCommandBuffer c, uint32_t comm
 	UniformDescriptor& uniformData = materialsystem->GetUniformData( mesh->GetID() );
 
 	VkDescriptorSet sets[  ] = {
-		uniformData.aSets[ commandBufferIndex ],
+		/*uniformData.aSets[ commandBufferIndex ],
 		diffuse->aSets[ commandBufferIndex ],
 		emissive->aSets[ commandBufferIndex ],
-		ao->aSets[ commandBufferIndex ],
+		ao->aSets[ commandBufferIndex ],*/
+		0
 	};
 
 	vkCmdBindDescriptorSets( c, VK_PIPELINE_BIND_POINT_GRAPHICS, aPipelineLayout, 0, 4, sets, 0, NULL );

@@ -16,6 +16,7 @@ Maybe the shadersystem could be inside this material system?
 #include "shaders/shader_basic_2d.h"
 #include "shaders/shader_unlit.h"
 #include "shaders/shader_debug.h"
+#include "shaders/shader_unlitarray.h"
 
 #include "textures/textureloader_ktx.h"
 #include "textures/textureloader_stbi.h"
@@ -42,11 +43,14 @@ void MaterialSystem::Init()
 	aTextureLoaders.push_back( new CTXTextureLoader );
 	aTextureLoaders.push_back( new STBITextureLoader );
 
+        aImageLayout = InitDescriptorSetLayout( DescriptorLayoutBinding( VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1000, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr ) );
+
 	// Setup built in shaders
-	BaseShader* basic_3d = CreateShader<Basic3D>( "basic_3d" );
-	BaseShader* basic_2d = CreateShader<Basic2D>( "basic_2d" );
-	BaseShader* unlit    = CreateShader<ShaderUnlit>( "unlit" );
-	BaseShader* debug    = CreateShader<ShaderDebug>( "debug" );
+	//BaseShader* basic_3d = CreateShader<Basic3D>( "basic_3d" );
+	//BaseShader* basic_2d = CreateShader<Basic2D>( "basic_2d" );
+	BaseShader* unlit      = CreateShader<ShaderUnlit>( "unlit" );
+	BaseShader* debug      = CreateShader<ShaderDebug>( "debug" );
+	BaseShader* unlitarray = CreateShader<ShaderUnlitArray>( "unlitarray" );
 
 	// Create Error Material
 	// TODO: move to GetErrorMaterial and make it have a shader name as an input
@@ -180,10 +184,10 @@ IMaterial* MaterialSystem::ParseMaterial( const std::string &path )
 			if ( absTexPath == "" )
 			{
 				Print( "[Graphics] \"%s\":\n\tCan't Find Texture: \"%s\": \"%s\"\n", fullPath.c_str(), kv->key.string, kv->value.string );
-				mat->AddVar( kv->key.string, kv->value.string, CreateTexture( mat, "" ) );
+				mat->AddVar( kv->key.string, kv->value.string, CreateTexture( "" ) );
 			}
 
-			Texture *texture = CreateTexture( mat, absTexPath );
+			Texture *texture = CreateTexture( absTexPath );
 			if ( texture != nullptr )
 			{
 				mat->AddVar( kv->key.string, texPath, texture );
@@ -220,7 +224,7 @@ IMaterial* MaterialSystem::GetErrorMaterial( const std::string& shaderName )
 	Material* mat = (Material*)CreateMaterial();
 	mat->aName = "ERROR_" + shaderName;
 	mat->apShader = shader;
-	mat->AddVar( "diffuse", "", CreateTexture(mat, "") );
+	mat->AddVar( "diffuse", "", CreateTexture("") );
 
 	aErrorMaterials.push_back( mat );
 	return mat;
@@ -236,7 +240,7 @@ const char *get_file_ext( const char *filename )
 
 
 // this really should not have a Material input, it should have a Texture class input, right? idk
-TextureDescriptor* MaterialSystem::CreateTexture( IMaterial* material, const std::string &path )
+Texture *MaterialSystem::CreateTexture( const std::string &path )
 {
 	// Check if texture was already loaded
 	std::unordered_map< std::string, TextureDescriptor* >::iterator it;
@@ -261,9 +265,15 @@ TextureDescriptor* MaterialSystem::CreateTexture( IMaterial* material, const std
 		if ( !loader->CheckExt( fileExt ) )
 			continue;
 
-		if ( TextureDescriptor* texture = loader->LoadTexture( material, absPath ) )
+		if ( TextureDescriptor* texture = loader->LoadTexture( absPath ) )
 		{
 			aTextures[path] = texture;
+			std::vector< TextureDescriptor* > v;
+			v.reserve( aTextures.size() );
+			for ( const auto &rTex : aTextures )
+				v.push_back( rTex.second );
+
+			UpdateImageSets( aImageSets, aImageLayout, *gpPool, v, *apSampler );
 			return texture;
 		}
 	}
@@ -271,6 +281,19 @@ TextureDescriptor* MaterialSystem::CreateTexture( IMaterial* material, const std
 	// error print is handled in STBI texture loader
 
 	return nullptr;
+}
+
+
+int MaterialSystem::GetTextureId( Texture *spTexture )
+{
+	int i = 0;
+	for ( const auto& [path, tex]: aTextures )
+	{
+		if ( tex == spTexture )
+			return i;
+		++i;
+	}
+	return 0;
 }
 
 

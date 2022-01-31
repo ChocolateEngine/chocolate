@@ -30,28 +30,13 @@ bool KTXTextureLoader::CheckExt( const char* ext )
 }
 
 
-TextureDescriptor* KTXTextureLoader::LoadTexture( IMaterial* material, const std::string path )
+TextureDescriptor* KTXTextureLoader::LoadTexture( const std::string path )
 {
 	TextureDescriptor	*pTexture = new TextureDescriptor;
 
 	if ( !LoadKTXTexture( pTexture, path, pTexture->aTextureImage, pTexture->aTextureImageMem, pTexture->aMipLevels ) )
 		return nullptr;
-
-	VkDescriptorSetLayout layout = ((Material*)material)->GetTextureLayout();
-
-	InitDescriptorSets(
-		pTexture->aSets,
-		layout,
-		*gpPool,
-		{ { {
-			VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-			pTexture->aTextureImageView,
-			renderer->GetTextureSampler(),
-			VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER
-		} } },
-		{  }
-	);
-
+	
 	return pTexture;
 }
 
@@ -104,7 +89,10 @@ bool KTXTextureLoader::LoadKTXTexture( TextureDescriptor* pTexture, const String
 	pTexture->aTextureImage = pTexture->texture.image;
 	pTexture->aTextureImageMem = pTexture->texture.deviceMemory;
 
-	InitImageView( pTexture->aTextureImageView, pTexture->aTextureImage, pTexture->texture.imageFormat, VK_IMAGE_ASPECT_COLOR_BIT, pTexture->aMipLevels );
+	auto i = ImageView( pTexture->aTextureImage, pTexture->texture.imageFormat, 
+	                    VK_IMAGE_ASPECT_COLOR_BIT, pTexture->aMipLevels, pTexture->texture.viewType, pTexture->texture.layerCount );
+
+	InitImageView( pTexture->aTextureImageView, i );
 
 	return true;
 #endif

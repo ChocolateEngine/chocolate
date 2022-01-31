@@ -51,13 +51,9 @@ public:
 	glm::vec4           GetVec4( const std::string &name, glm::vec4 fallback = {} ) override;
 
 	std::string                 aName;
-	
-	VkDescriptorSetLayout       apTextureLayout = nullptr;
 
 	BaseShader*                 apShader = nullptr;
 
 	std::vector< MaterialVar * > aVars;
-
-	inline VkDescriptorSetLayout       GetTextureLayout() const   { return apTextureLayout; }
 };
 

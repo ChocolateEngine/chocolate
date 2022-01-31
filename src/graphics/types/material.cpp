@@ -14,13 +14,13 @@ extern MaterialSystem* materialsystem;
 
 void Material::Init()
 {
-	apTextureLayout = InitDescriptorSetLayout( { { DescriptorLayoutBinding( VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, NULL ) } } );
+        
 }
 
 
 void Material::Destroy()
 {
-	vkDestroyDescriptorSetLayout( DEVICE, apTextureLayout, NULL );
+	
 }
 
 
@@ -109,7 +109,7 @@ float Material::GetFloat( const std::string &name, float fallback )
 int Material::GetInt( const std::string &name, int fallback )
 {
 	GET_VAR( name );
-	return var->GetFloat( fallback );
+	return var->GetInt( fallback );
 }
 
 glm::vec2 Material::GetVec2( const std::string &name, glm::vec2 fallback )

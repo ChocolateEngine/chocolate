@@ -1,12 +1,11 @@
 /*
-shader_basic_2d.cpp ( Authored by Demez )
+shader_basic_3d.cpp ( Authored by Demez )
 
-The Basic 2D Shader, starting point shader
+The Basic 3D Shader, starting point shader
 */
 #include "core/filesystem.h"
 #include "../renderer.h"
-#include "shader_basic_2d.h"
-#include "graphics/sprite.h"
+#include "shader_unlitarray.h"
 
 
 extern size_t gModelDrawCalls;
@@ -15,22 +14,40 @@ extern size_t gVertsDrawn;
 
 // =========================================================
 
-
-constexpr const char *pVShader = "shaders/basic2d.vert.spv";
-constexpr const char *pFShader = "shaders/basic2d.frag.spv";
+// =========================================================
 
 
-void Basic2D::Init()
+constexpr const char *pVShader = "shaders/unlitarray.vert.spv";
+constexpr const char *pFShader = "shaders/unlitarray.frag.spv";
+
+
+struct UnlitArrayPushConstant
+{
+    alignas( 16 )glm::mat4 trans;
+	alignas( 16 )int       index;
+    int       layer;
+};
+
+
+
+void ShaderUnlitArray::Init()
 {
 	aModules.Allocate(2);
 	aModules[0] = CreateShaderModule( filesys->ReadFile( pVShader ) ); // Processes incoming verticies, taking world position, color, and texture coordinates as an input
 	aModules[1] = CreateShaderModule( filesys->ReadFile( pFShader ) ); // Fills verticies with fragments to produce color, and depth
 
+	// very rough idea for now for material parameters for this shader:
+	// AddParameter<TextureDescriptor*>( "MainTexture", DEFAULT_TYPE );
+	// AddParameter<glm::vec3>( "VectorTest", glm::vec3(1, 1, 1) );
+	
+	// other thing for range only
+	// AddRangeParameter<TextureDescriptor*>( "MainTexture", DEFAULT_TYPE );
+
 	BaseShader::Init();
 }
 
 
-void Basic2D::ReInit()
+void ShaderUnlitArray::ReInit()
 {
 	aModules[0] = CreateShaderModule( filesys->ReadFile( pVShader ) ); // Processes incoming verticies, taking world position, color, and texture coordinates as an input
 	aModules[1] = CreateShaderModule( filesys->ReadFile( pFShader ) ); // Fills verticies with fragments to produce color, and depth
@@ -39,17 +56,17 @@ void Basic2D::ReInit()
 }
 
 
-std::vector<VkDescriptorSetLayoutBinding> Basic2D::GetDescriptorSetLayoutBindings(  )
+std::vector<VkDescriptorSetLayoutBinding> ShaderUnlitArray::GetDescriptorSetLayoutBindings(  )
 {
 	return {
-		DescriptorLayoutBinding( VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr )
+		DescriptorLayoutBinding( VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr ),
 	};
 }
 
 
-void Basic2D::CreateGraphicsPipeline(  )
+void ShaderUnlitArray::CreateGraphicsPipeline(  )
 {
-	aPipelineLayout = InitPipelineLayouts( aLayouts.GetBuffer(  ), aLayouts.GetSize(  ), sizeof( push_constant_t ) );
+	aPipelineLayout = InitPipelineLayouts( aLayouts.GetBuffer(  ), aLayouts.GetSize(  ), sizeof( UnlitArrayPushConstant ) );
 
 	VkPipelineShaderStageCreateInfo vertShaderStageInfo{  };
 	vertShaderStageInfo.sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;	//	Tells Vulkan which stage the shader is going to be used
@@ -103,7 +120,8 @@ void Basic2D::CreateGraphicsPipeline(  )
 	rasterizer.rasterizerDiscardEnable 	= VK_FALSE;
 	rasterizer.polygonMode 			= VK_POLYGON_MODE_FILL;		//	Fill with fragments, can optionally use VK_POLYGON_MODE_LINE for a wireframe
 	rasterizer.lineWidth 			= 1.0f;
-	rasterizer.cullMode 			= VK_CULL_MODE_NONE;
+	// rasterizer.cullMode 			= ( sFlags & NO_CULLING ) ? VK_CULL_MODE_NONE : VK_CULL_MODE_BACK_BIT;	//	FIX FOR MAKING 2D SPRITES WORK!!! WOOOOO!!!!
+	rasterizer.cullMode 			= VK_CULL_MODE_BACK_BIT;
 	rasterizer.frontFace 			= VK_FRONT_FACE_COUNTER_CLOCKWISE;
 	rasterizer.depthBiasEnable 		= VK_FALSE;
 	rasterizer.depthBiasConstantFactor 	= 0.0f; // Optional
@@ -131,8 +149,10 @@ void Basic2D::CreateGraphicsPipeline(  )
 
 	VkPipelineDepthStencilStateCreateInfo depthStencil{  };
 	depthStencil.sType 			= VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
-	depthStencil.depthTestEnable 		= VK_FALSE;  // SPRITE THING?
-	depthStencil.depthWriteEnable		= VK_FALSE;  // SPRITE THING?
+	//depthStencil.depthTestEnable 		= ( sFlags & NO_DEPTH ) ? VK_FALSE : VK_TRUE;
+	//depthStencil.depthWriteEnable		= ( sFlags & NO_DEPTH ) ? VK_FALSE : VK_TRUE;
+	depthStencil.depthTestEnable 		= VK_TRUE;
+	depthStencil.depthWriteEnable		= VK_TRUE;
 	depthStencil.depthCompareOp 		= VK_COMPARE_OP_LESS;
 	depthStencil.depthBoundsTestEnable 	= VK_FALSE;
 	depthStencil.minDepthBounds 		= 0.0f; // Optional
@@ -185,80 +205,88 @@ void Basic2D::CreateGraphicsPipeline(  )
 }
 
 
-void Basic2D::UpdateBuffers( uint32_t sCurrentImage, BaseRenderable* spRenderable )
+void ShaderUnlitArray::UpdateBuffers( uint32_t sCurrentImage, BaseRenderable* spRenderable )
 {
 }
 
 
-VkVertexInputBindingDescription Basic2D::GetBindingDesc(  )
+VkVertexInputBindingDescription ShaderUnlitArray::GetBindingDesc(  )
 {
 	VkVertexInputBindingDescription bindingDescription{};
 	bindingDescription.binding = 0;
-	bindingDescription.stride = sizeof( vertex_2d_t );
+	bindingDescription.stride = sizeof( vertex_3d_t );
 	bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
 
 	return bindingDescription;
 }
 
 
-std::array< VkVertexInputAttributeDescription, 3 > Basic2D::GetAttributeDesc(  )
+std::array< VkVertexInputAttributeDescription, 4 > ShaderUnlitArray::GetAttributeDesc(  )
 {
-	std::array< VkVertexInputAttributeDescription, 3 >attributeDescriptions{  };
+	std::array< VkVertexInputAttributeDescription, 4 >attributeDescriptions{  };
 	attributeDescriptions[ 0 ].binding  = 0;
 	attributeDescriptions[ 0 ].location = 0;
 	attributeDescriptions[ 0 ].format   = VK_FORMAT_R32G32B32_SFLOAT;
-	attributeDescriptions[ 0 ].offset   = offsetof( vertex_2d_t, pos );
+	attributeDescriptions[ 0 ].offset   = offsetof( vertex_3d_t, pos );
 
 	attributeDescriptions[ 1 ].binding  = 0;
 	attributeDescriptions[ 1 ].location = 1;
 	attributeDescriptions[ 1 ].format   = VK_FORMAT_R32G32B32_SFLOAT;
-	attributeDescriptions[ 1 ].offset   = offsetof( vertex_2d_t, color );
+	attributeDescriptions[ 1 ].offset   = offsetof( vertex_3d_t, color );
 
 	attributeDescriptions[ 2 ].binding  = 0;
 	attributeDescriptions[ 2 ].location = 2;
 	attributeDescriptions[ 2 ].format   = VK_FORMAT_R32G32_SFLOAT;
-	attributeDescriptions[ 2 ].offset   = offsetof( vertex_2d_t, texCoord );
+	attributeDescriptions[ 2 ].offset   = offsetof( vertex_3d_t, texCoord );
+
+	attributeDescriptions[ 3 ].binding  = 0;
+	attributeDescriptions[ 3 ].location = 3;
+	attributeDescriptions[ 3 ].format   = VK_FORMAT_R32G32B32_SFLOAT;
+	attributeDescriptions[ 3 ].offset   = offsetof( vertex_3d_t, normal );
 
 	return attributeDescriptions;
 }
 
 
-void Basic2D::Draw( BaseRenderable* renderable, VkCommandBuffer c, uint32_t commandBufferIndex )
+void ShaderUnlitArray::Draw( BaseRenderable* renderable, VkCommandBuffer c, uint32_t commandBufferIndex )
 {
-	Sprite* sprite = dynamic_cast<Sprite*>(renderable);
-	assert( sprite != nullptr );
+	IMesh* mesh = dynamic_cast<IMesh*>(renderable);
 
-	int diffuse = matsys->GetTextureId( sprite->apMaterial->GetTexture( "diffuse" ) );
+	assert(mesh != nullptr);
 
-	VkBuffer 	vBuffers[  ] 	= { renderable->aVertexBuffer };
+	int diffuse = matsys->GetTextureId( mesh->apMaterial->GetTexture( "diffuse" ) );
+
+	// Bind the mesh's vertex and index buffers
+	VkBuffer 	vBuffers[  ] 	= { mesh->aVertexBuffer };
 	VkDeviceSize 	offsets[  ] 	= { 0 };
-	VkDescriptorSet sets[  ] = { 0 };
-
-	vkCmdBindPipeline( c, VK_PIPELINE_BIND_POINT_GRAPHICS, aPipeline );
 	vkCmdBindVertexBuffers( c, 0, 1, vBuffers, offsets );
 
-	if ( renderable->aIndexBuffer )
-		vkCmdBindIndexBuffer( c, renderable->aIndexBuffer, 0, VK_INDEX_TYPE_UINT32 );
+	if ( mesh->aIndexBuffer )
+		vkCmdBindIndexBuffer( c, mesh->aIndexBuffer, 0, VK_INDEX_TYPE_UINT32 );
+
+	// Now draw it
+	vkCmdBindPipeline( c, VK_PIPELINE_BIND_POINT_GRAPHICS, aPipeline );
+
+    int a = mesh->apMaterial->GetInt( "frame" );
+	
+	UnlitArrayPushConstant p = {renderer->aView.projViewMatrix * mesh->GetModelMatrix(), diffuse, a };
+
+	vkCmdPushConstants(
+		c, aPipelineLayout, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
+		0, sizeof( UnlitArrayPushConstant ), &p
+	);
+
+	VkDescriptorSet sets[  ] = {
+		matsys->aImageSets[ commandBufferIndex ],
+	};
 
 	vkCmdBindDescriptorSets( c, VK_PIPELINE_BIND_POINT_GRAPHICS, aPipelineLayout, 0, 1, sets, 0, NULL );
 
-	push_constant_t push{  };
-	push.aMatrix	= sprite->GetMatrix();
-
-	vkCmdPushConstants
-	(
-		c,
-		aPipelineLayout,
-		VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
-		0,
-		sizeof( push_constant_t ),
-		&push
-	);
-
-	if ( sprite->aIndexBuffer )
-		vkCmdDrawIndexed( c, (uint32_t)sprite->aIndices.size(), 1, 0, 0, 0 );
+	if ( mesh->aIndexBuffer )
+		vkCmdDrawIndexed( c, (uint32_t)mesh->aIndices.size(), 1, 0, 0, 0 );
 	else
-		vkCmdDraw( c, (uint32_t)sprite->aVertices.size(), 1, 0, 0 );
+		vkCmdDraw( c, (uint32_t)mesh->aVertices.size(), 1, 0, 0 );
 
-	gVertsDrawn += sprite->aVertices.size();
+	gModelDrawCalls++;
+	gVertsDrawn += mesh->aVertices.size();
 }

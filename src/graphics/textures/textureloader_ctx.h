@@ -18,7 +18,7 @@ public:
 	/* Checks for .ctx extension.  */
 	bool                        CheckExt( const char* ext ) override;
 	/* Loads the texture into vulkan objects.  */
-	TextureDescriptor*          LoadTexture( IMaterial* material, const std::string path ) override;
+	TextureDescriptor*          LoadTexture( const std::string path ) override;
 
 	explicit                    CTXTextureLoader();
 	                           ~CTXTextureLoader() override;

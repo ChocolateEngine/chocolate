@@ -84,7 +84,7 @@ void 			Submit( const auto &&sFunction );
 /* A.  */
 void 			InitAllocator( ImageSet &sSwapChainImages );
 /* A.  */
-void 			InitImageView( VkImageView &sImageView, VkImage sImage, VkFormat sFormat, VkImageAspectFlags sAspectFlags, uint32_t sMipLevels );
+void 			InitImageView( VkImageView &sImageView, VkImageViewCreateInfo &srInfo );
 /* A.  */
 void 			InitImage( VkImageCreateInfo sImageInfo, VkMemoryPropertyFlags sProperties, VkImage &srImage, VkDeviceMemory &srImageMemory );
 /* A.  */
@@ -94,6 +94,7 @@ void			GenerateMipMaps( VkImage sImage, VkFormat sFormat, uint32_t sWidth, uint3
 /* A.  */
 TextureDescriptor       *InitTexture( const String &srImagePath, VkDescriptorSetLayout sLayout, VkDescriptorPool sPool, VkSampler sSampler,
 				      float *spWidth = NULL, float *spHeight = NULL );
+TextureDescriptor       *InitTexture( const String &srImagePath, VkDescriptorSetLayout sLayout, VkDescriptorPool sPool, VkSampler sSampler, int b );
 /* A.  */
 template< typename T >
 void 	        	InitTexBuffer( const std::vector< T > &srData, VkBuffer &srBuffer, VkDeviceMemory &srBufferMem, VkBufferUsageFlags sUsage );
@@ -102,6 +103,8 @@ void 			InitUniformBuffers( DataBuffer< VkBuffer > &srUBuffers, DataBuffer< VkDe
 /* A.  */
 void 			InitDescriptorSets( DataBuffer< VkDescriptorSet > &srDescSets, VkDescriptorSetLayout &srDescSetLayout,
 					    VkDescriptorPool &srDescPool, ImageInfoSets sDescImageInfos, BufferInfoSets sDescBufferInfos );
+void                    UpdateImageSets( std::vector< VkDescriptorSet > &srSets, VkDescriptorSetLayout &srLayout,
+					 VkDescriptorPool &srPool, std::vector< TextureDescriptor* > &srImages, VkSampler &srSampler );
 /* Initializes the uniform data, such as uniform buffers.  */
 void			InitUniformData( UniformDescriptor &srDescriptor, VkDescriptorSetLayout sLayout );
 /* A.  */
@@ -110,6 +113,8 @@ void 			InitImageViews( ImageViews &srSwapChainImageViews );
 void 			InitRenderPass(  );
 /* A.  */
 VkDescriptorSetLayout   InitDescriptorSetLayout( DescSetLayouts sBindings );
+/* A.  */
+VkDescriptorSetLayout   InitDescriptorSetLayout( VkDescriptorSetLayoutBinding sBinding );
 /* Creates graphics pipeline layouts using the specified descriptor set layouts.  */
 VkPipelineLayout        InitPipelineLayouts( VkDescriptorSetLayout *spSetLayouts, uint32_t setLayoutsCount, uint32_t sPushExtent );
 /* A.  */

@@ -28,8 +28,7 @@ bool STBITextureLoader::CheckExt( const char* ext )
 	return true;
 }
 
-
-TextureDescriptor* STBITextureLoader::LoadTexture( IMaterial* material, const std::string path )
+TextureDescriptor* STBITextureLoader::LoadTexture( const std::string path )
 {
 	TextureDescriptor	*pTexture = new TextureDescriptor;
 
@@ -76,21 +75,6 @@ TextureDescriptor* STBITextureLoader::LoadTexture( IMaterial* material, const st
 	vkFreeMemory( DEVICE, stagingBufferMemory, NULL );
 
 	InitTextureImageView( pTexture->aTextureImageView, pTexture->aTextureImage, pTexture->aMipLevels );
-
-	VkDescriptorSetLayout layout = ((Material*)material)->GetTextureLayout();
-
-	InitDescriptorSets(
-		pTexture->aSets,
-		layout,
-		*gpPool,
-		{ { {
-				VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-				pTexture->aTextureImageView,
-				renderer->GetTextureSampler(),
-				VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER
-			} } },
-		{  }
-	);
 
 	return pTexture;
 }

@@ -21,10 +21,10 @@ constexpr const char *pVShader = "shaders/unlit.vert.spv";
 constexpr const char *pFShader = "shaders/unlit.frag.spv";
 
 
-struct UnlitPushConstant
+struct UnlitArrayPushConstant
 {
-	glm::mat4 aProjView;
-	glm::mat4 aModel;
+        alignas( 16 )glm::mat4 trans;
+	alignas( 16 )int       index;
 };
 
 
@@ -65,7 +65,7 @@ std::vector<VkDescriptorSetLayoutBinding> ShaderUnlit::GetDescriptorSetLayoutBin
 
 void ShaderUnlit::CreateGraphicsPipeline(  )
 {
-	aPipelineLayout = InitPipelineLayouts( aLayouts.GetBuffer(  ), aLayouts.GetSize(  ), sizeof( UnlitPushConstant ) );
+	aPipelineLayout = InitPipelineLayouts( aLayouts.GetBuffer(  ), aLayouts.GetSize(  ), sizeof( UnlitArrayPushConstant ) );
 
 	VkPipelineShaderStageCreateInfo vertShaderStageInfo{  };
 	vertShaderStageInfo.sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;	//	Tells Vulkan which stage the shader is going to be used
@@ -253,9 +253,7 @@ void ShaderUnlit::Draw( BaseRenderable* renderable, VkCommandBuffer c, uint32_t 
 
 	assert(mesh != nullptr);
 
-	Texture *diffuse = mesh->apMaterial->GetTexture( "diffuse" );
-	if ( diffuse == nullptr )
-		return;
+	int diffuse = matsys->GetTextureId( mesh->apMaterial->GetTexture( "diffuse" ) );
 
 	// Bind the mesh's vertex and index buffers
 	VkBuffer 	vBuffers[  ] 	= { mesh->aVertexBuffer };
@@ -267,16 +265,16 @@ void ShaderUnlit::Draw( BaseRenderable* renderable, VkCommandBuffer c, uint32_t 
 
 	// Now draw it
 	vkCmdBindPipeline( c, VK_PIPELINE_BIND_POINT_GRAPHICS, aPipeline );
-
-	UnlitPushConstant p = {renderer->aView.projViewMatrix, mesh->GetModelMatrix()};
+	
+	UnlitArrayPushConstant p = {renderer->aView.projViewMatrix * mesh->GetModelMatrix(), diffuse};
 
 	vkCmdPushConstants(
 		c, aPipelineLayout, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
-		0, sizeof( UnlitPushConstant ), &p
+		0, sizeof( UnlitArrayPushConstant ), &p
 	);
 
 	VkDescriptorSet sets[  ] = {
-		diffuse->aSets[ commandBufferIndex ],
+		matsys->aImageSets[ commandBufferIndex ],
 	};
 
 	vkCmdBindDescriptorSets( c, VK_PIPELINE_BIND_POINT_GRAPHICS, aPipelineLayout, 0, 1, sets, 0, NULL );

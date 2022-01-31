@@ -41,8 +41,7 @@ void BaseShader::CreateDescriptorSetLayout(  )
 {
 	auto bindings = GetDescriptorSetLayoutBindings(  );
 
-	aLayouts.Allocate( bindings.size() );
+	aLayouts.Allocate( 1 );
 
-	for ( int i = 0; i < bindings.size(); i++ )
-		aLayouts[i] = InitDescriptorSetLayout( {bindings[i]} );  // stupid vector input
+        aLayouts[0] = matsys->aImageLayout;
 }

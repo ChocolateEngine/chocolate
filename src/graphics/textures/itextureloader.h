@@ -25,7 +25,7 @@ public:
 
 	// ideally this shouldn't need a path, should really be reworked to be closer to thermite, more flexible design
 	// also this probably shouldn't use a shader for a parameter
-	virtual TextureDescriptor*          LoadTexture( IMaterial* material, const std::string path ) = 0;
+	virtual TextureDescriptor*          LoadTexture( const std::string path ) = 0;
 
 	// will do later lol
 	// virtual void                        FreeTexture( TextureDescriptor* texture ) = 0;

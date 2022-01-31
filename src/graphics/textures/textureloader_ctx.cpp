@@ -13,7 +13,7 @@ bool CTXTextureLoader::CheckExt( const char* ext ) {
 	return ( strncmp( "ctx", ext, 3 ) == 0 );
 }
 /* Loads the texture into vulkan objects.  */
-TextureDescriptor *CTXTextureLoader::LoadTexture( IMaterial* material, const std::string path ) {
+TextureDescriptor *CTXTextureLoader::LoadTexture( const std::string path ) {
 	TextureDescriptor	*pTexture = new TextureDescriptor;
 	ctx_t                   *pTex     = ctx_open( path.c_str() );
 
@@ -55,21 +55,6 @@ TextureDescriptor *CTXTextureLoader::LoadTexture( IMaterial* material, const std
 	vkFreeMemory( DEVICE, stagingBufferMemory, NULL );
 
 	InitTextureImageView( pTexture->aTextureImageView, pTexture->aTextureImage, pTexture->aMipLevels );
-
-	VkDescriptorSetLayout layout = ((Material*)material)->GetTextureLayout();
-
-	InitDescriptorSets(
-		pTexture->aSets,
-		layout,
-		*gpPool,
-		{ { {
-				VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-				pTexture->aTextureImageView,
-				renderer->GetTextureSampler(),
-				VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER
-			} } },
-		{  }
-	);
 
 	ctx_free( pTex );
 
