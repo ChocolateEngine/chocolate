@@ -110,12 +110,16 @@ public:
 	void                        MeshInit( IMesh* mesh ) override;
 	void                        MeshReInit( IMesh* mesh ) override;
 	void                        MeshFreeOldResources( IMesh* mesh ) override;
-	VkSampler *apSampler;
+
+
+	VkSampler                  *apSampler;
 
 	VkDescriptorSetLayout       aImageLayout;
 	Sets                        aImageSets;
+
 	VkDescriptorSetLayout       aUniformLayout;
 	Sets                        aUniformSets;
+	
 private:
 	std::unordered_map< std::string, BaseShader* >          aShaders;
 

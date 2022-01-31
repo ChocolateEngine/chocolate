@@ -3,8 +3,6 @@
 #include "core/filesystem.h"
 #include "graphics/primvtx.hh"
 
-#include <csignal>
-
 FunctionList 			gFreeQueue;
 ShaderCache			gShaderCache;
 DescriptorCache			gDescriptorCache;

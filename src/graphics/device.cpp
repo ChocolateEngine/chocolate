@@ -3,8 +3,6 @@
 #include "core/console.h"
 #include "core/commandline.h"
 
-#include "unistd.h"
-
 #include <set>
 
 VKAPI_ATTR VkBool32 VKAPI_CALL Device::DebugCallback( VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, VkDebugUtilsMessageTypeFlagsEXT messageType,
