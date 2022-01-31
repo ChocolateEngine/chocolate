@@ -97,7 +97,7 @@ void FileSystem::DefaultSearchPaths(  )
 
 void FileSystem::AddSearchPath( const std::string& path )
 {
-	aSearchPaths.push_back( path );
+	aSearchPaths.push_back( CleanPath( path ) );
 }
 
 void FileSystem::RemoveSearchPath( const std::string& path )
@@ -111,19 +111,39 @@ void FileSystem::InsertSearchPath( size_t index, const std::string& path )
 }
 
 
+// maybe faster calls? probably not
+inline bool exists( const std::string& path )
+{
+    return ( access( path.c_str(), 0 ) != -1 );
+}
+
+
+inline bool is_dir( const std::string &path )
+{
+    struct stat s;
+    if ( stat( path.c_str(), &s ) == 0 )
+        return (s.st_mode & S_IFDIR);
+
+    return false;
+}
+
+
 std::string FileSystem::FindFile( const std::string& file )
 {
     // if it's an absolute path already,
     // don't bother to look in the search paths for it, and make sure it exists
     if ( IsAbsolute( file ) )
-        return Exists( file ) ? file : "";
+        return exists( file ) ? file : "";
+
+    if ( file == "" )
+        return file;
 
     for ( auto searchPath : aSearchPaths )
     {
         std::string fullPath = searchPath + "/" + file;
 
         // does item exist?
-        if ( Exists(fullPath) )
+        if ( exists( fullPath ) )
         {
             return fullPath;
         }
@@ -139,14 +159,14 @@ std::string FileSystem::FindDir( const std::string &dir )
     // if it's an absolute path already,
     // don't bother to look in the search paths for it, and make sure it exists
     if ( IsAbsolute( dir ) )
-        return IsDir( dir ) ? dir : "";
+        return is_dir( dir ) ? dir : "";
 
     for ( auto searchPath : aSearchPaths )
     {
         std::string fullPath = searchPath + "/" + dir;
 
         // does item exist?
-        if ( access( fullPath.c_str(), 0 ) != -1 )
+        if ( is_dir( fullPath ) )
         {
             return fullPath;
         }
@@ -188,7 +208,6 @@ std::vector< char > FileSystem::ReadFile( const std::string& srFilePath )
 }
 
 
-// i assume all of these could be faster if i used the system functions for these
 bool FileSystem::IsAbsolute( const std::string &path )
 {
 #ifdef _WIN32
@@ -199,6 +218,7 @@ bool FileSystem::IsAbsolute( const std::string &path )
     return std::filesystem::path( path ).is_absolute();
 #endif
 }
+
 
 bool FileSystem::IsDir( const std::string &path, bool noPaths )
 {
@@ -218,6 +238,7 @@ bool FileSystem::IsDir( const std::string &path, bool noPaths )
     return false;
 }
 
+
 bool FileSystem::IsFile( const std::string &path, bool noPaths )
 {
     struct stat s;
@@ -236,13 +257,15 @@ bool FileSystem::IsFile( const std::string &path, bool noPaths )
     return false;
 }
 
+
 bool FileSystem::Exists( const std::string &path, bool noPaths )
 {
     if ( noPaths || IsAbsolute( path ) )
         return (access( path.c_str(), 0 ) != -1);
     else
-        return (access( path.c_str(), 0 ) != -1);
+        return (access( FindFile(path).c_str(), 0 ) != -1);
 }
+
 
 int FileSystem::Access( const std::string &path, int mode )
 {
@@ -273,6 +296,7 @@ std::string FileSystem::GetBaseName( const std::string &path )
     return GetDirName( path ) + PATH_SEP;
 }
 
+
 std::string FileSystem::GetFileName( const std::string &path )
 {
     size_t i = path.length();
@@ -286,12 +310,33 @@ std::string FileSystem::GetFileName( const std::string &path )
 }
 
 
+std::string FileSystem::GetFileExt( const std::string &path )
+{
+    const char *dot = strrchr( path.c_str(), '.' );
+    if ( !dot || dot == path )
+        return "";
+
+    return dot + 1;
+}
+
+
 std::string FileSystem::CleanPath( const std::string &path )
 {
     std::vector< std::string > v;
 
     int n = path.length();
     std::string out;
+
+    std::string root;
+
+    if ( IsAbsolute( path ) )
+    {
+#ifdef _WIN32
+
+#elif
+        root = "/";
+#endif
+    }
 
     for ( int i = 0; i < n; i++ )
     {
@@ -326,9 +371,9 @@ std::string FileSystem::CleanPath( const std::string &path )
 
     // vector is empty
     if ( out == "" )
-        return "";  // PATH_SEP
-    else
-        return out;
+        return root;  // PATH_SEP
+    
+    return root + out;
 }
 
 

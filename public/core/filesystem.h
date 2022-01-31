@@ -103,6 +103,9 @@ public:
 	/* Return the filename in this path  */
 	std::string                             GetFileName( const std::string &path );
 
+	/* Return the file extension */
+	std::string                             GetFileExt( const std::string &path );
+
 	/* Cleans up the path, removes useless ".." and "."  */
 	std::string                             CleanPath( const std::string &path );
 
