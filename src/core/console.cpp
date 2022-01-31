@@ -1,3 +1,4 @@
+#include "core/filesystem.h"
 #include "core/console.h"
 #include "util.h"
 
@@ -206,7 +207,7 @@ CONCMD( exec )
 
 	std::string path = "cfg/" + args[0] + ".cfg";
 
-	if ( !FileExists( path ) )
+	if ( !filesys->IsFile( path ) )
 	{
 		Print( "Warning: File does not exist: \"%s\"\n", path );
 		return;
@@ -584,8 +585,10 @@ bool Console::RunCommand( const std::string& command )
 	std::vector< std::string > args;
 	int start, end = 0;
 
+	// ParseCommandLine( command, commandName, args );
+
 	/* Break the input into a vector of strings.  */
-	while ( ( start = command.find_first_not_of( ' ', end ) ) != std::string::npos )
+	while ( (start = command.find_first_not_of(' ', end)) != std::string::npos )
 	{
 		end = command.find( ' ', start );
 
@@ -642,6 +645,38 @@ bool Console::RunCommand( const std::string& command )
 		Print( "Command \"%s\" is undefined\n", commandName.c_str() );
 
 	return commandCalled;
+}
+
+
+void Console::ParseCommandLine( const std::string &command, std::string& name, std::vector< std::string >& args )
+{
+	// parse it
+	bool inName = false;
+	bool inQuote = false;
+
+	std::string curArg;
+
+	for ( auto ch: command )
+	{
+#ifdef _WIN32
+		if ( ch == '\r' )
+			continue;
+
+		else
+#endif
+		if ( ch == '\n' || ch == ';' )
+			break;
+
+		if ( inName )
+		{
+			name += ch;
+		}
+		else
+		{
+		}
+
+		ch++;
+	}
 }
 
 

@@ -48,7 +48,7 @@ public:
 
 	virtual void                       Draw( BaseRenderable* renderable, VkCommandBuffer c, uint32_t commandBufferIndex ) = 0;
 
-	//virtual bool                       UsesUniformBuffers(  ) = 0;
+	virtual bool                       UsesUniformBuffers(  ) = 0;
 
 	inline VkPipeline                  GetPipeline() const        { return aPipeline; }
 	inline VkPipelineLayout            GetPipelineLayout() const  { return aPipelineLayout; }

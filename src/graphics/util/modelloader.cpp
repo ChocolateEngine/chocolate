@@ -64,7 +64,6 @@ void LoadObj( const std::string &srPath, std::vector<Mesh*> &meshes )
 	{
 		meshes[i] = new Mesh;
 		materialsystem->RegisterRenderable( meshes[i] );
-		materialsystem->MeshInit( meshes[i] );
 		meshes[i]->apMaterial = nullptr;
 	}
 
@@ -108,6 +107,8 @@ void LoadObj( const std::string &srPath, std::vector<Mesh*> &meshes )
 		}
 
 		meshes[i]->apMaterial = material;
+		
+		materialsystem->MeshInit( meshes[i] );
 	}
 
 	std::unordered_map< vertex_3d_t, uint32_t > vertIndexes;

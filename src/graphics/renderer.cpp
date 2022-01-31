@@ -250,8 +250,8 @@ bool Renderer::LoadModel( Model* sModel, const String &srPath )
 			meshes[i] = new Mesh;
 			meshes[i]->apModel = sModel;
 			materialsystem->RegisterRenderable( meshes[i] );
-			materialsystem->MeshInit( meshes[i] );
 			meshes[i]->apMaterial = dupeModel->aMeshes[i]->apMaterial;
+			materialsystem->MeshInit( meshes[i] );
 			meshes[i]->aIndices = dupeModel->aMeshes[i]->aIndices;
 			meshes[i]->aVertices = dupeModel->aMeshes[i]->aVertices;
 		}
