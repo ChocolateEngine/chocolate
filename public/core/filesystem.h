@@ -26,12 +26,17 @@ constexpr char PATH_SEP = '/';
 using DirHandle = void*;
 
 
-enum ReadDirFlags
+enum ReadDirFlags_: unsigned char
 {
 	ReadDir_None = 0,
 	ReadDir_AllPaths = 1 << 1,  // DOES NOT WORK ON ReadFirst/ReadNext FUNCTIONS !!!
 	ReadDir_AbsPaths = 1 << 2,
+	ReadDir_NoDirs = 1 << 3,
+	ReadDir_NoFiles = 1 << 4,
+	ReadDir_Recursive = 1 << 5,
 };
+
+using ReadDirFlags = unsigned char;
 
 
 class CORE_API FileSystem
@@ -105,6 +110,9 @@ public:
 
 	/* Return the file extension */
 	std::string                             GetFileExt( const std::string &path );
+
+	/* Return the file name without the extension */
+	std::string                             GetFileNameNoExt( const std::string &path );
 
 	/* Cleans up the path, removes useless ".." and "."  */
 	std::string                             CleanPath( const std::string &path );

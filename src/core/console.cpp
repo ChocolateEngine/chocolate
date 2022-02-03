@@ -56,10 +56,11 @@ ConVarBase* ConVarBase::GetNext(  )
 // ================================================================================
 
 
-void ConCommand::Init( const std::string& name, ConVarFunc func )
+void ConCommand::Init( const std::string& name, ConVarFunc func, ConCommandDropdownFunc dropDownFunc )
 {
 	aName = name;
 	aFunc = func;
+	aDropDownFunc = dropDownFunc;
 }
 
 std::string ConCommand::GetPrintMessage(  )
@@ -206,7 +207,23 @@ bool ConVarRef::GetBool(  )
 
 // built in ConCommands
 
-CONCMD( exec )
+void exec_dropdown(
+	const std::vector< std::string >& args,  // arguments currently typed in by the user
+	std::vector< std::string >& results )      // results to populate the dropdown list with
+{
+	for ( const auto file : filesys->ScanDir( "cfg", ReadDir_AllPaths | ReadDir_Recursive ) )
+	{
+		if ( file.ends_with( ".." ) )
+			continue;
+
+		std::string mapName = filesys->GetFileName( file );
+
+		results.push_back( mapName );
+	}
+}
+
+
+CONCMD_DROP( exec, exec_dropdown )
 {
 	if ( args.size() == 0 )
 	{
@@ -631,6 +648,10 @@ void Console::CalculateAutoCompleteList( const std::string& textBuffer )
 	if ( textBuffer.empty() )
 		return;
 
+	std::string commandName;
+	std::vector< std::string > args;
+	ParseCommandLine( textBuffer, commandName, args );
+
 	ConVarBase* cvar = ConVarBase::spConVarBases;
 	while ( cvar )
 	{
@@ -638,10 +659,44 @@ void Console::CalculateAutoCompleteList( const std::string& textBuffer )
 		if ( !cvar )
 			continue;
 
-		if ( str_lower2(cvar->aName).starts_with( str_lower2(textBuffer) ) )
+		if ( !str_lower2( cvar->aName ).starts_with( str_lower2( commandName ) ) )
+		{
+			cvar = cvar->apNext;
+			continue;
+		}
+		
+		// if ( args.empty() )
+		if ( cvar->aName.length() >= textBuffer.length() )
+		{
 			aAutoCompleteList.push_back( cvar->aName );
+			cvar = cvar->apNext;
+			continue;
+		}
 
-		cvar = cvar->apNext;
+		// is this a concommand with a drop down function?
+		if ( auto cmd = dynamic_cast<ConCommand*>(cvar) )
+		{
+			if ( cmd->aDropDownFunc )
+			{
+				std::vector< std::string > dropDownArgs;
+				cmd->aDropDownFunc( args, dropDownArgs );
+
+				for ( auto dropArg: dropDownArgs )
+				{
+					aAutoCompleteList.push_back( cvar->aName + " " + dropArg );
+				}
+			}
+			else
+			{
+				aAutoCompleteList.push_back( cvar->aName );
+			}
+		}
+		else
+		{
+			aAutoCompleteList.push_back( cvar->aName );
+		}
+
+		break;
 	}
 }
 
@@ -679,10 +734,10 @@ bool Console::RunCommand( const std::string& command )
 	std::vector< std::string > args;
 	int start, end = 0;
 
-	// ParseCommandLine( command, commandName, args );
+	ParseCommandLine( command, commandName, args );
 
 	/* Break the input into a vector of strings.  */
-	while ( (start = command.find_first_not_of(' ', end)) != std::string::npos )
+	/*while ( (start = command.find_first_not_of(' ', end)) != std::string::npos )
 	{
 		end = command.find( ' ', start );
 
@@ -690,7 +745,7 @@ bool Console::RunCommand( const std::string& command )
 			commandName = command.substr( start, end - start );
 		else
 			args.push_back( command.substr( start, end - start ) );
-	}
+	}*/
 
 	str_lower( commandName );
 
@@ -744,33 +799,65 @@ bool Console::RunCommand( const std::string& command )
 
 void Console::ParseCommandLine( const std::string &command, std::string& name, std::vector< std::string >& args )
 {
-	// parse it
-	bool inName = false;
-	bool inQuote = false;
-
 	std::string curArg;
 
-	for ( auto ch: command )
+	int i = 0;
+	for ( ; i < command.size(); i++ )
 	{
+		if ( command[i] == ' ' )
+			break;
+		name += command[i];
+	}
+
+	i++;
+
+	for ( ; i < command.size(); i++ )
+	{
+		char ch = command[i];
+
 #ifdef _WIN32
 		if ( ch == '\r' )
 			continue;
-
-		else
 #endif
+
 		if ( ch == '\n' || ch == ';' )
 			break;
 
-		if ( inName )
+		// if a space, add
+		if ( ch == ' ' )
 		{
-			name += ch;
+			if ( curArg.size() )
+				args.push_back( curArg );
+
+			curArg = "";
+		}
+
+		// are we entering a quote?
+		else if ( ch == '"' || ch == '\'' )
+		{
+			char q = ch;
+
+			for ( ; i < command.size(); i++ )
+			{
+				if ( command[i] == q )
+					break;
+				else
+					curArg += command[i];
+			}
+
+			if ( curArg.size() )
+				args.push_back( curArg );
+
+			curArg = "";
 		}
 		else
 		{
+			curArg += ch;
 		}
-
-		ch++;
 	}
+
+	if ( curArg.size() )
+		args.push_back( curArg );
 }
 
 

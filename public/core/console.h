@@ -27,6 +27,14 @@ void CORE_API PrintFast( const char* str );
 
 typedef std::function< void( std::vector< std::string > args ) > ConVarFunc;
 
+typedef std::function< void(
+	const std::vector< std::string >& args,  // arguments currently typed in by the user
+	std::vector< std::string >& results      // results to populate the dropdown list with
+) > ConCommandDropdownFunc;
+
+// ConCommand console dropdown list function
+
+
 
 // why do i not need to forward declare the other ones?
 class ConVarRef;
@@ -61,14 +69,21 @@ public:
 	ConCommand( const std::string& name, ConVarFunc func ):
 		ConVarBase( name )
 	{
-		Init( name, func );
+		Init( name, func, aDropDownFunc );
 	}
 
-	void Init( const std::string& name, ConVarFunc func );
+	ConCommand( const std::string& name, ConVarFunc func, ConCommandDropdownFunc dropDownFunc ):
+		ConVarBase( name )
+	{
+		Init( name, func, dropDownFunc );
+	}
+
+	void Init( const std::string& name, ConVarFunc func, ConCommandDropdownFunc dropDownFunc );
 
 	std::string GetPrintMessage(  ) override;
 
 	ConVarFunc aFunc;
+	ConCommandDropdownFunc aDropDownFunc;
 
 	friend class Console;
 };
@@ -264,6 +279,11 @@ public:
 #define CONCMD( name ) \
 	void name( std::vector< std::string > args ); \
 	ConCommand name##_cmd( #name, name );              \
+	void name( std::vector< std::string > args )
+
+#define CONCMD_DROP( name, func ) \
+	void name( std::vector< std::string > args ); \
+	ConCommand name##_cmd( #name, name, func );              \
 	void name( std::vector< std::string > args )
 
 #define CON_COMMAND( name ) \

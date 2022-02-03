@@ -119,6 +119,12 @@ void Renderer::InitCommandBuffers(  )
 		renderPassInfo.clearValueCount 	 = ( uint32_t )clearValues.size(  );
 		renderPassInfo.pClearValues 	 = clearValues.data(  );
 
+		for ( auto& renderable : matsys->aDrawList )
+		{
+			Material* mat = (Material*)renderable->apMaterial;
+			mat->apShader->UpdateBuffers( i, renderable );
+		}
+
 		vkCmdBeginRenderPass( aCommandBuffers[ i ], &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE );
 
 		// IDEA: make a batched mesh vector so that way we can bind everything needed, and then just draw draw draw draw
@@ -333,11 +339,11 @@ void Renderer::DrawFrame(  )
 	gVertsDrawn = 0;
 	gLinesDrawn = 0;
 
-	for ( auto& renderable : matsys->aDrawList )
+	/*for ( auto& renderable : matsys->aDrawList )
 	{
 		Material* mat = (Material*)renderable->apMaterial;
 		mat->apShader->UpdateBuffers( aCurrentFrame, renderable );
-	}
+	}*/
 
 	InitCommandBuffers(  );	//	Fucky wucky!!
 	

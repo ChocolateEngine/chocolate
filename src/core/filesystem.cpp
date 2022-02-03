@@ -320,6 +320,21 @@ std::string FileSystem::GetFileExt( const std::string &path )
 }
 
 
+std::string FileSystem::GetFileNameNoExt( const std::string &path )
+{
+    std::string name = GetFileName( path );
+
+    size_t i = name.length();
+    for ( ; i > 0; i-- )
+    {
+        if ( name[i] == '.' )
+            break;
+    }
+
+    return name.substr( 0, i );
+}
+
+
 std::string FileSystem::CleanPath( const std::string &path )
 {
     std::vector< std::string > v;
@@ -504,7 +519,26 @@ bool sys_scandir( const std::string& root, const std::string& path, std::vector<
         return false;
 
     while ( FindNextFile( hFind, &ffd ) != 0 )
+    {
+        bool isDir = filesys->IsDir( path + "\\" + ffd.cFileName, true );
+
+        if ( (flags & ReadDir_Recursive) && isDir && strncmp(ffd.cFileName, "..", 2) != 0 )
+        {
+            sys_scandir( root, path + "\\" + ffd.cFileName, files, flags );
+        }
+
+        if ( (flags & ReadDir_NoDirs) && isDir )
+        {
+            continue;
+        }
+
+        if ( (flags & ReadDir_NoFiles) && filesys->IsFile( path + "\\" + ffd.cFileName, true ) )
+        {
+            continue;
+        }
+
         files.push_back( (flags & ReadDir_AbsPaths) ? scanDir + ffd.cFileName : path + "\\" + ffd.cFileName );
+    }
 
     FindClose( hFind );
 
