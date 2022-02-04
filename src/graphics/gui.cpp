@@ -158,7 +158,10 @@ bool CheckAddDropDownCommand( ImGuiInputTextCallbackData* data, Console* console
 	{
 		console->SetTextBuffer( data->Buf, false );
 		data->BufTextLen = console->GetTextBuffer().length();
-		data->CursorPos = console->GetTextBuffer().length();
+
+		if ( inDropDown )
+			data->CursorPos = console->GetTextBuffer().length();
+
 		prevTextBuffer = console->GetTextBuffer();
 	}
 
