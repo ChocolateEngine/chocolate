@@ -216,9 +216,13 @@ void exec_dropdown(
 		if ( file.ends_with( ".." ) )
 			continue;
 
-		std::string mapName = filesys->GetFileName( file );
+		std::string execName = filesys->GetFileName( file );
 
-		results.push_back( mapName );
+
+		if ( args.size() && !execName.starts_with( args[0] ) )
+			continue;
+
+		results.push_back( execName );
 	}
 }
 
@@ -231,7 +235,13 @@ CONCMD_DROP( exec, exec_dropdown )
 		return;
 	}
 
-	std::string path = "cfg/" + args[0] + ".cfg";
+	std::string path = "cfg/" + args[0];
+
+	if ( !filesys->IsFile( path ) )
+	{
+		if ( !path.ends_with( ".cfg" ) )
+			path += ".cfg";
+	}
 
 	if ( !filesys->IsFile( path ) )
 	{
