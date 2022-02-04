@@ -35,7 +35,7 @@ add_compile_definitions(
 	
 	GLM_FORCE_AVX2
 	#GLM_CONFIG_SIMD  # defined in GLM_FORCE_AVX2
-	
+
 	#GLM_FORCE_INLINE
 	#GLM_FORCE_SSE2 # or GLM_FORCE_SSE42 if your processor supports it
 	#GLM_FORCE_SSE42
@@ -44,7 +44,7 @@ add_compile_definitions(
 
 if( CMAKE_BUILD_TYPE STREQUAL Debug )
 	add_compile_definitions( "DEBUG=1" )
-elseif( CMAKE_BUILD_TYPE STREQUAL Release )
+else()
 	add_compile_definitions( "NDEBUG=1" )
 endif()
 
@@ -66,7 +66,7 @@ if( MSVC )
 	
 	# Remove default warning level from CMAKE_CXX_FLAGS
 	string ( REGEX REPLACE "/W[0-4]" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}" )
-	
+
 	if( CMAKE_BUILD_TYPE STREQUAL Debug )
 		add_compile_options( "/Od" )  # no optimizations
 		string ( REGEX REPLACE "/Zi" "/ZI" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}" )  # Use Edit and Continue on Debug
@@ -113,7 +113,7 @@ else()  # linux
 	
 	if ( CMAKE_BUILD_TYPE STREQUAL Debug )
 		add_compile_options( -g )
-	elseif( CMAKE_BUILD_TYPE STREQUAL Release )
+	else()
 		add_compile_options( -O2 )
 	endif()
 	
