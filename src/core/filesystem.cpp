@@ -348,7 +348,7 @@ std::string FileSystem::CleanPath( const std::string &path )
     {
 #ifdef _WIN32
 
-#elif
+#elif __linux__
         root = "/";
 #endif
     }

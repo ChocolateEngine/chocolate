@@ -232,7 +232,7 @@ void Basic2D::Draw( BaseRenderable* renderable, VkCommandBuffer c, uint32_t comm
 
 	VkBuffer 	vBuffers[  ] 	= { renderable->aVertexBuffer };
 	VkDeviceSize 	offsets[  ] 	= { 0 };
-	VkDescriptorSet sets[  ] = { 0 };
+	VkDescriptorSet sets[  ] = { matsys->aImageSets[ commandBufferIndex ] };
 
 	vkCmdBindPipeline( c, VK_PIPELINE_BIND_POINT_GRAPHICS, aPipeline );
 	vkCmdBindVertexBuffers( c, 0, 1, vBuffers, offsets );
@@ -244,6 +244,7 @@ void Basic2D::Draw( BaseRenderable* renderable, VkCommandBuffer c, uint32_t comm
 
 	push_constant_t push{  };
 	push.aMatrix	= sprite->GetMatrix();
+	push.aTexIndex  = diffuse;
 
 	vkCmdPushConstants
 	(

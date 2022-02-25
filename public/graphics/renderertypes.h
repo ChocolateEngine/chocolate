@@ -70,7 +70,8 @@ struct desc_set_layout_t
 
 struct push_constant_t
 {
-	glm::mat4 aMatrix;
+	alignas( 16 )glm::mat4 aMatrix;
+	alignas( 16 )int       aTexIndex;
 };
 
 struct vertex_3d_t
