@@ -239,7 +239,7 @@ def build_vorbis_project(proj, build_dir: str, out_dir: str):
     pass
 
 
-def post_vorbis_extract(path: str, copy_path: str, msbuild_projects: List[List[str | List[int]]]):
+def post_vorbis_extract(path: str, copy_path: str, msbuild_projects):
     if ARGS.no_build:
         return
 
