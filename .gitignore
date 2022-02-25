@@ -12,6 +12,7 @@ sidury/*.jpg
 
 #build files
 obj/
+out/
 
 #windows build files
 *.exe
@@ -32,3 +33,10 @@ scripts/*.mak
 .emacs.*
 *.desktop
 *.bak
+cmake_install.cmake
+CMakeFiles/
+public/SDL2/
+thirdparty/
+
+#ide
+.vs/
