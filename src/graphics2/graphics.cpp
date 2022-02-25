@@ -70,7 +70,7 @@ void Graphics::SetView( View& view )
  *
  *    @return Surface *    The surface that the Graphics system is using.
  */
-Surface *Graphics::GetSurface()
+Window *Graphics::GetSurface()
 {
 
 }

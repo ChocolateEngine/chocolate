@@ -15,6 +15,18 @@
 #define MALLOC_NEW( type ) (type*)malloc(sizeof(struct type))
 #define MALLOC_NEW2( type, var ) type* var = (type*)malloc(sizeof(struct type))
 
+using u8  = unsigned char;
+using u16 = unsigned short;
+using u32 = unsigned int;
+using u64 = unsigned long long;
+
+using s8  = char;
+using s16 = short;
+using s32 = int;
+using s64 = long long;
+
+using f32 = float;
+using f64 = double;
 
 template <class T>
 size_t vec_index(std::vector<T> &vec, T item)

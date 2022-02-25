@@ -1,27 +1,30 @@
-/*
- *    graphics.h    --    Header for Chocolate Graphics
- *
- *    Authored by Karl "p0lyh3dron" Kreuze on February 24, 2022
- *
- *    This header declares the graphics API and all of its
- *    functions.
- */
-#pragma once
+#pragma 1
 
-#include "graphics/igraphics2.h"
+#include "system.h"
+#include "graphics/renderertypes.h"
+#include <stdio.h>
+#include <SDL.h>
+#include <glm/glm.hpp>
 
-class Graphics : public IGraphics
+using HModel    = size_t;
+using HMaterial = size_t;
+using HTexture  = size_t;
+using HSprite   = size_t;
+
+struct Window 
 {
-protected:  
-public:
-    /*
+    SDL_Window *apWindow;
+};
+
+class IGraphics : public BaseSystem {
+	/*
      *    Draws a line from one point to another.
      *
      *    @param glm::vec3    The starting point.
      *    @param glm::vec3    The ending point.
      *    @param glm::vec3    The color of the line.
      */
-    void             DrawLine( glm::vec3 sX, glm::vec3 sY, glm::vec3 sColor ) override;
+    virtual void             DrawLine( glm::vec3 sX, glm::vec3 sY, glm::vec3 sColor ) = 0;
 
 	/*
      *    Loads a model from a path.
@@ -30,14 +33,14 @@ public:
      *
      *    @return HModel                The handle to the model.
      */
-	HModel           LoadModel( const std::string& srModelPath ) override;
+	virtual HModel           LoadModel( const std::string& srModelPath ) = 0;
 
 	/*
      *    Frees a model.
      *
      *    @param HModel     The handle to the model.
      */
-	void 		     FreeModel( HModel sModel ) override;
+	virtual void 		     FreeModel( HModel sModel ) = 0;
 
 	/*
      *    Loads a sprite from a path.
@@ -46,42 +49,42 @@ public:
      *
      *    @return HSprite               The handle to the sprite.
      */
-	HSprite          LoadSprite( const std::string& srSpritePath ) override;
+	virtual HSprite          LoadSprite( const std::string& srSpritePath ) = 0;
 
 	/*
      *    Frees a sprite.
      *
      *    @param HSprite    The handle to the sprite.
      */
-	void 		     FreeSprite( HSprite sSprite ) override;
+	virtual void 		     FreeSprite( HSprite sSprite ) = 0;
 
 	/*
      *    Sets the view.
      *
      *    @param View &    The view to set.
      */
-	void             SetView( View& view ) override;
+	virtual void             SetView( View& view ) = 0;
 
 	/*
      *    Returns the surface that the Graphics system is using.
      *
      *    @return Surface *    The surface that the Graphics system is using.
      */
-	Window          *GetSurface() override;
+	virtual Window          *GetSurface() = 0;
 
 	/*
 	 *    Creates a material.
 	 *
 	 *	  @return HMaterial    The handle to the material.
 	 */
-	HMaterial        CreateMat() override;
+	virtual HMaterial        CreateMat() = 0;
 
 	/*
 	 *    Frees a material.
 	 *
 	 *	  @param HMaterial    The handle to the material.
 	 */
-	void 		     FreeMat( HMaterial sMat ) override;
+	virtual void 		     FreeMat( HMaterial sMat ) = 0;
 
 	/*
 	 *    Loads a material.
@@ -90,7 +93,7 @@ public:
 	 *
 	 *	  @return HMaterial              The handle to the material.
 	 */
-	HMaterial        LoadMat( const std::string& srMatPath ) override;
+	virtual HMaterial        LoadMat( const std::string& srMatPath ) = 0;
 
 	/*
 	 *    Creates a texture from a file located by path specified.
@@ -99,7 +102,7 @@ public:
 	 * 
 	 *	  @return HTexture              The handle to the texture.
 	 */
-	HTexture         CreateTexture( const std::string& srTexturePath ) override;
+	virtual HTexture         CreateTexture( const std::string& srTexturePath ) = 0;
 	
 	/*
 	 *   Creates a texture from pixel data.
@@ -109,17 +112,12 @@ public:
 	 *   @param uint32_t    The height of the texture.
 	 *   @param uint32_t    The pixel format of the texture.
 	 */
-	HTexture         CreateTexture( void *pData, uint32_t width, uint32_t height, uint32_t format ) override;
+	virtual HTexture         CreateTexture( void *pData, uint32_t width, uint32_t height, uint32_t format ) = 0;
 
 	/*
 	 *    Frees a texture.
 	 *
 	 *    @param HTexture    The handle to the texture.
 	 */
-	void 		     FreeTexture( HTexture sTexture ) override;
-
-    /*
-	 *    Initializes the API.
-	 */
-	void             Init() override;
+	virtual void 		     FreeTexture( HTexture sTexture ) = 0;
 };

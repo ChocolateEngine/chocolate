@@ -9,11 +9,6 @@
     constexpr bool 	gEnableValidationLayers = true;
 #endif
 
-struct Window 
-{
-    SDL_Window *apWindow;
-};
-
 class GInstance
 {
 protected:

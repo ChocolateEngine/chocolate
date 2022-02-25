@@ -17,6 +17,37 @@ VKAPI_ATTR VkBool32 VKAPI_CALL DebugCallback( VkDebugUtilsMessageSeverityFlagBit
 	return VK_FALSE;
 }
 
+bool CheckValidationLayerSupport()
+{
+	bool layerFound;
+	unsigned int layerCount;
+	vkEnumerateInstanceLayerProperties( &layerCount, NULL );
+
+	std::vector< VkLayerProperties > availableLayers( layerCount );
+	vkEnumerateInstanceLayerProperties( &layerCount, availableLayers.data(  ) );
+	
+	for ( auto layerName : gpValidationLayers )
+	{
+		layerFound = false;
+
+		for ( const auto& layerProperties : availableLayers )
+		{
+			if ( strcmp( layerName, layerProperties.layerName ) == 0 )
+			{
+				layerFound = true;
+				break;
+			}
+		}
+
+		if ( !layerFound )
+		{
+			return false;
+		}
+	}
+
+	return true;
+}
+
 void GInstance::CreateSurface( void ) 
 {
     if ( gEnableValidationLayers && !CheckValidationLayerSupport(  ) )
@@ -104,37 +135,6 @@ std::vector< const char* > GInstance::InitRequiredExtensions()
 	// Add debug display extension, we need this to relay debug messages
 	extensions.push_back( VK_EXT_DEBUG_UTILS_EXTENSION_NAME );
 	return extensions;
-}
-
-bool CheckValidationLayerSupport()
-{
-	bool layerFound;
-	unsigned int layerCount;
-	vkEnumerateInstanceLayerProperties( &layerCount, NULL );
-
-	std::vector< VkLayerProperties > availableLayers( layerCount );
-	vkEnumerateInstanceLayerProperties( &layerCount, availableLayers.data(  ) );
-	
-	for ( auto layerName : gpValidationLayers )
-	{
-		layerFound = false;
-
-		for ( const auto& layerProperties : availableLayers )
-		{
-			if ( strcmp( layerName, layerProperties.layerName ) == 0 )
-			{
-				layerFound = true;
-				break;
-			}
-		}
-
-		if ( !layerFound )
-		{
-			return false;
-		}
-	}
-
-	return true;
 }
 
 GInstance::GInstance()

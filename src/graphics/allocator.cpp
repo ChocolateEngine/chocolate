@@ -3,6 +3,8 @@
 #include "core/filesystem.h"
 #include "graphics/primvtx.hh"
 
+#include "gutil.hh"
+
 FunctionList 			gFreeQueue;
 ShaderCache			gShaderCache;
 DescriptorCache			gDescriptorCache;
@@ -91,8 +93,7 @@ void InitBuffer( VkDeviceSize sSize, VkBufferUsageFlags sUsage, VkMemoryProperty
 
 	VkMemoryAllocateInfo allocInfo = MemoryAllocate( memRequirements.size, gpDevice->FindMemoryType( memRequirements.memoryTypeBits, sProperties ) );
 
-	if ( vkAllocateMemory( DEVICE, &allocInfo, nullptr, &srBufferMemory ) != VK_SUCCESS )
-		throw std::runtime_error( "Failed to allocate buffer memory!" );
+	CheckVKResult( vkAllocateMemory( DEVICE, &allocInfo, nullptr, &srBufferMemory ), "Failed to allocate buffer memory!" );
 
 	vkBindBufferMemory( DEVICE, srBuffer, srBufferMemory, 0 );
 }
@@ -262,8 +263,7 @@ void InitDescriptorSets( DataBuffer< VkDescriptorSet > &srDescSets, VkDescriptor
 	allocInfo.pSetLayouts 		= layouts.data(  );
 
 	srDescSets.Allocate( PSWAPCHAIN.GetImages(  ).size(  ) );
-	if ( vkAllocateDescriptorSets( DEVICE, &allocInfo, srDescSets.GetBuffer(  ) ) != VK_SUCCESS )	//	Allocate descriptor sets
-		throw std::runtime_error( "Failed to allocate descriptor sets!" );
+	CheckVKResult( vkAllocateDescriptorSets( DEVICE, &allocInfo, srDescSets.GetBuffer(  ) ), "Failed to allocate descriptor sets!" );
 
 	for ( int i = 0; i < PSWAPCHAIN.GetImages(  ).size(  ); i++ )					        //	For each of the rendered frames
 	{

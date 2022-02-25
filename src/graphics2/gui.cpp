@@ -1,5 +1,4 @@
 #include "gui.h"
-#include "renderer.h"
 #include "util.h"
 
 #include "imgui/imgui.h"
@@ -7,8 +6,6 @@
 #include "imgui/imgui_impl_sdl.h"
 
 GuiSystem* gui = new GuiSystem;
-
-extern Renderer* renderer;
 
 void GuiSystem::Update( float sDT )
 {
@@ -27,9 +24,6 @@ void GuiSystem::DrawGui(  )
 	static bool wasConsoleOpen = false;
 	static Uint32 prevtick = 0;
 	static Uint32 curtick = 0;
-
-	if ( !aDrawnFrame )
-		renderer->EnableImgui(  );
 
 	if ( aConsoleShown )
 		DrawConsole( wasConsoleOpen );
