@@ -24,7 +24,11 @@ set( CMAKE_SHARED_LIBRARY_PREFIX "" )
 
 set_property( GLOBAL PROPERTY PREFIX "" )
 
-include_directories( "." ${CH_PUBLIC} ${CH_THIRDPARTY} )
+include_directories(
+	"."
+	${CH_PUBLIC}
+	${CH_THIRDPARTY}
+)
 
 link_libraries( SDL2 )
 
@@ -55,6 +59,10 @@ if( MSVC )
 	# TODO: figure out vcpkg
 	link_directories(
 		${CH_THIRDPARTY}/SDL2/lib/x64
+	)
+	
+	include_directories(
+		${CH_THIRDPARTY}/glm
 	)
 	
 	add_compile_definitions(

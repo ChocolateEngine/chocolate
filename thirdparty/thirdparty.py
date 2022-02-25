@@ -302,6 +302,13 @@ def post_libvorbis_extract():
 # =================================================================================================
 
 
+def post_sdl_extract():
+    shutil.copytree("SDL2/include", "../public/SDL2", dirs_exist_ok=True)
+    
+
+# =================================================================================================
+
+
 FILE_LIST = {
     # NOTE: this kinda sucks because you can only put an item on one platform,
     # and would have to duplicate it for other platforms
@@ -355,6 +362,8 @@ FILE_LIST = {
             "zip",                  # file extension it's stored as
             "SDL2",                 # folder to check for if it exists already
             "SDL2-2.0.16",          # folder it extracts as to rename to another folder (optional)
+            ".",                    # extract into this folder (optional)
+            post_sdl_extract,       # function to run post extraction (optional)
         ],
         [
             "https://downloads.xiph.org/releases/ogg/libogg-1.3.5.zip",
@@ -362,7 +371,7 @@ FILE_LIST = {
             "libogg",
             "libogg-1.3.5",
             ".",                    # extract into this folder (optional)
-            post_libogg_extract,           # function to run post extraction (optional)
+            post_libogg_extract,    # function to run post extraction (optional)
         ],
         [
             "https://github.com/xiph/vorbis/releases/download/v1.3.7/libvorbis-1.3.7.zip",
