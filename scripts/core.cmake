@@ -35,9 +35,8 @@ link_libraries( SDL2 )
 add_compile_definitions(
 	# GLM_FORCE_DEPTH_ZERO_TO_ONE  # what does even this do internally
 	# glm is SHIT and can't do this with AVX2, ugh
-	# GLM_FORCE_XYZW_ONLY=GLM_ENABLE
+	GLM_FORCE_XYZW_ONLY=GLM_ENABLE
 	
-	GLM_FORCE_AVX2
 	#GLM_CONFIG_SIMD  # defined in GLM_FORCE_AVX2
 
 	#GLM_FORCE_INLINE
@@ -95,8 +94,6 @@ if( MSVC )
 		"/Zc:__cplusplus"   # set the __cplusplus macro to be the correct version
 		"/fp:fast"          # fast floating point model
 		"/GF"               # string pooling: allows compiler to create a single copy of identical strings in the program image and in memory during execution
-		
-		"/arch:AVX2"
 		
 		# disable stupid warnings
 		"/wd4244"  # conversion from 'X' to 'X', possible loss of data
