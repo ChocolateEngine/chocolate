@@ -29,11 +29,22 @@ public:
 };
 
 
-class Mesh;
+class Model;
+
+
+class Mesh : public IMesh
+{
+public:
+	virtual ~Mesh() {}
+
+	inline glm::mat4                GetModelMatrix() override;
+
+	Model* apModel;
+};
 
 
 // Simple Model Class, can be moved, rotated, and scaled
-class Model: public BaseRenderableGroup
+class Model : public BaseRenderableGroup
 {
 private:
 
@@ -85,17 +96,18 @@ public:
 	}
 
 	Model(  ) : aMeshes(  ){  };
-	~Model(  ) {}
+	~Model(  )
+	{
+		for ( auto mesh : aMeshes )
+		{
+			delete mesh;
+		}
+	}
 };
 
 
-class Mesh: public IMesh
+inline glm::mat4 Mesh::GetModelMatrix()
 {
-public:
-	virtual ~Mesh() {}
-
-	inline glm::mat4                GetModelMatrix() override { return apModel->aTransform.ToMatrix(); }
-
-	Model *apModel;
-};
+	return apModel->aTransform.ToMatrix();
+}
 

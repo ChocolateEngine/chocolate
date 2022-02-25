@@ -291,7 +291,7 @@ void UpdateImageSets( std::vector< VkDescriptorSet > &srSets, VkDescriptorSetLay
 	
 	std::vector< VkDescriptorSetLayout > layouts( PSWAPCHAIN.GetImages().size(), srLayout );
 
-	uint32_t counts[] = { 1000, 1000, 1000 };
+	uint32_t counts[] = { 100, 100, 100 };
 	VkDescriptorSetVariableDescriptorCountAllocateInfo dc{};
 	dc.sType              = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_VARIABLE_DESCRIPTOR_COUNT_ALLOCATE_INFO;
 	dc.descriptorSetCount = PSWAPCHAIN.GetImages().size();

@@ -58,6 +58,7 @@ public:
 	virtual void   DrawFrame() = 0;
 };
 
+#if NEW_NUTS
 class IGraphics : public BaseSystem {
 	/*
      *    Draws a line from one point to another.
@@ -163,3 +164,4 @@ class IGraphics : public BaseSystem {
 	 */
 	virtual void 		     FreeTexture( HTexture sTexture ) = 0;
 };
+#endif

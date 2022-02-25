@@ -33,6 +33,10 @@ void GraphicsSystem::DrawLine( glm::vec3 sX, glm::vec3 sY, glm::vec3 sColor ) {
 
 void GraphicsSystem::FreeModel( Model *spModel )
 {
+	if ( !spModel )
+		return;
+
+	matsys->DestroyRenderable( spModel );
 	vec_remove( aModels, spModel );
 	delete spModel;
 }
