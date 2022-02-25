@@ -97,6 +97,9 @@ def parse_args() -> argparse.Namespace:
     return args.parse_args()
 
 
+# =================================================================================================
+
+
 def post_ktx_extract():
     if ARGS.no_build:
         return
@@ -123,6 +126,41 @@ def post_ktx_extract():
     os.system("cmake --build . --config Debug")
 
     os.chdir("../..")
+
+
+# =================================================================================================
+
+
+def post_bullet_extract():
+    if ARGS.no_build:
+        return
+
+    os.chdir("bullet3")
+
+    #print("Building KTX\n")
+
+    if not os.path.isdir("build"):
+        os.mkdir("build")
+    #else:
+    #    print("Build Dir exists, skipping")
+    #    #return
+
+    os.chdir("build")
+
+    # initial setup
+    # cmake -DBUILD_EGL=Off -DBUILD_OPENGL3_DEMOS=Off -DBUILD_BULLET3=Off -DUSE_GRAPHICAL_BENCHMARK=Off -DBUILD_EXTRAS=Off -DBUILD_CPU_DEMOS=Off -DBUILD_BULLET2_DEMOS=Off -DBUILD_UNIT_TESTS=Off -DUSE_MSVC_RUNTIME_LIBRARY_DLL=On ..
+    os.system("cmake -DBUILD_EGL=Off -DBUILD_OPENGL3_DEMOS=Off -DBUILD_BULLET3=Off -DUSE_GRAPHICAL_BENCHMARK=Off -DBUILD_EXTRAS=Off -DBUILD_CPU_DEMOS=Off -DBUILD_BULLET2_DEMOS=Off -DBUILD_UNIT_TESTS=Off -DUSE_MSVC_RUNTIME_LIBRARY_DLL=On ..")
+
+    print("Building Bullet Physics - Release\n")
+    os.system("cmake --build . --config Release")
+
+    print("Building Bullet Physics - Debug\n")
+    os.system("cmake --build . --config Debug")
+
+    os.chdir("../..")
+
+
+# =================================================================================================
 
 
 def vorbis_copy_built_files(proj: str, cfg: str, build_dir: str, out_dir: str):
@@ -295,6 +333,7 @@ FILE_LIST = {
             "bullet3",              # folder to check for if it exists already
             "bullet3-3.17",         # folder it extracts as to rename to the folder above (optional)
             ".",                    # extract into this folder (optional)
+            post_bullet_extract,
             # TODO: set this up
             # cmake -DBUILD_EGL=Off -DBUILD_OPENGL3_DEMOS=Off -DBUILD_BULLET3=Off -DUSE_GRAPHICAL_BENCHMARK=Off -DBUILD_EXTRAS=Off -DBUILD_CPU_DEMOS=Off -DBUILD_BULLET2_DEMOS=Off -DBUILD_UNIT_TESTS=Off -DUSE_MSVC_RUNTIME_LIBRARY_DLL=On ..
         ],
