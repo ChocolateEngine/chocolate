@@ -13,7 +13,9 @@ using HSprite   = size_t;
 
 struct Window 
 {
-    SDL_Window *apWindow;
+    uint32_t         aWidth;
+    uint32_t         aHeight;
+    SDL_Window      *apWindow;
 };
 
 class IGraphics : public BaseSystem {

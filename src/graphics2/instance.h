@@ -4,20 +4,34 @@
 #include "graphics.h"
 
 #ifdef NDEBUG
-    constexpr bool 	gEnableValidationLayers = false;
+    constexpr bool 	      gEnableValidationLayers = false;
+    constexpr char const *gpValidationLayers[]    = {};
 #else
-    constexpr bool 	gEnableValidationLayers = true;
+    constexpr bool 	      gEnableValidationLayers = true;
+    constexpr char const *gpValidationLayers[]    = { "VK_LAYER_KHRONOS_validation" };
 #endif
 
 class GInstance
 {
 protected:
-    VkInstance aInstance;
-    Window     aWindow;
+    Window                      aWindow;
 
+    VkInstance                  aInstance;
+    VkDebugUtilsMessengerEXT 	aLayers;
+    VkSurfaceKHR                aSurface;
+
+    void                       CreateWindow();
     std::vector< const char* > InitRequiredExtensions();
-    void                       CreateSurface();
+    void                       CreateInstance();
+    VkResult                   CreateValidationLayers();
 public:
      GInstance();
     ~GInstance();
+
+    constexpr Window           GetWindow()   { return aWindow;   }
+
+    constexpr VkInstance       GetInstance() { return aInstance; }
+    constexpr VkSurfaceKHR     GetSurface()  { return aSurface;  }
 };
+
+extern GInstance gInstance;

@@ -37,6 +37,7 @@ cmake_install.cmake
 CMakeFiles/
 public/SDL2/
 thirdparty/
+Makefile
 
 #ide
 .vs/

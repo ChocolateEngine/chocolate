@@ -2,9 +2,12 @@
 
 #include <vulkan/vulkan.hpp>
 
+#include "graphics/renderertypes.h"
+#include "instance.h"
+
 #include <SDL.h>
 
-char const *VKString( VkResult sResult ) {
+constexpr char const *VKString( VkResult sResult ) {
     switch ( sResult ) {
         case VK_SUCCESS:
             return "VK_SUCCESS";
@@ -45,7 +48,7 @@ void CheckVKResult( VkResult sResult ) {
 }
 #endif
 
-void CheckVKResult( VkResult sResult, char const *spMsg ) {
+constexpr void CheckVKResult( VkResult sResult, char const *spMsg ) {
     if ( sResult == VK_SUCCESS )
         return;
 
@@ -55,3 +58,59 @@ void CheckVKResult( VkResult sResult, char const *spMsg ) {
     SDL_ShowSimpleMessageBox( SDL_MESSAGEBOX_ERROR, "Vulkan Error", pBuf, nullptr );
     throw std::runtime_error( pBuf );
 }
+
+static inline QueueFamilyIndices FindQueueFamilies( VkPhysicalDevice sDevice )
+{
+	QueueFamilyIndices indices;
+	uint32_t queueFamilyCount = 0;
+	vkGetPhysicalDeviceQueueFamilyProperties( sDevice, &queueFamilyCount, nullptr );
+
+	std::vector< VkQueueFamilyProperties > queueFamilies( queueFamilyCount );
+	vkGetPhysicalDeviceQueueFamilyProperties( sDevice, &queueFamilyCount, queueFamilies.data(  ) );// Logic to find queue family indices to populate struct with
+	int i = 0;
+	for ( const auto& queueFamily : queueFamilies )
+	{
+		if ( queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT )
+		{
+			VkBool32 presentSupport = false;
+			vkGetPhysicalDeviceSurfaceSupportKHR( sDevice, i, gInstance.GetSurface(), &presentSupport );
+			if ( presentSupport )
+			{
+				indices.aPresentFamily = i;
+			}
+			indices.aGraphicsFamily = i;
+		}
+		if ( indices.Complete(  ) )
+		{
+			break;
+		}
+		i++;
+	}
+	return indices;
+}
+
+static inline SwapChainSupportInfo CheckSwapChainSupport( VkPhysicalDevice sDevice )
+{
+    auto surf = gInstance.GetSurface();
+	SwapChainSupportInfo details;
+	vkGetPhysicalDeviceSurfaceCapabilitiesKHR( sDevice, surf, &details.aCapabilities );
+
+	uint32_t formatCount;
+	vkGetPhysicalDeviceSurfaceFormatsKHR( sDevice, surf, &formatCount, NULL );
+
+	if ( formatCount != 0 )
+	{
+		details.aFormats.resize( formatCount );
+		vkGetPhysicalDeviceSurfaceFormatsKHR( sDevice, surf, &formatCount, details.aFormats.data(  ) );
+	}
+	uint32_t presentModeCount;
+	vkGetPhysicalDeviceSurfacePresentModesKHR( sDevice, surf, &presentModeCount, NULL );
+
+	if ( presentModeCount != 0 )
+	{
+		details.aPresentModes.resize( presentModeCount );
+		vkGetPhysicalDeviceSurfacePresentModesKHR( sDevice, surf, &presentModeCount, details.aPresentModes.data(  ) );
+	}
+	return details;
+}
+

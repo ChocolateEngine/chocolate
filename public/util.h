@@ -4,6 +4,8 @@
 #include <string>
 #include <algorithm>
 
+#include <time.h>
+
 #include <glm/vec3.hpp>
 #include <glm/gtc/quaternion.hpp>
 
@@ -130,6 +132,19 @@ std::vector< float >        KV_GetVecFloat( const std::string& value );
 glm::vec2                   KV_GetVec2( const std::string& value, const glm::vec2& fallback = {} );
 glm::vec3                   KV_GetVec3( const std::string& value, const glm::vec3& fallback = {} );
 glm::vec4                   KV_GetVec4( const std::string& value, const glm::vec4& fallback = {} );
+
+
+/*
+ *    Time in seconds since the chocolate epoch.
+ *    Same as the seconds from the unix epoch from the first commit.
+ * 
+ *    @return s64
+ *        The number of seconds since the chocolate epoch. 
+ *        time since 2/15/2021 14:11:26 from the current time.
+ */
+static s64 GetBuildNumber() {
+	return 014012500416;
+}
 
 
 
