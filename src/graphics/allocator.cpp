@@ -85,8 +85,7 @@ void InitBuffer( VkDeviceSize sSize, VkBufferUsageFlags sUsage, VkMemoryProperty
 {
 	VkBufferCreateInfo bufferInfo = BufferCreate( sSize, sUsage );
 
-	if ( vkCreateBuffer( DEVICE, &bufferInfo, NULL, &srBuffer ) != VK_SUCCESS )
-		throw std::runtime_error( "Failed to create buffer!" );
+	CheckVKResult( vkCreateBuffer( DEVICE, &bufferInfo, NULL, &srBuffer ), "Failed to create buffer!" );
 
 	VkMemoryRequirements memRequirements;
 	vkGetBufferMemoryRequirements( DEVICE, srBuffer, &memRequirements );
