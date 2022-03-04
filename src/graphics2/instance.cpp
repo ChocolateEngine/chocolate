@@ -1,6 +1,7 @@
 #include "instance.h"
 
 #include "config.hh"
+#include "gutil.hh"
 
 #include "core/commandline.h"
 #include "core/log.h"
@@ -89,7 +90,7 @@ void GInstance::CreateInstance( void )
 
 	if ( gEnableValidationLayers )
 	{
-		createInfo.enabledLayerCount 	= ( unsigned int )sizeof( gpValidationLayers );
+		createInfo.enabledLayerCount 	= ( unsigned int )ARR_SIZE( gpValidationLayers );
 		createInfo.ppEnabledLayerNames 	= gpValidationLayers;
 		createInfo.pNext 		        = ( VkDebugUtilsMessengerCreateInfoEXT* )&gLayerInfo;
 	}
@@ -104,8 +105,7 @@ void GInstance::CreateInstance( void )
 	createInfo.enabledExtensionCount 	= ( uint32_t )SDLExtensions.size(  );
 	createInfo.ppEnabledExtensionNames 	= SDLExtensions.data(  );
 
-	if ( vkCreateInstance( &createInfo, NULL, &aInstance ) )
-		LogFatal( "Failed to create instance!" );
+	CheckVKResult( vkCreateInstance( &createInfo, NULL, &aInstance ), "Failed to create instance!" );
 
 	unsigned int extensionCount = 0;
 	vkEnumerateInstanceExtensionProperties( NULL, &extensionCount, NULL );
@@ -172,4 +172,8 @@ GInstance::~GInstance()
 	SDL_Quit();
 }
 
-GInstance gInstance{};
+GInstance &GetGInstance()
+{
+	static GInstance instance;
+	return instance;
+}

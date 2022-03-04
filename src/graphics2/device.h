@@ -2,7 +2,7 @@
 
 #include "types.h"
 
-class Device
+class GDevice
 {
 protected:
     VkSampleCountFlagBits aSampleCount;
@@ -15,14 +15,14 @@ protected:
     void                  SetupPhysicalDevice();
     void                  CreateDevice();
 public:
-     Device();
-    ~Device();
+     GDevice();
+    ~GDevice();
 
     constexpr VkQueue          GetGraphicsQueue()   { return aGraphicsQueue; }
     constexpr VkQueue          GetPresentQueue()    { return aPresentQueue;  }
 
-    constexpr VkPhysicalDevice GetPhysicalDevice() { return aPhysicalDevice; }
-    constexpr VkDevice         GetDevice()         { return aDevice;         }
+    constexpr VkPhysicalDevice GetPhysicalDevice()  { return aPhysicalDevice; }
+    constexpr VkDevice         GetDevice()          { return aDevice;         }
 };
 
-extern Device gDevice;
+GDevice &GetGDevice();

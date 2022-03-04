@@ -42,8 +42,8 @@ VkExtent2D ChooseSwapExtent( const VkSurfaceCapabilitiesKHR &srCapabilities )
 	else
 	{
 		VkExtent2D size = {
-			( unsigned int )gInstance.GetWindow().aWidth,
-            ( unsigned int )gInstance.GetWindow().aHeight
+			( unsigned int )GetGInstance().GetWindow().aWidth,
+            ( unsigned int )GetGInstance().GetWindow().aHeight
 		};
 
 	       size.width  = std::max( srCapabilities.minImageExtent.width,  std::min( srCapabilities.maxImageExtent.width,  size.width  ) );
@@ -55,7 +55,7 @@ VkExtent2D ChooseSwapExtent( const VkSurfaceCapabilitiesKHR &srCapabilities )
 
 Swapchain::Swapchain()
 {
-    SwapChainSupportInfo 	swapChainSupport    = CheckSwapChainSupport( gDevice.GetPhysicalDevice() );
+    SwapChainSupportInfo 	swapChainSupport    = CheckSwapChainSupport( GetGDevice().GetPhysicalDevice() );
 
 	VkSurfaceFormatKHR 	    aSurfaceFormat 		= ChooseSwapSurfaceFormat( swapChainSupport.aFormats );
 	VkPresentModeKHR 	    aPresentMode 	    = ChooseSwapPresentMode( swapChainSupport.aPresentModes );
@@ -67,7 +67,7 @@ Swapchain::Swapchain()
 
 	VkSwapchainCreateInfoKHR createInfo = {
 	    .sType 		        = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
-	    .surface 		    = gInstance.GetSurface(),
+	    .surface 		    = GetGInstance().GetSurface(),
 	    .minImageCount 	    = imageCount,
 	    .imageFormat 		= aSurfaceFormat.format,
 	    .imageColorSpace 	= aSurfaceFormat.colorSpace,
@@ -76,7 +76,7 @@ Swapchain::Swapchain()
 	    .imageUsage		    = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
     };
 
-    QueueFamilyIndices indices 	    = FindQueueFamilies( gDevice.GetPhysicalDevice() );
+    QueueFamilyIndices indices 	    = FindQueueFamilies( GetGDevice().GetPhysicalDevice() );
 	uint32_t queueFamilyIndices[  ] = { ( uint32_t )indices.aGraphicsFamily, ( uint32_t )indices.aPresentFamily };
 
 	if ( indices.aGraphicsFamily != indices.aPresentFamily )
@@ -98,17 +98,17 @@ Swapchain::Swapchain()
 	createInfo.clipped		    = VK_TRUE;
 	createInfo.oldSwapchain 	= VK_NULL_HANDLE;
 
-	if ( vkCreateSwapchainKHR( gDevice.GetDevice(), &createInfo, NULL, &aSwapChain ) != VK_SUCCESS )
+	if ( vkCreateSwapchainKHR( GetGDevice().GetDevice(), &createInfo, NULL, &aSwapChain ) != VK_SUCCESS )
 		LogFatal( "Failed to create swap chain!" );
 	
-	vkGetSwapchainImagesKHR( gDevice.GetDevice(), aSwapChain, &imageCount, NULL );
+	vkGetSwapchainImagesKHR( GetGDevice().GetDevice(), aSwapChain, &imageCount, NULL );
 	aImages.resize( imageCount );
-	vkGetSwapchainImagesKHR( gDevice.GetDevice(), aSwapChain, &imageCount, aImages.data(  ) );
+	vkGetSwapchainImagesKHR( GetGDevice().GetDevice(), aSwapChain, &imageCount, aImages.data(  ) );
 }
 
 Swapchain::~Swapchain()
 {
-    vkDestroySwapchainKHR( gDevice.GetDevice(), aSwapChain, NULL );
+    vkDestroySwapchainKHR( GetGDevice().GetDevice(), aSwapChain, NULL );
 }
 
 Swapchain gSwapChain{};

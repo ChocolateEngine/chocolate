@@ -28,7 +28,7 @@ typedef void* Module;
 Module          sys_load_library( const char* path );
 void            sys_close_library( Module mod );
 void*           sys_load_func( Module mod, const char* path );
-const char*     sys_get_error(  );
+const char*     sys_get_error();
 void            sys_print_last_error( const char* userErrorMessage );
 
 

@@ -2,9 +2,11 @@
 
 #include <vulkan/vulkan.hpp>
 
+#include "graphics/renderertypes.h"
+
 #include <SDL.h>
 
-char const *VKString( VkResult sResult ) {
+constexpr char const *VKString( VkResult sResult ) {
     switch ( sResult ) {
         case VK_SUCCESS:
             return "VK_SUCCESS";
@@ -45,7 +47,7 @@ void CheckVKResult( VkResult sResult ) {
 }
 #endif
 
-void CheckVKResult( VkResult sResult, char const *spMsg ) {
+constexpr void CheckVKResult( VkResult sResult, char const *spMsg ) {
     if ( sResult == VK_SUCCESS )
         return;
 

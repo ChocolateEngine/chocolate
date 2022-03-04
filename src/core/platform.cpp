@@ -84,5 +84,6 @@ void sys_print_last_error( const char* userErrorMessage )
 {
 	fprintf( stderr, "Error: %s\n%s\n", userErrorMessage, sys_get_error(  ) );
 }
+#elif __unix__
 
 #endif // _WIN32

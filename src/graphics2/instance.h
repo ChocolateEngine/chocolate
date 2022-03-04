@@ -34,4 +34,4 @@ public:
     constexpr VkSurfaceKHR     GetSurface()  { return aSurface;  }
 };
 
-extern GInstance gInstance;
+GInstance &GetGInstance();

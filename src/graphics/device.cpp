@@ -417,7 +417,6 @@ VkPresentModeKHR Device::ChooseSwapPresentMode( const PresentModes &srAvailableP
 			return availablePresentMode;
 		}
 	}
-	/* Unlimited fps     ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! !!!!!!!!!!!!!!!!!!!!!!!!!1  */
 	return VK_PRESENT_MODE_FIFO_KHR;
 }
 

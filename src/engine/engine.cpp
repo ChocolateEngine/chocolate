@@ -7,6 +7,8 @@ Defines the methods declared in engine.h.
 #include "core/platform.h"
 #include "core/console.h"
 #include "core/filesystem.h"
+#include "core/commandline.h"
+#include "core/log.h"
 #include "util.h"
 
 #ifdef _WIN32
@@ -33,16 +35,15 @@ void Engine::LoadModule( const std::string& srDlPath )
 		return;
 	}
 
-	handle = SDL_LoadObject( path.c_str() );
+	handle = sys_load_library( path.c_str() );
 	if ( !handle )
 	{
-		Print( "Error: %s\n", SDL_GetError() );
-		throw std::runtime_error( "Unable to load shared librarys!" );
+		LogFatal( "Unable to load shared librarys: %s\n", sys_get_error() );
 	}
-        *( void** )( &cframework_get ) = SDL_LoadFunction( handle, "cframework_get" );
+	
+    *( void** )( &cframework_get ) = sys_load_func( handle, "cframework_get" );
 	if ( !cframework_get ) {
-		Print( "Error: %s\n", SDL_GetError() );
-		throw std::runtime_error( "Unable to link library function!" );
+		LogFatal( "Unable to link library function: %s\n", sys_get_error() );
 	}
 
 	aDlHandles.push_back( handle );
@@ -56,7 +57,14 @@ void Engine::LoadModule( const std::string& srDlPath )
 void Engine::InitSystems(  )
 {
 	LoadModule( "input" );
-	LoadModule( "graphics" );
+	if ( cmdline->Find( "-g2" ) )
+	{
+		LoadModule( "graphics2" );
+	}
+	else
+	{
+		LoadModule( "graphics" );
+	}
 	LoadModule( "aduio" );
 }
 

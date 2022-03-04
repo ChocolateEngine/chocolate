@@ -122,4 +122,11 @@ public:
 	 *    Initializes the API.
 	 */
 	void             Init() override;
+	
+	/*
+	 *    Updates the API.
+	 *
+	 *	  @param float    The time since the last update.
+	 */
+	void             Update( float sDT ) override;
 };

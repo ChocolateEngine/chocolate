@@ -17,6 +17,8 @@
 #define MALLOC_NEW( type ) (type*)malloc(sizeof(struct type))
 #define MALLOC_NEW2( type, var ) type* var = (type*)malloc(sizeof(struct type))
 
+#define ARR_SIZE( arr ) (sizeof(arr) / sizeof(arr[0]))
+
 using u8  = unsigned char;
 using u16 = unsigned short;
 using u32 = unsigned int;

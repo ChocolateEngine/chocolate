@@ -33,7 +33,7 @@ add_dependencies( Graphics2 "Core" "ImGui" )
 
 set_target_properties(
 	Graphics2 PROPERTIES
-	OUTPUT_NAME Graphics2
+	OUTPUT_NAME graphics2
 )
 
 if ( VULKAN_DEBUG )

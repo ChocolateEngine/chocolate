@@ -1,4 +1,14 @@
 #include "graphics.h"
+
+extern "C" 
+{
+    void *cframework_get()
+    {
+        static Graphics graphics;
+        return &graphics;
+    }
+}
+
 /*
  *    Draws a line from one point to another.
  *
@@ -146,6 +156,16 @@ void Graphics::FreeTexture( HTexture sTexture )
  *    Initializes the API.
  */
 void Graphics::Init() 
+{
+
+}
+
+/*
+ *    Updates the API.
+ *
+ *	  @param float    The time since the last update.
+ */
+void Graphics::Update( float sDT )
 {
 
 }

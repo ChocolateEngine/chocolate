@@ -39,7 +39,7 @@ bool SuitableCard( VkPhysicalDevice sDevice )
 	return indices.Complete(  ) && extensionsSupported && swapChainAdequate;
 }
 
-VkSampleCountFlagBits Device::GetMaxUsableSampleCount()
+VkSampleCountFlagBits GDevice::GetMaxUsableSampleCount()
 {
 	VkPhysicalDeviceProperties 	physicalDeviceProperties;
 	vkGetPhysicalDeviceProperties( aPhysicalDevice, &physicalDeviceProperties );
@@ -55,17 +55,17 @@ VkSampleCountFlagBits Device::GetMaxUsableSampleCount()
 	return VK_SAMPLE_COUNT_1_BIT;
 }
 
-void Device::SetupPhysicalDevice() 
+void GDevice::SetupPhysicalDevice() 
 {
     aPhysicalDevice 	   = VK_NULL_HANDLE;
 	uint32_t deviceCount   = 0;
 	
-	vkEnumeratePhysicalDevices( gInstance.GetInstance(), &deviceCount, NULL );
+	vkEnumeratePhysicalDevices( GetGInstance().GetInstance(), &deviceCount, NULL );
 	if ( deviceCount == 0 ) {
 		throw std::runtime_error( "Failed to find GPUs with Vulkan support!" );
 	}
 	std::vector< VkPhysicalDevice > devices( deviceCount );
-	vkEnumeratePhysicalDevices( gInstance.GetInstance(), &deviceCount, devices.data(  ) );
+	vkEnumeratePhysicalDevices( GetGInstance().GetInstance(), &deviceCount, devices.data(  ) );
 
 	for ( const auto& device : devices ) {
 		if ( SuitableCard( device ) ) {
@@ -79,7 +79,7 @@ void Device::SetupPhysicalDevice()
 		LogFatal( "Failed to find a suitable GPU!" );
 }
 
-void Device::CreateDevice()
+void GDevice::CreateDevice()
 {
     QueueFamilyIndices indices = FindQueueFamilies( aPhysicalDevice );
 
@@ -116,29 +116,32 @@ void Device::CreateDevice()
         .flags                   = 0,	    
 	    .queueCreateInfoCount 	 = ( uint32_t )queueCreateInfos.size(  ),
         .pQueueCreateInfos 		 = queueCreateInfos.data(  ),
-        .enabledLayerCount       = ( uint32_t )sizeof( gpValidationLayers ),
+        .enabledLayerCount       = ( uint32_t )ARR_SIZE( gpValidationLayers ),
         .ppEnabledLayerNames     = gpValidationLayers,
-        .enabledExtensionCount   = ( uint32_t )sizeof( gpDeviceExtensions ),
+        .enabledExtensionCount   = ( uint32_t )ARR_SIZE( gpDeviceExtensions ),
         .ppEnabledExtensionNames = gpDeviceExtensions,
         .pEnabledFeatures        = &deviceFeatures,
     };
 
-	if ( vkCreateDevice( aPhysicalDevice, &createInfo, NULL, &aDevice ) != VK_SUCCESS )
-        LogFatal( "Failed to create logical device!" );
+	CheckVKResult( vkCreateDevice( aPhysicalDevice, &createInfo, NULL, &aDevice ), "Failed to create logical device!" );
 
 	vkGetDeviceQueue( aDevice, indices.aGraphicsFamily, 0, &aGraphicsQueue );
 	vkGetDeviceQueue( aDevice, indices.aPresentFamily,  0, &aPresentQueue );
 }
 
-Device::Device()
+GDevice::GDevice()
 {
     SetupPhysicalDevice();
     CreateDevice();
 }
 
-Device::~Device()
+GDevice::~GDevice()
 {
     vkDestroyDevice( aDevice, NULL );
 }
 
-Device gDevice{};
+GDevice &GetGDevice()
+{
+	static GDevice device;
+	return device;
+}

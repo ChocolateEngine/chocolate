@@ -4,6 +4,7 @@
 
 #include "graphics/renderertypes.h"
 #include "instance.h"
+#include "core/log.h"
 
 #include <SDL.h>
 
@@ -56,7 +57,7 @@ constexpr void CheckVKResult( VkResult sResult, char const *spMsg ) {
     snprintf( pBuf, sizeof( pBuf ), "Vulkan Error %s: %s", spMsg, VKString( sResult ) );
 
     SDL_ShowSimpleMessageBox( SDL_MESSAGEBOX_ERROR, "Vulkan Error", pBuf, nullptr );
-    throw std::runtime_error( pBuf );
+    LogFatal( pBuf );
 }
 
 static inline QueueFamilyIndices FindQueueFamilies( VkPhysicalDevice sDevice )
@@ -73,7 +74,7 @@ static inline QueueFamilyIndices FindQueueFamilies( VkPhysicalDevice sDevice )
 		if ( queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT )
 		{
 			VkBool32 presentSupport = false;
-			vkGetPhysicalDeviceSurfaceSupportKHR( sDevice, i, gInstance.GetSurface(), &presentSupport );
+			vkGetPhysicalDeviceSurfaceSupportKHR( sDevice, i, GetGInstance().GetSurface(), &presentSupport );
 			if ( presentSupport )
 			{
 				indices.aPresentFamily = i;
@@ -91,7 +92,7 @@ static inline QueueFamilyIndices FindQueueFamilies( VkPhysicalDevice sDevice )
 
 static inline SwapChainSupportInfo CheckSwapChainSupport( VkPhysicalDevice sDevice )
 {
-    auto surf = gInstance.GetSurface();
+    auto surf = GetGInstance().GetSurface();
 	SwapChainSupportInfo details;
 	vkGetPhysicalDeviceSurfaceCapabilitiesKHR( sDevice, surf, &details.aCapabilities );
 
