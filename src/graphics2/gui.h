@@ -35,6 +35,10 @@ public:
 	void		DebugMessage( const char* format, ... ) override;
 	void		DebugMessage( size_t index, const char* format, ... ) override;
 	void		InsertDebugMessage( size_t index, const char* format, ... ) override;
+	/*
+	 *    Starts a new ImGui frame.
+	 */
+	void 		StartFrame() override;
 
 	void            Init();
 

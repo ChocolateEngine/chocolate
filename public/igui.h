@@ -18,5 +18,9 @@ public:
 	virtual void		DebugMessage( const char* format, ... ) = 0;
 	virtual void		DebugMessage( size_t index, const char* format, ... ) = 0;
 	virtual void		InsertDebugMessage( size_t index, const char* format, ... ) = 0;
+	/*
+	 *    Starts a new ImGui frame.
+	 */	
+	virtual void 		StartFrame() = 0;
 };
 

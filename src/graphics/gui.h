@@ -21,8 +21,6 @@ protected:
 	void 		DrawConsole( bool wasConsoleOpen );
 
 public:
-	enum class	Commands{ NONE = 0, SHOW_CONSOLE, ASSIGN_WINDOW };
-
 	/* Per-Frame Update  */
 	void 		Update( float dt ) override;
 	/* Gets the window pointer from the renderer.  */
@@ -35,6 +33,10 @@ public:
 	void		DebugMessage( const char* format, ... ) override;
 	void		DebugMessage( size_t index, const char* format, ... ) override;
 	void		InsertDebugMessage( size_t index, const char* format, ... ) override;
+	/*
+	 *    Starts a new ImGui frame.
+	 */
+	void 		StartFrame() override;
 
 	void            Init();
 

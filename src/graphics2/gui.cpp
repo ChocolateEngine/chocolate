@@ -17,10 +17,6 @@ void GuiSystem::DrawGui(  )
 	if ( !apWindow )
 		return;
 
-	ImGui_ImplVulkan_NewFrame();
-	ImGui_ImplSDL2_NewFrame( apWindow );
-	ImGui::NewFrame();
-
 	static bool wasConsoleOpen = false;
 	static Uint32 prevtick = 0;
 	static Uint32 curtick = 0;
@@ -337,6 +333,18 @@ void GuiSystem::InsertDebugMessage( size_t index, const char* format, ... )
 	va_start( args, format );
 	aDebugMessages.insert( aDebugMessages.begin() + index, vstring( format, args ) );
 	va_end( args );
+}
+
+/*
+*    Starts a new ImGui frame.
+*/
+void GuiSystem::StartFrame() {
+	if ( !apWindow )
+		return;
+		
+	ImGui_ImplVulkan_NewFrame();
+	ImGui_ImplSDL2_NewFrame( apWindow );
+	ImGui::NewFrame();
 }
 
 void GuiSystem::Init()

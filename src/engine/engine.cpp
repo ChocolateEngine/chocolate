@@ -31,7 +31,7 @@ void Engine::LoadModule( const std::string& srDlPath )
 	std::string path = filesys->FindFile( srDlPath + EXT_DLL );
 
 	if ( path == "" ) {
-		Print( "No module named %s found in search paths\n", ( srDlPath + EXT_DLL ).c_str() );
+		LogWarn( "No module named %s found in search paths\n", ( srDlPath + EXT_DLL ).c_str() );
 		return;
 	}
 
@@ -51,10 +51,10 @@ void Engine::LoadModule( const std::string& srDlPath )
 	BaseSystem *pSys = cframework_get();
 	pSys->Init();
 	systems->Add( pSys );
-      	Print( "Loaded Module: %s\n", srDlPath.c_str() );
+    LogMsg( "Loaded Module: %s\n", srDlPath.c_str() );
 }
 
-void Engine::InitSystems(  )
+void Engine::InitSystems()
 {
 	LoadModule( "input" );
 	if ( cmdline->Find( "-g2" ) )
@@ -71,6 +71,6 @@ void Engine::InitSystems(  )
 void Engine::UpdateSystems( float sDT )
 {
 	for ( const auto& pSys : systems->GetSystemList() ) {
-	        pSys->Update( sDT );
+	    pSys->Update( sDT );
 	}
 }
