@@ -42,7 +42,7 @@ public:
 	/* Draws all loaded models and sprites to screen.  */
 	void 		DrawFrame(  );
 
-	void            DrawLine( glm::vec3 sX, glm::vec3 sY, glm::vec3 sColor ) override;
+	void            DrawLine( const glm::vec3& sX, const glm::vec3& sY, const glm::vec3& sColor ) override;
 
 	/* Loads a model given a path */
 	Model* 		LoadModel( const std::string& srModelPath ) override;

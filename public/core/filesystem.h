@@ -11,7 +11,7 @@
 #ifdef _WIN32
 #define stat _stat
 constexpr char PATH_SEP = '\\';
-#elif __linux__
+#elif __unix__
 constexpr char PATH_SEP = '/';
 #endif
 
@@ -72,7 +72,7 @@ public:
 	/* Find the path to a directory within the search paths.  */
 	std::string                             FindDir( const std::string& dir );
 
-	/* Reads a file into a byte array.  */
+	/* Reads a file - Returns an empty array if it doesn't exist.  */
 	std::vector< char >                     ReadFile( const std::string& file );
 
 	// ================================================================================
@@ -81,7 +81,10 @@ public:
 	/* Is path an absolute path?  */
 	bool                                    IsAbsolute( const std::string &path );
 
-	/* Is path a directory?  */
+	/* Is path a relative path?  */
+	bool                                    IsRelative( const std::string &path );
+
+	/* Is path a directory? Set noPaths to true to not use search paths for these three functions  */
 	bool                                    IsDir( const std::string &path, bool noPaths = false );
 
 	/* Is path a file?  */

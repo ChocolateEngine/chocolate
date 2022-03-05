@@ -72,6 +72,7 @@ public:
 	inline VkDescriptorSetLayout    GetUniformLayout( size_t id )          { return aUniformLayoutMap[id]; }
 
 	BaseShader*                 GetShader( const std::string& name ) override;
+	bool                        AddShader( BaseShader* spShader, const std::string& name );
 
 	template <typename T>
 	BaseShader* CreateShader( const std::string& name )
@@ -131,17 +132,22 @@ private:
 	std::unordered_map< std::string, BaseShader* >          aShaders;
 
 	std::vector< BaseRenderable* >                          aRenderables;
-	std::vector< BaseRenderable* >                          aDrawList;  // REMOVE THIS CRINGE
+
+	//std::vector< BaseRenderable* >                          aDrawList;
+	std::unordered_map< BaseShader*, std::vector< BaseRenderable* > > aDrawList;
 
 	std::vector< Material* >                                aMaterials;
 	std::vector< Material* >                                aErrorMaterials;
 
 	std::vector< ITextureLoader* >                          aTextureLoaders;
-	std::unordered_map< std::string, TextureDescriptor* >   aTextures;
+	std::vector< TextureDescriptor* >                       aTextures;
+	std::unordered_map< std::string, TextureDescriptor* >   aTexturePaths;
 
 	TextureDescriptor*                                      apMissingTex = nullptr;
 	size_t                                                  aMissingTexId = 0;
 };
 
 extern MaterialSystem* matsys;
+
+MaterialSystem* GetMaterialSystem();
 

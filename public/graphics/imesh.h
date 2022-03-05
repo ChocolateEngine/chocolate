@@ -59,15 +59,9 @@ public:
 
 	inline std::vector< BaseRenderable * > GetRenderables() override
 	{
-		std::vector< BaseRenderable * > items;
-
-		// blech
-		for ( auto mesh : aMeshes )
-			items.push_back( (BaseRenderable*)mesh );
-
-		// std::copy( items.begin(), items.end(), aMeshes );
-
-		return items;
+		// aw yeah
+		// even this RenderableGroup stuff stucks, ugh
+		return *(std::vector<BaseRenderable*> *)&aMeshes;
 	}
 
 	inline void SetTransform( const Transform& transform )

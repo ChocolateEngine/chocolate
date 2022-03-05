@@ -3,7 +3,6 @@ shader_basic_2d.cpp ( Authored by Demez )
 
 The Basic 2D Shader, starting point shader
 */
-#include "core/filesystem.h"
 #include "../renderer.h"
 #include "shader_basic_2d.h"
 #include "graphics/sprite.h"
@@ -36,14 +35,6 @@ void Basic2D::ReInit()
 	aModules[1] = CreateShaderModule( filesys->ReadFile( pFShader ) ); // Fills verticies with fragments to produce color, and depth
 
 	BaseShader::ReInit();
-}
-
-
-std::vector<VkDescriptorSetLayoutBinding> Basic2D::GetDescriptorSetLayoutBindings(  )
-{
-	return {
-		DescriptorLayoutBinding( VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr )
-	};
 }
 
 

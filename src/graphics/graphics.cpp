@@ -27,8 +27,10 @@ Model *GraphicsSystem::LoadModel( const std::string&srPath )
 	return model;
 }
 
-void GraphicsSystem::DrawLine( glm::vec3 sX, glm::vec3 sY, glm::vec3 sColor ) {
-	aRenderer.CreateLine( sX, sY, sColor );
+void GraphicsSystem::DrawLine( const glm::vec3& sX, const glm::vec3& sY, const glm::vec3& sColor )
+{
+	// amazing, fantastic, awful
+	aRenderer.aDbgDrawer.aMaterials.InitLine( sX, sY, sColor );
 }
 
 void GraphicsSystem::FreeModel( Model *spModel )

@@ -35,6 +35,8 @@ set_target_properties(
 	OUTPUT_NAME graphics
 )
 
+target_precompile_headers( Graphics PRIVATE "${CH_PUBLIC}/core/core.h" )
+
 if ( VULKAN_DEBUG )
 	target_compile_definitions( Graphics PRIVATE
 		-DVK_DEBUG=1

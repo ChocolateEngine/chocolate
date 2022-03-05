@@ -185,7 +185,7 @@ std::vector< char > FileSystem::ReadFile( const std::string& srFilePath )
     std::string fullPath = FindFile( srFilePath );
     if ( fullPath == "" )
     {
-        Print( "[Filesystem] Failed to find file: %s", srFilePath.c_str() );
+        LogError( "[Filesystem] Failed to find file: %s", srFilePath.c_str() );
         return {};
     }
 
@@ -193,7 +193,7 @@ std::vector< char > FileSystem::ReadFile( const std::string& srFilePath )
     std::ifstream file( fullPath, std::ios::ate | std::ios::binary );
     if ( !file.is_open() )
     {
-        Print( "[Filesystem] Failed to open file: %s", srFilePath.c_str() );
+        LogError( "[Filesystem] Failed to open file: %s", srFilePath.c_str() );
         return {};
     }
 
@@ -213,10 +213,22 @@ bool FileSystem::IsAbsolute( const std::string &path )
 {
 #ifdef _WIN32
     return !PathIsRelative( path.c_str() );
-#elif __linux__
+#elif __unix__
     return path.starts_with( "/" );
 #else
     return std::filesystem::path( path ).is_absolute();
+#endif
+}
+
+
+bool FileSystem::IsRelative( const std::string &path )
+{
+#ifdef _WIN32
+    return PathIsRelative( path.c_str() );
+#elif __unix__
+    return !path.starts_with( "/" );
+#else
+    return std::filesystem::path( path ).is_relative();
 #endif
 }
 
@@ -349,7 +361,7 @@ std::string FileSystem::CleanPath( const std::string &path )
     {
 #ifdef _WIN32
 
-#elif __linux__
+#elif __unix__
         root = "/";
 #endif
     }
@@ -410,7 +422,7 @@ bool FitsWildcard( DirHandle dirh, const std::string &path )
 
     if ( it != gSearchParams.end() )
     {
-        Print( "TODO: wildcard check oh god\n" );
+        Puts( "TODO: wildcard check oh god\n" );
         return false;
     }
     else
@@ -450,7 +462,7 @@ DirHandle FileSystem::ReadFirst( const std::string &path, std::string &file, Rea
     
     return hFind;
 
-#elif __linux__
+#elif __unix__
     return nullptr;
 #else
 #endif
@@ -478,11 +490,11 @@ bool FileSystem::ReadNext( DirHandle dirh, std::string &file )
     }
     else
     {
-        Print( "[Filesystem] handle not in handle list??\n" );
+        LogWarn( "[Filesystem] handle not in handle list??\n" );
         return false;
     }
 
-#elif __linux__
+#elif __unix__
     // somehow do stuff with wildcards
     // probably have to have an std::unordered_map< handles, search string > variable so you can do a comparison here
 
@@ -498,7 +510,7 @@ bool FileSystem::ReadClose( DirHandle dirh )
 #ifdef _WIN32
     return FindClose( dirh );
 
-#elif __linux__
+#elif __unix__
     return closedir( ( DIR* )dirh );
 
 #else
@@ -521,7 +533,7 @@ bool sys_scandir( const std::string& root, const std::string& path, std::vector<
 
     while ( FindNextFile( hFind, &ffd ) != 0 )
     {
-        bool isDir = filesys->IsDir( path + "\\" + ffd.cFileName, true );
+        bool isDir = ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY;
 
         if ( (flags & ReadDir_Recursive) && isDir && strncmp(ffd.cFileName, "..", 2) != 0 )
         {

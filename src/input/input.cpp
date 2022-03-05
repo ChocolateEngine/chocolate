@@ -4,14 +4,12 @@ input.cpp ( Authored by p0lyh3dron )
 Defines the methods declared in
 input.h
 */
-#include "core/platform.h"
+#include "core/core.h"
 #include "input.h"
 #include "imgui/imgui.h"
 #include "imgui/imgui_impl_sdl.h"
 
 #include "igui.h"
-
-#include "util.h"
 
 #include <fstream>
 #include <iostream>
@@ -279,7 +277,7 @@ KeyState InputSystem::GetKeyState( SDL_Scancode key )
 		if ( state == aKeyStates.end() )
 		{
 			// would be odd if this got hit
-			Print( "[Input System] Invalid Key: \"%s\"\n", SDL_GetKeyName( SDL_GetKeyFromScancode(key) ) );
+			LogWarn( "[Input System] Invalid Key: \"%s\"\n", SDL_GetKeyName( SDL_GetKeyFromScancode(key) ) );
 			return KeyState_Invalid;
 		}
 	}

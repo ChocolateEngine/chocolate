@@ -9,7 +9,7 @@
 #include <vector>
 #include <functional>
 
-#include "core/platform.h"
+#include "core/core.h"
 
 #include "system.h"
 #include "graphics/igraphics.h"

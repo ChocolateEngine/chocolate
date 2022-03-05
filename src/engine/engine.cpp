@@ -4,12 +4,6 @@ engine.cpp ( Authored by p0lyh3dron )
 Defines the methods declared in engine.h.  
 */
 #include "engine.h"
-#include "core/platform.h"
-#include "core/console.h"
-#include "core/filesystem.h"
-#include "core/commandline.h"
-#include "core/log.h"
-#include "util.h"
 
 #ifdef _WIN32
 	#include <direct.h>
@@ -31,7 +25,7 @@ void Engine::LoadModule( const std::string& srDlPath )
 	std::string path = filesys->FindFile( srDlPath + EXT_DLL );
 
 	if ( path == "" ) {
-		Print( "No module named %s found in search paths\n", ( srDlPath + EXT_DLL ).c_str() );
+		LogWarn( "No module named %s found in search paths\n", ( srDlPath + EXT_DLL ).c_str() );
 		return;
 	}
 
@@ -51,7 +45,7 @@ void Engine::LoadModule( const std::string& srDlPath )
 	BaseSystem *pSys = cframework_get();
 	pSys->Init();
 	systems->Add( pSys );
-      	Print( "Loaded Module: %s\n", srDlPath.c_str() );
+	Print( "Loaded Module: %s\n", srDlPath.c_str() );
 }
 
 void Engine::InitSystems(  )

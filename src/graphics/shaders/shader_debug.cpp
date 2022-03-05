@@ -3,7 +3,6 @@ shader_debug.cpp ( Authored by Demez )
 
 The Debug Shader, used for wireframe
 */
-#include "core/filesystem.h"
 #include "../renderer.h"
 #include "shader_debug.h"
 
@@ -21,6 +20,14 @@ constexpr const char *pVShader = "shaders/debug.vert.spv";
 constexpr const char *pFShader = "shaders/debug.frag.spv";
 
 
+ShaderDebug* gpShaderDebug = new ShaderDebug;
+
+ShaderDebug::ShaderDebug()
+{
+	GetMaterialSystem()->AddShader( this, "debug" );
+}
+
+
 void ShaderDebug::Init()
 {
 	aModules.Allocate(2);
@@ -34,12 +41,6 @@ void ShaderDebug::ReInit()
 	aModules[1] = CreateShaderModule( filesys->ReadFile( pFShader ) ); // Fills verticies with fragments to produce color, and depth
 
 	CreateGraphicsPipeline();
-}
-
-
-std::vector<VkDescriptorSetLayoutBinding> ShaderDebug::GetDescriptorSetLayoutBindings(  )
-{
-	return {};
 }
 
 
@@ -124,8 +125,6 @@ void ShaderDebug::CreateGraphicsPipeline(  )
 
 	VkPipelineDepthStencilStateCreateInfo depthStencil{  };
 	depthStencil.sType 			= VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
-	//depthStencil.depthTestEnable 		= ( sFlags & NO_DEPTH ) ? VK_FALSE : VK_TRUE;
-	//depthStencil.depthWriteEnable		= ( sFlags & NO_DEPTH ) ? VK_FALSE : VK_TRUE;
 	depthStencil.depthTestEnable 		= VK_TRUE;
 	depthStencil.depthWriteEnable		= VK_TRUE;
 	depthStencil.depthCompareOp 		= VK_COMPARE_OP_LESS;
@@ -185,26 +184,29 @@ void ShaderDebug::UpdateBuffers( uint32_t sCurrentImage, BaseRenderable* spRende
 }
 
 
-void ShaderDebug::Draw( BaseRenderable* renderable, VkCommandBuffer c, uint32_t commandBufferIndex )
+void ShaderDebug::Bind( VkCommandBuffer c, uint32_t cIndex )
 {
-	IMesh* mesh = dynamic_cast<IMesh*>(renderable);
-
-	assert(mesh != nullptr);
-
-	// Bind the mesh's vertex buffer
-	VkBuffer 	vBuffers[  ] 	= { mesh->aVertexBuffer };
-	VkDeviceSize 	offsets[  ] 	= { 0 };
-	vkCmdBindVertexBuffers( c, 0, 1, vBuffers, offsets );
-
-	// Now draw it
-	vkCmdBindPipeline( c, VK_PIPELINE_BIND_POINT_GRAPHICS, aPipeline );
-
 	DebugPushConstant p = {renderer->aView.projViewMatrix};
 
 	vkCmdPushConstants(
 		c, aPipelineLayout, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
 		0, sizeof( DebugPushConstant ), &p
 	);
+
+	BaseShader::Bind( c, cIndex );
+}
+
+
+void ShaderDebug::Draw( BaseRenderable* renderable, VkCommandBuffer c, uint32_t cIndex )
+{
+	IMesh* mesh = dynamic_cast<IMesh*>(renderable);
+
+	assert(mesh != nullptr);
+
+	// Bind the mesh's vertex buffer
+	/*VkBuffer 	vBuffers[  ] 	= { mesh->aVertexBuffer };
+	VkDeviceSize 	offsets[  ] 	= { 0 };
+	vkCmdBindVertexBuffers( c, 0, 1, vBuffers, offsets );*/
 
 	vkCmdDraw( c, (uint32_t)mesh->aVertices.size(), 1, 0, 0 );
 

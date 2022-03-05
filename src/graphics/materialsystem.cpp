@@ -5,17 +5,13 @@ Manages all the materials.
 Maybe the shadersystem could be inside this material system?
 */
 
-#include "core/filesystem.h"
 #include "materialsystem.h"
 #include "renderer.h"
-#include "util.h"
 #include "graphics/sprite.h"
 #include "speedykeyv/KeyValue.h"
 
-#include "shaders/shader_basic_3d.h"
 #include "shaders/shader_basic_2d.h"
 #include "shaders/shader_unlit.h"
-#include "shaders/shader_debug.h"
 #include "shaders/shader_unlitarray.h"
 
 #include "textures/textureloader_ktx.h"
@@ -26,6 +22,19 @@ extern size_t gModelDrawCalls;
 extern size_t gVertsDrawn;
 
 MaterialSystem* matsys = nullptr;
+
+
+MaterialSystem* GetMaterialSystem()
+{
+	static bool init = false;
+	if ( !init )
+	{
+		matsys = new MaterialSystem;
+		init = true;
+	}
+
+	return matsys;
+}
 
 
 MaterialSystem::MaterialSystem()
@@ -47,12 +56,35 @@ void MaterialSystem::Init()
 	// Create Missing Texture
 	apMissingTex = CreateTexture( "" );
 
+	// init shaders
+	for ( auto& [name, shader]: aShaders )
+	{
+		shader->Init();
+	}
+
 	// Setup built in shaders
-	BaseShader* basic_3d   = CreateShader<Basic3D>( "basic_3d" );
 	BaseShader* basic_2d   = CreateShader<Basic2D>( "basic_2d" );
 	BaseShader* unlit      = CreateShader<ShaderUnlit>( "unlit" );
-	BaseShader* debug      = CreateShader<ShaderDebug>( "debug" );
 	BaseShader* unlitarray = CreateShader<ShaderUnlitArray>( "unlitarray" );
+}
+
+
+bool MaterialSystem::AddShader( BaseShader* spShader, const std::string& name )
+{
+	// check if we already made this shader
+	auto search = aShaders.find( name );
+
+	if ( search != aShaders.end() )
+		return false;
+
+	spShader->aName = name;
+
+	if ( gpDevice )
+		spShader->Init();
+
+	aShaders[name] = spShader;
+
+	return true;
 }
 
 
@@ -80,9 +112,11 @@ IMaterial* MaterialSystem::FindMaterial( const std::string &name )
 void MaterialSystem::DeleteMaterial( IMaterial* matPublic )
 {
 	Material* mat = (Material*)matPublic;
-	if ( vec_contains( aMaterials, mat ) )
+
+	auto it = std::find( aMaterials.begin(), aMaterials.end(), matPublic );
+	if ( it != aMaterials.end() )
 	{
-		vec_remove( aMaterials, mat );
+		aMaterials.erase( it );
 		mat->Destroy();
 		delete mat;
 	}
@@ -100,7 +134,7 @@ IMaterial* MaterialSystem::ParseMaterial( const std::string &path )
 
 	if ( fullPath.empty() )
 	{
-		Print( "[Graphics] Failed to find file: %s\n", path.c_str() );
+		LogWarn( "[Graphics] Failed to find file: %s\n", path.c_str() );
 		return nullptr;
 	}
 
@@ -108,7 +142,7 @@ IMaterial* MaterialSystem::ParseMaterial( const std::string &path )
 
 	if ( rawData.empty() )
 	{
-		Print( "[Graphics] Failed to read file: %s\n", fullPath.c_str() );
+		LogWarn( "[Graphics] Failed to read file: %s\n", fullPath.c_str() );
 		return nullptr;
 	}
 
@@ -120,7 +154,7 @@ IMaterial* MaterialSystem::ParseMaterial( const std::string &path )
 
 	if ( err != KeyValueErrorCode::NO_ERROR )
 	{
-		Print( "[Graphics] Failed to parse file: %s\n", fullPath.c_str() );
+		LogWarn( "[Graphics] Failed to parse file: %s\n", fullPath.c_str() );
 		return nullptr;
 	}
 
@@ -138,7 +172,7 @@ IMaterial* MaterialSystem::ParseMaterial( const std::string &path )
 	{
 		if ( kv->hasChildren )
 		{
-			Print( "[Graphics] Skipping extra children in kv file: %s", fullPath.c_str() );
+			LogDev( 1, "[Graphics] Skipping extra children in kv file: %s", fullPath.c_str() );
 			kv = kv->next;
 			continue;
 		}
@@ -243,16 +277,16 @@ Texture *MaterialSystem::CreateTexture( const std::string &path )
 	// Check if texture was already loaded
 	std::unordered_map< std::string, TextureDescriptor* >::iterator it;
 
-	it = aTextures.find( path );
+	it = aTexturePaths.find( path );
 
-	if ( it != aTextures.end() )
+	if ( it != aTexturePaths.end() )
 		return it->second;
 
 	// Not found, so try to load it
 	std::string absPath = filesys->FindFile( path );
 	if ( absPath == "" && apMissingTex )
 	{
-		Print( "[Graphics] Failed to Find Texture \"%s\"\n", path );
+		LogWarn( "[Graphics] Failed to Find Texture \"%s\"\n", path );
 		return nullptr;
 	}
 
@@ -265,15 +299,10 @@ Texture *MaterialSystem::CreateTexture( const std::string &path )
 
 		if ( TextureDescriptor* texture = loader->LoadTexture( absPath ) )
 		{
-			aTextures[path] = texture;
+			aTextures.push_back( texture );
+			aTexturePaths[path] = texture;
 
-			std::vector< TextureDescriptor* > v;
-			v.reserve( aTextures.size() );
-
-			for ( const auto &rTex : aTextures )
-				v.push_back( rTex.second );
-
-			UpdateImageSets( aImageSets, aImageLayout, *gpPool, v, *apSampler );
+			UpdateImageSets( aImageSets, aImageLayout, *gpPool, aTextures, *apSampler );
 
 			// reassign the missing texture id due to order shifting
 			aMissingTexId = GetTextureId( apMissingTex );
@@ -290,14 +319,7 @@ Texture *MaterialSystem::CreateTexture( const std::string &path )
 
 int MaterialSystem::GetTextureId( Texture *spTexture )
 {
-	int i = 0;
-	for ( const auto& [path, tex]: aTextures )
-	{
-		if ( tex == spTexture )
-			return i;
-		++i;
-	}
-	return aMissingTexId;
+	return vec_index( aTextures, spTexture, aMissingTexId );
 }
 
 
@@ -367,7 +389,7 @@ BaseShader* MaterialSystem::GetShader( const std::string& name )
 	if (search != aShaders.end())
 		return search->second;
 
-	Print( "[Graphics] Shader not found: %s", name.c_str() );
+	LogError( "[Graphics] Shader not found: %s\n", name.c_str() );
 	return nullptr;
 }
 
@@ -397,13 +419,39 @@ void MaterialSystem::RegisterRenderable( BaseRenderable* renderable )
 
 void MaterialSystem::AddRenderable( BaseRenderable* renderable )
 {
-	aDrawList.push_back( renderable );
+	if ( !renderable )
+		return;
+
+	Material* mat = (Material*)renderable->apMaterial;
+
+	if ( !mat )
+	{
+		LogError( "[Graphics] Renderable has no material!\n" );
+		return;
+	}
+
+	if ( !mat->apShader )
+	{
+		LogError( "[Graphics] Material has no shader!\n" );
+		return;
+	}
+
+	auto search = aDrawList.find( mat->apShader );
+
+	if ( search != aDrawList.end() )
+	{
+		aDrawList[mat->apShader].push_back( renderable );
+	}
+	else
+	{
+		aDrawList[mat->apShader] = { renderable };
+	}
 }
 
 void MaterialSystem::AddRenderable( BaseRenderableGroup *group )
 {
 	for ( auto renderable : group->GetRenderables() )
-		aDrawList.push_back( renderable );
+		AddRenderable( renderable );
 }
 
 

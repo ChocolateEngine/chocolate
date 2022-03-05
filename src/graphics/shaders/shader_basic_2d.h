@@ -15,8 +15,6 @@ public:
 	virtual void        Init() override;
 	virtual void        ReInit() override;
 
-	virtual std::vector<VkDescriptorSetLayoutBinding> GetDescriptorSetLayoutBindings(  ) override;
-
 	virtual void        CreateGraphicsPipeline(  ) override;
 
 	virtual void        UpdateBuffers( uint32_t sCurrentImage, BaseRenderable* spRenderable ) override;

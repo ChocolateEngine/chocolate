@@ -12,7 +12,7 @@ file(
 )
 
 list( APPEND PUBLIC_FILES
-	${CH_PUBLIC}/util.cpp
+	${CH_PUBLIC}/util.h
 )
 
 add_compile_definitions( "CORE_DLL" )
@@ -28,4 +28,6 @@ set_target_properties(
 	LINKER_LANGUAGE CXX
 	OUTPUT_NAME core
 )
+
+target_precompile_headers( Core PUBLIC "${CH_PUBLIC}/core/core.h" )
 

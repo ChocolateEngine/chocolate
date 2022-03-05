@@ -6,8 +6,6 @@ Load Normal Images with stb_image (blech)
 
 #include "textureloader_stbi.h"
 #include "../renderer.h"
-#include "core/console.h"
-#include "util.h"
 
 #include "io/stb_image.h"
 #include "../types/missingtexture.h"
@@ -45,7 +43,7 @@ TextureDescriptor* STBITextureLoader::LoadTexture( const std::string path )
 		// This texture loader handles missing texture creation, i know, awful right?
 		if ( matsys->GetMissingTexture() )
 		{
-			Print( "Failed to open texture: %s\n", path.c_str() );
+			LogWarn( "Failed to open texture: %s\n", path.c_str() );
 			return matsys->GetMissingTexture();
 		}
 

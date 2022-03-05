@@ -9,6 +9,7 @@ Vulkan.
 
 #define GLM_ENABLE_EXPERIMENTAL
 
+#include "core/core.h"
 #include "system.h"
 #include "graphics/renderertypes.h"
 #include "graphics/imesh.h"
@@ -60,8 +61,6 @@ protected:
 	int                         aCurrentFrame       = 0;
 	bool                        aImGuiInitialized   = false;
 
-	DebugRenderer               aDbgDrawer;
-
 	friend class MaterialSystem;
 
 	/* A.  */
@@ -85,6 +84,8 @@ public:
 	View            aView;
 	ModelList       aModels;
 	SpriteList      aSprites;
+
+	DebugRenderer   aDbgDrawer;
 
 	/* A.  */
 	void    Init(  );

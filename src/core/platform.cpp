@@ -84,6 +84,35 @@ void sys_print_last_error( const char* userErrorMessage )
 {
 	fprintf( stderr, "Error: %s\n%s\n", userErrorMessage, sys_get_error(  ) );
 }
-#elif __unix__
+
+
+// https://stackoverflow.com/a/31411628/12778316
+static NTSTATUS(__stdcall *NtDelayExecution)(BOOL Alertable, PLARGE_INTEGER DelayInterval) = (NTSTATUS(__stdcall*)(BOOL, PLARGE_INTEGER)) GetProcAddress(GetModuleHandle("ntdll.dll"), "NtDelayExecution");
+static NTSTATUS(__stdcall *ZwSetTimerResolution)(IN ULONG RequestedResolution, IN BOOLEAN Set, OUT PULONG ActualResolution) = (NTSTATUS(__stdcall*)(ULONG, BOOLEAN, PULONG)) GetProcAddress(GetModuleHandle("ntdll.dll"), "ZwSetTimerResolution");
+
+
+// sleep for x milliseconds
+void sys_sleep( float ms )
+{
+	static bool once = true;
+	if (once)
+	{
+		ULONG actualResolution;
+		ZwSetTimerResolution(1, true, &actualResolution);
+		once = false;
+	}
+
+	LARGE_INTEGER interval{};
+	interval.QuadPart = -1 * (int)(ms * 10000.0f);
+	NtDelayExecution(false, &interval);
+}
+
+// very uh, windows only-ish i think
+void* sys_get_console_window()
+{
+	// idk what this is actually doing lmao
+	return GetStdHandle( -11 );
+}
+
 
 #endif // _WIN32

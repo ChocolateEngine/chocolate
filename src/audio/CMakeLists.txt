@@ -88,6 +88,8 @@ set_target_properties(
 	PREFIX ""
 )
 
+target_precompile_headers( Aduio PRIVATE "${CH_PUBLIC}/core/core.h" )
+
 # copy phonon over
 message( "Copying Steam Audio DLL (phonon)" )
 

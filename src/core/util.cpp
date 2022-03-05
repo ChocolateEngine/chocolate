@@ -57,6 +57,53 @@ std::string str_lower2( const std::string &in )
 
 // very cool
 // https://stackoverflow.com/questions/55424746/is-there-an-analogous-function-to-vsnprintf-that-works-with-stdstring
+void vstring( std::string& result, const char* format, ... )
+{
+	va_list args, args_copy;
+
+	va_start( args, format );
+	va_copy( args_copy, args );
+
+	int len = vsnprintf( nullptr, 0, format, args );
+	if (len < 0)
+	{
+		va_end(args_copy);
+		va_end(args);
+		throw std::runtime_error("vsnprintf error");
+	}
+
+	if ( len > 0 )
+	{
+		result.resize( len );
+		vsnprintf( result.data(), len+1, format, args_copy );
+	}
+
+	va_end( args_copy );
+	va_end( args );
+}
+
+void vstring( std::string& s, const char* format, va_list args )
+{
+	va_list copy;
+	va_copy( copy, args );
+	int len = std::vsnprintf( nullptr, 0, format, copy );
+	va_end( copy );
+
+	if ( len >= 0 )
+	{
+		//std::string s( std::size_t(len) + 1, '\0' );
+		s.resize( std::size_t(len) + 1, '\0' );
+		std::vsnprintf( s.data(), s.size(), format, args );
+		s.resize( len );
+		//return s;
+	}
+
+	throw std::runtime_error( "vsnprintf error" );
+}
+
+
+// very cool
+// https://stackoverflow.com/questions/55424746/is-there-an-analogous-function-to-vsnprintf-that-works-with-stdstring
 std::string vstring( const char* format, ... )
 {
 	std::string result;
@@ -99,12 +146,8 @@ std::string vstring( const char* format, va_list args )
 		s.resize( len );
 		return s;
 	}
-	
-	throw std::runtime_error( "vsnprintf error" );
 
-	//const auto err = errno;
-	//const auto ec = std::error_code(err, std::generic_category());
-	//throw std::system_error(ec);
+	throw std::runtime_error( "vsnprintf error" );
 }
 
 
@@ -184,7 +227,7 @@ std::vector< std::string > KV_GetVec( const std::string& value )
 
 	if ( value.size() == 1 || value[0] != '[' )
 	{
-		Print( "[KV] Error: not a list: %s\n", value.c_str() );
+		LogError( "[KV]: not a list: %s\n", value.c_str() );
 		return {};
 	}
 
@@ -239,7 +282,7 @@ std::vector< int > KV_GetVecInt( const std::string& value )
 		long val = 0;
 		if ( !ToLong2( strVal, val ) )
 		{
-			Print( "[KV] Warning: Failed to convert to long: %s - From %s\n", value.c_str() );
+			LogWarn( "[KV]: Failed to convert to long: %s - From %s\n", value.c_str() );
 			return {};
 		}
 
@@ -263,7 +306,7 @@ std::vector< float > KV_GetVecFloat( const std::string& value )
 		double val = 0;
 		if ( !ToDouble2( strVal, val ) )
 		{
-			Print( "[KV] Warning: Failed to convert to double: %s - From %s\n", value.c_str() );
+			LogWarn( "[KV]: Failed to convert to double: %s - From %s\n", value.c_str() );
 			return {};
 		}
 
@@ -287,7 +330,7 @@ glm::vec2 KV_GetVec2( const std::string& value, const glm::vec2& fallback )
 		double val = 0;
 		if ( !ToDouble2( strVec[i], val ) )
 		{
-			Print( "[KV] Warning: Failed to convert to double: %s - From %s\n", value.c_str() );
+			LogWarn( "[KV]: Failed to convert to double: %s - From %s\n", value.c_str() );
 			return fallback;
 		}
 
@@ -299,7 +342,7 @@ glm::vec2 KV_GetVec2( const std::string& value, const glm::vec2& fallback )
 
 	if ( i < 3 )
 	{
-		Print( "[KV] Warning: List does contains less or more than 2 values: %s\n", value.c_str() );
+		LogWarn( "[KV]: List does contains less or more than 2 values: %s\n", value.c_str() );
 		return fallback;
 	}
 
@@ -320,7 +363,7 @@ glm::vec3 KV_GetVec3( const std::string& value, const glm::vec3& fallback )
 		double val = 0;
 		if ( !ToDouble2( strVec[i], val ) )
 		{
-			Print( "[KV] Warning: Failed to convert to double: %s - From %s\n", value.c_str() );
+			LogWarn( "[KV]: Failed to convert to double: %s - From %s\n", value.c_str() );
 			return fallback;
 		}
 
@@ -332,7 +375,7 @@ glm::vec3 KV_GetVec3( const std::string& value, const glm::vec3& fallback )
 
 	if ( i < 3 )
 	{
-		Print( "[KV] Warning: List does contains less or more than 3 values: %s\n", value.c_str() );
+		LogWarn( "[KV]: List does contains less or more than 3 values: %s\n", value.c_str() );
 		return fallback;
 	}
 
@@ -353,7 +396,7 @@ glm::vec4 KV_GetVec4( const std::string& value, const glm::vec4& fallback )
 		double val = 0;
 		if ( !ToDouble2( strVec[i], val ) )
 		{
-			Print( "[KV] Warning: Failed to convert to double: %s - From %s\n", value.c_str() );
+			LogWarn( "[KV]: Failed to convert to double: %s - From %s\n", value.c_str() );
 			return fallback;
 		}
 
@@ -365,7 +408,7 @@ glm::vec4 KV_GetVec4( const std::string& value, const glm::vec4& fallback )
 
 	if ( i < 4 )
 	{
-		Print( "[KV] Warning: List does contains less or more than 4 values: %s\n", value.c_str() );
+		LogWarn( "[KV]: List does contains less or more than 4 values: %s\n", value.c_str() );
 		return fallback;
 	}
 

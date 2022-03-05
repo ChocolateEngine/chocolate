@@ -13,17 +13,16 @@ protected:
 
 
 public:	
-	                    ShaderDebug(): BaseShader() {}
+	                    ShaderDebug();
 
 	virtual void        Init() override;
 	virtual void        ReInit() override;
-
-	virtual std::vector<VkDescriptorSetLayoutBinding> GetDescriptorSetLayoutBindings(  ) override;
 
 	virtual void        CreateGraphicsPipeline(  ) override;
 
 	virtual void        UpdateBuffers( uint32_t sCurrentImage, BaseRenderable* spRenderable ) override;
 
+	virtual void        Bind( VkCommandBuffer c, uint32_t commandBufferIndex ) override;
 	virtual void        Draw( BaseRenderable* renderable, VkCommandBuffer c, uint32_t commandBufferIndex ) override;
 
 	inline bool         UsesUniformBuffers() override { return false; };

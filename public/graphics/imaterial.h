@@ -7,6 +7,7 @@ Interface for the material class to be used outside graphics
 
 #include "types/databuffer.hh"
 #include "graphics/renderertypes.h"
+#include "core/resources.h"
 
 #include <filesystem>
 #include <string>
@@ -108,37 +109,47 @@ public:
 };
 
 
+//using HMaterial = ResourceHandle;
+//using HShader = ResourceHandle;
+
+
 class IMaterial
 {
 public:
 	virtual                    ~IMaterial() = default;
 
-	std::string                 aName;
+	//virtual void                SetHandle( HMaterial mat ) = 0;
+	//virtual HMaterial           GetHandle() = 0;
+
+	//virtual void                SetName( const char* name ) = 0;
+	//virtual std::string         GetName(  ) = 0;
 
 	/* Set the shader for the material by the shader name */
 	virtual bool                SetShader( const char* name ) = 0;
-
-	// eh
+	//virtual HShader             GetShader( const char* name ) = 0;
 	virtual std::string         GetShaderName(  ) = 0;
 
-	virtual MaterialVar*        GetVar( const std::string& name ) = 0;
+	virtual MaterialVar*        GetVar( const char* name ) = 0;
 
-	virtual void                SetVar( const std::string& name, Texture* data ) = 0;
-	virtual void                SetVar( const std::string& name, float data ) = 0;
-	virtual void                SetVar( const std::string& name, int data ) = 0;
-	virtual void                SetVar( const std::string& name, const glm::vec2 &data ) = 0;
-	virtual void                SetVar( const std::string& name, const glm::vec3 &data ) = 0;
-	virtual void                SetVar( const std::string& name, const glm::vec4 &data ) = 0;
+	virtual void                SetVar( const char* name, Texture* data ) = 0;
+	virtual void                SetVar( const char* name, float data ) = 0;
+	virtual void                SetVar( const char* name, int data ) = 0;
+	virtual void                SetVar( const char* name, const glm::vec2 &data ) = 0;
+	virtual void                SetVar( const char* name, const glm::vec3 &data ) = 0;
+	virtual void                SetVar( const char* name, const glm::vec4 &data ) = 0;
 	
 	// Quicker Access to getting the data from the material vars stored for the shader
 	// So it doesn't need to check for if MaterialVar is null and can get a quick fallback in the 2nd default parameter
 	// TODO: shaders should probably have some shader data struct filled with the information from the material
 	//  so it doesn't need to search multiple times every frame
-	virtual Texture*            GetTexture( const std::string &name, Texture* fallback = nullptr ) = 0;
-	virtual float               GetFloat( const std::string &name, float fallback = 0.f ) = 0;
-	virtual int                 GetInt( const std::string &name, int fallback = 0 ) = 0;
-	virtual glm::vec2           GetVec2( const std::string &name, glm::vec2 fallback = {} ) = 0;
-	virtual glm::vec3           GetVec3( const std::string &name, glm::vec3 fallback = {} ) = 0;
-	virtual glm::vec4           GetVec4( const std::string &name, glm::vec4 fallback = {} ) = 0;
+	virtual Texture*            GetTexture( const char* name, Texture* fallback = nullptr ) = 0;
+	virtual float               GetFloat( const char* name, float fallback = 0.f ) = 0;
+	virtual int                 GetInt( const char* name, int fallback = 0 ) = 0;
+	virtual glm::vec2           GetVec2( const char* name, glm::vec2 fallback = {} ) = 0;
+	virtual glm::vec3           GetVec3( const char* name, glm::vec3 fallback = {} ) = 0;
+	virtual glm::vec4           GetVec4( const char* name, glm::vec4 fallback = {} ) = 0;
+
+	std::string                 aName;
 };
+
 

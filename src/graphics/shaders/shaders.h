@@ -39,8 +39,7 @@ public:
 	/* Reinitialize data that is useless after the swapchain becomes outdated.  */
 	virtual void                       ReInit();
 
-	virtual void                                      CreateDescriptorSetLayout(  );
-	virtual std::vector<VkDescriptorSetLayoutBinding> GetDescriptorSetLayoutBindings(  ) = 0;
+	virtual void                       CreateLayouts(  );
 
 	virtual void                       CreateGraphicsPipeline(  ) = 0;
 
@@ -48,6 +47,7 @@ public:
 
 	virtual void                       UpdateBuffers( uint32_t sCurrentImage, BaseRenderable* spRenderable ) = 0;
 
+	virtual void                       Bind( VkCommandBuffer c, uint32_t cIndex );
 	virtual void                       Draw( BaseRenderable* renderable, VkCommandBuffer c, uint32_t commandBufferIndex ) = 0;
 
 	virtual bool                       UsesUniformBuffers(  ) = 0;

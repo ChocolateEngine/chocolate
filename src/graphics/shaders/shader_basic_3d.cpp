@@ -3,18 +3,13 @@ shader_basic_3d.cpp ( Authored by Demez )
 
 The Basic 3D Shader, starting point shader
 */
-#include "core/filesystem.h"
 #include "../renderer.h"
-#include "shader_basic_3d.h"
+#include "shaders.h"
+//#include "shader_basic_3d.h"
 
 
 extern size_t gModelDrawCalls;
 extern size_t gVertsDrawn;
-
-
-// =========================================================
-
-// =========================================================
 
 
 constexpr const char *pVShader = "shaders/basic3d.vert.spv";
@@ -43,47 +38,63 @@ Texture* gFallbackEmissive = nullptr;
 Texture* gFallbackAO = nullptr;
 
 
-void Basic3D::Init()
+// =========================================================
+
+
+class Basic3D : public BaseShader
 {
-	aModules.Allocate(2);
-	aModules[0] = CreateShaderModule( filesys->ReadFile( pVShader ) ); // Processes incoming verticies, taking world position, color, and texture coordinates as an input
-	aModules[1] = CreateShaderModule( filesys->ReadFile( pFShader ) ); // Fills verticies with fragments to produce color, and depth
+public:	
 
-	// very rough idea for now for material parameters for this shader:
-	// AddParameter<TextureDescriptor*>( "MainTexture", DEFAULT_TYPE );
-	// AddParameter<glm::vec3>( "VectorTest", glm::vec3(1, 1, 1) );
-	
-	// other thing for range only
-	// AddRangeParameter<TextureDescriptor*>( "MainTexture", DEFAULT_TYPE );
+	Basic3D()
+	{
+		GetMaterialSystem()->AddShader( this, "basic_3d" );
+	}
 
-	gFallbackEmissive = matsys->CreateTexture( gFallbackEmissivePath );
-	gFallbackAO       = matsys->CreateTexture( gFallbackAOPath );
-
-	BaseShader::Init();
-}
+	inline bool UsesUniformBuffers(  ) override { return true; };
 
 
-void Basic3D::ReInit()
-{
-	aModules[0] = CreateShaderModule( filesys->ReadFile( pVShader ) ); // Processes incoming verticies, taking world position, color, and texture coordinates as an input
-	aModules[1] = CreateShaderModule( filesys->ReadFile( pFShader ) ); // Fills verticies with fragments to produce color, and depth
+	virtual void Init() override
+	{
+		aModules.Allocate(2);
+		aModules[0] = CreateShaderModule( filesys->ReadFile( pVShader ) ); // Processes incoming verticies, taking world position, color, and texture coordinates as an input
+		aModules[1] = CreateShaderModule( filesys->ReadFile( pFShader ) ); // Fills verticies with fragments to produce color, and depth
 
-	BaseShader::ReInit();
-}
+		gFallbackEmissive = matsys->CreateTexture( gFallbackEmissivePath );
+		gFallbackAO       = matsys->CreateTexture( gFallbackAOPath );
+
+		BaseShader::Init();
+	}
 
 
-void Basic3D::CreateDescriptorSetLayout()
+	virtual void ReInit() override
+	{
+		aModules[0] = CreateShaderModule( filesys->ReadFile( pVShader ) ); // Processes incoming verticies, taking world position, color, and texture coordinates as an input
+		aModules[1] = CreateShaderModule( filesys->ReadFile( pFShader ) ); // Fills verticies with fragments to produce color, and depth
+
+		BaseShader::ReInit();
+	}
+
+
+	virtual void        CreateLayouts() override;
+
+	virtual void        CreateGraphicsPipeline(  ) override;
+
+	virtual void        InitUniformBuffer( IMesh* mesh ) override;
+
+	virtual void        UpdateBuffers( uint32_t sCurrentImage, BaseRenderable* spRenderable ) override;
+
+	virtual void        Draw( BaseRenderable* renderable, VkCommandBuffer c, uint32_t commandBufferIndex ) override;
+};
+
+
+Basic3D* gpBasic3D = new Basic3D;
+
+
+void Basic3D::CreateLayouts()
 {
 	aLayouts.Allocate( 2 );
 	aLayouts[0] = InitDescriptorSetLayout( DescriptorLayoutBinding( VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr ) );
 	aLayouts[1] = matsys->aImageLayout;
-}
-
-
-// this is stupid
-std::vector<VkDescriptorSetLayoutBinding> Basic3D::GetDescriptorSetLayoutBindings(  )
-{
-	return {};
 }
 
 
@@ -239,23 +250,16 @@ void Basic3D::InitUniformBuffer( IMesh* mesh )
 
 
 // TODO: only update this during init or swapchain recreation if needed
+// because this has got to be slowing this whole thing down lol
 void Basic3D::UpdateBuffers( uint32_t sCurrentImage, BaseRenderable* spRenderable )
 {
-#if 0
-	static char init = 0;
-	if ( init == 2 )
-		return;
-
-	init++;
-#endif
-
 	Basic3D_UBO ubo { };
 
-	auto mat = spRenderable->apMaterial;
+	auto mat = (Material*)spRenderable->apMaterial;
 
-	ubo.diffuse         = matsys->GetTextureId( mat->GetTexture( "diffuse" ) );
-	ubo.emissive        = matsys->GetTextureId( mat->GetTexture( "emissive", gFallbackEmissive ) );
-	ubo.ao              = matsys->GetTextureId( mat->GetTexture( "ao", gFallbackAO ) );
+	ubo.diffuse         = mat->GetTextureId( "diffuse" );
+	ubo.emissive        = mat->GetTextureId( "emissive", gFallbackEmissive );
+	ubo.ao              = mat->GetTextureId( "ao", gFallbackAO );
 
 	ubo.aoPower         = mat->GetFloat( "ao_power", 1.f );
 	ubo.emissivePower   = mat->GetFloat( "emissive_power", 1.f );
@@ -273,9 +277,18 @@ void Basic3D::UpdateBuffers( uint32_t sCurrentImage, BaseRenderable* spRenderabl
 void Basic3D::Draw( BaseRenderable* renderable, VkCommandBuffer c, uint32_t i )
 {
 	// why did i do this, remove this ASAP
-	IMesh* mesh = static_cast<IMesh*>(renderable);
+	/*bool isMesh = typeid(*renderable) == typeid(IMesh);
+	assert( isMesh );
 
-	assert(mesh != nullptr);
+	if ( !isMesh )
+	{
+		LogWarn( "Basic3D::Draw - Not a Mesh!\n" );
+		return;
+	}*/
+
+	// use is base of
+
+	IMesh* mesh = static_cast<IMesh*>(renderable);
 
 	// Bind the mesh's vertex and index buffers
 	VkBuffer 	vBuffers[  ] 	= { mesh->aVertexBuffer };
@@ -284,9 +297,6 @@ void Basic3D::Draw( BaseRenderable* renderable, VkCommandBuffer c, uint32_t i )
 
 	if ( mesh->aIndexBuffer )
 		vkCmdBindIndexBuffer( c, mesh->aIndexBuffer, 0, VK_INDEX_TYPE_UINT32 );
-
-	// Now draw it
-	vkCmdBindPipeline( c, VK_PIPELINE_BIND_POINT_GRAPHICS, aPipeline );
 
 	Basic3D_PushConst p = {renderer->aView.projViewMatrix, mesh->GetModelMatrix()};
 
@@ -313,3 +323,4 @@ void Basic3D::Draw( BaseRenderable* renderable, VkCommandBuffer c, uint32_t i )
 	gModelDrawCalls++;
 	gVertsDrawn += mesh->aVertices.size();
 }
+

@@ -16,13 +16,12 @@
 #define VULKAN 1
 
 class DebugRenderer {
-protected:
+public:
 #if VULKAN
 	VulkanPrimitiveMaterials aMaterials;
 #endif	/* VULKAN  */
-public:
 	/* Draws a line from sX to sY on current frame */
-	void  CreateLine( glm::vec3 sX, glm::vec3 sY, glm::vec3 sColor );
+	void  CreateLine( const glm::vec3& sX, const glm::vec3& sY, const glm::vec3& sColor );
 	/* Initializes the debug drawer.  */
 	void Init();
 	/* Reset the debug mesh */
