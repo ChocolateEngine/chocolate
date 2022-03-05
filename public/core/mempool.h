@@ -86,4 +86,10 @@ public:
      *    @param  size_t    The new step size.
      */
     void  SetStepSize( size_t sSize );
+    /*
+     *    Gets the start of the buffer.
+     *
+     *    @return s8*       The start of the buffer, nullptr if not allocated.
+     */
+    s8*   GetStart() { return apBuf; }
 };

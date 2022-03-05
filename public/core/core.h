@@ -10,5 +10,5 @@
 #include "filesystem.h"
 #include "log.h"
 #include "systemmanager.h"
-#include "resources.h"
+#include "resources.hh"
 
