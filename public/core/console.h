@@ -22,7 +22,7 @@ Declares the sdfhuosdfhuiosdfhusdfhuisfhu
 
 
 void CORE_API Print( const char* str, ... );
-void CORE_API PrintFast( const char* str );
+void CORE_API Puts( const char* str );
 
 
 typedef std::function< void( std::vector< std::string > args ) > ConVarFunc;

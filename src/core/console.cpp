@@ -5,6 +5,7 @@
 #include <stdarg.h>
 #include <iostream>
 #include <fstream>
+#include <mutex>
 
 DLL_EXPORT Console* console = nullptr;
 
@@ -12,16 +13,16 @@ DLL_EXPORT Console* console = nullptr;
 void Print( const char* format, ... )
 {
 	VSTRING( std::string buffer, format );
-	printf( buffer.c_str() );
+	fputs( buffer.c_str(), stdout );
 
 	if ( console )
 		console->AddToBuffer( buffer );
 }
 
 
-void PrintFast( const char* buffer )
+void Puts( const char* buffer )
 {
-	printf( buffer );
+	fputs( buffer, stdout );
 
 	if ( console )
 		console->AddToBuffer( buffer );
@@ -278,7 +279,7 @@ CONCMD_DROP( exec, exec_dropdown )
 			if ( line != "" )
 			{
 				if ( line == "exec " + args[0] )
-					Print( "[Console] Warning: cfg file trying to exec itself and cause infinite recursion\n" );
+					LogWarn( "[Console] cfg file trying to exec itself and cause infinite recursion\n" );
 				else
 					console->RunCommand( line );
 
@@ -342,7 +343,7 @@ CONCMD( help )
 	}
 	else
 	{
-		Print( "Convar not found: %s\n", args[0].c_str() );
+		LogWarn( "Convar not found: %s\n", args[0].c_str() );
 	}
 }
 
@@ -372,11 +373,11 @@ void CmdFind( bool andSearch, std::vector< std::string >& args )
 	{
 		// ugly but probably faster than doing an extra dynamic cast to check if not a cvarref
 		// or doing the string search on a cvarref
-		if ( dynamic_cast<ConVar*>(cvar) )
+		if ( IS_TYPE( *cvar, ConVar ) )
 		{
 			FindStr( andSearch, cvar, args, resultsCvar );
 		}
-		else if ( dynamic_cast<ConCommand*>(cvar) )
+		else if ( IS_TYPE( *cvar, ConCommand ) )
 		{
 			FindStr( andSearch, cvar, args, resultsCCmd );
 		}
@@ -388,13 +389,13 @@ void CmdFind( bool andSearch, std::vector< std::string >& args )
 
 	Print( "\nConVars: %zu\n--------------------------------------\n", resultsCvar.size() );
 	for ( const auto& msg : resultsCvar )
-		PrintFast( msg.c_str() );
+		Puts( msg.c_str() );
 
 	Print( "\nConCommands: %zu\n--------------------------------------\n", resultsCCmd.size() );
 	for ( const auto& msg : resultsCCmd )
-		PrintFast( msg.c_str() );
+		Puts( msg.c_str() );
 
-	PrintFast( "--------------------------------------\n" );
+	Puts( "--------------------------------------\n" );
 }
 
 
@@ -405,7 +406,7 @@ CONCMD( find )
 {
 	if ( args.size() == 0 )
 	{
-		PrintFast( "Search if cvar name contains any of the search arguments\n" );
+		Puts( "Search if cvar name contains any of the search arguments\n" );
 		return;
 	}
 
@@ -416,7 +417,7 @@ CONCMD( findand )
 {
 	if ( args.size() == 0 )
 	{
-		PrintFast( "Search if cvar name contains all of the search arguments\n" );
+		Puts( "Search if cvar name contains all of the search arguments\n" );
 		return;
 	}
 
@@ -426,10 +427,15 @@ CONCMD( findand )
 
 // ================================================================================
 
+static std::mutex gPrintMutex;
 
 void Console::AddToBuffer( const std::string& buffer )
 {
+	gPrintMutex.lock();
+
 	aConsoleHistory.push_back( buffer );
+
+	gPrintMutex.unlock();
 }
 
 void Console::ReadConfig( const std::string& name )
@@ -468,8 +474,10 @@ void Console::RegisterConVars(  )
 	ConVarBase* current = ConVarBase::spConVarBases;
 	while ( current )
 	{
-		if ( ConVarRef* cvarRef = dynamic_cast< ConVarRef* >(current) )
+		if ( typeid(*current) == typeid(ConVarRef) )
 		{
+			ConVarRef* cvarRef = static_cast<ConVarRef*>(current);
+
 			if ( cvarRef->apRef == nullptr )
 				cvarRefList.push_back( cvarRef );
 		}
@@ -512,7 +520,7 @@ std::string Console::GetConsoleHistoryStr( int maxSize )
 	}
 
 	// go from latest to oldest
-	for (int i = aConsoleHistory.size() - 1; i > 0; i--)
+	for (size_t i = aConsoleHistory.size() - 1; i > 0; i--)
 	{
 		int strLen = glm::min(maxSize, (int)aConsoleHistory[i].length());
 		int strStart = aConsoleHistory[i].length() - strLen;
@@ -553,10 +561,10 @@ ConVar* Console::GetConVar( const std::string& name )
 	ConVarBase* cvar = ConVarBase::spConVarBases;
 	while ( cvar )
 	{
-		if ( ConVar* convar = dynamic_cast<ConVar*>(cvar) )
+		if ( typeid(*cvar) == typeid(ConVar) )
 		{
-			if ( convar->aName == name )
-				return convar;
+			if ( cvar->aName == name )
+				return static_cast<ConVar*>(cvar);
 		}
 
 		cvar = cvar->apNext;
@@ -595,24 +603,24 @@ void Console::PrintAllConVars(  )
 	ConVarBase* cvar = ConVarBase::spConVarBases;
 	while ( cvar )
 	{
-		if ( dynamic_cast<ConVar*>(cvar) )
+		if ( typeid(*cvar) == typeid(ConVar)  )
 			ConVarMsgs.push_back( cvar->GetPrintMessage() );
 
-		else if ( dynamic_cast<ConCommand*>(cvar) )
+		else if ( typeid(*cvar) == typeid(ConCommand) )
 			ConCommandMsgs.push_back( cvar->GetPrintMessage() );
 
 		cvar = cvar->apNext;
 	}
 
-	PrintFast( "\nConVars:\n--------------------------------------\n" );
+	Puts( "\nConVars:\n--------------------------------------\n" );
 	for ( const auto& msg : ConVarMsgs )
-		PrintFast( msg.c_str() );
+		Puts( msg.c_str() );
 
-	PrintFast( "\nConCommands:\n--------------------------------------\n" );
+	Puts( "\nConCommands:\n--------------------------------------\n" );
 	for ( const auto& msg : ConCommandMsgs )
-		PrintFast( msg.c_str() );
+		Puts( msg.c_str() );
 
-	PrintFast( "--------------------------------------\n" );
+	Puts( "--------------------------------------\n" );
 }
 
 
@@ -636,8 +644,10 @@ void Console::Print( Msg type, const char* format, ... )
 // return nullptr if it doesn't point to anything, and return the normal cvar if it's not a convarref
 ConVarBase* CheckForConVarRef( ConVarBase* cvar )
 {
-	if ( ConVarRef* cvarRef = dynamic_cast< ConVarRef* >(cvar) )
+	if ( typeid(*cvar) == typeid(ConVarRef) )
 	{
+		ConVarRef* cvarRef = static_cast<ConVarRef*>(cvar);
+
 		if ( cvarRef->apRef == nullptr )
 		{
 			Print( "[CONSOLE] Found unlinked cvar ref: %s\n", cvarRef->GetName().c_str() );
@@ -684,8 +694,10 @@ void Console::CalculateAutoCompleteList( const std::string& textBuffer )
 		}
 
 		// is this a concommand with a drop down function?
-		if ( auto cmd = dynamic_cast<ConCommand*>(cvar) )
+		if ( typeid(*cvar) == typeid(ConCommand) )
 		{
+			auto cmd = static_cast<ConCommand*>(cvar);
+
 			if ( cmd->aDropDownFunc )
 			{
 				std::vector< std::string > dropDownArgs;
@@ -719,9 +731,15 @@ const std::vector< std::string >& Console::GetAutoCompleteList( )
 
 void Console::Update(  )
 {
-	// HACK HACK HACK
-	// only needed for when creating cvars in functions
-	RegisterConVars(  );
+	static bool init = false;
+
+	if ( !init )
+	{
+		// TODO: rethink this stupid thing
+		// also call again if convar count changes
+		RegisterConVars(  );
+		init = true;
+	}
 
 	std::string command;
 
@@ -742,20 +760,8 @@ bool Console::RunCommand( const std::string& command )
 {
 	std::string commandName;
 	std::vector< std::string > args;
-	int start, end = 0;
 
 	ParseCommandLine( command, commandName, args );
-
-	/* Break the input into a vector of strings.  */
-	/*while ( (start = command.find_first_not_of(' ', end)) != std::string::npos )
-	{
-		end = command.find( ' ', start );
-
-		if ( start == 0 )
-			commandName = command.substr( start, end - start );
-		else
-			args.push_back( command.substr( start, end - start ) );
-	}*/
 
 	str_lower( commandName );
 
@@ -770,8 +776,10 @@ bool Console::RunCommand( const std::string& command )
 			if ( !cvar )
 				continue;
 
-			if ( ConVar* convar = dynamic_cast<ConVar*>(cvar) )
+			if ( typeid(*cvar) == typeid(ConVar) )
 			{
+				ConVar* convar = static_cast<ConVar*>(cvar);
+
 				commandCalled = true;
 
 				if ( !args.empty() )
@@ -784,11 +792,12 @@ bool Console::RunCommand( const std::string& command )
 				}
 				else
 				{
-					Print( convar->GetPrintMessage().c_str() );
+					Puts( convar->GetPrintMessage().c_str() );
 				}
 			}
-			else if ( ConCommand* cmd = dynamic_cast<ConCommand*>(cvar) )
+			else if ( typeid(*cvar) == typeid(ConCommand) )
 			{
+				ConCommand* cmd = static_cast<ConCommand*>(cvar);
 				commandCalled = true;
 				cmd->aFunc( args );
 			}
@@ -801,7 +810,7 @@ bool Console::RunCommand( const std::string& command )
 
 	// command wasn't used?
 	if ( !commandCalled )
-		Print( "Command \"%s\" is undefined\n", commandName.c_str() );
+		LogWarn( "Command \"%s\" is undefined\n", commandName.c_str() );
 
 	return commandCalled;
 }

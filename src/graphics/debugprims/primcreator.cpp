@@ -10,7 +10,7 @@
 #include "primcreator.h"
 
 /* Draws a line from sX to sY until program exit.  */
-void DebugRenderer::CreateLine( glm::vec3 sX, glm::vec3 sY, glm::vec3 sColor ) {
+void DebugRenderer::CreateLine( const glm::vec3& sX, const glm::vec3& sY, const glm::vec3& sColor ) {
 	aMaterials.InitLine( sX, sY, sColor );
 }
 

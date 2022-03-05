@@ -1,7 +1,5 @@
 #include "device.h"
-#include "util.h"
-#include "core/console.h"
-#include "core/commandline.h"
+#include "core/core.h"
 
 #include <set>
 
@@ -32,7 +30,7 @@ void Device::InitWindow(  )
 
 StringList Device::InitRequiredExtensions(  )
 {
-        uint32_t extensionCount = 0;
+	uint32_t extensionCount = 0;
 	if ( !SDL_Vulkan_GetInstanceExtensions( apWindow, &extensionCount, NULL ) )
 		throw std::runtime_error( "Unable to query the number of Vulkan instance extensions\n" );
 	/* Use the amount of extensions queried before to retrieve the names of the extensions.  */
@@ -50,12 +48,12 @@ StringList Device::InitRequiredExtensions(  )
 		throw std::runtime_error( "Unable to query the number of Vulkan instance extension names\n" );
 	}
 	// Display names
-	Print( "[Device] Found %d Vulkan extensions:\n", extensionCount );
-	for ( int i = 0; i < extensionCount; ++i )
+	LogDev( 1, "[Device] Found %d Vulkan extensions:\n", extensionCount );
+	for ( uint32_t i = 0; i < extensionCount; ++i )
 	{
-		Print( "\t%i : %s\n", i, extensions[ i ] );
+		LogDev( 1, "\t%i : %s\n", i, extensions[ i ] );
 	}
-	Print( "\n" );
+	LogPutsDev( 1, "\n" );
 
 	// Add debug display extension, we need this to relay debug messages
 	extensions.push_back( VK_EXT_DEBUG_UTILS_EXTENSION_NAME );
@@ -110,14 +108,14 @@ void Device::InitInstance(  )
 	std::vector< VkExtensionProperties > extensions( extensionCount );
 	vkEnumerateInstanceExtensionProperties( NULL, &extensionCount, extensions.data(  ) );
 
-	Print( "[Device] %d Vulkan extensions available:\n", extensionCount );
+	LogDev( 1, "[Device] %d Vulkan extensions available:\n", extensionCount );
 
 	for ( const auto& extension : extensions )
 	{
-		Print( "\t%s\n", extension.extensionName );
+		LogDev( 1, "\t%s\n", extension.extensionName );
 	}
 
-	Print( "\n" );
+	LogPutsDev( 1, "\n" );
 }
 
 void Device::InitDebugMessengerInfo( VkDebugUtilsMessengerCreateInfoEXT &srCreateInfo )

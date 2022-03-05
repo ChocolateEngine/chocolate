@@ -28,3 +28,5 @@ set_target_properties(
 	OUTPUT_NAME engine
 )
 
+target_precompile_headers( Engine PRIVATE "${CH_PUBLIC}/core/core.h" )
+

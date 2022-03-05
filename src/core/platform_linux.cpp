@@ -46,4 +46,11 @@ void            sys_print_last_error( const char* userErrorMessage )
     fprintf( stderr, "Error: %s\n%s\n", userErrorMessage, sys_get_error(  ) );
 }
 
+
+// sleep for x milliseconds
+void sys_sleep( float ms )
+{
+    usleep( ms * 1000 );
+}
+
 #endif /* __unix__  */

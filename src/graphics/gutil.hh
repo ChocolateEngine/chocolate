@@ -32,6 +32,9 @@ constexpr char const *VKString( VkResult sResult ) {
             return "VK_ERROR_SURFACE_LOST_KHR";
         case VK_ERROR_NATIVE_WINDOW_IN_USE_KHR:
             return "VK_ERROR_NATIVE_WINDOW_IN_USE_KHR";
+
+        default:
+            return "Unknown VkResult";
     }
 }
 #if 0

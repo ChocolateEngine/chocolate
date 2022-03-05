@@ -21,17 +21,17 @@ typedef void* Module;
 	#define CORE_API DLL_EXPORT
 #endif
 
-// actually NO, just use SDL2's library loading stuff smh my head
 
-// very quake-esque style code here with the sys prefix lol
+// why is msvc like this with this dllexport/dllimport stuff aaaa
+Module          CORE_API    sys_load_library( const char* path );
+void            CORE_API    sys_close_library( Module mod );
+void            CORE_API*   sys_load_func( Module mod, const char* path );
+const char      CORE_API*   sys_get_error();
+void            CORE_API    sys_print_last_error( const char* userErrorMessage );
 
-Module          sys_load_library( const char* path );
-void            sys_close_library( Module mod );
-void*           sys_load_func( Module mod, const char* path );
-const char*     sys_get_error();
-void            sys_print_last_error( const char* userErrorMessage );
+// sleep for x milliseconds
+void            CORE_API    sys_sleep( float ms );
 
-
-// maybe use sys_print_last_error if SDL_GetError isn't verbose enough on win32?
-
+// very uh, windows only-ish i think
+void            CORE_API*   sys_get_console_window();
 

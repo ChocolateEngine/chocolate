@@ -16,7 +16,7 @@ by the renderer.
 class BaseGraphicsSystem : public BaseSystem
 {
 public:
-	virtual void            DrawLine( glm::vec3 sX, glm::vec3 sY, glm::vec3 sColor ) = 0;
+	virtual void            DrawLine( const glm::vec3& sX, const glm::vec3& sY, const glm::vec3& sColor ) = 0;
 
 	/* Loads a model given a path for the model and texture, 
 	   spModel is optional for external management.  */

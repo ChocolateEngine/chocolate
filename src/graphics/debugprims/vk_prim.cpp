@@ -11,11 +11,10 @@
 
 #include "../allocator.h"
 
-#include "core/filesystem.h"
-#include "core/console.h"
+#include "core/core.h"
 #include "../materialsystem.h"
 
-#include "public/util.h"
+CONVAR( g_debug_draw, 1 );
 
 void VulkanPrimitiveMaterials::ResetMesh()
 {
@@ -27,23 +26,31 @@ void VulkanPrimitiveMaterials::ResetMesh()
 		aFinalMesh = nullptr;
 	}
 
+	if ( !g_debug_draw )
+		return;
+
 	aFinalMesh = new PrimitiveMesh;
 	aFinalMesh->apMaterial = apMaterial;
 }
 
 void VulkanPrimitiveMaterials::PrepareMeshForDraw()
 {
-	if ( aFinalMesh->aVertices.empty() )
+	if ( aFinalMesh->aVertices.empty() || !g_debug_draw )
 		return;
 
 	matsys->CreateVertexBuffer( aFinalMesh );
 	matsys->AddRenderable( aFinalMesh );
 }
 
-void VulkanPrimitiveMaterials::InitLine( glm::vec3 sX, glm::vec3 sY, glm::vec3 sColor )
+void VulkanPrimitiveMaterials::InitLine( const glm::vec3& sX, const glm::vec3& sY, const glm::vec3& sColor )
 {
-	aFinalMesh->aVertices.push_back({sX, sColor});
-	aFinalMesh->aVertices.push_back({sY, sColor});
+	if ( !g_debug_draw )
+		return;
+
+	aFinalMesh->aVertices.emplace_back(sX, sColor, sY, sColor);
+
+	//aFinalMesh->aVertices.push_back({sX, sColor});
+	//aFinalMesh->aVertices.push_back({sY, sColor});
 }
 
 void VulkanPrimitiveMaterials::Init()

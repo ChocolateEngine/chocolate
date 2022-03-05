@@ -64,7 +64,7 @@ void Renderer::InitVulkan(  )
 	InitImguiPool( gpDevice->GetWindow(  ) );
 	InitSync( aImageAvailableSemaphores, aRenderFinishedSemaphores, aInFlightFences, aImagesInFlight );
 
-	matsys = new MaterialSystem;
+	matsys = GetMaterialSystem();
 	matsys->apSampler = &aTextureSampler;
 	matsys->Init();
 
@@ -119,23 +119,32 @@ void Renderer::InitCommandBuffers(  )
 		renderPassInfo.clearValueCount 	 = ( uint32_t )clearValues.size(  );
 		renderPassInfo.pClearValues 	 = clearValues.data(  );
 
-		for ( auto& renderable : matsys->aDrawList )
+		for ( auto& [shader, renderList]: matsys->aDrawList )
 		{
-			Material* mat = (Material*)renderable->apMaterial;
-			mat->apShader->UpdateBuffers( i, renderable );
+			for ( auto& renderable : renderList )
+			{
+				Material* mat = (Material*)renderable->apMaterial;
+				mat->apShader->UpdateBuffers( i, renderable );
+			}
 		}
 
 		vkCmdBeginRenderPass( aCommandBuffers[ i ], &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE );
 
 		// IDEA: make a batched mesh vector so that way we can bind everything needed, and then just draw draw draw draw
 
-		for ( auto& renderable : matsys->aDrawList )
+		// TODO: still could be better, but it's better than what we used to have
+		for ( auto& [shader, renderList]: matsys->aDrawList )
 		{
-			matsys->DrawRenderable( renderable, aCommandBuffers[i], i );
+			shader->Bind( aCommandBuffers[i], i );
+
+			for ( auto& renderable : renderList )
+			{
+				matsys->DrawRenderable( renderable, aCommandBuffers[i], i );
+			}
 		}
 
 	//	aDbgDrawer.RenderPrims( aCommandBuffers[ i ], aView );
-				
+		
 		if ( aImGuiInitialized )
 		{
 			ImGui::Render(  );
@@ -270,7 +279,7 @@ bool Renderer::LoadModel( Model* sModel, const String &srPath )
 		}
 		else if ( srPath.substr(srPath.size() - 4) == ".glb" || srPath.substr(srPath.size() - 5) == ".gltf" )
 		{
-			Print( "[Renderer] GLTF currently not supported, on TODO list\n" );
+			LogDev( 1, "[Renderer] GLTF currently not supported, on TODO list\n" );
 			return false;
 		}
 	}

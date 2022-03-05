@@ -1,7 +1,5 @@
 #include "audio.h"
-#include "util.h"
-#include "core/systemmanager.h"
-#include "core/filesystem.h"
+#include "core/core.h"
 #include "types/transform.h"
 
 #if ENABLE_AUDIO
@@ -145,10 +143,14 @@ void AudioSystem::Init(  )
 	{
 		while ( true )
 		{
-			if ( aPaused )
+			if ( aPaused || aStreamsPlaying.size() == 0 )
 			{
 				SDL_Delay( 5 );
 				continue;
+			}
+			else
+			{
+				sys_sleep( 0.5 );
 			}
 
 			// TODO: use this for functions to modify how the stream is played during playback

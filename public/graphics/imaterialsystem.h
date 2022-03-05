@@ -49,6 +49,25 @@ public:
 };
 
 
+/*struct HTexture final
+{
+	uint32_t aHandle;
+
+	bool IsHandleValid() const { return aHandle != 0; }
+
+	inline uint32_t GetIndex()
+	{
+		return aHandle & gStandardIndexMask;
+	}
+
+	inline uint32_t GetMagic()
+	{
+		const uint32_t standardMagicNumberMask = ~gStandardIndexMask;
+		return ( aHandle & standardMagicNumberMask ) >> 16;
+	}
+};*/
+
+
 //template class BaseRenderable< vertex_2d_t >;
 //template class BaseRenderable< vertex_3d_t >;
 
@@ -112,10 +131,14 @@ public:
 	virtual size_t                      GetRenderableID( BaseRenderable* renderable ) = 0;
 
 	virtual BaseShader*                 GetShader( const std::string& name ) = 0;
+	//virtual HShader                     GetShader( const std::string& name ) = 0;
 
 	// Awful Mesh Functions, here until i abstract what's used in it
 	virtual void                        MeshInit( IMesh* mesh ) = 0;
 	virtual void                        MeshReInit( IMesh* mesh ) = 0;
 	virtual void                        MeshFreeOldResources( IMesh* mesh ) = 0;
+
+	// =====================================================================================
+	// Material Handle Functions
 };
 

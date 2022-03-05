@@ -65,6 +65,16 @@ inline glm::vec3 QuatToAng( const glm::quat& quat )
 
 #define VIEWMAT_ANG( axis ) glm::vec3(viewMatrix[0][axis], viewMatrix[1][axis], viewMatrix[2][axis])
 
+constexpr glm::vec3 vec_up( 0, 0, 1 );
+constexpr glm::vec3 vec_right( 0, 1, 0 );
+constexpr glm::vec3 vec_forward( 1, 0, 0 );
+
+constexpr float g_rot_z = glm::radians( -90.f );
+
+// do base rotation to get Z up
+static glm::mat4 gViewMatrixZ = glm::rotate( g_rot_z, vec_forward );
+
+
 // only 24 bytes, use this when you don't need scaling
 struct TransformSmall
 {
@@ -75,10 +85,9 @@ struct TransformSmall
 	{
 		glm::mat4 matrix = glm::translate( aPos );
 
-		matrix *= glm::rotate( glm::radians(aAng[YAW]), glm::vec3(0, 0, 1) );
-		//matrix *= glm::rotate( glm::radians(-aAng[PITCH]), glm::vec3(0, 1, 0) );
-		matrix *= glm::rotate( glm::radians(aAng[PITCH]), glm::vec3(0, 1, 0) );
-		matrix *= glm::rotate( glm::radians(aAng[ROLL]), glm::vec3(1, 0, 0) );
+		matrix *= glm::rotate( glm::radians(aAng[YAW]), vec_up );
+		matrix *= glm::rotate( glm::radians(aAng[PITCH]), vec_right );
+		matrix *= glm::rotate( glm::radians(aAng[ROLL]), vec_forward );
 
 		return matrix;
 	}
@@ -89,7 +98,7 @@ struct TransformSmall
 		glm::mat4 viewMatrix(1.0f);
 
 		/* Y Rotation - YAW (Mouse X for Y up) */
-		viewMatrix = glm::rotate( viewMatrix, glm::radians(aAng[YAW]), glm::vec3(0, 1, 0) );
+		viewMatrix = glm::rotate( viewMatrix, glm::radians(aAng[YAW]), vec_right );
 
 		/* X Rotation - PITCH (Mouse Y) */
 		viewMatrix = glm::rotate( viewMatrix, glm::radians(aAng[PITCH]), VIEWMAT_ANG(0) );
@@ -103,8 +112,7 @@ struct TransformSmall
 	/* Z Up version of the view matrix */
 	inline glm::mat4 ToViewMatrixZ(  ) const
 	{
-		// do base rotation to get Z up
-		glm::mat4 viewMatrix = glm::rotate( glm::radians(-90.f), glm::vec3(1, 0, 0) );
+		glm::mat4 viewMatrix = gViewMatrixZ;
 
 		/* Y Rotation - YAW */
 		viewMatrix = glm::rotate( viewMatrix, glm::radians(aAng[YAW]), VIEWMAT_ANG(1) );
@@ -132,12 +140,17 @@ struct Transform
 	{
 		glm::mat4 matrix = glm::translate( aPos );
 
-		matrix *= glm::rotate( glm::radians(aAng[YAW]), glm::vec3(0, 0, 1) );
-		//matrix *= glm::rotate( glm::radians(-aAng[PITCH]), glm::vec3(0, 1, 0) );
-		matrix *= glm::rotate( glm::radians(aAng[PITCH]), glm::vec3(0, 1, 0) );
-		matrix *= glm::rotate( glm::radians(aAng[ROLL]), glm::vec3(1, 0, 0) );
+		matrix *= glm::rotate( glm::radians(aAng[YAW]), vec_up );
+		matrix *= glm::rotate( glm::radians(aAng[PITCH]), vec_right );
+		matrix *= glm::rotate( glm::radians(aAng[ROLL]), vec_forward );
 
-		return ( useScale ) ? matrix * glm::scale( aScale ) : matrix;
+		if ( !useScale )
+			return matrix;
+
+		if ( aScale.x == 1.0 && aScale.y == 1.0 && aScale.z == 1.0 )
+			return matrix;
+
+		return matrix * glm::scale( aScale );
 	}
 
 	/* Y Up version of the ViewMatrix */
@@ -146,7 +159,7 @@ struct Transform
 		glm::mat4 viewMatrix(1.0f);
 
 		/* Y Rotation - YAW (Mouse X for Y up) */
-		viewMatrix = glm::rotate( viewMatrix, glm::radians(aAng[YAW]), glm::vec3(0, 1, 0) );
+		viewMatrix = glm::rotate( viewMatrix, glm::radians(aAng[YAW]), vec_right );
 
 		/* X Rotation - PITCH (Mouse Y) */
 		viewMatrix = glm::rotate( viewMatrix, glm::radians(aAng[PITCH]), VIEWMAT_ANG(0) );
@@ -160,8 +173,7 @@ struct Transform
 	/* Z Up version of the view matrix */
 	inline glm::mat4 ToViewMatrixZ(  ) const
 	{
-		// do base rotation to get Z up
-		glm::mat4 viewMatrix = glm::rotate( glm::radians(-90.f), glm::vec3(1, 0, 0) );
+		glm::mat4 viewMatrix = gViewMatrixZ;
 
 		/* Y Rotation - YAW */
 		viewMatrix = glm::rotate( viewMatrix, glm::radians(aAng[YAW]), VIEWMAT_ANG(1) );
@@ -181,14 +193,14 @@ struct Transform
 struct Transform2D
 {
 	glm::vec2 aPos = {};
-        float     aAng = 0.f;
+	float     aAng = 0.f;
 	glm::vec2 aScale = { 1.0f, 1.0f };
 };
 
 struct Transform2DSmall
 {
 	glm::vec2 aPos = {};
-	glm::vec2 aAng = {};
+	float     aAng = 0.f;
 };
 
 

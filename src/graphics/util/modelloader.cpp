@@ -42,7 +42,7 @@ void LoadObj( const std::string &srPath, std::vector<Mesh*> &meshes )
 	if ( !reader.ParseFromFile( srPath, reader_config ) )
 	{
 		if ( !reader.Error().empty() )
-			Print( "[LoadObj] Error: %s\n", reader.Error().c_str() );
+			LogError( "[LoadObj] Error: %s\n", reader.Error().c_str() );
 
 		return;
 	}
@@ -50,7 +50,7 @@ void LoadObj( const std::string &srPath, std::vector<Mesh*> &meshes )
 	startTime = std::chrono::high_resolution_clock::now(  );
 
 	if ( !reader.Warning().empty() )
-		Print( "%s\n", reader.Warning().c_str() );
+		LogWarn( "%s\n", reader.Warning().c_str() );
 
 	auto &objAttrib = reader.GetAttrib();
 	auto &objShapes = reader.GetShapes();
@@ -85,7 +85,7 @@ void LoadObj( const std::string &srPath, std::vector<Mesh*> &meshes )
 			material->aName = objMaterial.name;
 			material->SetShader( "basic_3d" );
 
-			auto SetTexture = [&]( const std::string &param, const std::string &texname )
+			auto SetTexture = [&]( const char* param, const std::string &texname )
 			{
 				if ( !texname.empty() )
 				{
@@ -94,7 +94,7 @@ void LoadObj( const std::string &srPath, std::vector<Mesh*> &meshes )
 					if ( path.is_relative() )
 						path = baseDir / path;
 
-					material->SetVar( param, matsys->CreateTexture( path.string() ) );
+					material->SetVar( param, matsys->CreateTexture(path.string().c_str()));
 				}
 			};
 
@@ -111,7 +111,7 @@ void LoadObj( const std::string &srPath, std::vector<Mesh*> &meshes )
 
 	for (std::size_t shapeIndex = 0; shapeIndex < objShapes.size(); ++shapeIndex)
 	{
-		Print( "Obj Shape Index: %u\n", shapeIndex );
+		LogDev( 1, "Obj Shape Index: %u\n", shapeIndex );
 
 		std::size_t indexOffset = 0;
 		for (std::size_t faceIndex = 0; faceIndex < objShapes[shapeIndex].mesh.num_face_vertices.size(); ++faceIndex)
@@ -133,35 +133,31 @@ void LoadObj( const std::string &srPath, std::vector<Mesh*> &meshes )
 
 			for (std::size_t v = 0; v < faceVertexCount; ++v)
 			{
-				glm::vec3 pos = {};
-				glm::vec3 norm = {};
-				glm::vec2 uv = {};
-				//glm::vec4 col = {};
-				glm::vec3 col = {};
+				vertex_3d_t vert{};
 
 				constexpr int posStride = 3;
 				constexpr int normStride = 3;
 				constexpr int uvStride = 2;
 				constexpr int colStride = 3;
 
-				#define ToVec3( out, item ) { \
+				#define ToVec3( attrib, out, item ) { \
 					const tinyobj_vec3& tiny_##out = reinterpret_cast<const tinyobj_vec3&>(item); \
-					out = {tiny_##out.x, tiny_##out.y, tiny_##out.z}; }
+					vert.attrib = {tiny_##out.x, tiny_##out.y, tiny_##out.z}; }
 
 				const tinyobj::index_t idx = objShapes[shapeIndex].mesh.indices[indexOffset + v];
-				ToVec3( pos, objAttrib.vertices[posStride * idx.vertex_index] );
+				ToVec3( pos, pos, objAttrib.vertices[posStride * idx.vertex_index] );
 
 				// wtf do i do if there is no normals (like in the bsp2obj thing)
 				if ( objAttrib.normals.size() > 0 && idx.normal_index >= 0 )
-					ToVec3( norm, objAttrib.normals[normStride * idx.normal_index] );
+					ToVec3( normal, norm, objAttrib.normals[normStride * idx.normal_index] );
 
 				if (idx.texcoord_index >= 0)
 				{
 					const tinyobj_vec2& texcoord = reinterpret_cast<const tinyobj_vec2&>(objAttrib.texcoords[uvStride * idx.texcoord_index]);
-					uv = {texcoord.x, 1.0f - texcoord.y};
+					vert.texCoord = {texcoord.x, 1.0f - texcoord.y};
 				}
 
-				ToVec3( col, objAttrib.colors[colStride * idx.vertex_index] );
+				ToVec3( color, col, objAttrib.colors[colStride * idx.vertex_index] );
 				//const tinyobj_vec3& color = reinterpret_cast<const tinyobj_vec3&>(objAttrib.colors[colStride * static_cast<std::size_t>(idx.vertex_index)]);
 				//vColor = {color.x, color.y, color.z, /*1.0f*/ };
 
@@ -170,13 +166,6 @@ void LoadObj( const std::string &srPath, std::vector<Mesh*> &meshes )
 				bool uniqueVertex = true;
 				uint32_t newIndex = static_cast<uint32_t>(mesh.aVertices.size());
 				assert(mesh.aVertices.size() < std::numeric_limits<uint32_t>::max());
-
-				vertex_3d_t vert;
-
-				vert.pos = pos;
-				vert.normal = norm;
-				vert.texCoord = uv;
-				vert.color = col;
 
 				auto iterSavedIndex = vertIndexes.find(vert);
 
@@ -205,7 +194,7 @@ void LoadObj( const std::string &srPath, std::vector<Mesh*> &meshes )
 	auto currentTime = std::chrono::high_resolution_clock::now();
 	float time = std::chrono::duration< float, std::chrono::seconds::period >( currentTime - startTime ).count(  );
 
-	Print( "Parsed Obj in %.6f sec: %s\n", time, srPath.c_str() );
+	LogDev( 1, "Parsed Obj in %.6f sec: %s\n", time, srPath.c_str() );
 }
 
 

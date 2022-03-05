@@ -4,12 +4,6 @@ engine.cpp ( Authored by p0lyh3dron )
 Defines the methods declared in engine.h.  
 */
 #include "engine.h"
-#include "core/platform.h"
-#include "core/console.h"
-#include "core/filesystem.h"
-#include "core/commandline.h"
-#include "core/log.h"
-#include "util.h"
 
 #ifdef _WIN32
 	#include <direct.h>

@@ -3,7 +3,6 @@ shader_basic_3d.cpp ( Authored by Demez )
 
 The Basic 3D Shader, starting point shader
 */
-#include "core/filesystem.h"
 #include "../renderer.h"
 #include "shader_unlit.h"
 
@@ -52,14 +51,6 @@ void ShaderUnlit::ReInit()
 	aModules[1] = CreateShaderModule( filesys->ReadFile( pFShader ) ); // Fills verticies with fragments to produce color, and depth
 
 	BaseShader::ReInit();
-}
-
-
-std::vector<VkDescriptorSetLayoutBinding> ShaderUnlit::GetDescriptorSetLayoutBindings(  )
-{
-	return {
-		DescriptorLayoutBinding( VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr ),
-	};
 }
 
 

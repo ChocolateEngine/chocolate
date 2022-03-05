@@ -252,7 +252,7 @@ void GuiSystem::DrawConsole( bool wasConsoleOpen )
 
 	ImGui::End(  );
 
-	std::vector< std::string > cvarAutoComplete = console->GetAutoCompleteList();
+	const std::vector< std::string >& cvarAutoComplete = console->GetAutoCompleteList();
 
 	if ( !cvarAutoComplete.empty() )
 	// if ( 0 )
@@ -316,12 +316,18 @@ void GuiSystem::AssignWindow( SDL_Window* spWindow )
 	apWindow = spWindow;
 }
 
+constexpr int MAX_DEBUG_MESSAGE_SIZE = 512;
+
 // Append a Debug Message
 void GuiSystem::DebugMessage( const char* format, ... )
 {
 	va_list args;
 	va_start(args, format);
-	aDebugMessages.push_back( vstring( format, args ) );
+
+	char buf[MAX_DEBUG_MESSAGE_SIZE];
+	int len = vsnprintf( buf, MAX_DEBUG_MESSAGE_SIZE, format, args );
+	aDebugMessages.push_back(buf);
+
 	va_end(args);
 }
 
@@ -329,7 +335,15 @@ void GuiSystem::DebugMessage( const char* format, ... )
 void GuiSystem::DebugMessage( size_t index, const char* format, ... )
 {
 	aDebugMessages.resize( glm::max(aDebugMessages.size(), index + 1) );
-	VSTRING( aDebugMessages[index], format );
+
+	va_list args;
+	va_start( args, format );
+
+	char buf[MAX_DEBUG_MESSAGE_SIZE];
+	int len = vsnprintf( buf, MAX_DEBUG_MESSAGE_SIZE, format, args );
+	aDebugMessages[index] = buf;
+
+	va_end( args );
 }
 
 // Insert a debug message in-between one
@@ -337,7 +351,11 @@ void GuiSystem::InsertDebugMessage( size_t index, const char* format, ... )
 {
 	va_list args;
 	va_start( args, format );
-	aDebugMessages.insert( aDebugMessages.begin() + index, vstring( format, args ) );
+
+	char buf[MAX_DEBUG_MESSAGE_SIZE];
+	int len = vsnprintf( buf, MAX_DEBUG_MESSAGE_SIZE, format, args );
+
+	aDebugMessages.insert( aDebugMessages.begin() + index, buf );
 	va_end( args );
 }
 

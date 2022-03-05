@@ -33,7 +33,7 @@ public:
 	/* Creates Vertex Buffer */
 	void   PrepareMeshForDraw();
 	/* Creates a new line.  */
-	void   InitLine( glm::vec3 sX, glm::vec3 sY, glm::vec3 sColor );
+	void   InitLine( const glm::vec3& sX, const glm::vec3& sY, const glm::vec3& sColor );
 	/* Initializes the general stuff required for rendering.  */
 	void   Init();
 	      ~VulkanPrimitiveMaterials();
