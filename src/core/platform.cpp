@@ -115,4 +115,13 @@ void* sys_get_console_window()
 }
 
 
+void sys_wait_for_debugger()
+{
+	while( !::IsDebuggerPresent() )
+		::Sleep( 100 ); // to avoid 100% CPU load
+
+	DebugBreak();
+}
+
+
 #endif // _WIN32

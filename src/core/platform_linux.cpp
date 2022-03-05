@@ -5,6 +5,7 @@
 
 #include <stdio.h>
 #include <dlfcn.h>
+#include <csignal>
 
 Module          sys_load_library( const char* path )
 {
@@ -52,5 +53,12 @@ void sys_sleep( float ms )
 {
     usleep( ms * 1000 );
 }
+
+
+void sys_wait_for_debugger()
+{
+    raise( SIGINT );
+}
+
 
 #endif /* __unix__  */

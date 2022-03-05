@@ -35,3 +35,6 @@ void            CORE_API    sys_sleep( float ms );
 // very uh, windows only-ish i think
 void            CORE_API*   sys_get_console_window();
 
+// wait for a debugger to attach
+void            CORE_API    sys_wait_for_debugger();
+
