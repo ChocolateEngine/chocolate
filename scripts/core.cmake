@@ -62,6 +62,7 @@ if( MSVC )
 	
 	include_directories(
 		${CH_THIRDPARTY}/glm
+		${CH_THIRDPARTY}/SDL2/include
 	)
 	
 	add_compile_definitions(
