@@ -6,7 +6,6 @@ material.cpp ( Authored by Demez )
 #include "../renderer.h"
 #include "../shaders/shaders.h"
 #include "material.h"
-#include "core/resources.h"
 
 extern MaterialSystem* matsys;
 

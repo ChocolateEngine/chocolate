@@ -7,7 +7,6 @@ Interface for the material class to be used outside graphics
 
 #include "types/databuffer.hh"
 #include "graphics/renderertypes.h"
-#include "core/resources.h"
 
 #include <filesystem>
 #include <string>
