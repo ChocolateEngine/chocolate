@@ -66,6 +66,9 @@ public:
 	// ================================================================================
 	// Main Funcs
 
+	/* Find the path to a file within the search paths with printf syntax.  */
+	std::string                             FindFileF( const char* spFmt, ... );
+
 	/* Find the path to a file within the search paths.  */
 	std::string                             FindFile( const std::string& file );
 

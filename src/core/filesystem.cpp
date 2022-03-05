@@ -129,6 +129,18 @@ inline bool is_dir( const std::string &path )
 }
 
 
+std::string FileSystem::FindFileF( const char* spFmt, ... )
+{
+    char pBuf[ 512 ];  // uh idk lol
+    va_list args;
+    va_start( args, spFmt );
+    vsprintf( pBuf, spFmt, args );
+    va_end( args );
+
+    return FindFile( pBuf );
+}
+
+
 std::string FileSystem::FindFile( const std::string& file )
 {
     // if it's an absolute path already,
