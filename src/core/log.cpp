@@ -7,6 +7,8 @@
 
 CONVAR( developer, 1 );
 
+LogColor gCurrentColor = LogColor::Default;
+
 /* Windows Specific Functions for console text colors.  */
 #ifdef _WIN32
 
@@ -17,20 +19,40 @@ constexpr int Win32GetColor( LogColor color )
 {
     switch ( color )
     {
-        case LogColor::Red:
-            return 4;
+        case LogColor::Black:
+            return 0;
+
+        case LogColor::DarkBlue:
+            return FOREGROUND_BLUE;
         case LogColor::DarkGreen:
-            return 2;
-        case LogColor::Green:
-            return 10;
-        case LogColor::Yellow:
-            return 6;
+            return FOREGROUND_GREEN;
+        case LogColor::DarkCyan:
+            return FOREGROUND_GREEN | FOREGROUND_BLUE;
+        case LogColor::DarkRed:
+            return FOREGROUND_RED;
+        case LogColor::DarkMagenta:
+            return FOREGROUND_RED | FOREGROUND_BLUE;
+        case LogColor::DarkYellow:
+            return FOREGROUND_RED | FOREGROUND_GREEN;
+        case LogColor::DarkGray:
+            return FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE;
+
+        case LogColor::Gray:
+            return FOREGROUND_INTENSITY;
         case LogColor::Blue:
-            return 1;
+            return FOREGROUND_INTENSITY | FOREGROUND_BLUE;
+        case LogColor::Green:
+            return FOREGROUND_INTENSITY | FOREGROUND_GREEN;
         case LogColor::Cyan:
-            return 3;  // or 9
+            return FOREGROUND_INTENSITY | FOREGROUND_GREEN | FOREGROUND_BLUE;
+        case LogColor::Red:
+            return FOREGROUND_INTENSITY | FOREGROUND_RED;
         case LogColor::Magenta:
-            return 13;
+            return FOREGROUND_INTENSITY | FOREGROUND_RED | FOREGROUND_BLUE;
+        case LogColor::Yellow:
+            return FOREGROUND_INTENSITY | FOREGROUND_RED | FOREGROUND_GREEN;
+        case LogColor::White:
+            return FOREGROUND_INTENSITY | FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE;
 
         case LogColor::Default:
         default:
@@ -59,6 +81,7 @@ void Win32SetColor( LogColor color )
 
 #elif __unix__
 
+// TODO: setup the rest of the colors here
 constexpr const char* UnixGetColor( LogColor color ) 
 {
     switch ( color )
@@ -157,6 +180,7 @@ void LogPutsWarn( const char *spBuf )
 }
 
 /* High severity.  */
+/* TODO: maybe have this print to stderr? */
 void LogError( const char *spFmt, ... )
 {
     LogSetColor( LogColor::Red );
@@ -226,11 +250,19 @@ void LogPutsDev( u8 sLvl, const char *spBuf )
 
 void LogSetColor( LogColor color )
 {
+    gCurrentColor = color;
+
 #ifdef _WIN32
     Win32SetColor( color );
 #elif __unix__
-    // technically works in windows 10
+    // technically works in windows 10, might try later and see if it's cheaper, idk
     UnixSetColor( color );
 #endif
+}
+
+
+LogColor LogGetColor()
+{
+    return gCurrentColor;
 }
 

@@ -8,14 +8,26 @@
 enum class LogColor
 {
 	Default,
-	Red,
+
+	Black,
+	DarkBlue,
 	DarkGreen,
-	Green,
-	Yellow,
+	DarkCyan,
+	DarkRed,
+	DarkMagenta,
+	DarkYellow,
+	DarkGray,
+
+	Gray,
 	Blue,
+	Green,
 	Cyan,
+	Red,
 	Magenta,
-	Max = Magenta,
+	Yellow,
+	White,
+
+	Max = White,
 };
 
 
