@@ -10,6 +10,7 @@
 
 #include <cstring>
 
+#include "platform.h"
 #include "mempool.h"
 
 using Handle = size_t;
@@ -17,7 +18,7 @@ using Handle = size_t;
 constexpr Handle InvalidHandle = 0;
 
 template < typename T >
-class CORE_API ResourceManager
+class ResourceManager
 {
     MemPool aPool;
 public:
