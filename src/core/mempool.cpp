@@ -11,7 +11,6 @@
 
 #define LOCK() auto m = AutoMutex( apMutex )
 
-std::mutex m;
 /*
  *    Consolidates regions of fragmented memory.
  */
@@ -26,7 +25,7 @@ void MemPool::Consolidate()
                 if( pChunk->apNext->aFlags & Mem_Free ) {
                     pChunk->aSize += pChunk->apNext->aSize;
                     pChunk->apNext = pChunk->apNext->apNext;
-                    LogDev( 1, "Consolidated memory chunk at %p with new size %d\n", pChunk, pChunk->aSize );
+                    LogDev( 2, "Consolidated memory chunk at %p with new size %d\n", pChunk, pChunk->aSize );
                 }
             }
         }
@@ -102,14 +101,12 @@ MemError MemPool::Resize( size_t sSize )
         LogWarn( "Failed to resize memory pool to %d bytes.\n", sSize );
         return MemPool_OutOfMemory;
     }
-    LogDev( 1, "Pointer: %d ->", apPtr - apBuf );
     apPtr = pNew + ( apPtr - apBuf );
-    LogDev( 1, " %d\n", apPtr - apBuf );
     apBuf = pNew;
     apEnd = apBuf + sSize;
     aSize = sSize;
 
-    LogDev( 1, "Resized memory pool to %d bytes.\n", sSize );
+    LogDev( 2, "Resized memory pool to %d bytes.\n", sSize );
 
     return MemPool_Success;
 }
@@ -145,9 +142,9 @@ void *MemPool::Alloc( size_t sSize )
                     pNew->apData   = p->apData + sSize;
                     p->apNext      = pNew;
 
-                    LogDev( 1, "Split chunk at %p with new size %d\n", pNew, pNew->aSize );
+                    LogDev( 3, "Split chunk at %p with new size %d\n", pNew, pNew->aSize );
                 }
-                LogDev( 1, "Allocated %d bytes in previously freed region at %p\n", sSize, p->apData );
+                LogDev( 4, "Allocated %d bytes in previously freed region at %p\n", sSize, p->apData );
                 p->aFlags = Mem_Used;
                 return p->apData;
             }
@@ -203,11 +200,9 @@ void *MemPool::Alloc( size_t sSize )
     }
 
     void *pRet = apPtr;
-    LogDev( 1, "Pointer: %d ->", apPtr - apBuf );
     apPtr     += sSize;
-    LogDev( 1, " %d\n", apPtr - apBuf );
 
-    LogDev( 1, "Allocated %d bytes at %p.\n", sSize, apPtr );
+    LogDev( 4, "Allocated %d bytes at %p.\n", sSize, apPtr );
 
     return pRet;
 }

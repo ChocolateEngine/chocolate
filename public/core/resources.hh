@@ -73,7 +73,7 @@ public:
 
         size_t index = ( size_t )pBuf - ( size_t )aPool.GetStart();
 
-        LogDev( 1, "Allocated resource at index %u\n", index );
+        LogDev( 3, "ResourceManager::Add( T* ): Allocated resource at index %u\n", index );
 
         return index | magic << 32;
     }
@@ -110,7 +110,7 @@ public:
          */
         aPool.Free( pBuf );
 
-        LogDev( 1, "Removed resource at index %u\n", index );
+        LogDev( 3, "ResourceManager::Remove( Handle ): Removed resource at index %u\n", index );
     }
     /*
      *    Get a resource.
@@ -141,11 +141,11 @@ public:
          *    Check the magic number.
          */
         if( *( size_t* )pBuf != magic ) {
-            LogWarn( "Invalid handle: %d\n", sHandle );
+            LogWarn( "*ResourceManager::Get( Handle ): Invalid handle: %d\n", sHandle );
             return nullptr;
         }
 
-        LogDev( 4, "Retrieved resource at index %u\n", index );
+        LogDev( 4, "*ResourceManager::Get( Handle ): Retrieved resource at index %u\n", index );
 
         /*
          *    Return the data.

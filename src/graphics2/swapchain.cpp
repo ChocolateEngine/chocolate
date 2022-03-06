@@ -53,6 +53,33 @@ VkExtent2D ChooseSwapExtent( const VkSurfaceCapabilitiesKHR &srCapabilities )
 	}
 }
 
+const std::vector< VkImageView >& CreateImageViews( const std::vector< VkImage >& srImages ) 
+{
+	std::vector< VkImageView > views;
+	views.resize( srImages.size() );
+	for ( int i = 0; i < srImages.size(); ++i )
+	{
+		VkImageViewCreateInfo aImageViewInfo           = {};
+		aImageViewInfo.sType                           = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+		aImageViewInfo.pNext                           = nullptr;
+		aImageViewInfo.flags                           = 0;
+		aImageViewInfo.image                           = srImages[ i ];
+		aImageViewInfo.viewType                        = VK_IMAGE_VIEW_TYPE_2D;
+		aImageViewInfo.format                          = VK_FORMAT_B8G8R8A8_SRGB;
+		aImageViewInfo.components.r                    = VK_COMPONENT_SWIZZLE_IDENTITY;
+		aImageViewInfo.components.g                    = VK_COMPONENT_SWIZZLE_IDENTITY;
+		aImageViewInfo.components.b                    = VK_COMPONENT_SWIZZLE_IDENTITY;
+		aImageViewInfo.components.a                    = VK_COMPONENT_SWIZZLE_IDENTITY;
+		aImageViewInfo.subresourceRange.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT;
+		aImageViewInfo.subresourceRange.baseMipLevel   = 0;
+		aImageViewInfo.subresourceRange.levelCount     = 1;
+		aImageViewInfo.subresourceRange.baseArrayLayer = 0;
+		aImageViewInfo.subresourceRange.layerCount     = 1;
+
+		CheckVKResult( vkCreateImageView( GetGDevice().GetDevice(), &aImageViewInfo, nullptr, &views[ i ] ), "Failed to create image view!" );
+	}
+}
+
 Swapchain::Swapchain()
 {
     SwapChainSupportInfo 	swapChainSupport    = CheckSwapChainSupport( GetGDevice().GetPhysicalDevice() );
@@ -98,12 +125,12 @@ Swapchain::Swapchain()
 	createInfo.clipped		    = VK_TRUE;
 	createInfo.oldSwapchain 	= VK_NULL_HANDLE;
 
-	if ( vkCreateSwapchainKHR( GetGDevice().GetDevice(), &createInfo, NULL, &aSwapChain ) != VK_SUCCESS )
-		LogFatal( "Failed to create swap chain!" );
+	CheckVKResult( vkCreateSwapchainKHR( GetGDevice().GetDevice(), &createInfo, NULL, &aSwapChain ), "Failed to create swap chain!" );
 	
 	vkGetSwapchainImagesKHR( GetGDevice().GetDevice(), aSwapChain, &imageCount, NULL );
 	aImages.resize( imageCount );
 	vkGetSwapchainImagesKHR( GetGDevice().GetDevice(), aSwapChain, &imageCount, aImages.data(  ) );
+	aImageViews = CreateImageViews( aImages );
 }
 
 Swapchain::~Swapchain()
