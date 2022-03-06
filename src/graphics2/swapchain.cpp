@@ -2,7 +2,6 @@
 
 #include "graphics/renderertypes.h"
 
-#include "device.h"
 #include "instance.h"
 #include "gutil.hh"
 
@@ -76,13 +75,13 @@ const std::vector< VkImageView >& CreateImageViews( const std::vector< VkImage >
 		aImageViewInfo.subresourceRange.baseArrayLayer = 0;
 		aImageViewInfo.subresourceRange.layerCount     = 1;
 
-		CheckVKResult( vkCreateImageView( GetGDevice().GetDevice(), &aImageViewInfo, nullptr, &views[ i ] ), "Failed to create image view!" );
+		CheckVKResult( vkCreateImageView( GetLogicDevice(), &aImageViewInfo, nullptr, &views[ i ] ), "Failed to create image view!" );
 	}
 }
 
 Swapchain::Swapchain()
 {
-    SwapChainSupportInfo 	swapChainSupport    = CheckSwapChainSupport( GetGDevice().GetPhysicalDevice() );
+    SwapChainSupportInfo 	swapChainSupport    = CheckSwapChainSupport( GetPhysicalDevice() );
 
 	VkSurfaceFormatKHR 	    aSurfaceFormat 		= ChooseSwapSurfaceFormat( swapChainSupport.aFormats );
 	VkPresentModeKHR 	    aPresentMode 	    = ChooseSwapPresentMode( swapChainSupport.aPresentModes );
@@ -103,7 +102,7 @@ Swapchain::Swapchain()
 	    .imageUsage		    = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
     };
 
-    QueueFamilyIndices indices 	    = FindQueueFamilies( GetGDevice().GetPhysicalDevice() );
+    QueueFamilyIndices indices 	    = FindQueueFamilies( GetPhysicalDevice() );
 	uint32_t queueFamilyIndices[  ] = { ( uint32_t )indices.aGraphicsFamily, ( uint32_t )indices.aPresentFamily };
 
 	if ( indices.aGraphicsFamily != indices.aPresentFamily )
@@ -125,17 +124,21 @@ Swapchain::Swapchain()
 	createInfo.clipped		    = VK_TRUE;
 	createInfo.oldSwapchain 	= VK_NULL_HANDLE;
 
-	CheckVKResult( vkCreateSwapchainKHR( GetGDevice().GetDevice(), &createInfo, NULL, &aSwapChain ), "Failed to create swap chain!" );
+	CheckVKResult( vkCreateSwapchainKHR( GetLogicDevice(), &createInfo, NULL, &aSwapChain ), "Failed to create swap chain!" );
 	
-	vkGetSwapchainImagesKHR( GetGDevice().GetDevice(), aSwapChain, &imageCount, NULL );
+	vkGetSwapchainImagesKHR( GetLogicDevice(), aSwapChain, &imageCount, NULL );
 	aImages.resize( imageCount );
-	vkGetSwapchainImagesKHR( GetGDevice().GetDevice(), aSwapChain, &imageCount, aImages.data(  ) );
+	vkGetSwapchainImagesKHR( GetLogicDevice(), aSwapChain, &imageCount, aImages.data(  ) );
 	aImageViews = CreateImageViews( aImages );
 }
 
 Swapchain::~Swapchain()
 {
-    vkDestroySwapchainKHR( GetGDevice().GetDevice(), aSwapChain, NULL );
+    vkDestroySwapchainKHR( GetLogicDevice(), aSwapChain, NULL );
 }
 
-Swapchain gSwapChain{};
+Swapchain &GetSwapchain()
+{
+	static Swapchain swapchain;
+	return swapchain;
+}

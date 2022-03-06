@@ -20,18 +20,40 @@ protected:
     VkDebugUtilsMessengerEXT 	aLayers;
     VkSurfaceKHR                aSurface;
 
+    VkSampleCountFlagBits       aSampleCount;
+    VkPhysicalDevice            aPhysicalDevice;
+    VkDevice                    aDevice;
+    VkQueue                     aGraphicsQueue;
+    VkQueue                     aPresentQueue;
+
     void                       CreateWindow();
     std::vector< const char* > InitRequiredExtensions();
     void                       CreateInstance();
     VkResult                   CreateValidationLayers();
+
+    VkSampleCountFlagBits      FindMaxMSAASamples();
+    void                       SetupPhysicalDevice();
+    void                       CreateDevice();
 public:
      GInstance();
     ~GInstance();
 
-    constexpr Window           GetWindow()   { return aWindow;   }
+    constexpr Window           GetWindow()          { return aWindow;         }
 
-    constexpr VkInstance       GetInstance() { return aInstance; }
-    constexpr VkSurfaceKHR     GetSurface()  { return aSurface;  }
+    constexpr VkInstance       GetInstance()        { return aInstance;       }
+    constexpr VkSurfaceKHR     GetSurface()         { return aSurface;        }
+
+    constexpr VkQueue          GetGraphicsQueue()   { return aGraphicsQueue;  }
+    constexpr VkQueue          GetPresentQueue()    { return aPresentQueue;   }
+
+    constexpr VkPhysicalDevice GetPhysicalDevice()  { return aPhysicalDevice; }
+    constexpr VkDevice         GetDevice()          { return aDevice;         }
 };
 
-GInstance &GetGInstance();
+GInstance        &GetGInstance();
+
+VkInstance        GetInst();
+
+VkDevice          GetLogicDevice();
+
+VkPhysicalDevice  GetPhysicalDevice();

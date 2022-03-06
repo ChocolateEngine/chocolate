@@ -57,7 +57,7 @@ void sys_sleep( float ms )
 
 void sys_wait_for_debugger()
 {
-    raise( SIGINT );
+    raise( SIGSTOP );
 }
 
 

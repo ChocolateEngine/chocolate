@@ -15,7 +15,10 @@ public:
      Swapchain();
     ~Swapchain();
 
-    uint32_t GetImageCount() { return aImages.size(); }
+    uint32_t           GetImageCount()        { return aImages.size(); }
+    VkSurfaceFormatKHR GetSurfaceFormat()     { return aSurfaceFormat; }
+    VkFormat           GetFormat()            { return aSurfaceFormat.format; }
+    VkColorSpaceKHR    GetColorSpace()        { return aSurfaceFormat.colorSpace; }
 };
 
-extern Swapchain gSwapchain;
+Swapchain &GetSwapchain();

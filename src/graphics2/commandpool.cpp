@@ -11,11 +11,11 @@
 #include "commandpool.h"
 
 #include "gutil.hh"
-#include "device.h"
+#include "instance.h"
 
 CommandPool::CommandPool( VkCommandPoolCreateFlags sFlags )
 {
-    QueueFamilyIndices q = FindQueueFamilies( GetGDevice().GetPhysicalDevice() );
+    QueueFamilyIndices q = FindQueueFamilies( GetPhysicalDevice() );
 
     VkCommandPoolCreateInfo aCommandPoolInfo = {};
     aCommandPoolInfo.sType                = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
@@ -23,12 +23,12 @@ CommandPool::CommandPool( VkCommandPoolCreateFlags sFlags )
     aCommandPoolInfo.flags                = sFlags;
     aCommandPoolInfo.queueFamilyIndex     = q.aGraphicsFamily;
 
-    CheckVKResult( vkCreateCommandPool( GetGDevice().GetDevice(), &aCommandPoolInfo, nullptr, &aCommandPool ), "Failed to create command pool!" );
+    CheckVKResult( vkCreateCommandPool( GetLogicDevice(), &aCommandPoolInfo, nullptr, &aCommandPool ), "Failed to create command pool!" );
 }
 
 CommandPool::~CommandPool()
 {
-    vkDestroyCommandPool( GetGDevice().GetDevice(), aCommandPool, nullptr );
+    vkDestroyCommandPool( GetLogicDevice(), aCommandPool, nullptr );
 }
 
 void CommandPool::Reset()
@@ -37,7 +37,7 @@ void CommandPool::Reset()
 }
 void CommandPool::Reset( VkCommandPoolResetFlags sFlags )
 {
-    CheckVKResult( vkResetCommandPool( GetGDevice().GetDevice(), aCommandPool, sFlags ), "Failed to reset command pool!" );
+    CheckVKResult( vkResetCommandPool( GetLogicDevice(), aCommandPool, sFlags ), "Failed to reset command pool!" );
 }
 
 VkCommandPool CommandPool::GetHandle() const
