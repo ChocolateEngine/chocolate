@@ -72,6 +72,8 @@ void Renderer::InitVulkan(  )
 	gPipelineBuilder.BuildPipelines(  );
 
 	aDbgDrawer.Init();
+
+	gui->StyleImGui();
 }
 
 bool Renderer::HasStencilComponent( VkFormat sFmt )

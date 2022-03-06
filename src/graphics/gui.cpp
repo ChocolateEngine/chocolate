@@ -355,8 +355,8 @@ void GuiSystem::DrawConsole( bool wasConsoleOpen )
 
 void GuiSystem::StyleImGui()
 {
-	// TEMP: don't do this for now until SRGB weirdness is fixed
-	return;
+	if ( cmdline->Find( "-no-vgui-style" ) )
+		return;
 
 	// Classic VGUI2 Style Color Scheme
 	ImVec4* colors = ImGui::GetStyle().Colors;
