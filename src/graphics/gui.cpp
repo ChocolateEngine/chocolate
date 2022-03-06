@@ -65,60 +65,44 @@ void GuiSystem::DrawGui(  )
 }
 
 
-bool CheckKeyPress( int& commandIndex, int maxSize, bool addTabInDownKey = false )
+static int         gCmdDropDownIndex = -1;
+static int         gCmdHistoryIndex = -1;
+
+static std::string gCmdUserInput = "";
+static int         gCmdUserCursor = 0;
+
+
+bool CheckAddDropDownCommand( ImGuiInputTextCallbackData* data )
 {
-	bool upPressed = ImGui::IsKeyPressed( ImGui::GetKeyIndex(ImGuiKey_UpArrow) );
-	bool downPressed = ImGui::IsKeyPressed( ImGui::GetKeyIndex(ImGuiKey_DownArrow) );
-
-	if ( addTabInDownKey )
-		downPressed |= ImGui::IsKeyPressed( ImGui::GetKeyIndex(ImGuiKey_Tab) );
-
-	if ( upPressed && --commandIndex == -2 )
-		commandIndex = maxSize - 1;
-
-	if ( downPressed && ++commandIndex == maxSize)
-		commandIndex = -1;
-
-	return upPressed || downPressed;
-}
-
-
-bool CheckAddLastCommand( ImGuiInputTextCallbackData* data, Console* console, int& commandIndex )
-{
-	if ( console->GetCommandHistory().empty() )
-		return false;
-
-	bool keyPressed = CheckKeyPress( commandIndex, console->GetCommandHistory().size() );
-
-	if ( keyPressed )
-	{
-		snprintf( data->Buf, 256, (commandIndex == -1) ? "" : console->GetCommandHistory()[commandIndex].c_str() );
-		console->SetTextBuffer( data->Buf );
-		data->CursorPos = console->GetTextBuffer().length();
-	}
-
-	return keyPressed;
-}
-
-
-bool CheckAddDropDownCommand( ImGuiInputTextCallbackData* data, Console* console, int& commandIndex )
-{
-	static std::string originalTextBuffer = "";
+	//static std::string originalTextBuffer = "";
 	static std::string prevTextBuffer = "";
 
-	bool keyPressed = CheckKeyPress( commandIndex, console->GetAutoCompleteList().size(), true );
+	bool upPressed = ImGui::IsKeyPressed( ImGui::GetKeyIndex(ImGuiKey_UpArrow) );
+	bool downPressed = ImGui::IsKeyPressed( ImGui::GetKeyIndex(ImGuiKey_DownArrow) );
+	downPressed |= ImGui::IsKeyPressed( ImGui::GetKeyIndex(ImGuiKey_Tab) );
+
+	const auto& autoComplete = console->GetAutoCompleteList();
+
+	// wrap around if over max size
+	if ( upPressed && --gCmdDropDownIndex == -2 )
+		gCmdDropDownIndex = autoComplete.size() - 1;
+
+	if ( downPressed && ++gCmdDropDownIndex == autoComplete.size() )
+		gCmdDropDownIndex = -1;
+
+	bool keyPressed = upPressed || downPressed;
 
 	// Reset the selected command index if the buffer is empty
 	if ( strncmp(data->Buf, "", data->BufSize) == 0 && !keyPressed )
-		commandIndex = -1;
+		gCmdDropDownIndex = -1;
 
-	bool inDropDown = commandIndex != -1;
+	bool inDropDown = gCmdDropDownIndex != -1;
 	bool textBufChanged = prevTextBuffer != data->Buf;
 
 	// If the user typed something in, then update the original text inputted
 	// relies on the if (inDropDown) below to set commandIndex back to -1 if there was something selected
 	if ( textBufChanged && !inDropDown )
-		originalTextBuffer = data->Buf;
+		gCmdUserInput = data->Buf;
 
 	bool bufDirty = false;
 
@@ -128,7 +112,7 @@ bool CheckAddDropDownCommand( ImGuiInputTextCallbackData* data, Console* console
 		{
 			// No items selected in auto complete list
 			// Set back to original text and recalculate the auto complete list
-			snprintf( data->Buf, data->BufSize, originalTextBuffer.c_str() );
+			snprintf( data->Buf, data->BufSize, gCmdUserInput.c_str() );
 			console->CalculateAutoCompleteList( data->Buf );
 			bufDirty = true;
 		}
@@ -136,15 +120,16 @@ bool CheckAddDropDownCommand( ImGuiInputTextCallbackData* data, Console* console
 		{
 			// An arrow key or tab is pressed, so fill the buffer with the selected item from the auto complete list
 			//snprintf( data->Buf, data->BufSize, console->GetAutoCompleteList()[commandIndex].c_str() );
-			snprintf( data->Buf, data->BufSize, (console->GetAutoCompleteList()[commandIndex] + " ").c_str() );
+			snprintf( data->Buf, data->BufSize, (console->GetAutoCompleteList()[gCmdDropDownIndex] + " ").c_str() );
 			bufDirty = true;
 		}
 		else if ( inDropDown )
 		{
 			// An item in auto complete list is selected, but the user typed something in
 			// So set back to original text recalculate the auto complete list
-			commandIndex = -1;
-			originalTextBuffer = data->Buf;
+			gCmdUserCursor = data->CursorPos;
+			gCmdDropDownIndex = 0;
+			gCmdUserInput = data->Buf;
 			console->CalculateAutoCompleteList( data->Buf );
 			bufDirty = true;
 		}
@@ -157,15 +142,73 @@ bool CheckAddDropDownCommand( ImGuiInputTextCallbackData* data, Console* console
 
 		if ( inDropDown )
 			data->CursorPos = console->GetTextBuffer().length();
+		else if ( !textBufChanged )
+			data->CursorPos = gCmdUserCursor;
+		else
+			gCmdUserCursor = data->CursorPos;
 
 		prevTextBuffer = console->GetTextBuffer();
+	}
+	else if ( !inDropDown && gCmdUserCursor != data->CursorPos )
+	{
+		gCmdUserCursor = data->CursorPos;
 	}
 
 	return bufDirty;
 }
 
 
-bool CheckEnterPress( char* buf, Console* console, int& lastCommandIndex, int& dropDownCommandIndex )
+// not in a drop down command, so feel free to add in a command from history if we hit up or down arrow
+bool CheckAddLastCommand( ImGuiInputTextCallbackData* data )
+{
+	static std::string prevTextBuffer = "";
+
+	const auto& history = console->GetCommandHistory();
+
+	if ( history.empty() )
+		return false;
+
+	bool upPressed = ImGui::IsKeyPressed( ImGui::GetKeyIndex(ImGuiKey_UpArrow) );
+	bool downPressed = ImGui::IsKeyPressed( ImGui::GetKeyIndex(ImGuiKey_DownArrow) );
+
+	bool textBufChanged = prevTextBuffer != data->Buf;
+
+	// If the user typed something in, then update the original text inputted
+	// relies on the if (inDropDown) below to set commandIndex back to -1 if there was something selected
+	if ( textBufChanged && !(upPressed || downPressed) )
+	{
+		gCmdUserInput = data->Buf;
+		//gCmdUserCursor = data->CursorPos;
+		gCmdHistoryIndex = -1;
+	}
+
+	if ( gCmdHistoryIndex == -1 )
+		gCmdUserCursor = data->CursorPos;
+
+	// wrap around if over max size
+	if ( upPressed && --gCmdHistoryIndex == -2 )
+		gCmdHistoryIndex = history.size() - 1;
+
+	if ( downPressed && ++gCmdHistoryIndex == history.size() )
+		gCmdHistoryIndex = -1;
+
+	if ( upPressed || downPressed )
+	{
+		snprintf( data->Buf, 256, (gCmdHistoryIndex == -1) ? gCmdUserInput.c_str() : history[gCmdHistoryIndex].c_str() );
+		console->SetTextBuffer( data->Buf );
+		prevTextBuffer = data->Buf;
+
+		if ( gCmdHistoryIndex == -1 )
+			data->CursorPos = gCmdUserCursor;
+		else
+			data->CursorPos = console->GetTextBuffer().length();
+	}
+
+	return ( upPressed || downPressed );
+}
+
+
+bool CheckEnterPress( char* buf )
 {
 	bool isPressed = ImGui::IsKeyPressed( ImGui::GetKeyIndex(ImGuiKey_Enter), false );
 	isPressed |= ImGui::IsKeyPressed( ImGui::GetKeyIndex(ImGuiKey_KeyPadEnter), false );
@@ -176,32 +219,41 @@ bool CheckEnterPress( char* buf, Console* console, int& lastCommandIndex, int& d
 		snprintf( buf, 256, "" );
 		console->SetTextBuffer( buf );
 		ImGui::SetKeyboardFocusHere(  );
-		lastCommandIndex = -1;
-		dropDownCommandIndex = -1;
+
+		gCmdUserInput = "";
+		gCmdHistoryIndex = -1;
+		gCmdDropDownIndex = -1;
 	}
 
 	return isPressed;
 }
 
 
-// blech, needed for selecting it in the dropdown
-static int gDropDownCommandIndex = -1;
-
-
 int ConsoleInputCallback( ImGuiInputTextCallbackData* data )
 {
 	static int lastCommandIndex = -1;
 
-	data->BufDirty = CheckAddDropDownCommand( data, console, gDropDownCommandIndex );
-
-	if ( console->GetAutoCompleteList().empty() )
+	if ( gCmdHistoryIndex != -1 )
 	{
-		data->BufDirty = CheckAddLastCommand( data, console, lastCommandIndex );
+		bool keyPressed = ImGui::IsKeyPressed( ImGui::GetKeyIndex(ImGuiKey_Tab) );
+		keyPressed |= ImGui::IsKeyPressed( ImGui::GetKeyIndex(ImGuiKey_RightArrow) );
+
+		if ( keyPressed )
+			data->BufDirty = CheckAddDropDownCommand( data );
+	}
+	else
+	{
+		data->BufDirty = CheckAddDropDownCommand( data );
+	}
+
+	if ( console->GetAutoCompleteList().empty() || gCmdHistoryIndex != -1 )
+	{
+		data->BufDirty = CheckAddLastCommand( data );
 	}
 
 	if ( !data->BufDirty )
 	{
-		data->BufDirty = CheckEnterPress( data->Buf, console, lastCommandIndex, gDropDownCommandIndex );
+		data->BufDirty = CheckEnterPress( data->Buf );
 	}
 
 	if ( data->BufDirty )
@@ -282,7 +334,7 @@ void GuiSystem::DrawConsole( bool wasConsoleOpen )
 
 			item += " " + console->GetConVarValue( item );
 
-			if ( ImGui::Selectable( item.c_str(), gDropDownCommandIndex == i ) )
+			if ( ImGui::Selectable( item.c_str(), gCmdDropDownIndex == i ) )
 			{
 				// should we keep the value in here too?
 				console->SetTextBuffer( cvarAutoComplete[i] );
@@ -299,6 +351,76 @@ void GuiSystem::DrawConsole( bool wasConsoleOpen )
 		//ImGui::EndPopup(  );
 	}
 
+}
+
+void GuiSystem::StyleImGui()
+{
+	// TEMP: don't do this for now until SRGB weirdness is fixed
+	return;
+
+	// Classic VGUI2 Style Color Scheme
+	ImVec4* colors = ImGui::GetStyle().Colors;
+
+	colors[ImGuiCol_Text]                              = ImVec4(1.00f, 1.00f, 1.00f, 1.00f);
+	colors[ImGuiCol_TextDisabled]              = ImVec4(0.50f, 0.50f, 0.50f, 1.00f);
+	colors[ImGuiCol_WindowBg]                          = ImVec4(0.29f, 0.34f, 0.26f, 1.00f);
+	colors[ImGuiCol_ChildBg]                                = ImVec4(0.29f, 0.34f, 0.26f, 1.00f);
+	colors[ImGuiCol_PopupBg]                                = ImVec4(0.24f, 0.27f, 0.20f, 1.00f);
+	colors[ImGuiCol_Border]                          = ImVec4(0.54f, 0.57f, 0.51f, 0.50f);
+	colors[ImGuiCol_BorderShadow]              = ImVec4(0.14f, 0.16f, 0.11f, 0.52f);
+	colors[ImGuiCol_FrameBg]                                = ImVec4(0.24f, 0.27f, 0.20f, 1.00f);
+	colors[ImGuiCol_FrameBgHovered]          = ImVec4(0.27f, 0.30f, 0.23f, 1.00f);
+	colors[ImGuiCol_FrameBgActive]            = ImVec4(0.30f, 0.34f, 0.26f, 1.00f);
+	colors[ImGuiCol_TitleBg]                                = ImVec4(0.24f, 0.27f, 0.20f, 1.00f);
+	colors[ImGuiCol_TitleBgActive]            = ImVec4(0.29f, 0.34f, 0.26f, 1.00f);
+	colors[ImGuiCol_TitleBgCollapsed]          = ImVec4(0.00f, 0.00f, 0.00f, 0.51f);
+	colors[ImGuiCol_MenuBarBg]                        = ImVec4(0.24f, 0.27f, 0.20f, 1.00f);
+	colors[ImGuiCol_ScrollbarBg]                    = ImVec4(0.35f, 0.42f, 0.31f, 1.00f);
+	colors[ImGuiCol_ScrollbarGrab]            = ImVec4(0.28f, 0.32f, 0.24f, 1.00f);
+	colors[ImGuiCol_ScrollbarGrabHovered]   = ImVec4(0.25f, 0.30f, 0.22f, 1.00f);
+	colors[ImGuiCol_ScrollbarGrabActive]    = ImVec4(0.23f, 0.27f, 0.21f, 1.00f);
+	colors[ImGuiCol_CheckMark]                        = ImVec4(0.59f, 0.54f, 0.18f, 1.00f);
+	colors[ImGuiCol_SliderGrab]                      = ImVec4(0.35f, 0.42f, 0.31f, 1.00f);
+	colors[ImGuiCol_SliderGrabActive]          = ImVec4(0.54f, 0.57f, 0.51f, 0.50f);
+	colors[ImGuiCol_Button]                          = ImVec4(0.29f, 0.34f, 0.26f, 0.40f);
+	colors[ImGuiCol_ButtonHovered]            = ImVec4(0.35f, 0.42f, 0.31f, 1.00f);
+	colors[ImGuiCol_ButtonActive]              = ImVec4(0.54f, 0.57f, 0.51f, 0.50f);
+	colors[ImGuiCol_Header]                          = ImVec4(0.35f, 0.42f, 0.31f, 1.00f);
+	colors[ImGuiCol_HeaderHovered]            = ImVec4(0.35f, 0.42f, 0.31f, 0.6f);
+	colors[ImGuiCol_HeaderActive]              = ImVec4(0.54f, 0.57f, 0.51f, 0.50f);
+	colors[ImGuiCol_Separator]                        = ImVec4(0.14f, 0.16f, 0.11f, 1.00f);
+	colors[ImGuiCol_SeparatorHovered]          = ImVec4(0.54f, 0.57f, 0.51f, 1.00f);
+	colors[ImGuiCol_SeparatorActive]                = ImVec4(0.59f, 0.54f, 0.18f, 1.00f);
+	colors[ImGuiCol_ResizeGrip]                      = ImVec4(0.19f, 0.23f, 0.18f, 0.00f); // grip invis
+	colors[ImGuiCol_ResizeGripHovered]        = ImVec4(0.54f, 0.57f, 0.51f, 1.00f);
+	colors[ImGuiCol_ResizeGripActive]          = ImVec4(0.59f, 0.54f, 0.18f, 1.00f);
+	colors[ImGuiCol_Tab]                                    = ImVec4(0.35f, 0.42f, 0.31f, 1.00f);
+	colors[ImGuiCol_TabHovered]                      = ImVec4(0.54f, 0.57f, 0.51f, 0.78f);
+	colors[ImGuiCol_TabActive]                        = ImVec4(0.59f, 0.54f, 0.18f, 1.00f);
+	colors[ImGuiCol_TabUnfocused]              = ImVec4(0.24f, 0.27f, 0.20f, 1.00f);
+	colors[ImGuiCol_TabUnfocusedActive]      = ImVec4(0.35f, 0.42f, 0.31f, 1.00f);
+	//colors[ImGuiCol_DockingPreview]          = ImVec4(0.59f, 0.54f, 0.18f, 1.00f);
+	//colors[ImGuiCol_DockingEmptyBg]          = ImVec4(0.20f, 0.20f, 0.20f, 1.00f);
+	colors[ImGuiCol_PlotLines]                        = ImVec4(0.61f, 0.61f, 0.61f, 1.00f);
+	colors[ImGuiCol_PlotLinesHovered]          = ImVec4(0.59f, 0.54f, 0.18f, 1.00f);
+	colors[ImGuiCol_PlotHistogram]            = ImVec4(1.00f, 0.78f, 0.28f, 1.00f);
+	colors[ImGuiCol_PlotHistogramHovered]   = ImVec4(1.00f, 0.60f, 0.00f, 1.00f);
+	colors[ImGuiCol_TextSelectedBg]          = ImVec4(0.59f, 0.54f, 0.18f, 1.00f);
+	colors[ImGuiCol_DragDropTarget]          = ImVec4(0.73f, 0.67f, 0.24f, 1.00f);
+	colors[ImGuiCol_NavHighlight]              = ImVec4(0.59f, 0.54f, 0.18f, 1.00f);
+	colors[ImGuiCol_NavWindowingHighlight]  = ImVec4(1.00f, 1.00f, 1.00f, 0.70f);
+	colors[ImGuiCol_NavWindowingDimBg]        = ImVec4(0.80f, 0.80f, 0.80f, 0.20f);
+	colors[ImGuiCol_ModalWindowDimBg]          = ImVec4(0.80f, 0.80f, 0.80f, 0.35f);
+
+	ImGuiStyle& style = ImGui::GetStyle();
+	style.FrameBorderSize = 1.0f;
+	style.WindowRounding = 0.0f;
+	style.ChildRounding = 0.0f;
+	style.FrameRounding = 0.0f;
+	style.PopupRounding = 0.0f;
+	style.ScrollbarRounding = 0.0f;
+	style.GrabRounding = 0.0f;
+	style.TabRounding = 0.0f;
 }
 
 void GuiSystem::ShowConsole(  )
@@ -362,7 +484,8 @@ void GuiSystem::InsertDebugMessage( size_t index, const char* format, ... )
 /*
 *    Starts a new ImGui frame.
 */
-void GuiSystem::StartFrame() {
+void GuiSystem::StartFrame()
+{
 	if ( !apWindow )
 		return;
 		

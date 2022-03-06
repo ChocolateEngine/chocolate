@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include <SDL2/SDL.h>
 
@@ -21,6 +21,9 @@ protected:
 	void 		DrawConsole( bool wasConsoleOpen );
 
 public:
+	/* Set to VGUI Style 😎 */
+	void 		StyleImGui();
+
 	/* Per-Frame Update  */
 	void 		Update( float dt ) override;
 	/* Gets the window pointer from the renderer.  */
