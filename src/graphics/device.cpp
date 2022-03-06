@@ -9,9 +9,9 @@ VKAPI_ATTR VkBool32 VKAPI_CALL Device::DebugCallback( VkDebugUtilsMessageSeverit
 	static bool dumpVLayers = cmdline->Find( "-dump-vlayers" ) || cmdline->Find( "-vlayers" );
 	if ( dumpVLayers )
 	{
-		fprintf( stderr, "\n[Validation Layer]%s\n\n", pCallbackData->pMessage );
-
-		// std::cerr << "\n[Validation Layer] " << pCallbackData->pMessage << "\n\n";
+		LogSetColor( LogColor::Blue );
+		fprintf( stderr, "\n[VK] %s\n\n", pCallbackData->pMessage );
+		LogSetColor( LogColor::Default );
 	}
 
 	return VK_FALSE;
