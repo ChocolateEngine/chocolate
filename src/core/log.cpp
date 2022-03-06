@@ -218,7 +218,7 @@ void LogFatal( const char *spFmt, ... )
 /* Dev only.  */
 void LogDev( u8 sLvl, const char *spFmt, ... )
 {
-    if ( developer > sLvl )
+    if ( developer < sLvl )
         return;
 
     LogSetColor( LogColor::Cyan );

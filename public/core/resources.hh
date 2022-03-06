@@ -8,21 +8,23 @@
  */
 #pragma once
 
+#include <cstring>
+
 #include "mempool.h"
 
 using Handle = size_t;
 
+constexpr Handle InvalidHandle = 0;
+
 template < typename T >
-class ResourceManager
+class CORE_API ResourceManager
 {
     MemPool aPool;
 public:
     /*
      *    Construct a resource manager.
-     *
-     *    @param size_t    Count of resources to be allocated.
      */
-    ResourceManager( size_t sCount = 256 * sizeof( T ) ) : aPool( sCount * sizeof( T ) )
+    ResourceManager() : aPool() 
     {
 
     }
@@ -35,6 +37,15 @@ public:
     }
 
     /*
+     *    Allocate memory.
+     *
+     *    @param size_t    The size of the memory to be allocated.
+     */
+    void   Allocate( size_t sSize )
+    {
+        aPool.Resize( sSize * sizeof( T ) + sSize * sizeof( Handle ) );
+    }
+    /*
      *    Allocate a resource.
      *
      *    @return Handle    The handle to the resource.
@@ -44,7 +55,7 @@ public:
         /*
          *    Generate a handle magic number.
          */
-        size_t magic = rand();
+        size_t magic = ( rand() % 0xFFFFFFFE ) + 1;
 
         /*
          *    Allocate a chunk of memory.
@@ -57,11 +68,12 @@ public:
          *   Write the magic number to the chunk
          *   followed by the data.
          */
-        *( size_t* )pBuf = magic;
-        pBuf            += sizeof( magic );
-        *( T* )pBuf      = *pData;
+        std::memcpy( pBuf, &magic, sizeof( magic ) );
+        std::memcpy( pBuf + sizeof( magic ), pData, sizeof( T ) );
 
-        size_t index = ( size_t )pBuf - ( size_t )aPool.GetStart() - sizeof( magic );
+        size_t index = ( size_t )pBuf - ( size_t )aPool.GetStart();
+
+        LogDev( 1, "Allocated resource at index %u\n", index );
 
         return index | magic << 32;
     }
@@ -72,7 +84,33 @@ public:
      */
     void   Remove( Handle sHandle )
     {
+        /*
+         *    Get the index of the resource.
+         */
+        size_t index = sHandle & 0xFFFFFFFF;
 
+        /*
+         *    Get the magic number.
+         */
+        size_t magic = sHandle >> 32;
+
+        /*
+         *    Get the chunk of memory.
+         */
+        s8 *pBuf = ( s8* )aPool.GetStart() + index;
+
+        /*
+         *    Check the magic number.
+         */
+        if( std::memcmp( pBuf, &magic, sizeof( magic ) ) != 0 )
+            return;
+
+        /*
+         *    Free the chunk of memory.
+         */
+        aPool.Free( pBuf );
+
+        LogDev( 1, "Removed resource at index %u\n", index );
     }
     /*
      *    Get a resource.
@@ -106,6 +144,8 @@ public:
             LogWarn( "Invalid handle: %d\n", sHandle );
             return nullptr;
         }
+
+        LogDev( 4, "Retrieved resource at index %u\n", index );
 
         /*
          *    Return the data.

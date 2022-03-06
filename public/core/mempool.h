@@ -8,6 +8,7 @@
 #pragma once
 
 #include <stdio.h>
+#include <SDL.h>
 
 #include "../util.h"
 
@@ -23,15 +24,15 @@ enum MemFlag {
     Mem_Used = 1 << 1,
 };
 
-struct MemChunk {
-    size_t    aFlags;
+struct CORE_API MemChunk {
+    MemFlag   aFlags;
     s8       *apData;
     size_t    aSize;
 
     MemChunk *apNext;
 };
 
-class MemPool
+class CORE_API MemPool
 {
     s8       *apBuf;
     s8       *apEnd;
@@ -43,14 +44,8 @@ class MemPool
 
     size_t    aStepSize = 2048;
 
-    /*
-     *    Resizes the memory pool.
-     *
-     *    @param  size_t      The new size of the memory pool.
-     *
-     *    @return MemError    The result of the operation.
-     */
-    MemError Resize( size_t sSize );
+    SDL_mutex *apMutex;
+    
     /*
      *    Consolidates regions of fragmented memory.
      */
@@ -63,10 +58,22 @@ public:
      */
      MemPool( size_t sSize );
     /*
+     *    Construct a memory pool.
+     */
+     MemPool();
+    /*
      *    Destruct the memory pool.
      */
     ~MemPool();
 
+    /*
+     *    Resizes the memory pool.
+     *
+     *    @param  size_t      The new size of the memory pool.
+     *
+     *    @return MemError    The result of the operation.
+     */
+    MemError Resize( size_t sSize );
     /*
      *    Allocate a block of memory from the pool.
      *

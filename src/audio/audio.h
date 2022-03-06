@@ -1,5 +1,7 @@
 #pragma once
 
+#define ENABLE_AUDIO 69420
+
 #include "system.h"
 #include "iaudio.h"
 
@@ -74,10 +76,10 @@ public:
 	virtual void                    SetPaused( bool paused ) override;
 	virtual void                    SetGlobalSpeed( float speed ) override;
 
-	virtual AudioStream*            LoadSound( std::string soundPath ) override;
+	virtual Handle                  LoadSound( std::string soundPath ) override;
 	virtual bool                    PreloadSound( AudioStream *stream ) override;
-	virtual bool                    PlaySound( AudioStream *stream ) override;
-	virtual void                    FreeSound( AudioStream* stream ) override;
+	virtual bool                    PlaySound( Handle sStream ) override;
+	virtual void                    FreeSound( Handle sStream ) override;
 	virtual int                     Seek( AudioStream *streamPublic, double pos ) override;
 
 	bool                            LoadSoundInternal( AudioStreamInternal *stream );
@@ -124,8 +126,10 @@ public:
 	// --------------------------------------------------
 
 	std::vector< BaseCodec* >       aCodecs;
-	std::vector< AudioStreamInternal* > aStreams;         // all streams loaded into memory
-	std::vector< AudioStreamInternal* > aStreamsPlaying;  // streams currently playing audio for
+	
+	MemPool                                 aStreamPool;
+	ResourceManager< AudioStreamInternal* > aStreams;         // all streams loaded into memory
+	std::vector< Handle >                   aStreamsPlaying;  // streams currently playing audio for
 
 	SDL_AudioDeviceID               aOutputDeviceID;
 	SDL_AudioSpec                   aAudioSpec;

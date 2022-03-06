@@ -80,6 +80,14 @@ std::mutex g_audioMutex;
 void AudioSystem::Init(  )
 {
 #if ENABLE_AUDIO
+    /*
+	 *    Preallocate 128 MB of memory for audio processing.
+	 */
+	aStreamPool.Resize( 128000000 );
+	aStreamPool.SetStepSize( 1000000 );
+
+	aStreams.Allocate( MAX_STREAMS * 2 );
+
 	SDL_AudioSpec wantedSpec;
 
 	wantedSpec.callback = NULL;
@@ -164,12 +172,13 @@ void AudioSystem::Init(  )
 				// this might work well for multithreading
 				for ( int i = 0; i < aStreamsPlaying.size(); i++ )
 				{
-					if ( aStreamsPlaying[i]->paused )
+					auto stream = *aStreams.Get( aStreamsPlaying[i] );
+					if ( stream->paused )
 						continue;
 
-					if ( !UpdateStream( aStreamsPlaying[i] ) )
+					if ( !UpdateStream( stream ) )
 					{
-						FreeSound( (AudioStream *)aStreamsPlaying[i] );
+						FreeSound( aStreamsPlaying[i] );
 						i--;
 						continue;
 					}
@@ -272,7 +281,7 @@ bool AudioSystem::InitSteamAudio()
 
 
 // OpenSound?
-AudioStream* AudioSystem::LoadSound( std::string soundPath )
+Handle AudioSystem::LoadSound( std::string soundPath )
 {
 #if ENABLE_AUDIO
 	// check for too many streams
@@ -290,8 +299,8 @@ AudioStream* AudioSystem::LoadSound( std::string soundPath )
 
 		if ( soundPath == "" )
 		{
-			Print( "[AudioSystem] Sound does not exist: \"%s\"\n", tmp.c_str() );
-			return nullptr;
+			LogError( "[AudioSystem] Sound does not exist: \"%s\"\n", tmp.c_str() );
+			return InvalidHandle;
 		}
 	}
 
@@ -312,21 +321,21 @@ AudioStream* AudioSystem::LoadSound( std::string soundPath )
 
 		if ( !(stream->valid = LoadSoundInternal( stream )) )
 		{
-			Print( "[AudioSystem] Could not load sound: \"%s\"\n", soundPath );
+			LogError( "[AudioSystem] Could not load sound: \"%s\"\n", soundPath );
 			delete stream;
-			return nullptr;
+			return InvalidHandle;
 		}
 		else
 		{
-			aStreams.push_back( stream );
-			return stream;
+			Handle h = aStreams.Add( &stream );
+			return h;
 		}
 	}
 
-	Print("[AudioSystem] Could not load sound: \"%s\"\n", soundPath);
+	LogError("[AudioSystem] Could not load sound: \"%s\"\n", soundPath);
 	delete stream;
 #endif
-	return nullptr;
+	return InvalidHandle;
 }
 
 
@@ -372,9 +381,9 @@ bool AudioSystem::LoadSoundInternal( AudioStreamInternal *stream )
 	}
 
 	// hmm, how am i going to handle this with different effects...
-	stream->inBufferAudio = new float[SOUND_BYTES * 2];
-	stream->midBufferAudio = new float[SOUND_BYTES * 2];
-	stream->outBufferAudio = new float[SOUND_BYTES * 2];
+	stream->inBufferAudio  = ( float* )aStreamPool.Alloc( SOUND_BYTES * 2 );
+	stream->midBufferAudio = ( float* )aStreamPool.Alloc( SOUND_BYTES * 2 );
+	stream->outBufferAudio = ( float* )aStreamPool.Alloc( SOUND_BYTES * 2 );
 
 	SDL_memset( stream->inBufferAudio, 0, sizeof( stream->inBufferAudio ) );
 	SDL_memset( stream->midBufferAudio, 0, sizeof( stream->midBufferAudio ) );
@@ -449,34 +458,44 @@ bool AudioSystem::PreloadSound( AudioStream *streamPublic )
 }
 
 
-bool AudioSystem::PlaySound( AudioStream *streamPublic )
+bool AudioSystem::PlaySound( Handle sStream )
 {
-	aStreamsPlaying.push_back( (AudioStreamInternal *)streamPublic );
+	if ( sStream == InvalidHandle )
+		return false;
+	
+	AudioStreamInternal *stream = *aStreams.Get( sStream );
+
+	if ( stream == nullptr )
+		return false;
+
+	aStreamsPlaying.push_back( sStream );
 	return true;
 }
 
 
-void AudioSystem::FreeSound( AudioStream* streamPublic )
+void AudioSystem::FreeSound( Handle sStream )
 {
 #if ENABLE_AUDIO
-	AudioStreamInternal* stream = (AudioStreamInternal*)streamPublic;
+	if ( sStream == InvalidHandle )
+		return;
+	
+	AudioStreamInternal *stream = *aStreams.Get( sStream );
 
-	if ( vec_contains( aStreamsPlaying, stream ) )
+	if ( stream == nullptr )
+		return;
+
+	if ( vec_contains( aStreamsPlaying, sStream ) )
 	{
-		vec_remove( aStreamsPlaying, stream );
+		vec_remove( aStreamsPlaying, sStream );
 	}
 
-	if ( vec_contains( aStreams, stream ) )
-	{
-		stream->codec->Close( stream );
-		vec_remove( aStreams, stream );
+	aStreamPool.Free( stream->inBufferAudio );
+	aStreamPool.Free( stream->midBufferAudio );
+	aStreamPool.Free( stream->outBufferAudio );
 
-		delete[] stream->inBufferAudio;
-		delete[] stream->midBufferAudio;
-		delete[] stream->outBufferAudio;
+	stream->codec->Close( stream );
+	aStreams.Remove( sStream );
 
-		delete stream;
-	}
 #endif
 }
 

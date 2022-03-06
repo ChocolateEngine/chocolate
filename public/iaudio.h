@@ -69,16 +69,16 @@ public:
 	virtual void            SetGlobalSpeed( float speed ) = 0;
 
 	/* Load a sound from a path */
-	virtual AudioStream*    LoadSound( std::string soundPath ) = 0;
+	virtual Handle          LoadSound( std::string soundPath ) = 0;
 
 	/* Load the entire sound into an audio buffer instead of streaming it from the disk on playback */
 	virtual bool            PreloadSound( AudioStream *stream ) = 0;
 
 	/* Start playback of a sound */
-	virtual bool            PlaySound( AudioStream *stream ) = 0;
+	virtual bool            PlaySound( Handle stream ) = 0;
 
 	/* Free a sound */
-	virtual void            FreeSound( AudioStream* stream ) = 0;
+	virtual void            FreeSound( Handle stream ) = 0;
 
 	/* UNTESTED: seek to different point in the audio file */
 	virtual int             Seek( AudioStream *streamPublic, double pos ) = 0;

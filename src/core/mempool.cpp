@@ -6,26 +6,12 @@
  *    This files defines the memory pool.
  */
 #include "core/mempool.h"
-#include "core/core.h"
-/*
- *    Resizes the memory pool.
- *
- *    @param  size_t      The new size of the memory pool.
- *
- *    @return MemError    The result of the operation.
- */
-MemError MemPool::Resize( size_t sSize )
-{
-    s8 *pNew = ( s8* )realloc( apBuf, sSize );
-    if( pNew == nullptr ) {
-        LogWarn( "Failed to resize memory pool to %d bytes.", sSize );
-        return MemPool_OutOfMemory;
-    }
-    apBuf = pNew;
-    apEnd = apBuf + sSize;
 
-    return MemPool_Success;
-}
+#include "core/core.h"
+
+#define LOCK() auto m = AutoMutex( apMutex )
+
+std::mutex m;
 /*
  *    Consolidates regions of fragmented memory.
  */
@@ -40,12 +26,14 @@ void MemPool::Consolidate()
                 if( pChunk->apNext->aFlags & Mem_Free ) {
                     pChunk->aSize += pChunk->apNext->aSize;
                     pChunk->apNext = pChunk->apNext->apNext;
+                    LogDev( 1, "Consolidated memory chunk at %p with new size %d\n", pChunk, pChunk->aSize );
                 }
             }
         }
         pChunk = pChunk->apNext;
     }
 }
+
 /*
  *    Construct a memory pool.
  *
@@ -57,15 +45,74 @@ MemPool::MemPool( size_t sSize )
     apEnd    = apBuf + sSize;
     apPtr    = apBuf;
     apChunks = nullptr;
+
+    apMutex = SDL_CreateMutex();
+    if ( apMutex == nullptr ) {
+        LogError( "Failed to create mutex: %s\n", SDL_GetError() );
+    }
+}
+/*
+ *    Construct a memory pool.
+ */
+MemPool::MemPool() {
+    apBuf    = nullptr;
+    apEnd    = nullptr;
+    apPtr    = nullptr;
+    apChunks = nullptr;
+
+    apMutex = SDL_CreateMutex();
+    if ( apMutex == nullptr ) {
+        LogError( "Failed to create mutex: %s\n", SDL_GetError() );
+    }
 }
 /*
  *    Destruct the memory pool.
  */
 MemPool::~MemPool()
 {
+    if ( apMutex != nullptr ) {
+        SDL_DestroyMutex( apMutex );
+    }
     free( apBuf );
 }
 
+/*
+ *    Resizes the memory pool.
+ *
+ *    @param  size_t      The new size of the memory pool.
+ *
+ *    @return MemError    The result of the operation.
+ */
+MemError MemPool::Resize( size_t sSize )
+{
+    if ( apBuf == nullptr )
+    {
+        apBuf = ( s8* )malloc( sSize );
+        if ( apBuf == nullptr ) {
+            return MemPool_OutOfMemory;
+        }
+        
+        apEnd = apBuf + sSize;
+        apPtr = apBuf;
+        aSize = sSize;
+    }
+
+    s8 *pNew = ( s8* )realloc( apBuf, sSize );
+    if( pNew == nullptr ) {
+        LogWarn( "Failed to resize memory pool to %d bytes.\n", sSize );
+        return MemPool_OutOfMemory;
+    }
+    LogDev( 1, "Pointer: %d ->", apPtr - apBuf );
+    apPtr = pNew + ( apPtr - apBuf );
+    LogDev( 1, " %d\n", apPtr - apBuf );
+    apBuf = pNew;
+    apEnd = apBuf + sSize;
+    aSize = sSize;
+
+    LogDev( 1, "Resized memory pool to %d bytes.\n", sSize );
+
+    return MemPool_Success;
+}
 /*
  *    Allocate a block of memory from the pool.
  *
@@ -74,7 +121,6 @@ MemPool::~MemPool()
  */
 void *MemPool::Alloc( size_t sSize )
 {
-    Consolidate();
     /*
      *    Find a free chunk.
      */
@@ -98,7 +144,10 @@ void *MemPool::Alloc( size_t sSize )
                     pNew->aSize    = p->aSize - sSize;
                     pNew->apData   = p->apData + sSize;
                     p->apNext      = pNew;
+
+                    LogDev( 1, "Split chunk at %p with new size %d\n", pNew, pNew->aSize );
                 }
+                LogDev( 1, "Allocated %d bytes in previously freed region at %p\n", sSize, p->apData );
                 p->aFlags = Mem_Used;
                 return p->apData;
             }
@@ -115,7 +164,7 @@ void *MemPool::Alloc( size_t sSize )
              */
             MemError e = Resize( ( size_t )( apPtr - apEnd ) + sSize + aStepSize );
             if( e != MemPool_Success ) {
-                LogWarn( "Failed to resize memory pool to %d bytes.", apPtr + sSize );
+                LogWarn( "Failed to resize memory pool to %d bytes.\n", apPtr + sSize );
                 return nullptr;
             }
         } 
@@ -124,12 +173,16 @@ void *MemPool::Alloc( size_t sSize )
              *    The requested size is smaller than the step size.
              *    Resize the memory pool by the defined increment
              */
-            MemError e = Resize( ( size_t )( apPtr - apEnd ) + aStepSize );
+            MemError e = Resize( aSize + aStepSize );
             if( e != MemPool_Success ) {
-                LogWarn( "Failed to resize memory pool to %d bytes.", apPtr + aStepSize );
+                LogWarn( "Failed to resize memory pool to %d bytes.\n", apPtr + aStepSize );
                 return nullptr;
             }
         }
+        /*
+         *    Consolidate free memory.
+         */
+        Consolidate();
     }
 
     MemChunk *pChunk = ( MemChunk* )malloc( sizeof( MemChunk ) );
@@ -150,7 +203,12 @@ void *MemPool::Alloc( size_t sSize )
     }
 
     void *pRet = apPtr;
+    LogDev( 1, "Pointer: %d ->", apPtr - apBuf );
     apPtr     += sSize;
+    LogDev( 1, " %d\n", apPtr - apBuf );
+
+    LogDev( 1, "Allocated %d bytes at %p.\n", sSize, apPtr );
+
     return pRet;
 }
 /*
@@ -161,10 +219,12 @@ void *MemPool::Alloc( size_t sSize )
 void MemPool::Free( void* spPtr )
 {
     for ( MemChunk *p = apChunks; p != nullptr; p = p->apNext ) {
-        if( p->apNext == spPtr ) {
-            p->apNext = nullptr;
+        if( p->apData == spPtr ) {
+            p->aFlags = Mem_Free;
+            return;
         }
     }
+    LogWarn( "Failed to find memory at %p.\n", spPtr );
 }
 
 /*

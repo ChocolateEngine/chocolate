@@ -11,4 +11,5 @@
 #include "log.h"
 #include "systemmanager.h"
 #include "resources.hh"
+#include "threadpool.h"
 
