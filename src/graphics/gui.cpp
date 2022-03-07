@@ -300,6 +300,9 @@ void GuiSystem::DrawConsole( bool wasConsoleOpen )
 	snprintf( buf, 256, console->GetTextBuffer(  ).c_str() );
 	ImGui::InputText( "send", buf, 256, ImGuiInputTextFlags_CallbackAlways, &ConsoleInputCallback );
 
+	if ( !wasConsoleOpen )
+		ImGui::SetKeyboardFocusHere(0);
+
 	ImVec2 dropDownPos( ImGui::GetWindowPos().x, ImGui::GetWindowSize().y + ImGui::GetWindowPos().y );
 
 	ImGui::End(  );
@@ -326,7 +329,7 @@ void GuiSystem::DrawConsole( bool wasConsoleOpen )
 					 //ImGuiWindowFlags_NoNavFocus |
 					 ImGuiWindowFlags_NoFocusOnAppearing );
 
-		ImGui::BeginListBox( "" );
+		ImGui::BeginListBox( " " );
 
 		for ( int i = 0; i < cvarAutoComplete.size(); i++ )
 		{
@@ -355,6 +358,31 @@ void GuiSystem::DrawConsole( bool wasConsoleOpen )
 
 void GuiSystem::StyleImGui()
 {
+	auto& io = ImGui::GetIO();
+
+#if 0
+	if ( !cmdline->Find( "-no-imgui-font" ) )
+	{
+		// auto fontPath = filesys->FindFile( "fonts/CascadiaCode.ttf" );
+		// auto fontPath = filesys->FindFile( "fonts/CascadiaMono.ttf" );
+		auto fontPath = filesys->FindFile( "fonts/Roboto-Medium.ttf" );
+		if ( fontPath != "" )
+		{
+			ImFontConfig config;
+			config.OversampleH = 2;
+			config.OversampleV = 1;
+			config.GlyphExtraSpacing.x = 1.0f;
+
+			// io.Fonts->AddFontFromFileTTF( fontPath.c_str(), 25.0f );
+			/*ImFont* newFont = io.Fonts->AddFontFromFileTTF(fontPath.c_str(), 15.f, &config);
+			bool built = io.Fonts->Build();
+			if ( !built )
+				LogWarn( "[Gui] ImGui Failed to Build Font\n" );*/
+
+		}
+	}
+#endif
+
 	if ( cmdline->Find( "-no-vgui-style" ) )
 		return;
 

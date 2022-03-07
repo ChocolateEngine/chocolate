@@ -406,6 +406,23 @@ bool AudioSystem::LoadSoundInternal( AudioStreamInternal *stream )
 }
 
 
+/* Checks If This a Valid Audio Stream, if not, throw a warning and return nullptr. */
+AudioStreamInternal* AudioSystem::GetStream( Handle streamHandle )
+{
+	if ( streamHandle == InvalidHandle )
+	{
+		return nullptr;
+	}
+
+	AudioStreamInternal *stream = *aStreams.Get( streamHandle );
+
+	if ( !stream )
+		LogWarn( "[AudioSystem] Invalid Stream Handle: %u\n", (size_t)streamHandle );
+
+	return stream;
+}
+
+
 // TODO: this preloading does work, but it's only valid for playing it once
 // only because we remove data from it's SDL_AudioStream during playback
 // we'll need to store the audio converted from SDL_AudioStream in a separate location
@@ -414,9 +431,12 @@ bool AudioSystem::LoadSoundInternal( AudioStreamInternal *stream )
 // probably have ReadAudio check if we're preloaded or not, if it is,
 // then it returns data from the preload cache instead of reading from the file
 
-bool AudioSystem::PreloadSound( AudioStream *streamPublic )
+bool AudioSystem::PreloadSound( Handle streamHandle )
 {
-	AudioStreamInternal *stream = (AudioStreamInternal *)streamPublic;
+	AudioStreamInternal *stream = GetStream( streamHandle );
+
+	if ( !stream )
+		return false;
 
 	while ( true )
 	{
@@ -500,17 +520,6 @@ void AudioSystem::FreeSound( Handle sStream )
 }
 
 
-int AudioSystem::Seek( AudioStream *streamPublic, double pos )
-{
-#if !ENABLE_AUDIO
-	return -1;
-#else
-	AudioStreamInternal* stream = (AudioStreamInternal*)streamPublic;
-	return stream->codec->Seek( stream, pos );
-#endif
-}
-
-
 void AudioSystem::SetListenerTransform( const glm::vec3& pos, const glm::quat& rot )
 {
 	aListenerPos = pos;
@@ -535,6 +544,110 @@ void AudioSystem::SetGlobalSpeed( float speed )
 {
 	aSpeed = speed;
 }
+
+
+// -------------------------------------------------------------------------------------
+// Audio Stream Functions
+// -------------------------------------------------------------------------------------
+
+/* Is This a Valid Audio Stream? */
+bool AudioSystem::IsValid( Handle stream )
+{
+	if ( stream == InvalidHandle )
+		return false;
+
+	return aStreams.Get( stream );
+}
+
+
+/* Audio Stream Volume ranges from 0.0f to 1.0f */
+void AudioSystem::SetVolume( Handle handle, float vol )
+{
+	AudioStreamInternal* stream = GetStream( handle );
+	if ( !stream )
+		return;
+
+	stream->vol = vol;
+}
+
+float AudioSystem::GetVolume( Handle handle )
+{
+	AudioStreamInternal* stream = GetStream( handle );
+	if ( !stream )
+		return 0.f;
+
+	return stream->vol;
+}
+
+
+/* Audio Stream Volume ranges from 0.0f to 1.0f */
+//bool AudioSystem::SetSampleRate( Handle stream, float vol ) override;
+//float AudioSystem::GetSampleRate( Handle stream ) override;
+
+
+/* Sound Position in World */
+void AudioSystem::SetWorldPos( Handle handle, const glm::vec3& pos )
+{
+	AudioStreamInternal* stream = GetStream( handle );
+	if ( !stream )
+		return;
+
+	stream->pos = pos;
+}
+
+const glm::vec3& AudioSystem::GetWorldPos( Handle handle )
+{
+	AudioStreamInternal* stream = GetStream( handle );
+	if ( !stream )
+		return {0, 0, 0};
+
+	return stream->pos;
+}
+
+
+/* Sound Loop Parameters (make a component?) */
+void AudioSystem::SetLoop( Handle handle, bool loop )
+{
+	AudioStreamInternal* stream = GetStream( handle );
+	if ( !stream )
+		return;
+
+	stream->loop = loop;
+}
+
+bool AudioSystem::DoesSoundLoop( Handle handle )
+{
+	AudioStreamInternal* stream = GetStream( handle );
+	if ( !stream )
+		return false;
+
+	return stream->loop;
+}
+
+
+bool AudioSystem::Seek( Handle streamHandle, double pos )
+{
+#if !ENABLE_AUDIO
+	return -1;
+#else
+	AudioStreamInternal *stream = GetStream( streamHandle );
+
+	if ( !stream )
+		return false;
+
+	return (stream->codec->Seek( stream, pos ) == 0);
+#endif
+}
+
+
+/* Audio Volume Channels (ex. General, Music, Voices, Commentary, etc.) */
+// virtual void                    SetChannel( Handle stream, int channel ) = 0;
+// virtual int                     GetChannel( Handle stream ) = 0;
+
+
+// -------------------------------------------------------------------------------------
+// idk
+// -------------------------------------------------------------------------------------
 
 
 void AudioSystem::Update( float frameTime )

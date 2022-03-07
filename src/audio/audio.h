@@ -1,6 +1,8 @@
 #pragma once
 
+#ifndef ENABLE_AUDIO
 #define ENABLE_AUDIO 69420
+#endif
 
 #include "system.h"
 #include "iaudio.h"
@@ -71,18 +73,68 @@ public:
 	                                AudioSystem();
 	                                ~AudioSystem();
 
+	// -------------------------------------------------------------------------------------
+	// General Audio System Functions
+	// -------------------------------------------------------------------------------------
+
 	virtual void                    SetListenerTransform( const glm::vec3& pos, const glm::quat& rot ) override;
 	virtual void                    SetListenerTransform( const glm::vec3& pos, const glm::vec3& ang ) override;
 	virtual void                    SetPaused( bool paused ) override;
 	virtual void                    SetGlobalSpeed( float speed ) override;
 
 	virtual Handle                  LoadSound( std::string soundPath ) override;
-	virtual bool                    PreloadSound( AudioStream *stream ) override;
+	virtual bool                    PreloadSound( Handle stream ) override;
 	virtual bool                    PlaySound( Handle sStream ) override;
 	virtual void                    FreeSound( Handle sStream ) override;
-	virtual int                     Seek( AudioStream *streamPublic, double pos ) override;
+
+	// -------------------------------------------------------------------------------------
+	// Audio Stream Functions
+	// -------------------------------------------------------------------------------------
+
+	/* Is This a Valid Audio Stream? */
+	virtual bool                    IsValid( Handle stream ) override;
+
+	/* Audio Stream Volume ranges from 0.0f to 1.0f */
+	virtual void                    SetVolume( Handle stream, float vol ) override;
+	virtual float                   GetVolume( Handle stream ) override;
+
+	/* Audio Stream Volume ranges from 0.0f to 1.0f */
+	//virtual bool                    SetSampleRate( Handle stream, float vol ) override;
+	//virtual float                   GetSampleRate( Handle stream ) override;
+
+	/* Sound Position in World */
+	virtual void                    SetWorldPos( Handle stream, const glm::vec3& pos ) override;
+	virtual const glm::vec3&        GetWorldPos( Handle stream ) override;
+
+	/* Sound Loop Parameters (make a component?) */
+	virtual void                    SetLoop( Handle stream, bool loop ) override;
+	virtual bool                    DoesSoundLoop( Handle stream ) override;  // um
+
+	/* Audio Volume Channels (ex. General, Music, Voices, Commentary, etc.) */
+	// virtual void                    SetChannel( Handle stream, int channel ) = 0;
+	// virtual int                     GetChannel( Handle stream ) = 0;
+
+	virtual bool                    Seek( Handle streamPublic, double pos ) override;
+	
+	// -------------------------------------------------------------------------------------
+	// Audio Stream Components
+	// -------------------------------------------------------------------------------------
+
+	// TODO: setup an audio component system internally
+	// will need to think about it's design more
+
+	// virtual Handle                  CreateComponent( AudioComponentType type ) = 0;
+	// virtual void                    AddComponent( Handle stream, Handle component, AudioComponentType type ) = 0;
+	// virtual Handle                  GetComponent( Handle stream, AudioComponentType type ) = 0;
+	
+	// -------------------------------------------------------------------------------------
+	// Internal Functions
+	// -------------------------------------------------------------------------------------
 
 	bool                            LoadSoundInternal( AudioStreamInternal *stream );
+
+	/* Checks If This a Valid Audio Stream, if not, throw a warning and return nullptr. */
+	AudioStreamInternal*            GetStream( Handle stream );
 
 	//virtual bool                    RegisterCodec( BaseCodec *codec ) override;
 	bool                            RegisterCodec( BaseCodec *codec );
