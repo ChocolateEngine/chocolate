@@ -17,7 +17,7 @@ class LogSystem
     struct Log
     {
         LogChannel aChannel;
-        LogLevel aLevel;
+        LogType aType;
         std::string aMessage;
         std::string aFormatted;
     };
@@ -69,31 +69,31 @@ public:
     void FormatLog( LogChannel_t *channel, Log &log )
     {
         //char pBuf[ LOG_MAX_LENGTH ];
-        switch ( log.aLevel )
+        switch ( log.aType )
         {
             default:
-            case LogLevel::Normal:
-            case LogLevel::Dev:
+            case LogType::Normal:
+            case LogType::Dev:
                 //snprintf( pBuf, LOG_MAX_LENGTH, "[%s] %s", channel->aName.c_str(), log.aMessage.c_str() );
                 vstring( log.aFormatted, "[%s] %s", channel->aName.c_str(), log.aMessage.c_str() );
                 break;
 
-            case LogLevel::Input:
+            case LogType::Input:
                 //snprintf( pBuf, LOG_MAX_LENGTH, "] %s\n", log.aMessage.c_str() );
                 vstring( log.aFormatted, "] %s\n", log.aMessage.c_str() );
                 break;
 
-            case LogLevel::Warning:
+            case LogType::Warning:
                 //snprintf( pBuf, LOG_MAX_LENGTH, "[%s] [WARNING] %s", channel->aName.c_str(), log.aMessage.c_str() );
                 vstring( log.aFormatted, "[%s] [WARNING] %s", channel->aName.c_str(), log.aMessage.c_str() );
                 break;
 
-            case LogLevel::Error:
+            case LogType::Error:
                 //snprintf( pBuf, LOG_MAX_LENGTH, "[%s] [ERROR] %s", channel->aName.c_str(), log.aMessage.c_str() );
                 vstring( log.aFormatted, "[%s] [ERROR] %s", channel->aName.c_str(), log.aMessage.c_str() );
                 break;
 
-            case LogLevel::Fatal:
+            case LogType::Fatal:
                 //snprintf( pBuf, LOG_MAX_LENGTH, "[%s] [FATAL] %s", channel->aName.c_str(), log.aMessage.c_str() );
                 vstring( log.aFormatted, "[%s] [FATAL] %s", channel->aName.c_str(), log.aMessage.c_str() );
                 break;
@@ -102,7 +102,7 @@ public:
         //log.aFormatted = pBuf;
     }
 
-    void LogMsg( LogChannel sChannel, LogLevel sLevel, const char *sMessage )
+    void LogMsg( LogChannel sChannel, LogType sLevel, const char *sMessage )
     {
         gLogMutex.lock();
 
@@ -123,30 +123,30 @@ public:
             switch ( sLevel )
             {
                 default:
-                case LogLevel::Normal:
-                case LogLevel::Dev:
-                case LogLevel::Input:
+                case LogType::Normal:
+                case LogType::Dev:
+                case LogType::Input:
                     LogSetColor( channel->aColor );
                     //Print( "[%s] %s", channel->aName.c_str(), sMessage );
                     fputs( log.aFormatted.c_str(), stdout );
                     LogSetColor( LogColor::Default );
                     break;
 
-                case LogLevel::Warning:
+                case LogType::Warning:
                     LogSetColor( LogColor::Yellow );
                     // Print( "[%s] [WARNING] %s", channel->aName.c_str(), sMessage );
                     fputs( log.aFormatted.c_str(), stdout );
                     LogSetColor( LogColor::Default );
                     break;
 
-                case LogLevel::Error:
+                case LogType::Error:
                     LogSetColor( LogColor::Red );
                     //Print( "[%s] [ERROR] %s", channel->aName.c_str(), sMessage );
                     fputs( log.aFormatted.c_str(), stdout );
                     LogSetColor( LogColor::Default );
                     break;
 
-                case LogLevel::Fatal:
+                case LogType::Fatal:
                     //fprintf( stderr, "[%s] [FATAL]: %s", channel->aName.c_str(), sMessage );
                     fputs( log.aFormatted.c_str(), stderr );
                     SDL_ShowSimpleMessageBox( SDL_MESSAGEBOX_ERROR, "Fatal Error", sMessage, NULL );
@@ -158,6 +158,17 @@ public:
         gLogMutex.unlock();
     }
 
+    inline bool CheckDevLevel( const Log& log )
+    {
+        if ( developer.GetFloat() < ( int )log.aType && ( log.aType == LogType::Dev  || 
+                                                          log.aType == LogType::Dev2 || 
+                                                          log.aType == LogType::Dev3 || 
+                                                          log.aType == LogType::Dev4    ) ) 
+            return false;
+
+        return true;
+    }
+
     void GetHistoryStr( std::string& output, int maxSize )
     {
         // No limit
@@ -165,14 +176,11 @@ public:
         {
             for ( auto& log : aLogHistory )
             {
-                LogChannel_t* channel = GetChannel( log.aChannel );
-                if ( !channel || !channel->aShown )
+                if ( !CheckDevLevel( log ) )
                     continue;
 
-                if ( developer.GetFloat() < ( int )log.aLevel && ( log.aLevel == LogLevel::Dev    || 
-                                                                   log.aLevel == LogLevel::Dev2   || 
-                                                                   log.aLevel == LogLevel::Dev3   || 
-                                                                   log.aLevel == LogLevel::Dev4      ) ) 
+                LogChannel_t* channel = GetChannel( log.aChannel );
+                if ( !channel || !channel->aShown )
                     continue;
 
                 output += log.aFormatted;
@@ -185,15 +193,13 @@ public:
         for ( size_t i = aLogHistory.size() - 1; i > 0; i-- )
         {
             auto& log = aLogHistory[i];
+
+            if ( !CheckDevLevel( log ) )
+                continue;
+
             LogChannel_t* channel = GetChannel( log.aChannel );
             if ( !channel || !channel->aShown )
                 continue;
-
-            if ( developer.GetFloat() < ( int )log.aLevel && ( log.aLevel == LogLevel::Dev    || 
-                                                               log.aLevel == LogLevel::Dev2   || 
-                                                               log.aLevel == LogLevel::Dev3   || 
-                                                               log.aLevel == LogLevel::Dev4      ) ) 
-                    continue;
 
             int strLen = glm::min( maxSize, (int)log.aFormatted.length() );
             int strStart = log.aFormatted.length() - strLen;
@@ -419,13 +425,13 @@ void Puts( const char* buffer )
 
 
 /* General Logging Function.  */
-void Log( LogChannel channel, LogLevel sLevel, const char *spBuf )
+void Log( LogChannel channel, LogType sLevel, const char *spBuf )
 {
     GetLogSystem().LogMsg( channel, sLevel, spBuf );
 }
 
 
-void LogF( LogChannel channel, LogLevel sLevel, const char *spFmt, ... )
+void LogF( LogChannel channel, LogType sLevel, const char *spFmt, ... )
 {
     char pBuf[ LOG_MAX_LENGTH ];
     va_list args;
@@ -443,14 +449,14 @@ void LogMsg( LogChannel channel, const char *spFmt, ... )
     va_list args;
     va_start( args, spFmt );
     vsprintf( pBuf, spFmt, args );
-    GetLogSystem().LogMsg( channel, LogLevel::Normal, pBuf );
+    GetLogSystem().LogMsg( channel, LogType::Normal, pBuf );
     va_end( args );
 }
 
 /* Lowest severity, no format.  */
 void LogPuts( LogChannel channel, const char *spBuf )
 {
-    GetLogSystem().LogMsg( channel, LogLevel::Normal, spBuf );
+    GetLogSystem().LogMsg( channel, LogType::Normal, spBuf );
 }
 
 /* Medium severity.  */
@@ -460,14 +466,14 @@ void LogWarn( LogChannel channel, const char *spFmt, ... )
     va_list args;
     va_start( args, spFmt );
     vsprintf( pBuf, spFmt, args );
-    GetLogSystem().LogMsg( channel, LogLevel::Warning, pBuf );
+    GetLogSystem().LogMsg( channel, LogType::Warning, pBuf );
     va_end( args );
 }
 
 /* Medium severity.  */
 void LogPutsWarn( LogChannel channel, const char *spBuf )
 {
-    GetLogSystem().LogMsg( channel, LogLevel::Warning, spBuf );
+    GetLogSystem().LogMsg( channel, LogType::Warning, spBuf );
 }
 
 /* High severity.  */
@@ -478,7 +484,7 @@ void LogError( LogChannel channel, const char *spFmt, ... )
     va_list args;
     va_start( args, spFmt );
     vsprintf( pBuf, spFmt, args );
-    GetLogSystem().LogMsg( channel, LogLevel::Error, pBuf );
+    GetLogSystem().LogMsg( channel, LogType::Error, pBuf );
     va_end( args );
 }
 
@@ -489,7 +495,7 @@ void LogFatal( LogChannel channel, const char *spFmt, ... )
     va_list args;
     va_start( args, spFmt );
     vsprintf( pBuf, spFmt, args );
-    GetLogSystem().LogMsg( channel, LogLevel::Fatal, pBuf );
+    GetLogSystem().LogMsg( channel, LogType::Fatal, pBuf );
     va_end( args );
 }
 
@@ -503,7 +509,7 @@ void LogDev( LogChannel channel, u8 sLvl, const char *spFmt, ... )
     va_list args;
     va_start( args, spFmt );
     vsprintf( pBuf, spFmt, args );
-    GetLogSystem().LogMsg( channel, ( LogLevel )sLvl, pBuf );
+    GetLogSystem().LogMsg( channel, ( LogType )sLvl, pBuf );
     va_end( args );
 }
 
@@ -511,7 +517,7 @@ void LogDev( LogChannel channel, u8 sLvl, const char *spFmt, ... )
 /* Dev only.  */
 void LogPutsDev( LogChannel channel, u8 sLvl, const char *spBuf )
 {
-    GetLogSystem().LogMsg( channel, LogLevel::Dev, spBuf );
+    GetLogSystem().LogMsg( channel, LogType::Dev, spBuf );
 }
 
 
@@ -525,14 +531,14 @@ void LogMsg( const char *spFmt, ... )
     va_list args;
     va_start( args, spFmt );
     vsprintf( pBuf, spFmt, args );
-    GetLogSystem().LogMsg( gGeneralChannel, LogLevel::Normal, pBuf );
+    GetLogSystem().LogMsg( gGeneralChannel, LogType::Normal, pBuf );
     va_end( args );
 }
 
 /* Lowest severity, no format.  */
 void LogPuts( const char *spBuf )
 {
-    GetLogSystem().LogMsg( gGeneralChannel, LogLevel::Normal, spBuf );
+    GetLogSystem().LogMsg( gGeneralChannel, LogType::Normal, spBuf );
 }
 
 /* Medium severity.  */
@@ -542,14 +548,14 @@ void LogWarn( const char *spFmt, ... )
     va_list args;
     va_start( args, spFmt );
     vsprintf( pBuf, spFmt, args );
-    GetLogSystem().LogMsg( gGeneralChannel, LogLevel::Warning, pBuf );
+    GetLogSystem().LogMsg( gGeneralChannel, LogType::Warning, pBuf );
     va_end( args );
 }
 
 /* Medium severity.  */
 void LogPutsWarn( const char *spBuf )
 {
-    GetLogSystem().LogMsg( gGeneralChannel, LogLevel::Warning, spBuf );
+    GetLogSystem().LogMsg( gGeneralChannel, LogType::Warning, spBuf );
 }
 
 /* High severity.  */
@@ -560,7 +566,7 @@ void LogError( const char *spFmt, ... )
     va_list args;
     va_start( args, spFmt );
     vsprintf( pBuf, spFmt, args );
-    GetLogSystem().LogMsg( gGeneralChannel, LogLevel::Error, pBuf );
+    GetLogSystem().LogMsg( gGeneralChannel, LogType::Error, pBuf );
     va_end( args );
 }
 
@@ -571,7 +577,7 @@ void LogFatal( const char *spFmt, ... )
     va_list args;
     va_start( args, spFmt );
     vsprintf( pBuf, spFmt, args );
-    GetLogSystem().LogMsg( gGeneralChannel, LogLevel::Fatal, pBuf );
+    GetLogSystem().LogMsg( gGeneralChannel, LogType::Fatal, pBuf );
     va_end( args );
 }
 
@@ -582,7 +588,7 @@ void LogDev( u8 sLvl, const char *spFmt, ... )
     va_list args;
     va_start( args, spFmt );
     vsprintf( pBuf, spFmt, args );
-    GetLogSystem().LogMsg( gGeneralChannel, LogLevel::Dev, pBuf );
+    GetLogSystem().LogMsg( gGeneralChannel, LogType::Dev, pBuf );
     va_end( args );
 }
 
@@ -590,6 +596,6 @@ void LogDev( u8 sLvl, const char *spFmt, ... )
 /* Dev only.  */
 void LogPutsDev( u8 sLvl, const char *spBuf )
 {
-    GetLogSystem().LogMsg( gGeneralChannel, LogLevel::Dev, spBuf );
+    GetLogSystem().LogMsg( gGeneralChannel, LogType::Dev, spBuf );
 }
 

@@ -71,7 +71,8 @@ void vstring( std::string& result, const char* format, ... )
 	{
 		va_end( args_copy );
 		va_end( args );
-		throw std::runtime_error("vsnprintf error");
+		LogError( "vstring va_args: vsnprintf failed\n" );
+		return;
 	}
 
 	if ( len > 0 )
@@ -97,10 +98,10 @@ void vstring( std::string& s, const char* format, va_list args )
 		s.resize( std::size_t(len) + 1, '\0' );
 		std::vsnprintf( s.data(), s.size(), format, args );
 		s.resize( len );
-		//return s;
+		return;
 	}
 
-	throw std::runtime_error( "vsnprintf error" );
+	LogError( "vstring va_list: vsnprintf failed\n" );
 }
 
 

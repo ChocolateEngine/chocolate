@@ -408,21 +408,52 @@ CONCMD( findand )
 }
 
 
+// use if you need to quit the engine right now
+CONCMD( _abort )
+{
+	abort();
+}
+
+
+// instant call commands hack
+// should figure out a way to register certain ones as instant if you need to
+constexpr ConCommand* gInstantCommands[] = {
+	&_abort_cmd,
+};
+
+static int gInstantCommandCount = ARR_SIZE( gInstantCommands );
+
+
+// very lazy, improve me
+void CheckInstantCommands( const std::string &srCmd )
+{
+	for ( int i = 0; i < gInstantCommandCount; i++ )
+	{
+		if ( gInstantCommands[i]->GetName() == srCmd )
+			gInstantCommands[i]->aFunc( {} );
+	}
+}
+
+
 // ================================================================================
 
 void Console::Add( const std::string &srCmd )
 {
+	CheckInstantCommands( srCmd );
+
 	aQueue.push_back( srCmd );
 
 	if ( aCommandHistory.empty() || aCommandHistory.back() != srCmd )
 		aCommandHistory.push_back( srCmd );
 
 	aCommandHistory.push_back( srCmd );
-	Log( gConsoleChannel, LogLevel::Input, srCmd.c_str() );
+	Log( gConsoleChannel, LogType::Input, srCmd.c_str() );
 }
 
 void Console::AddSilent( const std::string &srCmd )
 {
+	CheckInstantCommands( srCmd );
+
 	aQueue.push_back( srCmd );
 
 	if ( aCommandHistory.empty() || aCommandHistory.back() != srCmd )
