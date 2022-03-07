@@ -204,7 +204,6 @@ public:
         }
     }
 
-private:
     std::vector< LogChannel_t > aChannels;
     std::vector< Log > aLogHistory;
 };
@@ -215,7 +214,20 @@ LogSystem& GetLogSystem()
     return logsystem;
 }
 
-CONCMD( log_channel_disable )
+void log_channel_dropdown(
+	const std::vector< std::string >& args,  // arguments currently typed in by the user
+	std::vector< std::string >& results )      // results to populate the dropdown list with
+{
+	for ( const auto &channel : GetLogSystem().aChannels )
+	{
+		if ( args.size() && !channel.aName.starts_with( args[0] ) )
+			continue;
+
+		results.push_back( channel.aName );
+	}
+}
+
+CONCMD_DROP( log_channel_disable, log_channel_dropdown )
 {
     if ( args.size() == 0 )
         return;
@@ -227,7 +239,7 @@ CONCMD( log_channel_disable )
     channel->aEnabled = false;
 }
 
-CONCMD( log_channel_enable )
+CONCMD_DROP( log_channel_enable, log_channel_dropdown )
 {
     if ( args.size() == 0 )
         return;
