@@ -9,6 +9,8 @@
 
 constexpr char const *gpDeviceExtensions[] = { VK_KHR_SWAPCHAIN_EXTENSION_NAME, "VK_EXT_descriptor_indexing" };
 
+VkSampleCountFlagBits gMaxSamples = VK_SAMPLE_COUNT_1_BIT;
+
 VKAPI_ATTR VkBool32 VKAPI_CALL DebugCallback( VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,    VkDebugUtilsMessageTypeFlagsEXT messageType, 
                                               const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData )
 {
@@ -300,6 +302,23 @@ GInstance::~GInstance()
 	SDL_DestroyWindow( aWindow.apWindow );
 	SDL_Quit();
 }
+
+uint32_t GInstance::GetMemoryType( uint32_t sTypeFilter, VkMemoryPropertyFlags sProperties )
+{
+	VkPhysicalDeviceMemoryProperties memProperties;
+	vkGetPhysicalDeviceMemoryProperties( aPhysicalDevice, &memProperties );
+
+	for ( uint32_t i = 0; i < memProperties.memoryTypeCount; ++i )
+	{
+		if ( ( sTypeFilter & ( 1 << i ) ) && ( memProperties.memoryTypes[ i ].propertyFlags & sProperties ) == sProperties )
+		{
+			return i;
+		}
+	}
+
+	return INT32_MAX;
+}
+
 
 GInstance &GetGInstance()
 {

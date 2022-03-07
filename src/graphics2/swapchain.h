@@ -15,10 +15,13 @@ public:
      Swapchain();
     ~Swapchain();
 
-    uint32_t           GetImageCount()        { return aImages.size(); }
-    VkSurfaceFormatKHR GetSurfaceFormat()     { return aSurfaceFormat; }
-    VkFormat           GetFormat()            { return aSurfaceFormat.format; }
-    VkColorSpaceKHR    GetColorSpace()        { return aSurfaceFormat.colorSpace; }
+    uint32_t                   GetImageCount()        { return aImages.size();            }
+    std::vector< VkImage >     GetImages()            { return aImages;                   }
+    std::vector< VkImageView > GetImageViews()        { return aImageViews;               }
+    VkExtent2D                 GetExtent()            { return aExtent;                   }
+    VkSurfaceFormatKHR         GetSurfaceFormat()     { return aSurfaceFormat;            }
+    VkFormat                   GetFormat()            { return aSurfaceFormat.format;     }
+    VkColorSpaceKHR            GetColorSpace()        { return aSurfaceFormat.colorSpace; }
 };
 
 Swapchain &GetSwapchain();

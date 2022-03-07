@@ -12,8 +12,19 @@
 
 #include "gutil.hh"
 
+enum 
+{
+    RenderPass_Color        = 1 << 0,
+    RenderPass_Depth        = 1 << 1,
+    RenderPass_Resolve      = 1 << 2,
+};
+
+using RenderPassStage = uint32_t;
+
 class RenderPass
 {
+    RenderPassStage    aStage;
+
     VkRenderPass       aRenderPass;
     VkFormat           aFormat;
     VkExtent2D         aExtent;
@@ -23,10 +34,14 @@ class RenderPass
 public:
     RenderPass( const std::vector< VkAttachmentDescription > &srAttachments, 
                 const std::vector< VkSubpassDescription >    &srSubpasses, 
-                const std::vector< VkSubpassDependency >     &srDependencies );
+                const std::vector< VkSubpassDependency >     &srDependencies,
+                RenderPassStage                               sStage );
     ~RenderPass();
 
-    const VkRenderPass& GetRenderPass() const;
+    constexpr VkRenderPass    &GetRenderPass() { return aRenderPass; }
+    constexpr RenderPassStage &GetStage()      { return aStage;      }
 };
 
 const std::vector< RenderPass > &GetRenderPasses();
+
+VkRenderPass                    &GetRenderPass( RenderPassStage sStage );

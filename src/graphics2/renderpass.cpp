@@ -27,7 +27,8 @@ VkFormat GetDepthFormat()
 
 RenderPass::RenderPass( const std::vector< VkAttachmentDescription >& srAttachments, 
                         const std::vector< VkSubpassDescription >&    srSubpasses, 
-                        const std::vector< VkSubpassDependency >&     srDependencies )
+                        const std::vector< VkSubpassDependency >&     srDependencies,
+                        RenderPassStage                               sStage )
 {
     VkRenderPassCreateInfo renderPassInfo = {};
     renderPassInfo.sType                  = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
@@ -38,8 +39,9 @@ RenderPass::RenderPass( const std::vector< VkAttachmentDescription >& srAttachme
     renderPassInfo.dependencyCount        = static_cast< uint32_t >( srDependencies.size() );
     renderPassInfo.pDependencies          = srDependencies.data();
 
-    if ( vkCreateRenderPass( GetLogicDevice(), &renderPassInfo, nullptr, &aRenderPass ) != VK_SUCCESS )
-        throw std::runtime_error( "Failed to create render pass!" );
+    CheckVKResult( vkCreateRenderPass( GetLogicDevice(), &renderPassInfo, nullptr, &aRenderPass ), "Failed to create render pass!" );
+
+    aStage = sStage;
 }
 
 RenderPass::~RenderPass()
@@ -47,20 +49,15 @@ RenderPass::~RenderPass()
     vkDestroyRenderPass( GetLogicDevice(), aRenderPass, nullptr );
 }
 
-const VkRenderPass& RenderPass::GetRenderPass() const
-{
-    return aRenderPass;
-}
-
 const std::vector< RenderPass > &GetRenderPasses()
 {
     static std::vector< RenderPass > renderPasses;
+
     /*
      *    Create the default color and depth render pass.
      *    This is the standard draw pass, and later, other
      *    passes may do deferred for example.
      */
-    
     VkAttachmentDescription colorAttachment = {};
     colorAttachment.format                  = GetSwapchain().GetFormat();
     colorAttachment.samples                 = VK_SAMPLE_COUNT_1_BIT;
@@ -124,9 +121,18 @@ const std::vector< RenderPass > &GetRenderPasses()
     std::vector< VkSubpassDescription    > subpasses    = { subpass };
     std::vector< VkSubpassDependency     > dependencies = { dependency };
 
-    RenderPass renderPass( attachments, subpasses, dependencies );
+    RenderPass renderPass( attachments, subpasses, dependencies, RenderPass_Color | RenderPass_Depth | RenderPass_Resolve );
 
     renderPasses.push_back( renderPass );
 
     return renderPasses;
+}
+
+VkRenderPass &GetRenderPass( RenderPassStage sStage )
+{
+    for ( auto renderPass : GetRenderPasses() )
+    {
+        if ( renderPass.GetStage() == sStage )
+            return renderPass.GetRenderPass();
+    }
 }

@@ -12,6 +12,9 @@
 
 #include "mempool.h"
 
+#define GET_HANDLE_INDEX( sHandle ) ( sHandle & 0xFFFFFFFF )
+#define GET_HANDLE_MAGIC( sHandle ) ( sHandle >> 32 )
+
 using Handle = size_t;
 
 constexpr Handle InvalidHandle = 0;
@@ -71,7 +74,7 @@ public:
         std::memcpy( pBuf, &magic, sizeof( magic ) );
         std::memcpy( pBuf + sizeof( magic ), pData, sizeof( T ) );
 
-        size_t index = ( size_t )pBuf - ( size_t )aPool.GetStart();
+        size_t index = ( ( size_t )pBuf - ( size_t )aPool.GetStart() ) / ( sizeof( T ) + sizeof( magic ) );
 
         LogDev( 3, "ResourceManager::Add( T* ): Allocated resource at index %u\n", index );
 
@@ -87,12 +90,12 @@ public:
         /*
          *    Get the index of the resource.
          */
-        size_t index = sHandle & 0xFFFFFFFF;
+        size_t index = GET_HANDLE_INDEX( sHandle ) * ( sizeof( T ) + sizeof( Handle ) );
 
         /*
          *    Get the magic number.
          */
-        size_t magic = sHandle >> 32;
+        size_t magic = GET_HANDLE_MAGIC( sHandle );
 
         /*
          *    Get the chunk of memory.
@@ -125,12 +128,12 @@ public:
         /*
          *    Get the magic number from the handle.
          */
-        size_t magic = sHandle >> 32;
+        size_t magic = GET_HANDLE_MAGIC( sHandle );
 
         /*
          *    Get the index from the handle.
          */
-        size_t index = sHandle & 0xFFFFFFFF;
+        size_t index = GET_HANDLE_INDEX( sHandle ) * ( sizeof( T ) + sizeof( Handle ) );
 
         /*
          *    Get the chunk of memory.

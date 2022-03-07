@@ -6,42 +6,20 @@
 
 #include "gutil.hh"
 
+#include "renderpass.h"
+#include "texture.h"
+
 class RenderTarget
 {
-    std::vector< VkImageView > aImages;
-    VkFramebuffer              aFrameBuffer;
+    std::vector< Texture2      > aImages;
+    std::vector< VkFramebuffer > aFrameBuffers;
 public:
-    RenderTarget( const std::vector< VkImageView >& srImages, const VkFormat& srFormat, const VkExtent2D& srExtent, const VkImageViewType& srViewType, const VkImageAspectFlags& srAspectFlags, const VkImageView& srView )
-    {
-        aImages.resize( srImages.size() );
-        for ( int i = 0; i < srImages.size(); ++i )
-        {
-            aImages[ i ] = srImages[ i ];
-        }
+    RenderTarget( const std::vector< Texture2 >& srImages, const glm::uvec2 &srExtent, RenderPassStage sFlags, const std::vector< VkImageView >& srSwapImages = {} );
+    ~RenderTarget();
 
-        VkFramebufferCreateInfo framebufferInfo = {};
-        framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-        //framebufferInfo.renderPass = GetGInstance().GetRenderPass();
-        framebufferInfo.attachmentCount = 1;
-        framebufferInfo.pAttachments = &srView;
-        framebufferInfo.width = srExtent.width;
-        framebufferInfo.height = srExtent.height;
-        framebufferInfo.layers = 1;
-
-        if ( vkCreateFramebuffer( GetGInstance().GetDevice(), &framebufferInfo, nullptr, &aFrameBuffer ) != VK_SUCCESS )
-        {
-            LogDev( 1, "Failed to create framebuffer!\n" );
-        }
-    }
-
-    ~RenderTarget()
-    {
-        vkDestroyFramebuffer( GetGInstance().GetDevice(), aFrameBuffer, nullptr );
-    }
-
-    const VkFramebuffer& GetFrameBuffer() const
-    {
-        return aFrameBuffer;
-    }
+    constexpr std::vector< VkFramebuffer > &GetFrameBuffer() { return aFrameBuffers; }
 };
-};
+
+RenderTarget                       &CreateBackBuffer();
+
+const std::vector< RenderTarget* > &GetRenderTargets();

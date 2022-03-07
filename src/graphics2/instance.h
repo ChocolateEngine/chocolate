@@ -38,6 +38,8 @@ public:
      GInstance();
     ~GInstance();
 
+    uint32_t                   GetMemoryType( uint32_t sTypeFilter, VkMemoryPropertyFlags sProperties );
+
     constexpr Window           GetWindow()          { return aWindow;         }
 
     constexpr VkInstance       GetInstance()        { return aInstance;       }
