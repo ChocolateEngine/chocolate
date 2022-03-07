@@ -28,7 +28,7 @@
 	#define mkdir(f) mkdir(f, 666)
 #endif
 
-LOG_REGISTER_CHANNEL( KeyValue );
+LOG_REGISTER_CHANNEL( KeyValue, LogColor::DarkGray );
 
 
 void str_upper( std::string &string )

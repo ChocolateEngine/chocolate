@@ -231,7 +231,7 @@ void GuiSystem::DrawConsole( bool wasConsoleOpen )
 	ImGui::BeginChild("ConsoleOutput", ImVec2( ImGui::GetWindowSize().x - 32, ImGui::GetWindowSize().y - 64 ), true);
 	static int scrollMax = ImGui::GetScrollMaxY();
 
-	ImGui::TextUnformatted( console->GetConsoleHistoryStr( con_gui_max_history.GetFloat() ).c_str() );
+	//ImGui::TextUnformatted( console->GetConsoleHistoryStr( con_gui_max_history.GetFloat() ).c_str() );
 
 	if ( scrollMax == ImGui::GetScrollY() )
 		ImGui::SetScrollY( ImGui::GetScrollMaxY() );

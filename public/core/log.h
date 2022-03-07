@@ -33,8 +33,11 @@ enum class LogColor
 
 enum class LogLevel
 {
-	Normal,
-	Dev,  // maybe split into Dev1, Dev2, Dev3, and Dev4, for 4 developer levels?
+	Normal = 0,
+	Dev,
+	Dev2,
+	Dev3,
+	Dev4,
 	Input,
 	Warning,
 	Error,

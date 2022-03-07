@@ -169,6 +169,12 @@ public:
                 if ( !channel || !channel->aEnabled )
                     continue;
 
+                if ( developer.GetFloat() < ( int )log.aLevel && ( log.aLevel == LogLevel::Dev    || 
+                                                                   log.aLevel == LogLevel::Dev2   || 
+                                                                   log.aLevel == LogLevel::Dev3   || 
+                                                                   log.aLevel == LogLevel::Dev4      ) ) 
+                    continue;
+
                 output += log.aFormatted;
             }
 
@@ -179,8 +185,11 @@ public:
         for ( size_t i = aLogHistory.size() - 1; i > 0; i-- )
         {
             LogChannel_t* channel = GetChannel( aLogHistory[i].aChannel );
+
             if ( !channel || !channel->aEnabled )
                 continue;
+
+            
 
             int strLen = glm::min( maxSize, (int)aLogHistory[i].aFormatted.length() );
             int strStart = aLogHistory[i].aFormatted.length() - strLen;
@@ -462,11 +471,14 @@ void LogFatal( LogChannel channel, const char *spFmt, ... )
 /* Dev only.  */
 void LogDev( LogChannel channel, u8 sLvl, const char *spFmt, ... )
 {
+    if ( sLvl < 1 || sLvl > 4)
+        sLvl = 4;
+
     char pBuf[ LOG_MAX_LENGTH ];
     va_list args;
     va_start( args, spFmt );
     vsprintf( pBuf, spFmt, args );
-    GetLogSystem().LogMsg( channel, LogLevel::Dev, pBuf );
+    GetLogSystem().LogMsg( channel, ( LogLevel )sLvl, pBuf );
     va_end( args );
 }
 
