@@ -118,7 +118,7 @@ public:
 
         FormatLog( channel, log );
 
-        if ( channel->aEnabled )
+        if ( channel->aShown )
         {
             switch ( sLevel )
             {
@@ -166,7 +166,7 @@ public:
             for ( auto& log : aLogHistory )
             {
                 LogChannel_t* channel = GetChannel( log.aChannel );
-                if ( !channel || !channel->aEnabled )
+                if ( !channel || !channel->aShown )
                     continue;
 
                 if ( developer.GetFloat() < ( int )log.aLevel && ( log.aLevel == LogLevel::Dev    || 
@@ -184,18 +184,22 @@ public:
         // go from latest to oldest
         for ( size_t i = aLogHistory.size() - 1; i > 0; i-- )
         {
-            LogChannel_t* channel = GetChannel( aLogHistory[i].aChannel );
-
-            if ( !channel || !channel->aEnabled )
+            auto& log = aLogHistory[i];
+            LogChannel_t* channel = GetChannel( log.aChannel );
+            if ( !channel || !channel->aShown )
                 continue;
 
-            
+            if ( developer.GetFloat() < ( int )log.aLevel && ( log.aLevel == LogLevel::Dev    || 
+                                                               log.aLevel == LogLevel::Dev2   || 
+                                                               log.aLevel == LogLevel::Dev3   || 
+                                                               log.aLevel == LogLevel::Dev4      ) ) 
+                    continue;
 
-            int strLen = glm::min( maxSize, (int)aLogHistory[i].aFormatted.length() );
-            int strStart = aLogHistory[i].aFormatted.length() - strLen;
+            int strLen = glm::min( maxSize, (int)log.aFormatted.length() );
+            int strStart = log.aFormatted.length() - strLen;
 
             // if the length wanted is less then the string length, then start at an offset
-            output = aLogHistory[i].aFormatted.substr( strStart, strLen ) + output;
+            output = log.aFormatted.substr( strStart, strLen ) + output;
 
             maxSize -= strLen;
 
@@ -227,7 +231,7 @@ void log_channel_dropdown(
 	}
 }
 
-CONCMD_DROP( log_channel_disable, log_channel_dropdown )
+CONCMD_DROP( log_channel_hide, log_channel_dropdown )
 {
     if ( args.size() == 0 )
         return;
@@ -236,10 +240,10 @@ CONCMD_DROP( log_channel_disable, log_channel_dropdown )
     if ( !channel )
         return;
 
-    channel->aEnabled = false;
+    channel->aShown = false;
 }
 
-CONCMD_DROP( log_channel_enable, log_channel_dropdown )
+CONCMD_DROP( log_channel_show, log_channel_dropdown )
 {
     if ( args.size() == 0 )
         return;
@@ -248,7 +252,16 @@ CONCMD_DROP( log_channel_enable, log_channel_dropdown )
     if ( !channel )
         return;
 
-    channel->aEnabled = true;
+    channel->aShown = true;
+}
+
+CONCMD( log_channel_dump )
+{
+    LogPuts( "Log Channels: \n" );
+    for ( const auto& channel : GetLogSystem().aChannels )
+    {
+        LogMsg( "\t%s - Visibility: %s, Color: %d\n", channel.aName.c_str(), channel.aShown ? "Shown" : "Hidden", channel.aColor );
+    }
 }
 
 /* Windows Specific Functions for console text colors.  */

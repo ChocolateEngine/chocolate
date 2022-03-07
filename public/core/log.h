@@ -53,7 +53,7 @@ LogColor CORE_API LogGetColor();
 /* Channels!!! */
 struct LogChannel_t
 {
-	bool aEnabled;
+	bool aShown;
 	std::string aName;
 	LogColor aColor;
 };
