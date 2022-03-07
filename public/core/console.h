@@ -21,10 +21,6 @@ Declares the sdfhuosdfhuiosdfhusdfhuisfhu
 #endif
 
 
-void CORE_API Print( const char* str, ... );
-void CORE_API Puts( const char* str );
-
-
 typedef std::function< void( std::vector< std::string > args ) > ConVarFunc;
 
 typedef std::function< void(
@@ -295,18 +291,6 @@ public:
 	ConCommand* name = new ConCommand( #name, [ & ]( std::vector< std::string > sArgs )
 
 
-// will setup later in the future
-// maybe for a more advanced console than can let you search and filter out these Msg types
-// kind of like source 2 vconsole
-// i also want to setup some logging channel system, so i don't need to do "[System] blah" on everything
-enum class Msg
-{
-	Normal,
-	Dev,
-	Warning,
-	Error
-};
-
 
 class CORE_API Console
 {
@@ -316,7 +300,6 @@ class CORE_API Console
 protected:
 	int                                 aCmdIndex = -1;
 	StringList                          aQueue;
-	std::vector< std::string >          aConsoleHistory;
 	StringList                          aCommandHistory;
 	std::string                         aTextBuffer;
 	StringList                          aAutoCompleteList;
@@ -325,13 +308,8 @@ protected:
 
 public:
 
-	void                                AddToBuffer( const std::string& str );
-
 	/* Register all the ConCommands and ConVars created from static initialization.  */
 	void                                RegisterConVars(  );
-	/* A.  */
-	const std::vector<std::string>&     GetConsoleHistory(  );
-	std::string                         GetConsoleHistoryStr( int maxSize );
 
 	const std::vector< std::string >&   GetCommandHistory(  );
 
@@ -349,10 +327,6 @@ public:
 	void                                PrintAllConVars(  );
 
 	void                                Print( const char* format, ... );
-	void                                Print( Msg type, const char* format, ... );
-
-	/* Read a cfg file and run all the cvars in it.  */
-	void                                ReadConfig( const std::string& name );
 
 	/* Add a command to the queue  */
 	void                                Add( const std::string& srCmd );

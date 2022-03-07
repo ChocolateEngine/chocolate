@@ -30,15 +30,66 @@ enum class LogColor
 	Max = White,
 };
 
+/* Manage Console Color */
+void     CORE_API LogSetColor( LogColor color );
+LogColor CORE_API LogGetColor();
+
+
+/* Channels!!! */
+struct LogChannel_t
+{
+	bool aEnabled;
+	std::string aName;
+	LogColor aColor;
+};
+using LogChannel = size_t;
+constexpr LogChannel INVALID_LOG_CHANNEL = SIZE_MAX;
+
+/* Register Log Channel */
+LogChannel CORE_API LogRegisterChannel( const char *sName, LogColor sColor = LogColor::Default );
+#define LOG_REGISTER_CHANNEL( name, ... ) LogChannel g##name##Channel = LogRegisterChannel( #name, __VA_ARGS__ );
+#define LOG_CHANNEL( name ) extern LogChannel g##name##Channel;
+
+void CORE_API LogGetHistoryStr( std::string& output, int maxSize );
+
+/* Deprecated */
+void CORE_API Print( const char* str, ... );
+void CORE_API Puts( const char* str );
+
+
+// ----------------------------------------------------------------
+// Specify a custom channel.
+
+/* Lowest severity.  */
+void CORE_API LogMsg( LogChannel channel, const char *spFmt, ... );
+
+/* Lowest severity, no format.  */
+void CORE_API LogPuts( LogChannel channel, const char *spBuf );
+
+/* Medium severity.  */
+void CORE_API LogWarn( LogChannel channel, const char *spFmt, ... );
+
+/* High severity.  */
+void CORE_API LogError( LogChannel channel, const char *spFmt, ... );
+
+/* Extreme severity.  */
+void CORE_API LogFatal( LogChannel channel, const char *spFmt, ... );
+
+/* Dev only.  */
+void CORE_API LogDev( LogChannel channel, u8 sLvl, const char *spFmt, ... );
+
+/* Dev only.  */
+void CORE_API LogPutsDev( LogChannel channel, u8 sLvl, const char *spBuf );
+
+
+// ----------------------------------------------------------------
+// Default to general channel.
 
 /* Lowest severity.  */
 void CORE_API LogMsg( const char *spFmt, ... );
 
-/* Lowest severity - Color Option.  */
-void CORE_API LogMsg( LogColor color, const char *spFmt, ... );
-
 /* Lowest severity, no format.  */
-void CORE_API LogPuts( const char *spBuf, LogColor color = LogColor::Default );
+void CORE_API LogPuts( const char *spBuf );
 
 /* Medium severity.  */
 void CORE_API LogWarn( const char *spFmt, ... );
@@ -54,7 +105,4 @@ void CORE_API LogDev( u8 sLvl, const char *spFmt, ... );
 
 /* Dev only.  */
 void CORE_API LogPutsDev( u8 sLvl, const char *spBuf );
-
-/* Set Console Color */
-void CORE_API LogSetColor( LogColor color );
 

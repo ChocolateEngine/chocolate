@@ -8,6 +8,7 @@ Maybe the shadersystem could be inside this material system?
 #include "materialsystem.h"
 #include "renderer.h"
 #include "graphics/sprite.h"
+#include "graphics.h"
 #include "speedykeyv/KeyValue.h"
 
 #include "shaders/shader_basic_2d.h"
@@ -134,7 +135,7 @@ IMaterial* MaterialSystem::ParseMaterial( const std::string &path )
 
 	if ( fullPath.empty() )
 	{
-		LogWarn( "[Graphics] Failed to find file: %s\n", path.c_str() );
+		LogWarn( gGraphicsChannel, "Failed to find file: %s\n", path.c_str() );
 		return nullptr;
 	}
 
@@ -142,7 +143,7 @@ IMaterial* MaterialSystem::ParseMaterial( const std::string &path )
 
 	if ( rawData.empty() )
 	{
-		LogWarn( "[Graphics] Failed to read file: %s\n", fullPath.c_str() );
+		LogWarn( gGraphicsChannel, "Failed to read file: %s\n", fullPath.c_str() );
 		return nullptr;
 	}
 
@@ -154,7 +155,7 @@ IMaterial* MaterialSystem::ParseMaterial( const std::string &path )
 
 	if ( err != KeyValueErrorCode::NO_ERROR )
 	{
-		LogWarn( "[Graphics] Failed to parse file: %s\n", fullPath.c_str() );
+		LogWarn( gGraphicsChannel, "Failed to parse file: %s\n", fullPath.c_str() );
 		return nullptr;
 	}
 
@@ -172,7 +173,7 @@ IMaterial* MaterialSystem::ParseMaterial( const std::string &path )
 	{
 		if ( kv->hasChildren )
 		{
-			LogDev( 1, "[Graphics] Skipping extra children in kv file: %s", fullPath.c_str() );
+			LogDev( gGraphicsChannel, 1, "Skipping extra children in kv file: %s", fullPath.c_str() );
 			kv = kv->next;
 			continue;
 		}
@@ -216,7 +217,7 @@ IMaterial* MaterialSystem::ParseMaterial( const std::string &path )
 
 			if ( absTexPath == "" )
 			{
-				Print( "[Graphics] \"%s\":\n\tCan't Find Texture: \"%s\": \"%s\"\n", fullPath.c_str(), kv->key.string, kv->value.string );
+				LogMsg( gGraphicsChannel, "\"%s\":\n\tCan't Find Texture: \"%s\": \"%s\"\n", fullPath.c_str(), kv->key.string, kv->value.string );
 				mat->SetVar( kv->key.string, CreateTexture( kv->value.string ) );
 			}
 			else
@@ -228,7 +229,7 @@ IMaterial* MaterialSystem::ParseMaterial( const std::string &path )
 				}
 				else
 				{
-					Print( "[Graphics] \"%s\":n\tUnknown Material Var Type: \"%s\": \"%s\"\n", fullPath.c_str(), kv->key.string, kv->value.string );
+					LogMsg( gGraphicsChannel, "\"%s\":n\tUnknown Material Var Type: \"%s\": \"%s\"\n", fullPath.c_str(), kv->key.string, kv->value.string );
 					mat->SetVar( kv->key.string, 0 );
 				}
 			}
@@ -286,7 +287,7 @@ Texture *MaterialSystem::CreateTexture( const std::string &path )
 	std::string absPath = filesys->FindFile( path );
 	if ( absPath == "" && apMissingTex )
 	{
-		LogWarn( "[Graphics] Failed to Find Texture \"%s\"\n", path );
+		LogWarn( gGraphicsChannel, "Failed to Find Texture \"%s\"\n", path );
 		return nullptr;
 	}
 
@@ -389,7 +390,7 @@ BaseShader* MaterialSystem::GetShader( const std::string& name )
 	if (search != aShaders.end())
 		return search->second;
 
-	LogError( "[Graphics] Shader not found: %s\n", name.c_str() );
+	LogError( gGraphicsChannel, "Shader not found: %s\n", name.c_str() );
 	return nullptr;
 }
 
@@ -426,13 +427,13 @@ void MaterialSystem::AddRenderable( BaseRenderable* renderable )
 
 	if ( !mat )
 	{
-		LogError( "[Graphics] Renderable has no material!\n" );
+		LogError( gGraphicsChannel, "Renderable has no material!\n" );
 		return;
 	}
 
 	if ( !mat->apShader )
 	{
-		LogError( "[Graphics] Material has no shader!\n" );
+		LogError( gGraphicsChannel, "Material has no shader!\n" );
 		return;
 	}
 

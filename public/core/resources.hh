@@ -13,6 +13,8 @@
 #include "platform.h"
 #include "mempool.h"
 
+static LOG_REGISTER_CHANNEL( Resource, LogColor::DarkYellow );
+
 #define GET_HANDLE_INDEX( sHandle ) ( sHandle & 0xFFFFFFFF )
 #define GET_HANDLE_MAGIC( sHandle ) ( sHandle >> 32 )
 
@@ -77,7 +79,7 @@ public:
 
         size_t index = ( ( size_t )pBuf - ( size_t )aPool.GetStart() ) / ( sizeof( T ) + sizeof( magic ) );
 
-        LogDev( 3, "ResourceManager::Add( T* ): Allocated resource at index %u\n", index );
+        LogDev( gResourceChannel, 3, "ResourceManager::Add( T* ): Allocated resource at index %u\n", index );
 
         return index | magic << 32;
     }
@@ -114,7 +116,7 @@ public:
          */
         aPool.Free( pBuf );
 
-        LogDev( 3, "ResourceManager::Remove( Handle ): Removed resource at index %u\n", index );
+        LogDev( gResourceChannel, 3, "ResourceManager::Remove( Handle ): Removed resource at index %u\n", index );
     }
     /*
      *    Get a resource.
@@ -145,11 +147,11 @@ public:
          *    Check the magic number.
          */
         if( *( size_t* )pBuf != magic ) {
-            LogWarn( "*ResourceManager::Get( Handle ): Invalid handle: %d\n", sHandle );
+            LogWarn( gResourceChannel, "*ResourceManager::Get( Handle ): Invalid handle: %d\n", sHandle );
             return nullptr;
         }
 
-        LogDev( 4, "*ResourceManager::Get( Handle ): Retrieved resource at index %u\n", index );
+        LogDev( gResourceChannel, 4, "*ResourceManager::Get( Handle ): Retrieved resource at index %u\n", index );
 
         /*
          *    Return the data.

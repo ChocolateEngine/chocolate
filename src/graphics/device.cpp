@@ -3,15 +3,16 @@
 
 #include <set>
 
+LOG_REGISTER_CHANNEL( Device, LogColor::Cyan );
+LOG_REGISTER_CHANNEL( Validation, LogColor::Blue );
+
 VKAPI_ATTR VkBool32 VKAPI_CALL Device::DebugCallback( VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, VkDebugUtilsMessageTypeFlagsEXT messageType,
 					      const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData )
 {
 	static bool dumpVLayers = cmdline->Find( "-dump-vlayers" ) || cmdline->Find( "-vlayers" );
 	if ( dumpVLayers )
 	{
-		LogSetColor( LogColor::Blue );
-		fprintf( stderr, "\n[VK] %s\n\n", pCallbackData->pMessage );
-		LogSetColor( LogColor::Default );
+		LogMsg( gValidationChannel, "%s\n\n", pCallbackData->pMessage );
 	}
 
 	return VK_FALSE;
@@ -48,12 +49,12 @@ StringList Device::InitRequiredExtensions(  )
 		throw std::runtime_error( "Unable to query the number of Vulkan instance extension names\n" );
 	}
 	// Display names
-	LogDev( 1, "[Device] Found %d Vulkan extensions:\n", extensionCount );
+	LogDev( gDeviceChannel, 1, "Found %d Vulkan extensions:\n", extensionCount );
 	for ( uint32_t i = 0; i < extensionCount; ++i )
 	{
-		LogDev( 1, "\t%i : %s\n", i, extensions[ i ] );
+		LogDev( gDeviceChannel, 1, "\t%i : %s\n", i, extensions[ i ] );
 	}
-	LogPutsDev( 1, "\n" );
+	LogPutsDev( gDeviceChannel, 1, "\n" );
 
 	// Add debug display extension, we need this to relay debug messages
 	extensions.push_back( VK_EXT_DEBUG_UTILS_EXTENSION_NAME );
@@ -108,14 +109,14 @@ void Device::InitInstance(  )
 	std::vector< VkExtensionProperties > extensions( extensionCount );
 	vkEnumerateInstanceExtensionProperties( NULL, &extensionCount, extensions.data(  ) );
 
-	LogDev( 1, "[Device] %d Vulkan extensions available:\n", extensionCount );
+	LogDev( gDeviceChannel, 1, "%d Vulkan extensions available:\n", extensionCount );
 
 	for ( const auto& extension : extensions )
 	{
-		LogDev( 1, "\t%s\n", extension.extensionName );
+		LogDev( gDeviceChannel, 1, "\t%s\n", extension.extensionName );
 	}
 
-	LogPutsDev( 1, "\n" );
+	LogPutsDev( gDeviceChannel, 1, "\n" );
 }
 
 void Device::InitDebugMessengerInfo( VkDebugUtilsMessengerCreateInfoEXT &srCreateInfo )

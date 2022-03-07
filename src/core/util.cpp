@@ -28,6 +28,8 @@
 	#define mkdir(f) mkdir(f, 666)
 #endif
 
+LOG_REGISTER_CHANNEL( KeyValue );
+
 
 void str_upper( std::string &string )
 {
@@ -227,7 +229,7 @@ std::vector< std::string > KV_GetVec( const std::string& value )
 
 	if ( value.size() == 1 || value[0] != '[' )
 	{
-		LogError( "[KV]: not a list: %s\n", value.c_str() );
+		LogError( gKeyValueChannel, "not a list: %s\n", value.c_str() );
 		return {};
 	}
 
@@ -282,7 +284,7 @@ std::vector< int > KV_GetVecInt( const std::string& value )
 		long val = 0;
 		if ( !ToLong2( strVal, val ) )
 		{
-			LogWarn( "[KV]: Failed to convert to long: %s - From %s\n", value.c_str() );
+			LogWarn( gKeyValueChannel, "Failed to convert to long: %s - From %s\n", value.c_str() );
 			return {};
 		}
 
@@ -306,7 +308,7 @@ std::vector< float > KV_GetVecFloat( const std::string& value )
 		double val = 0;
 		if ( !ToDouble2( strVal, val ) )
 		{
-			LogWarn( "[KV]: Failed to convert to double: %s - From %s\n", value.c_str() );
+			LogWarn( gKeyValueChannel, "Failed to convert to double: %s - From %s\n", value.c_str() );
 			return {};
 		}
 
@@ -330,7 +332,7 @@ glm::vec2 KV_GetVec2( const std::string& value, const glm::vec2& fallback )
 		double val = 0;
 		if ( !ToDouble2( strVec[i], val ) )
 		{
-			LogWarn( "[KV]: Failed to convert to double: %s - From %s\n", value.c_str() );
+			LogWarn( gKeyValueChannel, "Failed to convert to double: %s - From %s\n", value.c_str() );
 			return fallback;
 		}
 
@@ -342,7 +344,7 @@ glm::vec2 KV_GetVec2( const std::string& value, const glm::vec2& fallback )
 
 	if ( i < 3 )
 	{
-		LogWarn( "[KV]: List does contains less or more than 2 values: %s\n", value.c_str() );
+		LogWarn( gKeyValueChannel, "List does contains less or more than 2 values: %s\n", value.c_str() );
 		return fallback;
 	}
 
@@ -363,7 +365,7 @@ glm::vec3 KV_GetVec3( const std::string& value, const glm::vec3& fallback )
 		double val = 0;
 		if ( !ToDouble2( strVec[i], val ) )
 		{
-			LogWarn( "[KV]: Failed to convert to double: %s - From %s\n", value.c_str() );
+			LogWarn( gKeyValueChannel, "Failed to convert to double: %s - From %s\n", value.c_str() );
 			return fallback;
 		}
 
@@ -375,7 +377,7 @@ glm::vec3 KV_GetVec3( const std::string& value, const glm::vec3& fallback )
 
 	if ( i < 3 )
 	{
-		LogWarn( "[KV]: List does contains less or more than 3 values: %s\n", value.c_str() );
+		LogWarn( gKeyValueChannel, "List does contains less or more than 3 values: %s\n", value.c_str() );
 		return fallback;
 	}
 
@@ -396,7 +398,7 @@ glm::vec4 KV_GetVec4( const std::string& value, const glm::vec4& fallback )
 		double val = 0;
 		if ( !ToDouble2( strVec[i], val ) )
 		{
-			LogWarn( "[KV]: Failed to convert to double: %s - From %s\n", value.c_str() );
+			LogWarn( gKeyValueChannel, "Failed to convert to double: %s - From %s\n", value.c_str() );
 			return fallback;
 		}
 
@@ -408,7 +410,7 @@ glm::vec4 KV_GetVec4( const std::string& value, const glm::vec4& fallback )
 
 	if ( i < 4 )
 	{
-		LogWarn( "[KV]: List does contains less or more than 4 values: %s\n", value.c_str() );
+		LogWarn( gKeyValueChannel, "List does contains less or more than 4 values: %s\n", value.c_str() );
 		return fallback;
 	}
 

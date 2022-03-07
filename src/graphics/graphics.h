@@ -12,6 +12,8 @@ by the renderer.
 #include "graphics/igraphics.h"
 
 
+LOG_CHANNEL( Graphics );
+
 class GraphicsSystem : public BaseGraphicsSystem
 {
 public:

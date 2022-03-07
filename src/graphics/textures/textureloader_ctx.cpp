@@ -6,6 +6,7 @@
 #include "textureloader_ctx.h"
 
 #include "graphics/ctxlib.h"
+#include "../graphics.h"
 #include "../renderer.h"
 
 /* Checks for .ctx extension.  */
@@ -27,7 +28,7 @@ TextureDescriptor *CTXTextureLoader::LoadTexture( const std::string path ) {
 
 	if ( !pTex )
 	{
-		Print( "oops no ctx\n" );
+		LogError( gGraphicsChannel, "oops no ctx\n" );
 	        return nullptr;
 	}
 

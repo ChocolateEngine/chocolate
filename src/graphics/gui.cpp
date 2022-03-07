@@ -272,7 +272,7 @@ CONVAR( con_gui_max_history, -1 );  // idk
 void GuiSystem::DrawConsole( bool wasConsoleOpen )
 {
 	if ( con_spam_test.GetBool() )
-		Print( "TEST\n" );
+		LogMsg( "TEST\n" );
 
 	// blech
 	static bool wasUpArrowPressed = false;
@@ -289,7 +289,9 @@ void GuiSystem::DrawConsole( bool wasConsoleOpen )
 	ImGui::BeginChild("ConsoleOutput", ImVec2( ImGui::GetWindowSize().x - 32, ImGui::GetWindowSize().y - 64 ), true);
 	static int scrollMax = ImGui::GetScrollMaxY();
 
-	ImGui::TextUnformatted( console->GetConsoleHistoryStr( con_gui_max_history.GetFloat() ).c_str() );
+	std::string history;
+	LogGetHistoryStr( history, con_gui_max_history.GetFloat() );
+	ImGui::TextUnformatted( history.c_str() );
 
 	if ( scrollMax == ImGui::GetScrollY() )
 		ImGui::SetScrollY( ImGui::GetScrollMaxY() );
@@ -319,7 +321,7 @@ void GuiSystem::DrawConsole( bool wasConsoleOpen )
 
 		ImGui::PushStyleVar( ImGuiStyleVar_WindowPadding, ImVec2(0,0) );
 
-		ImGui::Begin( "cvars_box", NULL,
+		if ( ImGui::Begin( "cvars_box", NULL,
 					 ImGuiWindowFlags_NoBringToFrontOnFocus |
 					 ImGuiWindowFlags_AlwaysAutoResize |
 					 ImGuiWindowFlags_NoBackground |
@@ -327,27 +329,29 @@ void GuiSystem::DrawConsole( bool wasConsoleOpen )
 					 ImGuiWindowFlags_NoTitleBar |
 					 ImGuiWindowFlags_NoMove |
 					 //ImGuiWindowFlags_NoNavFocus |
-					 ImGuiWindowFlags_NoFocusOnAppearing );
-
-		ImGui::BeginListBox( " " );
-
-		for ( int i = 0; i < cvarAutoComplete.size(); i++ )
+					 ImGuiWindowFlags_NoFocusOnAppearing ) )
 		{
-			std::string item = cvarAutoComplete[i];
-
-			item += " " + console->GetConVarValue( item );
-
-			if ( ImGui::Selectable( item.c_str(), gCmdDropDownIndex == i ) )
+			if ( ImGui::BeginListBox( " " ) )
 			{
-				// should we keep the value in here too?
-				console->SetTextBuffer( cvarAutoComplete[i] );
-				//break;
+				for ( int i = 0; i < cvarAutoComplete.size(); i++ )
+				{
+					std::string item = cvarAutoComplete[i];
+
+					item += " " + console->GetConVarValue( item );
+
+					if ( ImGui::Selectable( item.c_str(), gCmdDropDownIndex == i ) )
+					{
+						// should we keep the value in here too?
+						console->SetTextBuffer( cvarAutoComplete[i] );
+						//break;
+					}
+				}
+
+				ImGui::EndListBox(  );
 			}
+
+			ImGui::End(  );
 		}
-
-		ImGui::EndListBox(  );
-
-		ImGui::End(  );
 
 		ImGui::PopStyleVar();
 

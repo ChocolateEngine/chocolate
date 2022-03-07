@@ -4,6 +4,8 @@
 #include <cstdlib>
 #include <ctime>
 
+LOG_REGISTER_CHANNEL( Graphics, LogColor::Blue );
+
 GraphicsSystem* graphics = new GraphicsSystem;
 
 extern "C" {

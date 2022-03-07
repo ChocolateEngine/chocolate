@@ -31,6 +31,8 @@
 #endif
 
 
+LOG_REGISTER_CHANNEL( FileSystem, LogColor::DarkGray );
+
 DLL_EXPORT FileSystem* filesys = nullptr;
 
 
@@ -197,7 +199,7 @@ std::vector< char > FileSystem::ReadFile( const std::string& srFilePath )
     std::string fullPath = FindFile( srFilePath );
     if ( fullPath == "" )
     {
-        LogError( "[Filesystem] Failed to find file: %s", srFilePath.c_str() );
+        LogError( gFileSystemChannel, "Failed to find file: %s", srFilePath.c_str() );
         return {};
     }
 
@@ -205,7 +207,7 @@ std::vector< char > FileSystem::ReadFile( const std::string& srFilePath )
     std::ifstream file( fullPath, std::ios::ate | std::ios::binary );
     if ( !file.is_open() )
     {
-        LogError( "[Filesystem] Failed to open file: %s", srFilePath.c_str() );
+        LogError( gFileSystemChannel, "Failed to open file: %s", srFilePath.c_str() );
         return {};
     }
 
@@ -434,7 +436,7 @@ bool FitsWildcard( DirHandle dirh, const std::string &path )
 
     if ( it != gSearchParams.end() )
     {
-        Puts( "TODO: wildcard check oh god\n" );
+        LogPuts( gFileSystemChannel, "TODO: wildcard check oh god\n" );
         return false;
     }
     else

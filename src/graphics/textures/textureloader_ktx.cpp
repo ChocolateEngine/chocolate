@@ -5,6 +5,7 @@ Load KTX Textures
 */
 
 #include "textureloader_ktx.h"
+#include "../graphics.h"
 #include "../renderer.h"
 
 #ifdef KTX
@@ -52,7 +53,7 @@ bool KTXTextureLoader::LoadKTXTexture( TextureDescriptor* pTexture, const String
 
 	if ( result != KTX_SUCCESS )
 	{
-		LogError( "KTX Error %d: %s - Failed to Construct KTX Vulkan Device\n", result, ktxErrorString(result) );
+		LogError( gGraphicsChannel, "KTX Error %d: %s - Failed to Construct KTX Vulkan Device\n", result, ktxErrorString(result) );
 		return false;
 	}
 
@@ -60,7 +61,7 @@ bool KTXTextureLoader::LoadKTXTexture( TextureDescriptor* pTexture, const String
 
 	if ( result != KTX_SUCCESS )
 	{
-		LogError( "KTX Error %d: %s - Failed to open texture: %s\n", result, ktxErrorString(result), srImagePath.c_str(  ) );
+		LogError( gGraphicsChannel, "KTX Error %d: %s - Failed to open texture: %s\n", result, ktxErrorString(result), srImagePath.c_str(  ) );
 		ktxVulkanDeviceInfo_Destruct( &vdi );
 		return false;
 	}
@@ -72,13 +73,13 @@ bool KTXTextureLoader::LoadKTXTexture( TextureDescriptor* pTexture, const String
 
 	if ( result != KTX_SUCCESS )
 	{
-		LogError( "KTX Error %d: %s - Failed to upload texture: %s\n", result, ktxErrorString(result), srImagePath.c_str(  ) );
+		LogError( gGraphicsChannel, "KTX Error %d: %s - Failed to upload texture: %s\n", result, ktxErrorString(result), srImagePath.c_str(  ) );
 		ktxTexture_Destroy( pTexture->kTexture );
 		ktxVulkanDeviceInfo_Destruct( &vdi );
 		return false;
 	}
 
-	Print( "Loaded Image: %s - dataSize: %d\n", srImagePath.c_str(  ), pTexture->kTexture->dataSize );
+	LogMsg( gGraphicsChannel, "Loaded Image: %s - dataSize: %d\n", srImagePath.c_str(  ), pTexture->kTexture->dataSize );
 
 	ktxTexture_Destroy( pTexture->kTexture );
 	ktxVulkanDeviceInfo_Destruct( &vdi );

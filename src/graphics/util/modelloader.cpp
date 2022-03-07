@@ -8,6 +8,7 @@ Class dedicated for loading models, and caches them too for multiple uses
 #include "modelloader.h"
 #include "../materialsystem.h"
 #include "graphics/imesh.h"
+#include "../graphics.h"
 
 #include "util.h"
 #include "core/console.h"
@@ -42,7 +43,7 @@ void LoadObj( const std::string &srPath, std::vector<Mesh*> &meshes )
 	if ( !reader.ParseFromFile( srPath, reader_config ) )
 	{
 		if ( !reader.Error().empty() )
-			LogError( "[LoadObj] Error: %s\n", reader.Error().c_str() );
+			LogError( gGraphicsChannel, "Obj %s\n", reader.Error().c_str() );
 
 		return;
 	}
@@ -50,7 +51,7 @@ void LoadObj( const std::string &srPath, std::vector<Mesh*> &meshes )
 	startTime = std::chrono::high_resolution_clock::now(  );
 
 	if ( !reader.Warning().empty() )
-		LogWarn( "%s\n", reader.Warning().c_str() );
+		LogWarn( gGraphicsChannel, "Obj %s\n", reader.Warning().c_str() );
 
 	auto &objAttrib = reader.GetAttrib();
 	auto &objShapes = reader.GetShapes();
@@ -111,7 +112,7 @@ void LoadObj( const std::string &srPath, std::vector<Mesh*> &meshes )
 
 	for (std::size_t shapeIndex = 0; shapeIndex < objShapes.size(); ++shapeIndex)
 	{
-		LogDev( 1, "Obj Shape Index: %u\n", shapeIndex );
+		LogDev( gGraphicsChannel, 1, "Obj Shape Index: %u\n", shapeIndex );
 
 		std::size_t indexOffset = 0;
 		for (std::size_t faceIndex = 0; faceIndex < objShapes[shapeIndex].mesh.num_face_vertices.size(); ++faceIndex)
@@ -194,7 +195,7 @@ void LoadObj( const std::string &srPath, std::vector<Mesh*> &meshes )
 	auto currentTime = std::chrono::high_resolution_clock::now();
 	float time = std::chrono::duration< float, std::chrono::seconds::period >( currentTime - startTime ).count(  );
 
-	LogDev( 1, "Parsed Obj in %.6f sec: %s\n", time, srPath.c_str() );
+	LogDev( gGraphicsChannel, 1, "Parsed Obj in %.6f sec: %s\n", time, srPath.c_str() );
 }
 
 

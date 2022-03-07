@@ -10,6 +10,8 @@
 #include <vorbis/vorbisfile.h>
 
 
+LOG_REGISTER_CHANNEL( Vorbis, LogColor::Green );
+
 struct CodecVorbisData
 {
     OggVorbis_File* oggFile = nullptr;
@@ -36,7 +38,7 @@ bool CodecVorbis::Open( const char* soundPath, AudioStreamInternal *stream )
     FILE *soundFileHandle = fopen(soundPath, "rb");
     if (!soundFileHandle)
     {
-        Print( "File does not exist: \"%s\"\n", soundPath );
+        LogMsg( gVorbisChannel, "File does not exist: \"%s\"\n", soundPath );
         return false;
     }
 
@@ -46,14 +48,14 @@ bool CodecVorbis::Open( const char* soundPath, AudioStreamInternal *stream )
     // check if valid
     if (ov_open_callbacks(soundFileHandle, oggFile, NULL, 0, OV_CALLBACKS_NOCLOSE) < 0)
     {
-        Print( "Not a valid ogg file: \"{}\"\n", soundPath );
+        LogMsg( gVorbisChannel, "Not a valid ogg file: \"{}\"\n", soundPath );
         ov_clear(oggFile);
         return false;
     }
 
     if (!ov_seekable(oggFile))
     {
-        Print( "Stream not seekable: \"{}\"\n", soundPath );
+        LogMsg( gVorbisChannel, "Stream not seekable: \"{}\"\n", soundPath );
         ov_clear(oggFile);
         return false;
     }
@@ -61,7 +63,7 @@ bool CodecVorbis::Open( const char* soundPath, AudioStreamInternal *stream )
     ovfInfo = ov_info(oggFile, 0);
     if (!ovfInfo)
     {
-        Print( "Unable to get stream info: \"{}\".\n", soundPath );
+        LogMsg( gVorbisChannel, "Unable to get stream info: \"{}\".\n", soundPath );
         ov_clear(oggFile);
         return false;
     }
@@ -69,7 +71,7 @@ bool CodecVorbis::Open( const char* soundPath, AudioStreamInternal *stream )
     long numStreams = ov_streams(oggFile);
     if (numStreams != 1)
     {
-        Print( "More than one ({0}) stream in \"{1}\".\n", numStreams, stream->name );
+        LogMsg( gVorbisChannel, "More than one ({0}) stream in \"{1}\".\n", numStreams, stream->name );
         ov_clear(oggFile);
         return false;
     }
@@ -172,7 +174,7 @@ long CodecVorbis::Read( AudioStreamInternal *stream, size_t size, std::vector<fl
                 if (remain != 0)
                     remain--;
                 else
-                    Print("WHAT!!!\n");
+                    LogMsg( gVorbisChannel, "WHAT!!!\n");
             }
         }
 

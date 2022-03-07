@@ -7,26 +7,9 @@
 #include <fstream>
 #include <mutex>
 
+LOG_REGISTER_CHANNEL( Console, LogColor::Gray );
+
 DLL_EXPORT Console* console = nullptr;
-
-
-void Print( const char* format, ... )
-{
-	VSTRING( std::string buffer, format );
-	fputs( buffer.c_str(), stdout );
-
-	if ( console )
-		console->AddToBuffer( buffer );
-}
-
-
-void Puts( const char* buffer )
-{
-	fputs( buffer, stdout );
-
-	if ( console )
-		console->AddToBuffer( buffer );
-}
 
 
 // ================================================================================
@@ -232,7 +215,7 @@ CONCMD_DROP( exec, exec_dropdown )
 {
 	if ( args.size() == 0 )
 	{
-		Print( "No Path Specified for exec!\n" );
+		LogMsg( gConsoleChannel, "No Path Specified for exec!\n" );
 		return;
 	}
 
@@ -246,7 +229,7 @@ CONCMD_DROP( exec, exec_dropdown )
 
 	if ( !filesys->IsFile( path ) )
 	{
-		Print( "Warning: File does not exist: \"%s\"\n", path );
+		LogWarn( gConsoleChannel, "File does not exist: \"%s\"\n", path );
 		return;
 	}
 
@@ -279,7 +262,7 @@ CONCMD_DROP( exec, exec_dropdown )
 			if ( line != "" )
 			{
 				if ( line == "exec " + args[0] )
-					LogWarn( "[Console] cfg file trying to exec itself and cause infinite recursion\n" );
+					LogWarn( gConsoleChannel, "cfg file trying to exec itself and cause infinite recursion\n" );
 				else
 					console->RunCommand( line );
 
@@ -323,7 +306,7 @@ CONCMD( echo )
 			msg += args[i] + "\n";
 	}
 
-	Print( msg.c_str() );
+	LogMsg( gConsoleChannel, msg.c_str() );
 }
 
 
@@ -339,11 +322,11 @@ CONCMD( help )
 
 	if ( cvar )
 	{
-		Print( cvar->GetPrintMessage().c_str() );
+		LogMsg( gConsoleChannel, cvar->GetPrintMessage().c_str() );
 	}
 	else
 	{
-		LogWarn( "Convar not found: %s\n", args[0].c_str() );
+		LogWarn( gConsoleChannel, "Convar not found: %s\n", args[0].c_str() );
 	}
 }
 
@@ -385,17 +368,17 @@ void CmdFind( bool andSearch, std::vector< std::string >& args )
 		cvar = cvar->apNext;
 	}
 
-	Print( "Search Results: %zu\n", resultsCvar.size() + resultsCCmd.size() );
+	LogMsg( gConsoleChannel, "Search Results: %zu\n", resultsCvar.size() + resultsCCmd.size() );
 
-	Print( "\nConVars: %zu\n--------------------------------------\n", resultsCvar.size() );
+	LogMsg( gConsoleChannel, "\nConVars: %zu\n--------------------------------------\n", resultsCvar.size() );
 	for ( const auto& msg : resultsCvar )
-		Puts( msg.c_str() );
+		LogPuts( gConsoleChannel, msg.c_str() );
 
-	Print( "\nConCommands: %zu\n--------------------------------------\n", resultsCCmd.size() );
+	LogMsg( gConsoleChannel, "\nConCommands: %zu\n--------------------------------------\n", resultsCCmd.size() );
 	for ( const auto& msg : resultsCCmd )
-		Puts( msg.c_str() );
+		LogPuts( gConsoleChannel, msg.c_str() );
 
-	Puts( "--------------------------------------\n" );
+	LogPuts( gConsoleChannel, "--------------------------------------\n" );
 }
 
 
@@ -406,7 +389,7 @@ CONCMD( find )
 {
 	if ( args.size() == 0 )
 	{
-		Puts( "Search if cvar name contains any of the search arguments\n" );
+		LogPuts( gConsoleChannel, "Search if cvar name contains any of the search arguments\n" );
 		return;
 	}
 
@@ -417,7 +400,7 @@ CONCMD( findand )
 {
 	if ( args.size() == 0 )
 	{
-		Puts( "Search if cvar name contains all of the search arguments\n" );
+		LogPuts( gConsoleChannel, "Search if cvar name contains all of the search arguments\n" );
 		return;
 	}
 
@@ -426,22 +409,6 @@ CONCMD( findand )
 
 
 // ================================================================================
-
-static std::mutex gPrintMutex;
-
-void Console::AddToBuffer( const std::string& buffer )
-{
-	gPrintMutex.lock();
-
-	aConsoleHistory.push_back( buffer );
-
-	gPrintMutex.unlock();
-}
-
-void Console::ReadConfig( const std::string& name )
-{
-	
-}
 
 void Console::Add( const std::string &srCmd )
 {
@@ -495,46 +462,7 @@ void Console::RegisterConVars(  )
 
 void Console::AddToHistory( const std::string& str )
 {
-	std::string cmd = "] " + str + "\n";
-	aConsoleHistory.push_back( cmd );
-	printf( cmd.c_str() );
-}
-
-const std::vector<std::string>& Console::GetConsoleHistory(  )
-{
-	return aConsoleHistory;
-}
-
-std::string Console::GetConsoleHistoryStr( int maxSize )
-{
-	// make this static?
-	std::string output;
-
-	// No limit
-	if ( maxSize == -1 )
-	{
-		for (auto& str: aConsoleHistory)
-			output += str;
-
-		return output;
-	}
-
-	// go from latest to oldest
-	for (size_t i = aConsoleHistory.size() - 1; i > 0; i--)
-	{
-		int strLen = glm::min(maxSize, (int)aConsoleHistory[i].length());
-		int strStart = aConsoleHistory[i].length() - strLen;
-
-		// if the length wanted is less then the string length, then start at an offset
-		output = aConsoleHistory[i].substr(strStart, strLen) + output;
-
-		maxSize -= strLen;
-
-		if ( maxSize == 0 )
-			break;
-	}
-
-	return output;
+	Print( "] %s\n", str.c_str() );
 }
 
 const std::vector< std::string >& Console::GetCommandHistory(  )
@@ -612,15 +540,15 @@ void Console::PrintAllConVars(  )
 		cvar = cvar->apNext;
 	}
 
-	Puts( "\nConVars:\n--------------------------------------\n" );
+	LogPuts( gConsoleChannel, "\nConVars:\n--------------------------------------\n" );
 	for ( const auto& msg : ConVarMsgs )
-		Puts( msg.c_str() );
+		LogPuts( gConsoleChannel, msg.c_str() );
 
-	Puts( "\nConCommands:\n--------------------------------------\n" );
+	LogPuts( gConsoleChannel, "\nConCommands:\n--------------------------------------\n" );
 	for ( const auto& msg : ConCommandMsgs )
-		Puts( msg.c_str() );
+		LogPuts( gConsoleChannel, msg.c_str() );
 
-	Puts( "--------------------------------------\n" );
+	LogPuts( gConsoleChannel, "--------------------------------------\n" );
 }
 
 
@@ -628,15 +556,6 @@ void Console::Print( const char* format, ... )
 {
 	VSTRING( std::string buffer, format );
 	printf( buffer.c_str() );
-	aConsoleHistory.push_back( buffer );
-}
-
-
-void Console::Print( Msg type, const char* format, ... )
-{
-	VSTRING( std::string buffer, format );
-	printf( buffer.c_str() );
-	aConsoleHistory.push_back( buffer );
 }
 
 
@@ -650,7 +569,7 @@ ConVarBase* CheckForConVarRef( ConVarBase* cvar )
 
 		if ( cvarRef->apRef == nullptr )
 		{
-			Print( "[CONSOLE] Found unlinked cvar ref: %s\n", cvarRef->GetName().c_str() );
+			LogWarn( gConsoleChannel, "Found unlinked cvar ref: %s\n", cvarRef->GetName().c_str() );
 			return nullptr;
 		}
 
@@ -792,7 +711,7 @@ bool Console::RunCommand( const std::string& command )
 				}
 				else
 				{
-					Puts( convar->GetPrintMessage().c_str() );
+					LogPuts( gConsoleChannel, convar->GetPrintMessage().c_str() );
 				}
 			}
 			else if ( typeid(*cvar) == typeid(ConCommand) )
@@ -810,7 +729,7 @@ bool Console::RunCommand( const std::string& command )
 
 	// command wasn't used?
 	if ( !commandCalled )
-		LogWarn( "Command \"%s\" is undefined\n", commandName.c_str() );
+		LogWarn( gConsoleChannel, "Command \"%s\" is undefined\n", commandName.c_str() );
 
 	return commandCalled;
 }
