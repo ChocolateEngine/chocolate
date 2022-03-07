@@ -124,7 +124,10 @@ void           CORE_API str_lower( std::string &string );
 std::string    CORE_API str_upper2( const std::string &in );
 std::string    CORE_API str_lower2( const std::string &in );
 
-// don't need to worry about any resizing with these
+// don't need to worry about any resizing with these, but is a little slower
+void           CORE_API vstring( std::string& output, const char* format, ... );
+void           CORE_API vstring( std::string& output, const char* format, va_list args );
+
 std::string    CORE_API vstring( const char* format, ... );
 std::string    CORE_API vstring( const char* format, va_list args );
 

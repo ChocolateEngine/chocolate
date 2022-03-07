@@ -60,13 +60,12 @@ protected:
 	FenceList                   aImagesInFlight;
 	int                         aCurrentFrame       = 0;
 	bool                        aImGuiInitialized   = false;
+	bool                        aReinitSwapChain    = false;
 
 	friend class MaterialSystem;
 
 	/* A.  */
 	void    InitCommandBuffers(  );
-	/* A.  */
-	void    InitSpriteVertices( const String &srSpritePath, Sprite &srSprite );
 	/* A.  */
 	void    ReinitSwapChain(  );
 	/* A.  */

@@ -417,7 +417,8 @@ void Console::Add( const std::string &srCmd )
 	if ( aCommandHistory.empty() || aCommandHistory.back() != srCmd )
 		aCommandHistory.push_back( srCmd );
 
-	AddToHistory( srCmd );
+	aCommandHistory.push_back( srCmd );
+	Log( gConsoleChannel, LogLevel::Input, srCmd.c_str() );
 }
 
 void Console::AddSilent( const std::string &srCmd )
@@ -460,16 +461,13 @@ void Console::RegisterConVars(  )
 }
 
 
-void Console::AddToHistory( const std::string& str )
-{
-	Print( "] %s\n", str.c_str() );
-}
-
 const std::vector< std::string >& Console::GetCommandHistory(  )
 {
 	return aCommandHistory;
 }
 
+
+// this is stupid
 void Console::SetTextBuffer( const std::string& str, bool recalculateList )
 {
 	aTextBuffer = str;
@@ -591,6 +589,8 @@ void Console::CalculateAutoCompleteList( const std::string& textBuffer )
 	std::vector< std::string > args;
 	ParseCommandLine( textBuffer, commandName, args );
 
+	str_lower( commandName );
+
 	ConVarBase* cvar = ConVarBase::spConVarBases;
 	while ( cvar )
 	{
@@ -598,7 +598,7 @@ void Console::CalculateAutoCompleteList( const std::string& textBuffer )
 		if ( !cvar )
 			continue;
 
-		if ( !str_lower2( cvar->aName ).starts_with( str_lower2( commandName ) ) )
+		if ( !str_lower2( cvar->aName ).starts_with( commandName ) )
 		{
 			cvar = cvar->apNext;
 			continue;

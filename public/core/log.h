@@ -30,6 +30,18 @@ enum class LogColor
 	Max = White,
 };
 
+
+enum class LogLevel
+{
+	Normal,
+	Dev,  // maybe split into Dev1, Dev2, Dev3, and Dev4, for 4 developer levels?
+	Input,
+	Warning,
+	Error,
+	Fatal
+};
+
+
 /* Manage Console Color */
 void     CORE_API LogSetColor( LogColor color );
 LogColor CORE_API LogGetColor();
@@ -42,11 +54,14 @@ struct LogChannel_t
 	std::string aName;
 	LogColor aColor;
 };
+
 using LogChannel = size_t;
 constexpr LogChannel INVALID_LOG_CHANNEL = SIZE_MAX;
+constexpr int        LOG_MAX_LENGTH      = 2048;
 
 /* Register Log Channel */
 LogChannel CORE_API LogRegisterChannel( const char *sName, LogColor sColor = LogColor::Default );
+
 #define LOG_REGISTER_CHANNEL( name, ... ) LogChannel g##name##Channel = LogRegisterChannel( #name, __VA_ARGS__ );
 #define LOG_CHANNEL( name ) extern LogChannel g##name##Channel;
 
@@ -59,6 +74,10 @@ void CORE_API Puts( const char* str );
 
 // ----------------------------------------------------------------
 // Specify a custom channel.
+
+/* General Logging Function.  */
+void CORE_API Log(  LogChannel channel, LogLevel sLevel, const char *spBuf );
+void CORE_API LogF( LogChannel channel, LogLevel sLevel, const char *spFmt, ... );
 
 /* Lowest severity.  */
 void CORE_API LogMsg( LogChannel channel, const char *spFmt, ... );

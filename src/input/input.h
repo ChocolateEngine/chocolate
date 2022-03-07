@@ -22,7 +22,6 @@ public:
 
 class InputSystem : public BaseInputSystem
 {
-	using Inputs = std::vector< SDL_Event >;
 protected:
 	typedef std::vector< KeyAlias > KeyAliases;
 	typedef std::vector< KeyBind >	KeyBinds;
@@ -33,7 +32,7 @@ protected:
 	KeyBinds 	aKeyBinds;
 	KeyStates 	aKeyStates;
 	const Uint8*    aKeyboardState;
-	Inputs          aEvents;
+	std::vector< SDL_Event > aEvents;
 
 	/* Parse the key aliases that can be bound to.  */
 	void 		MakeAliases(  );
@@ -81,7 +80,7 @@ public:
 	bool KeyJustReleased( SDL_Scancode key ) { return GetKeyState(key) & KeyState_JustReleased; }
 
 	/* Accessors.  */
-	Inputs *GetEvents() { return &aEvents; }
+	std::vector< SDL_Event > *GetEvents() { return &aEvents; }
 
 	/* Constructor.  */
 	explicit        InputSystem(  );

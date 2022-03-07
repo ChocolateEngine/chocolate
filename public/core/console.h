@@ -304,8 +304,6 @@ protected:
 	std::string                         aTextBuffer;
 	StringList                          aAutoCompleteList;
 
-	void                                AddToHistory( const std::string& str );
-
 public:
 
 	/* Register all the ConCommands and ConVars created from static initialization.  */
@@ -335,7 +333,7 @@ public:
 	/* Go through and run every command inputed into the console last frame  */
 	void                                Update(  );
 
-	/* Find and run a command, returns true if a command was found  */
+	/* Find and run a command instantly, returns true if a command was found  */
 	bool                                RunCommand( const std::string& command );
 
 	void                                ParseCommandLine( const std::string& command, std::string &name, std::vector< std::string > &args );

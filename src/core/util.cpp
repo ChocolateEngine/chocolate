@@ -67,10 +67,10 @@ void vstring( std::string& result, const char* format, ... )
 	va_copy( args_copy, args );
 
 	int len = vsnprintf( nullptr, 0, format, args );
-	if (len < 0)
+	if ( len < 0 )
 	{
-		va_end(args_copy);
-		va_end(args);
+		va_end( args_copy );
+		va_end( args );
 		throw std::runtime_error("vsnprintf error");
 	}
 

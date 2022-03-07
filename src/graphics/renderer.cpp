@@ -160,25 +160,6 @@ void Renderer::InitCommandBuffers(  )
 	}
 }
 
-void Renderer::InitSpriteVertices( const String &srSpritePath, Sprite &srSprite )
-{
-	srSprite.aVertices =
-	{
-		{{-1 * ( srSprite.aWidth / 2.0f ), -1 * ( srSprite.aHeight / 2.0f )}, {1.0f, 0.0f, 0.0f}, {1.0f, 0.0f}},
-		{{( srSprite.aWidth / 2.0f ), -1 * ( srSprite.aHeight / 2.0f )}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f}},
-		{{( srSprite.aWidth / 2.0f ), ( srSprite.aHeight / 2.0f )}, {0.0f, 0.0f, 1.0f}, {0.0f, 1.0f}},
-		{{-1 * ( srSprite.aWidth / 2.0f ), ( srSprite.aHeight / 2.0f )}, {1.0f, 1.0f, 1.0f}, {1.0f, 1.0f}}
-	};
-
-	srSprite.aIndices =
-	{
-		0, 1, 2, 2, 3, 0	
-	};
-
-	matsys->CreateVertexBuffer( &srSprite );
-	matsys->CreateIndexBuffer( &srSprite );
-}
-
 void Renderer::ReinitSwapChain(  )
 {
 	int width = 0, height = 0;
@@ -214,6 +195,8 @@ void Renderer::ReinitSwapChain(  )
 
 void Renderer::DestroySwapChain(  )
 {
+	aReinitSwapChain = false;
+	
 	gShaderCache.ClearCache(  );
 	vkDestroyImageView( DEVICE, aDepthImageView, nullptr );
 	vkDestroyImage( DEVICE, aDepthImage, nullptr );
@@ -318,12 +301,23 @@ bool Renderer::LoadModel( Model* sModel, const String &srPath )
 
 bool Renderer::LoadSprite( Sprite &srSprite, const String &srSpritePath )
 {
-	srSprite.apMaterial = matsys->CreateMaterial(  );
+	srSprite.apMaterial = matsys->CreateMaterial();
 	srSprite.apMaterial->SetShader( "basic_2d" );
-
 	srSprite.apMaterial->SetVar( "diffuse", matsys->CreateTexture( srSpritePath ) );
 
-	InitSpriteVertices( "", srSprite );
+	srSprite.aVertices =
+	{
+		{{-1 * ( srSprite.aWidth / 2.0f ), -1 * ( srSprite.aHeight / 2.0f )}, {1.0f, 0.0f, 0.0f}, {1.0f, 0.0f}},
+		{{( srSprite.aWidth / 2.0f ), -1 * ( srSprite.aHeight / 2.0f )}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f}},
+		{{( srSprite.aWidth / 2.0f ), ( srSprite.aHeight / 2.0f )}, {0.0f, 0.0f, 1.0f}, {0.0f, 1.0f}},
+		{{-1 * ( srSprite.aWidth / 2.0f ), ( srSprite.aHeight / 2.0f )}, {1.0f, 1.0f, 1.0f}, {1.0f, 1.0f}}
+	};
+
+	srSprite.aIndices = { 0, 1, 2, 2, 3, 0 };
+
+	matsys->CreateVertexBuffer( &srSprite );
+	matsys->CreateIndexBuffer( &srSprite );
+
 	aSprites.push_back( &srSprite );
 
 	return true;
@@ -363,7 +357,7 @@ void Renderer::DrawFrame(  )
 	uint32_t imageIndex;
 	VkResult res =  vkAcquireNextImageKHR( DEVICE, SWAPCHAIN.GetSwapChain(  ), UINT64_MAX, aImageAvailableSemaphores[ aCurrentFrame ], VK_NULL_HANDLE, &imageIndex );
 
-	if ( res == VK_ERROR_OUT_OF_DATE_KHR )
+	if ( res == VK_ERROR_OUT_OF_DATE_KHR || aReinitSwapChain )
 	{
 		ReinitSwapChain(  );
 		return;
@@ -471,7 +465,13 @@ SDL_Window *Renderer::GetWindow(  )
 
 void Renderer::SetView( View& view )
 {
+	if ( aView.width != view.width || aView.height != view.height )
+		aReinitSwapChain = true;
+
 	aView.Set(view);
+
+	if ( aReinitSwapChain )
+		ReinitSwapChain();
 }
 
 void Renderer::GetWindowSize( uint32_t* width, uint32_t* height )
