@@ -189,7 +189,6 @@ LogSystem& GetLogSystem()
     return logsystem;
 }
 
-// TODO: Get channel ID from string instead.
 CONCMD( log_channel_disable )
 {
     if ( args.size() == 0 )
