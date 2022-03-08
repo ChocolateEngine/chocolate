@@ -31,7 +31,7 @@ enum class LogColor
 };
 
 
-enum class LogLevel
+enum class LogType: unsigned char
 {
 	Normal = 0,
 	Dev,
@@ -58,8 +58,8 @@ struct LogChannel_t
 	LogColor aColor;
 };
 
-using LogChannel = size_t;
-constexpr LogChannel INVALID_LOG_CHANNEL = SIZE_MAX;
+using LogChannel = unsigned char;
+constexpr LogChannel INVALID_LOG_CHANNEL = 255;
 constexpr int        LOG_MAX_LENGTH      = 2048;
 
 /* Register Log Channel */
@@ -79,8 +79,8 @@ void CORE_API Puts( const char* str );
 // Specify a custom channel.
 
 /* General Logging Function.  */
-void CORE_API Log(  LogChannel channel, LogLevel sLevel, const char *spBuf );
-void CORE_API LogF( LogChannel channel, LogLevel sLevel, const char *spFmt, ... );
+void CORE_API Log(  LogChannel channel, LogType sLevel, const char *spBuf );
+void CORE_API LogF( LogChannel channel, LogType sLevel, const char *spFmt, ... );
 
 /* Lowest severity.  */
 void CORE_API LogMsg( LogChannel channel, const char *spFmt, ... );
