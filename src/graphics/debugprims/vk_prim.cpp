@@ -44,7 +44,7 @@ void VulkanPrimitiveMaterials::PrepareMeshForDraw()
 
 void VulkanPrimitiveMaterials::InitLine( const glm::vec3& sX, const glm::vec3& sY, const glm::vec3& sColor )
 {
-	if ( !g_debug_draw )
+	if ( !g_debug_draw || !aFinalMesh )
 		return;
 
 	aFinalMesh->aVertices.resize( aFinalMesh->aVertices.size() + 2 );
