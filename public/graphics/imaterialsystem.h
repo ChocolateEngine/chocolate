@@ -20,7 +20,7 @@ public:
 
 	// this stuff will only be on the client (Meshes on the server won't inherit this probably? idk),
 	// so i can just use the address of the "this" pointer for it
-	inline size_t                   GetID(  ) { return (size_t)this; }
+	constexpr inline size_t         GetID(  ) { return (size_t)this; }
 
 	IMaterial*                      apMaterial = nullptr;
 
@@ -45,7 +45,8 @@ class BaseRenderableGroup
 public:
 	virtual ~BaseRenderableGroup() = default;
 
-	virtual std::vector< BaseRenderable * > GetRenderables() = 0;
+	virtual uint32_t        GetRenderableCount() = 0;
+	virtual BaseRenderable* GetRenderable( uint32_t index ) = 0;
 };
 
 

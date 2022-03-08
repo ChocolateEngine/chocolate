@@ -60,7 +60,6 @@ struct LogChannel_t
 
 using LogChannel = unsigned char;
 constexpr LogChannel INVALID_LOG_CHANNEL = 255;
-constexpr int        LOG_MAX_LENGTH      = 2048;
 
 /* Register Log Channel */
 LogChannel CORE_API LogRegisterChannel( const char *sName, LogColor sColor = LogColor::Default );
@@ -68,7 +67,7 @@ LogChannel CORE_API LogRegisterChannel( const char *sName, LogColor sColor = Log
 #define LOG_REGISTER_CHANNEL( name, ... ) LogChannel g##name##Channel = LogRegisterChannel( #name, __VA_ARGS__ );
 #define LOG_CHANNEL( name ) extern LogChannel g##name##Channel;
 
-void CORE_API LogGetHistoryStr( std::string& output, int maxSize );
+const std::string CORE_API &LogGetHistoryStr( int maxSize );
 
 /* Deprecated */
 void CORE_API Print( const char* str, ... );

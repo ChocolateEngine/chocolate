@@ -57,34 +57,37 @@ public:
 
 	Transform                   aTransform;
 
-	inline std::vector< BaseRenderable * > GetRenderables() override
+	constexpr inline uint32_t GetRenderableCount() override
 	{
-		// aw yeah
-		// even this RenderableGroup stuff stucks, ugh
-		return *(std::vector<BaseRenderable*> *)&aMeshes;
+		return aMeshes.size();
 	}
 
-	inline void SetTransform( const Transform& transform )
+	constexpr inline BaseRenderable* GetRenderable( uint32_t index ) override
+	{
+		return aMeshes[index];
+	}
+
+	constexpr inline void SetTransform( const Transform& transform )
 	{
 		aTransform = transform;
 	}
 
-	inline void SetPos( const glm::vec3& pos )
+	constexpr inline void SetPos( const glm::vec3& pos )
 	{
 		aTransform.aPos = pos;
 	}
 
-	inline void SetAng( const glm::vec3& ang )
+	constexpr inline void SetAng( const glm::vec3& ang )
 	{
 		aTransform.aAng = ang;
 	}
 
-	inline void SetScale( const glm::vec3& scale )
+	constexpr inline void SetScale( const glm::vec3& scale )
 	{
 		aTransform.aScale = scale;
 	}
 
-	inline Transform& GetTransform(  )
+	constexpr inline Transform& GetTransform(  )
 	{
 		return aTransform;
 	}

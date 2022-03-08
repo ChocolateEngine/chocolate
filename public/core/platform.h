@@ -23,6 +23,7 @@ typedef void* Module;
 
 
 // why is msvc like this with this dllexport/dllimport stuff aaaa
+void            CORE_API    sys_init();
 Module          CORE_API    sys_load_library( const char* path );
 void            CORE_API    sys_close_library( Module mod );
 void            CORE_API*   sys_load_func( Module mod, const char* path );
@@ -32,8 +33,9 @@ void            CORE_API    sys_print_last_error( const char* userErrorMessage )
 // sleep for x milliseconds
 void            CORE_API    sys_sleep( float ms );
 
-// very uh, windows only-ish i think
+// console functions
 void            CORE_API*   sys_get_console_window();
+int             CORE_API    sys_allow_console_input();
 
 // wait for a debugger to attach
 void            CORE_API    sys_wait_for_debugger();
