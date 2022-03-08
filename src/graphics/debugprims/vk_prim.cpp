@@ -47,10 +47,11 @@ void VulkanPrimitiveMaterials::InitLine( const glm::vec3& sX, const glm::vec3& s
 	if ( !g_debug_draw )
 		return;
 
-	aFinalMesh->aVertices.emplace_back(sX, sColor, sY, sColor);
+	aFinalMesh->aVertices.resize( aFinalMesh->aVertices.size() + 2 );
 
-	//aFinalMesh->aVertices.push_back({sX, sColor});
-	//aFinalMesh->aVertices.push_back({sY, sColor});
+	size_t size = aFinalMesh->aVertices.size();
+	aFinalMesh->aVertices[size-2] = {sX, sColor};
+	aFinalMesh->aVertices[size-1] = {sY, sColor};
 }
 
 void VulkanPrimitiveMaterials::Init()

@@ -97,14 +97,14 @@ public:
 
 	// Destroy a Renderable's Vertex and Index buffers, and anything else it may use
 	void                        DestroyRenderable( BaseRenderable* renderable ) override;
-	void                        DestroyRenderable( BaseRenderableGroup *group ) override;
+	constexpr void              DestroyRenderable( BaseRenderableGroup *group ) override;
 
 	// Add a Renderable to be drawn next frame, list is cleared after drawing
 	void                        AddRenderable( BaseRenderable* renderable ) override;
-	void                        AddRenderable( BaseRenderableGroup *group ) override;
+	constexpr void              AddRenderable( BaseRenderableGroup *group ) override;
 
 	// Get the Renderable ID
-	size_t                      GetRenderableID( BaseRenderable* renderable ) override;
+	constexpr size_t            GetRenderableID( BaseRenderable* renderable ) override;
 
 	// Draw a renderable (just calls shader draw lmao)
 	void                        DrawRenderable( BaseRenderable* renderable, VkCommandBuffer c, uint32_t commandBufferIndex );

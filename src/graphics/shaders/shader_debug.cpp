@@ -199,14 +199,16 @@ void ShaderDebug::Bind( VkCommandBuffer c, uint32_t cIndex )
 
 void ShaderDebug::Draw( BaseRenderable* renderable, VkCommandBuffer c, uint32_t cIndex )
 {
-	IMesh* mesh = dynamic_cast<IMesh*>(renderable);
+	// just kinda hope that it's a mesh for now to be slightly faster lmao, graphics 2 will have this done much better
+	// IMesh* mesh = dynamic_cast<IMesh*>(renderable);
+	IMesh* mesh = static_cast<IMesh*>(renderable);
 
 	assert(mesh != nullptr);
 
 	// Bind the mesh's vertex buffer
-	/*VkBuffer 	vBuffers[  ] 	= { mesh->aVertexBuffer };
+	VkBuffer 	vBuffers[  ] 	= { mesh->aVertexBuffer };
 	VkDeviceSize 	offsets[  ] 	= { 0 };
-	vkCmdBindVertexBuffers( c, 0, 1, vBuffers, offsets );*/
+	vkCmdBindVertexBuffers( c, 0, 1, vBuffers, offsets );
 
 	vkCmdDraw( c, (uint32_t)mesh->aVertices.size(), 1, 0, 0 );
 

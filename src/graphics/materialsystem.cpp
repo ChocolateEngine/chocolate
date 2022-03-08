@@ -449,14 +449,16 @@ void MaterialSystem::AddRenderable( BaseRenderable* renderable )
 	}
 }
 
-void MaterialSystem::AddRenderable( BaseRenderableGroup *group )
+constexpr void MaterialSystem::AddRenderable( BaseRenderableGroup *group )
 {
-	for ( auto renderable : group->GetRenderables() )
-		AddRenderable( renderable );
+	uint32_t size = group->GetRenderableCount();
+
+	for ( uint32_t i = 0; i < size; i++ )
+		AddRenderable( group->GetRenderable( i ) );
 }
 
 
-size_t MaterialSystem::GetRenderableID( BaseRenderable* renderable )
+constexpr size_t MaterialSystem::GetRenderableID( BaseRenderable* renderable )
 {
 	return renderable->GetID();
 }
@@ -467,6 +469,7 @@ void MaterialSystem::DrawRenderable( BaseRenderable* renderable, VkCommandBuffer
 	Material* mat = (Material*)renderable->apMaterial;
 	if ( !mat )
 		return;
+
 	mat->apShader->Draw( renderable, c, commandBufferIndex );
 }
 
@@ -484,10 +487,12 @@ void MaterialSystem::DestroyRenderable( BaseRenderable* renderable )
 }
 
 
-void MaterialSystem::DestroyRenderable( BaseRenderableGroup* group )
+constexpr void MaterialSystem::DestroyRenderable( BaseRenderableGroup* group )
 {
-	for ( auto renderable : group->GetRenderables() )
-		DestroyRenderable( renderable );
+	uint32_t size = group->GetRenderableCount();
+
+	for ( uint32_t i = 0; i < size; i++ )
+		DestroyRenderable( group->GetRenderable( i ) );
 }
 
 

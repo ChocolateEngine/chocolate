@@ -68,59 +68,92 @@ public:
     // Format for system console output
     void FormatLog( LogChannel_t *channel, Log &log )
     {
-        //char pBuf[ LOG_MAX_LENGTH ];
         switch ( log.aType )
         {
             default:
             case LogType::Normal:
-            case LogType::Dev:
-                //snprintf( pBuf, LOG_MAX_LENGTH, "[%s] %s", channel->aName.c_str(), log.aMessage.c_str() );
                 vstring( log.aFormatted, "[%s] %s", channel->aName.c_str(), log.aMessage.c_str() );
                 break;
 
+            case LogType::Dev:
+            case LogType::Dev2:
+            case LogType::Dev3:
+            case LogType::Dev4:
+                vstring( log.aFormatted, "[%s] [DEV %u] %s", channel->aName.c_str(), log.aType, log.aMessage.c_str() );
+                break;
+
             case LogType::Input:
-                //snprintf( pBuf, LOG_MAX_LENGTH, "] %s\n", log.aMessage.c_str() );
                 vstring( log.aFormatted, "] %s\n", log.aMessage.c_str() );
                 break;
 
             case LogType::Warning:
-                //snprintf( pBuf, LOG_MAX_LENGTH, "[%s] [WARNING] %s", channel->aName.c_str(), log.aMessage.c_str() );
                 vstring( log.aFormatted, "[%s] [WARNING] %s", channel->aName.c_str(), log.aMessage.c_str() );
                 break;
 
             case LogType::Error:
-                //snprintf( pBuf, LOG_MAX_LENGTH, "[%s] [ERROR] %s", channel->aName.c_str(), log.aMessage.c_str() );
                 vstring( log.aFormatted, "[%s] [ERROR] %s", channel->aName.c_str(), log.aMessage.c_str() );
                 break;
 
             case LogType::Fatal:
-                //snprintf( pBuf, LOG_MAX_LENGTH, "[%s] [FATAL] %s", channel->aName.c_str(), log.aMessage.c_str() );
                 vstring( log.aFormatted, "[%s] [FATAL] %s", channel->aName.c_str(), log.aMessage.c_str() );
                 break;
         }
-
-        //log.aFormatted = pBuf;
     }
 
-    void LogMsg( LogChannel sChannel, LogType sLevel, const char *sMessage )
+    void LogMsg( LogChannel sChannel, LogType sLevel, const char* spFmt, va_list args )
     {
         gLogMutex.lock();
 
-        LogChannel_t* channel = GetChannel( sChannel );
-        if ( !channel )
+        aLogHistory.push_back( { sChannel, sLevel, "" } );
+        Log& log = aLogHistory[aLogHistory.size() - 1];
+
+        va_list copy;
+        va_copy( copy, args );
+        int len = std::vsnprintf( nullptr, 0, spFmt, copy );
+        va_end( copy );
+
+        if ( len < 0 )
         {
+            Print( "\n *** LogSystem: vsnprintf failed?\n\n" );
             gLogMutex.unlock();
-            return; // wtf
+            return;
         }
 
-        aLogHistory.push_back( { sChannel, sLevel, sMessage } );
+        log.aMessage.resize( std::size_t(len) + 1, '\0' );
+        std::vsnprintf( log.aMessage.data(), log.aMessage.size(), spFmt, args );
+        log.aMessage.resize( len );
+
+        AddLogInternal( log );
+
+        gLogMutex.unlock();
+    }
+
+    void LogMsg( LogChannel sChannel, LogType sLevel, const char* spBuf )
+    {
+        gLogMutex.lock();
+
+        aLogHistory.push_back( { sChannel, sLevel, spBuf } );
         Log& log = aLogHistory[aLogHistory.size() - 1];
+
+        AddLogInternal( log );
+
+        gLogMutex.unlock();
+    }
+
+    void AddLogInternal( Log& log )
+    {
+        LogChannel_t* channel = GetChannel( log.aChannel );
+        if ( !channel )
+        {
+            Print( "\n *** LogSystem: Channel Not Found for message: \"%s\"\n", log.aMessage );
+            return;
+        }
 
         FormatLog( channel, log );
 
         if ( channel->aShown )
         {
-            switch ( sLevel )
+            switch ( log.aType )
             {
                 default:
                 case LogType::Normal:
@@ -149,13 +182,13 @@ public:
                 case LogType::Fatal:
                     //fprintf( stderr, "[%s] [FATAL]: %s", channel->aName.c_str(), sMessage );
                     fputs( log.aFormatted.c_str(), stderr );
-                    SDL_ShowSimpleMessageBox( SDL_MESSAGEBOX_ERROR, "Fatal Error", sMessage, NULL );
-                    throw std::runtime_error( sMessage );
+                    SDL_ShowSimpleMessageBox( SDL_MESSAGEBOX_ERROR, "Fatal Error", log.aMessage.c_str(), NULL );
+                    throw std::runtime_error( log.aMessage.c_str() );
                     break;
             }
         }
 
-        gLogMutex.unlock();
+        AddToHistoryString( log );
     }
 
     inline bool CheckDevLevel( const Log& log )
@@ -169,22 +202,16 @@ public:
         return true;
     }
 
-    void GetHistoryStr( std::string& output, int maxSize )
+    // TODO: make this async and probably store elsewhere
+    void BuildHistoryString( int maxSize )
     {
+        aLogHistoryStr = "";
+
         // No limit
         if ( maxSize == -1 )
         {
             for ( auto& log : aLogHistory )
-            {
-                if ( !CheckDevLevel( log ) )
-                    continue;
-
-                LogChannel_t* channel = GetChannel( log.aChannel );
-                if ( !channel || !channel->aShown )
-                    continue;
-
-                output += log.aFormatted;
-            }
+                AddToHistoryString( log );
 
             return;
         }
@@ -205,7 +232,7 @@ public:
             int strStart = log.aFormatted.length() - strLen;
 
             // if the length wanted is less then the string length, then start at an offset
-            output = log.aFormatted.substr( strStart, strLen ) + output;
+            aLogHistoryStr = log.aFormatted.substr( strStart, strLen ) + aLogHistoryStr;
 
             maxSize -= strLen;
 
@@ -214,8 +241,32 @@ public:
         }
     }
 
+    inline void AddToHistoryString( const Log& log )
+    {
+        if ( !CheckDevLevel( log ) )
+            return;
+
+        LogChannel_t* channel = GetChannel( log.aChannel );
+        if ( !channel || !channel->aShown )
+            return;
+
+        aLogHistoryStr += log.aFormatted;
+    }
+
+    const std::string& GetHistoryStr( int maxSize )
+    {
+        // lazy
+        if ( maxSize != -1 )
+        {
+            BuildHistoryString( maxSize );
+        }
+
+        return aLogHistoryStr;
+    }
+
     std::vector< LogChannel_t > aChannels;
-    std::vector< Log > aLogHistory;
+    std::vector< Log >          aLogHistory;
+    std::string                 aLogHistoryStr;
 };
 
 LogSystem& GetLogSystem()
@@ -247,6 +298,8 @@ CONCMD_DROP( log_channel_hide, log_channel_dropdown )
         return;
 
     channel->aShown = false;
+
+    GetLogSystem().BuildHistoryString( -1 );
 }
 
 CONCMD_DROP( log_channel_show, log_channel_dropdown )
@@ -259,6 +312,8 @@ CONCMD_DROP( log_channel_show, log_channel_dropdown )
         return;
 
     channel->aShown = true;
+
+    GetLogSystem().BuildHistoryString( -1 );
 }
 
 CONCMD( log_channel_dump )
@@ -340,7 +395,7 @@ void Win32SetColor( LogColor color )
     }
 }
 
-#elif __unix__
+#endif
 
 // TODO: setup the rest of the colors here
 constexpr const char* UnixGetColor( LogColor color ) 
@@ -374,8 +429,6 @@ void UnixSetColor( LogColor color )
     printf( UnixGetColor( color ) );
 }
 
-#endif
-
 void LogSetColor( LogColor color )
 {
     gCurrentColor = color;
@@ -400,9 +453,9 @@ LogChannel LogRegisterChannel( const char* sName, LogColor sColor )
 }
 
 
-void LogGetHistoryStr( std::string& output, int maxSize )
+const std::string& LogGetHistoryStr( int maxSize )
 {
-    return GetLogSystem().GetHistoryStr( output, maxSize );
+    return GetLogSystem().GetHistoryStr( maxSize );
 }
 
 
@@ -424,33 +477,29 @@ void Puts( const char* buffer )
 // Specify a custom channel.
 
 
+#define LOG_SYS_MSG_VA( str, channel, level ) \
+    va_list args; \
+    va_start( args, str ); \
+    GetLogSystem().LogMsg( channel, level, str, args ); \
+    va_end( args )
+
+
 /* General Logging Function.  */
 void Log( LogChannel channel, LogType sLevel, const char *spBuf )
 {
     GetLogSystem().LogMsg( channel, sLevel, spBuf );
 }
 
-
 void LogF( LogChannel channel, LogType sLevel, const char *spFmt, ... )
 {
-    char pBuf[ LOG_MAX_LENGTH ];
-    va_list args;
-    va_start( args, spFmt );
-    vsprintf( pBuf, spFmt, args );
-    GetLogSystem().LogMsg( channel, sLevel, pBuf );
-    va_end( args );
+    LOG_SYS_MSG_VA( spFmt, channel, sLevel );
 }
 
 
 /* Lowest severity.  */
 void LogMsg( LogChannel channel, const char *spFmt, ... ) 
 {
-    char pBuf[ LOG_MAX_LENGTH ];
-    va_list args;
-    va_start( args, spFmt );
-    vsprintf( pBuf, spFmt, args );
-    GetLogSystem().LogMsg( channel, LogType::Normal, pBuf );
-    va_end( args );
+    LOG_SYS_MSG_VA( spFmt, channel, LogType::Normal );
 }
 
 /* Lowest severity, no format.  */
@@ -462,12 +511,7 @@ void LogPuts( LogChannel channel, const char *spBuf )
 /* Medium severity.  */
 void LogWarn( LogChannel channel, const char *spFmt, ... )
 {
-    char pBuf[ LOG_MAX_LENGTH ];
-    va_list args;
-    va_start( args, spFmt );
-    vsprintf( pBuf, spFmt, args );
-    GetLogSystem().LogMsg( channel, LogType::Warning, pBuf );
-    va_end( args );
+    LOG_SYS_MSG_VA( spFmt, channel, LogType::Warning );
 }
 
 /* Medium severity.  */
@@ -480,23 +524,13 @@ void LogPutsWarn( LogChannel channel, const char *spBuf )
 /* TODO: maybe have this print to stderr? */
 void LogError( LogChannel channel, const char *spFmt, ... )
 {
-    char pBuf[ LOG_MAX_LENGTH ];
-    va_list args;
-    va_start( args, spFmt );
-    vsprintf( pBuf, spFmt, args );
-    GetLogSystem().LogMsg( channel, LogType::Error, pBuf );
-    va_end( args );
+    LOG_SYS_MSG_VA( spFmt, channel, LogType::Error );
 }
 
 /* Extreme severity.  */
 void LogFatal( LogChannel channel, const char *spFmt, ... )
 {
-    char pBuf[ LOG_MAX_LENGTH ];
-    va_list args;
-    va_start( args, spFmt );
-    vsprintf( pBuf, spFmt, args );
-    GetLogSystem().LogMsg( channel, LogType::Fatal, pBuf );
-    va_end( args );
+    LOG_SYS_MSG_VA( spFmt, channel, LogType::Fatal );
 }
 
 /* Dev only.  */
@@ -505,12 +539,7 @@ void LogDev( LogChannel channel, u8 sLvl, const char *spFmt, ... )
     if ( sLvl < 1 || sLvl > 4)
         sLvl = 4;
 
-    char pBuf[ LOG_MAX_LENGTH ];
-    va_list args;
-    va_start( args, spFmt );
-    vsprintf( pBuf, spFmt, args );
-    GetLogSystem().LogMsg( channel, ( LogType )sLvl, pBuf );
-    va_end( args );
+    LOG_SYS_MSG_VA( spFmt, channel, (LogType)sLvl );
 }
 
 
@@ -527,12 +556,7 @@ void LogPutsDev( LogChannel channel, u8 sLvl, const char *spBuf )
 /* Lowest severity.  */
 void LogMsg( const char *spFmt, ... ) 
 {
-    char pBuf[ LOG_MAX_LENGTH ];
-    va_list args;
-    va_start( args, spFmt );
-    vsprintf( pBuf, spFmt, args );
-    GetLogSystem().LogMsg( gGeneralChannel, LogType::Normal, pBuf );
-    va_end( args );
+    LOG_SYS_MSG_VA( spFmt, gGeneralChannel, LogType::Normal );
 }
 
 /* Lowest severity, no format.  */
@@ -544,12 +568,7 @@ void LogPuts( const char *spBuf )
 /* Medium severity.  */
 void LogWarn( const char *spFmt, ... )
 {
-    char pBuf[ LOG_MAX_LENGTH ];
-    va_list args;
-    va_start( args, spFmt );
-    vsprintf( pBuf, spFmt, args );
-    GetLogSystem().LogMsg( gGeneralChannel, LogType::Warning, pBuf );
-    va_end( args );
+    LOG_SYS_MSG_VA( spFmt, gGeneralChannel, LogType::Warning );
 }
 
 /* Medium severity.  */
@@ -562,34 +581,19 @@ void LogPutsWarn( const char *spBuf )
 /* TODO: maybe have this print to stderr? */
 void LogError( const char *spFmt, ... )
 {
-    char pBuf[ LOG_MAX_LENGTH ];
-    va_list args;
-    va_start( args, spFmt );
-    vsprintf( pBuf, spFmt, args );
-    GetLogSystem().LogMsg( gGeneralChannel, LogType::Error, pBuf );
-    va_end( args );
+    LOG_SYS_MSG_VA( spFmt, gGeneralChannel, LogType::Error );
 }
 
 /* Extreme severity.  */
 void LogFatal( const char *spFmt, ... )
 {
-    char pBuf[ LOG_MAX_LENGTH ];
-    va_list args;
-    va_start( args, spFmt );
-    vsprintf( pBuf, spFmt, args );
-    GetLogSystem().LogMsg( gGeneralChannel, LogType::Fatal, pBuf );
-    va_end( args );
+    LOG_SYS_MSG_VA( spFmt, gGeneralChannel, LogType::Fatal );
 }
 
 /* Dev only.  */
 void LogDev( u8 sLvl, const char *spFmt, ... )
 {
-    char pBuf[ LOG_MAX_LENGTH ];
-    va_list args;
-    va_start( args, spFmt );
-    vsprintf( pBuf, spFmt, args );
-    GetLogSystem().LogMsg( gGeneralChannel, LogType::Dev, pBuf );
-    va_end( args );
+    LOG_SYS_MSG_VA( spFmt, gGeneralChannel, LogType::Dev );
 }
 
 
