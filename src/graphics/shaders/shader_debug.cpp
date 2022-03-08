@@ -64,12 +64,17 @@ void ShaderDebug::CreateGraphicsPipeline(  )
 	/* Stack overflow lol.  */
 	VkPipelineShaderStageCreateInfo *pShaderStages = new VkPipelineShaderStageCreateInfo[ 2 ];
 	pShaderStages[ 0 ] = vertShaderStageInfo;
-	pShaderStages[ 1 ] = fragShaderStageInfo;   
+	pShaderStages[ 1 ] = fragShaderStageInfo;
+
+	auto attributeDescriptions 	= vertex_3d_t::GetAttributeDesc(  );
+	auto bindingDescription 	= vertex_3d_t::GetBindingDesc(  );
 
 	VkPipelineVertexInputStateCreateInfo vertexInputInfo{  };	//	Format of vertex data
 	vertexInputInfo.sType 				= VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-	vertexInputInfo.vertexBindingDescriptionCount = 0;
-	vertexInputInfo.vertexAttributeDescriptionCount = 0;	//	Same as above
+	vertexInputInfo.vertexBindingDescriptionCount 	= 1;
+	vertexInputInfo.pVertexBindingDescriptions 	= &bindingDescription;			//	Contains details for loading vertex data
+	vertexInputInfo.vertexAttributeDescriptionCount = ( uint32_t )( attributeDescriptions.size(  ) );
+	vertexInputInfo.pVertexAttributeDescriptions 	= attributeDescriptions.data(  );	//	Same as above
 
 	VkPipelineInputAssemblyStateCreateInfo inputAssembly{  };	//	Collects raw vertex data from buffers
 	inputAssembly.sType 			= VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
