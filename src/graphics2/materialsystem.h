@@ -9,12 +9,16 @@ class MaterialSystem
 {
     MemPool                      aTexPool;
     ResourceManager< Texture2* > aTextures;
+
+    
 public:
     MaterialSystem();
     ~MaterialSystem();
 
     Handle    CreateTexture( const std::string &srName );
     Texture2  *GetTexture( Handle shTex );
+
+    Handle    CreateMaterial( const std::string &srName );
 };
 
 extern MaterialSystem matsys;

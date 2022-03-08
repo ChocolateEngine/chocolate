@@ -1,5 +1,7 @@
 #include "graphics.h"
 
+LOG_REGISTER_CHANNEL( Graphics2, LogColor::DarkYellow );
+
 extern "C" 
 {
     void *cframework_get()

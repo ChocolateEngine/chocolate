@@ -8,7 +8,11 @@
  */
 #pragma once
 
+#include "core/core.h"
+
 #include "graphics/igraphics2.h"
+
+LOG_CHANNEL( Graphics2 );
 
 class Graphics : public IGraphics
 {

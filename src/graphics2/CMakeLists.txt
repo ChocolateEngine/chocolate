@@ -21,9 +21,14 @@ file(
 
 include( ${CH_ROOT}/scripts/vulkan.cmake )
 
+link_directories(
+    ${CH_THIRDPARTY}/libspirv/lib
+)
+
 link_libraries(
 	Core
 	ImGui
+	SPIRV-Tools
 )
 
 
