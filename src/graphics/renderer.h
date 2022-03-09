@@ -14,7 +14,7 @@ Vulkan.
 #include "graphics/renderertypes.h"
 #include "graphics/imesh.h"
 #include "graphics/sprite.h"
-#include "gui.h"
+#include "gui/gui.h"
 #include "materialsystem.h"
 #include "debugprims/primcreator.h"
 #include "types/databuffer.hh"

@@ -7,6 +7,10 @@
 #include <dlfcn.h>
 #include <csignal>
 
+void sys_init()
+{
+}
+
 Module          sys_load_library( const char* path )
 {
     auto pHandle = dlopen( path, RTLD_LAZY );

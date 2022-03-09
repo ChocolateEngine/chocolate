@@ -11,7 +11,6 @@ LOG_REGISTER_CHANNEL( Console, LogColor::Gray );
 
 DLL_EXPORT Console* console = nullptr;
 
-
 // ================================================================================
 
 
@@ -108,6 +107,11 @@ const std::string& ConVar::GetValue(  )
 float ConVar::GetFloat(  )
 {
 	return aValueFloat;
+}
+
+int ConVar::GetInt(  )
+{
+	return (int)aValueFloat;
 }
 
 bool ConVar::GetBool(  )
@@ -415,6 +419,10 @@ CONCMD( _abort )
 }
 
 
+// remove duplicate user inputs from the history
+CONVAR( con_remove_dup_input_history, 1 );
+
+
 // instant call commands hack
 // should figure out a way to register certain ones as instant if you need to
 constexpr ConCommand* gInstantCommands[] = {
@@ -437,28 +445,45 @@ void CheckInstantCommands( const std::string &srCmd )
 
 // ================================================================================
 
-void Console::Add( const std::string &srCmd )
+
+void Console::AddToCommandHistory( const std::string &srCmd )
+{
+	if ( srCmd.empty() )
+		return;
+
+	if ( con_remove_dup_input_history )
+	{
+		vec_remove_if( aCommandHistory, srCmd );
+		aCommandHistory.push_back( srCmd );
+	}
+	else
+	{
+		if ( aCommandHistory.empty() || aCommandHistory.back() != srCmd )
+			aCommandHistory.push_back( srCmd );
+	}
+}
+
+
+void Console::QueueCommand( const std::string &srCmd )
 {
 	CheckInstantCommands( srCmd );
 
 	aQueue.push_back( srCmd );
 
-	if ( aCommandHistory.empty() || aCommandHistory.back() != srCmd )
-		aCommandHistory.push_back( srCmd );
+	AddToCommandHistory( srCmd );
 
-	aCommandHistory.push_back( srCmd );
-	Log( gConsoleChannel, LogType::Input, srCmd.c_str() );
+	LogEx( gConsoleChannel, LogType::Input, srCmd.c_str() );
 }
 
-void Console::AddSilent( const std::string &srCmd )
+void Console::QueueCommandSilent( const std::string &srCmd )
 {
 	CheckInstantCommands( srCmd );
 
 	aQueue.push_back( srCmd );
 
-	if ( aCommandHistory.empty() || aCommandHistory.back() != srCmd )
-		aCommandHistory.push_back( srCmd );
+	AddToCommandHistory( srCmd );
 }
+
 
 // Only registers cvar refs
 void Console::RegisterConVars(  )
@@ -578,13 +603,6 @@ void Console::PrintAllConVars(  )
 		LogPuts( gConsoleChannel, msg.c_str() );
 
 	LogPuts( gConsoleChannel, "--------------------------------------\n" );
-}
-
-
-void Console::Print( const char* format, ... )
-{
-	VSTRING( std::string buffer, format );
-	printf( buffer.c_str() );
 }
 
 

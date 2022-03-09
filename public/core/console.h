@@ -140,6 +140,7 @@ public:
 
 	const std::string&  GetValue(  );
 	float               GetFloat(  );
+	int                 GetInt(  );
 	bool                GetBool(  );  // is aValueFloat equal to 1.f?
 
 	// operators !!!!!!
@@ -304,6 +305,8 @@ protected:
 	std::string                         aTextBuffer;
 	StringList                          aAutoCompleteList;
 
+	void                                AddToCommandHistory( const std::string& srCmd );
+
 public:
 
 	/* Register all the ConCommands and ConVars created from static initialization.  */
@@ -324,17 +327,16 @@ public:
 
 	void                                PrintAllConVars(  );
 
-	void                                Print( const char* format, ... );
-
 	/* Add a command to the queue  */
-	void                                Add( const std::string& srCmd );
-	void                                AddSilent( const std::string& srCmd );
+	void                                QueueCommand( const std::string& srCmd );
+	void                                QueueCommandSilent( const std::string& srCmd );
 
 	/* Go through and run every command inputed into the console last frame  */
 	void                                Update(  );
 
 	/* Find and run a command instantly, returns true if a command was found  */
 	bool                                RunCommand( const std::string& command );
+	bool                                RunCommandF( const char* command, ... );
 
 	void                                ParseCommandLine( const std::string& command, std::string &name, std::vector< std::string > &args );
 

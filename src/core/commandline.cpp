@@ -12,6 +12,8 @@ extern "C"
 {
 	void DLL_EXPORT core_init( int argc, char *argv[], const char* gamePath )
 	{
+		sys_init();
+
 		cmdline = new CommandLine;
 		cmdline->Init( argc, argv );
 
@@ -21,7 +23,7 @@ extern "C"
 		console = new Console;
 
 		if ( filesys->Exists( "cfg/autoexec.cfg" ) )
-			console->Add( "exec autoexec" );
+			console->QueueCommand( "exec autoexec" );
 		
 		std::string execCfg;
 		while ( true )
@@ -31,7 +33,7 @@ extern "C"
 			if ( execCfg == "" )
 				break;
 
-			console->Add( "exec " + execCfg );
+			console->QueueCommand( "exec " + execCfg );
 		}
 	}
 }

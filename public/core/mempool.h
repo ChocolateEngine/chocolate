@@ -88,6 +88,10 @@ public:
      */
     void  Free( void* spPtr );
     /*
+     *    Clear all blocks of memory from the pool.
+     */
+    void  Clear();
+    /*
      *    Sets the step size of the memory pool for reallocations.
      *
      *    @param  size_t    The new step size.

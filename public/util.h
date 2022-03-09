@@ -94,9 +94,26 @@ constexpr size_t vec_index( const std::vector<T> &vec, T item, size_t fallback =
 
 
 template <class T>
-constexpr void vec_remove(std::vector<T> &vec, T item)
+constexpr void vec_remove( std::vector<T> &vec, T item )
 {
-	vec.erase(vec.begin() + vec_index(vec, item));
+	vec.erase( vec.begin() + vec_index( vec, item ) );
+}
+
+
+// Remove item if it exists
+template <class T>
+constexpr void vec_remove_if( std::vector<T> &vec, T item )
+{
+	size_t index = vec_index( vec, item );
+	if ( index != SIZE_MAX )
+		vec.erase( vec.begin() + index );
+}
+
+
+template <class T>
+constexpr void vec_remove_index( std::vector<T> &vec, size_t index )
+{
+	vec.erase( vec.begin() + index );
 }
 
 
@@ -135,16 +152,7 @@ std::string    CORE_API vstring( const char* format, va_list args );
 #define VSTRING( out, format ) \
 	va_list args; \
 	va_start( args, format ); \
-	out = vstring( format, args ); \
-	va_end( args )
-
-
-// don't pass `const char* out` for out when using this?
-// some dangling pointer warning idk
-#define VCSTRING( out, format ) \
-	va_list args; \
-	va_start( args, format ); \
-	out = vstring( format, args ).c_str(); \
+	vstring( out, format, args ); \
 	va_end( args )
 
 

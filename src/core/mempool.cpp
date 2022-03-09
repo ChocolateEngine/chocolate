@@ -225,6 +225,17 @@ void MemPool::Free( void* spPtr )
 }
 
 /*
+ *    Clear all blocks of memory from the pool.
+ */
+void MemPool::Clear()
+{
+    for ( MemChunk *p = apChunks; p != nullptr; p = p->apNext ) {
+        p->aFlags = Mem_Free;
+    }
+    LogDev( gMemPoolChannel, 3, "Freed all memory from pool\n" );
+}
+
+/*
  *    Sets the step size of the memory pool for reallocations.
  *
  *    @param  size_t    The new step size.

@@ -4,7 +4,7 @@
 #include <cstdlib>
 #include <ctime>
 
-LOG_REGISTER_CHANNEL( Graphics, LogColor::Blue );
+LOG_REGISTER_CHANNEL( Graphics, LogColor::Cyan );
 
 GraphicsSystem* graphics = new GraphicsSystem;
 

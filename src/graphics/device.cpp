@@ -3,7 +3,7 @@
 
 #include <set>
 
-LOG_REGISTER_CHANNEL( Device, LogColor::Cyan );
+LOG_REGISTER_CHANNEL( Device, LogColor::Blue );
 LOG_REGISTER_CHANNEL( Validation, LogColor::Blue );
 
 VKAPI_ATTR VkBool32 VKAPI_CALL Device::DebugCallback( VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, VkDebugUtilsMessageTypeFlagsEXT messageType,
@@ -12,6 +12,12 @@ VKAPI_ATTR VkBool32 VKAPI_CALL Device::DebugCallback( VkDebugUtilsMessageSeverit
 	static bool dumpVLayers = cmdline->Find( "-dump-vlayers" ) || cmdline->Find( "-vlayers" );
 	if ( dumpVLayers )
 	{
+		const Log* log = LogGetLastLog();
+
+		// blech
+		if ( log && log->aChannel != gValidationChannel )
+			LogEx( gValidationChannel, LogType::Raw, "\n" );
+		
 		LogMsg( gValidationChannel, "%s\n\n", pCallbackData->pMessage );
 	}
 

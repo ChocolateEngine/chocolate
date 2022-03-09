@@ -506,10 +506,7 @@ void AudioSystem::FreeSound( Handle sStream )
 	if ( stream == nullptr )
 		return;
 
-	if ( vec_contains( aStreamsPlaying, sStream ) )
-	{
-		vec_remove( aStreamsPlaying, sStream );
-	}
+	vec_remove_if( aStreamsPlaying, sStream );
 
 	aStreamPool.Free( stream->inBufferAudio );
 	aStreamPool.Free( stream->midBufferAudio );

@@ -383,15 +383,15 @@ void InitImageViews( ImageViews &srSwapChainImageViews )
 
 void InitRenderPass(  )
 {
-	VkAttachmentDescription 	colorAttachment 	= AttachmentDescription( PSWAPCHAIN.GetFormat(  ), VK_ATTACHMENT_LOAD_OP_CLEAR,
+	VkAttachmentDescription colorAttachment = AttachmentDescription( PSWAPCHAIN.GetFormat(  ), VK_ATTACHMENT_LOAD_OP_CLEAR,
 											 VK_ATTACHMENT_STORE_OP_STORE,
 											 VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, gpDevice->GetSamples(  ) );
 	
-	VkAttachmentDescription 	depthAttachment 	= AttachmentDescription( FindDepthFormat(  ), VK_ATTACHMENT_LOAD_OP_CLEAR,
+	VkAttachmentDescription depthAttachment = AttachmentDescription( FindDepthFormat(  ), VK_ATTACHMENT_LOAD_OP_CLEAR,
 											 VK_ATTACHMENT_STORE_OP_DONT_CARE, 
 											 VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, gpDevice->GetSamples(  ) );
 	
-	VkAttachmentDescription		colorAttachmentResolve 	= AttachmentDescription( PSWAPCHAIN.GetFormat(  ), VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+	VkAttachmentDescription colorAttachmentResolve = AttachmentDescription( PSWAPCHAIN.GetFormat(  ), VK_ATTACHMENT_LOAD_OP_DONT_CARE,
 											 VK_ATTACHMENT_STORE_OP_STORE,
 											 VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, VK_SAMPLE_COUNT_1_BIT );
 
@@ -444,10 +444,10 @@ VkDescriptorSetLayout InitDescriptorSetLayout( DescSetLayouts sBindings )
 	//if ( gDescriptorCache.Exists( info ) )
 	//        return gDescriptorCache.GetLayout(  );
 	
-        uint32_t 	        i = -1;
-	VkDescriptorSetLayout   layout;
+	uint32_t i = -1;
+	VkDescriptorSetLayout layout;
 	for ( auto&& binding : sBindings )
-	        binding.binding = ++i;
+		binding.binding = ++i;
 
 	VkDescriptorBindingFlagsEXT bindFlag = VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT_EXT | VK_DESCRIPTOR_BINDING_VARIABLE_DESCRIPTOR_COUNT_BIT_EXT;
 
@@ -469,40 +469,51 @@ VkDescriptorSetLayout InitDescriptorSetLayout( DescSetLayouts sBindings )
 	return layout;
 }
 /* A.  */
-VkDescriptorSetLayout InitDescriptorSetLayout( VkDescriptorSetLayoutBinding sBinding ) {
+VkDescriptorSetLayout InitDescriptorSetLayout( VkDescriptorSetLayoutBinding sBinding )
+{
 	VkDescriptorSetLayout layout;
-        sBinding.binding = 0;
+	sBinding.binding = 0;
 
 	VkDescriptorBindingFlagsEXT bindFlag = VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT_EXT | VK_DESCRIPTOR_BINDING_VARIABLE_DESCRIPTOR_COUNT_BIT_EXT;
 
 	VkDescriptorSetLayoutBindingFlagsCreateInfoEXT extend{};
-	extend.sType         = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO_EXT;
-	extend.pNext         = nullptr;
-	extend.bindingCount  = 1;
-	extend.pBindingFlags = &bindFlag;
+	extend.sType            = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO_EXT;
+	extend.pNext            = nullptr;
+	extend.bindingCount     = 1;
+	extend.pBindingFlags    = &bindFlag;
 
 	VkDescriptorSetLayoutCreateInfo layoutInfo{  };
-	layoutInfo.sType 			= VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-	layoutInfo.pNext                        = &extend;
-	layoutInfo.bindingCount 		= 1;
-	layoutInfo.pBindings 			= &sBinding;
+	layoutInfo.sType        = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+	layoutInfo.pNext        = &extend;
+	layoutInfo.bindingCount = 1;
+	layoutInfo.pBindings    = &sBinding;
+
 	if ( vkCreateDescriptorSetLayout( DEVICE, &layoutInfo, NULL, &layout ) != VK_SUCCESS )
 		throw std::runtime_error( "Failed to create descriptor set layout!" );
 	
 	return layout;
 }
+
 /* Creates graphics pipeline layouts using the specified descriptor set layouts.  */
 VkPipelineLayout InitPipelineLayouts( VkDescriptorSetLayout *spSetLayouts, uint32_t setLayoutsCount, uint32_t sPushExtent )
 {
-	VkPipelineLayout		pipelineLayout;
-	VkPipelineLayoutCreateInfo 	pipelineInfo = PipelineLayout( spSetLayouts, setLayoutsCount );
-	VkPushConstantRange		pushConstantRange = PushConstantRange( VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
-									       sPushExtent, 0 );
+	VkPipelineLayoutCreateInfo pipelineInfo {
+		.sType          = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
+		.setLayoutCount = setLayoutsCount,
+		.pSetLayouts    = spSetLayouts
+	};
 
-        pipelineInfo.pushConstantRangeCount 	= 1;
-	pipelineInfo.pPushConstantRanges 	= &pushConstantRange;
-        if ( vkCreatePipelineLayout( DEVICE, &pipelineInfo, NULL, &pipelineLayout ) != VK_SUCCESS )
-		throw std::runtime_error( "Failed to create pipeline layout!" );
+	VkPushConstantRange pushConstantRange {
+		.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
+		.offset     = 0,
+		.size       = sPushExtent
+	};
+
+	VkPipelineLayout pipelineLayout;
+	pipelineInfo.pushConstantRangeCount = 1;
+	pipelineInfo.pPushConstantRanges = &pushConstantRange;
+	
+	CheckVKResult( vkCreatePipelineLayout( DEVICE, &pipelineInfo, NULL, &pipelineLayout ), "Failed to create pipeline layout" );
 	return pipelineLayout;
 }
 
@@ -584,7 +595,7 @@ void InitImguiPool( SDL_Window *spWindow )
 	};
 	
 	VkDescriptorPoolCreateInfo 	poolInfo{  };
-        VkDescriptorPool 		imguiPool;
+	VkDescriptorPool 		imguiPool;
 	poolInfo.sType 		= VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
 	poolInfo.flags 		= VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
 	poolInfo.maxSets 	= 1000;
@@ -606,6 +617,7 @@ void InitImguiPool( SDL_Window *spWindow )
 	initInfo.MinImageCount 	= 3;
 	initInfo.ImageCount 	= 3;
 	initInfo.MSAASamples 	= gpDevice->GetSamples(  );
+	initInfo.CheckVkResultFn = CheckVKResult;
 
 	ImGui_ImplVulkan_Init( &initInfo, *gpRenderPass );
 	Submit( [ & ]( VkCommandBuffer c ){ ImGui_ImplVulkan_CreateFontsTexture( c ); } );

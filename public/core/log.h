@@ -5,11 +5,13 @@
 
 
 /* Colors!!! */
-enum class LogColor
+enum class LogColor: unsigned char
 {
 	Default,
 
 	Black,
+	White,
+
 	DarkBlue,
 	DarkGreen,
 	DarkCyan,
@@ -18,16 +20,16 @@ enum class LogColor
 	DarkYellow,
 	DarkGray,
 
-	Gray,
 	Blue,
 	Green,
 	Cyan,
 	Red,
 	Magenta,
 	Yellow,
-	White,
+	Gray,
 
-	Max = White,
+	Max = Gray,
+	Count,
 };
 
 
@@ -38,36 +40,65 @@ enum class LogType: unsigned char
 	Dev2,
 	Dev3,
 	Dev4,
-	Input,
-	Warning,
-	Error,
-	Fatal
+	Input,    // "] %s" - user console input
+	Raw,      // "%s" - kind of a hack for quick new line printing
+	Warning,  // "[Channel] [WARNING] "%s"
+	Error,    // "[Channel] [ERROR] %s"
+	Fatal     // "[Channel] a[FATAL] %s"
 };
 
 
 /* Manage Console Color */
-void     CORE_API LogSetColor( LogColor color );
-LogColor CORE_API LogGetColor();
+void                  CORE_API  LogSetColor( LogColor color );
+LogColor              CORE_API  LogGetColor();
+constexpr const char  CORE_API *LogColorToStr( LogColor color );
+
+
+constexpr LogColor LOG_COLOR_WARNING = LogColor::Yellow;
+constexpr LogColor LOG_COLOR_ERROR   = LogColor::Yellow;
 
 
 /* Channels!!! */
 struct LogChannel_t
 {
-	bool aShown;
-	std::string aName;
-	LogColor aColor;
+	bool            aShown;
+	std::string     aName;
+	LogColor        aColor;
 };
 
 using LogChannel = unsigned char;
 constexpr LogChannel INVALID_LOG_CHANNEL = 255;
 
 /* Register Log Channel */
-LogChannel CORE_API LogRegisterChannel( const char *sName, LogColor sColor = LogColor::Default );
+LogChannel                  CORE_API  LogRegisterChannel( const char *sName, LogColor sColor = LogColor::Default );
+LogChannel                  CORE_API  LogGetChannel( const char *sName );
+LogColor                    CORE_API  LogGetChannelColor( LogChannel handle );
+const std::string           CORE_API &LogGetChannelName( LogChannel handle );
+bool                        CORE_API  LogChannelIsShown( LogChannel handle );
+unsigned char               CORE_API  LogGetChannelCount();
+
+
+struct Log
+{
+	LogChannel      aChannel;
+	LogType         aType;
+	std::string     aMessage;
+	std::string     aFormatted;
+};
+
+const std::string           CORE_API &LogGetHistoryStr( int maxSize );
+const std::vector< Log >    CORE_API &LogGetLogHistory();
+const Log                   CORE_API *LogGetLastLog();
+
+
+/*ReBuildConsoleOutput*/
+typedef std::function< void(  ) > LogChannelShownCallbackF;
+
+void CORE_API LogAddChannelShownCallback( LogChannelShownCallbackF callback );
+
 
 #define LOG_REGISTER_CHANNEL( name, ... ) LogChannel g##name##Channel = LogRegisterChannel( #name, __VA_ARGS__ );
 #define LOG_CHANNEL( name ) extern LogChannel g##name##Channel;
-
-const std::string CORE_API &LogGetHistoryStr( int maxSize );
 
 /* Deprecated */
 void CORE_API Print( const char* str, ... );
@@ -78,8 +109,8 @@ void CORE_API Puts( const char* str );
 // Specify a custom channel.
 
 /* General Logging Function.  */
-void CORE_API Log(  LogChannel channel, LogType sLevel, const char *spBuf );
-void CORE_API LogF( LogChannel channel, LogType sLevel, const char *spFmt, ... );
+void CORE_API LogEx(  LogChannel channel, LogType sLevel, const char *spBuf );
+void CORE_API LogExF( LogChannel channel, LogType sLevel, const char *spFmt, ... );
 
 /* Lowest severity.  */
 void CORE_API LogMsg( LogChannel channel, const char *spFmt, ... );

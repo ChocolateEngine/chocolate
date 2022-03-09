@@ -1,7 +1,5 @@
 #ifdef _WIN32
 
-#include "core/platform.h"
-
 #include <stdio.h>
 #include <stdlib.h>
 //#include <string>
@@ -9,28 +7,71 @@
 #include <wtypes.h>  // HWND
 #include <libloaderapi.h>
 //#include <errhandlingapi.h>
+//#include <VersionHelpers.h>
 #include <winbase.h>  // FormatMessage
 
+#include "core/platform.h"
 
-// ooo yeah
-#ifdef _WIN32
-	#define LOAD_LIBRARY(path) LoadLibrary(path)
-	#define CLOSE_LIBRARY(handle) FreeLibrary(handle)
-	// #define GET_ERROR() GetLastError()
-	#define GET_ERROR() "*dies of cringe*"
-	#define LOAD_FUNC GetProcAddress
 
-#elif __linux__
-	#include <dlfcn.h>
+bool            gIsWindows10 = false;
+OSVERSIONINFOEX gOSVer{};
 
-	#define LOAD_LIBRARY(path) dlopen(path, RTLD_LAZY)
-	#define CLOSE_LIBRARY(handle) dlclose(handle)
-	#define GET_ERROR() dlerror()
-	#define LOAD_FUNC dlsym
+HANDLE gConOut = INVALID_HANDLE_VALUE;
+HANDLE gConIn  = INVALID_HANDLE_VALUE;
 
+
+// super based
+typedef void (WINAPI * RtlGetVersion_FUNC) (OSVERSIONINFOEXW *);
+
+BOOL win32_get_version( OSVERSIONINFOEX* os )
+{
+	HMODULE hMod;
+	RtlGetVersion_FUNC func;
+
+#ifdef UNICODE
+	OSVERSIONINFOEXW * osw = os;
 #else
-	#error "Library loading not setup for this platform"
+	OSVERSIONINFOEXW o;
+	OSVERSIONINFOEXW * osw = &o;
 #endif
+
+	hMod = LoadLibrary(TEXT("ntdll.dll"));
+
+	if (hMod)
+	{
+		func = (RtlGetVersion_FUNC)GetProcAddress(hMod, "RtlGetVersion");
+		if (func == 0) {
+			FreeLibrary(hMod);
+			return FALSE;
+		}
+		ZeroMemory(osw, sizeof (*osw));
+		osw->dwOSVersionInfoSize = sizeof (*osw);
+		func(osw);
+
+#ifndef UNICODE
+		os->dwBuildNumber = osw->dwBuildNumber;
+		os->dwMajorVersion = osw->dwMajorVersion;
+		os->dwMinorVersion = osw->dwMinorVersion;
+		os->dwPlatformId = osw->dwPlatformId;
+		os->dwOSVersionInfoSize = sizeof (*os);
+		DWORD sz = sizeof (os->szCSDVersion);
+		WCHAR * src = osw->szCSDVersion;
+		unsigned char * dtc = (unsigned char *)os->szCSDVersion;
+		while (*src)
+			*dtc++ = (unsigned char)* src++;
+		*dtc = '\0';
+#endif
+
+	}
+	else
+	{
+		fputs( "Platform: Failed to get ntdll.dll to check windows version\n", stdout );
+		return FALSE;
+	}
+
+	FreeLibrary(hMod);
+	return TRUE;
+}
 
 
 Module sys_load_library( const char* path )
@@ -107,11 +148,81 @@ void sys_sleep( float ms )
 	NtDelayExecution(false, &interval);
 }
 
-// very uh, windows only-ish i think
+
+bool win32_init_console( HANDLE conOut, HANDLE conIn )
+{
+	if ( !gIsWindows10 )
+		return false;
+
+	DWORD dwOriginalOutMode = 0;
+	DWORD dwOriginalInMode = 0;
+	if (!GetConsoleMode(conOut, &dwOriginalOutMode))
+	{
+		return false;
+	}
+	if (!GetConsoleMode(conIn, &dwOriginalInMode))
+	{
+		return false;
+	}
+
+	DWORD dwRequestedOutModes = 0;
+	DWORD dwRequestedInModes = ENABLE_WINDOW_INPUT | ENABLE_QUICK_EDIT_MODE | ENABLE_LINE_INPUT | ENABLE_ECHO_INPUT;
+
+	if ( gIsWindows10 )
+	{
+		dwRequestedOutModes |= ENABLE_VIRTUAL_TERMINAL_PROCESSING;
+		dwRequestedInModes |= ENABLE_VIRTUAL_TERMINAL_INPUT;
+	}
+
+	DWORD dwOutMode = dwOriginalOutMode | dwRequestedOutModes;
+	if (!SetConsoleMode(conOut, dwOutMode))
+	{
+		// we failed to set both modes, try to step down mode gracefully.
+#if 0
+		dwRequestedOutModes = ENABLE_VIRTUAL_TERMINAL_PROCESSING;
+		dwOutMode = dwOriginalOutMode | dwRequestedOutModes;
+		if (!SetConsoleMode(conOut, dwOutMode))
+#endif
+		{
+			// Failed to set any VT mode, can't do anything here.
+			return false;
+		}
+	}
+
+	DWORD dwInMode = dwOriginalInMode | dwRequestedInModes;
+	if (!SetConsoleMode(conIn, dwInMode))
+	{
+		// Failed to set VT input mode, can't do anything here.
+		return false;
+	}
+
+	return true;
+}
+
+
+// should probably use AllocConsole later, idk
+// on linux though, idk
 void* sys_get_console_window()
 {
-	// idk what this is actually doing lmao
-	return GetStdHandle( -11 );
+	return gConOut;
+}
+
+
+int sys_allow_console_input()
+{
+	if ( gConOut == INVALID_HANDLE_VALUE )
+		return false;
+
+
+
+	
+
+
+
+
+	//SetConsoleMode( con, );
+
+	return true;
 }
 
 
@@ -121,6 +232,36 @@ void sys_wait_for_debugger()
 		::Sleep( 100 ); // to avoid 100% CPU load
 
 	DebugBreak();
+}
+
+
+void sys_init()
+{
+	// detect windows version
+	BOOL ret = win32_get_version( &gOSVer );
+
+	gIsWindows10 = gOSVer.dwMajorVersion >= 10;
+
+	// Init Console
+
+	// Set output mode to handle virtual terminal sequences
+	{
+		gConOut = GetStdHandle( STD_OUTPUT_HANDLE );
+		if ( gConOut == INVALID_HANDLE_VALUE )
+		{
+			sys_print_last_error( "Failed to get stdout console\n" );
+			return;
+		}
+		gConIn = GetStdHandle( STD_INPUT_HANDLE );
+		if ( gConIn == INVALID_HANDLE_VALUE )
+		{
+			sys_print_last_error( "Failed to get stdin console\n" );
+			return;
+		}
+
+		if ( !win32_init_console( gConOut, gConIn ) )
+			sys_print_last_error( "Failed to Init System Console\n" );
+	}
 }
 
 

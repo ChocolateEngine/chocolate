@@ -30,7 +30,7 @@ draw to the screen.
 
 #include "filemonitor.h"
 
-#include "gui.h"
+#include "gui/gui.h"
 #define SPRITE_SUPPORTED 0
 
 #define SWAPCHAIN gpDevice->GetSwapChain(  )

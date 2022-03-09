@@ -166,7 +166,7 @@ bool CheckEnterPress( char* buf, Console* console, int& lastCommandIndex, int& d
 
 	if ( isPressed )
 	{
-		console->Add( buf );
+		console->QueueCommand( buf );
 		snprintf( buf, 256, "" );
 		console->SetTextBuffer( buf );
 		ImGui::SetKeyboardFocusHere(  );
