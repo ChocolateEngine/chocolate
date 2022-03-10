@@ -57,12 +57,12 @@ public:
 
 	Transform                   aTransform;
 
-	constexpr inline uint32_t GetRenderableCount() override
+	inline uint32_t GetRenderableCount() override
 	{
 		return aMeshes.size();
 	}
 
-	constexpr inline BaseRenderable* GetRenderable( uint32_t index ) override
+	inline BaseRenderable* GetRenderable( uint32_t index ) override
 	{
 		return aMeshes[index];
 	}

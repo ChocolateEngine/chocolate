@@ -24,3 +24,5 @@ public:
 
     constexpr VkDescriptorPool GetHandle() { return aDescriptorPool; };
 };
+
+DescriptorManager &GetDescriptorManager();

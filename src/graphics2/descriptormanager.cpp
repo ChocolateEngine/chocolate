@@ -92,3 +92,10 @@ bool DescriptorManager::UpdateImage( Handle shImage )
         vkUpdateDescriptorSets( GetLogicDevice(), 1, &writeDescriptor, 0, nullptr );
     }
 }
+
+DescriptorManager &GetDescriptorManager()
+{
+    static DescriptorManager aDescriptorManager( 1024, 0 );
+    
+    return aDescriptorManager;
+}

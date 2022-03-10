@@ -37,7 +37,7 @@ constexpr char const *VKString( VkResult sResult ) {
             return "Unknown VkResult";
     }
 }
-#if 0
+
 void CheckVKResult( VkResult sResult ) {
     if ( sResult == VK_SUCCESS )
         return;
@@ -48,7 +48,6 @@ void CheckVKResult( VkResult sResult ) {
     SDL_ShowSimpleMessageBox( SDL_MESSAGEBOX_ERROR, "Vulkan Error", pBuf, nullptr );
     throw std::runtime_error( pBuf );
 }
-#endif
 
 constexpr void CheckVKResult( VkResult sResult, char const *spMsg ) {
     if ( sResult == VK_SUCCESS )
