@@ -125,7 +125,7 @@ void Renderer::InitCommandBuffers(  )
 		{
 			for ( auto& renderable : renderList )
 			{
-				Material* mat = (Material*)renderable->apMaterial;
+				Material* mat = (Material*)renderable->GetMaterial();
 				mat->apShader->UpdateBuffers( i, renderable );
 			}
 		}
@@ -224,10 +224,59 @@ void Renderer::DestroySwapChain(  )
 }
 
 
-bool Renderer::LoadModel( Model* sModel, const String &srPath )
+bool LoadBaseMeshes( Model* sModel, const std::string& srPath, std::vector< MeshPtr* >& meshPtrs )
+{
+	std::vector< IMesh* > meshes;
+
+	if ( srPath.substr(srPath.size() - 4) == ".obj" )
+	{
+		LoadObj( srPath, meshes );
+	}
+	else if ( srPath.substr(srPath.size() - 4) == ".glb" || srPath.substr(srPath.size() - 5) == ".gltf" )
+	{
+		LogDev( 1, "[Renderer] GLTF currently not supported, on TODO list\n" );
+		return false;
+	}
+
+	// TODO: load in an error model here somehow?
+	if (meshes.empty())
+		return false;
+
+	for (std::size_t i = 0; i < meshes.size(); ++i)
+	{
+		IMesh* mesh = meshes[i];
+
+		matsys->CreateVertexBuffer( mesh );
+
+		// if the vertex count is different than the index count, use the index buffer
+		if ( mesh->GetVertices().size() != mesh->GetIndices().size() )
+			matsys->CreateIndexBuffer( mesh );
+
+		//mesh->aRadius = glm::distance( mesh->aMinSize, mesh->aMaxSize ) / 2.0f;
+
+#if 0
+		sModel->aVertices.insert( sModel->aVertices.end(), mesh->aVertices.begin(), mesh->aVertices.end() );
+
+		size_t indCount = sModel->aIndices.size();
+		for ( uint32_t ind: mesh->aIndices )
+			sModel->aIndices.push_back( ind + indCount );
+#endif
+
+		MeshPtr* meshptr = new MeshPtr;
+		meshptr->apMesh = mesh;
+		meshptr->apModel = sModel;
+		meshPtrs.emplace_back( meshptr );
+
+		matsys->MeshInit( sModel->aMeshes[i] );
+	}
+
+	return true;
+}
+
+
+bool Renderer::LoadModel( Model* sModel, const std::string &srPath )
 {
 	sModel->aPath = srPath;
-	std::vector< Mesh* > meshes;
 
 	Model* dupeModel = nullptr;
 
@@ -243,57 +292,26 @@ bool Renderer::LoadModel( Model* sModel, const String &srPath )
 
 	if ( dupeModel )  // copy over stuf from the other loaded model
 	{
-		meshes.resize( dupeModel->aMeshes.size() );
+		sModel->aMeshes.resize( dupeModel->aMeshes.size() );
 
-		for (std::size_t i = 0; i < meshes.size(); ++i)
+		for (std::size_t i = 0; i < sModel->aMeshes.size(); ++i)
 		{
-			meshes[i] = new Mesh;
-			meshes[i]->apModel = sModel;
-			matsys->RegisterRenderable( meshes[i] );
-			meshes[i]->apMaterial = dupeModel->aMeshes[i]->apMaterial;
-			matsys->MeshInit( meshes[i] );
-			meshes[i]->aIndices = dupeModel->aMeshes[i]->aIndices;
-			meshes[i]->aVertices = dupeModel->aMeshes[i]->aVertices;
+			sModel->aMeshes[i] = new MeshPtr;
+			sModel->aMeshes[i]->apModel = sModel;
+			sModel->aMeshes[i]->apMesh = dupeModel->aMeshes[i];
+
+			matsys->RegisterRenderable( sModel->aMeshes[i] );
+			matsys->MeshInit( sModel->aMeshes[i] );
 		}
 	}
 	else  // we haven't loaded this model yet
 	{
-		if ( srPath.substr(srPath.size() - 4) == ".obj" )
-		{
-			LoadObj( srPath, meshes );
-		}
-		else if ( srPath.substr(srPath.size() - 4) == ".glb" || srPath.substr(srPath.size() - 5) == ".gltf" )
-		{
-			LogDev( 1, "[Renderer] GLTF currently not supported, on TODO list\n" );
-			return false;
-		}
+		LoadBaseMeshes( sModel, srPath, sModel->aMeshes );
 	}
 
 	// TODO: load in an error model here somehow?
-	if (meshes.empty())
+	if ( sModel->aMeshes.empty() )
 		return false;
-
-	for (std::size_t i = 0; i < meshes.size(); ++i)
-	{
-		Mesh* mesh = meshes[i];
-		mesh->apModel = sModel;
-
-		matsys->CreateVertexBuffer( mesh );
-
-		// if the vertex count is different than the index count, use the index buffer
-		if ( mesh->aVertices.size() != mesh->aIndices.size() )
-			matsys->CreateIndexBuffer( mesh );
-
-		//mesh->aRadius = glm::distance( mesh->aMinSize, mesh->aMaxSize ) / 2.0f;
-
-		sModel->aMeshes.push_back( mesh );
-
-		sModel->aVertices.insert( sModel->aVertices.end(), mesh->aVertices.begin(), mesh->aVertices.end() );
-
-		size_t indCount = sModel->aIndices.size();
-		for ( uint32_t ind: mesh->aIndices )
-			sModel->aIndices.push_back( ind + indCount );
-	}
 
 	aModels.push_back( sModel );
 	return true;
@@ -301,11 +319,11 @@ bool Renderer::LoadModel( Model* sModel, const String &srPath )
 
 bool Renderer::LoadSprite( Sprite &srSprite, const String &srSpritePath )
 {
-	srSprite.apMaterial = matsys->CreateMaterial();
-	srSprite.apMaterial->SetShader( "basic_2d" );
-	srSprite.apMaterial->SetVar( "diffuse", matsys->CreateTexture( srSpritePath ) );
+	srSprite.SetMaterial( matsys->CreateMaterial() );
+	srSprite.GetMaterial()->SetShader("basic_2d");
+	srSprite.GetMaterial()->SetVar( "diffuse", matsys->CreateTexture( srSpritePath ) );
 
-	srSprite.aVertices =
+	std::vector< vertex_2d_t > aVertices =
 	{
 		{{-1 * ( srSprite.aWidth / 2.0f ), -1 * ( srSprite.aHeight / 2.0f )}, {1.0f, 0.0f, 0.0f}, {1.0f, 0.0f}},
 		{{( srSprite.aWidth / 2.0f ), -1 * ( srSprite.aHeight / 2.0f )}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f}},
@@ -313,7 +331,11 @@ bool Renderer::LoadSprite( Sprite &srSprite, const String &srSpritePath )
 		{{-1 * ( srSprite.aWidth / 2.0f ), ( srSprite.aHeight / 2.0f )}, {1.0f, 1.0f, 1.0f}, {1.0f, 1.0f}}
 	};
 
-	srSprite.aIndices = { 0, 1, 2, 2, 3, 0 };
+	std::vector< uint32_t > aIndices = {0, 1, 2, 2, 3, 0};
+
+	// blech
+	srSprite.GetVertices() = aVertices;
+	srSprite.GetIndices()  = aIndices;
 
 	matsys->CreateVertexBuffer( &srSprite );
 	matsys->CreateIndexBuffer( &srSprite );

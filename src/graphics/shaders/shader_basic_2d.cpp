@@ -219,17 +219,18 @@ void Basic2D::Draw( BaseRenderable* renderable, VkCommandBuffer c, uint32_t comm
 	Sprite* sprite = dynamic_cast<Sprite*>(renderable);
 	assert( sprite != nullptr );
 
-	int diffuse = matsys->GetTextureId( sprite->apMaterial->GetTexture( "diffuse" ) );
+	int diffuse = matsys->GetTextureId( sprite->GetMaterial()->GetTexture("diffuse"));
 
-	VkBuffer 	vBuffers[  ] 	= { renderable->aVertexBuffer };
+	VkBuffer 	vBuffers[  ] 	= { renderable->GetVertexBuffer()};
 	VkDeviceSize 	offsets[  ] 	= { 0 };
 	VkDescriptorSet sets[  ] = { matsys->aImageSets[ commandBufferIndex ] };
 
 	vkCmdBindPipeline( c, VK_PIPELINE_BIND_POINT_GRAPHICS, aPipeline );
 	vkCmdBindVertexBuffers( c, 0, 1, vBuffers, offsets );
 
-	if ( renderable->aIndexBuffer )
-		vkCmdBindIndexBuffer( c, renderable->aIndexBuffer, 0, VK_INDEX_TYPE_UINT32 );
+	VkBuffer indexBuffer = renderable->GetIndexBuffer();
+	if ( indexBuffer )
+		vkCmdBindIndexBuffer( c, indexBuffer, 0, VK_INDEX_TYPE_UINT32 );
 
 	vkCmdBindDescriptorSets( c, VK_PIPELINE_BIND_POINT_GRAPHICS, aPipelineLayout, 0, 1, sets, 0, NULL );
 
@@ -247,10 +248,10 @@ void Basic2D::Draw( BaseRenderable* renderable, VkCommandBuffer c, uint32_t comm
 		&push
 	);
 
-	if ( sprite->aIndexBuffer )
-		vkCmdDrawIndexed( c, (uint32_t)sprite->aIndices.size(), 1, 0, 0, 0 );
+	if ( indexBuffer )
+		vkCmdDrawIndexed( c, (uint32_t)sprite->GetIndices().size(), 1, 0, 0, 0);
 	else
-		vkCmdDraw( c, (uint32_t)sprite->aVertices.size(), 1, 0, 0 );
+		vkCmdDraw( c, (uint32_t)sprite->GetVertices().size(), 1, 0, 0 );
 
-	gVertsDrawn += sprite->aVertices.size();
+	gVertsDrawn += sprite->GetVertices().size();
 }

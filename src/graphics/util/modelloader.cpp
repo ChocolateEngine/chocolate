@@ -29,7 +29,7 @@ std::string GetBaseDir( const std::string &srPath )
 
 
 // TODO: use std::filesystem::path
-void LoadObj( const std::string &srPath, std::vector<Mesh*> &meshes )
+void LoadObj( const std::string &srPath, std::vector<IMesh*> &meshes )
 {
 	auto startTime = std::chrono::high_resolution_clock::now(  );
 
@@ -63,7 +63,7 @@ void LoadObj( const std::string &srPath, std::vector<Mesh*> &meshes )
 	{
 		meshes[i] = new Mesh;
 		matsys->RegisterRenderable( meshes[i] );
-		meshes[i]->apMaterial = nullptr;
+		meshes[i]->SetMaterial( nullptr );
 	}
 
 	assert(objMaterials.size() > 0);
@@ -103,7 +103,7 @@ void LoadObj( const std::string &srPath, std::vector<Mesh*> &meshes )
 			SetTexture( "emissive", objMaterial.emissive_texname );
 		}
 
-		meshes[i]->apMaterial = material;
+		meshes[i]->SetMaterial( material );
 		
 		matsys->MeshInit( meshes[i] );
 	}
@@ -127,7 +127,7 @@ void LoadObj( const std::string &srPath, std::vector<Mesh*> &meshes )
 			const std::size_t materialIndex = objShapes[shapeIndex].mesh.material_ids[faceIndex] < 0 ? objMaterials.size() - 1 : objShapes[shapeIndex].mesh.material_ids[faceIndex];
 			assert(materialIndex < objMaterials.size());
 
-			Mesh& mesh = *meshes[materialIndex];
+			IMesh& mesh = *meshes[materialIndex];
 
 			struct tinyobj_vec2 { tinyobj::real_t x, y; };
 			struct tinyobj_vec3 { tinyobj::real_t x, y, z; };
@@ -165,8 +165,8 @@ void LoadObj( const std::string &srPath, std::vector<Mesh*> &meshes )
 				#undef ToVec3
 
 				bool uniqueVertex = true;
-				uint32_t newIndex = static_cast<uint32_t>(mesh.aVertices.size());
-				assert(mesh.aVertices.size() < std::numeric_limits<uint32_t>::max());
+				uint32_t newIndex = static_cast<uint32_t>(mesh.GetVertices().size());
+				assert(mesh.GetVertices().size() < std::numeric_limits<uint32_t>::max());
 
 				auto iterSavedIndex = vertIndexes.find(vert);
 
@@ -179,13 +179,13 @@ void LoadObj( const std::string &srPath, std::vector<Mesh*> &meshes )
 
 				if ( uniqueVertex )
 				{
-					mesh.aVertices.push_back( vert );
+					mesh.GetVertices().push_back( vert );
 					//mesh.aMinSize = glm::min( pos, mesh.aMinSize );
 					//mesh.aMaxSize = glm::max( pos, mesh.aMaxSize );
 				}
 
 				vertIndexes[ vert ] = newIndex;
-				mesh.aIndices.emplace_back(newIndex);
+				mesh.GetIndices().emplace_back(newIndex);
 			}
 
 			indexOffset += faceVertexCount;
@@ -199,7 +199,7 @@ void LoadObj( const std::string &srPath, std::vector<Mesh*> &meshes )
 }
 
 
-void LoadGltf( const std::string &srPath, std::vector<Mesh*> &meshes )
+void LoadGltf( const std::string &srPath, std::vector<IMesh*> &meshes )
 {
 }
 

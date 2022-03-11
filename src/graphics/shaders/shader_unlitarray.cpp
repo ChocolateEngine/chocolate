@@ -244,20 +244,21 @@ void ShaderUnlitArray::Draw( BaseRenderable* renderable, VkCommandBuffer c, uint
 
 	assert(mesh != nullptr);
 
-	int diffuse = matsys->GetTextureId( mesh->apMaterial->GetTexture( "diffuse" ) );
+	int diffuse = matsys->GetTextureId( mesh->GetMaterial()->GetTexture("diffuse"));
 
 	// Bind the mesh's vertex and index buffers
-	VkBuffer 	vBuffers[  ] 	= { mesh->aVertexBuffer };
+	VkBuffer 	vBuffers[  ] 	= { mesh->GetVertexBuffer()};
 	VkDeviceSize 	offsets[  ] 	= { 0 };
 	vkCmdBindVertexBuffers( c, 0, 1, vBuffers, offsets );
 
-	if ( mesh->aIndexBuffer )
-		vkCmdBindIndexBuffer( c, mesh->aIndexBuffer, 0, VK_INDEX_TYPE_UINT32 );
+	VkBuffer indexBuffer = mesh->GetIndexBuffer();
+	if ( indexBuffer )
+		vkCmdBindIndexBuffer( c, indexBuffer, 0, VK_INDEX_TYPE_UINT32 );
 
 	// Now draw it
 	vkCmdBindPipeline( c, VK_PIPELINE_BIND_POINT_GRAPHICS, aPipeline );
 
-    int a = mesh->apMaterial->GetInt( "frame" );
+    int a = mesh->GetMaterial()->GetInt("frame");
 	
 	UnlitArrayPushConstant p = {renderer->aView.projViewMatrix * mesh->GetModelMatrix(), diffuse, a };
 
@@ -272,11 +273,11 @@ void ShaderUnlitArray::Draw( BaseRenderable* renderable, VkCommandBuffer c, uint
 
 	vkCmdBindDescriptorSets( c, VK_PIPELINE_BIND_POINT_GRAPHICS, aPipelineLayout, 0, 1, sets, 0, NULL );
 
-	if ( mesh->aIndexBuffer )
-		vkCmdDrawIndexed( c, (uint32_t)mesh->aIndices.size(), 1, 0, 0, 0 );
+	if ( indexBuffer )
+		vkCmdDrawIndexed( c, (uint32_t)mesh->GetIndices().size(), 1, 0, 0, 0);
 	else
-		vkCmdDraw( c, (uint32_t)mesh->aVertices.size(), 1, 0, 0 );
+		vkCmdDraw( c, (uint32_t)mesh->GetVertices().size(), 1, 0, 0);
 
 	gModelDrawCalls++;
-	gVertsDrawn += mesh->aVertices.size();
+	gVertsDrawn += mesh->GetVertices().size();
 }

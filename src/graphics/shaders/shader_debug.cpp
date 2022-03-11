@@ -211,12 +211,12 @@ void ShaderDebug::Draw( BaseRenderable* renderable, VkCommandBuffer c, uint32_t 
 	assert(mesh != nullptr);
 
 	// Bind the mesh's vertex buffer
-	VkBuffer 	vBuffers[  ] 	= { mesh->aVertexBuffer };
+	VkBuffer 	vBuffers[  ] 	= { mesh->GetVertexBuffer() };
 	VkDeviceSize 	offsets[  ] 	= { 0 };
 	vkCmdBindVertexBuffers( c, 0, 1, vBuffers, offsets );
 
-	vkCmdDraw( c, (uint32_t)mesh->aVertices.size(), 1, 0, 0 );
+	vkCmdDraw( c, (uint32_t)mesh->GetVertices().size(), 1, 0, 0);
 
 	gModelDrawCalls++;
-	gVertsDrawn += mesh->aVertices.size();
+	gVertsDrawn += mesh->GetVertices().size();
 }

@@ -16,8 +16,24 @@ Provides a public interface to the materialsystem so that the game can use this
 class BaseRenderable
 {
 public:
-	virtual ~BaseRenderable() = default;
+	virtual                        ~BaseRenderable() = default;
 
+	virtual size_t                  GetID(  ) { return (size_t)this; }
+
+	virtual VkBuffer&               GetVertexBuffer() = 0;
+	virtual VkBuffer&               GetIndexBuffer() = 0;
+
+	virtual VkDeviceMemory&         GetVertexBufferMem() = 0;
+	virtual VkDeviceMemory&         GetIndexBufferMem() = 0;
+
+	virtual IMaterial*              GetMaterial() = 0;
+	virtual void                    SetMaterial( IMaterial* mat ) = 0;
+
+	virtual void                    SetShader( const char* name ) = 0;
+	
+	virtual const std::vector< uint32_t >& GetIndices() = 0;
+
+#if 0
 	// this stuff will only be on the client (Meshes on the server won't inherit this probably? idk),
 	// so i can just use the address of the "this" pointer for it
 	constexpr inline size_t         GetID(  ) { return (size_t)this; }
@@ -25,7 +41,7 @@ public:
 	IMaterial*                      apMaterial = nullptr;
 
 	// Set the shader for the material by the shader name
-	inline void                     SetShader( const char* name ) { if ( apMaterial ) apMaterial->SetShader( name ); };
+	// inline void                     SetShader( const char* name ) { if ( apMaterial ) apMaterial->SetShader( name ); };
 
 	// TODO: remove this from BaseRenderable, really shouldn't have this,
 	// gonna have to have some base types for this so game can use this
@@ -37,6 +53,7 @@ public:
 
 	//std::vector< VERT_TYPE >        aVertices;
 	std::vector< uint32_t >         aIndices;
+#endif
 };
 
 

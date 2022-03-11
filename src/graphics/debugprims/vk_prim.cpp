@@ -30,12 +30,12 @@ void VulkanPrimitiveMaterials::ResetMesh()
 		return;
 
 	aFinalMesh = new PrimitiveMesh;
-	aFinalMesh->apMaterial = apMaterial;
+	aFinalMesh->SetMaterial( apMaterial );
 }
 
 void VulkanPrimitiveMaterials::PrepareMeshForDraw()
 {
-	if ( !g_debug_draw || (aFinalMesh && aFinalMesh->aVertices.empty()) )
+	if ( !g_debug_draw || (aFinalMesh && aFinalMesh->GetVertices().empty()) )
 		return;
 
 	matsys->CreateVertexBuffer( aFinalMesh );
@@ -47,11 +47,11 @@ void VulkanPrimitiveMaterials::InitLine( const glm::vec3& sX, const glm::vec3& s
 	if ( !g_debug_draw || !aFinalMesh )
 		return;
 
-	aFinalMesh->aVertices.resize( aFinalMesh->aVertices.size() + 2 );
+	aFinalMesh->GetVertices().resize( aFinalMesh->GetVertices().size() + 2 );
 
-	size_t size = aFinalMesh->aVertices.size();
-	aFinalMesh->aVertices[size-2] = {sX, sColor};
-	aFinalMesh->aVertices[size-1] = {sY, sColor};
+	size_t size = aFinalMesh->GetVertices().size();
+	aFinalMesh->GetVertices()[size-2] = {sX, sColor};
+	aFinalMesh->GetVertices()[size-1] = {sY, sColor};
 }
 
 void VulkanPrimitiveMaterials::Init()

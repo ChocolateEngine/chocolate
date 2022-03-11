@@ -328,10 +328,10 @@ int MaterialSystem::GetTextureId( Texture *spTexture )
 void MaterialSystem::CreateVertexBuffer( BaseRenderable* itemBase )
 {
 	if ( IMesh* item = dynamic_cast<IMesh*>(itemBase) )
-		InitTexBuffer( item->aVertices, item->aVertexBuffer, item->aVertexBufferMem, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT );
+		InitTexBuffer( item->GetVertices(), item->GetVertexBuffer(), item->GetVertexBufferMem(), VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
 	
-	else if ( Sprite* item = dynamic_cast<Sprite*>(itemBase) )
-		InitTexBuffer( item->aVertices, item->aVertexBuffer, item->aVertexBufferMem, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT );
+	//else if ( Sprite* item = dynamic_cast<Sprite*>(itemBase) )
+	//	InitTexBuffer( item->GetVertices(), item->GetVertexBuffer(), item->GetVertexBufferMem(), VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
 
 	// just fucking exit
 	else throw std::runtime_error( "[MaterialSystem::CreateVertexBuffer] oh god oh fuck how the fuck do i design this properly\n  JUST USE IMesh or Sprite AAAAA\n" );
@@ -340,28 +340,28 @@ void MaterialSystem::CreateVertexBuffer( BaseRenderable* itemBase )
 
 void MaterialSystem::CreateIndexBuffer( BaseRenderable* item )
 {
-	if ( item->aIndices.size() > 0 )
-		InitTexBuffer( item->aIndices, item->aIndexBuffer, item->aIndexBufferMem, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT );
+	if ( item->GetIndices().size() > 0 )
+		InitTexBuffer( item->GetIndices(), item->GetIndexBuffer(), item->GetIndexBufferMem(), VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT);
 }
 
 
 void MaterialSystem::FreeVertexBuffer( BaseRenderable* item )
 {
-	vkDestroyBuffer( DEVICE, item->aVertexBuffer, NULL );
-	vkFreeMemory( DEVICE, item->aVertexBufferMem, NULL );
+	vkDestroyBuffer( DEVICE, item->GetVertexBuffer(), NULL);
+	vkFreeMemory( DEVICE, item->GetVertexBufferMem(), NULL);
 
-	item->aVertexBuffer = nullptr;
-	item->aVertexBufferMem = nullptr;
+	item->GetVertexBuffer() = nullptr;
+	item->GetVertexBufferMem() = nullptr;
 }
 
 
 void MaterialSystem::FreeIndexBuffer( BaseRenderable* item )
 {
-	vkDestroyBuffer( DEVICE, item->aIndexBuffer, NULL );
-	vkFreeMemory( DEVICE, item->aIndexBufferMem, NULL );
+	vkDestroyBuffer( DEVICE, item->GetIndexBuffer(), NULL);
+	vkFreeMemory( DEVICE, item->GetIndexBufferMem(), NULL);
 
-	item->aIndexBuffer = nullptr;
-	item->aIndexBufferMem = nullptr;
+	item->GetIndexBuffer() = nullptr;
+	item->GetIndexBufferMem() = nullptr;
 }
 
 
@@ -397,10 +397,10 @@ BaseShader* MaterialSystem::GetShader( const std::string& name )
 
 void MaterialSystem::InitUniformBuffer( IMesh* mesh )
 {
-	if ( !mesh->apMaterial )
+	if ( !mesh->GetMaterial() )
 		return;
 
-	Material* mat = (Material*)mesh->apMaterial;
+	Material* mat = (Material*)mesh->GetMaterial();
 
 	if ( !mat->apShader->UsesUniformBuffers() )
 		return;
@@ -423,7 +423,7 @@ void MaterialSystem::AddRenderable( BaseRenderable* renderable )
 	if ( !renderable )
 		return;
 
-	Material* mat = (Material*)renderable->apMaterial;
+	Material* mat = (Material*)renderable->GetMaterial();
 
 	if ( !mat )
 	{
@@ -466,7 +466,7 @@ constexpr size_t MaterialSystem::GetRenderableID( BaseRenderable* renderable )
 
 void MaterialSystem::DrawRenderable( BaseRenderable* renderable, VkCommandBuffer c, uint32_t commandBufferIndex )
 {
-	Material* mat = (Material*)renderable->apMaterial;
+	Material* mat = (Material*)renderable->GetMaterial();
 	if ( !mat )
 		return;
 
@@ -482,7 +482,7 @@ void MaterialSystem::DestroyRenderable( BaseRenderable* renderable )
 
 	FreeVertexBuffer( renderable );
 
-	if ( renderable->aIndexBuffer )
+	if ( renderable->GetIndexBuffer() )
 		FreeIndexBuffer( renderable );
 }
 

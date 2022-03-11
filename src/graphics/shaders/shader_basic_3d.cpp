@@ -255,7 +255,7 @@ void Basic3D::UpdateBuffers( uint32_t sCurrentImage, BaseRenderable* spRenderabl
 {
 	Basic3D_UBO ubo { };
 
-	auto mat = (Material*)spRenderable->apMaterial;
+	auto mat = (Material*)spRenderable->GetMaterial();
 
 	ubo.diffuse         = mat->GetTextureId( "diffuse" );
 	ubo.emissive        = mat->GetTextureId( "emissive", gFallbackEmissive );
@@ -291,12 +291,13 @@ void Basic3D::Draw( BaseRenderable* renderable, VkCommandBuffer c, uint32_t i )
 	IMesh* mesh = static_cast<IMesh*>(renderable);
 
 	// Bind the mesh's vertex and index buffers
-	VkBuffer 	vBuffers[  ] 	= { mesh->aVertexBuffer };
+	VkBuffer 	vBuffers[  ] 	= { mesh->GetVertexBuffer()};
 	VkDeviceSize 	offsets[  ] 	= { 0 };
 	vkCmdBindVertexBuffers( c, 0, 1, vBuffers, offsets );
 
-	if ( mesh->aIndexBuffer )
-		vkCmdBindIndexBuffer( c, mesh->aIndexBuffer, 0, VK_INDEX_TYPE_UINT32 );
+	VkBuffer indexBuffer = mesh->GetIndexBuffer();
+	if ( indexBuffer )
+		vkCmdBindIndexBuffer( c, indexBuffer, 0, VK_INDEX_TYPE_UINT32 );
 
 	Basic3D_PushConst p = {renderer->aView.projViewMatrix, mesh->GetModelMatrix()};
 
@@ -315,12 +316,12 @@ void Basic3D::Draw( BaseRenderable* renderable, VkCommandBuffer c, uint32_t i )
 
 	vkCmdBindDescriptorSets( c, VK_PIPELINE_BIND_POINT_GRAPHICS, aPipelineLayout, 0, 2, sets, 0, NULL );
 
-	if ( mesh->aIndexBuffer )
-		vkCmdDrawIndexed( c, (uint32_t)mesh->aIndices.size(), 1, 0, 0, 0 );
+	if ( indexBuffer )
+		vkCmdDrawIndexed( c, (uint32_t)mesh->GetIndices().size(), 1, 0, 0, 0);
 	else
-		vkCmdDraw( c, (uint32_t)mesh->aVertices.size(), 1, 0, 0 );
+		vkCmdDraw( c, (uint32_t)mesh->GetVertices().size(), 1, 0, 0);
 
 	gModelDrawCalls++;
-	gVertsDrawn += mesh->aVertices.size();
+	gVertsDrawn += mesh->GetVertices().size();
 }
 
