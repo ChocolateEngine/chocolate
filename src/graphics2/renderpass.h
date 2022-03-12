@@ -38,10 +38,10 @@ public:
                 RenderPassStage                               sStage );
     ~RenderPass();
 
-    constexpr VkRenderPass    &GetRenderPass() { return aRenderPass; }
-    constexpr RenderPassStage &GetStage()      { return aStage;      }
+    const constexpr VkRenderPass     GetRenderPass() { return aRenderPass; }
+    const constexpr RenderPassStage &GetStage()      { return aStage;      }
 };
 
-const std::vector< RenderPass > &GetRenderPasses();
+std::vector< RenderPass* > &GetRenderPasses();
 
-VkRenderPass                    &GetRenderPass( RenderPassStage sStage );
+VkRenderPass                GetRenderPass( RenderPassStage sStage );

@@ -49,9 +49,12 @@ RenderPass::~RenderPass()
     vkDestroyRenderPass( GetLogicDevice(), aRenderPass, nullptr );
 }
 
-const std::vector< RenderPass > &GetRenderPasses()
+std::vector< RenderPass* > &GetRenderPasses()
 {
-    static std::vector< RenderPass > renderPasses;
+    static std::vector< RenderPass* > renderPasses;
+
+    if ( renderPasses.size() )
+        return renderPasses;
 
     /*
      *    Create the default color and depth render pass.
@@ -121,18 +124,24 @@ const std::vector< RenderPass > &GetRenderPasses()
     std::vector< VkSubpassDescription    > subpasses    = { subpass };
     std::vector< VkSubpassDependency     > dependencies = { dependency };
 
-    RenderPass renderPass( attachments, subpasses, dependencies, RenderPass_Color | RenderPass_Depth | RenderPass_Resolve );
+    /*
+     *    TODO:
+     *
+     *    Either make this somehow not destructable or find a better way
+     *    to do this.
+     */
+    auto pRenderPass = new RenderPass( attachments, subpasses, dependencies, RenderPass_Color | RenderPass_Depth | RenderPass_Resolve );
 
-    renderPasses.push_back( renderPass );
+    renderPasses.push_back( pRenderPass );
 
     return renderPasses;
 }
 
-VkRenderPass &GetRenderPass( RenderPassStage sStage )
+VkRenderPass GetRenderPass( RenderPassStage sStage )
 {
-    for ( auto renderPass : GetRenderPasses() )
+    for ( auto &renderPass : GetRenderPasses() )
     {
-        if ( renderPass.GetStage() == sStage )
-            return renderPass.GetRenderPass();
+        if ( renderPass->GetStage() == sStage )
+            return renderPass->GetRenderPass();
     }
 }
