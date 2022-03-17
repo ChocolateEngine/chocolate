@@ -7,6 +7,8 @@
 #include "renderpass.h"
 #include "descriptormanager.h"
 
+#include "vertex.hh"
+
 #include "core/core.h"
 
 struct ShaderVar
@@ -32,6 +34,7 @@ struct LayoutObject
     std::string aName;
     bool        aIsUBO     = false;
     std::vector< ShaderVar > aVars;
+    LayoutObject *aOther   = nullptr;
 };
 
 struct ShaderRequirements
@@ -178,12 +181,36 @@ std::vector< LayoutObject > GetRequirements( const std::string &srDissassembly )
 
             for ( int i = 0; i < aVars.size(); ++i ) {
                 if ( aVars[ i ] == "OpVariable" ) {
-                    lo->aType = RemovePercent( aVars[ i + 1 ] );
+                    /*
+                     *    The value that follows is the string %_ptr_<storage>_<name>.
+                     *    We need to remove the %_ptr_ and deduce the storage type
+                     *    and tie this variable to the layout object with the same name.
+                     */
+                    auto ptr = RemovePercent( aVars[ i + 1 ] );
+
+                    ptr = ptr.substr( ptr.find( "_" ) + 4 );
+
+                    auto store = ptr.substr( 0, ptr.find( "_" ) );
+                    ptr = ptr.substr( ptr.find( "_" ) + 1 );
+
+                    auto name = ptr;
+
+                    if ( IsVar( name, obj ) ) {
+                        auto lo2 = GetLayoutObject( obj, name );
+
+                        if ( lo2 ) {
+                            lo->aOther = lo2;
+                        }
+                    }
+
                     if ( aVars[ i + 2 ] == "Input" ) {
                         lo->aInFlags = SHADER_IN;
                     }
                     else if ( aVars[ i + 2 ] == "Output" ) {
                         lo->aInFlags = SHADER_OUT;
+                    }
+                    else if ( aVars[ i + 2 ] == "Uniform" ) {
+                        lo->aIsUBO = true;
                     }
                 }
             }
@@ -226,12 +253,12 @@ VkPipelineLayout CreateLayout( const ShaderRequirements &srReqs )
     int bufferSet = -1;
 
     for ( auto &req : srReqs.aVertObjects ) {
-        if ( req.aType == "_ptr_UniformConstant__runtimearr_14" ) {
+        if ( req.aType == "_ptr_UniformConstant__runtimearr_14" && req.aSet > -1 ) {
             flags    |= REQUIRES_IMAGES;
             imageSet  = req.aSet;
             LogDev( gGraphics2Channel, 1, "Shader uses image samplers\n" );
         }
-        else if ( req.aIsUBO ) {
+        else if ( ( req.aIsUBO || ( req.aOther && req.aOther->aIsUBO ) ) && req.aSet > -1 ) {
             flags     |= REQUIRES_BUFFERS;
             bufferSet  = req.aSet;
             LogDev( gGraphics2Channel, 1, "Shader uses buffers\n" );
@@ -239,12 +266,12 @@ VkPipelineLayout CreateLayout( const ShaderRequirements &srReqs )
     }
 
     for ( auto &req : srReqs.aFragObjects ) {
-        if ( req.aType == "_ptr_UniformConstant__runtimearr_14" ) {
+        if ( req.aType == "_ptr_UniformConstant__runtimearr_14" && req.aSet > -1 ) {
             flags    |= REQUIRES_IMAGES;
             imageSet  = req.aSet;
             LogDev( gGraphics2Channel, 1, "Shader uses image samplers\n" );
         }
-        else if ( req.aIsUBO ) {
+        else if ( ( req.aIsUBO || ( req.aOther && req.aOther->aIsUBO ) ) && req.aSet > -1 ) {
             flags     |= REQUIRES_BUFFERS;
             bufferSet  = req.aSet;
             LogDev( gGraphics2Channel, 1, "Shader uses buffers\n" );
@@ -294,8 +321,6 @@ VkPipeline CreatePipeline( const std::string &srVertPath, const std::string &srF
 
     auto vert = GetRequirements( text );
 
-    //sys_wait_for_debugger();
-
     LogDev( gGraphics2Channel, 1, "shader disassembly:\n%s\n", text.c_str() );
 
     std::vector< char > fragSpriv = filesys->ReadFile( srFragPath );
@@ -338,13 +363,13 @@ VkPipeline CreatePipeline( const std::string &srVertPath, const std::string &srF
     VkPipelineVertexInputStateCreateInfo vertexInputInfo = {};
     vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
 
-    /*auto bindingDescription = Vertex::GetBindingDescription();
-    auto attributeDescriptions = Vertex::GetAttributeDescriptions();*/
+    auto bindingDescription    = Vertex::GetBindingDesc();
+    auto attributeDescriptions = Vertex::GetAttributeDesc();
 
     vertexInputInfo.vertexBindingDescriptionCount = 1;
-    //vertexInputInfo.vertexAttributeDescriptionCount = static_cast< uint32_t >( attributeDescriptions.size() );
-    //vertexInputInfo.pVertexBindingDescriptions = &bindingDescription;
-    //vertexInputInfo.pVertexAttributeDescriptions = attributeDescriptions.data();
+    vertexInputInfo.vertexAttributeDescriptionCount = static_cast< uint32_t >( attributeDescriptions.size() );
+    vertexInputInfo.pVertexBindingDescriptions = &bindingDescription;
+    vertexInputInfo.pVertexAttributeDescriptions = attributeDescriptions.data();
 
     VkPipelineInputAssemblyStateCreateInfo inputAssembly = {};
     inputAssembly.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
@@ -427,7 +452,7 @@ VkPipeline CreatePipeline( const std::string &srVertPath, const std::string &srF
     pipelineInfo.pMultisampleState = &multisampling;
     pipelineInfo.pColorBlendState = &colorBlending;
     pipelineInfo.pDepthStencilState = &depthStencil;
-    pipelineInfo.layout = CreateLayout( reqs );
+    pipelineInfo.layout = pipelineLayout;
     pipelineInfo.renderPass = GetRenderPass( RenderPass_Color | RenderPass_Depth | RenderPass_Resolve );
     pipelineInfo.subpass = 0;
     pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;

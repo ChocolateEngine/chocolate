@@ -211,17 +211,18 @@ void GInstance::SetupPhysicalDevice()
     aPhysicalDevice 	   = VK_NULL_HANDLE;
 	uint32_t deviceCount   = 0;
 	
-	vkEnumeratePhysicalDevices( GetGInstance().GetInstance(), &deviceCount, NULL );
+	vkEnumeratePhysicalDevices( aInstance, &deviceCount, NULL );
 	if ( deviceCount == 0 ) {
 		throw std::runtime_error( "Failed to find GPUs with Vulkan support!" );
 	}
 	std::vector< VkPhysicalDevice > devices( deviceCount );
-	vkEnumeratePhysicalDevices( GetGInstance().GetInstance(), &deviceCount, devices.data(  ) );
+	vkEnumeratePhysicalDevices( aInstance, &deviceCount, devices.data(  ) );
 
 	for ( const auto& device : devices ) {
 		if ( SuitableCard( device ) ) {
 			aPhysicalDevice = device;
 			aSampleCount    = gMaxSamples = FindMaxMSAASamples();
+			SetOption( "MSAA Samples", aSampleCount );
 			break;
 		}
 	}
@@ -319,11 +320,11 @@ uint32_t GInstance::GetMemoryType( uint32_t sTypeFilter, VkMemoryPropertyFlags s
 	return INT32_MAX;
 }
 
+static GInstance gInstance;
 
 GInstance &GetGInstance()
 {
-	static GInstance instance;
-	return instance;
+	return gInstance;
 }
 
 VkInstance GetInst()

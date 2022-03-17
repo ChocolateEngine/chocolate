@@ -81,13 +81,13 @@ const std::vector< VkImageView >& CreateImageViews( const std::vector< VkImage >
 
 Swapchain::Swapchain()
 {
-    SwapChainSupportInfo 	swapChainSupport    = CheckSwapChainSupport( GetPhysicalDevice() );
+    SwapChainSupportInfo swapChainSupport = CheckSwapChainSupport( GetPhysicalDevice() );
 
-	VkSurfaceFormatKHR 	    aSurfaceFormat 		= ChooseSwapSurfaceFormat( swapChainSupport.aFormats );
-	VkPresentModeKHR 	    aPresentMode 	    = ChooseSwapPresentMode( swapChainSupport.aPresentModes );
-	VkExtent2D 		        aExtent 		    = ChooseSwapExtent( swapChainSupport.aCapabilities );
+	aSurfaceFormat 		= ChooseSwapSurfaceFormat( swapChainSupport.aFormats );
+	aPresentMode 	    = ChooseSwapPresentMode( swapChainSupport.aPresentModes );
+	aExtent 		    = ChooseSwapExtent( swapChainSupport.aCapabilities );
 
-	uint32_t imageCount 				= swapChainSupport.aCapabilities.minImageCount + 1;
+	uint32_t imageCount = swapChainSupport.aCapabilities.minImageCount + 1;
 	if ( swapChainSupport.aCapabilities.maxImageCount > 0 && imageCount > swapChainSupport.aCapabilities.maxImageCount )
 		imageCount = swapChainSupport.aCapabilities.maxImageCount;
 
