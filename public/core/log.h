@@ -55,7 +55,7 @@ constexpr const char  CORE_API *LogColorToStr( LogColor color );
 
 
 constexpr LogColor LOG_COLOR_WARNING = LogColor::Yellow;
-constexpr LogColor LOG_COLOR_ERROR   = LogColor::Yellow;
+constexpr LogColor LOG_COLOR_ERROR   = LogColor::Red;
 
 
 /* Channels!!! */
