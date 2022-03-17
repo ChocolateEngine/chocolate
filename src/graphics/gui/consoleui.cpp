@@ -4,33 +4,51 @@
 
 #include "imgui/imgui.h"
 #include "imgui/imgui_impl_vulkan.h"
-#include "imgui/imgui_impl_sdl.h"
-
-extern Renderer* renderer;
+#include "imgui/imgui_internal.h"
 
 static LogChannel gConsoleChannel = LogGetChannel( "Console" );
 
-CONVAR( con_spam_test, 0 );
+void ReBuildConsoleOutput();
 
+
+struct ConLogBuffer
+{
+	bool        aSpacing;
+	LogColor    aColor;
+	std::string aBuffer;
+};
+
+
+static std::vector< ConLogBuffer > gConHistory;
+static size_t gConLogIndex = SIZE_MAX;
+
+
+CONVAR( con_spam_test, 0 );
 CONVAR( conui_max_history, -1 );  // idk
 CONVAR( conui_color_test, 0 );
 
-void ReBuildConsoleOutput();
 
-void CvarRebuildConsoleOutput( std::vector< std::string > args )
+CONVAR_CMD( conui_input_spacing, 4 )
+{
+	// TODO: fix convar funcs to pass in the previous convar value
+	// so we can actually check to see if we changed to 0 or changed from 0
+	// for now, force rebuild console output always, ugly and awful
+	// also make a help string please
+	ReBuildConsoleOutput();
+}
+
+
+// 3 is all colors (slowest), 2 is errors, warnings and validation layers, 1 is errors and warnings, only, 0 is no colors (fastest)
+CONVAR_CMD( conui_colors, 3 )
 {
 	ReBuildConsoleOutput();
 }
 
-// 3 is all colors (slowest), 2 is errors, warnings and validation layers, 1 is errors and warnings, only, 0 is no colors (fastest)
-CONVAR( conui_colors, 3, CvarRebuildConsoleOutput );
 
-
-static int         gCmdDropDownIndex = -1;
-static int         gCmdHistoryIndex = -1;
-
-static std::string gCmdUserInput = "";
-static int         gCmdUserCursor = 0;
+CONCMD( conui_rebuild )
+{
+	ReBuildConsoleOutput();
+}
 
 
 // NOTE: all these colors are just kinda randomly picked,
@@ -80,6 +98,17 @@ constexpr ImVec4 ToImCol( LogColor col )
 			return ImGui::GetStyleColorVec4( ImGuiCol_Text );
 	}
 }
+
+
+// ================================================================================
+// Console Input Dropdown Handling
+
+
+static int         gCmdDropDownIndex = -1;
+static int         gCmdHistoryIndex = -1;
+
+static std::string gCmdUserInput = "";
+static int         gCmdUserCursor = 0;
 
 
 bool CheckAddDropDownCommand( ImGuiInputTextCallbackData* data )
@@ -291,6 +320,10 @@ int FilterBoxCallbackIn( ImGuiInputTextCallbackData* data )
 }
 
 
+// ================================================================================
+// Console Drawing
+
+
 void DrawColorTest()
 {
 	if ( !conui_color_test )
@@ -405,15 +438,38 @@ LogColor GetConsoleTextColor( const Log& log )
 }
 
 
-struct ConLogBuffer
+inline ConLogBuffer* AddToConsoleHistory( ConLogBuffer* buffer, const Log& log )
 {
-	LogColor    aColor;
-	std::string aBuffer;
-};
+	if ( !LogIsVisible( log ) )
+		return buffer;
 
+	LogColor color = GetConsoleTextColor( log );
 
-static std::vector< ConLogBuffer > gConHistory;
-static size_t gConHistoryIndex = SIZE_MAX;
+	bool spacing = log.aType == LogType::Input && conui_input_spacing > 0.f;
+
+	if ( buffer->aBuffer.size() && color != buffer->aColor )
+	{
+		return &gConHistory.emplace_back( spacing, color, log.aFormatted );
+	}
+
+	if ( buffer->aBuffer.size() && spacing != buffer->aSpacing )
+	{
+		return &gConHistory.emplace_back( spacing, color, log.aFormatted );
+	}
+
+	if ( buffer->aBuffer.empty() )
+	{
+		buffer->aSpacing = spacing;
+		buffer->aColor = color;
+		buffer->aBuffer = log.aFormatted;
+	}
+	else
+	{
+		buffer->aBuffer += log.aFormatted;
+	}
+
+	return buffer;
+}
 
 
 void ReBuildConsoleOutput()
@@ -424,26 +480,9 @@ void ReBuildConsoleOutput()
 	const std::vector< Log >& logs = LogGetLogHistory();
 
 	for ( const auto& log: logs )
-	{
-		if ( !LogChannelIsShown( log.aChannel ) )
-			continue;
+		buffer = AddToConsoleHistory( buffer, log );
 
-		LogColor color = GetConsoleTextColor( log );
-
-		if ( color != buffer->aColor && buffer->aBuffer.size() )
-			buffer = &gConHistory.emplace_back( color, log.aFormatted );
-
-		else if ( buffer->aBuffer.empty() )
-		{
-			buffer->aColor = color;
-			buffer->aBuffer += log.aFormatted;
-		}
-
-		else
-			buffer->aBuffer += log.aFormatted;
-	}
-
-	gConHistoryIndex = logs.size();
+	gConLogIndex = logs.size();
 }
 
 
@@ -460,63 +499,75 @@ void UpdateConsoleOutput()
 		return;
 	}
 
-	if ( gConHistoryIndex == logs.size() )
-		return;
-
-	for ( ; gConHistoryIndex < logs.size(); gConHistoryIndex++ )
+	for ( ; gConLogIndex < logs.size(); gConLogIndex++ )
 	{
 		ConLogBuffer* buffer = &gConHistory.at( gConHistory.size() - 1 );
-		const Log& log = logs[gConHistoryIndex];
-		LogColor nextColor = GetConsoleTextColor( log );
+		const Log& log = logs[gConLogIndex];
 
-		if ( buffer->aColor != nextColor )
-			buffer = &gConHistory.emplace_back( nextColor, log.aFormatted );
-
-		else if ( buffer->aBuffer.empty() )
-		{
-			buffer->aColor = nextColor;
-			buffer->aBuffer += log.aFormatted;
-		}
-
-		else
-			buffer->aBuffer += log.aFormatted;
+		buffer = AddToConsoleHistory( buffer, log );
 	}
 }
 
 
 void DrawConsoleOutput()
 {
-	// um
+	// darken console background to make colored text more readable
 	ImVec4* colors = ImGui::GetStyle().Colors;
-	ImVec4 bgColor = colors[ImGuiCol_FrameBg];
 
-	bgColor.x /= 2;
-	bgColor.y /= 2;
-	bgColor.z /= 2;
+	ImVec4 frameColor = colors[ImGuiCol_FrameBg];
+	frameColor.x *= .75;
+	frameColor.y *= .75;
+	frameColor.z *= .75;
 
-	ImGui::PushStyleColor( ImGuiCol_ChildBg, bgColor );
-	
-	// ImGui::BeginChildFrame
-	ImGui::BeginChild( "ConsoleOutput", ImVec2( ImGui::GetWindowSize().x - 32, ImGui::GetWindowSize().y - 64 ), true );
+	ImGui::PushStyleColor( ImGuiCol_FrameBg, frameColor );
+
+	ImGuiWindow* window = ImGui::GetCurrentWindow();
+
+	const ImGuiID id = window->GetID( "ConsoleOutput" );
+	const ImVec2 outputSize( ImGui::GetWindowSize().x - 32, ImGui::GetWindowSize().y - 64 );
+
+	ImGui::BeginChildFrame( id, outputSize, 0 );
+
 	static int scrollMax = ImGui::GetScrollMaxY();
 
 	UpdateConsoleOutput();
 
-	ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, ImVec2(0,0) );
+	ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, {0, 0} );
 	
 	for ( size_t i = 0; i < gConHistory.size(); i++ )
 	{
-		const ConLogBuffer& buffer = gConHistory.at( i );
+		ConLogBuffer& buffer = gConHistory.at( i );
 
 		// show buffer, clear it, then set the new color
 		ImGui::PushStyleColor( ImGuiCol_Text, ToImCol( buffer.aColor ) );
-		ImGui::TextUnformatted( buffer.aBuffer.c_str() );
+
+		bool addSpacing = buffer.aSpacing || (i + 1 < gConHistory.size() && gConHistory.at(i+1).aSpacing);
+
+		if ( addSpacing )
+		{
+			ImGui::PopStyleVar();
+			ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, {0, conui_input_spacing} );
+		}
+		else
+		{
+			ImGui::PopStyleVar();
+			ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, {0, 0} );
+		}
+
+		bool need_backup = GImGui->CurrentWindow->DC.TextWrapPos < 0.0f;  // Keep existing wrap position if one is already set
+		if ( need_backup )
+			ImGui::PushTextWrapPos( 0.0f );
+
+		ImGui::TextEx( buffer.aBuffer.c_str(), 0, ImGuiTextFlags_NoWidthForLargeClippedText );
+		// ImGui::HighlightText( buffer.aBuffer.c_str(), buffer.aBuffer.size(), id );  // custom testing
+
+		if ( need_backup )
+			ImGui::PopTextWrapPos();
+
 		ImGui::PopStyleColor();
 	}
 
 	ImGui::PopStyleVar();
-
-	// ImGui::TextUnformatted( LogGetHistoryStr( conui_max_history.GetFloat() ).c_str() );
 
 	// if we were scrolled all the way down before, make sure we stay scrolled down all the way
 	if ( scrollMax == ImGui::GetScrollY() )
@@ -534,7 +585,9 @@ void GuiSystem::DrawConsole( bool wasConsoleOpen )
 	if ( con_spam_test.GetBool() )
 		LogMsg( "TEST\n" );
 
-	ImGui::Begin( "Developer Console" );
+	if ( !ImGui::Begin( "Developer Console" ) )
+		return;
+
 	static char buf[ 256 ] = "";
 
 	DrawColorTest();
@@ -545,7 +598,7 @@ void GuiSystem::DrawConsole( bool wasConsoleOpen )
 
 	DrawConsoleOutput();
 
-	snprintf( buf, 256, console->GetTextBuffer(  ).c_str() );
+	snprintf( buf, 256, console->GetTextBuffer().c_str() );
 	ImGui::InputText( "send", buf, 256, ImGuiInputTextFlags_CallbackAlways, &ConsoleInputCallback );
 
 	if ( !wasConsoleOpen )
@@ -576,7 +629,5 @@ bool GuiSystem::IsConsoleShown(  )
 void GuiSystem::InitConsole()
 {
 	LogAddChannelShownCallback( ReBuildConsoleOutput );
-
-	gConHistory.resize( 4096 );
 }
 

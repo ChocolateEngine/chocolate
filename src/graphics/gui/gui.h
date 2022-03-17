@@ -5,6 +5,8 @@
 #include "system.h"
 #include "igui.h"
 
+#include "imgui/imgui_internal.h"
+
 class GuiSystem : public BaseGuiSystem
 {
 protected:
@@ -52,3 +54,5 @@ public:
 	/* A.  */
 		        ~GuiSystem(  );
 };
+
+extern GuiSystem* gui;

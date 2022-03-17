@@ -10,6 +10,8 @@ GuiSystem* gui = new GuiSystem;
 
 ImFont* gBuiltInFont = nullptr;
 
+ImGuiContext* GImGui = nullptr;  // Current implicit context pointer
+
 extern Renderer* renderer;
 
 void GuiSystem::Update( float sDT )
@@ -28,6 +30,8 @@ void GuiSystem::DrawGui(  )
 
 	if ( !aDrawnFrame )
 		renderer->EnableImgui(  );
+
+	GImGui = ImGui::GetCurrentContext();
 
 	ImGui::PushFont( gBuiltInFont );
 
@@ -76,7 +80,6 @@ void GuiSystem::StyleImGui()
 
 	// gBuiltInFont = BuildFont( "fonts/CascadiaMono.ttf" );
 	gBuiltInFont = BuildFont( "fonts/MonoxRegular.ttf", 15.f );
-
 
 	if ( cmdline->Find( "-no-vgui-style" ) )
 		return;
@@ -231,6 +234,8 @@ void GuiSystem::StartFrame()
 void GuiSystem::Init()
 {
 	InitConsole();
+
+	// GImGui = ImGui::CreateContext();
 }
 
 GuiSystem::GuiSystem(  ) : BaseGuiSystem(  )

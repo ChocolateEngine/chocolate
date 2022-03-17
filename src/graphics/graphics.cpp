@@ -93,6 +93,8 @@ void GraphicsSystem::Init(  )
 {
 	aRenderer.Init();
 	aRenderer.InitVulkan(  );
+
+	gui->Init();
 }
 
 void GraphicsSystem::Update( float dt )
