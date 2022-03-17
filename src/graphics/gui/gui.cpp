@@ -8,6 +8,8 @@
 
 GuiSystem* gui = new GuiSystem;
 
+ImFont* gBuiltInFont = nullptr;
+
 extern Renderer* renderer;
 
 void GuiSystem::Update( float sDT )
@@ -26,6 +28,8 @@ void GuiSystem::DrawGui(  )
 
 	if ( !aDrawnFrame )
 		renderer->EnableImgui(  );
+
+	ImGui::PushFont( gBuiltInFont );
 
 	if ( aConsoleShown )
 		DrawConsole( wasConsoleOpen );
@@ -62,34 +66,17 @@ void GuiSystem::DrawGui(  )
 	prevtick = SDL_GetTicks();
 
 	aDrawnFrame = true;
+
+	ImGui::PopFont();
 }
 
 void GuiSystem::StyleImGui()
 {
 	auto& io = ImGui::GetIO();
 
-#if 0
-	if ( !cmdline->Find( "-no-imgui-font" ) )
-	{
-		// auto fontPath = filesys->FindFile( "fonts/CascadiaCode.ttf" );
-		// auto fontPath = filesys->FindFile( "fonts/CascadiaMono.ttf" );
-		auto fontPath = filesys->FindFile( "fonts/Roboto-Medium.ttf" );
-		if ( fontPath != "" )
-		{
-			ImFontConfig config;
-			config.OversampleH = 2;
-			config.OversampleV = 1;
-			config.GlyphExtraSpacing.x = 1.0f;
+	// gBuiltInFont = BuildFont( "fonts/CascadiaMono.ttf" );
+	gBuiltInFont = BuildFont( "fonts/MonoxRegular.ttf", 15.f );
 
-			// io.Fonts->AddFontFromFileTTF( fontPath.c_str(), 25.0f );
-			/*ImFont* newFont = io.Fonts->AddFontFromFileTTF(fontPath.c_str(), 15.f, &config);
-			bool built = io.Fonts->Build();
-			if ( !built )
-				LogWarn( "[Gui] ImGui Failed to Build Font\n" );*/
-
-		}
-	}
-#endif
 
 	if ( cmdline->Find( "-no-vgui-style" ) )
 		return;
@@ -157,6 +144,27 @@ void GuiSystem::StyleImGui()
 	style.ScrollbarRounding = 0.0f;
 	style.GrabRounding = 0.0f;
 	style.TabRounding = 0.0f;
+}
+
+ImFont* GuiSystem::BuildFont( const char* spPath, float sSizePixels, const ImFontConfig* spFontConfig )
+{
+	if ( cmdline->Find( "-no-imgui-font" ) )
+		return nullptr;
+
+	auto fontPath = filesys->FindFile( spPath );
+	if ( fontPath == "" )
+		return nullptr;
+
+	ImFont* font = ImGui::GetIO().Fonts->AddFontFromFileTTF( fontPath.c_str(), sSizePixels, spFontConfig );
+
+	// AWFUL
+	VkCommandBuffer c = gpDevice->BeginSingleTimeCommands(  );
+	ImGui_ImplVulkan_CreateFontsTexture( c );
+	gpDevice->EndSingleTimeCommands( c );
+
+	ImGui_ImplVulkan_DestroyFontUploadObjects(  );
+
+	return font;
 }
 
 void GuiSystem::AssignWindow( SDL_Window* spWindow )

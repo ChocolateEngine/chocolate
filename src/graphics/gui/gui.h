@@ -24,6 +24,9 @@ public:
 	/* Set to VGUI Style 😎 */
 	void 		StyleImGui();
 
+	/* Compile an ImGui font.  */
+	ImFont* 	BuildFont( const char* spPath, float sSizePixels = 15.f, const ImFontConfig* spFontConfig = nullptr ) override;
+
 	/* Per-Frame Update  */
 	void 		Update( float dt ) override;
 	/* Gets the window pointer from the renderer.  */

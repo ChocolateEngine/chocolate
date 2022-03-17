@@ -4,10 +4,17 @@
 
 #include "system.h"
 
+struct ImFont;
+struct ImFontConfig;
+
 
 class BaseGuiSystem : public BaseSystem
 {
 public:
+	/* Compile an ImGui font.  */
+	// virtual ImFont* 	BuildFont( const char* spPath, float sSizePixels = 15.f, const ImFontConfig* spFontConfig = nullptr , const ImWchar* spGlyphRanges = nullptr ) = 0;
+	virtual ImFont* 	BuildFont( const char* spPath, float sSizePixels = 15.f, const ImFontConfig* spFontConfig = nullptr ) = 0;
+
 	/* Gets the window pointer from the renderer.  */
 	virtual void 		AssignWindow( SDL_Window* spWindow ) = 0;
 	/* Shows the console window.  */
