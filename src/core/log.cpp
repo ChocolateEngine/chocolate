@@ -189,7 +189,7 @@ public:
         AddToHistoryString( log );
     }
 
-    inline bool CheckDevLevel( const Log& log )
+    inline bool DevLevelVisible( const Log& log )
     {
         if ( developer.GetInt() < ( int )log.aType && ( log.aType == LogType::Dev  || 
                                                         log.aType == LogType::Dev2 || 
@@ -222,7 +222,7 @@ public:
         {
             auto& log = aLogHistory[i];
 
-            if ( !CheckDevLevel( log ) )
+            if ( !DevLevelVisible( log ) )
                 continue;
 
             LogChannel_t* channel = GetChannel( log.aChannel );
@@ -247,7 +247,7 @@ BuildHistoryStringEnd:
 
     inline void AddToHistoryString( const Log& log )
     {
-        if ( !CheckDevLevel( log ) )
+        if ( !DevLevelVisible( log ) )
             return;
 
         LogChannel_t* channel = GetChannel( log.aChannel );
@@ -570,6 +570,16 @@ const std::vector< Log >& LogGetLogHistory()
 }
 
 
+bool LogChannelIsShown( LogChannel handle )
+{
+    LogChannel_t* channel = GetLogSystem().GetChannel( handle );
+    if ( !channel )
+        return false;
+
+    return channel->aShown;
+}
+
+
 const Log* LogGetLastLog()
 {
     if ( GetLogSystem().aLogHistory.size() == 0 )
@@ -579,13 +589,12 @@ const Log* LogGetLastLog()
 }
 
 
-bool LogChannelIsShown( LogChannel handle )
+bool LogIsVisible( const Log& log )
 {
-    LogChannel_t* channel = GetLogSystem().GetChannel( handle );
-    if ( !channel )
+    if ( !GetLogSystem().DevLevelVisible( log ) )
         return false;
 
-    return channel->aShown;
+    return LogChannelIsShown( log.aChannel );
 }
 
 

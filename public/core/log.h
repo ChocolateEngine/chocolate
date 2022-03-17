@@ -89,6 +89,7 @@ struct Log
 const std::string           CORE_API &LogGetHistoryStr( int maxSize );
 const std::vector< Log >    CORE_API &LogGetLogHistory();
 const Log                   CORE_API *LogGetLastLog();
+bool                        CORE_API  LogIsVisible( const Log& log );
 
 
 /*ReBuildConsoleOutput*/
