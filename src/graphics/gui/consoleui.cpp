@@ -502,6 +502,8 @@ void DrawConsoleOutput()
 
 	UpdateConsoleOutput();
 
+	ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, ImVec2(0,0) );
+	
 	for ( size_t i = 0; i < gConHistory.size(); i++ )
 	{
 		const ConLogBuffer& buffer = gConHistory.at( i );
@@ -511,6 +513,8 @@ void DrawConsoleOutput()
 		ImGui::TextUnformatted( buffer.aBuffer.c_str() );
 		ImGui::PopStyleColor();
 	}
+
+	ImGui::PopStyleVar();
 
 	// ImGui::TextUnformatted( LogGetHistoryStr( conui_max_history.GetFloat() ).c_str() );
 
