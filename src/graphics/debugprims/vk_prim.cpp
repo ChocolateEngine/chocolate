@@ -35,7 +35,7 @@ void VulkanPrimitiveMaterials::ResetMesh()
 
 void VulkanPrimitiveMaterials::PrepareMeshForDraw()
 {
-	if ( !g_debug_draw || (aFinalMesh && aFinalMesh->GetVertices().empty()) )
+	if ( !g_debug_draw || !aFinalMesh || aFinalMesh->GetVertices().empty() )
 		return;
 
 	matsys->CreateVertexBuffer( aFinalMesh );
