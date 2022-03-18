@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include <SDL2/SDL.h>
 
@@ -21,7 +21,11 @@ protected:
 	void 		DrawConsole( bool wasConsoleOpen );
 
 public:
-	enum class	Commands{ NONE = 0, SHOW_CONSOLE, ASSIGN_WINDOW };
+	/* Set to VGUI Style 😎 */
+	void 		StyleImGui();
+
+	/* Compile an ImGui font.  */
+	ImFont* 	BuildFont( const char* spPath, float sSizePixels = 15.f, const ImFontConfig* spFontConfig = nullptr ) override;
 
 	/* Per-Frame Update  */
 	void 		Update( float dt ) override;
@@ -40,6 +44,7 @@ public:
 	 */
 	void 		StartFrame() override;
 
+	void            InitConsole();
 	void            Init();
 
 	/* Constructor.  */

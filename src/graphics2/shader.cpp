@@ -11,213 +11,500 @@
 
 #include "core/core.h"
 
-struct ShaderVar
-{
-    int         aIndex  = -1;
-    int         aOffset = -1;
-    std::string aName;
-};
-
 enum
 {
     SHADER_IN,
     SHADER_OUT,
 };
 
-struct LayoutObject
+enum
 {
-    int         aLocation  = -1;
-    int         aSet       = -1;
-    int         aBinding   = -1;
-    int         aInFlags   = -1;
-    std::string aType;
-    std::string aName;
-    bool        aIsUBO     = false;
-    std::vector< ShaderVar > aVars;
-    LayoutObject *aOther   = nullptr;
+    OP_NAME,
+    OP_MEMBER_NAME,
+    OP_DECORATE,
+    OP_MEMBER_DECORATE,
+    OP_ENTRY_POINT,
+    OP_VARIABLE,
+    OP_TYPE_POINTER,
+    OP_TYPE_STRUCT,
+    OP_TYPE_RUNTIME_ARRAY,
+    OP_TYPE_SAMPLED_IMAGE,
+    OP_TYPE_IMAGE,
+};
+
+enum
+{
+    DECO_LOCATION,
+    DECO_SET,
+    DECO_BINDING,
+    DECO_OFFSET,
+};
+
+struct ShaderVar
+{
+    int aId                 = -1;
+    int aMembIndex          = -1;
+    int aLocation           = -1;
+    int aSet                = -1;
+    int aBinding            = -1;
+    int aOffset             = -1;
+    std::string aName       = "";
+    std::string aIdentifier = "";
+    std::string aType       = "";
+
+    ShaderVar *apNext     = nullptr;
+    ShaderVar *apChildren = nullptr;
+};
+
+struct SpirvDisassembly
+{
+    ShaderVar  *apLayoutVars;
+    ShaderVar  *apVars;
+
+    ShaderVar   aEntry      = {};
+    std::string aShaderType = "";
 };
 
 struct ShaderRequirements
 {
-    std::vector< LayoutObject > aVertObjects;
-    std::vector< LayoutObject > aFragObjects;
+    SpirvDisassembly aDisassembly;
 };
 
-const std::vector< std::string > &GetOpCodeVars( const std::string &srLine ) 
+void SkipWS( const std::string &srSource, size_t &sIndex )
 {
-    static std::vector< std::string > aVars;
-    aVars.clear();
-    std::stringstream ss( srLine );
-    std::string s;
-    while ( std::getline( ss, s, ' ' ) )
+    while( sIndex < srSource.size() && srSource[ sIndex ] <= ' ' )
+        ++sIndex;
+}
+
+void SkipLine( const std::string &srSource, size_t &sIndex )
+{
+    while( sIndex < srSource.size() && srSource[ sIndex ] != '\n' )
+        ++sIndex;
+    
+    ++sIndex;
+}
+
+int SwitchOperation( const std::string &srSource, size_t &sIndex )
+{
+    SkipWS( srSource, sIndex );
+    if ( srSource.substr( sIndex, 3 ) == "Op" )
     {
-        if ( s.length() > 0 )
-            aVars.push_back( s );
+        sIndex += 3;
+        return OP_NAME;
     }
-    return aVars;
-}
-
-const std::string &RemovePercent( const std::string &srString )
-{
-    static std::string aString;
-    aString = srString;
-    aString.erase( std::remove( aString.begin(), aString.end(), '%' ), aString.end() );
-    return aString;
-}
-
-const std::string &RemoveQuotes( const std::string &srString )
-{
-    static std::string aString;
-    aString = srString;
-    aString.erase( std::remove( aString.begin(), aString.end(), '"' ), aString.end() );
-    return aString;
-}
-
-LayoutObject *GetLayoutObject( std::vector< LayoutObject > &srObjects, const std::string &srName )
-{
-    for ( auto &object : srObjects )
+    else if ( srSource.substr( sIndex, 10 ) == "OpMemberName" )
     {
-        if ( object.aName == srName )
-            return &object;
+        sIndex += 10;
+        return OP_MEMBER_NAME;
     }
-    LogWarn( gGraphics2Channel, "Couldn't find layout object %s\n", srName.c_str() );
+    else if ( srSource.substr( sIndex, 9 ) == "OpDecorate" )
+    {
+        sIndex += 9;
+        return OP_DECORATE;
+    }
+    else if ( srSource.substr( sIndex, 15 ) == "OpMemberDecorate" )
+    {
+        sIndex += 15;
+        return OP_MEMBER_DECORATE;
+    }
+    else if ( srSource.substr( sIndex, 11 ) == "OpEntryPoint" )
+    {
+        sIndex += 11;
+        return OP_ENTRY_POINT;
+    }
+    else
+    {
+        return -1;
+    }
+}
+
+int SwitchDecorate( const std::string &srSource, size_t &sIndex )
+{
+    if ( srSource.substr( sIndex, 9 ) == "Location" )
+    {
+        sIndex += 9;
+        return DECO_LOCATION;
+    }
+    else if ( srSource.substr( sIndex, 14 ) == "DescriptorSet" )
+    {
+        sIndex += 3;
+        return DECO_SET;
+    }
+    else if ( srSource.substr( sIndex, 6 ) == "Binding" )
+    {
+        sIndex += 6;
+        return DECO_BINDING;
+    }
+    else if ( srSource.substr( sIndex, 6 ) == "Offset" )
+    {
+        sIndex += 6;
+        return DECO_OFFSET;
+    }
+}
+
+std::string OpGetStr( const std::string &srSource, size_t &srIndex )
+{
+    SkipWS( srSource, srIndex );
+    std::string var;
+    while( srIndex < srSource.size() && srSource[ srIndex ] != ' ' )
+        var += srSource[ srIndex++ ];
+
+    return var;
+}
+
+std::string OpSeekStr( const std::string &srSource, size_t sIndex )
+{
+    SkipWS( srSource, sIndex );
+    std::string var;
+    while( sIndex < srSource.size() && srSource[ sIndex ] != ' ' )
+        var += srSource[ sIndex++ ];
+
+    return var;
+}
+
+int OpGetInt( const std::string &srSource, size_t &srIndex )
+{
+    SkipWS( srSource, srIndex );
+    std::string var;
+    while( srIndex < srSource.size() && srSource[ srIndex ] != ' ' )
+        var += srSource[ srIndex++ ];
+
+    return atoi( var.c_str() );
+}
+
+struct DecomposedVar
+{
+    std::string aVarType;
+    std::string aVisibility;
+    std::string aIdentifier;
+};
+
+DecomposedVar DecomposeVar( const std::string &srSource, size_t &srIndex )
+{
+    SkipWS( srSource, srIndex );
+    DecomposedVar var;
+    size_t len = srIndex;
+
+    ++srIndex;
+    
+    while ( srIndex < srSource.size() && ( srSource[ srIndex ] != '_' || srIndex <= len ) ) {
+        var.aVarType += srSource[ srIndex++ ];
+    }
+    srIndex++;
+    while ( srIndex < srSource.size() && srSource[ srIndex ] != '_' ) {
+        var.aVarType += srSource[ srIndex++ ];
+    }
+
+    return var;
+}
+
+ShaderVar *GetVar( SpirvDisassembly &srDisass, const std::string &srVar )
+{
+    if ( srVar == srDisass.aEntry.aName )
+        return &srDisass.aEntry;
+
+    for ( auto var = srDisass.apLayoutVars; var; var = var->apNext )
+        if ( var->aName == srVar )
+            return var;
+        
+    for ( auto var = srDisass.apVars; var; var = var->apNext )
+        if ( var->aName == srVar )
+            return var;
+
     return nullptr;
 }
 
-ShaderVar *GetVar( std::vector< ShaderVar > &srObjects, const int sIndex )
+ShaderVar *GetVar( SpirvDisassembly &srDisass, const int &srId )
 {
-    for ( auto &object : srObjects )
-    {
-        if ( object.aIndex == sIndex )
-            return &object;
-    }
-    LogWarn( gGraphics2Channel, "Couldn't find var %d\n", sIndex );
+    if ( srId == srDisass.aEntry.aId )
+        return &srDisass.aEntry;
+
+    for ( auto var = srDisass.apLayoutVars; var; var = var->apNext )
+        if ( var->aId == srId )
+            return var;
+        
+    for ( auto var = srDisass.apVars; var; var = var->apNext )
+        if ( var->aId == srId )
+            return var;
+
     return nullptr;
 }
 
-bool IsVar( const std::string &srLine, const std::vector< LayoutObject > &srObjects )
+ShaderVar *AddVar( SpirvDisassembly &srDisass, const std::string& srVar )
 {
-    for ( const auto &object : srObjects )
-    {
-        if ( object.aName == srLine )
-            return true;
-    }
-    return false;
+    ShaderVar *pVar = GetVar( srDisass, srVar );
+    if ( pVar )
+        return pVar;
+
+    ShaderVar *pNewVar = new ShaderVar;
+    
+    if ( !pNewVar )
+        return nullptr;
+
+    pNewVar->aName = srVar;
+    pNewVar->apNext = srDisass.apVars;
+    srDisass.apVars = pNewVar;
+
+    return pNewVar;
 }
 
-std::vector< LayoutObject > GetRequirements( const std::string &srDissassembly )
+ShaderVar *AddVar( SpirvDisassembly &srDisass, const int &srId )
 {
-    std::vector< LayoutObject > obj;
-    std::vector< std::string > aLines;
-    std::stringstream ss( srDissassembly );
-    std::string str;
-    while ( std::getline( ss, str ) )
+    ShaderVar *pVar = GetVar( srDisass, srId );
+    if ( pVar )
+        return pVar;
+
+    ShaderVar *pNewVar = new ShaderVar;
+
+    if ( !pNewVar )
+        return nullptr;
+
+    pNewVar->aId = srId;
+    pNewVar->apNext = srDisass.apVars;
+    srDisass.apVars = pNewVar;
+
+    return pNewVar;
+}
+
+/*
+ *    Parses the requirements from a disassembled shader.
+ *    
+ *    TODO: Make use of C-style strings, substr is slow.
+ *
+ *    @param  const std::string &    The shader disassembly.
+ *
+ *    @return ShaderRequirements     The requirements of the shader.
+ */
+ShaderRequirements GetRequirements( const std::string &srDisassembly )
+{
+    ShaderRequirements reqs{};
+    size_t c = 0;
+    
+    SkipWS( srDisassembly, c );
+    while ( c < srDisassembly.size() )
     {
-        aLines.push_back( str );
-    }
+        /*
+         *    If our line starts with Op, then we're looking at a new instruction.
+         */
+        if ( srDisassembly.substr( c, c + 2 ) == "Op" )
+        {
+            int op = SwitchOperation( srDisassembly, c );
+            switch ( op ) {
+                case OP_NAME: {
+                    std::string var  = OpGetStr( srDisassembly, c );
 
-    for ( auto &line : aLines )
-    {
-        auto aVars = GetOpCodeVars( line );
-        if ( aVars[ 0 ] == "OpName" ) {
-            LayoutObject lo{};
-            lo.aName = RemovePercent( aVars[ 1 ] );
-            obj.push_back( lo );
-        }
-        else if ( aVars[ 0 ] == "OpDecorate" ) {
-            auto lo = GetLayoutObject( obj, RemovePercent( aVars[ 1 ] ) );
+                    if ( var[ 0 ] != '%' ) {
+                        LogError( "Invalid variable identifier: %s", var.c_str() );
+                        SkipLine( srDisassembly, c );
+                        break;
+                    }
 
-            for ( int i = 0; i < aVars.size(); ++i ) {
-                if ( aVars[ i ] == "Location" ) {
-                    lo->aLocation = std::stoi( aVars[ i + 1 ] );
+                    std::string name = OpGetStr( srDisassembly, c );
+
+                    ShaderVar *pVar = GetVar( reqs.aDisassembly, var );
+                    if ( !pVar ) {
+                        LogError( "Could not find variable: %s", var.c_str() );
+                        SkipLine( srDisassembly, c );
+                        break;
+                    }
+
+                    pVar->aIdentifier = name;
+                    break;
                 }
-                else if ( aVars[ i ] == "DescriptorSet" ) {
-                    lo->aSet = std::stoi( aVars[ i + 1 ] );
+                case OP_MEMBER_NAME: {
+                    std::string var  = OpGetStr( srDisassembly, c );
+
+                    if ( var[ 0 ] != '%' ) {
+                        LogError( "Invalid variable identifier: %s", var.c_str() );
+                        SkipLine( srDisassembly, c );
+                        break;
+                    }
+                    
+                    ShaderVar *pParent = AddVar( reqs.aDisassembly, var );
+                    if ( !pParent ) {
+                        LogError( "Failed to find parent variable '%s' for member name.", var.c_str() );
+                        SkipLine( srDisassembly, c );
+                        break;
+                    }
+
+                    int         memb = OpGetInt( srDisassembly, c );
+                    std::string name = OpGetStr( srDisassembly, c );
+
+                    ShaderVar *pVar = new ShaderVar;
+                    if ( !pVar ) {
+                        LogError( "Failed to allocate memory for member variable '%s' of '%s'.", name.c_str(), var.c_str() );
+                        SkipLine( srDisassembly, c );
+                        break;
+                    }
+
+                    ShaderVar *pMemb = pParent->apChildren;
+                    while ( pMemb && pMemb->apNext != nullptr )
+                        pMemb = pMemb->apNext;
+
+                    pMemb->apNext = pVar;
+
+                    pVar->aIdentifier      = name;
+                    pVar->aMembIndex       = memb;
+                    break;
                 }
-                else if ( aVars[ i ] == "Binding" ) {
-                    lo->aBinding = std::stoi( aVars[ i + 1 ] );
-                }
-                else if ( aVars[ i ] == "In" ) {
-                    lo->aInFlags = SHADER_IN;
-                }
-                else if ( aVars[ i ] == "Block" ) {
-                    lo->aIsUBO = true;
-                }
-            }
-        }
-        else if ( aVars[ 0 ] == "OpMemberName" ) {
-            auto lo = GetLayoutObject( obj, RemovePercent( aVars[ 1 ] ) );
+                case OP_DECORATE: {
+                    std::string var  = OpGetStr( srDisassembly, c );
 
-            if ( !lo )
-                continue;
+                    if ( var[ 0 ] != '%' ) {
+                        LogError( "Invalid variable identifier: %s", var.c_str() );
+                        SkipLine( srDisassembly, c );
+                        break;
+                    }
 
-            ShaderVar sv{};
-            sv.aName  = RemoveQuotes( aVars[ 3 ] );
-            sv.aIndex = std::stoi( aVars[ 2 ] );
-            lo->aVars.push_back( sv );
-        }
-        else if ( aVars[ 0 ] == "OpMemberDecorate" ) {
-            auto lo = GetLayoutObject( obj, RemovePercent( aVars[ 1 ] ) );
+                    ShaderVar *pVar = GetVar( reqs.aDisassembly, var );
+                    if ( !pVar ) {
+                        LogError( "Failed to find variable '%s' for decoration.", var.c_str() );
+                        SkipLine( srDisassembly, c );
+                        break;
+                    }
 
-            if ( !lo )
-                continue;
+                    int decor = SwitchDecorate( srDisassembly, c );
 
-            auto sv = GetVar( lo->aVars, std::stoi( aVars[ 2 ] ) );
-
-            for ( int i = 0; i < aVars.size(); ++i ) {
-                if ( sv && aVars[ i ] == "Offset" ) {
-                    sv->aOffset = std::stoi( aVars[ i + 1 ] );
-                }
-            }
-        }
-        else if ( IsVar( RemovePercent( aVars[ 0 ] ), obj ) ) {
-            /*
-             *    Get the types of the variables
-             */
-            auto lo = GetLayoutObject( obj, RemovePercent( aVars[ 0 ] ) );
-
-            if ( !lo )
-                continue;
-
-            for ( int i = 0; i < aVars.size(); ++i ) {
-                if ( aVars[ i ] == "OpVariable" ) {
-                    /*
-                     *    The value that follows is the string %_ptr_<storage>_<name>.
-                     *    We need to remove the %_ptr_ and deduce the storage type
-                     *    and tie this variable to the layout object with the same name.
-                     */
-                    auto ptr = RemovePercent( aVars[ i + 1 ] );
-
-                    ptr = ptr.substr( ptr.find( "_" ) + 4 );
-
-                    auto store = ptr.substr( 0, ptr.find( "_" ) );
-                    ptr = ptr.substr( ptr.find( "_" ) + 1 );
-
-                    auto name = ptr;
-
-                    if ( IsVar( name, obj ) ) {
-                        auto lo2 = GetLayoutObject( obj, name );
-
-                        if ( lo2 ) {
-                            lo->aOther = lo2;
+                    switch ( decor ) {
+                        case DECO_LOCATION: {
+                            int loc = OpGetInt( srDisassembly, c );
+                            pVar->aLocation = loc;
+                            break;
+                        }
+                        case DECO_BINDING: {
+                            int bind = OpGetInt( srDisassembly, c );
+                            pVar->aBinding = bind;
+                            break;
+                        }
+                        case DECO_SET: {
+                            int set = OpGetInt( srDisassembly, c );
+                            pVar->aSet = set;
+                            break;
                         }
                     }
+                }
+                case OP_MEMBER_DECORATE: {
+                    std::string var  = OpGetStr( srDisassembly, c );
 
-                    if ( aVars[ i + 2 ] == "Input" ) {
-                        lo->aInFlags = SHADER_IN;
+                    if ( var[ 0 ] != '%' ) {
+                        LogError( "Invalid variable identifier: %s", var.c_str() );
+                        SkipLine( srDisassembly, c );
+                        break;
                     }
-                    else if ( aVars[ i + 2 ] == "Output" ) {
-                        lo->aInFlags = SHADER_OUT;
+
+                    ShaderVar *pParent = GetVar( reqs.aDisassembly, var );
+                    if ( !pParent ) {
+                        LogError( "Failed to find parent variable '%s' for member decoration.", var.c_str() );
+                        SkipLine( srDisassembly, c );
+                        break;
                     }
-                    else if ( aVars[ i + 2 ] == "Uniform" ) {
-                        lo->aIsUBO = true;
+
+                    int memb  = OpGetInt( srDisassembly, c );
+                    int decor = SwitchDecorate( srDisassembly, c );
+
+                    ShaderVar *pVar = pParent->apChildren;
+                    while ( pVar && pVar->apNext != nullptr )
+                        pVar = pVar->apNext;
+
+                    if ( !pVar ) {
+                        LogError( "Failed to find member variable '%s' for decoration.", var.c_str() );
+                        SkipLine( srDisassembly, c );
+                        break;
                     }
+
+                    switch ( decor ) {
+                        case DECO_LOCATION: {
+                            int loc = OpGetInt( srDisassembly, c );
+                            pVar->aLocation = loc;
+                            break;
+                        }
+                        case DECO_BINDING: {
+                            int bind = OpGetInt( srDisassembly, c );
+                            pVar->aBinding = bind;
+                            break;
+                        }
+                        case DECO_SET: {
+                            int set = OpGetInt( srDisassembly, c );
+                            pVar->aSet = set;
+                            break;
+                        }
+                        case DECO_OFFSET: {
+                            int offset = OpGetInt( srDisassembly, c );
+                            pVar->aOffset = offset;
+                            break;
+                        }
+                    }
+                }
+                case OP_ENTRY_POINT: {
+                    std::string type = OpGetStr( srDisassembly, c );
+                    reqs.aDisassembly.aShaderType = type;
+
+                    std::string entry = OpGetStr( srDisassembly, c );
+                    reqs.aDisassembly.aEntry.aName = entry;
+                    
+                    std::string identifier = OpGetStr( srDisassembly, c );
+                    reqs.aDisassembly.aEntry.aIdentifier = identifier;
+
+                    std::string layoutVar = OpSeekStr( srDisassembly, c );
+                    while ( layoutVar[ 0 ] == '%' ) {
+                        layoutVar = OpGetStr( srDisassembly, c );
+                        ShaderVar *pVar = AddVar( reqs.aDisassembly, layoutVar );
+                        if ( !pVar ) {
+                            LogError( "Failed to add variable '%s' to layout.", layoutVar.c_str() );
+                            SkipLine( srDisassembly, c );
+                            break;
+                        }
+                        layoutVar = OpSeekStr( srDisassembly, c );
+                    }
+                    break;
+                }
+                default: {
+                    LogError( "Unknown operation\n" );
+                    SkipLine( srDisassembly, c );
+                    break;
                 }
             }
         }
-    }
+        else
+        {
+            /*
+             *    Otherwise, we're looking at a variable declaration.
+             */
+            if ( srDisassembly[ c ] == '%' )
+            {
+                std::string var = OpGetStr( srDisassembly, c );
+                ShaderVar *pVar = AddVar( reqs.aDisassembly, var );
 
-    return obj;
+                if ( !pVar ) {
+                    LogError( "Failed to find variable '%s' for declaration.", var.c_str() );
+                    SkipLine( srDisassembly, c );
+                    break;
+                }
+
+                SkipWS( srDisassembly, c );
+                if ( srDisassembly[ c ] != '=' ) {
+                    LogError( "Expected '=' after variable declaration." );
+                    SkipLine( srDisassembly, c );
+                    break;
+                }
+                ++c;
+                int op = SwitchOperation( srDisassembly, c );
+                switch ( op ) {
+                    case OP_VARIABLE: {
+                        std::string var = OpGetStr( srDisassembly, c );
+                        
+                    }
+                }
+            }
+            else
+            {
+                LogError( "Expected variable identifier\n" );
+                SkipLine( srDisassembly, c );
+                continue;
+            }
+        }
+        SkipWS( srDisassembly, c );
+    }
 }
 
 VkShaderModule CreateModule( const std::vector< char > &srData ) 
@@ -252,7 +539,7 @@ VkPipelineLayout CreateLayout( const ShaderRequirements &srReqs )
     int imageSet  = -1;
     int bufferSet = -1;
 
-    for ( auto &req : srReqs.aVertObjects ) {
+    /*for ( auto &req : srReqs.aVertObjects ) {
         if ( req.aType == "_ptr_UniformConstant__runtimearr_14" && req.aSet > -1 ) {
             flags    |= REQUIRES_IMAGES;
             imageSet  = req.aSet;
@@ -276,7 +563,7 @@ VkPipelineLayout CreateLayout( const ShaderRequirements &srReqs )
             bufferSet  = req.aSet;
             LogDev( gGraphics2Channel, 1, "Shader uses buffers\n" );
         }
-    }
+    }*/
     
     VkPipelineLayoutCreateInfo pipelineLayoutCreateInfo = {};
     pipelineLayoutCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
@@ -341,10 +628,10 @@ VkPipeline CreatePipeline( const std::string &srVertPath, const std::string &srF
 
     auto frag = GetRequirements( text );
 
-    ShaderRequirements reqs = { vert, frag };
+    //ShaderRequirements reqs = { vert, frag };
 
     VkPipeline pipeline = VK_NULL_HANDLE;
-    VkPipelineLayout pipelineLayout = CreateLayout( reqs );
+    VkPipelineLayout pipelineLayout = VK_NULL_HANDLE;//CreateLayout( reqs );
 
     VkPipelineShaderStageCreateInfo vertShaderStageInfo = {};
     vertShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;

@@ -5,7 +5,7 @@
 
 #ifdef NDEBUG
     constexpr bool 	      gEnableValidationLayers = false;
-    constexpr char const *gpValidationLayers[]    = {};
+    constexpr char const *gpValidationLayers[]    = { 0 };
 #else
     constexpr bool 	      gEnableValidationLayers = true;
     constexpr char const *gpValidationLayers[]    = { "VK_LAYER_KHRONOS_validation" };

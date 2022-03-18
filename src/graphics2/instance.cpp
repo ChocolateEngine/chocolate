@@ -11,17 +11,26 @@ constexpr char const *gpDeviceExtensions[] = { VK_KHR_SWAPCHAIN_EXTENSION_NAME, 
 
 VkSampleCountFlagBits gMaxSamples = VK_SAMPLE_COUNT_1_BIT;
 
-VKAPI_ATTR VkBool32 VKAPI_CALL DebugCallback( VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,    VkDebugUtilsMessageTypeFlagsEXT messageType, 
-                                              const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData )
+LOG_REGISTER_CHANNEL( Validation, LogColor::Blue );
+
+VKAPI_ATTR VkBool32 VKAPI_CALL DebugCallback( VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, VkDebugUtilsMessageTypeFlagsEXT messageType,
+					                          const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData )
 {
 	static bool dumpVLayers = cmdline->Find( "-dump-vlayers" ) || cmdline->Find( "-vlayers" );
 	if ( dumpVLayers )
 	{
-		LogDev( 1, "\n[Validation Layer] %s\n\n", pCallbackData->pMessage );
+		const Log* log = LogGetLastLog();
+
+		// blech
+		if ( log && log->aChannel != gValidationChannel )
+			LogEx( gValidationChannel, LogType::Raw, "\n" );
+		
+		LogMsg( gValidationChannel, "%s\n\n", pCallbackData->pMessage );
 	}
 
 	return VK_FALSE;
 }
+
 
 constexpr VkDebugUtilsMessengerCreateInfoEXT gLayerInfo = {
 	.sType 	   		  = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT,
