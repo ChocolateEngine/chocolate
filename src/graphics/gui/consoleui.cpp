@@ -526,7 +526,7 @@ void DrawConsoleOutput()
 	const ImGuiID id = window->GetID( "ConsoleOutput" );
 	const ImVec2 outputSize( ImGui::GetWindowSize().x - 32, ImGui::GetWindowSize().y - 64 );
 
-	ImGui::BeginChildFrame( id, outputSize, 0 );
+	ImGui::BeginChildFrame( id, outputSize, ImGuiWindowFlags_NoNav );
 
 	static int scrollMax = ImGui::GetScrollMaxY();
 
@@ -586,17 +586,19 @@ void GuiSystem::DrawConsole( bool wasConsoleOpen )
 		LogMsg( "TEST\n" );
 
 	if ( !ImGui::Begin( "Developer Console" ) )
+	{
+		ImGui::End();
 		return;
+	}
 
 	static char buf[ 256 ] = "";
 
 	DrawColorTest();
 	DrawFilterBox();
+	DrawConsoleOutput();
 
 	if ( !wasConsoleOpen )
 		ImGui::SetKeyboardFocusHere(0);
-
-	DrawConsoleOutput();
 
 	snprintf( buf, 256, console->GetTextBuffer().c_str() );
 	ImGui::InputText( "send", buf, 256, ImGuiInputTextFlags_CallbackAlways, &ConsoleInputCallback );
@@ -606,7 +608,7 @@ void GuiSystem::DrawConsole( bool wasConsoleOpen )
 
 	ImVec2 dropDownPos( ImGui::GetWindowPos().x, ImGui::GetWindowSize().y + ImGui::GetWindowPos().y );
 
-	ImGui::End(  );
+	ImGui::End();
 
 	const std::vector< std::string >& cvarAutoComplete = console->GetAutoCompleteList();
 
