@@ -87,29 +87,29 @@ void SkipLine( const std::string &srSource, size_t &sIndex )
 int SwitchOperation( const std::string &srSource, size_t &sIndex )
 {
     SkipWS( srSource, sIndex );
-    if ( srSource.substr( sIndex, 3 ) == "Op" )
+    if ( srSource.substr( sIndex, 6 ) == "OpName" )
     {
-        sIndex += 3;
+        sIndex += 6;
         return OP_NAME;
     }
-    else if ( srSource.substr( sIndex, 10 ) == "OpMemberName" )
+    else if ( srSource.substr( sIndex, 12 ) == "OpMemberName" )
     {
-        sIndex += 10;
+        sIndex += 12;
         return OP_MEMBER_NAME;
     }
-    else if ( srSource.substr( sIndex, 9 ) == "OpDecorate" )
+    else if ( srSource.substr( sIndex, 10 ) == "OpDecorate" )
     {
-        sIndex += 9;
+        sIndex += 10;
         return OP_DECORATE;
     }
-    else if ( srSource.substr( sIndex, 15 ) == "OpMemberDecorate" )
+    else if ( srSource.substr( sIndex, 16 ) == "OpMemberDecorate" )
     {
-        sIndex += 15;
+        sIndex += 16;
         return OP_MEMBER_DECORATE;
     }
-    else if ( srSource.substr( sIndex, 11 ) == "OpEntryPoint" )
+    else if ( srSource.substr( sIndex, 12 ) == "OpEntryPoint" )
     {
-        sIndex += 11;
+        sIndex += 12;
         return OP_ENTRY_POINT;
     }
     else
@@ -120,19 +120,19 @@ int SwitchOperation( const std::string &srSource, size_t &sIndex )
 
 int SwitchDecorate( const std::string &srSource, size_t &sIndex )
 {
-    if ( srSource.substr( sIndex, 9 ) == "Location" )
+    if ( srSource.substr( sIndex, 8 ) == "Location" )
     {
-        sIndex += 9;
+        sIndex += 8;
         return DECO_LOCATION;
     }
-    else if ( srSource.substr( sIndex, 14 ) == "DescriptorSet" )
+    else if ( srSource.substr( sIndex, 13 ) == "DescriptorSet" )
     {
-        sIndex += 3;
+        sIndex += 13;
         return DECO_SET;
     }
-    else if ( srSource.substr( sIndex, 6 ) == "Binding" )
+    else if ( srSource.substr( sIndex, 7 ) == "Binding" )
     {
-        sIndex += 6;
+        sIndex += 7;
         return DECO_BINDING;
     }
     else if ( srSource.substr( sIndex, 6 ) == "Offset" )
@@ -241,9 +241,19 @@ ShaderVar *AddVar( SpirvDisassembly &srDisass, const std::string& srVar )
     if ( !pNewVar )
         return nullptr;
 
-    pNewVar->aName = srVar;
-    pNewVar->apNext = srDisass.apVars;
-    srDisass.apVars = pNewVar;
+    if ( srDisass.apVars == nullptr ) {
+        srDisass.apVars = pNewVar;
+        pNewVar->apNext = nullptr;
+
+        return pNewVar;
+    }
+
+    ShaderVar *pMemb = srDisass.apVars;
+    while ( pMemb && pMemb->apNext != nullptr )
+        pMemb = pMemb->apNext;
+
+    pMemb->apNext   = pNewVar;
+    pNewVar->aName  = srVar;
 
     return pNewVar;
 }
@@ -259,9 +269,19 @@ ShaderVar *AddVar( SpirvDisassembly &srDisass, const int &srId )
     if ( !pNewVar )
         return nullptr;
 
-    pNewVar->aId = srId;
-    pNewVar->apNext = srDisass.apVars;
-    srDisass.apVars = pNewVar;
+    if ( srDisass.apVars == nullptr ) {
+        srDisass.apVars = pNewVar;
+        pNewVar->apNext = nullptr;
+
+        return pNewVar;
+    }
+
+    ShaderVar *pMemb = srDisass.apVars;
+    while ( pMemb && pMemb->apNext != nullptr )
+        pMemb = pMemb->apNext;
+
+    pMemb->apNext   = pNewVar;
+    pNewVar->aId    = srId;
 
     return pNewVar;
 }
@@ -286,7 +306,7 @@ ShaderRequirements GetRequirements( const std::string &srDisassembly )
         /*
          *    If our line starts with Op, then we're looking at a new instruction.
          */
-        if ( srDisassembly.substr( c, c + 2 ) == "Op" )
+        if ( srDisassembly.substr( c, 2 ) == "Op" )
         {
             int op = SwitchOperation( srDisassembly, c );
             switch ( op ) {
@@ -494,6 +514,11 @@ ShaderRequirements GetRequirements( const std::string &srDisassembly )
                         std::string var = OpGetStr( srDisassembly, c );
                         
                     }
+                    default: {
+                        LogError( "Unknown operation\n" );
+                        SkipLine( srDisassembly, c );
+                        break;
+                    }
                 }
             }
             else
@@ -505,6 +530,8 @@ ShaderRequirements GetRequirements( const std::string &srDisassembly )
         }
         SkipWS( srDisassembly, c );
     }
+
+    return reqs;
 }
 
 VkShaderModule CreateModule( const std::vector< char > &srData ) 
