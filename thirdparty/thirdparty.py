@@ -234,6 +234,10 @@ def fix_vorbis_proj(proj: str, proj_line_nums: List[int]):
 
     with open(proj, mode="r") as proj_io:
         vcxproj = proj_io.readlines()
+        
+    for line_num, line in enumerate(vcxproj):
+        if "<WindowsTargetPlatformVersion>8.1</WindowsTargetPlatformVersion>" in line:
+            vcxproj[line_num] = "    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>"
 
     # set build tools in vcxproj to the latest MSVC version
     for index, line_num in enumerate(proj_line_nums):
@@ -338,9 +342,9 @@ FILE_LIST = {
     # All Platforms
     OS.Any: [
         [
-            "https://github.com/ValveSoftware/steam-audio/releases/download/v2.0-beta.17/steamaudio_api_2.0-beta.17.zip",
+            "https://github.com/ValveSoftware/steam-audio/releases/download/v4.0.3/steamaudio_4.0.3.zip",
             "zip",                  # file extension it's stored as
-            "steamaudio_api",       # folder to check for if it exists already
+            "steamaudio",           # folder to check for if it exists already
             "",                     # folder it extracts as to rename to another folder (optional)
             ".",                    # extract into this folder (optional)
             None,                   # function to run post extraction (optional)
@@ -361,16 +365,16 @@ FILE_LIST = {
             ".",                    # extract into this folder (optional)
             post_jolt_extract,
         ],
-        #[
-        #    "https://github.com/bulletphysics/bullet3/archive/refs/tags/3.17.zip",
-        #    "zip",                  # file extension it's stored as
-        #    "bullet3",              # folder to check for if it exists already
-        #    "bullet3-3.17",         # folder it extracts as to rename to the folder above (optional)
-        #    ".",                    # extract into this folder (optional)
-        #    post_bullet_extract,
-        #    # TODO: set this up
-        #    # cmake -DBUILD_EGL=Off -DBUILD_OPENGL3_DEMOS=Off -DBUILD_BULLET3=Off -DUSE_GRAPHICAL_BENCHMARK=Off -DBUILD_EXTRAS=Off -DBUILD_CPU_DEMOS=Off -DBUILD_BULLET2_DEMOS=Off -DBUILD_UNIT_TESTS=Off -DUSE_MSVC_RUNTIME_LIBRARY_DLL=On ..
-        #],
+        [
+            "https://github.com/bulletphysics/bullet3/archive/refs/tags/3.17.zip",
+            "zip",                  # file extension it's stored as
+            "bullet3",              # folder to check for if it exists already
+            "bullet3-3.17",         # folder it extracts as to rename to the folder above (optional)
+            ".",                    # extract into this folder (optional)
+            post_bullet_extract,
+            # TODO: set this up
+            # cmake -DBUILD_EGL=Off -DBUILD_OPENGL3_DEMOS=Off -DBUILD_BULLET3=Off -DUSE_GRAPHICAL_BENCHMARK=Off -DBUILD_EXTRAS=Off -DBUILD_CPU_DEMOS=Off -DBUILD_BULLET2_DEMOS=Off -DBUILD_UNIT_TESTS=Off -DUSE_MSVC_RUNTIME_LIBRARY_DLL=On ..
+        ],
     ],
 
     # Windows Only

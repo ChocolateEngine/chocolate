@@ -33,7 +33,7 @@ bool CodecVorbis::CheckExt( const char* ext )
 }
 
 
-bool CodecVorbis::Open( const char* soundPath, AudioStreamInternal *stream )
+bool CodecVorbis::Open( const char* soundPath, AudioStream *stream )
 {
     FILE *soundFileHandle = fopen(soundPath, "rb");
     if (!soundFileHandle)
@@ -131,7 +131,7 @@ long CodecVorbis::ReadPacket( AudioStream *stream, std::vector<float> &data )
 }*/
 
 
-long CodecVorbis::Read( AudioStreamInternal *stream, size_t size, std::vector<float> &data )
+long CodecVorbis::Read( AudioStream *stream, size_t size, std::vector<float> &data )
 {
     CodecVorbisData *vorbisData = (CodecVorbisData*)stream->data;
     OggVorbis_File *oggFile = vorbisData->oggFile;
@@ -187,7 +187,7 @@ long CodecVorbis::Read( AudioStreamInternal *stream, size_t size, std::vector<fl
 }
 
 
-int CodecVorbis::Seek( AudioStreamInternal *stream, double pos )
+int CodecVorbis::Seek( AudioStream *stream, double pos )
 {
     CodecVorbisData* vorbisData = (CodecVorbisData*)stream->data;
     OggVorbis_File *oggFile = vorbisData->oggFile;
@@ -200,7 +200,7 @@ int CodecVorbis::Seek( AudioStreamInternal *stream, double pos )
 }
 
 
-void CodecVorbis::Close( AudioStreamInternal *stream )
+void CodecVorbis::Close( AudioStream *stream )
 {
     CodecVorbisData* vorbisData = (CodecVorbisData*)stream->data;
     ov_clear(vorbisData->oggFile);

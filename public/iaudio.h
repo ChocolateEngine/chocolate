@@ -11,54 +11,19 @@
 class BaseCodec;
 class BaseAudioSystem;
 
+using AudioEffects = unsigned char;
 
-enum
+enum: AudioEffects
 {
 	AudioEffect_None = (1 << 1),
 	//AudioEffect_Panning = (1 << 2),
-	AudioEffect_Direct = (1 << 3),
-	AudioEffect_Binaural = (1 << 4),
+	//AudioEffect_Direct = (1 << 3),
+	//AudioEffect_Binaural = (1 << 4),
+	AudioEffect_World = (1 << 2),
 };
 
-constexpr size_t AudioEffectPreset_World = AudioEffect_Direct | AudioEffect_Binaural;
-
-
-// maybe change to Sound?
-// also hide a few more things from normal game code probably? idk
-struct AudioStream
-{
-	bool Valid() { return valid; }
-
-	std::string name;
-	size_t frame = 0;
-
-	unsigned char channels;
-	size_t rate;
-	SDL_AudioFormat format = AUDIO_F32;
-	unsigned int size;
-	unsigned int samples;
-	unsigned int bits;
-	unsigned char width;  // ???
-
-	float vol = 1.f;
-	float radius = 100.0f;
-	float falloff = 16.f;
-
-	bool loop = false;      // should we loop the file when it ends?
-	//double time = 0;        // time in seconds in the file
-	double startTime = 0;   // time in seconds to start playback
-	//double endTime = 0;     // time in seconds to end playback
-	//float speed = 1.0f;
-
-	// must be set before playing a sound
-	size_t effects = AudioEffect_None;
-
-	bool paused = false;
-	bool valid = false;
-	bool preloaded = false;  // bruh
-
-	glm::vec3 pos;
-};
+// constexpr AudioEffects AudioEffectPreset_World = AudioEffect_Direct | AudioEffect_Binaural;
+constexpr AudioEffects AudioEffectPreset_World = AudioEffect_World;
 
 
 // prototyping idea
@@ -131,6 +96,9 @@ public:
 	/* Audio Volume Channels (ex. General, Music, Voices, Commentary, etc.) */
 	// virtual void                    SetChannel( Handle stream, int channel ) = 0;
 	// virtual int                     GetChannel( Handle stream ) = 0;
+	
+	virtual void                    SetEffects( Handle stream, AudioEffects effect ) = 0;
+	virtual AudioEffects            GetEffects( Handle stream ) = 0;
 
 	/* UNTESTED: seek to different point in the audio file */
 	virtual bool                    Seek( Handle stream, double pos ) = 0;

@@ -2,11 +2,9 @@
 #include "core/core.h"
 #include "types/transform.h"
 
-#if ENABLE_AUDIO
 #include "codec_vorbis.h"
 #include "codec_wav.h"
 #include "codec_libav.h"
-#endif
 
 #include <SDL2/SDL.h>
 #include <glm/gtx/transform.hpp>
@@ -24,8 +22,8 @@ AudioSystem* audio = new AudioSystem;
 namespace fs = std::filesystem;
 
 // WHY DOES THIS BREAK WHEN I CHANGE IT FROM 2048??? I HATE WORKING WITH AUDIO
-constexpr size_t SOUND_BYTES = 2048;
-//constexpr size_t SOUND_BYTES = 4096;
+constexpr size_t FRAME_SIZE = 2048;
+//constexpr size_t FRAME_SIZE = 4096;
 constexpr size_t SOUND_RATE = 48000;
 constexpr size_t MAX_STREAMS = 32;
 
@@ -36,9 +34,8 @@ CONVAR( snd_buffer_size, 4 );
 CONVAR( snd_read_mult, 4 );  // 4
 CONVAR( snd_audio_stream_available, 2 );
 
-#if ENABLE_AUDIO
-IPLAudioFormat g_formatMono = {};
-IPLAudioFormat g_formatStereo = {};
+//IPLAudioFormat g_formatMono = {};
+//IPLAudioFormat g_formatStereo = {};
 
 extern "C" {
 	DLL_EXPORT void* cframework_get() {
@@ -49,17 +46,16 @@ extern "C" {
 bool HandleSteamAudioReturn(IPLerror ret, const char* msg)
 {
 	if (ret == IPL_STATUS_OUTOFMEMORY)
-		LogMsg( gAduioChannel, "%s: %d - Out Of Memory\n", msg, (int)ret );
+		LogError( gAduioChannel, "%s: %d - Out Of Memory\n", msg, (int)ret );
 
 	else if (ret == IPL_STATUS_INITIALIZATION)
-		LogMsg( gAduioChannel, "%s: %d - An error occurred while initializing an external dependency\n", msg, (int)ret );
+		LogError( gAduioChannel, "%s: %d - An error occurred while initializing an external dependency\n", msg, (int)ret );
 
 	else if (ret == IPL_STATUS_FAILURE)
-		LogMsg( gAduioChannel, "%s: %d - Failure\n", msg, (int)ret );
+		LogError( gAduioChannel, "%s: %d - Failure\n", msg, (int)ret );
 
 	return ret == IPL_STATUS_SUCCESS;
 }
-#endif
 
 
 AudioSystem::AudioSystem(  ) : BaseAudioSystem(  )
@@ -81,7 +77,6 @@ std::mutex g_audioMutex;
 
 void AudioSystem::Init(  )
 {
-#if ENABLE_AUDIO
     /*
 	 *    Preallocate 128 MB of memory for audio processing.
 	 */
@@ -96,8 +91,8 @@ void AudioSystem::Init(  )
 	wantedSpec.userdata = NULL;
 	wantedSpec.channels = 2;
 	wantedSpec.freq = SOUND_RATE;
-	wantedSpec.samples = SOUND_BYTES;
-	// aAudioSpec.samples = SOUND_BYTES / 2;
+	wantedSpec.samples = FRAME_SIZE;
+	// aAudioSpec.samples = FRAME_SIZE / 2;
 	wantedSpec.silence = 0;
 	wantedSpec.size = 0;
 
@@ -113,21 +108,12 @@ void AudioSystem::Init(  )
 		LogMsg( gAduioChannel, "SDL_OpenAudioDevice failed: %s\n", SDL_GetError() );
 		return;
 	}
-	
-	// this shouldn't be needed, but doesn't work without it, yay
-	// aMasterStream = SDL_NewAudioStream(AUDIO_S16, aAudioSpec.channels, aAudioSpec.freq, aAudioSpec.format, aAudioSpec.channels, aAudioSpec.freq);
-	aMasterStream = SDL_NewAudioStream(AUDIO_F32, aAudioSpec.channels, aAudioSpec.freq, aAudioSpec.format, aAudioSpec.channels, aAudioSpec.freq);
 
 	InitSteamAudio();
 	
 	// why won't an std::vector work here ????
-	mixBufferAudio = new float[SOUND_BYTES * 2];
-	SDL_memset( mixBufferAudio, 0, sizeof( mixBufferAudio ) );
-
-	// mixBufferContext.interleavedBuffer = mixBuffer.data();
-	mixBufferContext.interleavedBuffer = mixBufferAudio;
-	mixBufferContext.numSamples = aAudioSpec.samples; // * aAudioSpec.channels;
-	mixBufferContext.format = g_formatStereo;
+	apMixBufferAudio = new float[FRAME_SIZE * 2];
+	SDL_memset( apMixBufferAudio, 0, sizeof( apMixBufferAudio ) );
 
 	// Load built-in codecs
 	// these other 2 codecs don't work properly for some reason
@@ -169,7 +155,7 @@ void AudioSystem::Init(  )
 			int remainingAudio = SDL_GetQueuedAudioSize( aOutputDeviceID );
 			static int read = remainingAudio;
 
-			if ( remainingAudio < SOUND_BYTES * snd_buffer_size.GetFloat() )
+			if ( remainingAudio < FRAME_SIZE * snd_buffer_size.GetFloat() )
 			{
 				// this might work well for multithreading
 				for ( int i = 0; i < aStreamsPlaying.size(); i++ )
@@ -201,14 +187,11 @@ void AudioSystem::Init(  )
 	);
 	
 #endif
-
-#endif
 }
 
 
 bool AudioSystem::RegisterCodec( BaseCodec *codec )
 {
-#if ENABLE_AUDIO
 	if ( aCodecs.empty() || std::find(aCodecs.begin(), aCodecs.end(), codec) == aCodecs.end() )
 	{
 		aCodecs.push_back(codec);
@@ -222,15 +205,49 @@ bool AudioSystem::RegisterCodec( BaseCodec *codec )
 	}
 
 	LogMsg( gAduioChannel, "Audio Codec already loaded - \"%s\"\n", codec->GetName() );
-#endif
 	return false;
 }
 
 
-#if ENABLE_AUDIO
+IPLAudioSettings gAudioSettings{
+	.samplingRate = 48000,
+	.frameSize = FRAME_SIZE
+};
+
+IPLHRTF gpHrtf = nullptr;
+
+
 bool AudioSystem::InitSteamAudio()
 {
-	IPLerror ret = iplCreateContext( [](char* message){ LogMsg( gAduioChannel, "Steam Audio: %s", message); }, nullptr, nullptr, &context );
+	IPLContextSettings contextSettings{};
+	contextSettings.logCallback = []( IPLLogLevel level, const char* message ) { LogMsg( gAduioChannel, "Steam Audio LVL %d: %s\n", (int)level, message ); };
+	contextSettings.version = STEAMAUDIO_VERSION;
+
+	IPLerror ret = iplContextCreate( &contextSettings, &aCtx );
+	if ( !HandleSteamAudioReturn( ret, "Error creating steam audio context" ) )
+		return false;
+
+	IPLHRTFSettings hrtfSettings{};
+	hrtfSettings.type = IPL_HRTFTYPE_DEFAULT;
+
+	ret = iplHRTFCreate( aCtx, &gAudioSettings, &hrtfSettings, &gpHrtf );
+	if ( !HandleSteamAudioReturn( ret, "Error creating HTRF" ) )
+		return false;
+
+	ret = iplAudioBufferAllocate( aCtx, 2, FRAME_SIZE, &aMixBuffer );
+	if ( !HandleSteamAudioReturn( ret, "Error creating steam audio context" ) )
+		return false;
+	
+	IPLBinauralEffectSettings effectSettings{};
+	effectSettings.hrtf = gpHrtf;
+
+	ret = iplBinauralEffectCreate( aCtx, &gAudioSettings, &effectSettings, &apBinauralEffect );
+	if ( !HandleSteamAudioReturn( ret, "Error creating binaural effect" ) )
+		return false;
+
+	// Steam Audio 2 Code
+#if 0
+	IPLerror ret = iplCreateContext( [](char* message){ Print("[AudioSystem] Steam Audio: %s", message); }, nullptr, nullptr, &context );
 	if ( !HandleSteamAudioReturn( ret, "Error creating steam audio context" ) )
 		return false;
 
@@ -275,17 +292,16 @@ bool AudioSystem::InitSteamAudio()
 	ret = iplCreateEnvironmentalRenderer( context, environment, settings, g_formatStereo, nullptr, nullptr, &envRenderer );
 	if ( !HandleSteamAudioReturn( ret, "Error creating environmental renderer" ) )
 		return false;
+#endif
 
 	return true;
 }
-#endif
 
 
 
 // OpenSound?
 Handle AudioSystem::LoadSound( std::string soundPath )
 {
-#if ENABLE_AUDIO
 	// check for too many streams
 	/*if ( aStreams.size() == MAX_STREAMS )
 	{
@@ -308,7 +324,7 @@ Handle AudioSystem::LoadSound( std::string soundPath )
 
 	std::string ext = fs::path(soundPath).extension().string();
 
-	AudioStreamInternal* stream = new AudioStreamInternal;
+	AudioStream* stream = new AudioStream;
 	stream->name = soundPath;
 
 	for ( BaseCodec* codec: aCodecs )
@@ -323,7 +339,7 @@ Handle AudioSystem::LoadSound( std::string soundPath )
 
 		if ( !(stream->valid = LoadSoundInternal( stream )) )
 		{
-			LogError( gAduioChannel, "Could not load sound: \"%s\"\n", soundPath );
+			LogError( gAduioChannel, "Could not load sound: \"%s\"\n", soundPath.c_str() );
 			delete stream;
 			return InvalidHandle;
 		}
@@ -334,24 +350,21 @@ Handle AudioSystem::LoadSound( std::string soundPath )
 		}
 	}
 
-	LogError( gAduioChannel, "Could not load sound: \"%s\"\n", soundPath );
+	LogError( gAduioChannel, "Could not load sound: \"%s\"\n", soundPath.c_str() );
 	delete stream;
-#endif
 	return InvalidHandle;
 }
 
 
-bool AudioSystem::LoadSoundInternal( AudioStreamInternal *stream )
+bool AudioSystem::LoadSoundInternal( AudioStream *stream )
 {
-#if !ENABLE_AUDIO
-	return false;
-#else
 	IPLerror ret;
 	// SDL_AudioStream will convert it to stereo for us
 	//IPLAudioFormat inAudioFormat = (stream->channels == 1 ? g_formatMono: g_formatStereo);
-	IPLAudioFormat inAudioFormat = g_formatStereo;
+	// IPLAudioFormat inAudioFormat = g_formatStereo;
 	//IPLAudioFormat inAudioFormat = g_formatMono;
 
+#if 0 // Steam Audio 2 Code
 	if ( stream->effects & AudioEffect_Direct )
 	{
 		ret = iplCreateDirectSoundEffect(envRenderer, inAudioFormat, g_formatStereo, &stream->directSoundEffect);
@@ -361,10 +374,15 @@ bool AudioSystem::LoadSoundInternal( AudioStreamInternal *stream )
 
 	if ( stream->effects & AudioEffect_Binaural )
 	{
-		ret = iplCreateBinauralEffect(renderer, g_formatStereo, g_formatStereo, &stream->binauralEffect);
+		// ret = iplCreateBinauralEffect(renderer, g_formatStereo, g_formatStereo, &stream->binauralEffect);
+		IPLBinauralEffectSettings effectSettings{};
+		effectSettings.hrtf = gpHrtf;
+
+		ret = iplBinauralEffectCreate( aCtx, &gAudioSettings, &effectSettings, &stream->apBinauralEffect);
 		if (!HandleSteamAudioReturn(ret, "Error creating binaural effect"))
 			return false;
 	}
+#endif
 
 	// ret = iplCreatePanningEffect(renderer, g_formatStereo, g_formatStereo, &stream->effect);
 	// ret = iplCreateVirtualSurroundEffect(renderer, g_formatStereo, g_formatStereo, &stream->effect);
@@ -377,49 +395,34 @@ bool AudioSystem::LoadSoundInternal( AudioStreamInternal *stream )
 		stream->audioStream = SDL_NewAudioStream(stream->format, stream->channels, stream->rate, aAudioSpec.format, 2, aAudioSpec.freq);
 		if (stream->audioStream == nullptr)
 		{
-			LogMsg( gAduioChannel, "SDL_NewAudioStream failed: %s\n", SDL_GetError() );
+			LogError( gAduioChannel, "SDL_NewAudioStream failed: %s\n", SDL_GetError() );
 			return false;
 		}
 	}
 
-	// hmm, how am i going to handle this with different effects...
-	stream->inBufferAudio  = ( float* )aStreamPool.Alloc( SOUND_BYTES * 2 );
-	stream->midBufferAudio = ( float* )aStreamPool.Alloc( SOUND_BYTES * 2 );
-	stream->outBufferAudio = ( float* )aStreamPool.Alloc( SOUND_BYTES * 2 );
-
-	SDL_memset( stream->inBufferAudio, 0, sizeof( stream->inBufferAudio ) );
-	SDL_memset( stream->midBufferAudio, 0, sizeof( stream->midBufferAudio ) );
-	SDL_memset( stream->outBufferAudio, 0, sizeof( stream->outBufferAudio ) );
-
-	stream->inBuffer.interleavedBuffer = stream->inBufferAudio;
-	stream->midBuffer.interleavedBuffer = stream->midBufferAudio;
-	stream->outBuffer.interleavedBuffer = stream->outBufferAudio;
-
-	stream->inBuffer.format = inAudioFormat;
-	stream->midBuffer.format = g_formatStereo;
-	stream->outBuffer.format = g_formatStereo;
+	// final output audio buffer
+	ret = iplAudioBufferAllocate( aCtx, 2, FRAME_SIZE, &stream->outBuffer );
+	if ( !HandleSteamAudioReturn( ret, "Error creating outBuffer" ) )
+		return false;
 
 	// Jump to start time
 	if ( stream->startTime > 0 )
 		stream->codec->Seek( stream, stream->startTime );
 
 	return true;
-#endif
 }
 
 
 /* Checks If This a Valid Audio Stream, if not, throw a warning and return nullptr. */
-AudioStreamInternal* AudioSystem::GetStream( Handle streamHandle )
+AudioStream* AudioSystem::GetStream( Handle streamHandle )
 {
 	if ( streamHandle == InvalidHandle )
-	{
 		return nullptr;
-	}
 
-	AudioStreamInternal *stream = *aStreams.Get( streamHandle );
+	AudioStream *stream = *aStreams.Get( streamHandle );
 
 	if ( !stream )
-		LogWarn( "[AudioSystem] Invalid Stream Handle: %u\n", (size_t)streamHandle );
+		LogWarn( gAduioChannel, "Invalid Stream Handle: %u\n", (size_t)streamHandle );
 
 	return stream;
 }
@@ -435,7 +438,7 @@ AudioStreamInternal* AudioSystem::GetStream( Handle streamHandle )
 
 bool AudioSystem::PreloadSound( Handle streamHandle )
 {
-	AudioStreamInternal *stream = GetStream( streamHandle );
+	AudioStream *stream = GetStream( streamHandle );
 
 	if ( !stream )
 		return false;
@@ -444,7 +447,7 @@ bool AudioSystem::PreloadSound( Handle streamHandle )
 	{
 		std::vector<float> rawAudio;
 
-		long read = stream->codec->Read( stream, SOUND_BYTES, rawAudio );
+		long read = stream->codec->Read( stream, FRAME_SIZE, rawAudio );
 
 		// should just put silence in the stream if this is true
 		if ( read < 0 )
@@ -460,7 +463,7 @@ bool AudioSystem::PreloadSound( Handle streamHandle )
 			if ( stream->codec->Seek( stream, stream->startTime ) == -1 )
 				return false; // failed to seek back, stop the sound
 
-			read = stream->codec->Read( stream, SOUND_BYTES, rawAudio );
+			read = stream->codec->Read( stream, FRAME_SIZE, rawAudio );
 
 			// should just put silence in the stream if this is true
 			if ( read < 0 )
@@ -485,7 +488,7 @@ bool AudioSystem::PlaySound( Handle sStream )
 	if ( sStream == InvalidHandle )
 		return false;
 	
-	AudioStreamInternal *stream = *aStreams.Get( sStream );
+	AudioStream *stream = *aStreams.Get( sStream );
 
 	if ( stream == nullptr )
 		return false;
@@ -497,25 +500,25 @@ bool AudioSystem::PlaySound( Handle sStream )
 
 void AudioSystem::FreeSound( Handle sStream )
 {
-#if ENABLE_AUDIO
 	if ( sStream == InvalidHandle )
 		return;
-	
-	AudioStreamInternal *stream = *aStreams.Get( sStream );
+
+	AudioStream *stream = *aStreams.Get( sStream );
 
 	if ( stream == nullptr )
 		return;
 
 	vec_remove_if( aStreamsPlaying, sStream );
 
-	aStreamPool.Free( stream->inBufferAudio );
-	aStreamPool.Free( stream->midBufferAudio );
-	aStreamPool.Free( stream->outBufferAudio );
+	// TODO: use the memory pool again (though i think i can set it in steam audio?)
+	iplAudioBufferFree( aCtx, &stream->outBuffer );
+
+	//aStreamPool.Free( stream->inBufferAudio );
+	//aStreamPool.Free( stream->midBufferAudio );
+	//aStreamPool.Free( stream->outBufferAudio );
 
 	stream->codec->Close( stream );
 	aStreams.Remove( sStream );
-
-#endif
 }
 
 
@@ -562,7 +565,7 @@ bool AudioSystem::IsValid( Handle stream )
 /* Audio Stream Volume ranges from 0.0f to 1.0f */
 void AudioSystem::SetVolume( Handle handle, float vol )
 {
-	AudioStreamInternal* stream = GetStream( handle );
+	AudioStream* stream = GetStream( handle );
 	if ( !stream )
 		return;
 
@@ -571,7 +574,7 @@ void AudioSystem::SetVolume( Handle handle, float vol )
 
 float AudioSystem::GetVolume( Handle handle )
 {
-	AudioStreamInternal* stream = GetStream( handle );
+	AudioStream* stream = GetStream( handle );
 	if ( !stream )
 		return 0.f;
 
@@ -579,7 +582,9 @@ float AudioSystem::GetVolume( Handle handle )
 }
 
 
-/* Audio Stream Volume ranges from 0.0f to 1.0f */
+// TODO: actually be able to change input sample rate live,
+// right now it's impossible due to how SDL_AudioStream works
+// need to make my own sample rate converter somehow probably
 //bool AudioSystem::SetSampleRate( Handle stream, float vol ) override;
 //float AudioSystem::GetSampleRate( Handle stream ) override;
 
@@ -587,7 +592,7 @@ float AudioSystem::GetVolume( Handle handle )
 /* Sound Position in World */
 void AudioSystem::SetWorldPos( Handle handle, const glm::vec3& pos )
 {
-	AudioStreamInternal* stream = GetStream( handle );
+	AudioStream* stream = GetStream( handle );
 	if ( !stream )
 		return;
 
@@ -598,7 +603,7 @@ const glm::vec3& AudioSystem::GetWorldPos( Handle handle )
 {
 	static constexpr glm::vec3 origin = { 0, 0, 0 };
 
-	AudioStreamInternal* stream = GetStream( handle );
+	AudioStream* stream = GetStream( handle );
 	if ( !stream )
 		return origin;
 
@@ -609,7 +614,7 @@ const glm::vec3& AudioSystem::GetWorldPos( Handle handle )
 /* Sound Loop Parameters (make a component?) */
 void AudioSystem::SetLoop( Handle handle, bool loop )
 {
-	AudioStreamInternal* stream = GetStream( handle );
+	AudioStream* stream = GetStream( handle );
 	if ( !stream )
 		return;
 
@@ -618,7 +623,7 @@ void AudioSystem::SetLoop( Handle handle, bool loop )
 
 bool AudioSystem::DoesSoundLoop( Handle handle )
 {
-	AudioStreamInternal* stream = GetStream( handle );
+	AudioStream* stream = GetStream( handle );
 	if ( !stream )
 		return false;
 
@@ -626,24 +631,46 @@ bool AudioSystem::DoesSoundLoop( Handle handle )
 }
 
 
+void AudioSystem::SetEffects( Handle handle, AudioEffects effects )
+{
+	AudioStream* stream = GetStream( handle );
+	if ( !stream )
+		return;
+
+	if ( effects | AudioEffect_World )
+	{
+		AudioEffectWorld* worldEffect = (AudioEffectWorld*)stream->aEffects.emplace_back( new AudioEffectWorld );
+	}
+
+	stream->effects = effects;
+}
+
+AudioEffects AudioSystem::GetEffects( Handle handle )
+{
+	AudioStream* stream = GetStream( handle );
+	if ( !stream )
+		return AudioEffect_None;
+
+	return stream->effects;
+}
+
+
 bool AudioSystem::Seek( Handle streamHandle, double pos )
 {
-#if !ENABLE_AUDIO
-	return -1;
-#else
-	AudioStreamInternal *stream = GetStream( streamHandle );
+	AudioStream *stream = GetStream( streamHandle );
 
 	if ( !stream )
 		return false;
 
 	return (stream->codec->Seek( stream, pos ) == 0);
-#endif
 }
 
 
 /* Audio Volume Channels (ex. General, Music, Voices, Commentary, etc.) */
 // virtual void                    SetChannel( Handle stream, int channel ) = 0;
 // virtual int                     GetChannel( Handle stream ) = 0;
+
+// virtual int                     RegisterChannel( const char* channelName ) = 0;
 
 
 // -------------------------------------------------------------------------------------
@@ -653,67 +680,10 @@ bool AudioSystem::Seek( Handle streamHandle, double pos )
 
 void AudioSystem::Update( float frameTime )
 {
-#if ENABLE_AUDIO
-	// not really needed tbh
-	// SDL_PauseAudioDevice( aOutputDeviceID, aPaused );
-
-	if ( aPaused )
-		return;
-
-#if AUDIO_THREAD
-	// std::unique_lock<std::mutex> lock(g_audioMutex);
-	// g_cv.wait(lock);
-#else
-	unmixedBuffers.clear();
-#endif
-
-	//gui->DebugMessage( 14, "Audio Streams: %u", aStreams.size() );
-
-#if !AUDIO_THREAD
-	int remainingAudio = SDL_GetQueuedAudioSize( aOutputDeviceID );
-	static int read = remainingAudio;
-
-	// if remaining audio is too low, update streams
-	// maybe a bad idea for new streams?
-	if ( remainingAudio < SOUND_BYTES * snd_buffer_size.GetFloat() )
-	{
-		// this might work well for multithreading
-		for (int i = 0; i < aStreamsPlaying.size(); i++)
-		{
-			// um
-			if ( aStreamsPlaying[i] == nullptr )
-			{
-				LogMsg( gAduioChannel, "WARNING: nullptr audio stream ????\n" );
-				vec_remove( aStreamsPlaying, aStreamsPlaying[i] );
-				i--;
-				continue;
-			}
-
-			if ( aStreamsPlaying[i]->paused )
-				continue;
-
-			if ( !UpdateStream( aStreamsPlaying[i] ) )
-			{
-				FreeSound( (AudioStream*)aStreamsPlaying[i] );
-				i--;
-				continue;
-			}
-		}
-	}
-
-	if ( aStreamsPlaying.size() )
-	{
-		MixAudio();
-		QueueAudio();
-	}
-#endif
-#endif
 }
 
 
-#if ENABLE_AUDIO
-
-bool AudioSystem::UpdateStream( AudioStreamInternal* stream )
+bool AudioSystem::UpdateStream( AudioStream* stream )
 {
 	if ( !stream->preloaded )
 	{
@@ -728,14 +698,14 @@ bool AudioSystem::UpdateStream( AudioStreamInternal* stream )
 }
 
 
-bool AudioSystem::ReadAudio( AudioStreamInternal *stream )
+bool AudioSystem::ReadAudio( AudioStream *stream )
 {
 	int read = SDL_AudioStreamAvailable( stream->audioStream );
-	if ( read < SOUND_BYTES * snd_audio_stream_available.GetFloat() )
+	if ( read < FRAME_SIZE * snd_audio_stream_available.GetFloat() )
 	{
 		std::vector<float> rawAudio;
 
-		read = stream->codec->Read( stream, SOUND_BYTES, rawAudio );
+		read = stream->codec->Read( stream, FRAME_SIZE, rawAudio );
 
 		// should just put silence in the stream if this is true
 		if ( read < 0 )
@@ -751,7 +721,7 @@ bool AudioSystem::ReadAudio( AudioStreamInternal *stream )
 			if ( stream->codec->Seek( stream, stream->startTime ) == -1 )
 				return false;  // failed to seek back, stop the sound
 
-			read = stream->codec->Read( stream, SOUND_BYTES, rawAudio );
+			read = stream->codec->Read( stream, FRAME_SIZE, rawAudio );
 
 			// should just put silence in the stream if this is true
 			if ( read < 0 )
@@ -759,25 +729,71 @@ bool AudioSystem::ReadAudio( AudioStreamInternal *stream )
 		}
 
 		// NOTE: "read" NEEDS TO BE 4 TIMES THE AMOUNT FOR SOME REASON, no clue why
-		if ( SDL_AudioStreamPut( stream->audioStream, rawAudio.data(), read * snd_read_mult ) == -1 )
+		if ( SDL_AudioStreamPut(stream->audioStream, rawAudio.data(), read * snd_read_mult) == -1 )
 		{
-			LogMsg( gAduioChannel, "SDL_AudioStreamPut - Failed to put samples in stream: %s\n", SDL_GetError() );
+			Print( "[AudioSystem] SDL_AudioStreamPut - Failed to put samples in stream: %s\n", SDL_GetError() );
 			return false;
 		}
+
+
+
+		// apply stream volume
+		/*for ( int i = 0; i < read; i++ )
+			rawAudio[i] *= stream->vol;
+
+		// TODO: split these effects up
+		if ( stream->effects & AudioEffectPreset_World )
+		{
+			// ApplySpatialEffects( stream, rawAudio.data(), read );
+		}
+		else
+		{
+			// SDL_memset( stream->outBufferAudio, 0, sizeof( stream->outBufferAudio ) );
+			// SDL_memset( stream->outBuffer.data, 0, sizeof(stream->outBuffer.data));
+
+			// copy over samples
+			// auto data = stream->outBuffer.data;
+
+			// for ( uint32_t i = 0, j = 0; i < FRAME_SIZE / 2; i++ )
+			for ( uint32_t i = 0, j = 0; i < read / 2; i++ )
+			{
+				for ( uint32_t ch = 0; ch < 2; ch++ )
+				{
+					stream->outBuffer.data[ch][i] = rawAudio[j++] * snd_volume_2d.GetFloat();
+				}
+			}
+		}
+
+		unmixedBuffers.push_back( stream->outBuffer );
+
+		stream->frame += read;
+
+
+		// don't fill audio stream and destroy memory lol
+		std::vector<float> outAudio;
+		outAudio.resize( FRAME_SIZE );
+		//outAudio = rawAudio;
+
+		// wtf is this doing
+		long read = SDL_AudioStreamGet( stream->audioStream, outAudio.data(), FRAME_SIZE );*/
 	}
 
 	return true;
 }
 
 
-bool AudioSystem::ApplyEffects( AudioStreamInternal *stream )
+bool AudioSystem::ApplyEffects( AudioStream *stream )
 {
+	// return true;
+
 	// this is in bytes, not samples!
 	std::vector<float> outAudio;
-	outAudio.resize( SOUND_BYTES );
+	outAudio.resize( FRAME_SIZE );
 	//outAudio = rawAudio;
-	long read = SDL_AudioStreamGet( stream->audioStream, outAudio.data(), SOUND_BYTES );
-	//read = SOUND_BYTES;
+
+	// wtf is this doing
+	long read = SDL_AudioStreamGet( stream->audioStream, outAudio.data(), FRAME_SIZE );
+	//read = FRAME_SIZE;
 
 	if ( read == -1 )
 	{
@@ -793,6 +809,9 @@ bool AudioSystem::ApplyEffects( AudioStreamInternal *stream )
 	for ( int i = 0; i < read; i++ )
 		outAudio[i] *= stream->vol;
 
+	SDL_memset( stream->outBuffer.data[0], 0, FRAME_SIZE/2 );
+	SDL_memset( stream->outBuffer.data[1], 0, FRAME_SIZE/2 );
+
 	// TODO: split these effects up
 	if ( stream->effects & AudioEffectPreset_World )
 	{
@@ -800,11 +819,19 @@ bool AudioSystem::ApplyEffects( AudioStreamInternal *stream )
 	}
 	else
 	{
-		SDL_memset( stream->outBufferAudio, 0, sizeof( stream->outBufferAudio ) );
+		// SDL_memset( stream->outBufferAudio, 0, sizeof( stream->outBufferAudio ) );
+		// SDL_memset( stream->outBuffer.data, 0, sizeof(stream->outBuffer.data));
 
 		// copy over samples
-		for ( int i = 0; i < read; i++ )
-			stream->outBufferAudio[i] = outAudio[i] * snd_volume_2d.GetFloat();
+		// auto data = stream->outBuffer.data;
+
+		for ( uint32_t i = 0, j = 0; i < FRAME_SIZE / 2; i++ )
+		{
+			for ( uint32_t ch = 0; ch < 2; ch++ )
+			{
+				stream->outBuffer.data[ch][i] = outAudio[j++] * snd_volume_2d.GetFloat();
+			}
+		}
 	}
 
 	unmixedBuffers.push_back( stream->outBuffer );
@@ -815,23 +842,17 @@ bool AudioSystem::ApplyEffects( AudioStreamInternal *stream )
 }
 
 
-#define USE_MASTER_STREAM 0
-
-
 bool AudioSystem::MixAudio()
 {
 	if (!unmixedBuffers.size())
 		return true;
 
-	iplMixAudioBuffers( unmixedBuffers.size(), unmixedBuffers.data(), mixBufferContext );
+	// clear the mix buffer of previous audio data first
+	SDL_memset( aMixBuffer.data[0], 0, FRAME_SIZE/2 );
+	SDL_memset( aMixBuffer.data[1], 0, FRAME_SIZE/2 );
 
-#if USE_MASTER_STREAM
-	if ( SDL_AudioStreamPut( aMasterStream, unmixedBuffers[0].interleavedBuffer, SOUND_BYTES ) == -1 )
-	{
-		Print( "SDL_AudioStreamPut - Failed to put samples in stream: %s\n", SDL_GetError() );
-		return false;
-	}
-#endif
+ 	for ( auto& buffer: unmixedBuffers )
+		iplAudioBufferMix( aCtx, &buffer, &aMixBuffer );
 
 	return true;
 }
@@ -839,48 +860,27 @@ bool AudioSystem::MixAudio()
 
 bool AudioSystem::QueueAudio()
 {
-#if USE_MASTER_STREAM
-	// this is in bytes, not samples!
-	int gotten = SDL_AudioStreamGet( aMasterStream, converted, SOUND_BYTES );
-
-	if (gotten == 0)
-		return true;
-
-	if (gotten == -1)
-	{
-		Print( "SDL_AudioStreamGet - Failed to get converted data: %s\n", SDL_GetError() );
-		return false;
-	}
-
-	// apply global volume to stream
-	for (uint32_t i = 0; i < gotten; i++)
-	{
-		converted[i] *= snd_volume.GetFloat();
-	}
-
-	if ( SDL_QueueAudio( aOutputDeviceID, converted, gotten ) == -1 )
-	{
-		Print( "SDL_QueueAudio Error: %s\n", SDL_GetError() );
-		return false;
-	}
-#else
-
 	if (!unmixedBuffers.size())
 		return true;
 	
-	// apply global volume to stream
-	for (uint32_t i = 0; i < SOUND_BYTES; i++)
+	// iplAudioBufferInterleave( aCtx, &aMixBuffer, apMixBufferAudio );
+
+	// interleave manually so we can control global audio volume
+	// unless we can set volume on the output device without changing it on the system
+	for ( uint32_t i = 0, j = 0; i < FRAME_SIZE / 2; i++ )
 	{
-		mixBufferContext.interleavedBuffer[i] *= snd_volume.GetFloat();
+		for ( uint32_t ch = 0; ch < 2; ch++ )
+		{
+			// apMixBufferAudio[j++] = unmixedBuffers[0].data[ch][i] * snd_volume.GetFloat();
+			apMixBufferAudio[j++] = aMixBuffer.data[ch][i] * snd_volume.GetFloat();
+		}
 	}
 
-	if ( SDL_QueueAudio( aOutputDeviceID, mixBufferContext.interleavedBuffer, SOUND_BYTES ) == -1 )
+	if ( SDL_QueueAudio( aOutputDeviceID, apMixBufferAudio, FRAME_SIZE ) == -1 )
 	{
 		LogMsg( gAduioChannel, "SDL_QueueAudio Error: %s\n", SDL_GetError() );
 		return false;
 	}
-
-#endif
 
 	return true;
 }
@@ -898,12 +898,19 @@ float calculateDistanceAttenutation( const glm::vec3& listener, const glm::vec3&
 	if (distance >= radius)
 		return 0;
 
+	// what is this actually doing
 	return glm::pow(glm::clamp(1.f - (distance * 1.f / radius), 0.f, 1.f), falloffPower);
 }
 
 
-int AudioSystem::ApplySpatialEffects( AudioStreamInternal* stream, float* data, size_t frameCount )
+CONVAR( snd_phonon_spatial_blend, 0.5f );
+CONVAR( snd_phonon_lerp_type, 0 );
+
+
+int AudioSystem::ApplySpatialEffects( AudioStream* stream, float* data, size_t frameCount )
 {
+	// old steam audio 2 code
+#if 0
 	SDL_memset( stream->inBufferAudio, 0, sizeof( stream->inBufferAudio ) );
 	SDL_memset( stream->midBufferAudio, 0, sizeof( stream->midBufferAudio ) );
 	SDL_memset( stream->outBufferAudio, 0, sizeof( stream->outBufferAudio ) );
@@ -953,8 +960,51 @@ int AudioSystem::ApplySpatialEffects( AudioStreamInternal* stream, float* data, 
 		IPL_HRTFINTERPOLATION_BILINEAR,
 		stream->outBuffer
 	);
+#else
+
+	// TODO ONCE WORKING: don't allocate and free multiple times an audio update
+	// probably move this to an effect class or some job class thing, idk
+	// and then just store it in a memory pool, and then just use memset on it to clear it if needed
+	IPLAudioBuffer tempInBuffer = {};
+	iplAudioBufferAllocate( aCtx, 2, FRAME_SIZE, &tempInBuffer );
+
+	IPLAudioBuffer tempOutBuffer = {};
+	iplAudioBufferAllocate( aCtx, 2, FRAME_SIZE, &tempOutBuffer );
+
+	// copy over samples
+	for ( uint32_t i = 0, j = 0; i < FRAME_SIZE / 2; i++ )
+	{
+		for ( uint32_t ch = 0; ch < 2; ch++ )
+		{
+			tempInBuffer.data[ch][i] = data[j++] * snd_volume_3d.GetFloat();
+		}
+	}
+
+	// IPLVector3 direction = toPhonon(aListenerRot * glm::normalize(stream->pos - aListenerPos));
+
+	IPLBinauralEffectParams effectParams{};
+	// effectParams.direction = direction;
+	effectParams.direction = IPLVector3{1.0f, 1.0f, 1.0f};
+	effectParams.interpolation = snd_phonon_lerp_type ? IPL_HRTFINTERPOLATION_BILINEAR : IPL_HRTFINTERPOLATION_NEAREST;
+	effectParams.spatialBlend = snd_phonon_spatial_blend;
+	effectParams.hrtf = gpHrtf;
+
+	// WHY IS THIS STILL BROKEN, I AM GOING TO LOSE MY MIND
+	iplBinauralEffectApply( apBinauralEffect, &effectParams, &tempInBuffer, &tempOutBuffer );
+
+	for ( uint32_t i = 0, j = 0; i < FRAME_SIZE / 2; i++ )
+	{
+		for ( uint32_t ch = 0; ch < 2; ch++ )
+		{
+			stream->outBuffer.data[ch][i] = tempOutBuffer.data[ch][i];
+		}
+	}
+
+	iplAudioBufferFree( aCtx, &tempInBuffer );
+	iplAudioBufferFree( aCtx, &tempOutBuffer );
+
+#endif
 
 	return 0;
 }
 
-#endif

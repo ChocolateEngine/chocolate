@@ -1,9 +1,5 @@
 #pragma once
 
-#ifndef ENABLE_AUDIO
-#define ENABLE_AUDIO 69420
-#endif
-
 #include "system.h"
 #include "iaudio.h"
 
@@ -13,38 +9,101 @@
 #include <phonon.h>
 #endif /* ENABLE_AUDIO  */
 
-class BaseCodec;
 
-struct AudioStreamInternal: public AudioStream
+class BaseCodec;
+class IAudioEffect;
+
+
+struct AudioStream
 {
-#if ENABLE_AUDIO
+	bool Valid() { return valid; }
+
 	BaseCodec *codec = nullptr;
 	void* data;  // data for the codec only
 
-	// other stuff
+	std::string name;
+	size_t frame = 0;
+
+	unsigned char channels;
+	size_t rate;
 	SDL_AudioFormat format = AUDIO_F32;
-	unsigned int frameSize = 0;
 	unsigned int size;
 	unsigned int samples;
 	unsigned int bits;
 	unsigned char width;  // ???
 
+	float vol = 1.f;
+	float radius = 100.0f;
+	float falloff = 16.f;
+
+	bool loop = false;      // should we loop the file when it ends?
+	//double time = 0;        // time in seconds in the file
+	double startTime = 0;   // time in seconds to start playback
+	//double endTime = 0;     // time in seconds to end playback
+	//float speed = 1.0f;
+
+	// must be set before playing a sound
+	AudioEffects effects = AudioEffect_None;
+	std::vector< IAudioEffect* > aEffects{};
+
+	bool paused = false;
+	bool valid = false;
+	bool preloaded = false;  // bruh
+
 	// audio stream to store audio from the codec and covert it
 	SDL_AudioStream *audioStream = nullptr;
 
+	// stored audio data
+	std::vector< float > preloadedAudio;
+
+	// --------------------------------------------------
+	// 3d sound
+	glm::vec3 pos;
+
 	// maybe std::vector will work here? try later
-	float *inBufferAudio = nullptr;
-	float *midBufferAudio = nullptr;
-	float *outBufferAudio = nullptr;
+	//float *inBufferAudio = nullptr;
+	//float *midBufferAudio = nullptr;
+	//float *outBufferAudio = nullptr;
 
-	IPLAudioBuffer inBuffer;
-	IPLAudioBuffer midBuffer;
-	IPLAudioBuffer outBuffer;
+	IPLAudioBuffer outBuffer{};
 
-	IPLhandle directSoundEffect = {};
-	IPLhandle binauralEffect = {};
-#endif
+	// IPLhandle directSoundEffect = {};
+	// IPLhandle binauralEffect = {};
+
+	// IPLBinauralEffect               apBinauralEffect = nullptr;
 };
+
+
+// ===========================================================================
+// Audio Effects
+
+
+class IAudioEffect
+{
+	//virtual void RunEffect( std::vector< float* >& buffer ) = 0;
+};
+
+
+class AudioEffectWorld: public IAudioEffect
+{
+public:
+	//void RunEffect( std::vector< float* >& buffer );
+
+private:
+	glm::vec3 pos;
+	IPLAudioBuffer buffer;
+};
+
+struct AudioEffectLoop: public IAudioEffect
+{
+	bool loop = false;      // should we loop the file when it ends?
+	double startTime = 0;   // time in seconds to start playback
+							//double endTime = 0;     // time in seconds to end playback
+};
+
+
+// ===========================================================================
+// Base Codec
 
 
 class BaseCodec
@@ -57,14 +116,18 @@ public:
 	virtual const char*     GetName() = 0;
 	virtual bool            CheckExt( const char* ext ) = 0;
 
-	virtual bool            Open( const char* soundPath, AudioStreamInternal *stream ) = 0;
-	virtual long            Read( AudioStreamInternal *stream, size_t size, std::vector<float> &data ) = 0;
-	virtual int             Seek( AudioStreamInternal *stream, double pos ) = 0;
-	virtual void            Close( AudioStreamInternal *stream ) = 0;
+	virtual bool            Open( const char* soundPath, AudioStream *stream ) = 0;
+	virtual long            Read( AudioStream *stream, size_t size, std::vector<float> &data ) = 0;
+	virtual int             Seek( AudioStream *stream, double pos ) = 0;
+	virtual void            Close( AudioStream *stream ) = 0;
 
 	virtual void            SetAudioSystem( BaseAudioSystem* system ) { apAudio = system; };
 	BaseAudioSystem*        apAudio;
 };
+
+
+// ===========================================================================
+// Audio System
 
 
 class AudioSystem : public BaseAudioSystem
@@ -113,6 +176,9 @@ public:
 	/* Audio Volume Channels (ex. General, Music, Voices, Commentary, etc.) */
 	// virtual void                    SetChannel( Handle stream, int channel ) = 0;
 	// virtual int                     GetChannel( Handle stream ) = 0;
+	
+	virtual void                    SetEffects( Handle stream, AudioEffects effect ) override;
+	virtual AudioEffects            GetEffects( Handle stream ) override;
 
 	virtual bool                    Seek( Handle streamPublic, double pos ) override;
 	
@@ -131,24 +197,22 @@ public:
 	// Internal Functions
 	// -------------------------------------------------------------------------------------
 
-	bool                            LoadSoundInternal( AudioStreamInternal *stream );
+	bool                            LoadSoundInternal( AudioStream *stream );
 
 	/* Checks If This a Valid Audio Stream, if not, throw a warning and return nullptr. */
-	AudioStreamInternal*            GetStream( Handle stream );
+	AudioStream*                    GetStream( Handle stream );
 
 	//virtual bool                    RegisterCodec( BaseCodec *codec ) override;
 	bool                            RegisterCodec( BaseCodec *codec );
 
-#if ENABLE_AUDIO
-	bool                            UpdateStream( AudioStreamInternal* stream );
-	bool                            ReadAudio( AudioStreamInternal* stream );
-	bool                            ApplyEffects( AudioStreamInternal* stream );
+	bool                            UpdateStream( AudioStream* stream );
+	bool                            ReadAudio( AudioStream* stream );
+	bool                            ApplyEffects( AudioStream* stream );
 	bool                            MixAudio();
 	bool                            QueueAudio();
 
 	bool                            InitSteamAudio();
-	int                             ApplySpatialEffects( AudioStreamInternal* stream, float* data, size_t frameSize );
-#endif
+	int                             ApplySpatialEffects( AudioStream* stream, float* data, size_t frameSize );
 
 	virtual void                 	Init(  ) override;
 	virtual void                 	Update( float frameTime ) override;
@@ -156,23 +220,23 @@ public:
 	// --------------------------------------------------
 	// steam audio settings
 
-#if ENABLE_AUDIO
-	IPLhandle                       rendererBinaural = nullptr;
+	IPLBinauralEffect               apBinauralEffect = nullptr;
 
-	IPLhandle                       context {nullptr};
+	IPLContext                      aCtx {nullptr};
 
-	IPLhandle                       computeDevice {nullptr};
-	IPLhandle                       scene {nullptr};
-	IPLhandle                       probeManager {nullptr};
-	IPLhandle                       environment {nullptr};
+	//IPLhandle                       computeDevice {nullptr};
+	//IPLhandle                       scene {nullptr};
+	//IPLhandle                       probeManager {nullptr};
+	//IPLhandle                       environment {nullptr};
 	IPLSimulationSettings           simulationSettings {};
 
-	IPLhandle                       envRenderer = {};
-	IPLhandle                       renderer = {};
+	//IPLhandle                       envRenderer = {};
+	//IPLhandle                       renderer = {};
 
 	// memory buffer for phonon rendering final mix
-	float*                          mixBufferAudio = nullptr;
-	IPLAudioBuffer                  mixBufferContext;
+	float*                          apMixBufferAudio = nullptr;
+	// IPLAudioBuffer                  mixBufferContext;
+	IPLAudioBuffer                  aMixBuffer;
 	std::vector<IPLAudioBuffer>     unmixedBuffers;
 
 	// --------------------------------------------------
@@ -180,17 +244,19 @@ public:
 	std::vector< BaseCodec* >       aCodecs;
 	
 	MemPool                                 aStreamPool;
-	ResourceManager< AudioStreamInternal* > aStreams;         // all streams loaded into memory
+	ResourceManager< AudioStream* >         aStreams;         // all streams loaded into memory
 	std::vector< Handle >                   aStreamsPlaying;  // streams currently playing audio for
 
 	SDL_AudioDeviceID               aOutputDeviceID;
 	SDL_AudioSpec                   aAudioSpec;
-	SDL_AudioStream*                aMasterStream = nullptr;
-#endif
 
 	glm::vec3                       aListenerPos = {0, 0, 0};
 	glm::quat                       aListenerRot = {0, 0, 0, 0};
 	bool                            aPaused = false;
 	float                           aSpeed = 1.f;
+
+	//AudioEffect3D*                  aEffect3D = new AudioEffect3D;
+
+	//std::vector< IAudioEffect* >    aEffects;
 };
 

@@ -1,6 +1,6 @@
 message( "Current Project: Aduio" )
 
-set( STEAMAUDIO_DIR ${CH_THIRDPARTY}/steamaudio_api )
+set( STEAMAUDIO_DIR ${CH_THIRDPARTY}/steamaudio )
 
 file(
 	GLOB_RECURSE SRC_FILES CONFIGURE_DEPENDS
@@ -25,7 +25,7 @@ add_compile_definitions(
 )
 
 include_directories(
-	"${CH_THIRDPARTY}/steamaudio_api/include"
+	"${STEAMAUDIO_DIR}/include"
 	"${CH_THIRDPARTY}/libogg/include"
 	"${CH_THIRDPARTY}/libvorbis/include"
 	if( MSVC )
@@ -35,7 +35,7 @@ include_directories(
 
 if( MSVC )
 	link_libraries(
-		"${STEAMAUDIO_DIR}/lib/Windows/x64/phonon.lib"
+		"${STEAMAUDIO_DIR}/lib/windows-x64/phonon.lib"
 	)
 	
 	# stupdi
@@ -55,7 +55,7 @@ if( MSVC )
 	
 	add_link_options( "/LTCG" )
 else()
-	link_directories( "${STEAMAUDIO_DIR}/lib/Linux/x64" )
+	link_directories( "${STEAMAUDIO_DIR}/lib/linux-x64" )
 	link_libraries(
 		"libphonon.so"  # uh how does this work on cmake on linux
 		"vorbis"
@@ -94,8 +94,10 @@ target_precompile_headers( Aduio PRIVATE "${CH_PUBLIC}/core/core.h" )
 message( "Copying Steam Audio DLL (phonon)" )
 
 if( MSVC )
-	configure_file( "${STEAMAUDIO_DIR}/bin/Windows/x64/phonon.dll" "${GAME_DIR}/phonon.dll" COPYONLY )
+	configure_file( "${STEAMAUDIO_DIR}/lib/windows-x64/phonon.dll" "${GAME_DIR}/phonon.dll" COPYONLY )
+	configure_file( "${STEAMAUDIO_DIR}/lib/windows-x64/GPUUtilities.dll" "${GAME_DIR}/GPUUtilities.dll" COPYONLY )
+	configure_file( "${STEAMAUDIO_DIR}/lib/windows-x64/TrueAudioNext.dll" "${GAME_DIR}/TrueAudioNext.dll" COPYONLY )
 else()
-	configure_file( "${STEAMAUDIO_DIR}/lib/Linux/x64/libphonon.so" "${GAME_DIR}/bin/libphonon.so" COPYONLY )
+	configure_file( "${STEAMAUDIO_DIR}/lib/linux-x64/libphonon.so" "${GAME_DIR}/libphonon.so" COPYONLY )
 endif()
 
