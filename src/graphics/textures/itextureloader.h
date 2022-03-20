@@ -7,9 +7,12 @@ Interface for loading textures in the engine
 #pragma once
 
 #include "types/databuffer.hh"
-#include "graphics/imaterialsystem.h"
 #include "../allocator.h"
 #include "../types/material.h"
+
+
+class ITextureLoader;
+extern void AddTextureLoader( ITextureLoader* loader );
 
 
 // most likely going to have features added to it when needed
@@ -17,9 +20,17 @@ class ITextureLoader
 {
 public:
 
+	ITextureLoader()
+	{
+		Init();
+	}
+
 	virtual ~ITextureLoader() = default;
 
-	// virtual void                        Init() = 0;
+	virtual inline void Init()
+	{
+		AddTextureLoader( this ); 
+	}
 	
 	virtual bool                        CheckExt( const char* ext ) = 0;
 

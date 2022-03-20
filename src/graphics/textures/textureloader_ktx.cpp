@@ -4,7 +4,6 @@ textureloader_ktx.h ( Authored by Demez )
 Load KTX Textures
 */
 
-#include "textureloader_ktx.h"
 #include "../graphics.h"
 #include "../renderer.h"
 
@@ -14,87 +13,141 @@ Load KTX Textures
 #endif
 
 
-KTXTextureLoader::KTXTextureLoader()
+#define LogError( channel, ... ) \
+	LogError( g##channel##Channel, __VA_ARGS__ )
+
+#define LogWarn( channel, ... ) \
+	LogWarn( g##channel##Channel, __VA_ARGS__ )
+
+
+class KTXTextureLoader: public ITextureLoader
 {
-}
+public:
+	// =============================================================
+	// Vars
 
-KTXTextureLoader::~KTXTextureLoader()
-{
-}
+	// =============================================================
+	// Functions
 
+	KTXTextureLoader() {}
+	~KTXTextureLoader() override {}
 
-bool KTXTextureLoader::CheckExt( const char* ext )
-{
-	return (strncmp( "ktx", ext, 3) == 0);
-}
-
-
-TextureDescriptor* KTXTextureLoader::LoadTexture( const std::string path )
-{
-	TextureDescriptor	*pTexture = new TextureDescriptor;
-
-	if ( !LoadKTXTexture( pTexture, path, pTexture->aTextureImage, pTexture->aTextureImageMem, pTexture->aMipLevels ) )
-		return nullptr;
-	
-	return pTexture;
-}
-
-
-bool KTXTextureLoader::LoadKTXTexture( TextureDescriptor* pTexture, const String &srImagePath, VkImage &srTImage, VkDeviceMemory &srTImageMem, uint32_t &srMipLevels )
-{
-#ifndef KTX
-	return false;
-#else
-
-	ktxVulkanDeviceInfo vdi;
-
-	KTX_error_code result = ktxVulkanDeviceInfo_Construct(&vdi, gpDevice->GetPhysicalDevice(), DEVICE,
-														  gpDevice->GetGraphicsQueue(), gpDevice->GetCommandPool(), nullptr);
-
-	if ( result != KTX_SUCCESS )
+	bool CheckExt( const char* ext ) override
 	{
-		LogError( gGraphicsChannel, "KTX Error %d: %s - Failed to Construct KTX Vulkan Device\n", result, ktxErrorString(result) );
-		return false;
+		return (strncmp( "ktx", ext, 3) == 0);
 	}
 
-	result = ktxTexture_CreateFromNamedFile(srImagePath.c_str(), KTX_TEXTURE_CREATE_NO_FLAGS, &pTexture->kTexture);
 
-	if ( result != KTX_SUCCESS )
+	TextureDescriptor* LoadTexture( const std::string srPath ) override
 	{
-		LogError( gGraphicsChannel, "KTX Error %d: %s - Failed to open texture: %s\n", result, ktxErrorString(result), srImagePath.c_str(  ) );
-		ktxVulkanDeviceInfo_Destruct( &vdi );
-		return false;
-	}
+		ktxVulkanDeviceInfo vdi;
 
-	result = ktxTexture_VkUploadEx(pTexture->kTexture, &vdi, &pTexture->texture,
-								   VK_IMAGE_TILING_OPTIMAL,
-								   VK_IMAGE_USAGE_SAMPLED_BIT,
-								   VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+		KTX_error_code result = ktxVulkanDeviceInfo_Construct(&vdi, gpDevice->GetPhysicalDevice(), DEVICE,
+			gpDevice->GetGraphicsQueue(), gpDevice->GetCommandPool(), nullptr);
 
-	if ( result != KTX_SUCCESS )
-	{
-		LogError( gGraphicsChannel, "KTX Error %d: %s - Failed to upload texture: %s\n", result, ktxErrorString(result), srImagePath.c_str(  ) );
+		if ( result != KTX_SUCCESS )
+		{
+			LogError( Graphics, "KTX Error %d: %s - Failed to Construct KTX Vulkan Device\n", result, ktxErrorString(result) );
+			return nullptr;
+		}
+
+		TextureDescriptor *pTexture = new TextureDescriptor;
+
+		result = ktxTexture_CreateFromNamedFile( srPath.c_str(), KTX_TEXTURE_CREATE_NO_FLAGS, &pTexture->kTexture );
+
+		if ( result != KTX_SUCCESS )
+		{
+			LogError( Graphics, "KTX Error %d: %s - Failed to open texture: %s\n", result, ktxErrorString(result), srPath.c_str(  ) );
+			ktxVulkanDeviceInfo_Destruct( &vdi );
+			delete pTexture;
+			return nullptr;
+		}
+
+		VkFormat vkFormat = ktxTexture_GetVkFormat( pTexture->kTexture );
+
+		// WHY does this happen so often, wtf
+		if ( vkFormat == VK_FORMAT_UNDEFINED )
+		{
+			LogWarn( Graphics, "KTX Warning: - No Vulkan Format Found in KTX File: %s\n", srPath.c_str(  ) );
+			//ktxVulkanDeviceInfo_Destruct( &vdi );
+			//delete pTexture;
+			//return nullptr;
+		}
+
+		if ( pTexture->kTexture->classId == class_id::ktxTexture2_c )
+		{
+			if ( !LoadKTX2( pTexture, (ktxTexture2*)pTexture->kTexture, vdi ) )
+			{
+				ktxVulkanDeviceInfo_Destruct( &vdi );
+				delete pTexture;
+				return nullptr;
+			}
+		}
+
+		result = ktxTexture_VkUploadEx(
+			pTexture->kTexture,
+			&vdi,
+			&pTexture->texture,
+			VK_IMAGE_TILING_OPTIMAL,
+			VK_IMAGE_USAGE_SAMPLED_BIT,
+			VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+		);
+
+		if ( result != KTX_SUCCESS )
+		{
+			LogError( Graphics, "KTX Error %d: %s - Failed to upload texture: %s\n", result, ktxErrorString(result), srPath.c_str(  ) );
+			ktxTexture_Destroy( pTexture->kTexture );
+			ktxVulkanDeviceInfo_Destruct( &vdi );
+			delete pTexture;
+			return nullptr;
+		}
+
+		LogMsg( gGraphicsChannel, "Loaded Image: %s - dataSize: %d\n", srPath.c_str(  ), pTexture->kTexture->dataSize );
+
 		ktxTexture_Destroy( pTexture->kTexture );
 		ktxVulkanDeviceInfo_Destruct( &vdi );
-		return false;
+
+		pTexture->aMipLevels = pTexture->kTexture->numLevels;
+		pTexture->aTextureImage = pTexture->texture.image;
+		pTexture->aTextureImageMem = pTexture->texture.deviceMemory;
+
+		auto i = ImageView( pTexture->aTextureImage, pTexture->texture.imageFormat, 
+			VK_IMAGE_ASPECT_COLOR_BIT, pTexture->aMipLevels, pTexture->texture.viewType, pTexture->texture.layerCount );
+
+		InitImageView( pTexture->aTextureImageView, i );
+
+		return pTexture;
 	}
 
-	LogMsg( gGraphicsChannel, "Loaded Image: %s - dataSize: %d\n", srImagePath.c_str(  ), pTexture->kTexture->dataSize );
 
-	ktxTexture_Destroy( pTexture->kTexture );
-	ktxVulkanDeviceInfo_Destruct( &vdi );
+	bool LoadKTX2( TextureDescriptor* pTexture, ktxTexture2* kTexture2, ktxVulkanDeviceInfo& vdi )
+	{
+		// ktxTexture2_CreateFromNamedFile
+		KTX_error_code result = KTX_SUCCESS;
 
-	pTexture->aMipLevels = pTexture->kTexture->numLevels;
-	pTexture->aTextureImage = pTexture->texture.image;
-	pTexture->aTextureImageMem = pTexture->texture.deviceMemory;
+		if ( !ktxTexture2_NeedsTranscoding( kTexture2 ) && !kTexture2->isCompressed )
+		{
+			result = ktxTexture2_CompressBasis(kTexture2, 0);
+			if (KTX_SUCCESS != result)
+			{
+				LogError( Graphics, "Encoding of ktxTexture2 to Basis failed: %s", ktxErrorString( result ) );
+				return false;
+			}
+		}
 
-	auto i = ImageView( pTexture->aTextureImage, pTexture->texture.imageFormat, 
-	                    VK_IMAGE_ASPECT_COLOR_BIT, pTexture->aMipLevels, pTexture->texture.viewType, pTexture->texture.layerCount );
+		// result = ktxTexture2_TranscodeBasis( kTexture2, KTX_TTF_NOSELECTION, 0 );
+		result = ktxTexture2_TranscodeBasis( kTexture2, KTX_TTF_BC3_RGBA, 0 );
 
-	InitImageView( pTexture->aTextureImageView, i );
+		if (KTX_SUCCESS != result)
+		{
+			LogError( Graphics, "Transcoding of ktxTexture2 to %s failed: %s\n", ktxTranscodeFormatString( KTX_TTF_BC3_RGBA ), ktxErrorString( result ) );
+			return false;
+		}
 
-	return true;
-#endif
-}
+		return true;
+	}
+};
 
+
+KTXTextureLoader gKTXLoader;
 

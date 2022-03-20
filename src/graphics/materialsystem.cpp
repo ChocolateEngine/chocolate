@@ -14,15 +14,18 @@ Maybe the shadersystem could be inside this material system?
 #include "shaders/shader_basic_2d.h"
 #include "shaders/shader_unlit.h"
 #include "shaders/shader_unlitarray.h"
-
-#include "textures/textureloader_ktx.h"
-#include "textures/textureloader_stbi.h"
-#include "textures/textureloader_ctx.h"
+#include "shaders/shader_skybox.h"
 
 extern size_t gModelDrawCalls;
 extern size_t gVertsDrawn;
 
 MaterialSystem* matsys = nullptr;
+
+
+void AddTextureLoader( ITextureLoader* loader )
+{
+	GetMaterialSystem()->aTextureLoaders.push_back( loader );
+}
 
 
 MaterialSystem* GetMaterialSystem()
@@ -46,11 +49,6 @@ MaterialSystem::MaterialSystem()
 
 void MaterialSystem::Init()
 {
-	// Create Texture Loaders
-	aTextureLoaders.push_back( new KTXTextureLoader );
-	aTextureLoaders.push_back( new CTXTextureLoader );
-	aTextureLoaders.push_back( new STBITextureLoader );
-
 	aImageLayout = InitDescriptorSetLayout( DescriptorLayoutBinding( VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1000, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr ) );
 	// aUniformLayout = InitDescriptorSetLayout( DescriptorLayoutBinding( VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1000, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, nullptr ) );
 
@@ -67,6 +65,7 @@ void MaterialSystem::Init()
 	BaseShader* basic_2d   = CreateShader<Basic2D>( "basic_2d" );
 	BaseShader* unlit      = CreateShader<ShaderUnlit>( "unlit" );
 	BaseShader* unlitarray = CreateShader<ShaderUnlitArray>( "unlitarray" );
+	BaseShader* skybox     = CreateShader<ShaderSkybox>( "skybox" );
 }
 
 
@@ -328,6 +327,9 @@ int MaterialSystem::GetTextureId( Texture *spTexture )
 void MaterialSystem::CreateVertexBuffer( BaseRenderable* itemBase )
 {
 	if ( IMesh* item = dynamic_cast<IMesh*>(itemBase) )
+		InitTexBuffer( item->GetVertices(), item->GetVertexBuffer(), item->GetVertexBufferMem(), VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
+
+	else if ( ISkyboxMesh* item = dynamic_cast<ISkyboxMesh*>(itemBase) )
 		InitTexBuffer( item->GetVertices(), item->GetVertexBuffer(), item->GetVertexBufferMem(), VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
 	
 	//else if ( Sprite* item = dynamic_cast<Sprite*>(itemBase) )

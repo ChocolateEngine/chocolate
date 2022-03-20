@@ -656,4 +656,5 @@ void FreeResources(  )
 template void 		InitTexBuffer< uint32_t >( const std::vector< uint32_t >&, VkBuffer&, VkDeviceMemory&, VkBufferUsageFlags );
 template void 		InitTexBuffer< vertex_2d_t >( const std::vector< vertex_2d_t >&, VkBuffer&, VkDeviceMemory&, VkBufferUsageFlags );
 template void 		InitTexBuffer< vertex_3d_t >( const std::vector< vertex_3d_t >&, VkBuffer&, VkDeviceMemory&, VkBufferUsageFlags );
-template void           InitTexBuffer< PrimVtx >( const std::vector< PrimVtx >&, VkBuffer&, VkDeviceMemory&, VkBufferUsageFlags );
+template void 		InitTexBuffer< vertex_cube_3d_t >( const std::vector< vertex_cube_3d_t >&, VkBuffer&, VkDeviceMemory&, VkBufferUsageFlags );
+template void       InitTexBuffer< PrimVtx >( const std::vector< PrimVtx >&, VkBuffer&, VkDeviceMemory&, VkBufferUsageFlags );

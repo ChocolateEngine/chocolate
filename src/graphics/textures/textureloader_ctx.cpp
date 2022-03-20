@@ -3,69 +3,75 @@
  *
  *	Implementation of .ctx loading.
  */
-#include "textureloader_ctx.h"
 
 #include "graphics/ctxlib.h"
 #include "../graphics.h"
 #include "../renderer.h"
 
-/* Checks for .ctx extension.  */
-bool CTXTextureLoader::CheckExt( const char* ext ) {
-	return ( strncmp( "ctx", ext, 3 ) == 0 );
-}
-/* Loads the texture into vulkan objects.  */
-TextureDescriptor *CTXTextureLoader::LoadTexture( const std::string path ) {
-	TextureDescriptor	*pTexture = new TextureDescriptor;
-	ctx_t                   *pTex     = ctx_open( path.c_str() );
 
-	int 		texWidth              = pTex->aHead.aWidth;
-	int		texHeight             = pTex->aHead.aHeight;
-	VkBuffer 	stagingBuffer;
-	VkDeviceMemory 	stagingBufferMemory;
-	void           *pData                 = pTex->appImages[ 0 ][ 0 ].apData;
-	int             dataSize              = pTex->appImages[ 0 ][ 0 ].aSize;
-	bool		noTexture = false;
+class CTXTextureLoader : public ITextureLoader
+{
+public:
+	explicit CTXTextureLoader() {}
+	~CTXTextureLoader() override {}
 
-	if ( !pTex )
+	/* Checks for .ctx extension.  */
+	bool CheckExt( const char* ext ) override
 	{
-		LogError( gGraphicsChannel, "oops no ctx\n" );
-	        return nullptr;
+		return ( strncmp( "ctx", ext, 3 ) == 0 );
 	}
 
-	VkDeviceSize 	imageSize = texWidth * texHeight * 4;
+	/* Loads the texture into vulkan objects.  */
+	TextureDescriptor* LoadTexture( const std::string path ) override
+	{
+		ctx_t *pTex = ctx_open( path.c_str() );
 
-	/* Divides res by 2 each level.  */
-	pTexture->aMipLevels = ( uint32_t )std::floor( std::log2( std::max( texWidth, texHeight ) ) ) + 1;
+		if ( !pTex )
+		{
+			LogError( gGraphicsChannel, "oops no ctx\n" );
+			return nullptr;
+		}
 
-	InitBuffer( imageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-			   stagingBuffer, stagingBufferMemory );
+		int 		texWidth              = pTex->aHead.aWidth;
+		int		texHeight             = pTex->aHead.aHeight;
+		VkBuffer 	stagingBuffer;
+		VkDeviceMemory 	stagingBufferMemory;
+		void           *pData                 = pTex->appImages[ 0 ][ 0 ].apData;
+		int             dataSize              = pTex->appImages[ 0 ][ 0 ].aSize;
 
-	MapMemory( stagingBufferMemory, imageSize, pData );
+		TextureDescriptor	*pTexture = new TextureDescriptor;
 
-	InitImage( Image( texWidth, texHeight, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_TILING_OPTIMAL,
-					 VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT, pTexture->aMipLevels, VK_SAMPLE_COUNT_1_BIT ),
-			  VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, pTexture->aTextureImage, pTexture->aTextureImageMem );
+		VkDeviceSize imageSize = texWidth * texHeight * 4;
 
-	TransitionImageLayout( pTexture->aTextureImage, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, pTexture->aMipLevels );
+		/* Divides res by 2 each level.  */
+		pTexture->aMipLevels = ( uint32_t )std::floor( std::log2( std::max( texWidth, texHeight ) ) ) + 1;
 
-	CopyBufferToImage( stagingBuffer, pTexture->aTextureImage, ( uint32_t )texWidth, ( uint32_t )texHeight );
-	GenerateMipMaps( pTexture->aTextureImage, VK_FORMAT_R8G8B8A8_SRGB, texWidth, texHeight, pTexture->aMipLevels );
+		InitBuffer( imageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+			stagingBuffer, stagingBufferMemory );
 
-	/* Clean memory  */
-	vkDestroyBuffer( DEVICE, stagingBuffer, NULL );
-	vkFreeMemory( DEVICE, stagingBufferMemory, NULL );
+		MapMemory( stagingBufferMemory, imageSize, pData );
 
-	InitTextureImageView( pTexture->aTextureImageView, pTexture->aTextureImage, pTexture->aMipLevels );
+		InitImage( Image( texWidth, texHeight, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_TILING_OPTIMAL,
+			VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT, pTexture->aMipLevels, VK_SAMPLE_COUNT_1_BIT ),
+			VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, pTexture->aTextureImage, pTexture->aTextureImageMem );
 
-	ctx_free( pTex );
+		TransitionImageLayout( pTexture->aTextureImage, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, pTexture->aMipLevels );
 
-	return pTexture;
-}
+		CopyBufferToImage( stagingBuffer, pTexture->aTextureImage, ( uint32_t )texWidth, ( uint32_t )texHeight );
+		GenerateMipMaps( pTexture->aTextureImage, VK_FORMAT_R8G8B8A8_SRGB, texWidth, texHeight, pTexture->aMipLevels );
 
-CTXTextureLoader::CTXTextureLoader() {
-	
-}
+		/* Clean memory  */
+		vkDestroyBuffer( DEVICE, stagingBuffer, NULL );
+		vkFreeMemory( DEVICE, stagingBufferMemory, NULL );
 
-CTXTextureLoader::~CTXTextureLoader() {
-	
-}
+		InitTextureImageView( pTexture->aTextureImageView, pTexture->aTextureImage, pTexture->aMipLevels );
+
+		ctx_free( pTex );
+
+		return pTexture;
+	}
+};
+
+
+CTXTextureLoader gCTXTextureLoader;
+

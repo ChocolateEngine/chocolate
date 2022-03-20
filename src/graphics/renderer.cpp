@@ -31,7 +31,12 @@ draw to the screen.
 #include "filemonitor.h"
 
 #include "gui/gui.h"
-#define SPRITE_SUPPORTED 0
+
+
+#if RENDER_DOC
+#include <renderdoc_app.h>
+#endif
+
 
 #define SWAPCHAIN gpDevice->GetSwapChain(  )
 
@@ -46,6 +51,8 @@ extern GuiSystem* gui;
 Renderer* renderer = nullptr;
 
 static FileMonitor gFileMonitor;
+
+LOG_CHANNEL( Graphics );
 
 void Renderer::EnableImgui(  )
 {
@@ -134,12 +141,32 @@ void Renderer::InitCommandBuffers(  )
 
 		// IDEA: make a batched mesh vector so that way we can bind everything needed, and then just draw draw draw draw
 
+		BaseShader* skybox = nullptr;
+
 		// TODO: still could be better, but it's better than what we used to have
 		for ( auto& [shader, renderList]: matsys->aDrawList )
 		{
+			// HACK HACK
+			if ( shader->aName == "skybox" )
+			{
+				skybox = shader;
+				continue;
+			}
+
 			shader->Bind( aCommandBuffers[i], i );
 
 			for ( auto& renderable : renderList )
+			{
+				matsys->DrawRenderable( renderable, aCommandBuffers[i], i );
+			}
+		}
+
+		// HACK HACK: Get skybox to draw last so it's the cheapest
+		if ( skybox )
+		{
+			skybox->Bind( aCommandBuffers[i], i );
+
+			for ( auto& renderable: matsys->aDrawList[skybox] )
 			{
 				matsys->DrawRenderable( renderable, aCommandBuffers[i], i );
 			}
@@ -463,8 +490,59 @@ Renderer::Renderer(  ) :
 	renderer = this;
 }
 
+
+#if RENDER_DOC
+RENDERDOC_API_1_5_0* gpRenderDoc = nullptr;
+
+void LoadRenderDocAPI()
+{
+	void* renderdoc = SDL_LoadObject( "renderdoc" EXT_DLL );
+
+	// enable validation layers in renderdoc
+	if ( !renderdoc )
+	{
+		LogWarn( gGraphicsChannel, "(-renderdoc) Renderdoc DLL not found: %s\n", SDL_GetError() );
+		return;
+	}
+
+	// typedef int(RENDERDOC_CC *pRENDERDOC_GetAPI)(RENDERDOC_Version version, void **outAPIPointers)
+
+	pRENDERDOC_GetAPI rdGet = (pRENDERDOC_GetAPI)SDL_LoadFunction( renderdoc, "RENDERDOC_GetAPI" );
+
+	// pRENDERDOC_SetCaptureOptionU32 RENDERDOC_SetCaptureOptionU32 = (pRENDERDOC_SetCaptureOptionU32)SDL_LoadFunction( renderdoc, "RENDERDOC_SetCaptureOptionU32" );
+	// pRENDERDOC_SetCaptureOptionU32 RENDERDOC_SetCaptureOptionU32 = (pRENDERDOC_SetCaptureOptionU32)SDL_LoadFunction( renderdoc, "RENDERDOC_SetCaptureOptionU32" );
+
+	if ( !rdGet )
+		return;
+
+	int ret = rdGet( eRENDERDOC_API_Version_1_5_0, (void **)&gpRenderDoc );
+	if ( ret != 1 )
+	{
+		LogWarn( gGraphicsChannel, "(-renderdoc) Failed to Get Renderdoc API\n" );
+		SDL_UnloadObject( gpRenderDoc );
+		return;
+	}
+
+	// Enable Vulkan API Validation Layers
+	ret = gpRenderDoc->SetCaptureOptionU32( eRENDERDOC_Option_DebugOutputMute, 0 );
+	if ( ret != 1 )
+	{
+		LogWarn( gGraphicsChannel, "(-renderdoc) Failed to Get Renderdoc API\n" );
+		SDL_UnloadObject( gpRenderDoc );
+		return;
+	}
+}
+
+#endif
+
+
 void Renderer::Init(  )
 {
+#if RENDER_DOC
+	if ( cmdline->Find( "-renderdoc" ) )
+		LoadRenderDocAPI();
+#endif
+
 	gpDevice = new Device;
 	gpDevice->InitDevice(  );
 

@@ -18,5 +18,13 @@ else()
 	
 endif()
 
+# renderdoc support
+if( DEFINED RENDER_DOC )
+	message( "RENDER_DOC = " ${RENDER_DOC} )
+	include_directories( "${RENDER_DOC}" )
+	add_compile_definitions( RENDER_DOC=1 )
+endif()
+
+
 include( ${CH_ROOT}/scripts/ktx.cmake )
 

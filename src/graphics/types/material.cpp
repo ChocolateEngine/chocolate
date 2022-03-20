@@ -57,6 +57,7 @@ MaterialVar* Material::CreateVar( const char* name, T data )
 	for ( auto var : aVars ) { \
 		if ( var->aName == name ) { \
 			var->func( data ); \
+			return; \
 		} \
 	} \
 	CreateVar( name, data )

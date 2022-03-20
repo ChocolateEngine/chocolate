@@ -127,6 +127,8 @@ public:
 	// TODO: remove this
 	std::unordered_map< size_t, UniformDescriptor >         aUniformDataMap;
 	std::unordered_map< size_t, VkDescriptorSetLayout >     aUniformLayoutMap;
+
+	std::vector< ITextureLoader* >                          aTextureLoaders;
 	
 private:
 	std::unordered_map< std::string, BaseShader* >          aShaders;
@@ -139,7 +141,6 @@ private:
 	std::vector< Material* >                                aMaterials;
 	std::vector< Material* >                                aErrorMaterials;
 
-	std::vector< ITextureLoader* >                          aTextureLoaders;
 	std::vector< TextureDescriptor* >                       aTextures;
 	std::unordered_map< std::string, TextureDescriptor* >   aTexturePaths;
 
@@ -150,4 +151,7 @@ private:
 extern MaterialSystem* matsys;
 
 MaterialSystem* GetMaterialSystem();
+
+
+void AddTextureLoader( ITextureLoader* loader );
 

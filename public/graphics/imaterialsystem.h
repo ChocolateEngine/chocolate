@@ -20,6 +20,8 @@ public:
 
 	virtual size_t                  GetID(  ) { return (size_t)this; }
 
+	virtual glm::mat4               GetModelMatrix() { return glm::mat4( 1.f ); };
+
 	virtual VkBuffer&               GetVertexBuffer() = 0;
 	virtual VkBuffer&               GetIndexBuffer() = 0;
 
