@@ -22,7 +22,10 @@ public:
     bool UpdateBuffer( Handle shBuf );
     bool UpdateImage( Handle shImage );
 
-    constexpr VkDescriptorPool GetHandle() { return aDescriptorPool; };
+    constexpr VkDescriptorPool      GetHandle()    { return aDescriptorPool; };
+
+    constexpr VkDescriptorSetLayout GetImageSet()  { return aImageLayout;    };
+    constexpr VkDescriptorSetLayout GetBufferSet() { return aBufferLayout;   };
 };
 
 DescriptorManager &GetDescriptorManager();

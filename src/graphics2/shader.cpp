@@ -7,6 +7,7 @@
 #include "renderpass.h"
 #include "descriptormanager.h"
 
+#include "config.hh"
 #include "vertex.hh"
 
 #include "core/core.h"
@@ -48,6 +49,7 @@ enum
     VIS_UNIFORM  = 1 << 2,
     VIS_ARR      = 1 << 3,
     VIS_IMAGE    = 1 << 4,
+    VIS_PUSH     = 1 << 5,
 };
 
 struct ShaderVar
@@ -58,6 +60,7 @@ struct ShaderVar
     int aSet                = -1;
     int aBinding            = -1;
     int aOffset             = -1;
+    int aStructSize         =  0;
     int aFlags              =  0;
     std::string aName       = "";
     std::string aIdentifier = "";
@@ -690,6 +693,8 @@ ShaderRequirements GetRequirements( const std::string &srDisassembly )
                                 pVar->aFlags |= VIS_IN;
                             else if ( vis == "Output" )
                                 pVar->aFlags |= VIS_OUT;
+                            else if ( vis == "PushConstant" )
+                                pVar->aFlags |= VIS_PUSH;
                             /*
                              *    Fair warning, this is a hack.
                              *    
@@ -713,6 +718,24 @@ ShaderRequirements GetRequirements( const std::string &srDisassembly )
                             break;
                         }
                         pVar->apPointsTo = other;
+                        break;
+                    }
+                    case OP_TYPE_STRUCT: {
+                        /*
+                         *    For now, let's just store the size of the struct.
+                         *    We'll need to do something more sophisticated later.
+                         */
+                        auto var = OpSeekStr( srDisassembly, c );
+                        while ( var[ 0 ] == '%' ) {
+                            var = OpGetStr( srDisassembly, c );
+                            if ( var == "%mat4v4float" ) {
+                                pVar->aStructSize += 64;
+                            }
+                            if ( var == "%int" ) {
+                                pVar->aStructSize += 4;
+                            }
+                            var = OpSeekStr( srDisassembly, c );
+                        }
                         break;
                     }
                     case OP_TYPE_SAMPLED_IMAGE: {
@@ -786,6 +809,8 @@ VkPipelineLayout CreateLayout( const ShaderRequirements &srVert, const ShaderReq
     int imageSet  = -1;
     int bufferSet = -1;
 
+    std::vector< VkPushConstantRange > pushConstantRanges;
+
     for ( auto var = srVert.aDisassembly.apVars; var; var = var->apNext ) {
         if ( var->aSet > -1 ) {
             if ( UnderlyingHasFlag( var, VIS_IMAGE ) ) {
@@ -803,6 +828,14 @@ VkPipelineLayout CreateLayout( const ShaderRequirements &srVert, const ShaderReq
                 }
             }
         }
+        if ( UnderlyingHasFlag( var, VIS_PUSH ) ) {
+                VkPushConstantRange range = {};
+                range.stageFlags          = VK_SHADER_STAGE_VERTEX_BIT;
+                range.offset              = 0;
+                range.size                = var->apPointsTo->aStructSize;
+
+                pushConstantRanges.push_back( range );
+            }
     }
 
     for ( auto var = srFrag.aDisassembly.apVars; var; var = var->apNext ) {
@@ -822,16 +855,43 @@ VkPipelineLayout CreateLayout( const ShaderRequirements &srVert, const ShaderReq
                 }
             }
         }
+        if ( UnderlyingHasFlag( var, VIS_PUSH ) ) {
+                VkPushConstantRange range = {};
+                range.stageFlags          = VK_SHADER_STAGE_FRAGMENT_BIT;
+                range.offset              = 0;
+                range.size                = var->apPointsTo->aStructSize;
+
+                pushConstantRanges.push_back( range );
+            }
+    }
+
+    std::vector< VkDescriptorSetLayout > layouts;
+    layouts.resize( 2 );
+
+    if ( imageSet > -1 ) {
+        layouts[ imageSet ] = GetDescriptorManager().GetImageSet();
+    }
+
+    if ( bufferSet > -1 ) {
+        layouts[ bufferSet ] = GetDescriptorManager().GetBufferSet();
+    }
+
+    if ( layouts[ 1 ] == VK_NULL_HANDLE ) {
+        layouts.pop_back();
+    }
+    if ( layouts[ 0 ] == VK_NULL_HANDLE ) {
+        layouts.pop_back();
     }
     
     VkPipelineLayoutCreateInfo pipelineLayoutCreateInfo = {};
     pipelineLayoutCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
     pipelineLayoutCreateInfo.pNext = nullptr;
     pipelineLayoutCreateInfo.flags = 0;
-    pipelineLayoutCreateInfo.setLayoutCount = 0;
-    pipelineLayoutCreateInfo.pSetLayouts = nullptr;
-    pipelineLayoutCreateInfo.pushConstantRangeCount = 0;
-    pipelineLayoutCreateInfo.pPushConstantRanges = nullptr;
+    
+    pipelineLayoutCreateInfo.setLayoutCount = layouts.size();
+    pipelineLayoutCreateInfo.pSetLayouts = layouts.data();
+    pipelineLayoutCreateInfo.pushConstantRangeCount = pushConstantRanges.size();
+    pipelineLayoutCreateInfo.pPushConstantRanges = pushConstantRanges.data();
 
     VkPipelineLayout pipelineLayout;
     VkResult result = vkCreatePipelineLayout( GetLogicDevice(), &pipelineLayoutCreateInfo, nullptr, &pipelineLayout );
@@ -953,7 +1013,7 @@ VkPipeline CreatePipeline( const std::string &srVertPath, const std::string &srF
     VkPipelineMultisampleStateCreateInfo multisampling = {};
     multisampling.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
     multisampling.sampleShadingEnable = VK_FALSE;
-    multisampling.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
+    multisampling.rasterizationSamples = GetMSAASamples();
 
     VkPipelineColorBlendAttachmentState colorBlendAttachment = {};
     colorBlendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;

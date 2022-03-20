@@ -8,7 +8,7 @@ MaterialSystem::MaterialSystem()
 {
     aTexPool.Resize( 1000000 );
 
-    Shader *pShader = new Shader( "shader", "shaders/basic3d.vert.spv", "shaders/basic3d.frag.spv" );
+    Shader *pShader = new Shader( "shader", "shaders/unlit.vert.spv", "shaders/unlit.frag.spv" );
 }
 
 MaterialSystem::~MaterialSystem()

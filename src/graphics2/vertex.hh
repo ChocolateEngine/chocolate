@@ -4,6 +4,7 @@ class Vertex
 {
 public:
     glm::vec3 aPos       {};
+    glm::vec3 aColor     {};
     glm::vec2 aTexCoords {};
     glm::vec3 aNormal    {};
 
@@ -22,23 +23,28 @@ public:
         return b;
     }
 
-    static constexpr std::array< VkVertexInputAttributeDescription, 3 > GetAttributeDesc()
+    static constexpr std::array< VkVertexInputAttributeDescription, 4 > GetAttributeDesc()
     {
-        std::array< VkVertexInputAttributeDescription, 3 > a{};
-        a[0].binding   = 0;
-        a[0].location  = 0;
-        a[0].format    = VK_FORMAT_R32G32B32_SFLOAT;
-        a[0].offset    = offsetof( Vertex, aPos );
+        std::array< VkVertexInputAttributeDescription, 4 > a{};
+        a[ 0 ].binding   = 0;
+        a[ 0 ].location  = 0;
+        a[ 0 ].format    = VK_FORMAT_R32G32B32_SFLOAT;
+        a[ 0 ].offset    = offsetof( Vertex, aPos );
 
-        a[1].binding   = 0;
-        a[1].location  = 1;
-        a[1].format    = VK_FORMAT_R32G32_SFLOAT;
-        a[1].offset    = offsetof( Vertex, aTexCoords );
+        a[ 1 ].binding   = 0;
+        a[ 1 ].location  = 1;
+        a[ 1 ].format    = VK_FORMAT_R32G32B32_SFLOAT;
+        a[ 1 ].offset    = offsetof( Vertex, aColor );
 
-        a[2].binding   = 0;
-        a[2].location  = 2;
-        a[2].format    = VK_FORMAT_R32G32B32_SFLOAT;
-        a[2].offset    = offsetof( Vertex, aNormal );
+        a[ 2 ].binding   = 0;
+        a[ 2 ].location  = 2;
+        a[ 2 ].format    = VK_FORMAT_R32G32_SFLOAT;
+        a[ 2 ].offset    = offsetof( Vertex, aTexCoords );
+
+        a[ 3 ].binding   = 0;
+        a[ 3 ].location  = 3;
+        a[ 3 ].format    = VK_FORMAT_R32G32B32_SFLOAT;
+        a[ 3 ].offset    = offsetof( Vertex, aNormal );
 
         return a;
     }
