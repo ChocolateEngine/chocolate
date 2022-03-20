@@ -127,11 +127,10 @@ struct vertex_3d_t
 struct vertex_cube_3d_t
 {
 	glm::vec3 pos{};
-	glm::vec3 texCoord{};
 
 	bool operator==( const vertex_cube_3d_t& other ) const
 	{
-		return pos == other.pos && texCoord == other.texCoord;
+		return pos == other.pos;
 	}
 
 	static inline VkVertexInputBindingDescription GetBindingDesc()
@@ -144,18 +143,13 @@ struct vertex_cube_3d_t
 		return bindingDescription;
 	}
 
-	static inline std::array< VkVertexInputAttributeDescription, 2 > GetAttributeDesc()
+	static inline std::array< VkVertexInputAttributeDescription, 1 > GetAttributeDesc()
 	{
-		std::array< VkVertexInputAttributeDescription, 2 >attributeDescriptions{  };
+		std::array< VkVertexInputAttributeDescription, 1 >attributeDescriptions{  };
 		attributeDescriptions[0].binding = 0;
 		attributeDescriptions[0].location = 0;
 		attributeDescriptions[0].format = VK_FORMAT_R32G32B32_SFLOAT;
 		attributeDescriptions[0].offset = offsetof( vertex_cube_3d_t, pos );
-
-		attributeDescriptions[1].binding = 0;
-		attributeDescriptions[1].location = 1;
-		attributeDescriptions[1].format = VK_FORMAT_R32G32B32_SFLOAT;
-		attributeDescriptions[1].offset = offsetof( vertex_cube_3d_t, texCoord );
 
 		return attributeDescriptions;
 	}
@@ -259,12 +253,7 @@ namespace std	//	Black magic!! don't touch!!!!
 	{
 		size_t operator(  )( vertex_cube_3d_t const& vertex ) const
 		{
-			std::size_t h1 = std::hash< glm::vec3 >{}( vertex.pos );
-			std::size_t h2 = std::hash< glm::vec3 >{}( vertex.texCoord );
-			return h1 ^ (h2 << 1); // or use boost::hash_combine
-
-			//return  ((hash< glm::vec3 >()(vertex.pos) ^
-			//	(hash< glm::vec3 >()(vertex.texCoord) << 1)) >> 1);
+			return std::hash< glm::vec3 >{}( vertex.pos );
 		}
 	};
 	template<  > struct hash< vertex_2d_t >
