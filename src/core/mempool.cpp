@@ -6,6 +6,7 @@
  *    This files defines the memory pool.
  */
 #include "core/mempool.h"
+#include "core/profiler.h"
 
 #include "core/core.h"
 
@@ -190,6 +191,10 @@ void *MemPool::Alloc( size_t sSize )
     pChunk->aSize  = sSize;
     pChunk->apNext = nullptr;
 
+#ifdef TRACY_ENABLE
+    // TracyAlloc( pChunk, sSize );
+#endif
+
     if ( apChunks == nullptr ) {
         apChunks = pChunk;
     } 
@@ -218,6 +223,10 @@ void MemPool::Free( void* spPtr )
     for ( MemChunk *p = apChunks; p != nullptr; p = p->apNext ) {
         if( p->apData == spPtr ) {
             p->aFlags = Mem_Free;
+
+#ifdef TRACY_ENABLE
+            // TracyFree( spPtr );
+#endif
             return;
         }
     }

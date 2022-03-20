@@ -1,5 +1,6 @@
 #include "core/filesystem.h"
 #include "core/console.h"
+#include "core/profiler.h"
 #include "util.h"
 
 #include <array>
@@ -133,6 +134,8 @@ inline bool is_dir( const std::string &path )
 
 std::string FileSystem::FindFileF( const char* spFmt, ... )
 {
+    PROF_SCOPE();
+
     char pBuf[ 512 ];  // uh idk lol
     va_list args;
     va_start( args, spFmt );
@@ -145,6 +148,8 @@ std::string FileSystem::FindFileF( const char* spFmt, ... )
 
 std::string FileSystem::FindFile( const std::string& file )
 {
+    PROF_SCOPE();
+
     // if it's an absolute path already,
     // don't bother to look in the search paths for it, and make sure it exists
     if ( IsAbsolute( file ) )
@@ -171,6 +176,8 @@ std::string FileSystem::FindFile( const std::string& file )
 
 std::string FileSystem::FindDir( const std::string &dir )
 {
+    PROF_SCOPE();
+
     // if it's an absolute path already,
     // don't bother to look in the search paths for it, and make sure it exists
     if ( IsAbsolute( dir ) )
@@ -195,6 +202,8 @@ std::string FileSystem::FindDir( const std::string &dir )
 /* Reads a file into a byte array.  */
 std::vector< char > FileSystem::ReadFile( const std::string& srFilePath )
 {
+    PROF_SCOPE();
+
     // Find path first
     std::string fullPath = FindFile( srFilePath );
     if ( fullPath == "" )
@@ -249,6 +258,8 @@ bool FileSystem::IsRelative( const std::string &path )
 
 bool FileSystem::IsDir( const std::string &path, bool noPaths )
 {
+    PROF_SCOPE();
+
     struct stat s;
 
     if ( noPaths || IsAbsolute( path ) )
@@ -268,6 +279,8 @@ bool FileSystem::IsDir( const std::string &path, bool noPaths )
 
 bool FileSystem::IsFile( const std::string &path, bool noPaths )
 {
+    PROF_SCOPE();
+
     struct stat s;
 
     if ( noPaths || IsAbsolute( path ) )
@@ -287,6 +300,8 @@ bool FileSystem::IsFile( const std::string &path, bool noPaths )
 
 bool FileSystem::Exists( const std::string &path, bool noPaths )
 {
+    PROF_SCOPE();
+
     if ( noPaths || IsAbsolute( path ) )
         return (access( path.c_str(), 0 ) != -1);
     else
@@ -364,6 +379,8 @@ std::string FileSystem::GetFileNameNoExt( const std::string &path )
 
 std::string FileSystem::CleanPath( const std::string &path )
 {
+    PROF_SCOPE();
+
     std::vector< std::string > v;
 
     int n = path.length();
@@ -449,6 +466,8 @@ bool FitsWildcard( DirHandle dirh, const std::string &path )
 /* Read the first file in a Directory  */
 DirHandle FileSystem::ReadFirst( const std::string &path, std::string &file, ReadDirFlags flags )
 {
+    PROF_SCOPE();
+
 #ifdef _WIN32
     std::string readPath = path + "\\*";
 
@@ -486,6 +505,8 @@ DirHandle FileSystem::ReadFirst( const std::string &path, std::string &file, Rea
 /* Get the next file in the directory */
 bool FileSystem::ReadNext( DirHandle dirh, std::string &file )
 {
+    PROF_SCOPE();
+
 #ifdef _WIN32
     WIN32_FIND_DATA ffd;
 
@@ -535,6 +556,8 @@ bool FileSystem::ReadClose( DirHandle dirh )
 // TODO: make a faster linux direct system call version like i have for windows here
 bool sys_scandir( const std::string& root, const std::string& path, std::vector< std::string >& files, ReadDirFlags flags = ReadDir_None )
 {
+    PROF_SCOPE();
+
 #ifdef _WIN32
     WIN32_FIND_DATA ffd;
 
@@ -589,6 +612,8 @@ bool sys_scandir( const std::string& root, const std::string& path, std::vector<
 /* Scan an entire Directory  */
 std::vector< std::string > FileSystem::ScanDir( const std::string &path, ReadDirFlags flags )
 {
+    PROF_SCOPE();
+
     std::vector< std::string > files;
 
     if ( !IsAbsolute( path ) )

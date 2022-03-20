@@ -5,6 +5,7 @@ Defines the methods declared in renderer.h,
 creating a vulkan interface with which to
 draw to the screen.
  */
+#include "core/profiler.h"
 #include "renderer.h"
 #include "initializers.h"
 #include "types/material.h"
@@ -90,6 +91,8 @@ bool Renderer::HasStencilComponent( VkFormat sFmt )
 
 void Renderer::InitCommandBuffers(  )
 {
+	PROF_SCOPE();
+
 	gFileMonitor.Update();
 
 	aDbgDrawer.PrepareMeshForDraw();
@@ -374,6 +377,8 @@ bool Renderer::LoadSprite( Sprite &srSprite, const String &srSpritePath )
 
 void Renderer::DrawFrame(  )
 {
+	PROF_SCOPE();
+
 	if ( aCommandBuffers.size() > 0 && r_showDrawCalls.GetBool() )
 	{
 		int buh = 0;

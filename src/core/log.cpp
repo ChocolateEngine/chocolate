@@ -1,5 +1,6 @@
 #include "core/log.h"
 #include "core/console.h"
+#include "core/profiler.h"
 
 #include <iostream>
 #include <mutex>
@@ -11,6 +12,28 @@ CONVAR( developer, 1 );
 LogColor          gCurrentColor = LogColor::Default;
 LogChannel        gGeneralChannel = INVALID_LOG_CHANNEL;
 static std::mutex gLogMutex;
+
+constexpr glm::vec4 gVecTo255(255, 255, 255, 255);
+
+static void StripTrailingLines( const char* pText, size_t& len )
+{
+    while ( len > 1 )
+    {
+        switch ( pText[len - 1] )
+        {
+        case ' ':
+        case 9:
+        case '\r':
+        case '\n':
+        case 11:
+        case '\f':
+            --len;
+            break;
+        default:
+            return;
+        }
+    }
+}
 
 class LogSystem
 {
@@ -60,6 +83,8 @@ public:
     // Format for system console output
     void FormatLog( LogChannel_t *channel, Log &log )
     {
+        PROF_SCOPE();
+
         switch ( log.aType )
         {
             default:
@@ -96,8 +121,103 @@ public:
         }
     }
 
+    constexpr LogColor GetColor( LogChannel_t *channel, const Log& log )
+    {
+        switch ( log.aType )
+        {
+            default:
+            case LogType::Normal:
+            case LogType::Dev:
+            case LogType::Dev2:
+            case LogType::Dev3:
+            case LogType::Dev4:
+            case LogType::Input:
+            case LogType::Raw:
+                return channel->aColor;
+
+            case LogType::Warning:
+                return LOG_COLOR_WARNING;
+
+            case LogType::Error:
+            case LogType::Fatal:
+                return LOG_COLOR_ERROR;
+        }
+    }
+
+    // copied from graphics/gui/consoleui.cpp
+    constexpr glm::vec4 GetColorRGBA( LogColor col )
+    {
+        switch (col)
+        {
+            // hmm
+            case LogColor::Black:
+                return {0.3, 0.3, 0.3, 1};
+            case LogColor::White:
+                return {1, 1, 1, 1};
+
+            case LogColor::DarkBlue:
+                return {0, 0.3, 0.8, 1};
+            case LogColor::DarkGreen:
+                return {0.25, 0.57, 0.25, 1};
+            case LogColor::DarkCyan:
+                return {0, 0.35, 0.75, 1};
+            case LogColor::DarkRed:
+                return {0.7, 0, 0.25, 1};
+            case LogColor::DarkMagenta:
+                return {0.45, 0, 0.7, 1};
+            case LogColor::DarkYellow:
+                return {0.6, 0.6, 0, 1};
+            case LogColor::DarkGray:
+                return {0.45, 0.45, 0.45, 1};
+
+            case LogColor::Blue:
+                return {0, 0.4, 1, 1};
+            case LogColor::Green:
+                return {0.4, 0.9, 0.4, 1};
+            case LogColor::Cyan:
+                return {0, 0.85, 1, 1};
+            case LogColor::Red:
+                return {0.9, 0, 0.4, 1};
+            case LogColor::Magenta:
+                return {0.6, 0, 0.9, 1};
+            case LogColor::Yellow:
+                return {1, 1, 0, 1};
+            case LogColor::Gray:
+                return {0.7, 0.7, 0.7, 1};
+
+            case LogColor::Default:
+            default:
+                return {1, 1, 1, 1};
+        }
+    }
+
+    constexpr glm::vec4 GetColorRGBA( LogChannel_t *channel, const Log& log )
+    {
+        return GetColorRGBA( GetColor( channel, log ) );
+    }
+    
+    constexpr u32 GetColorU32( LogChannel_t *channel, const Log& log )
+    {
+        // i don't like this
+        glm::vec4 colorVec = GetColorRGBA( GetColor( channel, log ) );
+
+        u8 colorU8[4] = {
+            colorVec.x * 255,
+            colorVec.y * 255,
+            colorVec.z * 255,
+            colorVec.w * 255,
+        };
+
+        // what
+        u32 color = *( (u32 *)colorU8 );
+
+        return color;
+    }
+
     void LogMsg( LogChannel sChannel, LogType sLevel, const char* spFmt, va_list args )
     {
+        PROF_SCOPE();
+
         gLogMutex.lock();
 
         aLogHistory.push_back( { sChannel, sLevel, "" } );
@@ -126,6 +246,8 @@ public:
 
     void LogMsg( LogChannel sChannel, LogType sLevel, const char* spBuf )
     {
+        PROF_SCOPE();
+
         gLogMutex.lock();
 
         aLogHistory.push_back( { sChannel, sLevel, spBuf } );
@@ -138,6 +260,8 @@ public:
 
     void AddLogInternal( Log& log )
     {
+        PROF_SCOPE();
+
         LogChannel_t* channel = GetChannel( log.aChannel );
         if ( !channel )
         {
@@ -186,6 +310,7 @@ public:
             }
         }
 
+        LogTracy( channel, log );
         AddToHistoryString( log );
     }
 
@@ -200,12 +325,26 @@ public:
         return true;
     }
 
+    inline void LogTracy( LogChannel_t *channel, const Log& log )
+    {
+#ifdef TRACY_ENABLE
+        if ( !tracy::ProfilerAvailable() )
+            return;
+
+        size_t len = log.aFormatted.size();
+        StripTrailingLines( log.aFormatted.c_str(), len );
+        TracyMessageC( log.aFormatted.c_str(), len, GetColorU32( channel, log ) );
+#endif
+    }
+
     // -----------------------------------------------------------------------------
     // Maybe move this stuff to some separate class, for different variations of "log listeners"? idk
 
     // TODO: make this async and probably store elsewhere
     void BuildHistoryString( int maxSize )
     {
+        PROF_SCOPE();
+
         aLogHistoryStr = "";
 
         // No limit

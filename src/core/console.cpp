@@ -1,5 +1,6 @@
 #include "core/filesystem.h"
 #include "core/console.h"
+#include "core/profiler.h"
 #include "util.h"
 
 #include <stdarg.h>
@@ -485,9 +486,11 @@ void Console::QueueCommandSilent( const std::string &srCmd )
 }
 
 
-// Only registers cvar refs
+// TODO: rethink this function
 void Console::RegisterConVars(  )
 {
+	PROF_SCOPE();
+
 	// static bool registered = false;
 
 	//if ( registered )
@@ -540,6 +543,8 @@ const std::string& Console::GetTextBuffer(  )
 
 ConVar* Console::GetConVar( const std::string& name )
 {
+	PROF_SCOPE();
+
 	ConVarBase* cvar = ConVarBase::spConVarBases;
 	while ( cvar )
 	{
@@ -610,6 +615,8 @@ void Console::PrintAllConVars(  )
 // return nullptr if it doesn't point to anything, and return the normal cvar if it's not a convarref
 ConVarBase* CheckForConVarRef( ConVarBase* cvar )
 {
+	PROF_SCOPE();
+
 	if ( typeid(*cvar) == typeid(ConVarRef) )
 	{
 		ConVarRef* cvarRef = static_cast<ConVarRef*>(cvar);
@@ -629,6 +636,8 @@ ConVarBase* CheckForConVarRef( ConVarBase* cvar )
 
 void Console::CalculateAutoCompleteList( const std::string& textBuffer )
 {
+	PROF_SCOPE();
+
 	aAutoCompleteList.clear();
 
 	if ( textBuffer.empty() )
@@ -699,6 +708,8 @@ const std::vector< std::string >& Console::GetAutoCompleteList( )
 
 void Console::Update(  )
 {
+	PROF_SCOPE();
+
 	static bool init = false;
 
 	if ( !init )
@@ -726,6 +737,8 @@ void Console::Update(  )
 
 bool Console::RunCommand( const std::string& command )
 {
+	PROF_SCOPE();
+
 	std::string commandName;
 	std::vector< std::string > args;
 
@@ -786,6 +799,8 @@ bool Console::RunCommand( const std::string& command )
 
 void Console::ParseCommandLine( const std::string &command, std::string& name, std::vector< std::string >& args )
 {
+	PROF_SCOPE();
+
 	std::string curArg;
 
 	int i = 0;
