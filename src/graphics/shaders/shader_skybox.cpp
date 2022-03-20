@@ -91,7 +91,7 @@ void ShaderSkybox::CreateGraphicsPipeline(  )
 
 	/* Region of frambuffer to be rendered to, likely will always use 0, 0 and width, height  */
 	// SKYBOX SHADER HACK: use min and max depth of 1 to put it all the way back
-	VkViewport viewport = Viewport( 0.f, 0.f, ( float )PSWAPCHAIN.GetExtent(  ).width, ( float )PSWAPCHAIN.GetExtent(  ).height, 0.99999f, 1.f );
+	VkViewport viewport = Viewport( 0.f, 0.f, ( float )PSWAPCHAIN.GetExtent(  ).width, ( float )PSWAPCHAIN.GetExtent(  ).height, 0.999f, 1.f );
 	// VkViewport viewport = Viewport( 0.f, 0.f, ( float )PSWAPCHAIN.GetExtent(  ).width, ( float )PSWAPCHAIN.GetExtent(  ).height, 0.1f, 1.f );
 
 	VkRect2D scissor{  };		//	More agressive cropping than viewport, defining which regions pixels are to be stored
