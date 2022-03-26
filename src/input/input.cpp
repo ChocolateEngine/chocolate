@@ -16,6 +16,8 @@ input.h
 
 InputSystem *input = new InputSystem;
 
+CONVAR( in_show_mouse_events, 0 );
+
 extern "C" {
 	DLL_EXPORT void* cframework_get() {
 		return input;
@@ -84,14 +86,27 @@ void InputSystem::Bind( const std::string& srKey, const std::string& srCmd )
 	std::cout << srKey << " is not a valid key alias" << std::endl;
 }
 
-void InputSystem::ParseInput(  )
+void InputSystem::ParseInput()
 {
 	static BaseGuiSystem* gui = GET_SYSTEM( BaseGuiSystem );
-	aEvents.clear();
 
-	for ( ; SDL_PollEvent( &aEvent ) ; )
+	aEvents.clear();
+	SDL_PumpEvents();
+
+	int mouseEventCount = 0;
+
+	// get total event count first
+	int eventCount = SDL_PeepEvents( nullptr, 0, SDL_PEEKEVENT, SDL_FIRSTEVENT, SDL_LASTEVENT );
+
+	// resize event vector with events found (probably bad to do every frame?)
+	aEvents.resize( eventCount );
+
+	// fill event vector with events found
+	SDL_PeepEvents( aEvents.data(), eventCount, SDL_GETEVENT, SDL_FIRSTEVENT, SDL_LASTEVENT );
+
+	for ( int i = 0; i < eventCount; i++ )
 	{
-		aEvents.push_back( aEvent );
+		SDL_Event& aEvent = aEvents[i];
 		ImGui_ImplSDL2_ProcessEvent( &aEvent );
 
 		switch (aEvent.type)
@@ -117,6 +132,10 @@ void InputSystem::ParseInput(  )
 				aMousePos.y = aEvent.motion.y;
 				aMouseDelta.x += aEvent.motion.xrel;
 				aMouseDelta.y += aEvent.motion.yrel;
+
+				if ( in_show_mouse_events )
+					gui->DebugMessage( 12 + mouseEventCount++, "Mouse Motion X: %d Y:%d", aEvent.motion.xrel, aEvent.motion.yrel );
+
 				break;
 			}
 

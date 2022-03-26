@@ -27,7 +27,6 @@ protected:
 	typedef std::vector< KeyBind >	KeyBinds;
 	typedef std::unordered_map< SDL_Scancode, KeyState >	KeyStates;
 	
-	SDL_Event 	aEvent;
 	KeyAliases 	aKeyAliases;
 	KeyBinds 	aKeyBinds;
 	KeyStates 	aKeyStates;
