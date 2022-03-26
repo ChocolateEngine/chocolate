@@ -680,12 +680,13 @@ LogColor LogGetChannelColor( LogChannel handle )
     return channel->aColor;
 }
 
+static std::string gDefaultChannelName = "[General]";
 
 const std::string& LogGetChannelName( LogChannel handle )
 {
     LogChannel_t* channel = GetLogSystem().GetChannel( handle );
     if ( !channel )
-        return "[General]";
+        return gDefaultChannelName;
 
     return channel->aName;
 }

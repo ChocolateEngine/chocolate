@@ -79,7 +79,7 @@ public:
 	 *
 	 *	  @param const std::strnig &    The library name.
 	 */
-	void                    LoadModule( const std::string& srDlPath );
+	BaseSystem*             LoadModule( const std::string& srDlPath );
 	/*
 	 *    Initializes the systems.
 	 */

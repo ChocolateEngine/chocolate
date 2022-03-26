@@ -476,13 +476,14 @@ void Console::QueueCommand( const std::string &srCmd )
 	LogEx( gConsoleChannel, LogType::Input, srCmd.c_str() );
 }
 
-void Console::QueueCommandSilent( const std::string &srCmd )
+void Console::QueueCommandSilent( const std::string &srCmd, bool sAddToHistory )
 {
 	CheckInstantCommands( srCmd );
 
 	aQueue.push_back( srCmd );
 
-	AddToCommandHistory( srCmd );
+	if ( sAddToHistory )
+		AddToCommandHistory( srCmd );
 }
 
 

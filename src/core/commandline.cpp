@@ -10,7 +10,7 @@ DLL_EXPORT CommandLine* cmdline = nullptr;
 
 extern "C"
 {
-	void DLL_EXPORT core_init( int argc, char *argv[], const char* gamePath )
+	void DLL_EXPORT core_init( int argc, char *argv[], const char* workingDir )
 	{
 		sys_init();
 
@@ -18,23 +18,29 @@ extern "C"
 		cmdline->Init( argc, argv );
 
 		filesys = new FileSystem;
-		filesys->Init( gamePath );
+		filesys->Init( workingDir );
 
 		console = new Console;
+	}
+}
 
-		if ( filesys->Exists( "cfg/autoexec.cfg" ) )
-			console->QueueCommand( "exec autoexec" );
-		
-		std::string execCfg;
-		while ( true )
-		{
-			execCfg = cmdline->GetValue( "-exec" );
 
-			if ( execCfg == "" )
-				break;
+// call this after the other dlls are loaded, but not initialized yet
+// it runs all startup config files, like config.cfg to store saved cvar values
+void DLL_EXPORT core_post_load()
+{
+	if ( filesys->Exists( "cfg/config.cfg" ) )
+		console->QueueCommandSilent( "exec config", false );
 
-			console->QueueCommand( "exec " + execCfg );
-		}
+	if ( filesys->Exists( "cfg/autoexec.cfg" ) )
+		console->QueueCommandSilent( "exec autoexec", false );
+
+	std::string execCfg;
+	int arg = 0;
+
+	while ( cmdline->GetValueNext( arg, "-exec", execCfg ) )
+	{
+		console->QueueCommandSilent( "exec " + execCfg, false );
 	}
 }
 
@@ -50,9 +56,15 @@ void CommandLine::Init( int argc, char *argv[] )
 }
 
 
-const std::vector<std::string>& CommandLine::GetAll(  )
+constexpr const std::vector<std::string>& CommandLine::GetArgs(  )
 {
 	return aArgs;
+}
+
+
+constexpr size_t CommandLine::GetCount(  )
+{
+	return aArgs.size();
 }
 
 
@@ -74,6 +86,9 @@ bool CommandLine::Find( const std::string& search )
 
 	return false;
 }
+
+
+// ------------------------------------------------------------------------------------
 
 
 const std::string& CommandLine::GetValue( const std::string& search, const std::string& fallback )
@@ -113,6 +128,32 @@ double CommandLine::GetValue( const std::string& search, double fallback )
 
 	return ToDouble( aArgs[i + 1], fallback );
 }
+
+
+// ------------------------------------------------------------------------------------
+
+
+// function to be able to find all values like this
+// returns true if it finds a value, false if it fails to
+bool CommandLine::GetValueNext( int& i, const std::string& search, std::string& ret )
+{
+	for ( ; i < aArgs.size(); i++ )
+	{
+		if ( aArgs[i] == search )
+		{
+			if ( i == -1 || i + 1 > aArgs.size() )
+				return false;
+
+			ret = aArgs[i + 1];
+			return true;
+		}
+	}
+
+	return false;
+}
+
+
+// ------------------------------------------------------------------------------------
 
 
 CommandLine::CommandLine(  )

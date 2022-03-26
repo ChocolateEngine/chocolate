@@ -151,6 +151,8 @@ void sys_sleep( float ms )
 
 bool win32_init_console( HANDLE conOut, HANDLE conIn )
 {
+	// DOESN'T WORK YET
+#if 0
 	if ( !gIsWindows10 )
 		return false;
 
@@ -195,7 +197,7 @@ bool win32_init_console( HANDLE conOut, HANDLE conIn )
 		// Failed to set VT input mode, can't do anything here.
 		return false;
 	}
-
+#endif
 	return true;
 }
 

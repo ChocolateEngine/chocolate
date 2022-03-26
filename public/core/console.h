@@ -334,7 +334,7 @@ public:
 
 	/* Add a command to the queue  */
 	void                                QueueCommand( const std::string& srCmd );
-	void                                QueueCommandSilent( const std::string& srCmd );
+	void                                QueueCommandSilent( const std::string& srCmd, bool sAddToHistory = true );
 
 	/* Go through and run every command inputed into the console last frame  */
 	void                                Update(  );
