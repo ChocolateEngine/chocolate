@@ -265,7 +265,7 @@ public:
         LogChannel_t* channel = GetChannel( log.aChannel );
         if ( !channel )
         {
-            Print( "\n *** LogSystem: Channel Not Found for message: \"%s\"\n", log.aMessage );
+            Print( "\n *** LogSystem: Channel Not Found for message: \"%s\"\n", log.aMessage.c_str() );
             return;
         }
 
@@ -282,24 +282,28 @@ public:
                 case LogType::Raw:
                     LogSetColor( channel->aColor );
                     fputs( log.aFormatted.c_str(), stdout );
+                    fflush( stdout );
                     LogSetColor( LogColor::Default );
                     break;
 
                 case LogType::Warning:
                     LogSetColor( LOG_COLOR_WARNING );
                     fputs( log.aFormatted.c_str(), stdout );
+                    fflush( stdout );
                     LogSetColor( LogColor::Default );
                     break;
 
                 case LogType::Error:
                     LogSetColor( LOG_COLOR_ERROR );
                     fputs( log.aFormatted.c_str(), stdout );
+                    fflush( stdout );
                     LogSetColor( LogColor::Default );
                     break;
 
                 case LogType::Fatal:
                     LogSetColor( LOG_COLOR_ERROR );
                     fputs( log.aFormatted.c_str(), stderr );
+                    fflush( stderr );
                     LogSetColor( LogColor::Default );
 
                     std::string messageBoxTitle;
@@ -783,6 +787,11 @@ void LogEx( LogChannel channel, LogType sLevel, const char *spBuf )
 void LogExF( LogChannel channel, LogType sLevel, const char *spFmt, ... )
 {
     LOG_SYS_MSG_VA( spFmt, channel, sLevel );
+}
+
+void LogExV( LogChannel channel, LogType sLevel, const char *spFmt, va_list args )
+{
+    GetLogSystem().LogMsg( channel, sLevel, spFmt, args );
 }
 
 
