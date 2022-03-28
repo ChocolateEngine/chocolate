@@ -200,7 +200,7 @@ void exec_dropdown(
 	const std::vector< std::string >& args,  // arguments currently typed in by the user
 	std::vector< std::string >& results )      // results to populate the dropdown list with
 {
-	for ( const auto file : filesys->ScanDir( "cfg", ReadDir_AllPaths | ReadDir_Recursive ) )
+	for ( const auto& file : filesys->ScanDir( "cfg", ReadDir_AllPaths | ReadDir_Recursive ) )
 	{
 		if ( file.ends_with( ".." ) )
 			continue;
@@ -234,7 +234,7 @@ CONCMD_DROP( exec, exec_dropdown )
 
 	if ( !filesys->IsFile( path ) )
 	{
-		LogWarn( gConsoleChannel, "File does not exist: \"%s\"\n", path );
+		LogWarn( gConsoleChannel, "File does not exist: \"%s\"\n", path.c_str() );
 		return;
 	}
 
