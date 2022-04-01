@@ -2,6 +2,8 @@
 #include "../renderer.h"
 #include "util.h"
 
+#include "core/core.h"
+
 #include "imgui/imgui.h"
 #include "imgui/imgui_impl_vulkan.h"
 #include "imgui/imgui_internal.h"

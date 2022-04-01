@@ -18,6 +18,7 @@ if( MSVC )
 		link_libraries( LinearMath BulletCollision BulletDynamics )
 	endif()
 else()
-	message( "NO BULLET ON LINUX SETUP YET AAAAA" )
+	link_directories( /usr/local/include/bullet )
+	link_libraries( LinearMath BulletCollision  BulletDynamics )
 endif()
 

@@ -51,7 +51,7 @@ enum class LogType: unsigned char
 /* Manage Console Color */
 void                  CORE_API  LogSetColor( LogColor color );
 LogColor              CORE_API  LogGetColor();
-constexpr const char  CORE_API *LogColorToStr( LogColor color );
+const char            CORE_API *LogColorToStr( LogColor color );
 
 
 constexpr LogColor LOG_COLOR_WARNING = LogColor::Yellow;
