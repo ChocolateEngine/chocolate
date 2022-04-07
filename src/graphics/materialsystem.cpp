@@ -52,6 +52,8 @@ void MaterialSystem::Init()
 	aImageLayout = InitDescriptorSetLayout( DescriptorLayoutBinding( VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1000, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr ) );
 	// aUniformLayout = InitDescriptorSetLayout( DescriptorLayoutBinding( VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1000, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, nullptr ) );
 
+	AllocImageSets( aImageSets, aImageLayout, *gpPool );
+
 	// Create Missing Texture
 	apMissingTex = CreateTexture( "" );
 
@@ -286,7 +288,7 @@ Texture *MaterialSystem::CreateTexture( const std::string &path )
 	std::string absPath = filesys->FindFile( path );
 	if ( absPath == "" && apMissingTex )
 	{
-		LogWarn( gGraphicsChannel, "Failed to Find Texture \"%s\"\n", path );
+		LogWarn( gGraphicsChannel, "Failed to Find Texture \"%s\"\n", path.c_str() );
 		return nullptr;
 	}
 
@@ -302,7 +304,7 @@ Texture *MaterialSystem::CreateTexture( const std::string &path )
 			aTextures.push_back( texture );
 			aTexturePaths[path] = texture;
 
-			UpdateImageSets( aImageSets, aImageLayout, *gpPool, aTextures, *apSampler );
+			UpdateImageSets( aImageSets, aTextures, *apSampler );
 
 			// reassign the missing texture id due to order shifting
 			aMissingTexId = GetTextureId( apMissingTex );

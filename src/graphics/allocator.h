@@ -103,8 +103,11 @@ void 			InitUniformBuffers( DataBuffer< VkBuffer > &srUBuffers, DataBuffer< VkDe
 /* A.  */
 void 			InitDescriptorSets( DataBuffer< VkDescriptorSet > &srDescSets, VkDescriptorSetLayout &srDescSetLayout,
 					    ImageInfoSets sDescImageInfos, BufferInfoSets sDescBufferInfos );
-void                    UpdateImageSets( std::vector< VkDescriptorSet > &srSets, VkDescriptorSetLayout &srLayout,
-					 VkDescriptorPool &srPool, std::vector< TextureDescriptor* > &srImages, VkSampler &srSampler );
+
+void            AllocImageSets( std::vector< VkDescriptorSet > &srSets, VkDescriptorSetLayout &srLayout, VkDescriptorPool &srPool );
+
+void            UpdateImageSets( std::vector< VkDescriptorSet > &srSets, std::vector< TextureDescriptor* > &srImages, VkSampler &srSampler );
+
 /* Initializes the uniform data, such as uniform buffers.  */
 void			InitUniformData( UniformDescriptor &srDescriptor, VkDescriptorSetLayout sLayout, unsigned int uboSize );
 /* A.  */

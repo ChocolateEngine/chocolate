@@ -2,6 +2,7 @@
 #include "debug.h"
 #include "core/filesystem.h"
 #include "graphics/primvtx.hh"
+#include "graphics.h"
 
 #include "gutil.hh"
 
@@ -284,18 +285,19 @@ void InitDescriptorSets( DataBuffer< VkDescriptorSet > &srDescSets, VkDescriptor
 		vkUpdateDescriptorSets( DEVICE, ( uint32_t )descriptorWrites.size(  ), descriptorWrites.data(  ), 0, NULL );
 	}
 }
-void UpdateImageSets( std::vector< VkDescriptorSet > &srSets, VkDescriptorSetLayout &srLayout, VkDescriptorPool &srPool, std::vector< TextureDescriptor* > &srImages, VkSampler &srSampler ) {
-	if ( !srImages.size() )
-		return;
-	
+
+constexpr int MAX_IMAGES = 1000;
+
+void AllocImageSets( std::vector< VkDescriptorSet > &srSets, VkDescriptorSetLayout &srLayout, VkDescriptorPool &srPool )
+{
 	std::vector< VkDescriptorSetLayout > layouts( PSWAPCHAIN.GetImages().size(), srLayout );
 
-	uint32_t counts[] = { 100, 100, 100 };
+	uint32_t counts[] = { MAX_IMAGES, MAX_IMAGES, MAX_IMAGES };
 	VkDescriptorSetVariableDescriptorCountAllocateInfo dc{};
 	dc.sType              = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_VARIABLE_DESCRIPTOR_COUNT_ALLOCATE_INFO;
 	dc.descriptorSetCount = PSWAPCHAIN.GetImages().size();
 	dc.pDescriptorCounts  = counts;
-	
+
 	VkDescriptorSetAllocateInfo a{};
 	a.sType              = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
 	a.pNext              = &dc;
@@ -303,10 +305,21 @@ void UpdateImageSets( std::vector< VkDescriptorSet > &srSets, VkDescriptorSetLay
 	a.descriptorSetCount = PSWAPCHAIN.GetImages().size();
 	a.pSetLayouts        = layouts.data();
 
-
 	srSets.resize( PSWAPCHAIN.GetImages().size() );
-	if ( vkAllocateDescriptorSets( DEVICE, &a, srSets.data() ) != VK_SUCCESS )
-		throw std::runtime_error( "Failed to allocate descriptor sets!" );
+	CheckVKResult( vkAllocateDescriptorSets( DEVICE, &a, srSets.data() ), "Failed to allocate descriptor sets!" );
+}
+
+void UpdateImageSets( std::vector< VkDescriptorSet > &srSets, std::vector< TextureDescriptor* > &srImages, VkSampler &srSampler )
+{
+	if ( !srImages.size() )
+		return;
+
+	// hmm, this doesn't crash on Nvidia, though idk how AMD would react
+	// also would this be >= or just >, lol
+	if ( srImages.size() >= MAX_IMAGES )
+	{
+		LogFatal( gGraphicsChannel, "Over Max Images allocated (at %d, max is %d)", (int)srImages.size(), MAX_IMAGES );
+	}
 
 	for ( uint32_t i = 0; i < srSets.size(); ++i ) {
 		std::vector< VkDescriptorImageInfo > infos;
@@ -332,6 +345,7 @@ void UpdateImageSets( std::vector< VkDescriptorSet > &srSets, VkDescriptorSetLay
 		vkUpdateDescriptorSets( DEVICE, 1, &w, 0, nullptr );
 	}
 }
+
 /* Initializes a texture, view, and appropriate descriptors.  */
 TextureDescriptor *InitTexture( const String &srImagePath, VkDescriptorSetLayout sLayout, VkDescriptorPool sPool, VkSampler sSampler, float *spWidth, float *spHeight )
 {
