@@ -12,6 +12,7 @@
 
 #define FLOAT_AUDIO 1
 
+constexpr int MAX_SOURCE_BUFFERS = 4;
 
 class BaseCodec;
 class IAudioEffect;
@@ -88,13 +89,13 @@ public:
 		glm::vec4   aDataVec4;
 	};
 
-	inline void        SetFloat( float val )                        { aType = AudioVar::Float; aDataFloat = val; }
-	inline void        SetInt( int val )                            { aType = AudioVar::Int; aDataInt = val; }
-	inline void        SetVec3( const glm::vec3 &val )              { aType = AudioVar::Vec3; aDataVec3 = val; }
+	inline void                 SetFloat( float val )                        { aType = AudioVar::Float; aDataFloat = val; }
+	inline void                 SetInt( int val )                            { aType = AudioVar::Int; aDataInt = val; }
+	inline void                 SetVec3( const glm::vec3 &val )              { aType = AudioVar::Vec3; aDataVec3 = val; }
 
-	inline float       GetFloat( float fallback = 0.f )             { return (aType == AudioVar::Float) ? aDataFloat : fallback; }
-	inline int         GetInt( int fallback = 0 )                   { return (aType == AudioVar::Int) ? aDataInt : fallback; }
-	inline glm::vec3   GetVec3( const glm::vec3 &fallback )         { return (aType == AudioVar::Vec3) ? aDataVec3 : fallback; }
+	inline float                GetFloat( float fallback = 0.f )             { return (aType == AudioVar::Float) ? aDataFloat : fallback; }
+	inline int                  GetInt( int fallback = 0 )                   { return (aType == AudioVar::Int) ? aDataInt : fallback; }
+	inline const glm::vec3&     GetVec3( const glm::vec3 &fallback )         { return (aType == AudioVar::Vec3) ? aDataVec3 : fallback; }
 };
 
 
@@ -170,33 +171,6 @@ struct AudioStream
 
 
 // ===========================================================================
-// Audio Effects
-
-
-struct IAudioEffect
-{
-};
-
-
-struct AudioEffectWorld: public IAudioEffect
-{
-	glm::vec3 aPos;
-	float aFalloff;
-};
-
-
-struct AudioEffectLoop: public IAudioEffect
-{
-	bool loop = false;      // should we loop the file when it ends?
-	// double time = 0;        // time in seconds in the file
-	double startTime = 0;   // time in seconds to start playback
-	double endTime = 0;     // time in seconds to end playback
-	// float speed = 1.0f;
-};
-
-
-
-// ===========================================================================
 // Base Codec
 
 
@@ -248,7 +222,12 @@ public:
 	// -------------------------------------------------------------------------------------
 
 	void                            SetListenerTransform( const glm::vec3& pos, const glm::vec3& ang ) override;
+	void                            SetListenerVelocity( const glm::vec3& vel ) override;
 	void                            SetListenerOrient( const glm::vec3& forward, const glm::vec3& up ) override;
+
+	void                            SetDopplerScale( float scale ) override;
+	void                            SetSoundSpeed( float speed ) override;
+
 	void                            SetPaused( bool paused ) override;
 	void                            SetGlobalSpeed( float speed ) override;
 
@@ -331,6 +310,7 @@ public:
 
 	bool                            RegisterCodec( BaseCodec *codec );
 
+	bool                            ApplyVolume( AudioStream* stream );
 	bool                            UpdateStream( AudioStream* stream );
 	bool                            ReadAudio( AudioStream* stream );
 	bool                            ApplyEffects( AudioStream* stream );
@@ -383,6 +363,7 @@ public:
 	// SDL_AudioSpec                   aAudioSpec;
 
 	glm::vec3                       aListenerPos = {0, 0, 0};
+	glm::vec3                       aListenerVel = {0, 0, 0};
 	glm::quat                       aListenerRot = {0, 0, 0, 0};
 	float                           aListenerOrient[6] = {};
 	bool                            aPaused = false;

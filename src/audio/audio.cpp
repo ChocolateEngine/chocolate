@@ -32,7 +32,6 @@ Handle gDefaultChannel = audio->RegisterChannel( "Default" );
 std::mutex g_audioMutex;
 
 
-CONVAR( snd_volume, 0.5 );
 CONVAR( snd_volume_3d, 1 );
 CONVAR( snd_volume_2d, 1 );
 CONVAR( snd_buffer_size, 4 );
@@ -250,6 +249,21 @@ const char* AudioVar2Str( AudioVar var )
 
 
 // ============================================================================
+// ConVar Funcs
+// ============================================================================
+
+
+CONVAR_CMD( snd_volume, 0.5 )
+{
+	alListenerf( AL_GAIN, snd_volume.GetFloat() );
+}
+
+CONVAR_CMD( snd_hrtf, 1 )
+{
+}
+
+
+// ============================================================================
 // Audio Stream Vars
 // ============================================================================
 
@@ -311,18 +325,19 @@ void AudioStream::SetVar( AudioEffectData name, const glm::vec3 &data )   { SET_
 
 #undef SET_VAR
 
+static glm::vec3 vec3_zero{};
 
-#define GET_VAR( func ) \
+#define GET_VAR( func, ret ) \
 	AudioEffectVar *var = GetVar( name ); \
 	if ( var == nullptr ) { \
 		LogWarn( gAduioChannel, "Audio Var Not Defined for Effect Data: %s\n", EffectData2Str(name) ); \
-		return {}; \
+		return ret; \
 	} \
-	return var->func( {} )
+	return var->func( ret )
 
-float               AudioStream::GetFloat(   AudioEffectData name )     { GET_VAR( GetFloat );   }
-int                 AudioStream::GetInt(     AudioEffectData name )     { GET_VAR( GetInt );     }
-const glm::vec3&    AudioStream::GetVec3(    AudioEffectData name )     { GET_VAR( GetVec3 );    }
+float               AudioStream::GetFloat(   AudioEffectData name )     { GET_VAR( GetFloat, 0.f );         }
+int                 AudioStream::GetInt(     AudioEffectData name )     { GET_VAR( GetInt, 0 );             }
+const glm::vec3&    AudioStream::GetVec3(    AudioEffectData name )     { GET_VAR( GetVec3, vec3_zero );    }
 
 #undef GET_VAR
 
@@ -437,8 +452,11 @@ void AudioSystem::Init(  )
 			//if ( !HandleALErr( "Failed to Set Listener Position" ) )
 			//	continue;
 
-			// set this up soon
-			alListener3f( AL_VELOCITY, 0, 0, 0 );
+			float vel[3];
+			ToAlVec( aListenerVel, vel );
+			alListener3f( AL_VELOCITY, vel[0], vel[1], vel[2] );
+
+			HandleALErr( "Failed to Set Listener Velocity" );
 
 			// if ( remainingAudio < SAMPLE_SIZE * snd_buffer_size.GetFloat() )
 			{
@@ -680,13 +698,14 @@ bool AudioSystem::InitOpenAL()
 	// alDistanceModel( AL_LINEAR_DISTANCE );
 	alDistanceModel( AL_INVERSE_DISTANCE_CLAMPED );
 
+	alListenerf( AL_GAIN, snd_volume.GetFloat() );
+
 	return true;
 }
 
 
 // TEMP
 CONVAR( snd_min_distance, 120 );
-CONVAR( snd_al_rolloff, 2.f );
 
 // excess error handling lol
 bool AudioSystem::LoadSoundInternal( AudioStream *stream )
@@ -702,8 +721,8 @@ bool AudioSystem::LoadSoundInternal( AudioStream *stream )
 		stream->format = AL_FORMAT_MONO_FLOAT32;
 
 	// lets use this for now
-	stream->aBuffers.resize( MAX_AUDIO_STREAMS );
-	alGenBuffers( MAX_AUDIO_STREAMS, stream->aBuffers.data() );
+	stream->aBuffers.resize( MAX_SOURCE_BUFFERS );
+	alGenBuffers( MAX_SOURCE_BUFFERS, stream->aBuffers.data() );
 
 	if ( !HandleALErr( "Failed to Gen Buffers" ) )
 		return false;
@@ -723,11 +742,6 @@ bool AudioSystem::LoadSoundInternal( AudioStream *stream )
 	alSourcef( stream->aSource, AL_SOURCE_RELATIVE, AL_TRUE );
 
 	if ( !HandleALErr( "Failed to Set Source to Relative" ) )
-		return false;
-
-	alSourcef( stream->aSource, AL_ROLLOFF_FACTOR, snd_al_rolloff.GetFloat() );
-
-	if ( !HandleALErr( "Failed to Set Source Rolloff Factor" ) )
 		return false;
 
 	stream->aChannel = gDefaultChannel;
@@ -768,76 +782,17 @@ AudioStream* AudioSystem::GetStream( Handle streamHandle )
 }
 
 
-#if 0
-/* Get an effect on an audio stream if it exists, otherwise return nullptr. */
-IAudioEffect* AudioSystem::GetEffect( AudioStream* stream, AudioEffects effectEnum )
-{
-	auto search = stream->aEffects.find( effectEnum );
-
-	if ( search == stream->aEffects.end() )
-		return nullptr;
-
-	return search->second;
-}
-#endif
-
-
-#if 0
-template< typename T >
-T GetEffect( AudioStream* stream, AudioEffects effectEnum )
-{
-	auto search = stream->aEffects.find( effectEnum );
-
-	if ( search == stream->aEffects.end() )
-		return nullptr;
-
-	return (T)search->second;
-}
-
-
-template AudioEffectLoop*       GetEffect< AudioEffectLoop* >( AudioStream* stream, AudioEffects effectEnum );
-template AudioEffectWorld*      GetEffect< AudioEffectWorld* >( AudioStream* stream, AudioEffects effectEnum );
-
-
-/* Same as above, but warns if it doesn't exist */
-template< typename T >
-T GetEffectWarn( AudioStream* stream, AudioEffects effectEnum )
-{
-	if ( T effect = GetEffect< T >( stream, effectEnum ) )
-		return effect;
-
-	LogWarn( gAduioChannel, "Stream Does not have audio effect: %s\n", Effect2Str( effectEnum ) );
-
-	return nullptr;
-}
-#endif
-
-
-#if 0
-/* Same as above, but warns if it doesn't exist */
-IAudioEffect* AudioSystem::GetEffectWarn( AudioStream* stream, AudioEffects effectEnum )
-{
-	if ( IAudioEffect* effect = GetEffect( stream, effectEnum ) )
-		return effect;
-
-	LogWarn( gAduioChannel, "Stream Does not have audio effect: %s\n", Effect2Str( effectEnum ) );
-
-	return nullptr;
-}
-#endif
-
 
 void AudioSystem::SetListenerTransform( const glm::vec3& pos, const glm::vec3& ang )
 {
 	aListenerPos = pos;
 	aListenerRot = ang;
+}
 
-	
-	// TODO: make a vec3_to_ang function or something in util.h !!!!
-	// glm::vec3 forward, up;
-	// vec3_to_ang( ang, *forward, *up, 0 );
-	// ALfloat vecs[] = { forward.x, forward.y, forward.z, up.x, up.y, up.z };
-	// alListenerfv( AL_ORIENTATION, vecs );
+
+void AudioSystem::SetListenerVelocity( const glm::vec3& vel )
+{
+	aListenerVel = vel;
 }
 
 
@@ -865,6 +820,22 @@ void AudioSystem::SetListenerOrient( const glm::vec3& forward, const glm::vec3& 
 	alListenerfv( AL_ORIENTATION, orient );
 
 	HandleALErr( "Failed to Set Listener Orientation" );
+}
+
+
+void AudioSystem::SetDopplerScale( float scale )
+{
+	alDopplerFactor( scale );
+
+	HandleALErr( "Failed to Set Doppler Factor" );
+}
+
+
+void AudioSystem::SetSoundSpeed( float speed )
+{
+	alSpeedOfSound( speed );
+
+	HandleALErr( "Failed to Set Speed of Sound" );
 }
 
 
@@ -1162,7 +1133,7 @@ void AudioSystem::FreeSound( Handle sStream )
 	//aStreamPool.Free( stream->midBufferAudio );
 	//aStreamPool.Free( stream->outBufferAudio );
 
-	alDeleteBuffers( MAX_AUDIO_STREAMS, stream->aBuffers.data() );
+	alDeleteBuffers( MAX_SOURCE_BUFFERS, stream->aBuffers.data() );
 
 	stream->codec->Close( stream );
 	aStreams.Remove( sStream );
@@ -1295,7 +1266,11 @@ void AudioSystem::AddEffect( Handle handle, AudioEffect effect )
 				return;
 
 			stream->CreateVar< glm::vec3 >( Audio_World_Pos, {} );
-			stream->CreateVar( Audio_World_Falloff, 0.f );
+			stream->CreateVar< glm::vec3 >( Audio_World_Velocity, {} );
+			stream->CreateVar( Audio_World_Falloff, 1.f );
+			stream->CreateVar( Audio_World_ConeInnerAngle, 360.f );
+			stream->CreateVar( Audio_World_ConeOuterAngle, 360.f );
+			stream->CreateVar( Audio_World_ConeOuterGain, 1.f );
 
 			break;
 
@@ -1345,7 +1320,11 @@ void AudioSystem::RemoveEffect( Handle handle, AudioEffect effect )
 	{
 		case AudioEffect_World:
 			stream->RemoveVar( Audio_World_Pos );
+			stream->RemoveVar( Audio_World_Velocity );
 			stream->RemoveVar( Audio_World_Falloff );
+			stream->RemoveVar( Audio_World_ConeInnerAngle );
+			stream->RemoveVar( Audio_World_ConeOuterAngle );
+			stream->RemoveVar( Audio_World_ConeOuterGain );
 			break;
 
 		case AudioEffect_Loop:
@@ -1396,6 +1375,47 @@ bool AudioSystem::SetEffectData( Handle handle, AudioEffectData sDataType, float
 		return false;
 
 	stream->SetVar( sDataType, data );
+
+	// hmmm, should move elsewhere probably, idk
+	// also this is one of the types that could change live, hmmmmm
+	switch ( sDataType )
+	{
+		case Audio_World_Falloff:
+		{
+			alSourcef( stream->aSource, AL_ROLLOFF_FACTOR, data );
+
+			if ( !HandleALErr( "Failed to Set Source Rolloff Factor" ) )
+				return false;
+		}
+
+		case Audio_World_ConeInnerAngle:
+		{
+			alSourcef( stream->aSource, AL_CONE_INNER_ANGLE, data );
+
+			if ( !HandleALErr( "Failed to Set Source Cone Inner Angle" ) )
+				return false;
+		}
+
+		case Audio_World_ConeOuterAngle:
+		{
+			alSourcef( stream->aSource, AL_CONE_OUTER_ANGLE, data );
+
+			if ( !HandleALErr( "Failed to Set Source Cone Outer Angle" ) )
+				return false;
+		}
+
+		case Audio_World_ConeOuterGain:
+		{
+			alSourcef( stream->aSource, AL_CONE_OUTER_GAIN, data );
+
+			if ( !HandleALErr( "Failed to Set Source Cone Outer Gain" ) )
+				return false;
+		}
+
+		default:
+			break;
+	}
+
 	return true;
 }
 
@@ -1414,18 +1434,21 @@ bool AudioSystem::SetEffectData( Handle handle, AudioEffectData sDataType, const
 	{
 		case Audio_World_Pos:
 		{
-			ALfloat pos[3];
-			ToAlVec( data, pos );
-			alSourcefv( stream->aSource, AL_POSITION, &pos[0] );
+			ALfloat vec[3];
+			ToAlVec( data, vec );
+			alSourcefv( stream->aSource, AL_POSITION, &vec[0] );
 
-			if ( !HandleALErr( "Failed to Set Position" ) )
+			if ( !HandleALErr( "Failed to Set Source Position" ) )
 				return false;
+		}
 
-			// um
-			alSourcei( stream->aSource, AL_SOURCE_RELATIVE, AL_FALSE );
-			// alSourcei( stream->aSource, AL_SOURCE_RELATIVE, AL_TRUE );
+		case Audio_World_Velocity:
+		{
+			ALfloat vec[3];
+			ToAlVec( data, vec );
+			alSourcefv( stream->aSource, AL_VELOCITY, &vec[0] );
 
-			if ( !HandleALErr( "Failed to Set Source to Non-Relative" ) )
+			if ( !HandleALErr( "Failed to Set Source Velocity" ) )
 				return false;
 		}
 
@@ -1478,8 +1501,33 @@ bool AudioSystem::GetEffectData( Handle handle, AudioEffectData sDataType, glm::
 // -------------------------------------------------------------------------------------
 
 
+bool AudioSystem::ApplyVolume( AudioStream* stream )
+{
+	float finalVol = stream->vol;
+
+	if ( stream->aEffects & AudioEffect_World )
+		finalVol *= snd_volume_3d;
+	else
+		finalVol *= snd_volume_2d;
+
+	if ( stream->aChannel != InvalidHandle )
+	{
+		AudioChannel* channel = aChannels.Get( stream->aChannel );
+		if ( channel )
+			finalVol *= channel->aVol;
+	}
+
+	// apply volume
+	alSourcef( stream->aSource, AL_GAIN, finalVol );
+
+	return true;
+}
+
+
 bool AudioSystem::UpdateStream( AudioStream* stream )
 {
+	ApplyVolume( stream );
+
 	if ( !stream->preloaded )
 	{
 		if ( !ReadAudio( stream ) )
@@ -1506,7 +1554,7 @@ CONVAR( snd_max_buffers, 2 );
 
 bool AudioSystem::ReadAudio( AudioStream *stream )
 {
-	// int read = SDL_AudioStreamAvailable( stream->audioStream );
+	// Unqueue processed buffers
 
 	if ( stream->aBufferIndex == stream->aBuffers.size() - 1 )
 	{
@@ -1535,137 +1583,54 @@ bool AudioSystem::ReadAudio( AudioStream *stream )
 		alSourceUnqueueBuffers( stream->aSource, processed, buffers.data() );
 	}
 
-	int read = 0;
+	// don't queue too many buffers at a time
 
+	int read = 0;
 	alGetSourcei( stream->aSource, AL_BUFFERS_QUEUED, &read );
 
-	// if ( read < SAMPLE_SIZE * snd_audio_stream_available.GetFloat() )
-	if ( read < snd_max_buffers )
+	if ( read > snd_max_buffers )
+		return true;
+
+	std::vector<float> rawAudio;
+
+	read = ReadAudioInternal( stream, rawAudio );
+
+	if ( read <= 0 )
+		return false;
+
+	// fill in the rest with zeros
+	if ( read != READ_SIZE )
 	{
-		std::vector<float> rawAudio;
-
-		read = ReadAudioInternal( stream, rawAudio );
-
-		if ( read <= 0 )
-			return false;
-
-		// adjust volume because openal doesn't have it for some stupid reason
-		// NOTE: this probably won't work for preloaded sounds,
-		// unless we had them stored in an `std::unordered_map< AudioStream*, std::vector< std::vector< float > > > aPreloadedAudio`
-		// then we can just have a function in here return one of the vectors in it, and live volume changes would work again
-		float finalVol = stream->vol * snd_volume_2d * snd_volume;
-
-		if ( stream->aChannel != InvalidHandle )
-		{
-			AudioChannel* channel = aChannels.Get( stream->aChannel );
-			if ( channel )
-				finalVol *= channel->aVol;
-		}
-
-		// AL_GAIN ?
-		for ( uint32_t i = 0, j = 0; i < read; i++ )
-			rawAudio[i] *= finalVol;
-
-		// fill in the rest with zeros
-		if ( read != READ_SIZE )
-		{
-			// GET RID OF THIS
-			rawAudio.resize( READ_SIZE );
-		}
-
-		// ALuint& buffer = apBuffers[stream->index];
-		ALuint& buffer = stream->aBuffers[stream->aBufferIndex++];
-		// ALint buffer;
-
-		// alGetSourcei( apSources[stream->index], AL_BUFFERS_QUEUED, &buffer );
-
-		// alBufferi( buffer, AL_POSITION, 0 )
-
-		// um
-		ALuint buffers[] = {buffer};
-
-		// alSourceUnqueueBuffers( source, 1, buffers );
-
-		// alBufferData( buffer, AL_FORMAT_STEREO16, rawAudio.data(), read, stream->rate );
-		
-		// TODO: get rid of FLOAT32 now that steam audio is gone, only made read from ogg painful for some reason
-		// also figure out how to convert from int to float32 anyway, could be useful
-		
-#if FLOAT_AUDIO
-		// alBufferData( buffer, stream->format, rawAudio.data(), SAMPLE_SIZE, stream->rate );
-		// alBufferData( buffer, AL_FORMAT_STEREO_FLOAT32, rawAudio.data(), SAMPLE_SIZE, stream->rate );
-
-		// cool hack because AL_FORMAT_MONO_FLOAT32 just doesn't play sound for some stupid reason lol
-		// alBufferData( buffer, AL_FORMAT_STEREO_FLOAT32, rawAudio.data(), SAMPLE_SIZE, stream->channels == 2 ? stream->rate : stream->rate/2 );
-
-		// alBufferData( buffer, AL_FORMAT_STEREO_FLOAT32, rawAudio.data(), (READ_SIZE * stream->width * 2), stream->channels == 2 ? stream->rate : stream->rate/2 );
-		
-		// auto size = (READ_SIZE * stream->width * stream->channels);
-		auto size = (READ_SIZE * stream->width * 2);
-		alBufferData( buffer, stream->format, rawAudio.data(), size, stream->rate );
-#else
-		alBufferData( buffer, AL_FORMAT_STEREO16, rawAudio.data(), SAMPLE_SIZE, stream->rate / 2 );
-#endif
-
-		if ( !HandleALErr( "Failed to add audio data to alBuffer" ) )
-			return false;
-
-		alSourceQueueBuffers( stream->aSource, 1, buffers );
-
-		if ( !HandleALErr( "Failed to queue buffer to source" ) )
-			return false;
-
-#if 0
-		// NOTE: "read" NEEDS TO BE 4 TIMES THE AMOUNT FOR SOME REASON, no clue why
-		if ( SDL_AudioStreamPut(stream->audioStream, rawAudio.data(), read * snd_read_mult) == -1 )
-		{
-			Print( "[AudioSystem] SDL_AudioStreamPut - Failed to put samples in stream: %s\n", SDL_GetError() );
-			return false;
-		}
-#endif
-		// alSourcePlay();
-
-		// apply stream volume
-		/*for ( int i = 0; i < read; i++ )
-			rawAudio[i] *= stream->vol;
-
-		// TODO: split these effects up
-		if ( stream->effects & AudioEffectPreset_World )
-		{
-			// ApplySpatialEffects( stream, rawAudio.data(), read );
-		}
-		else
-		{
-			// SDL_memset( stream->outBufferAudio, 0, sizeof( stream->outBufferAudio ) );
-			// SDL_memset( stream->outBuffer.data, 0, sizeof(stream->outBuffer.data));
-
-			// copy over samples
-			// auto data = stream->outBuffer.data;
-
-			// for ( uint32_t i = 0, j = 0; i < SAMPLE_SIZE / 2; i++ )
-			for ( uint32_t i = 0, j = 0; i < read / 2; i++ )
-			{
-				for ( uint32_t ch = 0; ch < 2; ch++ )
-				{
-					stream->outBuffer.data[ch][i] = rawAudio[j++] * snd_volume_2d.GetFloat();
-				}
-			}
-		}
-
-		unmixedBuffers.push_back( stream->outBuffer );
-
-		stream->frame += read;
-
-
-		// don't fill audio stream and destroy memory lol
-		std::vector<float> outAudio;
-		outAudio.resize( SAMPLE_SIZE );
-		//outAudio = rawAudio;
-
-		// wtf is this doing
-		long read = SDL_AudioStreamGet( stream->audioStream, outAudio.data(), SAMPLE_SIZE );*/
+		// GET RID OF THIS
+		rawAudio.resize( READ_SIZE );
 	}
 
+	ALuint& buffer = stream->aBuffers[stream->aBufferIndex++];
+
+	// um
+	ALuint buffers[] = {buffer};
+		
+	// auto size = (READ_SIZE * stream->width * stream->channels);
+	auto size = (READ_SIZE * stream->width * 2);
+	alBufferData( buffer, stream->format, rawAudio.data(), size, stream->rate );
+
+	if ( !HandleALErr( "Failed to add audio data to alBuffer" ) )
+		return false;
+
+	alSourceQueueBuffers( stream->aSource, 1, buffers );
+
+	if ( !HandleALErr( "Failed to queue buffer to source" ) )
+		return false;
+
+#if 0
+	// NOTE: "read" NEEDS TO BE 4 TIMES THE AMOUNT FOR SOME REASON, no clue why
+	if ( SDL_AudioStreamPut(stream->audioStream, rawAudio.data(), read * snd_read_mult) == -1 )
+	{
+		Print( "[AudioSystem] SDL_AudioStreamPut - Failed to put samples in stream: %s\n", SDL_GetError() );
+		return false;
+	}
+#endif
+	
 	return true;
 }
 

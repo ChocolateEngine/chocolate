@@ -49,10 +49,15 @@ enum AudioEffectData
 	Audio_Loop_EndTime,            // float
 
 	// ===================================
-	// World Effect
+	// World Effect (totally not copy and paste of openal)
 
 	Audio_World_Pos,               // glm::vec3
-	Audio_World_Falloff,           // float
+	Audio_World_Velocity,          // glm::vec3
+	Audio_World_Falloff,           // float, [0.0 -  ], default 1.0
+	Audio_World_MaxDist,           // float, [0.0 -  ], default FLT_MAX
+	Audio_World_ConeInnerAngle,    // float, [0 - 360], default 360
+	Audio_World_ConeOuterAngle,    // float, [0 - 360], default 360
+	Audio_World_ConeOuterGain,     // float, [0 - 1.0], default 0
 };
 
 
@@ -82,12 +87,12 @@ public:
 	// General Audio System Functions (no global volume because that's up the ConVar snd_volume)
 	// -------------------------------------------------------------------------------------
 
-	// maybe make an AudioListener type?
 	virtual void                    SetListenerTransform( const glm::vec3& pos, const glm::vec3& ang ) = 0;
-
-	// CHANGE THIS: front vector and up vector smashed together
-	// virtual void                    SetListenerOrient( float orient[6] ) = 0;
+	virtual void                    SetListenerVelocity( const glm::vec3& vel ) = 0;
 	virtual void                    SetListenerOrient( const glm::vec3& forward, const glm::vec3& up ) = 0;
+
+	virtual void                    SetDopplerScale( float scale ) = 0;
+	virtual void                    SetSoundSpeed( float speed ) = 0;
 
 	virtual void                    SetPaused( bool paused ) = 0;
 	virtual void                    SetGlobalSpeed( float speed ) = 0;
