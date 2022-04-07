@@ -608,7 +608,7 @@ LogColor LogGetColor()
 }
 
 
-constexpr const char* LogColorToStr( LogColor color )
+const char* LogColorToStr( LogColor color )
 {
     switch ( color )
     {

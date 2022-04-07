@@ -62,7 +62,7 @@ constexpr const std::vector<std::string>& CommandLine::GetArgs(  )
 }
 
 
-constexpr size_t CommandLine::GetCount(  )
+size_t CommandLine::GetCount(  )
 {
 	return aArgs.size();
 }

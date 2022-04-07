@@ -135,6 +135,7 @@ else()  # linux
 		-Wno-missing-field-initializers
 		-Wno-deprecated-enum-enum-conversion
 	)
+	SET ( CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,--no-undefined")
 	
 endif()
 
