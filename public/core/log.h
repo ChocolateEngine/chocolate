@@ -112,6 +112,7 @@ void CORE_API Puts( const char* str );
 /* General Logging Function.  */
 void CORE_API LogEx(  LogChannel channel, LogType sLevel, const char *spBuf );
 void CORE_API LogExF( LogChannel channel, LogType sLevel, const char *spFmt, ... );
+void CORE_API LogExV( LogChannel channel, LogType sLevel, const char *spFmt, va_list args );
 
 /* Lowest severity.  */
 void CORE_API LogMsg( LogChannel channel, const char *spFmt, ... );

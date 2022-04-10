@@ -308,7 +308,12 @@ public:
 
                     std::string messageBoxTitle;
                     vstring( messageBoxTitle, "[%s] Fatal Error", channel->aName.c_str() );
-                    SDL_ShowSimpleMessageBox( SDL_MESSAGEBOX_ERROR, messageBoxTitle.c_str(), log.aMessage.c_str(), NULL);
+
+                    if ( log.aMessage.ends_with("\n") )
+                        SDL_ShowSimpleMessageBox( SDL_MESSAGEBOX_ERROR, messageBoxTitle.c_str(), log.aMessage.substr(0, log.aMessage.size()-1 ).c_str(), NULL );
+                    else
+                        SDL_ShowSimpleMessageBox( SDL_MESSAGEBOX_ERROR, messageBoxTitle.c_str(), log.aMessage.c_str(), NULL );
+
                     throw std::runtime_error( log.aFormatted.c_str() );
                     break;
             }
