@@ -10,14 +10,24 @@
 //#include <VersionHelpers.h>
 #include <winbase.h>  // FormatMessage
 
+// bruh: https://stackoverflow.com/questions/25267272/win32-enable-visual-styles-in-dll
+#pragma comment(linker,"\"/manifestdependency:type='win32' name='Microsoft.Windows.Common-Controls' version='6.0.0.0' processorArchitecture='*'    publicKeyToken='6595b64144ccf1df' language='*'\"")
+
+
 #include "core/platform.h"
 
 
 bool            gIsWindows10 = false;
 OSVERSIONINFOEX gOSVer{};
 
+HMODULE ghInst = 0;
+
 HANDLE gConOut = INVALID_HANDLE_VALUE;
 HANDLE gConIn  = INVALID_HANDLE_VALUE;
+
+HANDLE ghActCtx = INVALID_HANDLE_VALUE;
+ACTCTX gActCtx;
+ULONG_PTR gActCookie;
 
 
 // super based
@@ -244,25 +254,58 @@ void sys_init()
 
 	gIsWindows10 = gOSVer.dwMajorVersion >= 10;
 
+	// Get Module Handle because we don't use WinMain at the moment (probably should tbh, idk)
+	// ghInst = GetModuleHandle( 0 );
+	ghInst = GetModuleHandle( "core.dll" );
+
+
 	// Init Console
-
-	// Set output mode to handle virtual terminal sequences
+	gConOut = GetStdHandle( STD_OUTPUT_HANDLE );
+	if ( gConOut == INVALID_HANDLE_VALUE )
 	{
-		gConOut = GetStdHandle( STD_OUTPUT_HANDLE );
-		if ( gConOut == INVALID_HANDLE_VALUE )
-		{
-			sys_print_last_error( "Failed to get stdout console\n" );
-			return;
-		}
-		gConIn = GetStdHandle( STD_INPUT_HANDLE );
-		if ( gConIn == INVALID_HANDLE_VALUE )
-		{
-			sys_print_last_error( "Failed to get stdin console\n" );
-			return;
-		}
+		sys_print_last_error( "Failed to get stdout console\n" );
+		return;
+	}
 
-		if ( !win32_init_console( gConOut, gConIn ) )
-			sys_print_last_error( "Failed to Init System Console\n" );
+	gConIn = GetStdHandle( STD_INPUT_HANDLE );
+	if ( gConIn == INVALID_HANDLE_VALUE )
+	{
+		sys_print_last_error( "Failed to get stdin console\n" );
+		return;
+	}
+
+	if ( !win32_init_console( gConOut, gConIn ) )
+		sys_print_last_error( "Failed to Init System Console\n" );
+
+	
+	// Init Theme Context (why windows???)
+	ZeroMemory( &gActCtx, sizeof( gActCtx ) );
+
+	gActCtx.cbSize = sizeof(gActCtx);
+	gActCtx.hModule = ghInst;
+	gActCtx.lpResourceName = MAKEINTRESOURCE(2);
+	gActCtx.dwFlags = ACTCTX_FLAG_HMODULE_VALID | ACTCTX_FLAG_RESOURCE_NAME_VALID;
+
+	ghActCtx = CreateActCtx(&gActCtx);
+	if (ghActCtx != INVALID_HANDLE_VALUE)
+	{
+		ActivateActCtx(ghActCtx, &gActCookie);
+		// MessageBox(NULL, TEXT("Styled message box"), NULL, MB_OK | MB_ICONERROR);
+	}
+	else
+	{
+		sys_print_last_error( "Failed to create theme context" );
+	}
+}
+
+
+void sys_shutdown()
+{
+	// Close Theme Context (why windows???)
+	if (ghActCtx != INVALID_HANDLE_VALUE)
+	{
+		DeactivateActCtx(0, gActCookie);
+		ReleaseActCtx(ghActCtx);
 	}
 }
 

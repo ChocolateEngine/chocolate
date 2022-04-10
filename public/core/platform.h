@@ -24,6 +24,8 @@ typedef void* Module;
 
 // why is msvc like this with this dllexport/dllimport stuff aaaa
 void            CORE_API    sys_init();
+void            CORE_API    sys_shutdown();
+
 Module          CORE_API    sys_load_library( const char* path );
 void            CORE_API    sys_close_library( Module mod );
 void            CORE_API*   sys_load_func( Module mod, const char* path );
