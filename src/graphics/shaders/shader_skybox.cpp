@@ -238,9 +238,6 @@ void ShaderSkybox::Draw( BaseRenderable* renderable, VkCommandBuffer c, uint32_t
 	if ( indexBuffer )
 		vkCmdBindIndexBuffer( c, indexBuffer, 0, VK_INDEX_TYPE_UINT32 );
 
-	// Now draw it
-	vkCmdBindPipeline( c, VK_PIPELINE_BIND_POINT_GRAPHICS, aPipeline );
-
 	Material* mat = (Material*)mesh->GetMaterial();
 
 	// TODO: add GetMat4 to MaterialVar types
