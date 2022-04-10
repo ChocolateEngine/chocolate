@@ -265,9 +265,9 @@ public:
 	ConVar name( #name, __VA_ARGS__ )
 
 #define CONVAR_CMD( name, value ) \
-	void cvarfunc_##name( std::vector< std::string > args ); \
+	void cvarfunc_##name( const std::vector< std::string >& args ); \
 	ConVar name( #name, value, cvarfunc_##name ); \
-	void cvarfunc_##name( std::vector< std::string > args )
+	void cvarfunc_##name( const std::vector< std::string >& args )
 
 #define CONVARREF( name ) \
 	ConVarRef name( #name )
