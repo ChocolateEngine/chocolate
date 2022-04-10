@@ -67,17 +67,11 @@ void Material::SetVar( const std::string& name, Texture *data )           { SET_
 void Material::SetVar( const std::string& name, float data )              { SET_VAR( SetFloat );   }
 void Material::SetVar( const std::string& name, int data )                { SET_VAR( SetInt );     }
 void Material::SetVar( const std::string& name, const glm::vec2 &data )   { SET_VAR( SetVec2 );    }
-// void Material::SetVar( const std::string& name, const glm::vec3 &data )   { SET_VAR( SetVec3 );    }
+void Material::SetVar( const std::string& name, const glm::vec3 &data )   { SET_VAR( SetVec3 );    }
 void Material::SetVar( const std::string& name, const glm::vec4 &data )   { SET_VAR( SetVec4 );    }
 
-
-void Material::SetVar( const std::string& name, const glm::vec3 &data )
-{
-	gui->DebugMessage( "Material SetVar - Vec3: %s", Vec2Str( data ).c_str() );
-	SET_VAR( SetVec3 );
-}
-
 #undef SET_VAR
+
 
 #define GET_VAR( func ) \
 	MaterialVar *var = GetVar( name ); \
