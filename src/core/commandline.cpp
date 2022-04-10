@@ -8,6 +8,9 @@
 DLL_EXPORT CommandLine* cmdline = nullptr;
 
 
+extern void AssertInit();
+
+
 extern "C"
 {
 	void DLL_EXPORT core_init( int argc, char *argv[], const char* workingDir )
@@ -21,6 +24,17 @@ extern "C"
 		filesys->Init( workingDir );
 
 		console = new Console;
+
+		AssertInit();
+	}
+
+	void DLL_EXPORT core_exit()
+	{
+		sys_shutdown();
+
+		if ( cmdline ) delete cmdline;
+		if ( filesys ) delete filesys;
+		if ( console ) delete console;
 	}
 }
 
