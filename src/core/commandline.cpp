@@ -23,7 +23,8 @@ extern "C"
 		filesys = new FileSystem;
 		filesys->Init( workingDir );
 
-		console = new Console;
+		// init console just in case
+		GetConsole();
 
 		AssertInit();
 	}

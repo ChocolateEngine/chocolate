@@ -21,7 +21,8 @@ Declares the sdfhuosdfhuiosdfhusdfhuisfhu
 #endif
 
 
-typedef std::function< void( std::vector< std::string > args ) > ConVarFunc;
+typedef std::function< void( const std::vector< std::string >& args ) > ConCommandFunc;
+typedef std::function< void( const std::string& prevString, float prevFloat, const std::vector< std::string >& args ) > ConVarFunc;
 
 typedef std::function< void(
 	const std::vector< std::string >& args,  // arguments currently typed in by the user
@@ -30,6 +31,7 @@ typedef std::function< void(
 
 // ConCommand console dropdown list function
 
+using ConVarFlag_t = size_t;
 
 
 // why do i not need to forward declare the other ones?
@@ -39,11 +41,17 @@ class ConVarRef;
 class CORE_API ConVarBase
 {
 public:
-	ConVarBase( const std::string& name );
+	ConVarBase( const std::string& name, ConVarFlag_t flags = 0 );
+
+	ConVarBase( const std::string& name, const std::string& desc );
+	ConVarBase( const std::string& name, ConVarFlag_t flags, const std::string& desc );
+
 	virtual std::string		GetPrintMessage(  ) = 0;
 
-	const std::string&      GetName(  );
-	ConVarBase*             GetNext(  );
+	const std::string&      GetName();
+	const std::string&      GetDesc();
+	ConVarFlag_t            GetFlags();
+	ConVarBase*             GetNext();
 
 	friend class ConCommand;
 	friend class ConVar;
@@ -55,6 +63,8 @@ public:
 
 private:
 	std::string             aName;
+	std::string             aDesc;
+	ConVarFlag_t            aFlags;
 };
 
 
@@ -62,23 +72,47 @@ class CORE_API ConCommand : public ConVarBase
 {
 public:
 
-	ConCommand( const std::string& name, ConVarFunc func ):
-		ConVarBase( name )
+	ConCommand( const std::string& name, ConCommandFunc func, ConVarFlag_t flags = 0 ):
+		ConVarBase( name, flags )
 	{
-		Init( name, func, aDropDownFunc );
+		Init( func, aDropDownFunc );
 	}
 
-	ConCommand( const std::string& name, ConVarFunc func, ConCommandDropdownFunc dropDownFunc ):
-		ConVarBase( name )
+	ConCommand( const std::string& name, ConCommandFunc func, const std::string& desc ):
+		ConVarBase( name, desc )
 	{
-		Init( name, func, dropDownFunc );
+		Init( func, aDropDownFunc );
 	}
 
-	void Init( const std::string& name, ConVarFunc func, ConCommandDropdownFunc dropDownFunc );
+	ConCommand( const std::string& name, ConCommandFunc func, ConCommandDropdownFunc dropDownFunc ):
+		ConVarBase( name )
+	{
+		Init( func, dropDownFunc );
+	}
+
+	ConCommand( const std::string& name, ConCommandFunc func, ConVarFlag_t flags, ConCommandDropdownFunc dropDownFunc ):
+		ConVarBase( name, flags )
+	{
+		Init( func, dropDownFunc );
+	}
+	
+	ConCommand( const std::string& name, ConCommandFunc func, ConVarFlag_t flags, const std::string& desc ):
+		ConVarBase( name, flags, desc )
+	{
+		Init( func, aDropDownFunc );
+	}
+
+	ConCommand( const std::string& name, ConCommandFunc func, ConVarFlag_t flags, const std::string& desc, ConCommandDropdownFunc dropDownFunc ):
+		ConVarBase( name, flags, desc )
+	{
+		Init( func, dropDownFunc );
+	}
+
+	void Init( ConCommandFunc func, ConCommandDropdownFunc dropDownFunc );
 
 	std::string GetPrintMessage(  ) override;
 
-	ConVarFunc aFunc;
+	ConCommandFunc aFunc;
 	ConCommandDropdownFunc aDropDownFunc;
 
 	friend class Console;
@@ -108,28 +142,71 @@ class CORE_API ConVar : public ConVarBase
 {
 public:
 
-	ConVar( const std::string& name, const std::string& defaultValue ): ConVarBase( name )
+	ConVar( const std::string& name, const std::string& defaultValue, ConVarFlag_t flags = 0 ):
+		ConVarBase( name, flags )
 	{
-		Init( name, defaultValue, aFunc );
+		Init( defaultValue, aFunc );
 	}
 
-	ConVar( const std::string& name, const std::string& defaultValue, ConVarFunc callback ): ConVarBase( name )
+	ConVar( const std::string& name, const std::string& defaultValue, const std::string& desc ):
+		ConVarBase( name, desc )
 	{
-		Init( name, defaultValue, callback );
+		Init( defaultValue, aFunc );
 	}
 
-	ConVar( const std::string& name, float defaultValue ): ConVarBase( name )
+	ConVar( const std::string& name, const std::string& defaultValue, ConVarFlag_t flags, const std::string& desc ):
+		ConVarBase( name, flags, desc )
 	{
-		Init( name, defaultValue, aFunc );
+		Init( defaultValue, aFunc );
 	}
 
-	ConVar( const std::string& name, float defaultValue, ConVarFunc callback ): ConVarBase( name )
+	ConVar( const std::string& name, const std::string& defaultValue, ConVarFlag_t flags, const std::string& desc, ConVarFunc callback ):
+		ConVarBase( name, flags, desc )
 	{
-		Init( name, defaultValue, callback );
+		Init( defaultValue, callback );
 	}
 
-	void                Init( const std::string& name, const std::string& defaultValue, ConVarFunc func );
-	void                Init( const std::string& name, float defaultValue, ConVarFunc func );
+
+	ConVar( const std::string& name, float defaultValue, ConVarFlag_t flags = 0 ):
+		ConVarBase( name, flags )
+	{
+		Init( defaultValue, aFunc );
+	}
+
+	ConVar( const std::string& name, float defaultValue, const std::string& desc ):
+		ConVarBase( name, desc )
+	{
+		Init( defaultValue, aFunc );
+	}
+
+	ConVar( const std::string& name, float defaultValue, ConVarFlag_t flags, const std::string& desc ):
+		ConVarBase( name, flags, desc )
+	{
+		Init( defaultValue, aFunc );
+	}
+
+	ConVar( const std::string& name, float defaultValue, ConVarFlag_t flags, const std::string& desc, ConVarFunc callback ):
+		ConVarBase( name, flags, desc )
+	{
+		Init( defaultValue, callback );
+	}
+
+
+	ConVar( const std::string& name, const std::string& defaultValue, ConVarFunc callback ):
+		ConVarBase( name )
+	{
+		Init( defaultValue, callback );
+	}
+
+	ConVar( const std::string& name, float defaultValue, ConVarFunc callback ):
+		ConVarBase( name )
+	{
+		Init( defaultValue, callback );
+	}
+
+
+	void                Init( const std::string& defaultValue, ConVarFunc func );
+	void                Init( float defaultValue, ConVarFunc func );
 
 	std::string         GetPrintMessage(  ) override;
 
@@ -265,9 +342,9 @@ public:
 	ConVar name( #name, __VA_ARGS__ )
 
 #define CONVAR_CMD( name, value ) \
-	void cvarfunc_##name( const std::vector< std::string >& args ); \
+	void cvarfunc_##name( const std::string& prevString, float prevFloat, const std::vector< std::string >& args ); \
 	ConVar name( #name, value, cvarfunc_##name ); \
-	void cvarfunc_##name( const std::vector< std::string >& args )
+	void cvarfunc_##name( const std::string& prevString, float prevFloat, const std::vector< std::string >& args )
 
 #define CONVARREF( name ) \
 	ConVarRef name( #name )
@@ -283,9 +360,19 @@ public:
 	ConCommand name##_cmd( #name, name );              \
 	void name( std::vector< std::string > args )
 
+#define CONCMD_VA( name, ... ) \
+	void name( std::vector< std::string > args ); \
+	ConCommand name##_cmd( #name, name, __VA_ARGS__ );              \
+	void name( std::vector< std::string > args )
+
 #define CONCMD_DROP( name, func ) \
 	void name( std::vector< std::string > args ); \
 	ConCommand name##_cmd( #name, name, func );              \
+	void name( std::vector< std::string > args )
+
+#define CONCMD_DROP_VA( name, func, ... ) \
+	void name( std::vector< std::string > args ); \
+	ConCommand name##_cmd( #name, name, __VA_ARGS__, func );              \
 	void name( std::vector< std::string > args )
 
 #define CON_COMMAND( name ) \
@@ -310,7 +397,10 @@ protected:
 	std::string                         aTextBuffer;
 	StringList                          aAutoCompleteList;
 
+	std::vector< ConCommand* >          aInstantConVars;
+
 	void                                AddToCommandHistory( const std::string& srCmd );
+	void                                CheckInstantCommands( const std::string& srCmd );
 
 public:
 
@@ -318,6 +408,10 @@ public:
 	void                                RegisterConVars(  );
 
 	const std::vector< std::string >&   GetCommandHistory(  );
+
+	// Checks if the current ConVar is a reference, if so, then return what it's pointing to
+	// return nullptr if it doesn't point to anything, and return the normal cvar if it's not a ConVarRef
+	ConVarBase*                         CheckForConVarRef( ConVarBase* cvar );
 
 	/* Set and get current user text input.  */
 	void                                SetTextBuffer( const std::string& str, bool recalculateList = true );
@@ -327,6 +421,8 @@ public:
 	const std::vector< std::string >&   GetAutoCompleteList(  );
 
 	ConVar*                             GetConVar( const std::string& name );
+	ConVarBase*                         GetConVarBase( const std::string& name );
+
 	const std::string&                  GetConVarValue( const std::string& name );
 	float                               GetConVarFloat( const std::string& name );
 
@@ -339,11 +435,19 @@ public:
 	/* Go through and run every command inputed into the console last frame  */
 	void                                Update(  );
 
-	/* Find and run a command instantly, returns true if a command was found  */
-	bool                                RunCommand( const std::string& command );
-	bool                                RunCommandF( const char* command, ... );
+	/* Find and run a command instantly  */
+	void                                RunCommand( const std::string& command );
+	void                                RunCommandF( const char* command, ... );
+
+	/* Find and run a parsed command instantly  */
+	bool                                RunCommand( const std::string &name, const std::vector< std::string > &args );
 
 	void                                ParseCommandLine( const std::string& command, std::string &name, std::vector< std::string > &args );
+	void                                ParseCommandLine( const std::string& command, std::string &name, std::vector< std::string > &args, size_t& i );
+
+	ConVarFlag_t                        CreateCvarFlag( const char* name );
+	const char*                         GetCvarFlagName( ConVarFlag_t flag );
+	ConVarFlag_t                        GetCvarFlag( const char* name );
 
 	/* A.  */
 		Console(  );
@@ -355,6 +459,17 @@ friend class ConCommand;
 
 
 CORE_API extern Console* console;
+
+CORE_API Console& GetConsole();  // maybe Core_GetConsole()?
+
+
+#define NEW_CVAR_FLAG( name ) ConVarFlag_t name = GetConsole().CreateCvarFlag( #name )
+#define EXT_CVAR_FLAG( name ) extern ConVarFlag_t name
+
+
+CORE_API EXT_CVAR_FLAG( CVARF_NONE );
+CORE_API EXT_CVAR_FLAG( CVARF_ARCHIVE );  // save this convar value in a config.cfg file
+CORE_API EXT_CVAR_FLAG( CVARF_INSTANT );  // instantly call this command (only works with ConCommand)
 
 
 #ifdef _MSC_VER

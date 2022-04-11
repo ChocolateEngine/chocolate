@@ -12,6 +12,25 @@ LOG_REGISTER_CHANNEL( Console, LogColor::Gray );
 
 DLL_EXPORT Console* console = nullptr;
 
+
+struct ConVarFlagData_t
+{
+	ConVarFlag_t flag;
+	const char*  name;
+	size_t       nameLen;
+};
+
+std::vector< ConVarFlagData_t > gConVarFlags;
+
+std::unordered_map< ConVarBase*, std::string > gConVarLowercaseNames;
+
+
+DLL_EXPORT ConVarFlag_t CVARF_NONE = 0;
+
+DLL_EXPORT NEW_CVAR_FLAG( CVARF_ARCHIVE );
+DLL_EXPORT NEW_CVAR_FLAG( CVARF_INSTANT );
+
+
 // ================================================================================
 
 
@@ -19,9 +38,23 @@ DLL_EXPORT Console* console = nullptr;
 ConVarBase* ConVarBase::spConVarBases = nullptr;
 
 
-ConVarBase::ConVarBase( const std::string& name )
+ConVarBase::ConVarBase( const std::string& name, ConVarFlag_t flags ):
+	aName( name ), aDesc(), aFlags( flags )
 {
-	aName = name;
+	apNext = spConVarBases;
+	spConVarBases = this;
+}
+
+ConVarBase::ConVarBase( const std::string& name, const std::string& desc ):
+	aName( name ), aDesc( desc ), aFlags()
+{
+	apNext = spConVarBases;
+	spConVarBases = this;
+}
+
+ConVarBase::ConVarBase( const std::string& name, ConVarFlag_t flags, const std::string& desc ):
+	aName( name ), aDesc( desc ), aFlags( flags )
+{
 	apNext = spConVarBases;
 	spConVarBases = this;
 }
@@ -29,6 +62,16 @@ ConVarBase::ConVarBase( const std::string& name )
 const std::string& ConVarBase::GetName(  )
 {
 	return aName;
+}
+
+const std::string& ConVarBase::GetDesc(  )
+{
+	return aDesc;
+}
+
+ConVarFlag_t ConVarBase::GetFlags(  )
+{
+	return aFlags;
 }
 
 ConVarBase* ConVarBase::GetNext(  )
@@ -40,24 +83,25 @@ ConVarBase* ConVarBase::GetNext(  )
 // ================================================================================
 
 
-void ConCommand::Init( const std::string& name, ConVarFunc func, ConCommandDropdownFunc dropDownFunc )
+void ConCommand::Init( ConCommandFunc func, ConCommandDropdownFunc dropDownFunc )
 {
-	aName = name;
 	aFunc = func;
 	aDropDownFunc = dropDownFunc;
 }
 
 std::string ConCommand::GetPrintMessage(  )
 {
-	return aName + "\n";
+	if ( aDesc.empty() )
+		return aName + "\n";
+
+	return aName + "\n\t" + aDesc + "\n";
 }
 
 // ================================================================================
 
 
-void ConVar::Init( const std::string& name, const std::string& defaultValue, ConVarFunc callback )
+void ConVar::Init( const std::string& defaultValue, ConVarFunc callback )
 {
-	aName = name;
 	aDefaultValue = defaultValue;
 	aDefaultValueFloat = ToDouble( defaultValue, 0.f );
 	aFunc = callback;
@@ -65,9 +109,9 @@ void ConVar::Init( const std::string& name, const std::string& defaultValue, Con
 	SetValue( defaultValue );
 }
 
-void ConVar::Init( const std::string& name, float defaultValue, ConVarFunc callback )
+
+void ConVar::Init( float defaultValue, ConVarFunc callback )
 {
-	aName = name;
 	aDefaultValue = ToString( defaultValue );
 	aDefaultValueFloat = defaultValue;
 	aFunc = callback;
@@ -77,7 +121,12 @@ void ConVar::Init( const std::string& name, float defaultValue, ConVarFunc callb
 
 std::string ConVar::GetPrintMessage(  )
 {
-	return aName + " = " + GetValue() + " (" + aDefaultValue + " default)\n";
+	std::string msg = aName + " = " + GetValue() + " (" + aDefaultValue + " default)\n";
+
+	if ( aDesc.size() )
+		return msg + "\t" + aDesc + "\n\n";
+
+	return msg;
 }
 
 
@@ -96,7 +145,7 @@ void ConVar::SetValue( float value )
 
 void ConVar::Reset(  )
 {
-	Init( aName, aDefaultValue, aFunc );
+	Init( aDefaultValue, aFunc );
 }
 
 
@@ -216,7 +265,7 @@ void exec_dropdown(
 }
 
 
-CONCMD_DROP( exec, exec_dropdown )
+CONCMD_DROP_VA( exec, exec_dropdown, 0, "Execute a script full of console commands" )
 {
 	if ( args.size() == 0 )
 	{
@@ -297,33 +346,64 @@ CONCMD_DROP( exec, exec_dropdown )
 }
 
 
-CONCMD( echo )
+CONCMD_VA( echo, "Print a string to the console" )
 {
-	std::string msg = "";
+	// std::string msg = "";
+	auto p = args.begin();
+	std::string msg = *p++;
 
-	for ( int i = 0; i < args.size(); i++ )
+	if (p == args.end() - 1)
+		msg += " ";
+
+	// for (auto p = args.begin(); p != args.end(); p)
+	for (; p != args.end(); ++p)
 	{
-		//const auto& str = args[i];
+		msg += *p;
 
-		if ( i + 1 < args.size() )
-			msg += args[i] + " ";
-		else
-			msg += args[i] + "\n";
+		if (p == args.end() - 1)
+			msg += " ";
 	}
 
-	LogMsg( gConsoleChannel, msg.c_str() );
+	msg += "\n";
+
+	LogPuts( gConsoleChannel, msg.c_str() );
 }
 
 
-CONCMD( help )
+void help_dropdown(
+	const std::vector< std::string >& args,  // arguments currently typed in by the user
+	std::vector< std::string >& results )      // results to populate the dropdown list with
 {
-	if ( args.size() == 0 )
+	std::string name = args.empty() ? "" : str_lower2(args[0]);
+
+	ConVarBase* cvar = ConVarBase::spConVarBases;
+	while ( cvar )
+	{
+		cvar = console->CheckForConVarRef( cvar );
+		if ( !cvar )
+			break;  // wtf
+
+		if ( !gConVarLowercaseNames[cvar].starts_with( name ) )
+		{
+			cvar = cvar->apNext;
+			continue;
+		}
+
+		results.push_back( cvar->GetName() );
+		cvar = cvar->apNext;
+	}
+}
+
+
+CONCMD_DROP_VA( help, help_dropdown, 0, "If no args specified, Print all Registered ConVars, otherwise, print information about this convar" )
+{
+	if ( args.empty() )
 	{
 		console->PrintAllConVars();
 		return;
 	}
 
-	ConVarBase* cvar = console->GetConVar( args[0] );
+	ConVarBase* cvar = console->GetConVarBase( args[0] );
 
 	if ( cvar )
 	{
@@ -390,22 +470,22 @@ void CmdFind( bool andSearch, std::vector< std::string >& args )
 // IDEA: later when you add in ConVar flags and descriptions, make a findex cmd that you can choose specific parts to search
 // like only desc, or only name, or both, and probably the rest of the args for flag searching
 // and if search string is empty but flags isn't, just list all for those flags
-CONCMD( find )
+CONCMD_VA( find, "Search if cvar name contains any of the search arguments" )
 {
-	if ( args.size() == 0 )
+	if ( args.empty() )
 	{
-		LogPuts( gConsoleChannel, "Search if cvar name contains any of the search arguments\n" );
+		LogMsg( gConsoleChannel, "%s\n", find_cmd.GetDesc().c_str() );
 		return;
 	}
 
 	CmdFind( false, args );
 }
 
-CONCMD( findand )
+CONCMD_VA( findand, "Search if cvar name contains all of the search arguments" )
 {
-	if ( args.size() == 0 )
+	if ( args.empty() )
 	{
-		LogPuts( gConsoleChannel, "Search if cvar name contains all of the search arguments\n" );
+		LogMsg( gConsoleChannel, "%s\n", findand_cmd.GetDesc().c_str() );
 		return;
 	}
 
@@ -413,8 +493,55 @@ CONCMD( findand )
 }
 
 
+void reset_cvar_dropdown(
+	const std::vector< std::string >& args,  // arguments currently typed in by the user
+	std::vector< std::string >& results )      // results to populate the dropdown list with
+{
+	std::string name = args.empty() ? "" : str_lower2(args[0]);
+
+	ConVarBase* cvar = ConVarBase::spConVarBases;
+	while ( cvar )
+	{
+		cvar = console->CheckForConVarRef( cvar );
+		if ( !cvar )
+			break;  // wtf
+
+		if ( IS_NOT_TYPE( *cvar, ConVar ) || !gConVarLowercaseNames[cvar].starts_with( name ) )
+		{
+			cvar = cvar->apNext;
+			continue;
+		}
+
+		results.push_back( cvar->GetName() );
+		cvar = cvar->apNext;
+	}
+}
+
+
 // use if you need to quit the engine right now
-CONCMD( _abort )
+CONCMD_DROP_VA( reset_cvar, reset_cvar_dropdown, 0, "reset a convar back to it's default value" )
+{
+	if ( args.empty() )
+	{
+		LogPuts( gConsoleChannel, "No ConVar specified to reset!\n" );
+		return;
+	}
+
+	ConVar* cvar = console->GetConVar( args[0] );
+
+	if ( cvar )
+	{
+		cvar->Reset();
+	}
+	else
+	{
+		LogWarn( gConsoleChannel, "Convar not found: %s\n", args[0].c_str() );
+	}
+}
+
+
+// use if you need to quit the engine right now
+CONCMD_VA( _abort, CVARF_INSTANT, "funny" )
 {
 	abort();
 }
@@ -422,26 +549,6 @@ CONCMD( _abort )
 
 // remove duplicate user inputs from the history
 CONVAR( con_remove_dup_input_history, 1 );
-
-
-// instant call commands hack
-// should figure out a way to register certain ones as instant if you need to
-constexpr ConCommand* gInstantCommands[] = {
-	&_abort_cmd,
-};
-
-static int gInstantCommandCount = ARR_SIZE( gInstantCommands );
-
-
-// very lazy, improve me
-void CheckInstantCommands( const std::string &srCmd )
-{
-	for ( int i = 0; i < gInstantCommandCount; i++ )
-	{
-		if ( gInstantCommands[i]->GetName() == srCmd )
-			gInstantCommands[i]->aFunc( {} );
-	}
-}
 
 
 // ================================================================================
@@ -461,6 +568,16 @@ void Console::AddToCommandHistory( const std::string &srCmd )
 	{
 		if ( aCommandHistory.empty() || aCommandHistory.back() != srCmd )
 			aCommandHistory.push_back( srCmd );
+	}
+}
+
+
+void Console::CheckInstantCommands( const std::string &srCmd )
+{
+	for ( size_t i = 0; i < aInstantConVars.size(); i++ )
+	{
+		if ( aInstantConVars[i]->GetName() == srCmd )
+			aInstantConVars[i]->aFunc( {} );
 	}
 }
 
@@ -499,6 +616,8 @@ void Console::RegisterConVars(  )
 
 	std::vector< ConVarRef* > cvarRefList;
 
+	aInstantConVars.clear();
+
 	ConVarBase* current = ConVarBase::spConVarBases;
 	while ( current )
 	{
@@ -509,6 +628,11 @@ void Console::RegisterConVars(  )
 			if ( cvarRef->apRef == nullptr )
 				cvarRefList.push_back( cvarRef );
 		}
+
+		if ( current->aFlags & CVARF_INSTANT && typeid(*current) == typeid(ConCommand) )
+			aInstantConVars.push_back( static_cast<ConCommand*>(current) );
+
+		gConVarLowercaseNames[current] = str_lower2( current->aName );
 
 		current = current->apNext;
 	}
@@ -554,6 +678,23 @@ ConVar* Console::GetConVar( const std::string& name )
 			if ( cvar->aName == name )
 				return static_cast<ConVar*>(cvar);
 		}
+
+		cvar = cvar->apNext;
+	}
+
+	return nullptr;
+}
+
+
+ConVarBase* Console::GetConVarBase( const std::string& name )
+{
+	PROF_SCOPE();
+
+	ConVarBase* cvar = ConVarBase::spConVarBases;
+	while ( cvar )
+	{
+		if ( cvar->aName == name )
+			return cvar;
 
 		cvar = cvar->apNext;
 	}
@@ -612,9 +753,7 @@ void Console::PrintAllConVars(  )
 }
 
 
-// Checks if the current convar is a reference, if so, then return what it's pointing to
-// return nullptr if it doesn't point to anything, and return the normal cvar if it's not a convarref
-ConVarBase* CheckForConVarRef( ConVarBase* cvar )
+ConVarBase* Console::CheckForConVarRef( ConVarBase* cvar )
 {
 	PROF_SCOPE();
 
@@ -657,7 +796,8 @@ void Console::CalculateAutoCompleteList( const std::string& textBuffer )
 		if ( !cvar )
 			continue;
 
-		if ( !str_lower2( cvar->aName ).starts_with( commandName ) )
+		// this SHOULD be fine, if the convar doesn't exist in here, something is very wrong
+		if ( !gConVarLowercaseNames[cvar].starts_with( commandName ) )
 		{
 			cvar = cvar->apNext;
 			continue;
@@ -736,23 +876,36 @@ void Console::Update(  )
 }
 
 
-bool Console::RunCommand( const std::string& command )
+void Console::RunCommand( const std::string& command )
 {
 	PROF_SCOPE();
 
 	std::string commandName;
 	std::vector< std::string > args;
 
-	ParseCommandLine( command, commandName, args );
+	for ( size_t i = 0; i < command.size(); i++ )
+	{
+		commandName.clear();
+		args.clear();
 
-	str_lower( commandName );
+		ParseCommandLine( command, commandName, args, i );
+		str_lower( commandName );
+
+		RunCommand( commandName, args );
+	}
+}
+
+
+bool Console::RunCommand( const std::string &name, const std::vector< std::string > &args )
+{
+	PROF_SCOPE();
 
 	bool commandCalled = false;
 
 	ConVarBase* cvar = ConVarBase::spConVarBases;
 	while ( cvar )
 	{
-		if ( str_lower2(cvar->aName) == commandName )
+		if ( gConVarLowercaseNames[cvar] == name )
 		{
 			cvar = CheckForConVarRef( cvar );
 			if ( !cvar )
@@ -766,11 +919,14 @@ bool Console::RunCommand( const std::string& command )
 
 				if ( !args.empty() )
 				{
+					std::string prevString = convar->aValue;
+					float       prevFloat  = convar->aValueFloat;
+
 					convar->SetValue( args[0] );
 
 					// TODO: convar callbacks should have different parameters
 					if ( convar->aFunc )
-						convar->aFunc( args );
+						convar->aFunc( prevString, prevFloat, args );
 				}
 				else
 				{
@@ -792,7 +948,7 @@ bool Console::RunCommand( const std::string& command )
 
 	// command wasn't used?
 	if ( !commandCalled )
-		LogWarn( gConsoleChannel, "Command \"%s\" is undefined\n", commandName.c_str() );
+		LogWarn( gConsoleChannel, "Command \"%s\" is undefined\n", name.c_str() );
 
 	return commandCalled;
 }
@@ -800,16 +956,33 @@ bool Console::RunCommand( const std::string& command )
 
 void Console::ParseCommandLine( const std::string &command, std::string& name, std::vector< std::string >& args )
 {
+	size_t i = 0;
+	ParseCommandLine( command, name, args, i );
+}
+
+void Console::ParseCommandLine( const std::string &command, std::string& name, std::vector< std::string >& args, size_t& i )
+{
 	PROF_SCOPE();
 
 	std::string curArg;
 
-	int i = 0;
 	for ( ; i < command.size(); i++ )
 	{
-		if ( command[i] == ' ' )
-			break;
-		name += command[i];
+		if ( name.size() )
+		{
+			if ( command[i] == ' ' )
+				break;
+
+			name += command[i];
+		}
+		else if ( command[i] == ' ' )
+		{
+			continue;
+		}
+		else
+		{
+			name += command[i];
+		}
 	}
 
 	i++;
@@ -864,6 +1037,42 @@ void Console::ParseCommandLine( const std::string &command, std::string& name, s
 }
 
 
+ConVarFlag_t Console::CreateCvarFlag( const char* name )
+{
+	ConVarFlag_t newBitShift = (1 << gConVarFlags.size());
+	size_t len = strlen( name );
+	gConVarFlags.emplace_back( newBitShift, name, len );
+	return newBitShift;
+}
+
+const char* Console::GetCvarFlagName( ConVarFlag_t flag )
+{
+	for ( auto& data : gConVarFlags )
+	{
+		if ( data.flag == flag )
+			return data.name;
+	}
+
+	return nullptr;
+}
+
+ConVarFlag_t Console::GetCvarFlag( const char* name )
+{
+	size_t len = strlen( name );
+
+	for ( auto& data : gConVarFlags )
+	{
+		if ( data.nameLen != len )
+			continue;
+
+		if ( strncmp( data.name, name, len ) == 0 )
+			return data.flag;
+	}
+
+	return CVARF_NONE;
+}
+
+
 Console::Console(  )
 {
 	console = this;
@@ -871,4 +1080,13 @@ Console::Console(  )
 
 Console::~Console(  )
 {
+}
+
+
+Console& GetConsole()
+{
+	if ( console == nullptr )
+		console = new Console;
+
+	return *console;
 }

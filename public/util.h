@@ -31,6 +31,7 @@
 
 // much faster alternative to dynamic_cast
 #define IS_TYPE( var1, var2 ) typeid(var1) == typeid(var2)
+#define IS_NOT_TYPE( var1, var2 ) typeid(var1) != typeid(var2)
 
 
 // ==============================================================================
