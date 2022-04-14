@@ -6,14 +6,6 @@ systems inherit.
 */
 #pragma once
 
-#include "core/console.h"
-#include "core/systemmanager.h"
-#include "types/databuffer.hh"
-
-#include <functional>
-
-union SDL_Event;
-
 class BaseSystem
 {
 protected:
@@ -23,5 +15,5 @@ public:
 	/* Initialize system.  */
 	virtual void 	 Init()              = 0;
 	/* Destructs the system, freeing any used memory.  */
-	virtual 	~BaseSystem()            = 0;
+	virtual 	~BaseSystem()            = default;
 };
