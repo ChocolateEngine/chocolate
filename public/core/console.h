@@ -10,7 +10,6 @@ Declares the sdfhuosdfhuiosdfhusdfhuisfhu
 #include <vector>
 #include <functional>
 
-#include "types/databuffer.hh"
 #include "core/platform.h"
 
 
@@ -65,6 +64,9 @@ private:
 	std::string             aName;
 	std::string             aDesc;
 	ConVarFlag_t            aFlags;
+
+	// NO COPYING!!
+	ConVarBase( const ConVarBase& );
 };
 
 
@@ -116,6 +118,11 @@ public:
 	ConCommandDropdownFunc aDropDownFunc;
 
 	friend class Console;
+
+private:
+
+	// NO COPYING!!
+	ConCommand( const ConCommand& );
 };
 
 
@@ -271,6 +278,9 @@ private:
 	float       aDefaultValueFloat;
 	float       aValueFloat;
 	ConVarFunc  aFunc;
+
+	// NO COPYING!!
+	ConVar( const ConVar& );
 };
 
 
@@ -335,6 +345,11 @@ public:
 	CVAR_OP( float,     ConVarRef,      GetFloat(), other.GetFloat() );
 
 	friend class Console;
+
+private:
+
+	// NO COPYING!!
+	ConVarRef( const ConVarRef& );
 };
 
 

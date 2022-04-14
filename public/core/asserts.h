@@ -27,9 +27,9 @@ void CORE_API HandleAssert( const char* file, u32 line, const char* cond, const 
 	#define AssertTitleMsg( cond, title, msg )
 
 #else
-	#define Assert( cond )                              if ( !cond ) HandleAssert( __FILE__, __LINE__, #cond, "" )
-	#define AssertMsg( cond, msg )                      if ( !cond ) HandleAssert( __FILE__, __LINE__, #cond, msg )
-	#define AssertTitleMsg( cond, title, msg )          if ( !cond ) HandleAssert( __FILE__, __LINE__, #cond, title, msg )
+	#define Assert( cond )                              if ( !(cond) ) HandleAssert( __FILE__, __LINE__, #cond, "" )
+	#define AssertMsg( cond, msg )                      if ( !(cond) ) HandleAssert( __FILE__, __LINE__, #cond, msg )
+	#define AssertTitleMsg( cond, title, msg )          if ( !(cond) ) HandleAssert( __FILE__, __LINE__, #cond, title, msg )
 
 #endif
 

@@ -24,10 +24,11 @@ an interface for getting systems from the engine
 #define GET_SYSTEM( sType ) systems->Get< sType >()
 
 // slightly overkill
-#define GET_SYSTEM_CHECK( sVar, sType ) \
-	sVar = GET_SYSTEM( sType ); // \
-	//if ( sVar == nullptr ) \
-	//	apCommandManager->Execute( Engine::Commands::EXIT );
+#define GET_SYSTEM_ASSERT( sVar, sType ) \
+	sVar = GET_SYSTEM( sType ); \
+	Assert( sVar != nullptr );
+
+#define GET_SYSTEM_CHECK GET_SYSTEM_ASSERT
 
 
 class BaseSystem;
