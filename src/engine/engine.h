@@ -16,8 +16,11 @@
 #include "iinput.h"
 #include "iaudio.h"
 #include "igui.h"
+#include "ch_iengine.h"
 
-class Engine
+
+// NOTE: this should probably just be moved to core and have this dll just completely nuked
+class Engine: public Ch_IEngine
 {
 	using SystemList = std::vector< BaseSystem* >;
 	using DataList   = std::vector< void* >;
@@ -28,38 +31,28 @@ protected:
 	BaseGuiSystem *apGuiSystem = nullptr;
 public:	
 	bool 		aActive;
+
 	/*
 	 *    Initializes the engine.
 	 */
-	std::function< void() >           Init = [ & ](){
-		/*
-		 *    Create some engine specific console commands.
-		 */
-		CON_COMMAND_LAMBDA( exit ) { aActive = false; });
-		CON_COMMAND_LAMBDA( quit ) { aActive = false; });
-		/*
-		 *    Grab the systems from libraries.
-		 */
-		InitSystems();
-		/*
-		 *    Register the convars that are declared.
-		 */
-		console->RegisterConVars();
-		/*
-		 *    Get systems that the engine needs to specifically
-		 *    keep track of.
-		 */
-		apGuiSystem = GET_SYSTEM( BaseGuiSystem );
-	};
+	void Init( const std::vector< std::string >& srModulePaths ) override;
+
 	/*
-	 *    Updates the engine.
-	 *
-	 *    @param float    The delta time.
-	 */
-	std::function< void( float ) >    Update = [ & ]( float sDT ) {
+	*    Updates the engine.
+	*
+	*    @param float    The delta time.
+	*/
+	void Update( float sDT ) override
+	{
 		console->Update();
 		UpdateSystems( sDT );	
-	};
+	}
+
+	bool IsActive() override
+	{
+		return aActive;
+	}
+
 	/*
 	 *    Starts a new frame.
 	 */
@@ -81,13 +74,9 @@ public:
 	 */
 	BaseSystem*             LoadModule( const std::string& srDlPath );
 	/*
-	 *    Initializes the systems.
-	 */
-	void DLL_EXPORT	       	InitSystems();
-	/*
 	 *    Updates all systems.  
 	 */
-	void DLL_EXPORT		    UpdateSystems( float sDT );
+	void                    UpdateSystems( float sDT );
 	/*
 	 *    Set the engine to active on construction.
 	 */

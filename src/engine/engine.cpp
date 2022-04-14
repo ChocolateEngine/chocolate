@@ -16,6 +16,29 @@ Defines the methods declared in engine.h.
 
 LOG_REGISTER_CHANNEL( Engine, LogColor::Default );
 
+void Engine::Init( const std::vector< std::string >& srModulePaths )
+{
+	// Create some engine specific console commands.
+	CON_COMMAND_LAMBDA( exit ) { aActive = false; });
+	CON_COMMAND_LAMBDA( quit ) { aActive = false; });
+
+	// Grab the systems from libraries.
+	for ( auto& path : srModulePaths )
+		LoadModule( path );
+
+	// load saved cvar values and other stuff
+	core_post_load();
+
+	for ( BaseSystem* sys : systems->GetSystemList() )
+		sys->Init();
+
+	// Register the convars that are declared.
+	console->RegisterConVars();
+
+	// Get systems that the engine needs to specificallykeep track of.
+	apGuiSystem = GET_SYSTEM( BaseGuiSystem );
+}
+
 /* Note: SDL_LoadLibrary is a little broken on linux; it seems like SDL_GetError()
  * has a fixed length, so error reporting is a little flawed. For now, just temporarily
  * use dlopen() to get the full message.  */
@@ -49,7 +72,7 @@ BaseSystem* Engine::LoadModule( const std::string& srDlPath )
 
 	if ( pSys == nullptr )
 	{
-		LogFatal( "Failed to Load Framework From DLL: %s\n", srDlPath );
+		LogFatal( "Failed to Load Framework From DLL: %s\n", srDlPath.c_str() );
 		return nullptr;
 	}
 
@@ -59,32 +82,8 @@ BaseSystem* Engine::LoadModule( const std::string& srDlPath )
 	return pSys;
 }
 
-void Engine::InitSystems()
-{
-	BaseSystem* input = LoadModule( "input" );
-	BaseSystem* graphics = nullptr;
-
-	if ( cmdline->Find( "-g2" ) )
-	{
-		graphics = LoadModule( "graphics2" );
-	}
-	else
-	{
-		graphics = LoadModule( "graphics" );
-	}
-
-	BaseSystem* aduio =LoadModule( "aduio" );
-
-	core_post_load();
-
-	input->Init();
-	graphics->Init();
-	aduio->Init();
-}
-
 void Engine::UpdateSystems( float sDT )
 {
-	for ( const auto& pSys : systems->GetSystemList() ) {
+	for ( const auto& pSys : systems->GetSystemList() )
 	    pSys->Update( sDT );
-	}
 }
