@@ -1,6 +1,7 @@
 #pragma once
 
-#include <glm/glm.hpp>
+// #include <glm/glm.hpp>
+#include <glm/vec3.hpp>
 #include <glm/gtx/quaternion.hpp>
 #include <glm/gtx/transform.hpp>
 #include <glm/gtx/euler_angles.hpp>

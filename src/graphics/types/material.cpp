@@ -89,8 +89,11 @@ glm::vec4   Material::GetVec4(    const std::string& name, glm::vec4 fallback ) 
 #undef GET_VAR
 
 
-int Material::GetTextureId( const std::string& name, Texture *fallback )
+size_t Material::GetTextureId( const std::string& name, Texture *fallback )
 {
-	return matsys->GetTextureId( GetTexture( name, fallback ) );
+	if ( Texture* tex = GetTexture( name, fallback ) )
+		return tex->aId;
+
+	return matsys->GetMissingTexture()->aId;
 }
 

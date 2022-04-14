@@ -20,14 +20,6 @@ constexpr const char *pVShader = "shaders/unlitarray.vert.spv";
 constexpr const char *pFShader = "shaders/unlitarray.frag.spv";
 
 
-struct UnlitArrayPushConstant
-{
-    alignas( 16 )glm::mat4 trans;
-	alignas( 16 )int       index;
-    int       layer;
-};
-
-
 void ShaderUnlitArray::Init()
 {
 	aModules.Allocate(2);
@@ -238,13 +230,11 @@ std::array< VkVertexInputAttributeDescription, 4 > ShaderUnlitArray::GetAttribut
 }
 
 
-void ShaderUnlitArray::Draw( BaseRenderable* renderable, VkCommandBuffer c, uint32_t commandBufferIndex )
+void ShaderUnlitArray::Draw( size_t renderableIndex, BaseRenderable* renderable, VkCommandBuffer c, uint32_t commandBufferIndex )
 {
-	IMesh* mesh = dynamic_cast<IMesh*>(renderable);
+	IMesh* mesh = static_cast<IMesh*>(renderable);
 
 	assert(mesh != nullptr);
-
-	int diffuse = matsys->GetTextureId( mesh->GetMaterial()->GetTexture("diffuse"));
 
 	// Bind the mesh's vertex and index buffers
 	VkBuffer 	vBuffers[  ] 	= { mesh->GetVertexBuffer()};
@@ -258,13 +248,11 @@ void ShaderUnlitArray::Draw( BaseRenderable* renderable, VkCommandBuffer c, uint
 	// Now draw it
 	vkCmdBindPipeline( c, VK_PIPELINE_BIND_POINT_GRAPHICS, aPipeline );
 
-    int a = mesh->GetMaterial()->GetInt("frame");
-	
-	UnlitArrayPushConstant p = {renderer->aView.projViewMatrix * mesh->GetModelMatrix(), diffuse, a };
+	UnlitArrayPushConstant* p = (UnlitArrayPushConstant*)(aDrawDataPool.GetStart() + (sizeof( UnlitArrayPushConstant ) * renderableIndex));
 
 	vkCmdPushConstants(
 		c, aPipelineLayout, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
-		0, sizeof( UnlitArrayPushConstant ), &p
+		0, sizeof( UnlitArrayPushConstant ), p
 	);
 
 	VkDescriptorSet sets[  ] = {
@@ -281,3 +269,30 @@ void ShaderUnlitArray::Draw( BaseRenderable* renderable, VkCommandBuffer c, uint
 	gModelDrawCalls++;
 	gVertsDrawn += mesh->GetVertices().size();
 }
+
+
+void ShaderUnlitArray::AllocDrawData( size_t sRenderableCount )
+{
+	aDrawDataPool.Clear();
+	Assert( MemPool_OutOfMemory != aDrawDataPool.Resize( sizeof( push_constant_t ) * sRenderableCount ) );
+}
+
+
+static std::string MatVar_Diffuse = "diffuse";
+static std::string MatVar_Frame = "frame";
+
+
+void ShaderUnlitArray::PrepareDrawData( size_t renderableIndex, BaseRenderable* renderable, uint32_t commandBufferCount )
+{
+	// there is the old DataBuffer class as well, hmm
+	IMesh* mesh = static_cast<IMesh*>(renderable);
+
+	UnlitArrayPushConstant* push = (UnlitArrayPushConstant*)(aDrawDataPool.GetStart() + (sizeof( UnlitArrayPushConstant ) * renderableIndex));
+
+	auto mat = (Material*)mesh->GetMaterial();
+
+	push->trans	= renderer->aView.projViewMatrix * mesh->GetModelMatrix();
+	push->index = mat->GetTextureId( MatVar_Diffuse );
+	push->layer = mat->GetInt( MatVar_Frame );
+}
+

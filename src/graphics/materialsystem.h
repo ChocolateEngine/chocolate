@@ -108,6 +108,8 @@ public:
 
 	// Draw a renderable (just calls shader draw lmao)
 	void                        DrawRenderable( BaseRenderable* renderable, VkCommandBuffer c, uint32_t commandBufferIndex );
+	void                        DrawRenderable( size_t renderableIndex, BaseRenderable* renderable, VkCommandBuffer c, uint32_t commandBufferIndex );
+
 	void                        DrawRenderable( BaseRenderableGroup *group, VkCommandBuffer c, uint32_t commandBufferIndex );
 
 	// Awful Mesh Functions, here until i abstract what's used in it

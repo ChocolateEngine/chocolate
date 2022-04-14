@@ -282,6 +282,7 @@ public:
 	uint32_t                        GetMipLevels() { return kTexture ? kTexture->numLevels : 0; }
 #endif
 
+	size_t                          aId;
 	uint32_t                        aMipLevels;
 	VkDeviceMemory                  aTextureImageMem;
 	VkImage                         aTextureImage;

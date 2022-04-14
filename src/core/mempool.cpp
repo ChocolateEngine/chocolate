@@ -109,7 +109,7 @@ MemError MemPool::Resize( size_t sSize )
     apEnd = apBuf + sSize;
     aSize = sSize;
 
-    LogDev( gMemPoolChannel, 2, "Resized memory pool to %d bytes.\n", sSize );
+    // LogDev( gMemPoolChannel, 2, "Resized memory pool to %d bytes.\n", sSize );
 
     return MemPool_Success;
 }
@@ -241,7 +241,7 @@ void MemPool::Clear()
     for ( MemChunk *p = apChunks; p != nullptr; p = p->apNext ) {
         p->aFlags = Mem_Free;
     }
-    LogDev( gMemPoolChannel, 3, "Freed all memory from pool\n" );
+    // LogDev( gMemPoolChannel, 3, "Freed all memory from pool\n" );
 }
 
 /*

@@ -55,7 +55,7 @@ public:
 	glm::vec3           GetVec3( const std::string& name, glm::vec3 fallback = {} ) override;
 	glm::vec4           GetVec4( const std::string& name, glm::vec4 fallback = {} ) override;
 
-	int                 GetTextureId( const std::string& name, Texture *fallback = nullptr );
+	size_t              GetTextureId( const std::string& name, Texture *fallback = nullptr );
 
 	//HMaterial                   aMat;
 

@@ -301,6 +301,7 @@ Texture *MaterialSystem::CreateTexture( const std::string &path )
 
 		if ( TextureDescriptor* texture = loader->LoadTexture( absPath ) )
 		{
+			texture->aId = aTextures.size();
 			aTextures.push_back( texture );
 			aTexturePaths[path] = texture;
 
@@ -475,6 +476,16 @@ void MaterialSystem::DrawRenderable( BaseRenderable* renderable, VkCommandBuffer
 		return;
 
 	mat->apShader->Draw( renderable, c, commandBufferIndex );
+}
+
+
+void MaterialSystem::DrawRenderable( size_t renderableIndex, BaseRenderable* renderable, VkCommandBuffer c, uint32_t commandBufferIndex )
+{
+	Material* mat = (Material*)renderable->GetMaterial();
+	if ( !mat )
+		return;
+
+	mat->apShader->Draw( renderableIndex, renderable, c, commandBufferIndex );
 }
 
 

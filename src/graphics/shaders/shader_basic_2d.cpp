@@ -176,7 +176,7 @@ void Basic2D::CreateGraphicsPipeline(  )
 }
 
 
-void Basic2D::UpdateBuffers( uint32_t sCurrentImage, BaseRenderable* spRenderable )
+void Basic2D::UpdateBuffers( uint32_t sCurrentImage, size_t renderableIndex, BaseRenderable* spRenderable )
 {
 }
 
@@ -214,7 +214,7 @@ std::array< VkVertexInputAttributeDescription, 3 > Basic2D::GetAttributeDesc(  )
 }
 
 
-void Basic2D::Draw( BaseRenderable* renderable, VkCommandBuffer c, uint32_t commandBufferIndex )
+void Basic2D::Draw( size_t renderableIndex, BaseRenderable* renderable, VkCommandBuffer c, uint32_t commandBufferIndex )
 {
 	Sprite* sprite = dynamic_cast<Sprite*>(renderable);
 	assert( sprite != nullptr );
@@ -234,9 +234,7 @@ void Basic2D::Draw( BaseRenderable* renderable, VkCommandBuffer c, uint32_t comm
 
 	vkCmdBindDescriptorSets( c, VK_PIPELINE_BIND_POINT_GRAPHICS, aPipelineLayout, 0, 1, sets, 0, NULL );
 
-	push_constant_t push{  };
-	push.aMatrix	= sprite->GetMatrix();
-	push.aTexIndex  = diffuse;
+	push_constant_t* push = (push_constant_t*)(aDrawDataPool.GetStart() + (sizeof( push_constant_t ) * renderableIndex));
 
 	vkCmdPushConstants
 	(
@@ -245,7 +243,7 @@ void Basic2D::Draw( BaseRenderable* renderable, VkCommandBuffer c, uint32_t comm
 		VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
 		0,
 		sizeof( push_constant_t ),
-		&push
+		push
 	);
 
 	if ( indexBuffer )
@@ -254,4 +252,29 @@ void Basic2D::Draw( BaseRenderable* renderable, VkCommandBuffer c, uint32_t comm
 		vkCmdDraw( c, (uint32_t)sprite->GetVertices().size(), 1, 0, 0 );
 
 	gVertsDrawn += sprite->GetVertices().size();
+}
+
+
+void Basic2D::AllocDrawData( size_t sRenderableCount )
+{
+	aDrawDataPool.Clear();
+	Assert( MemPool_OutOfMemory != aDrawDataPool.Resize( sizeof( push_constant_t ) * sRenderableCount ) );
+}
+
+
+static std::string MatVar_Diffuse          = "diffuse";
+
+
+void Basic2D::PrepareDrawData( size_t renderableIndex, BaseRenderable* renderable, uint32_t commandBufferCount )
+{
+	// there is the old DataBuffer class as well, hmm
+
+	Sprite* sprite = dynamic_cast<Sprite*>(renderable);
+
+	push_constant_t* push = (push_constant_t*)(aDrawDataPool.GetStart() + (sizeof( push_constant_t ) * renderableIndex));
+
+	auto mat = (Material*)sprite->GetMaterial();
+
+	push->aMatrix	= sprite->GetMatrix();
+	push->aTexIndex  = mat->GetTextureId( MatVar_Diffuse );
 }

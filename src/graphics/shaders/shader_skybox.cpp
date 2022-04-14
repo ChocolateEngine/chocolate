@@ -16,13 +16,6 @@ extern size_t gVertsDrawn;
 // =========================================================
 
 
-struct SkyboxPushConst
-{
-	alignas( 16 )glm::mat4 trans;
-	alignas( 16 )int       sky;
-};
-
-
 constexpr const char *pVShader = "shaders/skybox.vert.spv";
 constexpr const char *pFShader = "shaders/skybox.frag.spv";
 
@@ -222,7 +215,7 @@ inline void ToViewMatrixY( glm::mat4& viewMatrix, const glm::vec3& ang )
 }
 
 
-void ShaderSkybox::Draw( BaseRenderable* renderable, VkCommandBuffer c, uint32_t commandBufferIndex )
+void ShaderSkybox::Draw( size_t renderableIndex, BaseRenderable* renderable, VkCommandBuffer c, uint32_t commandBufferIndex )
 {
 	// why did i do this, remove this ASAP
 	ISkyboxMesh* mesh = static_cast<ISkyboxMesh*>(renderable);
@@ -238,20 +231,11 @@ void ShaderSkybox::Draw( BaseRenderable* renderable, VkCommandBuffer c, uint32_t
 	if ( indexBuffer )
 		vkCmdBindIndexBuffer( c, indexBuffer, 0, VK_INDEX_TYPE_UINT32 );
 
-	Material* mat = (Material*)mesh->GetMaterial();
-
-	// TODO: add GetMat4 to MaterialVar types
-	glm::mat4 viewMat( 1.f );
-	ToViewMatrixY( viewMat, mat->GetVec3( "ang" ) );
-
-	SkyboxPushConst p = {
-		renderer->aView.projMatrix * viewMat,
-		mat->GetTextureId( "sky" )
-	};
+	SkyboxPushConst* p = (SkyboxPushConst*)(aDrawDataPool.GetStart() + (sizeof( SkyboxPushConst ) * renderableIndex));
 
 	vkCmdPushConstants(
 		c, aPipelineLayout, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
-		0, sizeof( SkyboxPushConst ), &p
+		0, sizeof( SkyboxPushConst ), p
 	);
 
 	VkDescriptorSet sets[  ] = {
@@ -268,3 +252,39 @@ void ShaderSkybox::Draw( BaseRenderable* renderable, VkCommandBuffer c, uint32_t
 	gModelDrawCalls++;
 	gVertsDrawn += mesh->GetVertices().size();
 }
+
+
+void ShaderSkybox::AllocDrawData( size_t sRenderableCount )
+{
+	aDrawDataPool.Clear();
+	Assert( MemPool_OutOfMemory != aDrawDataPool.Resize( sizeof( SkyboxPushConst ) * sRenderableCount ) );
+}
+
+
+// here to avoid constantly creating std::strings
+// maybe just change mat var names to const char*
+// if doing strlen and strcmp can reach the same speed as std::string
+// ... which i doubt
+
+static std::string MatVar_Ang = "ang";
+static std::string MatVar_Sky = "sky";
+
+
+void ShaderSkybox::PrepareDrawData( size_t renderableIndex, BaseRenderable* renderable, uint32_t commandBufferCount )
+{
+	// there is the old DataBuffer class as well, hmm
+
+	IMesh* mesh = static_cast<IMesh*>(renderable);
+
+	SkyboxPushConst* push = (SkyboxPushConst*)(aDrawDataPool.GetStart() + (sizeof(SkyboxPushConst) * renderableIndex));
+
+	Material* mat = (Material*)mesh->GetMaterial();
+
+	// TODO: add GetMat4 to MaterialVar types
+	glm::mat4 viewMat( 1.f );
+	ToViewMatrixY( viewMat, mat->GetVec3( MatVar_Ang ) );
+
+	push->trans = renderer->aView.projMatrix * viewMat;
+	push->sky   = mat->GetTextureId( MatVar_Sky );
+}
+

@@ -24,6 +24,8 @@ draw to the screen.
 #include <chrono>
 #include <glm/gtc/matrix_transform.hpp>
 #include <unordered_map>
+#include <thread>
+#include <mutex>
 
 #include "imgui/imgui.h"
 #include "imgui/imgui_impl_vulkan.h"
@@ -55,6 +57,98 @@ static FileMonitor gFileMonitor;
 
 LOG_CHANNEL( Graphics );
 
+const int THREAD_COUNT = std::thread::hardware_concurrency() - 1;
+
+
+// awful
+struct RenderableData_t
+{
+	size_t index;
+	BaseRenderable* renderable;
+};
+
+
+struct RenderWorkerData_t
+{
+	// std::vector< BaseRenderable* > aRenderables;
+	// std::unordered_map< BaseShader*, std::vector< BaseRenderable* > > aDrawList;
+	std::unordered_map< BaseShader*, std::vector< RenderableData_t > > aDrawList;
+
+	uint32_t aCommandBufferCount;
+};
+
+
+// lazy and awful
+std::vector< std::vector< RenderWorkerData_t* > > gTaskQueue;
+
+// um
+std::mutex gTaskMutex;
+
+// lazy and awful
+int gTaskFinishedCount = 0;
+bool gThreadsPaused = false;
+
+RenderWorkerData_t* GetNextTask( int sThreadId )
+{
+	RenderWorkerData_t* data = nullptr;
+
+	if ( gTaskQueue[sThreadId].size() )
+	{
+		if ( gThreadsPaused )
+			return nullptr;
+
+		data = gTaskQueue[sThreadId][gTaskQueue[sThreadId].size() - 1];
+
+		if ( gThreadsPaused )
+			return nullptr;
+
+		gTaskQueue[sThreadId].pop_back();
+	}
+
+	return data;
+}
+
+
+void TaskFinished( int sThreadId )
+{
+	gTaskMutex.lock();
+	gTaskFinishedCount++;
+	gTaskMutex.unlock();
+}
+
+
+void RenderWorker( int sThreadId )
+{
+	while ( true )
+	{
+		sys_sleep( 0.01 );
+
+		if ( gThreadsPaused )
+			continue;
+
+		// NOTE: probably change this to a task queue for each thread
+		// this mutex thing is really shit imo
+		if ( RenderWorkerData_t* data = GetNextTask( sThreadId ) )
+		{
+			for ( auto& [shader, renderList]: data->aDrawList )
+			{
+				for ( auto& renderable : renderList )
+				{
+					shader->PrepareDrawData( renderable.index, renderable.renderable, data->aCommandBufferCount );
+				}
+			}
+
+			delete data;
+			TaskFinished( sThreadId );
+		}
+	}
+}
+
+
+// TEST BASIC MULTITHREADING, MOVE TO CH_CORE LATER AND PROPERLY GET CPU THREAD COUNT
+std::vector< std::thread > gThreadPool;
+
+
 void Renderer::EnableImgui(  )
 {
 	aImGuiInitialized = true;
@@ -81,6 +175,14 @@ void Renderer::InitVulkan(  )
 
 	aDbgDrawer.Init();
 
+	// start up threads
+	gThreadPool.resize( THREAD_COUNT );
+	gTaskQueue.resize( THREAD_COUNT );
+	for ( int i = 0; i < THREAD_COUNT; i++ )
+	{
+		gThreadPool[i] = std::thread( RenderWorker, i );
+	}
+
 	gui->StyleImGui();
 }
 
@@ -106,8 +208,52 @@ void Renderer::InitCommandBuffers(  )
 
 	if ( vkAllocateCommandBuffers( DEVICE, &allocInfo, aCommandBuffers.data(  ) ) != VK_SUCCESS )
 		throw std::runtime_error( "Failed to allocate command buffers!" );
+	
+	// reset and allocate data for worker threads
+	gTaskMutex.lock();
+	gThreadsPaused = true;
 
-	for ( int i = 0; i < aCommandBuffers.size(  ); i++ )
+	// reset thread finished state
+	gTaskFinishedCount = 0;
+	for ( int i = 0; i < THREAD_COUNT; i++ )
+	{
+		gTaskQueue[i].push_back( new RenderWorkerData_t );
+	}
+
+	// calculate work for threads
+	for ( auto& [shader, renderList] : matsys->aDrawList )
+	{
+		shader->AllocDrawData( renderList.size() );
+	}
+
+	size_t curTask = 0;
+	for ( auto& [shader, renderList]: matsys->aDrawList )
+	{
+		size_t renderIndex = 0;
+		for ( auto& renderable : renderList )
+		{
+			RenderWorkerData_t* data = gTaskQueue[curTask][0];
+			data->aDrawList[shader].emplace_back( renderIndex++, renderable );
+			data->aCommandBufferCount = aCommandBuffers.size();
+
+			curTask++;
+
+			if ( curTask >= THREAD_COUNT )
+				curTask = 0;
+		}
+	}
+
+	gTaskMutex.unlock();
+	gThreadsPaused = false;
+
+	// wait for threads to finish
+	// does this need to be locked?
+	while ( gTaskFinishedCount != THREAD_COUNT )
+	{
+		sys_sleep( 0.01 );
+	}
+
+	for ( int i = 0; i < aCommandBuffers.size(); i++ )
 	{
 		VkCommandBufferBeginInfo beginInfo{  };
 		beginInfo.sType 		= VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
@@ -131,12 +277,15 @@ void Renderer::InitCommandBuffers(  )
 		renderPassInfo.clearValueCount 	 = ( uint32_t )clearValues.size(  );
 		renderPassInfo.pClearValues 	 = clearValues.data(  );
 
+		size_t renderIndex = 0;
+
 		for ( auto& [shader, renderList]: matsys->aDrawList )
 		{
+			renderIndex = 0;
 			for ( auto& renderable : renderList )
 			{
 				Material* mat = (Material*)renderable->GetMaterial();
-				mat->apShader->UpdateBuffers( i, renderable );
+				mat->apShader->UpdateBuffers( i, renderIndex++, renderable );
 			}
 		}
 
@@ -145,6 +294,7 @@ void Renderer::InitCommandBuffers(  )
 		// IDEA: make a batched mesh vector so that way we can bind everything needed, and then just draw draw draw draw
 
 		BaseShader* skybox = nullptr;
+		renderIndex = 0;
 
 		// TODO: still could be better, but it's better than what we used to have
 		for ( auto& [shader, renderList]: matsys->aDrawList )
@@ -153,14 +303,16 @@ void Renderer::InitCommandBuffers(  )
 			if ( shader->aName == "skybox" )
 			{
 				skybox = shader;
+				renderIndex++;
 				continue;
 			}
 
 			shader->Bind( aCommandBuffers[i], i );
 
+			renderIndex = 0;
 			for ( auto& renderable : renderList )
 			{
-				matsys->DrawRenderable( renderable, aCommandBuffers[i], i );
+				matsys->DrawRenderable( renderIndex++, renderable, aCommandBuffers[i], i );
 			}
 		}
 
@@ -171,7 +323,7 @@ void Renderer::InitCommandBuffers(  )
 
 			for ( auto& renderable: matsys->aDrawList[skybox] )
 			{
-				matsys->DrawRenderable( renderable, aCommandBuffers[i], i );
+				matsys->DrawRenderable( 0, renderable, aCommandBuffers[i], i );
 			}
 		}
 

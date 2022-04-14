@@ -5,7 +5,8 @@ The Basic 3D Shader, starting point shader
 */
 #include "../renderer.h"
 #include "shaders.h"
-//#include "shader_basic_3d.h"
+
+#include <mutex>
 
 
 extern size_t gModelDrawCalls;
@@ -30,9 +31,17 @@ struct Basic3D_UBO
 };
 
 
+struct Basic3D_DrawData
+{
+	Basic3D_PushConst  aPushConst;
+	Basic3D_UBO        aUBO;
+	UniformDescriptor* apUniformDesc;
+};
+
+
 // KTX fails to load this and i don't feel like figuring out why right now
-constexpr const char* gFallbackEmissivePath = "materials/base/black.png";
-constexpr const char* gFallbackAOPath = "materials/base/white.png";
+static std::string gFallbackEmissivePath = "materials/base/black.png";
+static std::string gFallbackAOPath = "materials/base/white.png";
 
 Texture* gFallbackEmissive = nullptr;
 Texture* gFallbackAO = nullptr;
@@ -81,9 +90,17 @@ public:
 
 	virtual void        InitUniformBuffer( IMesh* mesh ) override;
 
-	virtual void        UpdateBuffers( uint32_t sCurrentImage, BaseRenderable* spRenderable ) override;
+	virtual void        UpdateBuffers( uint32_t sCurrentImage, BaseRenderable* spRenderable ) {};
+	virtual void        UpdateBuffers( uint32_t sCurrentImage, size_t renderableIndex, BaseRenderable* spRenderable ) override;
 
-	virtual void        Draw( BaseRenderable* renderable, VkCommandBuffer c, uint32_t commandBufferIndex ) override;
+	virtual void        Draw( BaseRenderable* renderable, VkCommandBuffer c, uint32_t commandBufferIndex ) override {}
+	virtual void        Draw( size_t renderableIndex, BaseRenderable* renderable, VkCommandBuffer c, uint32_t commandBufferIndex ) override;
+
+	virtual void        AllocDrawData( size_t sRenderableCount ) override;
+	virtual void        PrepareDrawData( size_t renderableIndex, BaseRenderable* renderable, uint32_t commandBufferCount ) override;
+
+	std::unordered_map< BaseRenderable*, Basic3D_DrawData* > aDrawData;
+	MemPool aDrawDataPool;
 };
 
 
@@ -241,6 +258,12 @@ void Basic3D::CreateGraphicsPipeline(  )
 
 void Basic3D::InitUniformBuffer( IMesh* mesh )
 {
+	auto it = matsys->aUniformLayoutMap.find( mesh->GetID() );
+
+	// we have one already lol
+	if ( it != matsys->aUniformLayoutMap.end() )
+		return;
+
 	matsys->aUniformLayoutMap[mesh->GetID()] = InitDescriptorSetLayout( {{ DescriptorLayoutBinding( VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, NULL ) }} );
 
 	matsys->aUniformDataMap[mesh->GetID()] = UniformDescriptor{};
@@ -251,30 +274,20 @@ void Basic3D::InitUniformBuffer( IMesh* mesh )
 
 // TODO: only update this during init or swapchain recreation if needed
 // because this has got to be slowing this whole thing down lol
-void Basic3D::UpdateBuffers( uint32_t sCurrentImage, BaseRenderable* spRenderable )
+void Basic3D::UpdateBuffers( uint32_t sCurrentImage, size_t renderableIndex, BaseRenderable* spRenderable )
 {
-	Basic3D_UBO ubo { };
+	Basic3D_DrawData* drawData = (Basic3D_DrawData*)(aDrawDataPool.GetStart() + (sizeof( Basic3D_DrawData ) * renderableIndex));
 
-	auto mat = (Material*)spRenderable->GetMaterial();
-
-	ubo.diffuse         = mat->GetTextureId( "diffuse" );
-	ubo.emissive        = mat->GetTextureId( "emissive", gFallbackEmissive );
-	ubo.ao              = mat->GetTextureId( "ao", gFallbackAO );
-
-	ubo.aoPower         = mat->GetFloat( "ao_power", 1.f );
-	ubo.emissivePower   = mat->GetFloat( "emissive_power", 1.f );
-
-	auto& uniformData = matsys->GetUniformData( spRenderable->GetID() );
-	auto& uniformDataMem = uniformData.aMem[ sCurrentImage ];
+	auto& uniformDataMem = drawData->apUniformDesc->aMem[ sCurrentImage ];
 
 	void* data;
-	vkMapMemory( DEVICE, uniformDataMem, 0, sizeof( ubo ), 0, &data );
-	memcpy( data, &ubo, sizeof( ubo ) );
+	vkMapMemory( DEVICE, uniformDataMem, 0, sizeof( drawData->aUBO ), 0, &data );
+	memcpy( data, &drawData->aUBO, sizeof( drawData->aUBO ) );
 	vkUnmapMemory( DEVICE, uniformDataMem );
 }
 
 
-void Basic3D::Draw( BaseRenderable* renderable, VkCommandBuffer c, uint32_t i )
+void Basic3D::Draw( size_t renderableIndex, BaseRenderable* renderable, VkCommandBuffer c, uint32_t i )
 {
 	// why did i do this, remove this ASAP
 	/*bool isMesh = typeid(*renderable) == typeid(IMesh);
@@ -290,6 +303,8 @@ void Basic3D::Draw( BaseRenderable* renderable, VkCommandBuffer c, uint32_t i )
 
 	IMesh* mesh = static_cast<IMesh*>(renderable);
 
+	Basic3D_DrawData* drawData = (Basic3D_DrawData*)(aDrawDataPool.GetStart() + (sizeof( Basic3D_DrawData ) * renderableIndex));
+
 	// Bind the mesh's vertex and index buffers
 	VkBuffer 	vBuffers[  ] 	= { mesh->GetVertexBuffer()};
 	VkDeviceSize 	offsets[  ] 	= { 0 };
@@ -299,18 +314,14 @@ void Basic3D::Draw( BaseRenderable* renderable, VkCommandBuffer c, uint32_t i )
 	if ( indexBuffer )
 		vkCmdBindIndexBuffer( c, indexBuffer, 0, VK_INDEX_TYPE_UINT32 );
 
-	Basic3D_PushConst p = {renderer->aView.projViewMatrix, mesh->GetModelMatrix()};
-
 	// we don't need this in the fragment shader aaaa
 	vkCmdPushConstants(
 		c, aPipelineLayout, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
-		0, sizeof( Basic3D_PushConst ), &p
+		0, sizeof( Basic3D_PushConst ), &drawData->aPushConst
 	);
 
-	UniformDescriptor& uniformData = matsys->GetUniformData( mesh->GetID() );
-
 	VkDescriptorSet sets[  ] = {
-		uniformData.aSets[i],
+		drawData->apUniformDesc->aSets[i],
 		matsys->aImageSets[i],
 	};
 
@@ -323,5 +334,49 @@ void Basic3D::Draw( BaseRenderable* renderable, VkCommandBuffer c, uint32_t i )
 
 	gModelDrawCalls++;
 	gVertsDrawn += mesh->GetVertices().size();
+}
+
+
+void Basic3D::AllocDrawData( size_t sRenderableCount )
+{
+	aDrawDataPool.Clear();
+	Assert( MemPool_OutOfMemory != aDrawDataPool.Resize( sizeof( Basic3D_DrawData ) * sRenderableCount ) );
+}
+
+
+// here to avoid constantly creating std::strings
+// maybe just change mat var names to const char*
+// if doing strlen and strcmp can reach the same speed as std::string
+// ... which i doubt
+
+static std::string MatVar_Diffuse          = "diffuse";
+static std::string MatVar_Emissive         = "emissive";
+static std::string MatVar_AO               = "ao";
+
+static std::string MatVar_AOPower          = "ao_power";
+static std::string MatVar_EmissivePower    = "emissive_power";
+
+
+void Basic3D::PrepareDrawData( size_t renderableIndex, BaseRenderable* renderable, uint32_t commandBufferCount )
+{
+	// there is the old DataBuffer class as well, hmm
+
+	IMesh* mesh = static_cast<IMesh*>(renderable);
+
+	Basic3D_DrawData* drawData = (Basic3D_DrawData*)(aDrawDataPool.GetStart() + (sizeof( Basic3D_DrawData ) * renderableIndex));
+
+	drawData->aPushConst = {renderer->aView.projViewMatrix, mesh->GetModelMatrix()};
+	drawData->apUniformDesc = &matsys->GetUniformData( mesh->GetID() );
+
+	auto mat = (Material*)mesh->GetMaterial();
+
+	// NOTE: should get the MeshPtr directly so there can be less matvar calls since it would always be the same material
+
+	drawData->aUBO.diffuse         = mat->GetTextureId( MatVar_Diffuse );
+	drawData->aUBO.emissive        = mat->GetTextureId( MatVar_Emissive, gFallbackEmissive );
+	drawData->aUBO.ao              = mat->GetTextureId( MatVar_AO, gFallbackAO );
+
+	drawData->aUBO.aoPower         = mat->GetFloat( MatVar_AOPower, 1.f );
+	drawData->aUBO.emissivePower   = mat->GetFloat( MatVar_EmissivePower, 1.f );
 }
 
