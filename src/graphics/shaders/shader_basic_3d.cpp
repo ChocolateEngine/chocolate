@@ -340,7 +340,8 @@ void Basic3D::Draw( size_t renderableIndex, BaseRenderable* renderable, VkComman
 void Basic3D::AllocDrawData( size_t sRenderableCount )
 {
 	aDrawDataPool.Clear();
-	Assert( MemPool_OutOfMemory != aDrawDataPool.Resize( sizeof( Basic3D_DrawData ) * sRenderableCount ) );
+	MemError err = aDrawDataPool.Resize( sizeof( Basic3D_DrawData ) * sRenderableCount );
+	Assert( MemPool_OutOfMemory != err );
 }
 
 

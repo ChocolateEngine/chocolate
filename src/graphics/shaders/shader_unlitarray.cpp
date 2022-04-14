@@ -274,13 +274,15 @@ void ShaderUnlitArray::Draw( size_t renderableIndex, BaseRenderable* renderable,
 void ShaderUnlitArray::AllocDrawData( size_t sRenderableCount )
 {
 	aDrawDataPool.Clear();
-	Assert( MemPool_OutOfMemory != aDrawDataPool.Resize( sizeof( push_constant_t ) * sRenderableCount ) );
+	MemError err = aDrawDataPool.Resize( sizeof( UnlitArrayPushConstant ) * sRenderableCount );
+	Assert( MemPool_OutOfMemory != err );
 }
 
 
 static std::string MatVar_Diffuse = "diffuse";
 static std::string MatVar_Frame = "frame";
 
+#pragma optimize("", off)
 
 void ShaderUnlitArray::PrepareDrawData( size_t renderableIndex, BaseRenderable* renderable, uint32_t commandBufferCount )
 {
@@ -296,3 +298,4 @@ void ShaderUnlitArray::PrepareDrawData( size_t renderableIndex, BaseRenderable* 
 	push->layer = mat->GetInt( MatVar_Frame );
 }
 
+#pragma optimize("", on)

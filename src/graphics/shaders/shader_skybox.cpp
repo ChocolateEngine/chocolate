@@ -257,7 +257,8 @@ void ShaderSkybox::Draw( size_t renderableIndex, BaseRenderable* renderable, VkC
 void ShaderSkybox::AllocDrawData( size_t sRenderableCount )
 {
 	aDrawDataPool.Clear();
-	Assert( MemPool_OutOfMemory != aDrawDataPool.Resize( sizeof( SkyboxPushConst ) * sRenderableCount ) );
+	MemError err = aDrawDataPool.Resize( sizeof( SkyboxPushConst ) * sRenderableCount );
+	Assert( MemPool_OutOfMemory != err );
 }
 
 

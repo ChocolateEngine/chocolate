@@ -258,7 +258,8 @@ void Basic2D::Draw( size_t renderableIndex, BaseRenderable* renderable, VkComman
 void Basic2D::AllocDrawData( size_t sRenderableCount )
 {
 	aDrawDataPool.Clear();
-	Assert( MemPool_OutOfMemory != aDrawDataPool.Resize( sizeof( push_constant_t ) * sRenderableCount ) );
+	MemError err = aDrawDataPool.Resize( sizeof( push_constant_t ) * sRenderableCount );
+	Assert( MemPool_OutOfMemory != err );
 }
 
 
