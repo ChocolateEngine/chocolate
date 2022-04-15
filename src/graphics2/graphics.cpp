@@ -1,6 +1,13 @@
 #include "graphics.h"
 
+#include "instance.h"
+#include "present.h"
+
+#include "gui/gui.h"
+
 LOG_REGISTER_CHANNEL( Graphics2, LogColor::DarkYellow );
+
+extern GuiSystem* gui;
 
 extern "C" 
 {
@@ -159,7 +166,8 @@ void Graphics::FreeTexture( HTexture sTexture )
  */
 void Graphics::Init() 
 {
-
+    CreateDrawThreads();
+    gui->AssignWindow( GetGInstance().GetWindow().apWindow );
 }
 
 /*
@@ -169,5 +177,7 @@ void Graphics::Init()
  */
 void Graphics::Update( float sDT )
 {
-
+    gui->StartFrame();
+    RecordCommands();
+    Present();
 }

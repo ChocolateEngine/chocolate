@@ -13,6 +13,8 @@
 #include "gutil.hh"
 #include "instance.h"
 
+CommandPool gSingleTimeCommandPool;
+
 CommandPool::CommandPool( VkCommandPoolCreateFlags sFlags )
 {
     QueueFamilyIndices q = FindQueueFamilies( GetPhysicalDevice() );
@@ -48,4 +50,28 @@ VkCommandPool CommandPool::GetHandle() const
 VkCommandPool CommandPool::GetHandle( VkCommandPoolResetFlags sFlags )
 {
     return aCommandPool;
+}
+
+void SingleCommand( std::function< void( VkCommandBuffer ) > sFunc )
+{
+    VkCommandBufferAllocateInfo aCommandBufferAllocateInfo = {};
+    aCommandBufferAllocateInfo.sType                          = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    aCommandBufferAllocateInfo.pNext                          = nullptr;
+    aCommandBufferAllocateInfo.commandPool                   = gSingleTimeCommandPool.GetHandle();
+    aCommandBufferAllocateInfo.level                          = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    aCommandBufferAllocateInfo.commandBufferCount             = 1;
+
+    VkCommandBuffer aCommandBuffer;
+    CheckVKResult( vkAllocateCommandBuffers( GetLogicDevice(), &aCommandBufferAllocateInfo, &aCommandBuffer ), "Failed to allocate command buffer!" );
+
+    VkCommandBufferBeginInfo aCommandBufferBeginInfo = {};
+    aCommandBufferBeginInfo.sType                    = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+    aCommandBufferBeginInfo.pNext                    = nullptr;
+    aCommandBufferBeginInfo.flags                    = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+
+    CheckVKResult( vkBeginCommandBuffer( aCommandBuffer, &aCommandBufferBeginInfo ), "Failed to begin command buffer!" );
+
+    sFunc( aCommandBuffer );
+
+    CheckVKResult( vkEndCommandBuffer( aCommandBuffer ), "Failed to end command buffer!" );
 }

@@ -4,6 +4,7 @@
 
 #include "instance.h"
 #include "gutil.hh"
+#include "rendertarget.h"
 
 #include "config.hh"
 #include "core/log.h"
@@ -52,7 +53,7 @@ VkExtent2D ChooseSwapExtent( const VkSurfaceCapabilitiesKHR &srCapabilities )
 	}
 }
 
-const std::vector< VkImageView >& CreateImageViews( const std::vector< VkImage >& srImages ) 
+std::vector< VkImageView > CreateImageViews( const std::vector< VkImage >& srImages ) 
 {
 	std::vector< VkImageView > views;
 	views.resize( srImages.size() );
@@ -77,6 +78,8 @@ const std::vector< VkImageView >& CreateImageViews( const std::vector< VkImage >
 
 		CheckVKResult( vkCreateImageView( GetLogicDevice(), &aImageViewInfo, nullptr, &views[ i ] ), "Failed to create image view!" );
 	}
+
+	return views;
 }
 
 Swapchain::Swapchain()

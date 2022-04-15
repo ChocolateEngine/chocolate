@@ -329,11 +329,12 @@ uint32_t GInstance::GetMemoryType( uint32_t sTypeFilter, VkMemoryPropertyFlags s
 	return INT32_MAX;
 }
 
-static GInstance gInstance;
+
 
 GInstance &GetGInstance()
 {
-	return gInstance;
+	static GInstance instance;
+	return instance;
 }
 
 VkInstance GetInst()

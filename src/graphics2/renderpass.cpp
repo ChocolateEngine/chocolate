@@ -22,7 +22,7 @@ VkFormat GetColorFormat()
 
 VkFormat GetDepthFormat()
 {
-    return VK_FORMAT_D32_SFLOAT_S8_UINT;
+    return VK_FORMAT_D32_SFLOAT;
 }
 
 RenderPass::RenderPass( const std::vector< VkAttachmentDescription >& srAttachments, 

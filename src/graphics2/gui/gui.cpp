@@ -1,6 +1,15 @@
 #include "gui.h"
 #include "util.h"
 
+#include "../gutil.hh"
+#include "../config.hh"
+
+#include "../instance.h"
+#include "../commandpool.h"
+#include "../swapchain.h"
+#include "../renderpass.h"
+#include "../descriptormanager.h"
+
 #include "imgui/imgui.h"
 #include "imgui/imgui_impl_vulkan.h"
 #include "imgui/imgui_impl_sdl.h"
@@ -228,6 +237,25 @@ void GuiSystem::StartFrame()
 void GuiSystem::Init()
 {
 	InitConsole();
+	ImGui::CreateContext();
+
+	ImGui_ImplSDL2_InitForVulkan( apWindow );
+
+	ImGui_ImplVulkan_InitInfo init_info = {};
+	init_info.Instance        = GetInst();
+	init_info.PhysicalDevice  = GetPhysicalDevice();
+	init_info.Device          = GetLogicDevice();
+	init_info.Queue           = GetGInstance().GetGraphicsQueue();
+	init_info.DescriptorPool  = GetDescriptorManager().GetHandle();
+	init_info.MinImageCount   = GetSwapchain().GetImageCount();
+	init_info.ImageCount      = GetSwapchain().GetImageCount();
+	init_info.MSAASamples     = GetMSAASamples();
+	//init_info.CheckVkResultFn = CheckVKResult;
+
+	ImGui_ImplVulkan_Init( &init_info, GetRenderPass( RenderPass_Color | RenderPass_Depth | RenderPass_Resolve ) );
+
+	SingleCommand( []( VkCommandBuffer c ){ ImGui_ImplVulkan_CreateFontsTexture( c ); } );
+	ImGui_ImplVulkan_DestroyFontUploadObjects();
 }
 
 GuiSystem::GuiSystem(  ) : BaseGuiSystem(  )

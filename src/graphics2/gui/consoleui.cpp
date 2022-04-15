@@ -17,13 +17,11 @@ CONVAR( conui_color_test, 0 );
 
 void ReBuildConsoleOutput();
 
-void CvarRebuildConsoleOutput( std::vector< std::string > args )
+// 3 is all colors (slowest), 2 is errors, warnings and validation layers, 1 is errors and warnings, only, 0 is no colors (fastest)
+CONVAR_CMD( conui_colors, 3 )
 {
 	ReBuildConsoleOutput();
 }
-
-// 3 is all colors (slowest), 2 is errors, warnings and validation layers, 1 is errors and warnings, only, 0 is no colors (fastest)
-CONVAR( conui_colors, 3, CvarRebuildConsoleOutput );
 
 
 static int         gCmdDropDownIndex = -1;

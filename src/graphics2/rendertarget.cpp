@@ -1,12 +1,16 @@
 #include "rendertarget.h"
 
+#include "config.hh"
+
 #include "swapchain.h"
 
-static std::vector< RenderTarget* > gRenderTargets;
+static std::vector< RenderTarget* >  gRenderTargets;
+static RenderTarget                 *gpBackBuffer = nullptr;
 
 RenderTarget::RenderTarget( const std::vector< Texture2 >& srImages, const glm::uvec2 &srExtent, RenderPassStage sStage, const std::vector< VkImageView > &srSwapImages )
 {
     aImages.resize( srImages.size() );
+    aFrameBuffers.resize( srSwapImages.size() );
     for ( int i = 0; i < srImages.size(); ++i )
         aImages[ i ] = srImages[ i ];
 
@@ -40,7 +44,7 @@ RenderTarget::~RenderTarget()
         vkDestroyFramebuffer( GetLogicDevice(), frameBuffer, nullptr );
 }
 
-RenderTarget &CreateBackBuffer()
+RenderTarget *CreateBackBuffer()
 {
     /*
      *    Our backbuffer contains 3 render operations: Color, Depth, and Resolve,
@@ -58,7 +62,7 @@ RenderTarget &CreateBackBuffer()
     color.extent.depth          = 1;
     color.mipLevels             = 1;
     color.arrayLayers           = 1;
-    color.samples               = VK_SAMPLE_COUNT_1_BIT;
+    color.samples               = GetMSAASamples();
     color.tiling                = VK_IMAGE_TILING_OPTIMAL;
     color.usage                 = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
     color.sharingMode           = VK_SHARING_MODE_EXCLUSIVE;
@@ -78,6 +82,8 @@ RenderTarget &CreateBackBuffer()
     allocInfo.memoryTypeIndex      = GetGInstance().GetMemoryType( memReqs.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT );
 
     CheckVKResult( vkAllocateMemory( GetLogicDevice(), &allocInfo, nullptr, &colorTex.GetMemory() ), "Failed to allocate color image memory!" );
+
+    vkBindImageMemory( GetLogicDevice(), colorTex.GetImage(), colorTex.GetMemory(), 0 );
     
     VkImageViewCreateInfo colorView;
     colorView.sType         = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
@@ -107,7 +113,7 @@ RenderTarget &CreateBackBuffer()
     depth.extent.depth          = 1;
     depth.mipLevels             = 1;
     depth.arrayLayers           = 1;
-    depth.samples               = VK_SAMPLE_COUNT_1_BIT;
+    depth.samples               = GetMSAASamples();
     depth.tiling                = VK_IMAGE_TILING_OPTIMAL;
     depth.usage                 = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
     depth.sharingMode           = VK_SHARING_MODE_EXCLUSIVE;
@@ -123,6 +129,8 @@ RenderTarget &CreateBackBuffer()
     allocInfo.memoryTypeIndex = GetGInstance().GetMemoryType( memReqs.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT );
     
     CheckVKResult( vkAllocateMemory( GetLogicDevice(), &allocInfo, nullptr, &depthTex.GetMemory() ), "Failed to allocate depth image memory!" );
+
+    vkBindImageMemory( GetLogicDevice(), depthTex.GetImage(), depthTex.GetMemory(), 0 );
     
     VkImageViewCreateInfo depthView;
     depthView.sType         = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
@@ -144,8 +152,25 @@ RenderTarget &CreateBackBuffer()
 
     glm::uvec2 swapchainSize = { GetSwapchain().GetExtent().width, GetSwapchain().GetExtent().height };
 
-    static RenderTarget backBuffer( textures, swapchainSize, RenderPass_Color | RenderPass_Depth | RenderPass_Resolve, GetSwapchain().GetImageViews() );
-    return backBuffer;
+    return new RenderTarget( textures, swapchainSize, RenderPass_Color | RenderPass_Depth | RenderPass_Resolve, GetSwapchain().GetImageViews() );
+}
+
+/*
+ *    Returns the backbuffer.
+ *    The returned backbuffer contains framebuffers which
+ *    are to be drawn to during command buffer recording.
+ *    Previously, these were wrongly assumed to be the
+ *    same as the swapchain images, but it turns out that
+ *    this doesn't matter, it just needs something to draw to.
+ * 
+ *    @return RenderTarget *    The backbuffer.
+ */
+RenderTarget *GetBackBuffer()
+{
+    if ( !gpBackBuffer ){
+        gpBackBuffer = CreateBackBuffer();
+    }
+    return gpBackBuffer;
 }
 
 const std::vector< RenderTarget* > &GetRenderTargets()

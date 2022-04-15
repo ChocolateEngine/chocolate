@@ -10,6 +10,8 @@
  */
 #pragma once
 
+#include <functional>
+
 #include "gutil.hh"
 
 class CommandPool
@@ -25,3 +27,5 @@ public:
     VkCommandPool GetHandle() const;
     VkCommandPool GetHandle( VkCommandPoolResetFlags sFlags );
 };
+
+void SingleCommand( std::function< void( VkCommandBuffer ) > sFunc );

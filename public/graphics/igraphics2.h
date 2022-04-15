@@ -1,4 +1,4 @@
-#pragma 1
+#pragma once
 
 #include "system.h"
 #include "graphics/renderertypes.h"
@@ -19,6 +19,8 @@ struct Window
 };
 
 class IGraphics : public BaseSystem {
+protected:
+public:
 	/*
      *    Draws a line from one point to another.
      *
