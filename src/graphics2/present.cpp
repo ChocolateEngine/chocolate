@@ -34,6 +34,8 @@ std::vector< DrawThread >      gDrawThreads;
 std::vector< VkCommandBuffer > gCommandBuffers;
 CommandPool                    gPrimCmdPool;
 
+std::vector< VkCommandBuffer > gImGuiCommandBuffers; 
+
 std::vector< VkSemaphore > gImageAvailableSemaphores;
 std::vector< VkSemaphore > gRenderFinishedSemaphores;
 std::vector< VkFence >     gFences;
@@ -82,6 +84,30 @@ void CreateDrawThreads()
     CreateSemaphores();
 }
 
+void RecordImGuiCommands( u32 sCmdIndex,  VkCommandBufferInheritanceInfo sInfo ) {
+    VkCommandBufferAllocateInfo allocInfo = {};
+    allocInfo.sType              = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    allocInfo.commandPool        = gPrimCmdPool.GetHandle();
+    allocInfo.level              = VK_COMMAND_BUFFER_LEVEL_SECONDARY;
+    allocInfo.commandBufferCount = 1;
+
+    CheckVKResult( vkAllocateCommandBuffers( GetLogicDevice(), &allocInfo, &gImGuiCommandBuffers[ sCmdIndex ] ), "Failed to allocate command buffer!" );
+
+    VkCommandBufferBeginInfo beginInfo = {};
+    beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+    beginInfo.flags = VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT;
+    beginInfo.pInheritanceInfo = &sInfo;
+
+    CheckVKResult( vkBeginCommandBuffer( gImGuiCommandBuffers[ sCmdIndex ], &beginInfo ), "Failed to begin command buffer!" );
+
+    auto stuff = ImGui::GetDrawData();
+    stuff->DisplaySize = ImVec2( GetSwapchain().GetExtent().width, GetSwapchain().GetExtent().height );
+
+    ImGui_ImplVulkan_RenderDrawData( stuff, gImGuiCommandBuffers[ sCmdIndex ] );
+
+    CheckVKResult( vkEndCommandBuffer( gImGuiCommandBuffers[ sCmdIndex ] ), "Failed to end command buffer!" );
+}
+
 void RecordSecondaryCommands( u32 sThreadIndex, u32 cmdIndex, VkCommandBufferInheritanceInfo sInfo )
 {
     VkCommandBufferBeginInfo begin{};
@@ -108,6 +134,7 @@ void RecordSecondaryCommands( u32 sThreadIndex, u32 cmdIndex, VkCommandBufferInh
 void RecordCommands() 
 {
     gCommandBuffers.resize( GetSwapchain().GetImageCount() );
+    gImGuiCommandBuffers.resize( GetSwapchain().GetImageCount() );
 
     /*
      *    Allocate primary command buffers
@@ -199,13 +226,17 @@ void RecordCommands()
             cmds.push_back( gDrawThreads[ j ].aCommandBuffers[ i ] );
         }
 
-        vkCmdExecuteCommands( gCommandBuffers[ i ], gDrawThreads.size(), cmds.data() );
-
         /*
          *    Render UI.
          */
         ImGui::Render();
-        ImGui_ImplVulkan_RenderDrawData( ImGui::GetDrawData(), gCommandBuffers[ i ] );
+        /*
+         *    Run ImGui commands.
+         */
+        RecordImGuiCommands( i, inherit );
+        cmds.push_back( gImGuiCommandBuffers[ i ] );
+
+        vkCmdExecuteCommands( gCommandBuffers[ i ], cmds.size(), cmds.data() );
 
         vkCmdEndRenderPass( gCommandBuffers[ i ] );
 

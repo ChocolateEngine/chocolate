@@ -17,7 +17,7 @@ CommandPool gSingleTimeCommandPool;
 
 CommandPool::CommandPool( VkCommandPoolCreateFlags sFlags )
 {
-    QueueFamilyIndices q = FindQueueFamilies( GetPhysicalDevice() );
+    QueueFamilyIndices q = GetGInstance().FindQueueFamilies( GetPhysicalDevice() );
 
     VkCommandPoolCreateInfo aCommandPoolInfo = {};
     aCommandPoolInfo.sType                = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;

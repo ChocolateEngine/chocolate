@@ -105,7 +105,7 @@ Swapchain::Swapchain()
 	    .imageUsage		    = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
     };
 
-    QueueFamilyIndices indices 	    = FindQueueFamilies( GetPhysicalDevice() );
+    QueueFamilyIndices indices 	    = GetGInstance().FindQueueFamilies( GetPhysicalDevice() );
 	uint32_t queueFamilyIndices[  ] = { ( uint32_t )indices.aGraphicsFamily, ( uint32_t )indices.aPresentFamily };
 
 	if ( indices.aGraphicsFamily != indices.aPresentFamily )

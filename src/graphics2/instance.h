@@ -31,6 +31,7 @@ protected:
     void                       CreateInstance();
     VkResult                   CreateValidationLayers();
 
+    bool                       SuitableCard( VkPhysicalDevice sDevice );
     VkSampleCountFlagBits      FindMaxMSAASamples();
     void                       SetupPhysicalDevice();
     void                       CreateDevice();
@@ -39,6 +40,8 @@ public:
     ~GInstance();
 
     uint32_t                   GetMemoryType( uint32_t sTypeFilter, VkMemoryPropertyFlags sProperties );
+    QueueFamilyIndices         FindQueueFamilies( VkPhysicalDevice sDevice );
+    SwapChainSupportInfo       CheckSwapChainSupport( VkPhysicalDevice sDevice );
 
     constexpr Window           GetWindow()          { return aWindow;         }
 

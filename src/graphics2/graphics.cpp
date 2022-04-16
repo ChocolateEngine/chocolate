@@ -177,7 +177,7 @@ void Graphics::Init()
  */
 void Graphics::Update( float sDT )
 {
-    gui->StartFrame();
+    gui->Update( sDT );
     RecordCommands();
     Present();
 }

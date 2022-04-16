@@ -15,7 +15,7 @@ struct GOption{
 static GOption gOptions[] = {
     { "Width",              1280                  },
     { "Height",             720                   },
-    { "MSAA Samples",       VK_SAMPLE_COUNT_1_BIT },
+    { "MSAA Samples",       VK_SAMPLE_COUNT_8_BIT },
     { "VSync",              1                     },
     { "Buffered Swapchain", 1                     }
 };

@@ -60,36 +60,6 @@ constexpr void CheckVKResult( VkResult sResult, char const *spMsg ) {
     LogFatal( pBuf );
 }
 
-static inline QueueFamilyIndices FindQueueFamilies( VkPhysicalDevice sDevice )
-{
-	QueueFamilyIndices indices;
-	uint32_t queueFamilyCount = 0;
-	vkGetPhysicalDeviceQueueFamilyProperties( sDevice, &queueFamilyCount, nullptr );
-
-	std::vector< VkQueueFamilyProperties > queueFamilies( queueFamilyCount );
-	vkGetPhysicalDeviceQueueFamilyProperties( sDevice, &queueFamilyCount, queueFamilies.data(  ) );// Logic to find queue family indices to populate struct with
-	int i = 0;
-	for ( const auto& queueFamily : queueFamilies )
-	{
-		if ( queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT )
-		{
-			VkBool32 presentSupport = false;
-			vkGetPhysicalDeviceSurfaceSupportKHR( sDevice, i, GetGInstance().GetSurface(), &presentSupport );
-			if ( presentSupport )
-			{
-				indices.aPresentFamily = i;
-			}
-			indices.aGraphicsFamily = i;
-		}
-		if ( indices.Complete(  ) )
-		{
-			break;
-		}
-		i++;
-	}
-	return indices;
-}
-
 static inline SwapChainSupportInfo CheckSwapChainSupport( VkPhysicalDevice sDevice )
 {
     auto surf = GetGInstance().GetSurface();
