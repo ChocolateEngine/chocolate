@@ -157,36 +157,6 @@ def post_jolt_extract():
 # =================================================================================================
 
 
-def post_bullet_extract():
-    if ARGS.no_build:
-        return
-
-    os.chdir("bullet3")
-
-    if not os.path.isdir("build"):
-        os.mkdir("build")
-    #else:
-    #    print("Build Dir exists, skipping")
-    #    #return
-
-    os.chdir("build")
-
-    # initial setup
-    # cmake -DBUILD_EGL=Off -DBUILD_OPENGL3_DEMOS=Off -DBUILD_BULLET3=Off -DUSE_GRAPHICAL_BENCHMARK=Off -DBUILD_EXTRAS=Off -DBUILD_CPU_DEMOS=Off -DBUILD_BULLET2_DEMOS=Off -DBUILD_UNIT_TESTS=Off -DUSE_MSVC_RUNTIME_LIBRARY_DLL=On ..
-    os.system("cmake -DBUILD_EGL=Off -DBUILD_OPENGL3_DEMOS=Off -DBUILD_BULLET3=Off -DUSE_GRAPHICAL_BENCHMARK=Off -DBUILD_EXTRAS=Off -DBUILD_CPU_DEMOS=Off -DBUILD_BULLET2_DEMOS=Off -DBUILD_UNIT_TESTS=Off -DUSE_MSVC_RUNTIME_LIBRARY_DLL=On -DBUILD_SHARED_LIBS=On ..")
-
-    print("Building Bullet Physics - Release\n")
-    os.system("cmake --build . --config Release")
-
-    print("Building Bullet Physics - Debug\n")
-    os.system("cmake --build . --config Debug")
-    
-    os.chdir("../..")
-
-
-# =================================================================================================
-
-
 def post_openal_extract():
     if ARGS.no_build:
         return
@@ -389,16 +359,6 @@ FILE_LIST = {
             "JoltPhysics-1.1.0",    # folder it extracts as to rename to the folder above (optional)
             ".",                    # extract into this folder (optional)
             post_jolt_extract,
-        ],
-        [
-            "https://github.com/bulletphysics/bullet3/archive/refs/tags/3.17.zip",
-            "zip",                  # file extension it's stored as
-            "bullet3",              # folder to check for if it exists already
-            "bullet3-3.17",         # folder it extracts as to rename to the folder above (optional)
-            ".",                    # extract into this folder (optional)
-            post_bullet_extract,
-            # TODO: set this up
-            # cmake -DBUILD_EGL=Off -DBUILD_OPENGL3_DEMOS=Off -DBUILD_BULLET3=Off -DUSE_GRAPHICAL_BENCHMARK=Off -DBUILD_EXTRAS=Off -DBUILD_CPU_DEMOS=Off -DBUILD_BULLET2_DEMOS=Off -DBUILD_UNIT_TESTS=Off -DUSE_MSVC_RUNTIME_LIBRARY_DLL=On ..
         ],
         [
             # https://github.com/wolfpld/tracy/archive/refs/tags/v0.7.8.zip
