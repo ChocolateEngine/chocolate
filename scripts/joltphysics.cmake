@@ -8,15 +8,6 @@ add_compile_definitions(
 )
 
 include_directories( ${JOLTPHYSICS_DIR}/Jolt )
-
-if( MSVC )
-	if( (CMAKE_BUILD_TYPE STREQUAL Debug) )
-		link_directories( ${JOLTPHYSICS_DIR}/Build/Debug )
-	else()
-		link_directories( ${JOLTPHYSICS_DIR}/Build/Release )
-	endif()
-	link_libraries( Jolt )
-else()
-	message( "NO JOLTPHYSICS ON LINUX SETUP YET AAAAA" )
-endif()
+link_directories( ${JOLTPHYSICS_DIR}/Build/build/${CMAKE_BUILD_TYPE} )
+link_libraries( Jolt )
 

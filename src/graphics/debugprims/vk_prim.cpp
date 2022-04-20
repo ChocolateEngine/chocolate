@@ -57,7 +57,7 @@ void VulkanPrimitiveMaterials::InitLine( const glm::vec3& sX, const glm::vec3& s
 void VulkanPrimitiveMaterials::Init()
 {
 	apMaterial = (Material*)matsys->CreateMaterial();
-	apMaterial->SetShader( "debug" );
+	apMaterial->SetShader( "debug_line" );
 
 	ResetMesh();
 }

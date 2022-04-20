@@ -9,11 +9,11 @@ The Debug Shader, used for wireframe
 
 class ShaderDebug: public BaseShader
 {
-protected:
-
-
 public:	
 	                    ShaderDebug();
+	                    ShaderDebug( const std::string& name );
+
+	// virtual void        RegisterShader();
 
 	virtual void        Init() override;
 	virtual void        ReInit() override;
@@ -26,12 +26,23 @@ public:
 	virtual void        Draw( BaseRenderable* renderable, VkCommandBuffer c, uint32_t commandBufferIndex ) override;
 
 	inline bool         UsesUniformBuffers() override { return false; };
+
+	virtual VkPrimitiveTopology GetTopologyType() { return VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST; }
+	virtual void        CmdPushConst( BaseRenderable* renderable, VkCommandBuffer c, uint32_t cIndex );
 };
 
 
-struct DebugPushConstant
+class ShaderDebugLine: public ShaderDebug
 {
-	alignas(16) glm::mat4 aTransform;
+public:	
+	                    ShaderDebugLine( const std::string& name );
+						
+	// virtual void        RegisterShader() override;
+
+	virtual void        ReInit() override;
+
+	VkPrimitiveTopology GetTopologyType() override { return VK_PRIMITIVE_TOPOLOGY_LINE_LIST; }
+	void                CmdPushConst( BaseRenderable* renderable, VkCommandBuffer c, uint32_t cIndex ) override;
 };
 
 

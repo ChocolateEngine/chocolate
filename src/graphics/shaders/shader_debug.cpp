@@ -11,20 +11,79 @@ extern size_t gModelDrawCalls;
 extern size_t gVertsDrawn;
 
 
-// =========================================================
+constexpr const char *pVShader    = "shaders/debug.vert.spv";
+constexpr const char *pVShaderCol = "shaders/debug_col.vert.spv";
+constexpr const char *pFShader    = "shaders/debug.frag.spv";
+
+
+struct DebugLinePushConstant
+{
+	alignas(16) glm::mat4 aTransform;
+};
+
+
+struct DebugPushConstant
+{
+	alignas(16) glm::mat4 aTransform;
+	alignas(16) glm::vec4 aColor;
+};
+
+
+constexpr glm::vec3 vec3_default( 255, 255, 255 );
+constexpr glm::vec4 vec4_default( 255, 255, 255, 255 );
+
 
 // =========================================================
 
 
-constexpr const char *pVShader = "shaders/debug.vert.spv";
-constexpr const char *pFShader = "shaders/debug.frag.spv";
+ShaderDebugLine* gpShaderDebugLine = new ShaderDebugLine( "debug_line" );
+
+ShaderDebugLine::ShaderDebugLine( const std::string& name )
+{
+	GetMaterialSystem()->AddShader( this, name );
+}
 
 
-ShaderDebug* gpShaderDebug = new ShaderDebug;
+void ShaderDebugLine::ReInit()
+{
+	aModules[0] = CreateShaderModule( filesys->ReadFile( pVShader ) ); // Processes incoming verticies, taking world position, color, and texture coordinates as an input
+	aModules[1] = CreateShaderModule( filesys->ReadFile( pFShader ) ); // Fills verticies with fragments to produce color, and depth
+
+	aPipelineLayout = InitPipelineLayouts( nullptr, 0, sizeof( DebugLinePushConstant ) );
+
+	CreateGraphicsPipeline();
+}
+
+
+void ShaderDebugLine::CmdPushConst( BaseRenderable* renderable, VkCommandBuffer c, uint32_t cIndex )
+{
+	IMesh* mesh = static_cast<IMesh*>(renderable);
+
+	// NOTE: should get the MeshPtr directly so there can be less matvar calls since it would always be the same material
+
+	DebugLinePushConstant p = {
+		renderer->aView.projViewMatrix * mesh->GetModelMatrix()
+	};
+
+	vkCmdPushConstants(
+		c, aPipelineLayout, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
+		0, sizeof( DebugLinePushConstant ), &p
+	);
+}
+
+
+// =========================================================
+
+
+ShaderDebug* gpShaderDebug = new ShaderDebug( "debug" );
 
 ShaderDebug::ShaderDebug()
 {
-	GetMaterialSystem()->AddShader( this, "debug" );
+}
+
+ShaderDebug::ShaderDebug( const std::string& name )
+{
+	GetMaterialSystem()->AddShader( this, name );
 }
 
 
@@ -37,8 +96,10 @@ void ShaderDebug::Init()
 
 void ShaderDebug::ReInit()
 {
-	aModules[0] = CreateShaderModule( filesys->ReadFile( pVShader ) ); // Processes incoming verticies, taking world position, color, and texture coordinates as an input
+	aModules[0] = CreateShaderModule( filesys->ReadFile( pVShaderCol ) ); // Processes incoming verticies, taking world position, color, and texture coordinates as an input
 	aModules[1] = CreateShaderModule( filesys->ReadFile( pFShader ) ); // Fills verticies with fragments to produce color, and depth
+	
+	aPipelineLayout = InitPipelineLayouts( nullptr, 0, sizeof( DebugPushConstant ) );
 
 	CreateGraphicsPipeline();
 }
@@ -46,9 +107,6 @@ void ShaderDebug::ReInit()
 
 void ShaderDebug::CreateGraphicsPipeline(  )
 {
-	// aPipelineLayout = InitPipelineLayouts( aLayouts.GetBuffer(  ), aLayouts.GetSize(  ), sizeof( push_constant_t ) );
-	aPipelineLayout = InitPipelineLayouts( nullptr, 0, sizeof( DebugPushConstant ) );
-
 	VkPipelineShaderStageCreateInfo vertShaderStageInfo{  };
 	vertShaderStageInfo.sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;	//	Tells Vulkan which stage the shader is going to be used
 	vertShaderStageInfo.stage  = VK_SHADER_STAGE_VERTEX_BIT;
@@ -78,6 +136,7 @@ void ShaderDebug::CreateGraphicsPipeline(  )
 
 	VkPipelineInputAssemblyStateCreateInfo inputAssembly{  };	//	Collects raw vertex data from buffers
 	inputAssembly.sType 			= VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
+	// inputAssembly.topology 			= GetTopologyType();
 	inputAssembly.topology 			= VK_PRIMITIVE_TOPOLOGY_LINE_LIST;
 	inputAssembly.primitiveRestartEnable 	= VK_FALSE;
 
@@ -99,11 +158,12 @@ void ShaderDebug::CreateGraphicsPipeline(  )
 	rasterizer.sType 			= VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
 	rasterizer.depthClampEnable 		= VK_FALSE;
 	rasterizer.rasterizerDiscardEnable 	= VK_FALSE;
-	rasterizer.polygonMode 			= VK_POLYGON_MODE_FILL;		//	Fill with fragments, can optionally use VK_POLYGON_MODE_LINE for a wireframe
+	rasterizer.polygonMode 			= VK_POLYGON_MODE_LINE;		//	Fill with fragments, can optionally use VK_POLYGON_MODE_LINE for a wireframe
 	rasterizer.lineWidth 			= 1.0f;
 	// rasterizer.cullMode 			= ( sFlags & NO_CULLING ) ? VK_CULL_MODE_NONE : VK_CULL_MODE_BACK_BIT;	//	FIX FOR MAKING 2D SPRITES WORK!!! WOOOOO!!!!
 	rasterizer.cullMode 			= VK_CULL_MODE_NONE;
 	rasterizer.frontFace 			= VK_FRONT_FACE_COUNTER_CLOCKWISE;
+	// rasterizer.frontFace 			= VK_FRONT_FACE_CLOCKWISE;
 	rasterizer.depthBiasEnable 		= VK_FALSE;
 	rasterizer.depthBiasConstantFactor 	= 0.0f; // Optional
 	rasterizer.depthBiasClamp 		= 0.0f; // Optional
@@ -191,13 +251,6 @@ void ShaderDebug::UpdateBuffers( uint32_t sCurrentImage, BaseRenderable* spRende
 
 void ShaderDebug::Bind( VkCommandBuffer c, uint32_t cIndex )
 {
-	DebugPushConstant p = {renderer->aView.projViewMatrix};
-
-	vkCmdPushConstants(
-		c, aPipelineLayout, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
-		0, sizeof( DebugPushConstant ), &p
-	);
-
 	BaseShader::Bind( c, cIndex );
 }
 
@@ -208,15 +261,35 @@ void ShaderDebug::Draw( BaseRenderable* renderable, VkCommandBuffer c, uint32_t 
 	// IMesh* mesh = dynamic_cast<IMesh*>(renderable);
 	IMesh* mesh = static_cast<IMesh*>(renderable);
 
-	assert(mesh != nullptr);
-
 	// Bind the mesh's vertex buffer
 	VkBuffer 	vBuffers[  ] 	= { mesh->GetVertexBuffer() };
 	VkDeviceSize 	offsets[  ] 	= { 0 };
 	vkCmdBindVertexBuffers( c, 0, 1, vBuffers, offsets );
+
+	CmdPushConst( renderable, c, cIndex );
 
 	vkCmdDraw( c, (uint32_t)mesh->GetVertices().size(), 1, 0, 0);
 
 	gModelDrawCalls++;
 	gVertsDrawn += mesh->GetVertices().size();
 }
+
+
+void ShaderDebug::CmdPushConst( BaseRenderable* renderable, VkCommandBuffer c, uint32_t cIndex )
+{
+	IMesh* mesh = static_cast<IMesh*>(renderable);
+	auto mat = (Material*)mesh->GetMaterial();
+
+	// NOTE: should get the MeshPtr directly so there can be less matvar calls since it would always be the same material
+
+	DebugPushConstant p = {
+		renderer->aView.projViewMatrix * mesh->GetModelMatrix(),
+		mat->GetVec4( "color", vec4_default )
+	};
+
+	vkCmdPushConstants(
+		c, aPipelineLayout, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
+		0, sizeof( DebugPushConstant ), &p
+	);
+}
+

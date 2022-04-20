@@ -136,15 +136,20 @@ def post_jolt_extract():
         return
 
     os.chdir("JoltPhysics/Build")
+    
+    if SYS_OS == OS.Windows:
+        build_dir = "VS2022_CL"
+    else:
+        build_dir = "build"
 
     # initial setup
-    os.system("cmake .")
+    os.system(f"cmake -S . -B {build_dir} -A x64")
 
     print("Building JoltPhysics - Release\n")
-    os.system("cmake --build . --config Release")
+    os.system(f"cmake --build {build_dir} --config Release")
 
     print("Building JoltPhysics - Debug\n")
-    os.system("cmake --build . --config Debug")
+    os.system(f"cmake --build {build_dir} --config Debug")
 
     os.chdir("../..")
 
@@ -174,6 +179,26 @@ def post_bullet_extract():
     os.system("cmake --build . --config Release")
 
     print("Building Bullet Physics - Debug\n")
+    os.system("cmake --build . --config Debug")
+    
+    os.chdir("../..")
+
+
+# =================================================================================================
+
+
+def post_openal_extract():
+    if ARGS.no_build:
+        return
+
+    os.chdir("openal-soft/build")
+
+    os.system("cmake ..")
+
+    print("Building OpenAL-Soft - Release\n")
+    os.system("cmake --build . --config Release")
+
+    print("Building OpenAL-Soft - Debug\n")
     os.system("cmake --build . --config Debug")
 
     os.chdir("../..")
@@ -383,6 +408,14 @@ FILE_LIST = {
             "tracy-f1fea0331aa7222df5b0a8b0ffdf6610547fb336",         # folder it extracts as to rename to the folder above (optional)
             ".",                    # extract into this folder (optional)
             None,
+        ],
+        [
+            "https://github.com/kcat/openal-soft/archive/6f9311b1ba26211895b507670b421356cc305bee.zip",
+            "zip",                   # file extension it's stored as
+            "openal-soft",              # folder to check for if it exists already
+            "openal-soft-6f9311b1ba26211895b507670b421356cc305bee",         # folder it extracts as to rename to the folder above (optional)
+            ".",                    # extract into this folder (optional)
+            post_openal_extract,
         ],
     ],
 

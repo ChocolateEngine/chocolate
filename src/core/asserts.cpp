@@ -130,7 +130,7 @@ void HandleAssert( const char* file, u32 line, const char* cond, const char* tit
 	if ( gNoAsserts )
 		return;
 
-	// TODO: check if assert is disabled
+	// check if assert is disabled
     for ( AssertDisabled& _assert : gDisabledAsserts )
     {
         if ( line != _assert.line )
@@ -149,7 +149,23 @@ void HandleAssert( const char* file, u32 line, const char* cond, const char* tit
 
 void HandleAssert( const char* file, u32 line, const char* cond, const char* msg )
 {
-	HandleAssert( file, line, cond, "Assertion Failed", msg );
+    if ( gNoAsserts )
+        return;
+
+    // check if assert is disabled
+    for ( AssertDisabled& _assert : gDisabledAsserts )
+    {
+        if ( line != _assert.line )
+            continue;
+
+        // Assert is disabled, ignore it
+        if ( strncmp( file, _assert.file, 512 ) == 0 )
+            return;
+    }
+
+    // All clear to show this assert
+    LogError( "Assertion Failed\n  File: %s: %d\n  Cond: %s\n  %s\n", file, line, cond, msg );
+    ShowAssert( file, line, cond, "Assertion Failed", msg );
 }
 
 

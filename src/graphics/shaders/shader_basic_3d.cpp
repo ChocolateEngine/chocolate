@@ -272,8 +272,7 @@ void Basic3D::InitUniformBuffer( IMesh* mesh )
 }
 
 
-// TODO: only update this during init or swapchain recreation if needed
-// because this has got to be slowing this whole thing down lol
+// NOTE: sometimes crashes here? something with debug rendering from physics, hmm, memory leaking or overstepping?
 void Basic3D::UpdateBuffers( uint32_t sCurrentImage, size_t renderableIndex, BaseRenderable* spRenderable )
 {
 	Basic3D_DrawData* drawData = (Basic3D_DrawData*)(aDrawDataPool.GetStart() + (sizeof( Basic3D_DrawData ) * renderableIndex));

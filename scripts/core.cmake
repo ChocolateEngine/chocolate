@@ -78,7 +78,7 @@ if( MSVC )
 
 	if( CMAKE_BUILD_TYPE STREQUAL Debug )
 		add_compile_options( "/Od" )  # no optimizations
-		add_compile_options( "/ZI" )  # edit and continue
+		add_compile_options( "/ZI" )  # edit and continue (TODO: DO THIS RIGHT PLEASE)
 		string ( REGEX REPLACE "/Zi" "/ZI" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}" )  # Use Edit and Continue on Debug
 	elseif( CMAKE_BUILD_TYPE STREQUAL Release )
 		add_compile_options( "/O2" )  # level 2 optimizations (max in msvc)

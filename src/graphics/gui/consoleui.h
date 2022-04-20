@@ -16,11 +16,14 @@ protected:
 	std::vector< std::string > aDebugMessages;
 
 	/* Draw the gui.  */
-	void 		DrawGui(  );
+	void 		DrawGui( float sDT );
 	/* Draw the console, move to it's own class later  */
 	void 		DrawConsole( bool wasConsoleOpen );
 
 public:
+	/* Set to VGUI Style 😎 */
+	void 		StyleImGui();
+
 	/* Set to VGUI Style 😎 */
 	void 		StyleImGui();
 
