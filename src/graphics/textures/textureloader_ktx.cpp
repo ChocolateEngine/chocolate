@@ -102,7 +102,7 @@ public:
 			return nullptr;
 		}
 
-		LogMsg( gGraphicsChannel, "Loaded Image: %s - dataSize: %d\n", srPath.c_str(  ), pTexture->kTexture->dataSize );
+		LogDev( gGraphicsChannel, 2, "Loaded Image: %s - dataSize: %d\n", srPath.c_str(  ), pTexture->kTexture->dataSize );
 
 		ktxTexture_Destroy( pTexture->kTexture );
 		ktxVulkanDeviceInfo_Destruct( &vdi );
