@@ -57,6 +57,9 @@ static bool MyObjectCanCollide( JPH::ObjectLayer inObject1, JPH::ObjectLayer inO
 		case ObjLayer_Moving:
 			return true; // Moving collides with everything
 
+		case ObjLayer_NoCollide:
+			return false; // Nothing collides with this
+
 		default:
 			Assert( false );
 			return false;
@@ -77,6 +80,7 @@ static bool MyObjectCanCollide( JPH::ObjectLayer inObject1, JPH::ObjectLayer inO
 
 JPH::BroadPhaseLayer BroadPhase_Stationary(0);
 JPH::BroadPhaseLayer BroadPhase_Moving(1);
+JPH::BroadPhaseLayer BroadPhase_NoCollide(2);
 
 
 // Function that determines if two broadphase layers can collide
@@ -88,7 +92,10 @@ static bool MyBroadPhaseCanCollide( JPH::ObjectLayer inLayer1, JPH::BroadPhaseLa
 			return inLayer2 == BroadPhase_Moving;
 
 		case ObjLayer_Moving:
-			return true;	
+			return true;
+
+		case ObjLayer_NoCollide:
+			return false; // Nothing collides with this
 
 		default:
 			AssertMsg( false, "Invalid Physics Object Layer" );
@@ -411,9 +418,9 @@ static const char* gShapeTypeStr[] = {
 	"TaperedCapsule",
 	"Cylinder",
 	"Convex",
+	"Mesh",
 	"StaticCompound",
 	"MutableCompound",
-	"Mesh",
 	"HeightField",
 };
 
@@ -475,6 +482,7 @@ PhysicsEnvironment::~PhysicsEnvironment()
 JPH::ObjectToBroadPhaseLayer gObjectToBroadphase = {
 	BroadPhase_Stationary,
 	BroadPhase_Moving,
+	BroadPhase_NoCollide,
 };
 
 
@@ -600,8 +608,18 @@ IPhysicsShape* PhysicsEnvironment::CreateShape( const PhysicsShapeInfo& physInfo
 	JPH::Shape::ShapeResult result = shapeSettings->Create();
 	if ( !result.IsValid() )
 	{
+		if ( result.HasError() )
+		{
+			LogError( gPhysicsChannel, "Failed to create \"%s\" Physics Shape - %s\n",
+				PhysShapeType2Str( physInfo.aShapeType ),
+				result.GetError().c_str()
+			);
+		}
+		else
+		{
+			LogError( gPhysicsChannel, "Failed to create \"%s\" Physics Shape\n", PhysShapeType2Str( physInfo.aShapeType ) );
+		}
 		// TODO: use HasError() and GetError() on the result
-		LogError( gPhysicsChannel, "Failed to create Physics Shape: %s\n", PhysShapeType2Str( physInfo.aShapeType ) );
 		delete shapeSettings;
 		return nullptr;
 	}
@@ -656,10 +674,22 @@ IPhysicsObject* PhysicsEnvironment::CreateObject( IPhysicsShape* spShape, const 
 		layer
 	);
 
+	bodySettings.mAllowSleeping             = physInfo.aAllowSleeping;
+	bodySettings.mIsSensor                  = physInfo.aIsSensor;
+	bodySettings.mMaxLinearVelocity         = physInfo.aMaxLinearVelocity;
+	bodySettings.mMaxAngularVelocity        = physInfo.aMaxAngularVelocity;
+	bodySettings.mMotionQuality             = (JPH::EMotionQuality)physInfo.aMotionQuality;
+
+	if ( physInfo.aCustomMass )
+	{
+		bodySettings.mOverrideMassProperties = JPH::EOverrideMassProperties::CalculateInertia;
+		bodySettings.mMassPropertiesOverride.mMass = physInfo.aMass;
+	}
+
 	// TODO: check for any mass override
 
 	// Create the actual rigid body
-	JPH::Body *body = bodyInterface.CreateBody(bodySettings); // Note that if we run out of bodies this can return nullptr
+	JPH::Body *body = bodyInterface.CreateBody( bodySettings ); // Note that if we run out of bodies this can return nullptr
 
 	if ( body == nullptr )
 	{
@@ -673,6 +703,7 @@ IPhysicsObject* PhysicsEnvironment::CreateObject( IPhysicsShape* spShape, const 
 	phys->apBody = body;
 	phys->apEnv = this;
 	phys->aLayer = layer;
+	phys->aOrigLayer = layer;
 
 	// Add it to the world
 	bodyInterface.AddBody( body->GetID(), physInfo.aStartActive ? JPH::EActivation::Activate : JPH::EActivation::DontActivate );
@@ -698,21 +729,12 @@ void PhysicsEnvironment::DestroyObject( IPhysicsObject *spPhysObj )
 		JPH::BodyInterface &bodyInterface = apPhys->GetBodyInterface();
 		bodyInterface.RemoveBody( physObj->apBody->GetID() );
 		bodyInterface.DestroyBody( physObj->apBody->GetID() );
-
-		// delete physObj->apBody;
 	}
 
 	vec_remove( aPhysObjs, physObj );
 
 	delete physObj;
 }
-
-
-
-//#define COLLISION_MARGIN 0.015 // 15 mm
-//#define COLLISION_MARGIN 0.0015 // 15 mm
-//#define COLLISION_MARGIN 1.5 // 15 mm
-#define COLLISION_MARGIN 15 // this does fix the tripping over edges issue, but it pushes out the collision of everything
 
 
 // this is stupid, graphics2 will do this better, or i might just try doing it better in graphics1
@@ -765,9 +787,9 @@ void GetModelTris( Model* spModel, std::vector< JPH::Triangle >& srTris )
 		for ( size_t i = 0; i < ind.size(); i += 3 )
 		{
 			srTris.emplace_back(
-				toJolt( verts[i].pos ),
-				toJolt( verts[i+1].pos ),
-				toJolt( verts[i+2].pos )
+				toJolt( verts[ind[i]  ].pos ),
+				toJolt( verts[ind[i+1]].pos ),
+				toJolt( verts[ind[i+2]].pos )
 			);
 		}
 	}
@@ -789,6 +811,47 @@ void GetModelTris( Model* spModel, std::vector< JPH::Triangle >& srTris )
 			btVector3(v2[0], v2[1], v2[2]));
 	}
 #endif
+}
+
+
+// something is very broken here
+void GetModelInd( Model* spModel, std::vector< JPH::Float3 >& srVerts, std::vector< JPH::IndexedTriangle >& srInd )
+{
+	PROF_SCOPE();
+
+	for ( uint32_t r = 0; r < spModel->GetRenderableCount(); r++ )
+	{
+		MeshPtr* mesh = (MeshPtr*)spModel->GetRenderable( r );
+
+		Assert( mesh );
+
+		if ( mesh == nullptr )
+			continue;
+
+		auto& verts = mesh->GetVertices();
+		auto& ind = mesh->GetIndices();
+
+		JPH::uint32 origSize = (JPH::uint32)srVerts.size();
+
+		// TODO: do these faster, memcpy the indices maybe?
+		srVerts.resize( origSize + verts.size() );
+		// std::memcpy( srVerts.data() + origSize, verts.data(), verts.size() * sizeof( );
+
+		for ( size_t i = 0; i < verts.size(); i++ )
+		{
+			// srVerts.emplace_back( toJoltFl( verts[i].pos ) );
+			srVerts[origSize + i] = toJoltFl( verts[i].pos );
+		}
+
+		for ( size_t i = 0; i < ind.size(); i += 3 )
+		{
+			srInd.emplace_back(
+			 	origSize + ind[i],
+			 	origSize + ind[i + 1],
+			 	origSize + ind[i + 2]
+			);
+		}
+	}
 }
 
 
@@ -821,17 +884,32 @@ JPH::ShapeSettings* PhysicsEnvironment::LoadModel( const PhysicsShapeInfo& physI
 
 		case PhysShapeType::Mesh:
 		{
-			// Create an array of triangles
+#if 1
+			std::vector< JPH::Float3 > verts;
+			std::vector< JPH::IndexedTriangle > ind;
+
+			GetModelInd( physInfo.aMeshData.apModel, verts, ind );
+
+			if ( ind.empty() )
+			{
+				LogWarn( gPhysicsChannel, "No vertices in model? - \"%s\"\n", physInfo.aMeshData.apModel->aPath.c_str() );
+				return nullptr;
+			}
+
+			return new JPH::MeshShapeSettings( verts, ind );
+#else
 			std::vector< JPH::Triangle > tris;
+
 			GetModelTris( physInfo.aMeshData.apModel, tris );
 
 			if ( tris.empty() )
 			{
-				LogWarn( gPhysicsChannel, "No tris in model? - \"%s\"\n", physInfo.aMeshData.apModel->aPath.c_str() );
+				LogWarn( gPhysicsChannel, "No vertices in model? - \"%s\"\n", physInfo.aMeshData.apModel->aPath.c_str() );
 				return nullptr;
 			}
 
 			return new JPH::MeshShapeSettings( tris );
+#endif
 		}
 
 		default:

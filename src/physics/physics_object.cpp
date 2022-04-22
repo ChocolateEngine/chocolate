@@ -81,18 +81,27 @@ void PhysicsObject::Activate( bool active )
 }
 
 
-void PhysicsObject::SetAlwaysActive( bool alwaysActive )
-{
-}
-
-
+// IDEA: maybe make an object layer for this?
 void PhysicsObject::SetCollisionEnabled( bool enable )
 {
+	apEnv->apPhys->GetBodyInterface().SetObjectLayer(
+		apBody->GetID(),
+		enable ? aOrigLayer : ObjLayer_NoCollide
+	);
 }
 
 
-void PhysicsObject::SetContinuousCollisionEnabled( bool enable )
+void PhysicsObject::SetMotionQuality( PhysMotionQuality quality )
 {
+	auto motion = apBody->GetMotionProperties();
+	motion->SetMotionQuality( (JPH::EMotionQuality)quality );
+}
+
+
+PhysMotionQuality PhysicsObject::GetMotionQuality()
+{
+	auto motion = apBody->GetMotionProperties();
+	return (PhysMotionQuality)motion->GetMotionQuality();
 }
 
 

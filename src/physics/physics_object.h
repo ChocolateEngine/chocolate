@@ -20,13 +20,11 @@ public:
 	void                  SetPos( const glm::vec3& pos, bool activate = true ) override;
 	void                  SetAng( const glm::vec3& ang, bool activate = true ) override;
 
-	// Transform&            GetWorldTransform() override;
-	// void                  SetWorldTransform( const Transform& transform ) override;
-
 	void                  Activate( bool active ) override;
-	void                  SetAlwaysActive( bool alwaysActive ) override;
 	void                  SetCollisionEnabled( bool enable ) override;
-	void                  SetContinuousCollisionEnabled( bool enable ) override;
+
+	void                  SetMotionQuality( PhysMotionQuality sQuality ) override;
+	PhysMotionQuality     GetMotionQuality() override;
 
 	void                  SetScale( const glm::vec3& scale ) override;
 
@@ -86,6 +84,7 @@ public:
 
 	// The layer the body is in
 	JPH::ObjectLayer      aLayer;
+	JPH::ObjectLayer      aOrigLayer;  // for when you turn collision on or off, kinda awful
 
 	// um
 	PhysicsEnvironment*   apEnv = nullptr;

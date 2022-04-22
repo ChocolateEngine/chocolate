@@ -48,22 +48,6 @@
 #include "graphics/imesh.h"
 
 
-#if 0
-GLM_FUNC_DECL GLM_CONSTEXPR mat(
-	X1 const& x1, Y1 const& y1, Z1 const& z1, W1 const& w1,
-	X2 const& x2, Y2 const& y2, Z2 const& z2, W2 const& w2,
-	X3 const& x3, Y3 const& y3, Z3 const& z3, W3 const& w3,
-	X4 const& x4, Y4 const& y4, Z4 const& z4, W4 const& w4);
-
-template<typename V1, typename V2, typename V3, typename V4>
-GLM_FUNC_DECL GLM_CONSTEXPR mat(
-	vec<4, V1, Q> const& v1,
-	vec<4, V2, Q> const& v2,
-	vec<4, V3, Q> const& v3,
-	vec<4, V4, Q> const& v4);
-#endif
-
-
 inline glm::mat4 fromJolt( const JPH::Mat44& from ) {
 	return glm::mat4(
 		from(0, 0), from(1, 0), from(2, 0), from(3, 0),
@@ -99,6 +83,10 @@ inline JPH::Quat toJolt( const glm::quat& from ) {
 
 inline JPH::Vec3 toJolt( const glm::vec3& from ) {
 	return JPH::Vec3( from.x, from.y, from.z );
+}
+
+inline JPH::Float3 toJoltFl( const glm::vec3& from ) {
+	return JPH::Float3( from.x, from.y, from.z );
 }
 
 
@@ -205,10 +193,12 @@ extern BaseGraphicsSystem* graphics;
 // layers if you want. E.g. you could have a layer for high detail collision (which is not used by the physics simulation
 // but only if you do collision testing).
 
+// TODO: have the game be able to override or entirely handle these
 enum : JPH::ObjectLayer
 {
 	ObjLayer_Stationary = 0,
 	ObjLayer_Moving,
+	ObjLayer_NoCollide,
 	ObjLayer_Count,
 };
 
@@ -221,6 +211,7 @@ enum : JPH::ObjectLayer
 
 extern JPH::BroadPhaseLayer BroadPhase_Stationary;
 extern JPH::BroadPhaseLayer BroadPhase_Moving;
+extern JPH::BroadPhaseLayer BroadPhase_NoCollide;
 
 
 // other
