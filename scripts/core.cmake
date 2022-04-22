@@ -46,11 +46,16 @@ add_compile_definitions(
 	#GLM_FORCE_ALIGNED
 )
 
-if( CMAKE_BUILD_TYPE STREQUAL Debug )
-	add_compile_definitions( "DEBUG=1" )
-else()
-	add_compile_definitions( "NDEBUG=1" )
-endif()
+
+set( COMPILE_DEF_DEBUG "DEBUG=1" )
+set( COMPILE_DEF_RELEASE "NDEBUG=1" )
+
+# NOTE: won't work for everything, really dumb
+add_compile_definitions(
+	"$<$<CONFIG:Debug>:${COMPILE_DEF_DEBUG}>"
+	"$<$<CONFIG:Release>:${COMPILE_DEF_RELEASE}>"
+	"$<$<CONFIG:RelWithDebInfo>:${COMPILE_DEF_RELEASE}>"
+)
 
 
 # Compiler/Platform specifc options
@@ -65,7 +70,7 @@ if( MSVC )
 		${CH_THIRDPARTY}/glm
 		${CH_THIRDPARTY}/SDL2/include
 	)
-	
+
 	add_compile_definitions(
 		NOMINMAX
 		_CRT_SECURE_NO_WARNINGS
@@ -76,6 +81,7 @@ if( MSVC )
 	# Remove default warning level from CMAKE_CXX_FLAGS
 	string ( REGEX REPLACE "/W[0-4]" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}" )
 
+	# TODO: fix this for normal visual studio builds
 	if( CMAKE_BUILD_TYPE STREQUAL Debug )
 		add_compile_options( "/Od" )  # no optimizations
 		add_compile_options( "/ZI" )  # edit and continue (TODO: DO THIS RIGHT PLEASE)

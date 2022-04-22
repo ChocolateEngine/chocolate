@@ -15,14 +15,14 @@ link_libraries( Core )
 
 # this is really stupid
 if ( MSVC )
-	set( COMPILE_OPTION_DEBUG "/MTd" )
-	set( COMPILE_OPTION_RELEASE "/MT" )
-	
+	set( COMPILE_OPTION_MT_DEBUG "/MTd" )
+	set( COMPILE_OPTION_MT_RELEASE "/MT" )
+
 	# NOTE: won't work for everything, really dumb
 	add_compile_options(
-	    "$<$<CONFIG:Debug>:${COMPILE_OPTION_DEBUG}>"
-	    "$<$<CONFIG:Release>:${COMPILE_OPTION_RELEASE}>"
-	    "$<$<CONFIG:RelWithDebInfo>:${COMPILE_OPTION_RELEASE}>"
+	    "$<$<CONFIG:Debug>:${COMPILE_OPTION_MT_DEBUG}>"
+	    "$<$<CONFIG:Release>:${COMPILE_OPTION_MT_RELEASE}>"
+	    "$<$<CONFIG:RelWithDebInfo>:${COMPILE_OPTION_MT_RELEASE}>"
 	)
 endif()
 
