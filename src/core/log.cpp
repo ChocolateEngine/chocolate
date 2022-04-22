@@ -277,9 +277,21 @@ public:
             {
                 default:
                 case LogType::Normal:
-                case LogType::Dev:
                 case LogType::Input:
                 case LogType::Raw:
+                    LogSetColor( channel->aColor );
+                    fputs( log.aFormatted.c_str(), stdout );
+                    fflush( stdout );
+                    LogSetColor( LogColor::Default );
+                    break;
+
+                case LogType::Dev:
+                case LogType::Dev2:
+                case LogType::Dev3:
+                case LogType::Dev4:
+                    if ( !DevLevelVisible( log ) )
+                        break;
+
                     LogSetColor( channel->aColor );
                     fputs( log.aFormatted.c_str(), stdout );
                     fflush( stdout );
