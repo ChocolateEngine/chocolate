@@ -4,22 +4,66 @@
 #include <set>
 
 LOG_REGISTER_CHANNEL( Device, LogColor::Blue );
-LOG_REGISTER_CHANNEL( Validation, LogColor::Blue );
+LOG_REGISTER_CHANNEL( Vulkan, LogColor::Blue );
+
+
+#ifdef NDEBUG
+const bool 	gEnableValidationLayers = false;
+bool g_vk_verbose = false;
+#else
+const bool 	gEnableValidationLayers = cmdline->Find( "-vlayers" );
+CONVAR( g_vk_verbose, "1" );
+#endif
+
+
+// lengths to chop off from warnings
+
+// "Validation Performance Warning: "
+int gVkStripPerf = 32;
+
+// "Validation Error: "
+int gVkStripError = 18;
+
+
 
 VKAPI_ATTR VkBool32 VKAPI_CALL Device::DebugCallback( VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, VkDebugUtilsMessageTypeFlagsEXT messageType,
 					      const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData )
 {
-	static bool dumpVLayers = cmdline->Find( "-dump-vlayers" ) || cmdline->Find( "-vlayers" );
-	if ( dumpVLayers )
-	{
-		const Log* log = LogGetLastLog();
+	if ( !gEnableValidationLayers )
+		return VK_FALSE;
 
-		// blech
-		if ( log && log->aChannel != gValidationChannel )
-			LogEx( gValidationChannel, LogType::Raw, "\n" );
+	const Log* log = LogGetLastLog();
+
+	// blech
+	if ( log && log->aChannel != gVulkanChannel )
+		LogEx( gVulkanChannel, LogType::Raw, "\n" );
+
+	std::string formatted;
 		
-		LogMsg( gValidationChannel, "%s\n\n", pCallbackData->pMessage );
+	if ( messageType & VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT )
+		vstring( formatted, "Validation: %s\n\n", pCallbackData->pMessage + gVkStripError );
+	
+	else if ( messageType & VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT )
+		vstring( formatted, "Performance: %s\n\n", pCallbackData->pMessage + gVkStripPerf );
+		
+	else
+		vstring( formatted, "%s\n\n", pCallbackData->pMessage );
+
+
+	if ( messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT )
+	{
+		if ( g_vk_verbose )
+			LogPutsDev( gVulkanChannel, 1, formatted.c_str() );
 	}
+
+	else if ( messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT )
+		LogEx( gVulkanChannel, LogType::Error, formatted.c_str() );
+
+	else if ( messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT )
+		LogEx( gVulkanChannel, LogType::Warning, formatted.c_str() );
+
+	else
+		LogPuts( gVulkanChannel, formatted.c_str() );
 
 	return VK_FALSE;
 }
@@ -287,6 +331,12 @@ void Device::InitCommandPool(  )
 
 bool Device::CheckValidationLayerSupport(  )
 {
+	// just gonna put this here to make sure we don't use this old one anymore
+	if ( cmdline->Find( "-dump-vlayers" ) )
+	{
+		LogFatal( " *** Use \"-vlayers\" instead of \"-dump-vlayers\" *** \n" );
+	}
+
 	bool layerFound;
 	unsigned int layerCount;
 	vkEnumerateInstanceLayerProperties( &layerCount, NULL );
