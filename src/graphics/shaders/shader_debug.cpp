@@ -244,31 +244,18 @@ void ShaderDebug::CreateGraphicsPipeline(  )
 }
 
 
-void ShaderDebug::UpdateBuffers( uint32_t sCurrentImage, BaseRenderable* spRenderable )
-{
-}
-
-
-void ShaderDebug::Bind( VkCommandBuffer c, uint32_t cIndex )
-{
-	BaseShader::Bind( c, cIndex );
-}
-
-
 void ShaderDebug::Draw( BaseRenderable* renderable, VkCommandBuffer c, uint32_t cIndex )
 {
 	// just kinda hope that it's a mesh for now to be slightly faster lmao, graphics 2 will have this done much better
 	// IMesh* mesh = dynamic_cast<IMesh*>(renderable);
 	IMesh* mesh = static_cast<IMesh*>(renderable);
 
-	// Bind the mesh's vertex buffer
-	VkBuffer 	vBuffers[  ] 	= { mesh->GetVertexBuffer() };
-	VkDeviceSize 	offsets[  ] 	= { 0 };
-	vkCmdBindVertexBuffers( c, 0, 1, vBuffers, offsets );
-
 	CmdPushConst( renderable, c, cIndex );
 
-	vkCmdDraw( c, (uint32_t)mesh->GetVertices().size(), 1, 0, 0);
+	if ( matsys->HasIndexBuffer( renderable ) )
+		vkCmdDraw( c, (uint32_t)mesh->GetVertices().size(), 1, 0, 0 );
+	else
+		vkCmdDraw( c, (uint32_t)mesh->GetVertices().size(), 1, 0, 0 );
 
 	gModelDrawCalls++;
 	gVertsDrawn += mesh->GetVertices().size();

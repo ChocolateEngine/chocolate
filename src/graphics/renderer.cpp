@@ -148,6 +148,8 @@ void RenderWorker( int sThreadId )
 // TEST BASIC MULTITHREADING, MOVE TO CH_CORE LATER AND PROPERLY GET CPU THREAD COUNT
 std::vector< std::thread > gThreadPool;
 
+// HACK
+BaseShader* gpSkybox = nullptr;
 
 void Renderer::EnableImgui(  )
 {
@@ -170,6 +172,8 @@ void Renderer::InitVulkan(  )
 	matsys->apSampler = &aTextureSampler;
 	matsys->Init();
 
+	gpSkybox = matsys->GetShader( "skybox" );
+
 	gLayoutBuilder.BuildLayouts(  );
 	gPipelineBuilder.BuildPipelines(  );
 
@@ -190,6 +194,7 @@ bool Renderer::HasStencilComponent( VkFormat sFmt )
 {
 	return sFmt == VK_FORMAT_D32_SFLOAT_S8_UINT || sFmt == VK_FORMAT_D24_UNORM_S8_UINT;
 }
+
 
 void Renderer::InitCommandBuffers(  )
 {
@@ -270,18 +275,19 @@ void Renderer::InitCommandBuffers(  )
 		renderPassInfo.renderArea.offset = { 0, 0 };
 		renderPassInfo.renderArea.extent = SWAPCHAIN.GetExtent(  );
 
-		std::array< VkClearValue, 2 > clearValues{  };
-		clearValues[ 0 ].color = { 0.0f, 0.0f, 0.0f, 1.0f };
-		clearValues[ 1 ].depthStencil = { 1.0f, 0 };
-			
-		renderPassInfo.clearValueCount 	 = ( uint32_t )clearValues.size(  );
-		renderPassInfo.pClearValues 	 = clearValues.data(  );
-
-		size_t renderIndex = 0;
+		// HACK: check for skybox
+		bool drawSkybox = false;
 
 		for ( auto& [shader, renderList]: matsys->aDrawList )
 		{
-			renderIndex = 0;
+			// if ( shader->aName == strSkybox )
+			if ( shader == gpSkybox )
+			{
+				drawSkybox = true;
+				continue;
+			}
+			
+			size_t renderIndex = 0;
 			for ( auto& renderable : renderList )
 			{
 				Material* mat = (Material*)renderable->GetMaterial();
@@ -289,20 +295,32 @@ void Renderer::InitCommandBuffers(  )
 			}
 		}
 
+		// if we have a skybox, don't bother to clear the previous frame
+		// um, why does not clearing it crash it
+		// maybe something when creating an attachment description idk
+		// if ( !drawSkybox )
+		if ( true )
+		{
+			std::array< VkClearValue, 2 > clearValues{  };
+			clearValues[ 0 ].color = { 0.0f, 0.0f, 0.0f, 1.0f };
+			clearValues[ 1 ].depthStencil = { 1.0f, 0 };
+
+			renderPassInfo.clearValueCount 	 = ( uint32_t )clearValues.size(  );
+			renderPassInfo.pClearValues 	 = clearValues.data(  );
+		}
+
 		vkCmdBeginRenderPass( aCommandBuffers[ i ], &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE );
 
 		// IDEA: make a batched mesh vector so that way we can bind everything needed, and then just draw draw draw draw
 
-		BaseShader* skybox = nullptr;
-		renderIndex = 0;
+		size_t renderIndex = 0;
 
 		// TODO: still could be better, but it's better than what we used to have
 		for ( auto& [shader, renderList]: matsys->aDrawList )
 		{
 			// HACK HACK
-			if ( shader->aName == "skybox" )
+			if ( shader == gpSkybox )
 			{
-				skybox = shader;
 				renderIndex++;
 				continue;
 			}
@@ -317,11 +335,11 @@ void Renderer::InitCommandBuffers(  )
 		}
 
 		// HACK HACK: Get skybox to draw last so it's the cheapest
-		if ( skybox )
+		if ( drawSkybox )
 		{
-			skybox->Bind( aCommandBuffers[i], i );
+			gpSkybox->Bind( aCommandBuffers[i], i );
 
-			for ( auto& renderable: matsys->aDrawList[skybox] )
+			for ( auto& renderable: matsys->aDrawList[gpSkybox] )
 			{
 				matsys->DrawRenderable( 0, renderable, aCommandBuffers[i], i );
 			}
@@ -502,7 +520,7 @@ bool Renderer::LoadModel( Model* sModel, const std::string &srPath )
 bool Renderer::LoadSprite( Sprite &srSprite, const String &srSpritePath )
 {
 	srSprite.SetMaterial( matsys->CreateMaterial() );
-	srSprite.GetMaterial()->SetShader("basic_2d");
+	srSprite.GetMaterial()->SetShader( "basic_2d" );
 	srSprite.GetMaterial()->SetVar( "diffuse", matsys->CreateTexture( srSpritePath ) );
 
 	std::vector< vertex_2d_t > aVertices =

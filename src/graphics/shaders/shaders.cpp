@@ -49,6 +49,28 @@ void BaseShader::CreateLayouts(  )
 }
 
 
+void BaseShader::BindBuffers( BaseRenderable* renderable, VkCommandBuffer c, uint32_t cIndex )
+{
+	const std::vector< RenderableBuffer* >& renderBuffers = matsys->GetRenderBuffers( renderable );
+
+	// Bind the mesh's vertex and index buffers
+	for ( RenderableBuffer* buffer : renderBuffers )
+	{
+		if ( buffer->aFlags & gVertexBufferFlags )
+		{
+			VkBuffer        vBuffers[]  = { buffer->aBuffer };
+			VkDeviceSize	offsets[]   = { 0 };
+
+			vkCmdBindVertexBuffers( c, 0, 1, vBuffers, offsets );
+		}
+		else if ( buffer->aFlags & gIndexBufferFlags )
+		{
+			vkCmdBindIndexBuffer( c, buffer->aBuffer, 0, VK_INDEX_TYPE_UINT32 );
+		}
+	}
+}
+
+
 void BaseShader::Bind( VkCommandBuffer c, uint32_t cIndex )
 {
 	vkCmdBindPipeline( c, VK_PIPELINE_BIND_POINT_GRAPHICS, aPipeline );

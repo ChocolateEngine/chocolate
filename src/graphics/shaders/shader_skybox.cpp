@@ -190,11 +190,6 @@ void ShaderSkybox::CreateGraphicsPipeline(  )
 }
 
 
-void ShaderSkybox::UpdateBuffers( uint32_t sCurrentImage, BaseRenderable* spRenderable )
-{
-}
-
-
 // KTX fails to load this and i don't feel like figuring out why right now
 constexpr const char* gFallback = "materials/base/black.png";
 
@@ -222,15 +217,6 @@ void ShaderSkybox::Draw( size_t renderableIndex, BaseRenderable* renderable, VkC
 
 	assert(mesh != nullptr);
 
-	// Bind the mesh's vertex and index buffers
-	VkBuffer 	vBuffers[  ] 	= { mesh->GetVertexBuffer()};
-	VkDeviceSize 	offsets[  ] 	= { 0 };
-	vkCmdBindVertexBuffers( c, 0, 1, vBuffers, offsets );
-
-	VkBuffer indexBuffer = mesh->GetIndexBuffer();
-	if ( indexBuffer )
-		vkCmdBindIndexBuffer( c, indexBuffer, 0, VK_INDEX_TYPE_UINT32 );
-
 	SkyboxPushConst* p = (SkyboxPushConst*)(aDrawDataPool.GetStart() + (sizeof( SkyboxPushConst ) * renderableIndex));
 
 	vkCmdPushConstants(
@@ -244,7 +230,7 @@ void ShaderSkybox::Draw( size_t renderableIndex, BaseRenderable* renderable, VkC
 
 	vkCmdBindDescriptorSets( c, VK_PIPELINE_BIND_POINT_GRAPHICS, aPipelineLayout, 0, 1, sets, 0, NULL );
 
-	if ( indexBuffer )
+	if ( matsys->HasIndexBuffer( renderable ) )
 		vkCmdDrawIndexed( c, (uint32_t)mesh->GetIndices().size(), 1, 0, 0, 0 );
 	else
 		vkCmdDraw( c, (uint32_t)mesh->GetVertices().size(), 1, 0, 0 );

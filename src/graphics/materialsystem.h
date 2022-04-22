@@ -15,6 +15,19 @@ TODO: move this to graphics level abstraction so the game can use this
 #include "textures/itextureloader.h"
 
 
+// for vertex and index buffers
+struct RenderableBuffer
+{
+	VkBufferUsageFlags      aFlags     = 0;
+	VkBuffer                aBuffer    = nullptr;
+	VkDeviceMemory          aBufferMem = nullptr;
+};
+
+
+constexpr VkBufferUsageFlags gVertexBufferFlags = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+constexpr VkBufferUsageFlags gIndexBufferFlags  = VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
+
+
 class MaterialSystem: public IMaterialSystem
 {
 	using Sets   = std::vector< VkDescriptorSet >;
@@ -58,9 +71,27 @@ public:
 	void                        CreateVertexBuffer( BaseRenderable* renderable ) override;
 	void                        CreateIndexBuffer( BaseRenderable* renderable ) override;
 
+	/* Check if a Renderable has a Vertex and/or Index buffer. */
+	bool                        HasVertexBuffer( BaseRenderable* renderable ) override;
+	bool                        HasIndexBuffer( BaseRenderable* renderable ) override;
+
 	/* Free a Vertex and Index buffer for a Renderable. */
 	void                        FreeVertexBuffer( BaseRenderable* renderable ) override;
 	void                        FreeIndexBuffer( BaseRenderable* renderable ) override;
+
+	// Free all buffers from this renderable
+	void                        FreeAllBuffers( BaseRenderable* renderable ) override;
+
+	// New buffer methods
+	// void                        CreateBuffers( BaseRenderable* renderable, RenderableBufferFlags flags ) override;
+	// bool                        HasBuffers( BaseRenderable* renderable, RenderableBufferFlags flags ) override;
+	// void                        FreeBuffers( BaseRenderable* renderable, RenderableBufferFlags flags ) override;
+
+	/* Get Vector of Buffers for a Renderable. */
+	const std::vector< RenderableBuffer* >& GetRenderBuffers( BaseRenderable* renderable );
+
+	// Does a buffer exist with these flags for this renderable already?
+	bool                        HasBufferInternal( BaseRenderable* renderable, VkBufferUsageFlags flags );
 
 	void                        ReInitSwapChain();
 	void                        DestroySwapChain();
@@ -136,6 +167,8 @@ private:
 	std::unordered_map< std::string, BaseShader* >          aShaders;
 
 	std::vector< BaseRenderable* >                          aRenderables;
+
+	std::unordered_map< size_t, std::vector< RenderableBuffer* > >   aRenderBuffers;
 
 	//std::vector< BaseRenderable* >                          aDrawList;
 	std::unordered_map< BaseShader*, std::vector< BaseRenderable* > > aDrawList;

@@ -22,40 +22,12 @@ public:
 
 	virtual glm::mat4               GetModelMatrix() { return glm::mat4( 1.f ); };
 
-	virtual VkBuffer&               GetVertexBuffer() = 0;
-	virtual VkBuffer&               GetIndexBuffer() = 0;
-
-	virtual VkDeviceMemory&         GetVertexBufferMem() = 0;
-	virtual VkDeviceMemory&         GetIndexBufferMem() = 0;
-
 	virtual IMaterial*              GetMaterial() = 0;
 	virtual void                    SetMaterial( IMaterial* mat ) = 0;
 
 	virtual void                    SetShader( const char* name ) = 0;
 	
 	virtual const std::vector< uint32_t >& GetIndices() = 0;
-
-#if 0
-	// this stuff will only be on the client (Meshes on the server won't inherit this probably? idk),
-	// so i can just use the address of the "this" pointer for it
-	constexpr inline size_t         GetID(  ) { return (size_t)this; }
-
-	IMaterial*                      apMaterial = nullptr;
-
-	// Set the shader for the material by the shader name
-	// inline void                     SetShader( const char* name ) { if ( apMaterial ) apMaterial->SetShader( name ); };
-
-	// TODO: remove this from BaseRenderable, really shouldn't have this,
-	// gonna have to have some base types for this so game can use this
-	// or we just store this in graphics like how we store uniform buffers
-	VkBuffer                        aVertexBuffer = nullptr;
-	VkBuffer                        aIndexBuffer = nullptr;
-	VkDeviceMemory                  aVertexBufferMem = nullptr;
-	VkDeviceMemory                  aIndexBufferMem = nullptr;
-
-	//std::vector< VERT_TYPE >        aVertices;
-	std::vector< uint32_t >         aIndices;
-#endif
 };
 
 
@@ -69,30 +41,21 @@ public:
 };
 
 
-/*struct HTexture final
-{
-	uint32_t aHandle;
-
-	bool IsHandleValid() const { return aHandle != 0; }
-
-	inline uint32_t GetIndex()
-	{
-		return aHandle & gStandardIndexMask;
-	}
-
-	inline uint32_t GetMagic()
-	{
-		const uint32_t standardMagicNumberMask = ~gStandardIndexMask;
-		return ( aHandle & standardMagicNumberMask ) >> 16;
-	}
-};*/
-
-
-//template class BaseRenderable< vertex_2d_t >;
-//template class BaseRenderable< vertex_3d_t >;
-
 class IMesh;
 class Sprite;
+
+
+using RenderableBufferFlags = u32;
+
+
+// TODO: use this later probably idk
+enum : RenderableBufferFlags
+{
+	RenderableBuffer_None       = 0,
+	RenderableBuffer_Vertex     = (1 << 0),
+	RenderableBuffer_Index      = (1 << 1),
+	RenderableBuffer_Uniform    = (1 << 2),
+};
 
 
 class IMaterialSystem
@@ -128,13 +91,24 @@ public:
 	/* Find an already loaded texture in vram (useless, use the above func, it will do the check for you) */
 	// virtual TextureDescriptor          *FindTexture( const std::string &path ) = 0;
 
-	/* Create a Vertex and Index buffer for a Renderable. */
+	// Create a Vertex and Index buffer for a Renderable.
 	virtual void                        CreateVertexBuffer( BaseRenderable* renderable ) = 0;
 	virtual void                        CreateIndexBuffer( BaseRenderable* renderable ) = 0;
 
-	/* Free a Vertex and Index buffer for a Renderable. */
+	// Check if a Renderable has a Vertex and/or Index buffer.
+	virtual bool                        HasVertexBuffer( BaseRenderable* renderable ) = 0;
+	virtual bool                        HasIndexBuffer( BaseRenderable* renderable ) = 0;
+
+	// Free a Vertex and Index buffer for a Renderable.
 	virtual void                        FreeVertexBuffer( BaseRenderable* renderable ) = 0;
 	virtual void                        FreeIndexBuffer( BaseRenderable* renderable ) = 0;
+
+	virtual void                        FreeAllBuffers( BaseRenderable* renderable ) = 0;
+
+	// New buffer methods
+	// virtual void                        CreateBuffers( BaseRenderable* renderable, RenderableBufferFlags flags ) = 0;
+	// virtual RenderableBufferFlags       GetBuffers( BaseRenderable* renderable ) = 0;
+	// virtual void                        FreeBuffers( BaseRenderable* renderable, RenderableBufferFlags flags ) = 0;
 
 	// Call this on renderable creation to assign it an Id
 	virtual void                        RegisterRenderable( BaseRenderable* renderable ) = 0;

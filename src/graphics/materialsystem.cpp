@@ -328,46 +328,168 @@ int MaterialSystem::GetTextureId( Texture *spTexture )
 
 
 // TODO: i need to make BaseRenderable a template for the vertex type which i don't feel like doing right now so
-void MaterialSystem::CreateVertexBuffer( BaseRenderable* itemBase )
+void MaterialSystem::CreateVertexBuffer( BaseRenderable* renderable )
 {
-	if ( IMesh* item = dynamic_cast<IMesh*>(itemBase) )
-		InitTexBuffer( item->GetVertices(), item->GetVertexBuffer(), item->GetVertexBufferMem(), VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
+	if ( HasBufferInternal( renderable, gVertexBufferFlags ) )
+	{
+		LogWarn( gGraphicsChannel, "Vertex Buffer already exists for renderable\n" );
+		Assert( false );
+		return;
+	}
 
-	else if ( ISkyboxMesh* item = dynamic_cast<ISkyboxMesh*>(itemBase) )
-		InitTexBuffer( item->GetVertices(), item->GetVertexBuffer(), item->GetVertexBufferMem(), VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
+	// create a new buffer
+	RenderableBuffer* buffer = new RenderableBuffer;
+	buffer->aFlags = gVertexBufferFlags;
+
+	if ( IMesh* item = dynamic_cast<IMesh*>(renderable) )
+		InitTexBuffer( item->GetVertices(), buffer->aBuffer, buffer->aBufferMem, VK_BUFFER_USAGE_TRANSFER_DST_BIT | buffer->aFlags );
+
+	else if ( ISkyboxMesh* item = dynamic_cast<ISkyboxMesh*>(renderable) )
+		InitTexBuffer( item->GetVertices(), buffer->aBuffer, buffer->aBufferMem, VK_BUFFER_USAGE_TRANSFER_DST_BIT | buffer->aFlags );
+
+	else if ( Sprite* item = dynamic_cast<Sprite*>(renderable) )
+		InitTexBuffer( item->GetVertices(), buffer->aBuffer, buffer->aBufferMem, VK_BUFFER_USAGE_TRANSFER_DST_BIT | buffer->aFlags );
 	
-	//else if ( Sprite* item = dynamic_cast<Sprite*>(itemBase) )
-	//	InitTexBuffer( item->GetVertices(), item->GetVertexBuffer(), item->GetVertexBufferMem(), VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
-
 	// just fucking exit
-	else throw std::runtime_error( "[MaterialSystem::CreateVertexBuffer] oh god oh fuck how the fuck do i design this properly\n  JUST USE IMesh or Sprite AAAAA\n" );
+	else
+		LogFatal( gGraphicsChannel, "MaterialSystem::CreateVertexBuffer: oh god oh fuck how the fuck do i design this properly\n  JUST USE IMesh or Sprite AAAAA\n" );
+
+	// store this buffer
+	aRenderBuffers[renderable->GetID()].push_back(buffer);
 }
 
 
-void MaterialSystem::CreateIndexBuffer( BaseRenderable* item )
+void MaterialSystem::CreateIndexBuffer( BaseRenderable* renderable )
 {
-	if ( item->GetIndices().size() > 0 )
-		InitTexBuffer( item->GetIndices(), item->GetIndexBuffer(), item->GetIndexBufferMem(), VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT);
+	if ( HasBufferInternal( renderable, gIndexBufferFlags ) )
+	{
+		LogWarn( gGraphicsChannel, "Vertex Buffer already exists for renderable\n" );
+		Assert( false );
+		return;
+	}
+
+	// create a new buffer
+	RenderableBuffer* buffer = new RenderableBuffer;
+	buffer->aFlags = gIndexBufferFlags;
+
+	if ( renderable->GetIndices().size() > 0 )
+		InitTexBuffer( renderable->GetIndices(), buffer->aBuffer, buffer->aBufferMem, VK_BUFFER_USAGE_TRANSFER_DST_BIT | buffer->aFlags );
+
+	// store this buffer
+	aRenderBuffers[renderable->GetID()].push_back( buffer );
+}
+
+
+bool MaterialSystem::HasVertexBuffer( BaseRenderable* item )
+{
+	return (HasBufferInternal( item, gVertexBufferFlags ));
+}
+
+
+bool MaterialSystem::HasIndexBuffer( BaseRenderable* item )
+{
+	return (HasBufferInternal( item, gIndexBufferFlags ));
 }
 
 
 void MaterialSystem::FreeVertexBuffer( BaseRenderable* item )
 {
-	vkDestroyBuffer( DEVICE, item->GetVertexBuffer(), NULL);
-	vkFreeMemory( DEVICE, item->GetVertexBufferMem(), NULL);
+	auto it = aRenderBuffers.find( item->GetID() );
 
-	item->GetVertexBuffer() = nullptr;
-	item->GetVertexBufferMem() = nullptr;
+	if ( it == aRenderBuffers.end() )
+		return;
+
+	for ( size_t i = 0; i < it->second.size(); i++ )
+	{
+		RenderableBuffer* buffer = it->second[i];
+		if ( buffer->aFlags & gVertexBufferFlags )
+		{
+			vkDestroyBuffer( DEVICE, buffer->aBuffer, NULL );
+			vkFreeMemory( DEVICE, buffer->aBufferMem, NULL );
+
+			vec_remove_index( it->second, i );
+
+			delete buffer;
+			return;
+		}
+	}
 }
 
 
 void MaterialSystem::FreeIndexBuffer( BaseRenderable* item )
 {
-	vkDestroyBuffer( DEVICE, item->GetIndexBuffer(), NULL);
-	vkFreeMemory( DEVICE, item->GetIndexBufferMem(), NULL);
+	auto it = aRenderBuffers.find( item->GetID() );
 
-	item->GetIndexBuffer() = nullptr;
-	item->GetIndexBufferMem() = nullptr;
+	if ( it == aRenderBuffers.end() )
+		return;
+
+	for ( size_t i = 0; i < it->second.size(); i++ )
+	{
+		RenderableBuffer* buffer = it->second[i];
+		if ( buffer->aFlags & gIndexBufferFlags )
+		{
+			vkDestroyBuffer( DEVICE, buffer->aBuffer, NULL );
+			vkFreeMemory( DEVICE, buffer->aBufferMem, NULL );
+
+			vec_remove_index( it->second, i );
+
+			delete buffer;
+			return;
+		}
+	}
+}
+
+
+void MaterialSystem::FreeAllBuffers( BaseRenderable* item )
+{
+	auto it = aRenderBuffers.find( item->GetID() );
+
+	if ( it == aRenderBuffers.end() )
+		return;
+
+	for ( size_t i = 0; i < it->second.size(); i++ )
+	{
+		RenderableBuffer* buffer = it->second[i];
+
+		vkDestroyBuffer( DEVICE, buffer->aBuffer, NULL );
+		vkFreeMemory( DEVICE, buffer->aBufferMem, NULL );
+
+		delete buffer;
+	}
+
+	aRenderBuffers.erase( it );
+}
+
+
+static std::vector< RenderableBuffer* > gRenderBufferEmpty;
+
+/* Get Vector of Buffers for a Renderable. */
+const std::vector< RenderableBuffer* >& MaterialSystem::GetRenderBuffers( BaseRenderable* renderable )
+{
+	auto it = aRenderBuffers.find( renderable->GetID() );
+
+	if ( it != aRenderBuffers.end() )
+		return it->second;
+
+	return gRenderBufferEmpty;
+}
+
+
+// Does a buffer exist with these flags for this renderable already?
+bool MaterialSystem::HasBufferInternal( BaseRenderable* renderable, VkBufferUsageFlags flags )
+{
+	auto it = aRenderBuffers.find( renderable->GetID() );
+
+	if ( it == aRenderBuffers.end() )
+		return false;
+
+	for ( RenderableBuffer* buffer : it->second )
+	{
+		if ( buffer->aFlags & flags )
+			return true;
+	}
+
+	return false;
 }
 
 
@@ -476,6 +598,7 @@ void MaterialSystem::DrawRenderable( BaseRenderable* renderable, VkCommandBuffer
 	if ( !mat )
 		return;
 
+	mat->apShader->BindBuffers( renderable, c, commandBufferIndex );
 	mat->apShader->Draw( renderable, c, commandBufferIndex );
 }
 
@@ -486,6 +609,7 @@ void MaterialSystem::DrawRenderable( size_t renderableIndex, BaseRenderable* ren
 	if ( !mat )
 		return;
 
+	mat->apShader->BindBuffers( renderable, c, commandBufferIndex );
 	mat->apShader->Draw( renderableIndex, renderable, c, commandBufferIndex );
 }
 
@@ -496,10 +620,7 @@ void MaterialSystem::DestroyRenderable( BaseRenderable* renderable )
 	if ( IMesh* mesh = dynamic_cast<IMesh*>( renderable ) )
 		MeshFreeOldResources( mesh );
 
-	FreeVertexBuffer( renderable );
-
-	if ( renderable->GetIndexBuffer() )
-		FreeIndexBuffer( renderable );
+	FreeAllBuffers( renderable );
 }
 
 

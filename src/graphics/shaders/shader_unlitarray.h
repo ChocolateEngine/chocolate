@@ -29,19 +29,13 @@ public:
 
 	virtual void        CreateGraphicsPipeline(  ) override;
 
-	virtual void        UpdateBuffers( uint32_t sCurrentImage, BaseRenderable* spRenderable ) override;
-
 	virtual void        Draw( size_t renderableIndex, BaseRenderable* renderable, VkCommandBuffer c, uint32_t commandBufferIndex ) override;
 
 	inline bool         UsesUniformBuffers(  ) override { return false; };
 
-	VkVertexInputBindingDescription                             GetBindingDesc(  );
-	std::array< VkVertexInputAttributeDescription, 4 >          GetAttributeDesc(  );
-
-	std::unordered_map< BaseRenderable*, UnlitArrayPushConstant* > aDrawData;
-	MemPool aDrawDataPool;
-
 	virtual void        AllocDrawData( size_t sRenderableCount ) override;
 	virtual void        PrepareDrawData( size_t renderableIndex, BaseRenderable* renderable, uint32_t commandBufferCount ) override;
+
+	MemPool aDrawDataPool;
 };
 

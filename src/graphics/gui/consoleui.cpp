@@ -417,7 +417,7 @@ void DrawLogChannelButtons()
 }
 
 
-LOG_CHANNEL( Validation );
+LOG_CHANNEL( Vulkan );
 
 
 LogColor GetConsoleTextColor( const Log& log )
@@ -433,7 +433,7 @@ LogColor GetConsoleTextColor( const Log& log )
 	else if ( log.aType == LogType::Error || log.aType == LogType::Fatal )
 		color = LOG_COLOR_ERROR;
 
-	else if ( (conui_colors == 2.f && log.aChannel == gValidationChannel) || conui_colors >= 3.f )
+	else if ( (conui_colors == 2.f && log.aChannel == gVulkanChannel) || conui_colors >= 3.f )
 		color = LogGetChannelColor( log.aChannel );
 
 	return color;

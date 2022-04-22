@@ -17,15 +17,7 @@ class IMesh: public BaseRenderable
 public:
 	virtual ~IMesh() = default;
 
-	virtual size_t                  GetID(  ) override { return (size_t)this; }
-
 	virtual glm::mat4               GetModelMatrix() { return glm::mat4( 1.f ); };
-
-	virtual VkBuffer&               GetVertexBuffer() override { return aVertexBuffer; };
-	virtual VkBuffer&               GetIndexBuffer() override { return aIndexBuffer; };
-
-	virtual VkDeviceMemory&         GetVertexBufferMem() override { return aVertexBufferMem; };
-	virtual VkDeviceMemory&         GetIndexBufferMem() override { return aIndexBufferMem; };
 
 	virtual IMaterial*              GetMaterial() override { return apMaterial; };
 	virtual void                    SetMaterial( IMaterial* mat ) override { apMaterial = mat; };
@@ -37,16 +29,6 @@ public:
 
 private:
 	IMaterial*                      apMaterial = nullptr;
-
-	// Set the shader for the material by the shader name
-
-	// TODO: remove this from BaseRenderable, really shouldn't have this,
-	// gonna have to have some base types for this so game can use this
-	// or we just store this in graphics like how we store uniform buffers
-	VkBuffer                        aVertexBuffer = nullptr;
-	VkBuffer                        aIndexBuffer = nullptr;
-	VkDeviceMemory                  aVertexBufferMem = nullptr;
-	VkDeviceMemory                  aIndexBufferMem = nullptr;
 
 	std::vector< vertex_3d_t >		aVertices;
 	std::vector< uint32_t >         aIndices;
@@ -64,14 +46,6 @@ class ISkyboxMesh: public BaseRenderable
 public:
 	virtual ~ISkyboxMesh() = default;
 
-	virtual size_t                  GetID(  ) override { return (size_t)this; }
-
-	virtual VkBuffer&               GetVertexBuffer() override { return aVertexBuffer; };
-	virtual VkBuffer&               GetIndexBuffer() override { return aIndexBuffer; };
-
-	virtual VkDeviceMemory&         GetVertexBufferMem() override { return aVertexBufferMem; };
-	virtual VkDeviceMemory&         GetIndexBufferMem() override { return aIndexBufferMem; };
-
 	virtual IMaterial*              GetMaterial() override { return apMaterial; };
 	virtual void                    SetMaterial( IMaterial* mat ) override { apMaterial = mat; };
 
@@ -88,10 +62,6 @@ private:
 	// TODO: remove this from BaseRenderable, really shouldn't have this,
 	// gonna have to have some base types for this so game can use this
 	// or we just store this in graphics like how we store uniform buffers
-	VkBuffer                        aVertexBuffer = nullptr;
-	VkBuffer                        aIndexBuffer = nullptr;
-	VkDeviceMemory                  aVertexBufferMem = nullptr;
-	VkDeviceMemory                  aIndexBufferMem = nullptr;
 
 	std::vector< vertex_cube_3d_t >	aVertices;
 	std::vector< uint32_t >         aIndices;
@@ -106,15 +76,9 @@ class MeshPtr: public IMesh
 public:
 	virtual ~MeshPtr() = default;
 
-	virtual size_t                  GetID(  ) override { return (size_t)this; }
+	virtual size_t                  GetID(  ) override { return apMesh->GetID(); }
 
 	virtual glm::mat4               GetModelMatrix() override;
-
-	virtual VkBuffer&               GetVertexBuffer() override { return apMesh->GetVertexBuffer(); };
-	virtual VkBuffer&               GetIndexBuffer() override { return apMesh->GetIndexBuffer(); };
-
-	virtual VkDeviceMemory&         GetVertexBufferMem() override { return apMesh->GetVertexBufferMem(); };
-	virtual VkDeviceMemory&         GetIndexBufferMem() override { return apMesh->GetIndexBufferMem(); };
 
 	virtual IMaterial*              GetMaterial() override { return apMesh->GetMaterial(); };
 	virtual inline void             SetShader( const char* name ) override { apMesh->SetShader( name ); };

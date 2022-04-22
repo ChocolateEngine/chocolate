@@ -53,6 +53,8 @@ public:
 		UpdateBuffers( sCurrentImage, 0, spRenderable );
 	}
 
+	virtual void                       BindBuffers( BaseRenderable* renderable, VkCommandBuffer c, uint32_t cIndex );
+
 	virtual void                       Bind( VkCommandBuffer c, uint32_t cIndex );
 	virtual void                       Draw( BaseRenderable* renderable, VkCommandBuffer c, uint32_t commandBufferIndex ) {};
 

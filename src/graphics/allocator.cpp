@@ -397,11 +397,13 @@ void InitImageViews( ImageViews &srSwapChainImageViews )
 
 void InitRenderPass(  )
 {
-	VkAttachmentDescription colorAttachment = AttachmentDescription( PSWAPCHAIN.GetFormat(  ), VK_ATTACHMENT_LOAD_OP_CLEAR,
+	VkAttachmentDescription colorAttachment = AttachmentDescription( PSWAPCHAIN.GetFormat(  ),
+											 VK_ATTACHMENT_LOAD_OP_CLEAR,
 											 VK_ATTACHMENT_STORE_OP_STORE,
 											 VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, gpDevice->GetSamples(  ) );
 	
-	VkAttachmentDescription depthAttachment = AttachmentDescription( FindDepthFormat(  ), VK_ATTACHMENT_LOAD_OP_CLEAR,
+	VkAttachmentDescription depthAttachment = AttachmentDescription( FindDepthFormat(  ),
+											 VK_ATTACHMENT_LOAD_OP_CLEAR,
 											 VK_ATTACHMENT_STORE_OP_DONT_CARE, 
 											 VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, gpDevice->GetSamples(  ) );
 	

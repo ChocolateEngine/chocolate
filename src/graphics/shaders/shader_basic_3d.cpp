@@ -93,6 +93,8 @@ public:
 	virtual void        UpdateBuffers( uint32_t sCurrentImage, BaseRenderable* spRenderable ) {};
 	virtual void        UpdateBuffers( uint32_t sCurrentImage, size_t renderableIndex, BaseRenderable* spRenderable ) override;
 
+	virtual void        Bind( VkCommandBuffer c, uint32_t cIndex ) override;
+
 	virtual void        Draw( BaseRenderable* renderable, VkCommandBuffer c, uint32_t commandBufferIndex ) override {}
 	virtual void        Draw( size_t renderableIndex, BaseRenderable* renderable, VkCommandBuffer c, uint32_t commandBufferIndex ) override;
 
@@ -286,6 +288,15 @@ void Basic3D::UpdateBuffers( uint32_t sCurrentImage, size_t renderableIndex, Bas
 }
 
 
+void Basic3D::Bind( VkCommandBuffer c, uint32_t cIndex )
+{
+	BaseShader::Bind( c, cIndex );
+}
+
+
+// TODO: make a BaseShader::BindBuffers function to be per BaseRenderableGroup
+
+
 void Basic3D::Draw( size_t renderableIndex, BaseRenderable* renderable, VkCommandBuffer c, uint32_t i )
 {
 	// why did i do this, remove this ASAP
@@ -304,14 +315,23 @@ void Basic3D::Draw( size_t renderableIndex, BaseRenderable* renderable, VkComman
 
 	Basic3D_DrawData* drawData = (Basic3D_DrawData*)(aDrawDataPool.GetStart() + (sizeof( Basic3D_DrawData ) * renderableIndex));
 
-	// Bind the mesh's vertex and index buffers
-	VkBuffer 	vBuffers[  ] 	= { mesh->GetVertexBuffer()};
-	VkDeviceSize 	offsets[  ] 	= { 0 };
-	vkCmdBindVertexBuffers( c, 0, 1, vBuffers, offsets );
+	const std::vector< RenderableBuffer* >& renderBuffers = matsys->GetRenderBuffers( renderable );
 
-	VkBuffer indexBuffer = mesh->GetIndexBuffer();
-	if ( indexBuffer )
-		vkCmdBindIndexBuffer( c, indexBuffer, 0, VK_INDEX_TYPE_UINT32 );
+	// Bind the mesh's vertex and index buffers
+	for ( RenderableBuffer* buffer : renderBuffers )
+	{
+		if ( buffer->aFlags & gVertexBufferFlags )
+		{
+			VkBuffer        vBuffers[]  = { buffer->aBuffer };
+			VkDeviceSize	offsets[]   = { 0 };
+
+			vkCmdBindVertexBuffers( c, 0, 1, vBuffers, offsets );
+		}
+		else if ( buffer->aFlags & gIndexBufferFlags )
+		{
+			vkCmdBindIndexBuffer( c, buffer->aBuffer, 0, VK_INDEX_TYPE_UINT32 );
+		}
+	}
 
 	// we don't need this in the fragment shader aaaa
 	vkCmdPushConstants(
@@ -326,10 +346,16 @@ void Basic3D::Draw( size_t renderableIndex, BaseRenderable* renderable, VkComman
 
 	vkCmdBindDescriptorSets( c, VK_PIPELINE_BIND_POINT_GRAPHICS, aPipelineLayout, 0, 2, sets, 0, NULL );
 
-	if ( indexBuffer )
-		vkCmdDrawIndexed( c, (uint32_t)mesh->GetIndices().size(), 1, 0, 0, 0);
+	// TODO: change meshes to not store vertices/indices, and instead store a count and offset
+	// that way, we can do less binding of vertex and index buffers, and push constants, etc.
+	// should speed up rendering quite a bit
+	// also, if we are drawing the same model multiple times,
+	// then we shouldn't rebind the vertex/index buffers of it
+
+	if ( matsys->HasIndexBuffer( renderable ) )
+		vkCmdDrawIndexed( c, (uint32_t)mesh->GetIndices().size(), 1, 0, 0, 0 );
 	else
-		vkCmdDraw( c, (uint32_t)mesh->GetVertices().size(), 1, 0, 0);
+		vkCmdDraw( c, (uint32_t)mesh->GetVertices().size(), 1, 0, 0 );
 
 	gModelDrawCalls++;
 	gVertsDrawn += mesh->GetVertices().size();

@@ -23,11 +23,7 @@ public:
 	virtual void        Init() override;
 	virtual void        ReInit() override;
 
-	// virtual std::vector<VkDescriptorSetLayoutBinding> GetDescriptorSetLayoutBindings(  ) override;
-
 	virtual void        CreateGraphicsPipeline(  ) override;
-
-	virtual void        UpdateBuffers( uint32_t sCurrentImage, BaseRenderable* spRenderable ) override;
 
 	virtual void        Draw( size_t renderableIndex, BaseRenderable* renderable, VkCommandBuffer c, uint32_t commandBufferIndex ) override;
 
@@ -36,7 +32,6 @@ public:
 	virtual void        AllocDrawData( size_t sRenderableCount ) override;
 	virtual void        PrepareDrawData( size_t renderableIndex, BaseRenderable* renderable, uint32_t commandBufferCount ) override;
 
-	std::unordered_map< BaseRenderable*, SkyboxPushConst* > aDrawData;
 	MemPool aDrawDataPool;
 };
 

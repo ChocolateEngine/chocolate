@@ -67,8 +67,8 @@ void ShaderUnlitArray::CreateGraphicsPipeline(  )
 	pShaderStages[ 0 ] = vertShaderStageInfo;
 	pShaderStages[ 1 ] = fragShaderStageInfo;
 
-	auto attributeDescriptions 	= GetAttributeDesc(  );
-	auto bindingDescription 	= GetBindingDesc(  );      
+	auto attributeDescriptions 	= vertex_3d_t::GetAttributeDesc(  );
+	auto bindingDescription 	= vertex_3d_t::GetBindingDesc(  );      
 
 	VkPipelineVertexInputStateCreateInfo vertexInputInfo{  };	//	Format of vertex data
 	vertexInputInfo.sType 				= VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
@@ -187,66 +187,9 @@ void ShaderUnlitArray::CreateGraphicsPipeline(  )
 }
 
 
-void ShaderUnlitArray::UpdateBuffers( uint32_t sCurrentImage, BaseRenderable* spRenderable )
-{
-}
-
-
-VkVertexInputBindingDescription ShaderUnlitArray::GetBindingDesc(  )
-{
-	VkVertexInputBindingDescription bindingDescription{};
-	bindingDescription.binding = 0;
-	bindingDescription.stride = sizeof( vertex_3d_t );
-	bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
-
-	return bindingDescription;
-}
-
-
-std::array< VkVertexInputAttributeDescription, 4 > ShaderUnlitArray::GetAttributeDesc(  )
-{
-	std::array< VkVertexInputAttributeDescription, 4 >attributeDescriptions{  };
-	attributeDescriptions[ 0 ].binding  = 0;
-	attributeDescriptions[ 0 ].location = 0;
-	attributeDescriptions[ 0 ].format   = VK_FORMAT_R32G32B32_SFLOAT;
-	attributeDescriptions[ 0 ].offset   = offsetof( vertex_3d_t, pos );
-
-	attributeDescriptions[ 1 ].binding  = 0;
-	attributeDescriptions[ 1 ].location = 1;
-	attributeDescriptions[ 1 ].format   = VK_FORMAT_R32G32B32_SFLOAT;
-	attributeDescriptions[ 1 ].offset   = offsetof( vertex_3d_t, color );
-
-	attributeDescriptions[ 2 ].binding  = 0;
-	attributeDescriptions[ 2 ].location = 2;
-	attributeDescriptions[ 2 ].format   = VK_FORMAT_R32G32_SFLOAT;
-	attributeDescriptions[ 2 ].offset   = offsetof( vertex_3d_t, texCoord );
-
-	attributeDescriptions[ 3 ].binding  = 0;
-	attributeDescriptions[ 3 ].location = 3;
-	attributeDescriptions[ 3 ].format   = VK_FORMAT_R32G32B32_SFLOAT;
-	attributeDescriptions[ 3 ].offset   = offsetof( vertex_3d_t, normal );
-
-	return attributeDescriptions;
-}
-
-
 void ShaderUnlitArray::Draw( size_t renderableIndex, BaseRenderable* renderable, VkCommandBuffer c, uint32_t commandBufferIndex )
 {
 	IMesh* mesh = static_cast<IMesh*>(renderable);
-
-	assert(mesh != nullptr);
-
-	// Bind the mesh's vertex and index buffers
-	VkBuffer 	vBuffers[  ] 	= { mesh->GetVertexBuffer()};
-	VkDeviceSize 	offsets[  ] 	= { 0 };
-	vkCmdBindVertexBuffers( c, 0, 1, vBuffers, offsets );
-
-	VkBuffer indexBuffer = mesh->GetIndexBuffer();
-	if ( indexBuffer )
-		vkCmdBindIndexBuffer( c, indexBuffer, 0, VK_INDEX_TYPE_UINT32 );
-
-	// Now draw it
-	vkCmdBindPipeline( c, VK_PIPELINE_BIND_POINT_GRAPHICS, aPipeline );
 
 	UnlitArrayPushConstant* p = (UnlitArrayPushConstant*)(aDrawDataPool.GetStart() + (sizeof( UnlitArrayPushConstant ) * renderableIndex));
 
@@ -261,7 +204,7 @@ void ShaderUnlitArray::Draw( size_t renderableIndex, BaseRenderable* renderable,
 
 	vkCmdBindDescriptorSets( c, VK_PIPELINE_BIND_POINT_GRAPHICS, aPipelineLayout, 0, 1, sets, 0, NULL );
 
-	if ( indexBuffer )
+	if ( matsys->HasIndexBuffer( renderable ) )
 		vkCmdDrawIndexed( c, (uint32_t)mesh->GetIndices().size(), 1, 0, 0, 0);
 	else
 		vkCmdDraw( c, (uint32_t)mesh->GetVertices().size(), 1, 0, 0);
@@ -282,7 +225,6 @@ void ShaderUnlitArray::AllocDrawData( size_t sRenderableCount )
 static std::string MatVar_Diffuse = "diffuse";
 static std::string MatVar_Frame = "frame";
 
-#pragma optimize("", off)
 
 void ShaderUnlitArray::PrepareDrawData( size_t renderableIndex, BaseRenderable* renderable, uint32_t commandBufferCount )
 {
@@ -298,4 +240,3 @@ void ShaderUnlitArray::PrepareDrawData( size_t renderableIndex, BaseRenderable* 
 	push->layer = mat->GetInt( MatVar_Frame );
 }
 
-#pragma optimize("", on)
