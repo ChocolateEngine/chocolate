@@ -365,15 +365,7 @@ std::string FileSystem::GetFileExt( const std::string &path )
 std::string FileSystem::GetFileNameNoExt( const std::string &path )
 {
     std::string name = GetFileName( path );
-
-    size_t i = name.length();
-    for ( ; i > 0; i-- )
-    {
-        if ( name[i] == '.' )
-            break;
-    }
-
-    return name.substr( 0, i );
+    return name.substr( 0, name.rfind(".") );
 }
 
 
