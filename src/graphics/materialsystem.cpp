@@ -136,7 +136,7 @@ IMaterial* MaterialSystem::ParseMaterial( const std::string &path )
 
 	if ( fullPath.empty() )
 	{
-		LogWarn( gGraphicsChannel, "Failed to find file: %s\n", path.c_str() );
+		LogWarn( gGraphicsChannel, "Failed to find material: %s\n", path.c_str() );
 		return nullptr;
 	}
 
@@ -144,7 +144,7 @@ IMaterial* MaterialSystem::ParseMaterial( const std::string &path )
 
 	if ( rawData.empty() )
 	{
-		LogWarn( gGraphicsChannel, "Failed to read file: %s\n", fullPath.c_str() );
+		LogWarn( gGraphicsChannel, "Failed to read material: %s\n", fullPath.c_str() );
 		return nullptr;
 	}
 
@@ -156,7 +156,7 @@ IMaterial* MaterialSystem::ParseMaterial( const std::string &path )
 
 	if ( err != KeyValueErrorCode::NO_ERROR )
 	{
-		LogWarn( gGraphicsChannel, "Failed to parse file: %s\n", fullPath.c_str() );
+		LogWarn( gGraphicsChannel, "Failed to parse material: %s\n", fullPath.c_str() );
 		return nullptr;
 	}
 
@@ -166,7 +166,8 @@ IMaterial* MaterialSystem::ParseMaterial( const std::string &path )
 	KeyValue* kvShader = kvRoot.children;
 
 	IMaterial *mat = CreateMaterial();
-	mat->aName = std::filesystem::path( path ).filename().string();
+	mat->aName = filesys->GetFileNameNoExt( path );
+	// mat->aName = std::filesystem::path( path ).filename().string();
 	mat->SetShader( kvShader->key.string );
 
 	KeyValue *kv = kvShader->children;
@@ -174,7 +175,7 @@ IMaterial* MaterialSystem::ParseMaterial( const std::string &path )
 	{
 		if ( kv->hasChildren )
 		{
-			LogDev( gGraphicsChannel, 1, "Skipping extra children in kv file: %s", fullPath.c_str() );
+			LogDev( gGraphicsChannel, 1, "Skipping extra children in material: %s", fullPath.c_str() );
 			kv = kv->next;
 			continue;
 		}
@@ -191,7 +192,7 @@ IMaterial* MaterialSystem::ParseMaterial( const std::string &path )
 		{
 			mat->SetVar( kv->key.string, (int)valInt );
 		}
-		else if ( strncmp(kv->value.string, "", kv->value.length) == 0 )
+		else if ( strnlen(kv->value.string, kv->value.length) == 0 )
 		{
 			// empty string case, just an int with 0 as the value, idk
 			mat->SetVar( kv->key.string, 0 );
