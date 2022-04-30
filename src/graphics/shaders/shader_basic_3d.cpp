@@ -34,8 +34,12 @@ struct Basic3D_UBO
 struct Basic3D_DrawData
 {
 	Basic3D_PushConst  aPushConst;
-	Basic3D_UBO        aUBO;
-	UniformDescriptor* apUniformDesc;
+
+	// lol
+	// Basic3D_UBO        aUBO;
+	// DataBuffer< Basic3D_UBO > aUBO;
+
+	// UniformDescriptor* apUniformDesc;
 };
 
 
@@ -88,20 +92,17 @@ public:
 
 	virtual void        CreateGraphicsPipeline(  ) override;
 
-	virtual void        InitUniformBuffer( IMesh* mesh ) override;
+	virtual void        InitUniformBuffer( IRenderable* mesh ) override;
 
-	virtual void        UpdateBuffers( uint32_t sCurrentImage, BaseRenderable* spRenderable ) {};
-	virtual void        UpdateBuffers( uint32_t sCurrentImage, size_t renderableIndex, BaseRenderable* spRenderable ) override;
+	virtual void        UpdateBuffers( uint32_t sCurrentImage, size_t renderableIndex, IRenderable* spRenderable, size_t matIndex ) override;
 
 	virtual void        Bind( VkCommandBuffer c, uint32_t cIndex ) override;
 
-	virtual void        Draw( BaseRenderable* renderable, VkCommandBuffer c, uint32_t commandBufferIndex ) override {}
-	virtual void        Draw( size_t renderableIndex, BaseRenderable* renderable, VkCommandBuffer c, uint32_t commandBufferIndex ) override;
+	virtual void        Draw( size_t renderableIndex, IRenderable* renderable, size_t material, VkCommandBuffer c, uint32_t commandBufferIndex ) override;
 
 	virtual void        AllocDrawData( size_t sRenderableCount ) override;
-	virtual void        PrepareDrawData( size_t renderableIndex, BaseRenderable* renderable, uint32_t commandBufferCount ) override;
+	virtual void        PrepareDrawData( size_t renderableIndex, IRenderable* renderable, size_t matIndex, const RenderableDrawData& instanceDrawData, uint32_t commandBufferCount ) override;
 
-	std::unordered_map< BaseRenderable*, Basic3D_DrawData* > aDrawData;
 	MemPool aDrawDataPool;
 };
 
@@ -138,8 +139,8 @@ void Basic3D::CreateGraphicsPipeline(  )
 	pShaderStages[ 0 ] = vertShaderStageInfo;
 	pShaderStages[ 1 ] = fragShaderStageInfo;
 
-	auto attributeDescriptions 	= vertex_3d_t::GetAttributeDesc(  );
-	auto bindingDescription 	= vertex_3d_t::GetBindingDesc(  );
+	auto attributeDescriptions 	= Vertex3D_GetAttributeDesc();
+	auto bindingDescription 	= Vertex3D_GetBindingDesc();
 
 	VkPipelineVertexInputStateCreateInfo vertexInputInfo{  };	//	Format of vertex data
 	vertexInputInfo.sType 				= VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
@@ -255,118 +256,38 @@ void Basic3D::CreateGraphicsPipeline(  )
 
 	if ( vkCreateGraphicsPipelines( DEVICE, VK_NULL_HANDLE, 1, &pipelineInfo, NULL, &aPipeline ) != VK_SUCCESS )
 		throw std::runtime_error( "Failed to create graphics pipeline!" );
+
+	delete[] pShaderStages;
 }
 
 
-void Basic3D::InitUniformBuffer( IMesh* mesh )
+void Basic3D::InitUniformBuffer( IRenderable* mesh )
 {
-	auto it = matsys->aUniformLayoutMap.find( mesh->GetID() );
+	auto it = matsys->aUniformMap.find( mesh->GetID() );
 
 	// we have one already lol
-	if ( it != matsys->aUniformLayoutMap.end() )
+	if ( it != matsys->aUniformMap.end() )
 		return;
 
-	matsys->aUniformLayoutMap[mesh->GetID()] = InitDescriptorSetLayout( {{ DescriptorLayoutBinding( VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, NULL ) }} );
+	std::vector< UniformData >& uniformList = matsys->aUniformMap[mesh->GetID()];
+	uniformList.resize( mesh->GetMaterialCount() );
 
-	matsys->aUniformDataMap[mesh->GetID()] = UniformDescriptor{};
-
-	InitUniformData( matsys->aUniformDataMap[mesh->GetID()], matsys->aUniformLayoutMap[mesh->GetID()], sizeof( Basic3D_UBO ) );
-}
-
-
-// NOTE: sometimes crashes here? something with debug rendering from physics, hmm, memory leaking or overstepping?
-void Basic3D::UpdateBuffers( uint32_t sCurrentImage, size_t renderableIndex, BaseRenderable* spRenderable )
-{
-	Basic3D_DrawData* drawData = (Basic3D_DrawData*)(aDrawDataPool.GetStart() + (sizeof( Basic3D_DrawData ) * renderableIndex));
-
-	auto& uniformDataMem = drawData->apUniformDesc->aMem[ sCurrentImage ];
-
-	void* data;
-	vkMapMemory( DEVICE, uniformDataMem, 0, sizeof( drawData->aUBO ), 0, &data );
-	memcpy( data, &drawData->aUBO, sizeof( drawData->aUBO ) );
-	vkUnmapMemory( DEVICE, uniformDataMem );
-}
-
-
-void Basic3D::Bind( VkCommandBuffer c, uint32_t cIndex )
-{
-	BaseShader::Bind( c, cIndex );
-}
-
-
-// TODO: make a BaseShader::BindBuffers function to be per BaseRenderableGroup
-
-
-void Basic3D::Draw( size_t renderableIndex, BaseRenderable* renderable, VkCommandBuffer c, uint32_t i )
-{
-	// why did i do this, remove this ASAP
-	/*bool isMesh = typeid(*renderable) == typeid(IMesh);
-	assert( isMesh );
-
-	if ( !isMesh )
+	for ( size_t i = 0; i < mesh->GetMaterialCount(); i++ )
 	{
-		LogWarn( "Basic3D::Draw - Not a Mesh!\n" );
-		return;
-	}*/
+		// uniformList.emplace_back(
+		// 	InitDescriptorSetLayout( {{ DescriptorLayoutBinding( VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, NULL ) }} )
+		// );
 
-	// use is base of
+		uniformList[i].aLayout = InitDescriptorSetLayout( {{ DescriptorLayoutBinding( VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, NULL ) }} );
 
-	IMesh* mesh = static_cast<IMesh*>(renderable);
-
-	Basic3D_DrawData* drawData = (Basic3D_DrawData*)(aDrawDataPool.GetStart() + (sizeof( Basic3D_DrawData ) * renderableIndex));
-
-	const std::vector< RenderableBuffer* >& renderBuffers = matsys->GetRenderBuffers( renderable );
-
-	// Bind the mesh's vertex and index buffers
-	for ( RenderableBuffer* buffer : renderBuffers )
-	{
-		if ( buffer->aFlags & gVertexBufferFlags )
-		{
-			VkBuffer        vBuffers[]  = { buffer->aBuffer };
-			VkDeviceSize	offsets[]   = { 0 };
-
-			vkCmdBindVertexBuffers( c, 0, 1, vBuffers, offsets );
-		}
-		else if ( buffer->aFlags & gIndexBufferFlags )
-		{
-			vkCmdBindIndexBuffer( c, buffer->aBuffer, 0, VK_INDEX_TYPE_UINT32 );
-		}
+		InitUniformData( uniformList[i].aDesc, uniformList[i].aLayout, sizeof( Basic3D_UBO ) );
 	}
 
-	// we don't need this in the fragment shader aaaa
-	vkCmdPushConstants(
-		c, aPipelineLayout, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
-		0, sizeof( Basic3D_PushConst ), &drawData->aPushConst
-	);
+	// matsys->aUniformLayoutMap[mesh->GetID()] = InitDescriptorSetLayout( {{ DescriptorLayoutBinding( VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, NULL ) }} );
+	// 
+	// matsys->aUniformDataMap[mesh->GetID()] = UniformDescriptor{};
 
-	VkDescriptorSet sets[  ] = {
-		drawData->apUniformDesc->aSets[i],
-		matsys->aImageSets[i],
-	};
-
-	vkCmdBindDescriptorSets( c, VK_PIPELINE_BIND_POINT_GRAPHICS, aPipelineLayout, 0, 2, sets, 0, NULL );
-
-	// TODO: change meshes to not store vertices/indices, and instead store a count and offset
-	// that way, we can do less binding of vertex and index buffers, and push constants, etc.
-	// should speed up rendering quite a bit
-	// also, if we are drawing the same model multiple times,
-	// then we shouldn't rebind the vertex/index buffers of it
-
-	if ( matsys->HasIndexBuffer( renderable ) )
-		vkCmdDrawIndexed( c, (uint32_t)mesh->GetIndices().size(), 1, 0, 0, 0 );
-	else
-		vkCmdDraw( c, (uint32_t)mesh->GetVertices().size(), 1, 0, 0 );
-
-	gModelDrawCalls++;
-	gVertsDrawn += mesh->GetVertices().size();
-}
-
-
-void Basic3D::AllocDrawData( size_t sRenderableCount )
-{
-	aDrawDataPool.Clear();
-	MemError err = aDrawDataPool.Resize( sizeof( Basic3D_DrawData ) * sRenderableCount );
-	Assert( MemPool_OutOfMemory != err );
+	// InitUniformData( matsys->aUniformDataMap[mesh->GetID()], matsys->aUniformLayoutMap[mesh->GetID()], sizeof( Basic3D_UBO ) );
 }
 
 
@@ -383,26 +304,119 @@ static std::string MatVar_AOPower          = "ao_power";
 static std::string MatVar_EmissivePower    = "emissive_power";
 
 
-void Basic3D::PrepareDrawData( size_t renderableIndex, BaseRenderable* renderable, uint32_t commandBufferCount )
+// GO BACK TO THREADING THIS WITH (renderableIndex + matIndex)
+// NOTE: sometimes crashes here? something with debug rendering from physics, hmm, memory leaking or overstepping?
+void Basic3D::UpdateBuffers( uint32_t sCurrentImage, size_t memIndex, IRenderable* spRenderable, size_t matIndex )
 {
-	// there is the old DataBuffer class as well, hmm
+	// Basic3D_DrawData* drawData = (Basic3D_DrawData*)(aDrawDataPool.GetStart() + (sizeof( Basic3D_DrawData ) * memIndex));
 
-	IMesh* mesh = static_cast<IMesh*>(renderable);
+	auto mat = (Material*)spRenderable->GetMaterial( matIndex );
+	Basic3D_UBO ubo;
 
-	Basic3D_DrawData* drawData = (Basic3D_DrawData*)(aDrawDataPool.GetStart() + (sizeof( Basic3D_DrawData ) * renderableIndex));
+	ubo.diffuse         = mat->GetTextureId( MatVar_Diffuse );
+	ubo.emissive        = mat->GetTextureId( MatVar_Emissive, gFallbackEmissive );
+	ubo.ao              = mat->GetTextureId( MatVar_AO, gFallbackAO );
 
-	drawData->aPushConst = {renderer->aView.projViewMatrix, mesh->GetModelMatrix()};
-	drawData->apUniformDesc = &matsys->GetUniformData( mesh->GetID() );
+	ubo.aoPower         = mat->GetFloat( MatVar_AOPower, 1.f );
+	ubo.emissivePower   = mat->GetFloat( MatVar_EmissivePower, 1.f );
 
-	auto mat = (Material*)mesh->GetMaterial();
+	auto it = matsys->aUniformMap.find( spRenderable->GetID() );
 
-	// NOTE: should get the MeshPtr directly so there can be less matvar calls since it would always be the same material
+	// make sure there is one
+	if ( it == matsys->aUniformMap.end() )
+	{
+		LogError( "No Uniform Buffer/Layout Created For Mesh yet?\n" );
+		InitUniformBuffer( spRenderable );
+	}
 
-	drawData->aUBO.diffuse         = mat->GetTextureId( MatVar_Diffuse );
-	drawData->aUBO.emissive        = mat->GetTextureId( MatVar_Emissive, gFallbackEmissive );
-	drawData->aUBO.ao              = mat->GetTextureId( MatVar_AO, gFallbackAO );
+	// auto& uniformDataMem = drawData->apUniformDesc->aMem[ sCurrentImage ];
 
-	drawData->aUBO.aoPower         = mat->GetFloat( MatVar_AOPower, 1.f );
-	drawData->aUBO.emissivePower   = mat->GetFloat( MatVar_EmissivePower, 1.f );
+	auto& uniformDataMem = it->second[matIndex].aDesc.aMem[sCurrentImage];
+
+	void* data;
+	// vkMapMemory( DEVICE, uniformDataMem, 0, sizeof( drawData->aUBO ), 0, &data );
+	// memcpy( data, &drawData->aUBO, sizeof( drawData->aUBO ) );
+	vkMapMemory( DEVICE, uniformDataMem, 0, sizeof( ubo ), 0, &data );
+	memcpy( data, &ubo, sizeof( ubo ) );
+	vkUnmapMemory( DEVICE, uniformDataMem );
+}
+
+
+void Basic3D::Bind( VkCommandBuffer c, uint32_t cIndex )
+{
+	BaseShader::Bind( c, cIndex );
+}
+
+
+// TODO: make a BaseShader::BindBuffers function to be per BaseRenderableGroup
+
+
+void Basic3D::Draw( size_t memIndex, IRenderable* mesh, size_t matIndex, VkCommandBuffer c, uint32_t i )
+{
+	Basic3D_DrawData* drawData = (Basic3D_DrawData*)(aDrawDataPool.GetStart() + (sizeof( Basic3D_DrawData ) * memIndex));
+
+	auto it = matsys->aUniformMap.find( mesh->GetID() );
+
+	// make sure there is one
+	if ( it == matsys->aUniformMap.end() )
+	{
+		LogError( "No Uniform Buffer/Layout Created For Mesh yet?\n" );
+		return;
+	}
+
+	// we don't need this in the fragment shader aaaa
+	vkCmdPushConstants(
+		c, aPipelineLayout, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
+		0, sizeof( Basic3D_PushConst ), &drawData->aPushConst
+	);
+
+	VkDescriptorSet sets[  ] = {
+		it->second[matIndex].aDesc.aSets[i],
+		matsys->aImageSets[i],
+	};
+
+	vkCmdBindDescriptorSets( c, VK_PIPELINE_BIND_POINT_GRAPHICS, aPipelineLayout, 0, 2, sets, 0, NULL );
+
+	CmdDraw( mesh, matIndex, c );
+}
+
+
+void Basic3D::AllocDrawData( size_t sRenderableCount )
+{
+	aDrawDataPool.Clear();
+	MemError err = aDrawDataPool.Resize( sizeof( Basic3D_DrawData ) * sRenderableCount );
+	Assert( MemPool_OutOfMemory != err );
+
+	// for ( size_t memIndex = 0; memIndex < sRenderableCount; memIndex++ )
+	// {
+	// 	Basic3D_DrawData* drawData = (Basic3D_DrawData*)(aDrawDataPool.GetStart() + (sizeof( Basic3D_DrawData ) * memIndex));
+	// 	drawData->aUBO.apBuffers = 0;
+	// 	drawData->aUBO.aBufferCount = 0;
+	// }
+}
+
+
+void Basic3D::PrepareDrawData( size_t memIndex, IRenderable* mesh, size_t matIndex, const RenderableDrawData& instanceDrawData, uint32_t commandBufferCount )
+{
+	Basic3D_DrawData* drawData = (Basic3D_DrawData*)(aDrawDataPool.GetStart() + (sizeof( Basic3D_DrawData ) * memIndex));
+
+	// TODO: WHERE TF WILL I GET THE MODEL MATRIX NOW ????
+	drawData->aPushConst = {renderer->aView.projViewMatrix, instanceDrawData.aTransform.ToMatrix()};
+	// drawData->apUniformDesc = &matsys->GetUniformData( mesh->GetID() );
+
+	// auto mat = (Material*)mesh->GetMaterial( matIndex );
+
+	// really dumb
+	// if ( drawData->aUBO.GetSize() < matIndex + 1 )
+	// 	drawData->aUBO.Allocate( matIndex + 1 );
+	// 
+	// // NOTE: should get the MeshPtr directly so there can be less matvar calls since it would always be the same material
+	// 
+	// drawData->aUBO[matIndex].diffuse         = mat->GetTextureId( MatVar_Diffuse );
+	// drawData->aUBO[matIndex].emissive        = mat->GetTextureId( MatVar_Emissive, gFallbackEmissive );
+	// drawData->aUBO[matIndex].ao              = mat->GetTextureId( MatVar_AO, gFallbackAO );
+	// 
+	// drawData->aUBO[matIndex].aoPower         = mat->GetFloat( MatVar_AOPower, 1.f );
+	// drawData->aUBO[matIndex].emissivePower   = mat->GetFloat( MatVar_EmissivePower, 1.f );
 }
 

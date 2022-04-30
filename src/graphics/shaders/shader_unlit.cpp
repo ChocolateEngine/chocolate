@@ -68,8 +68,8 @@ void ShaderUnlit::CreateGraphicsPipeline(  )
 	pShaderStages[ 0 ] = vertShaderStageInfo;
 	pShaderStages[ 1 ] = fragShaderStageInfo;
 
-	auto attributeDescriptions 	= vertex_3d_t::GetAttributeDesc();
-	auto bindingDescription 	= vertex_3d_t::GetBindingDesc();      
+	auto attributeDescriptions 	= Vertex3D_GetAttributeDesc();
+	auto bindingDescription 	= Vertex3D_GetBindingDesc();      
 
 	VkPipelineVertexInputStateCreateInfo vertexInputInfo{  };	//	Format of vertex data
 	vertexInputInfo.sType 				= VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
@@ -188,11 +188,8 @@ void ShaderUnlit::CreateGraphicsPipeline(  )
 }
 
 
-void ShaderUnlit::Draw( size_t renderableIndex, BaseRenderable* renderable, VkCommandBuffer c, uint32_t commandBufferIndex )
+void ShaderUnlit::Draw( size_t renderableIndex, IRenderable* mesh, size_t matIndex, const RenderableDrawData& instanceDrawData, VkCommandBuffer c, uint32_t commandBufferIndex )
 {
-	// IMesh* mesh = dynamic_cast<IMesh*>(renderable);
-	IMesh* mesh = static_cast<IMesh*>(renderable);
-
 	UnlitPushConstant* p = (UnlitPushConstant*)(aDrawDataPool.GetStart() + (sizeof( UnlitPushConstant ) * renderableIndex));
 
 	vkCmdPushConstants(
@@ -206,13 +203,7 @@ void ShaderUnlit::Draw( size_t renderableIndex, BaseRenderable* renderable, VkCo
 
 	vkCmdBindDescriptorSets( c, VK_PIPELINE_BIND_POINT_GRAPHICS, aPipelineLayout, 0, 1, sets, 0, NULL );
 
-	if ( matsys->HasIndexBuffer( renderable ) )
-		vkCmdDrawIndexed( c, (uint32_t)mesh->GetIndices().size(), 1, 0, 0, 0);
-	else
-		vkCmdDraw( c, (uint32_t)mesh->GetVertices().size(), 1, 0, 0);
-
-	gModelDrawCalls++;
-	gVertsDrawn += mesh->GetVertices().size();
+	CmdDraw( mesh, matIndex, c );
 }
 
 
@@ -227,16 +218,13 @@ void ShaderUnlit::AllocDrawData( size_t sRenderableCount )
 static std::string MatVar_Diffuse = "diffuse";
 
 
-void ShaderUnlit::PrepareDrawData( size_t renderableIndex, BaseRenderable* renderable, uint32_t commandBufferCount )
+void ShaderUnlit::PrepareDrawData( size_t renderableIndex, IRenderable* renderable, size_t matIndex, const RenderableDrawData& instanceDrawData, uint32_t commandBufferCount )
 {
-	// there is the old DataBuffer class as well, hmm
-	IMesh* mesh = static_cast<IMesh*>(renderable);
-
 	UnlitPushConstant* push = (UnlitPushConstant*)(aDrawDataPool.GetStart() + (sizeof( UnlitPushConstant ) * renderableIndex));
 
-	auto mat = (Material*)mesh->GetMaterial();
+	auto mat = (Material*)renderable->GetMaterial( matIndex );
 
-	push->trans	= renderer->aView.projViewMatrix * mesh->GetModelMatrix();
+	push->trans	= renderer->aView.projViewMatrix * instanceDrawData.aTransform.ToMatrix();
 	push->index = mat->GetTextureId( MatVar_Diffuse );
 }
 

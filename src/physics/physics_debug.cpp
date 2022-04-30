@@ -91,13 +91,13 @@ void PhysDebugDraw::DrawTriangle(
 }
 
 
-vertex_3d_t ToVert3D( const JPH::DebugRenderer::Vertex& inVert )
+vertex_debug_t ToVertDBG( const JPH::DebugRenderer::Vertex& inVert )
 {
 	return {
 		.pos        = fromJolt(inVert.mPosition),
 		.color      = fromJolt(inVert.mColor),
-		.texCoord   = fromJolt(inVert.mUV),
-		.normal     = fromJolt(inVert.mNormal),
+		// .texCoord   = fromJolt(inVert.mUV),
+		// .normal     = fromJolt(inVert.mNormal),
 	};
 }
 
@@ -111,7 +111,7 @@ PhysDebugDraw::Batch PhysDebugDraw::CreateTriangleBatch(
 
 	PhysDebugMesh* mesh = aMeshes.emplace_back( new PhysDebugMesh );
 
-	mesh->SetMaterial( apMatSolid );
+	mesh->SetMaterial( 0, apMatSolid );
 
 	auto& vert = mesh->GetVertices();
 	auto& ind = mesh->GetIndices();
@@ -120,13 +120,12 @@ PhysDebugDraw::Batch PhysDebugDraw::CreateTriangleBatch(
 	vert.resize( inTriangleCount * 3 );
 	for ( int i = 0, t = 0; t < inTriangleCount; i++, t++ )
 	{
-		vert[i * 3 + 0] = ToVert3D( inTriangles[i].mV[0] );
-		vert[i * 3 + 1] = ToVert3D( inTriangles[i].mV[1] );
-		vert[i * 3 + 2] = ToVert3D( inTriangles[i].mV[2] );
+		vert[i * 3 + 0] = ToVertDBG( inTriangles[i].mV[0] );
+		vert[i * 3 + 1] = ToVertDBG( inTriangles[i].mV[1] );
+		vert[i * 3 + 2] = ToVertDBG( inTriangles[i].mV[2] );
 	}
 
 	// create buffers
-	matsys->MeshInit( mesh );
 	matsys->CreateVertexBuffer( mesh );
 	// matsys->CreateIndexBuffer( mesh );
 
@@ -145,7 +144,7 @@ PhysDebugDraw::Batch PhysDebugDraw::CreateTriangleBatch(
 
 	PhysDebugMesh* mesh = aMeshes.emplace_back( new PhysDebugMesh );
 
-	mesh->SetMaterial( apMatWire );
+	mesh->SetMaterial( 0, apMatWire );
 
 	auto& vert = mesh->GetVertices();
 	auto& ind = mesh->GetIndices();
@@ -154,7 +153,7 @@ PhysDebugDraw::Batch PhysDebugDraw::CreateTriangleBatch(
 	vert.resize( inVertexCount );
 	for ( int i = 0; i < inVertexCount; i++ )
 	{
-		vert[i] = ToVert3D( inVertices[i] );
+		vert[i] = ToVertDBG( inVertices[i] );
 	}
 
 	// convert indices
@@ -198,14 +197,14 @@ void PhysDebugDraw::DrawGeometry(
 	if ( mesh == nullptr )
 		return;
 
-	IMaterial* mat = mesh->GetMaterial();
+	IMaterial* mat = mesh->GetMaterial( 0 );
 	const std::string& shader = mat->GetShaderName();
 
 	// AAAA
 	if ( inDrawMode == EDrawMode::Wireframe )
 	{
 		if ( shader != gShader_DebugLine )
-			mat->SetShader( gShader_DebugLine.c_str() );
+			mat->SetShader( gShader_DebugLine );
 
 		auto& verts = mesh->GetVertices();
 		for ( auto& vert : verts )
@@ -218,7 +217,7 @@ void PhysDebugDraw::DrawGeometry(
 	else
 	{
 		if ( shader != gShader_Debug )
-			mat->SetShader( gShader_Debug.c_str() );
+			mat->SetShader( gShader_Debug );
 
 		mat->SetVar(
 			"color",
@@ -231,9 +230,13 @@ void PhysDebugDraw::DrawGeometry(
 		);
 	}
 
-	mesh->aMatrix = fromJolt( inModelMatrix );
-
-	matsys->AddRenderable( mesh );
+	matsys->AddRenderable(
+		mesh,
+		{
+			.aTransform = {},
+			.aMatrix = fromJolt( inModelMatrix ),
+		}
+	);
 
 	return;
 }

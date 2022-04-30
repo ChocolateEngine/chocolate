@@ -9,7 +9,6 @@ draw to the screen.
 #include "renderer.h"
 #include "initializers.h"
 #include "types/material.h"
-#include "util/modelloader.h"
 #include "types/transform.h"
 #include "graphics/sprite.h"
 #include "util.h"
@@ -63,8 +62,11 @@ const int THREAD_COUNT = std::thread::hardware_concurrency() - 1;
 // awful
 struct RenderableData_t
 {
+	BaseShader* shader;
 	size_t index;
-	BaseRenderable* renderable;
+	IRenderable* renderable;
+	size_t matIndex;
+	RenderableDrawData drawData;
 };
 
 
@@ -72,14 +74,33 @@ struct RenderWorkerData_t
 {
 	// std::vector< BaseRenderable* > aRenderables;
 	// std::unordered_map< BaseShader*, std::vector< BaseRenderable* > > aDrawList;
-	std::unordered_map< BaseShader*, std::vector< RenderableData_t > > aDrawList;
+	// std::unordered_map< BaseShader*, std::vector< RenderableData_t > > aDrawList;
+	std::forward_list< RenderableData_t > aDrawList;
+	// DataBuffer< RenderableData_t > aDrawList;
+	// u32 aDrawCount;
 
 	uint32_t aCommandBufferCount;
 };
 
+constexpr int CH_RENDER_WORKER_TASKS = 11;
+
+
+struct RenderWorkerThread_t
+{
+	//RenderWorkerData_t** apData = nullptr;  // list of data on the stack
+	std::vector< RenderWorkerData_t* > aData;  // list of data on the stack
+	u32                  aCount = 0;        // amount in array
+};
 
 // lazy and awful
-std::vector< std::vector< RenderWorkerData_t* > > gTaskQueue;
+// std::vector< std::vector< RenderWorkerData_t* > > gTaskQueue;
+// use a c array for this and create them on the stack?
+// std::vector< std::forward_list< RenderWorkerData_t > > gTaskQueue;
+std::vector< RenderWorkerThread_t > gTaskQueue;
+
+
+// allocate one memory pool containing all draw data
+// and each thread gets it's own offset and count into the memory pool
 
 // um
 std::mutex gTaskMutex;
@@ -88,29 +109,42 @@ std::mutex gTaskMutex;
 int gTaskFinishedCount = 0;
 bool gThreadsPaused = false;
 
-RenderWorkerData_t* GetNextTask( int sThreadId )
+RenderWorkerData_t* GetNextTask( std::mutex& mutex, int sThreadId )
 {
-	RenderWorkerData_t* data = nullptr;
+	// RenderWorkerData_t* data = nullptr;
+	if ( gThreadsPaused )
+		return nullptr;
 
-	if ( gTaskQueue[sThreadId].size() )
+	if ( gTaskQueue[sThreadId].aCount )
 	{
-		if ( gThreadsPaused )
-			return nullptr;
-
-		data = gTaskQueue[sThreadId][gTaskQueue[sThreadId].size() - 1];
-
-		if ( gThreadsPaused )
-			return nullptr;
-
-		gTaskQueue[sThreadId].pop_back();
+		return gTaskQueue[sThreadId].aData[ --gTaskQueue[sThreadId].aCount ];
 	}
 
-	return data;
+	// if ( !gTaskQueue[sThreadId].empty() )
+	// {
+	// 	if ( gThreadsPaused )
+	// 		return nullptr;
+	// 
+	// 	return &gTaskQueue[sThreadId].front();
+	// 	// return &gTaskQueue[sThreadId][gTaskQueue[sThreadId].size() - 1];
+	// 	
+	// 	// data = gTaskQueue[sThreadId][gTaskQueue[sThreadId].size() - 1];
+	// 	// 
+	// 	// if ( gThreadsPaused )
+	// 	// 	return nullptr;
+	// 	// 
+	// 	// gTaskQueue[sThreadId].pop_back();
+	// }
+
+	return nullptr;
+	// return data;
 }
 
 
 void TaskFinished( int sThreadId )
 {
+	// gTaskQueue[sThreadId].pop_front();
+
 	gTaskMutex.lock();
 	gTaskFinishedCount++;
 	gTaskMutex.unlock();
@@ -119,6 +153,9 @@ void TaskFinished( int sThreadId )
 
 void RenderWorker( int sThreadId )
 {
+	// blech
+	std::mutex taskMutex;
+
 	while ( true )
 	{
 		sys_sleep( 0.01 );
@@ -126,27 +163,51 @@ void RenderWorker( int sThreadId )
 		if ( gThreadsPaused )
 			continue;
 
-		// NOTE: probably change this to a task queue for each thread
-		// this mutex thing is really shit imo
-		if ( RenderWorkerData_t* data = GetNextTask( sThreadId ) )
+		if ( RenderWorkerData_t* data = GetNextTask( taskMutex, sThreadId ) )
 		{
-			for ( auto& [shader, renderList]: data->aDrawList )
+			for ( auto& renderData : data->aDrawList )
 			{
-				for ( auto& renderable : renderList )
-				{
-					shader->PrepareDrawData( renderable.index, renderable.renderable, data->aCommandBufferCount );
-				}
+				renderData.shader->PrepareDrawData(
+					renderData.index,
+					renderData.renderable,
+					renderData.matIndex,
+					renderData.drawData,
+					data->aCommandBufferCount
+				);
 			}
 
-			delete data;
 			TaskFinished( sThreadId );
 		}
 	}
 }
 
-
 // TEST BASIC MULTITHREADING, MOVE TO CH_CORE LATER AND PROPERLY GET CPU THREAD COUNT
 std::vector< std::thread > gThreadPool;
+
+
+// ------------------------------------------------------------
+// New Task Testing
+
+
+struct Task_PrepareDrawData
+{
+	// CH_DECLARE_TASK(
+	//		Task_PrepareDrawData, 
+	//		ETaskStackReq::Standard, 
+	//		ETaskPriotiry::Normal, 
+	//		LogColor::Blue,  // um 
+	// );
+
+	void Run()
+	{
+		// ... do thing here ...
+	}
+};
+
+
+
+// ------------------------------------------------------------
+
 
 // HACK
 BaseShader* gpSkybox = nullptr;
@@ -220,40 +281,69 @@ void Renderer::InitCommandBuffers(  )
 
 	// reset thread finished state
 	gTaskFinishedCount = 0;
-	for ( int i = 0; i < THREAD_COUNT; i++ )
-	{
-		gTaskQueue[i].push_back( new RenderWorkerData_t );
-	}
 
 	// calculate work for threads
+	size_t drawCount = 0;
 	for ( auto& [shader, renderList] : matsys->aDrawList )
 	{
-		shader->AllocDrawData( renderList.size() );
+		auto size = std::distance( renderList.begin(), renderList.end() );
+		shader->AllocDrawData( size );
 	}
 
+	// reset queue
+	for ( int i = 0; i < THREAD_COUNT; i++ )
+	{
+	 	gTaskQueue[i].aCount = 0;
+	}
+
+	// i would like to use a global memory pool for this instead
+	// ...but then the forward list not allocated
+	// luckily though, the data accessing still works fine (i think)
+	RenderWorkerData_t workerData[CH_RENDER_WORKER_TASKS];
+	size_t taskCount = 0;
+
+	// calculate memory info for the memory pool
 	size_t curTask = 0;
 	for ( auto& [shader, renderList]: matsys->aDrawList )
 	{
 		size_t renderIndex = 0;
-		for ( auto& renderable : renderList )
+		for ( auto& [renderable, matIndex, drawData]: renderList )
 		{
-			RenderWorkerData_t* data = gTaskQueue[curTask][0];
-			data->aDrawList[shader].emplace_back( renderIndex++, renderable );
-			data->aCommandBufferCount = aCommandBuffers.size();
+			workerData[curTask].aDrawList.emplace_front( shader, renderIndex++, renderable, matIndex, drawData );
+			workerData[curTask].aCommandBufferCount = aCommandBuffers.size();
+
+			// RenderWorkerData_t& data = gTaskQueue[curTask].front();
+			// data.aDrawList.emplace_front( shader, renderIndex++, renderable );
+			// data.aCommandBufferCount = aCommandBuffers.size();
 
 			curTask++;
+			taskCount++;
 
-			if ( curTask >= THREAD_COUNT )
+			// if ( curTask >= THREAD_COUNT )
+			if ( curTask >= CH_RENDER_WORKER_TASKS )
 				curTask = 0;
 		}
+	}
+
+	curTask = 0;
+	for ( int curThread = 0; curTask < CH_RENDER_WORKER_TASKS; curTask++ )
+	{
+		// hmm, probably a lot of excess tasks here, idk
+
+		gTaskQueue[curThread].aCount++;
+		// gTaskQueue[curThread].apData[0] = &workerData[curTask];
+		gTaskQueue[curThread].aData.push_back( &workerData[curTask] );
+
+		if ( ++curThread >= THREAD_COUNT )
+			curThread = 0;
 	}
 
 	gTaskMutex.unlock();
 	gThreadsPaused = false;
 
 	// wait for threads to finish
-	// does this need to be locked?
-	while ( gTaskFinishedCount != THREAD_COUNT )
+	// while ( gTaskFinishedCount != THREAD_COUNT )
+	while ( gTaskFinishedCount != CH_RENDER_WORKER_TASKS )
 	{
 		sys_sleep( 0.01 );
 	}
@@ -288,10 +378,10 @@ void Renderer::InitCommandBuffers(  )
 			}
 			
 			size_t renderIndex = 0;
-			for ( auto& renderable : renderList )
+			for ( auto& [renderable, matIndex, drawData] : renderList )
 			{
-				Material* mat = (Material*)renderable->GetMaterial();
-				mat->apShader->UpdateBuffers( i, renderIndex++, renderable );
+				Material* mat = (Material*)renderable->GetMaterial( matIndex );
+				mat->apShader->UpdateBuffers( i, renderIndex++, renderable, matIndex );
 			}
 		}
 
@@ -328,20 +418,34 @@ void Renderer::InitCommandBuffers(  )
 			shader->Bind( aCommandBuffers[i], i );
 
 			renderIndex = 0;
-			for ( auto& renderable : renderList )
+			IRenderable* prevRenderable = nullptr;
+
+			for ( auto& [renderable, matIndex, drawData]: renderList )
 			{
-				matsys->DrawRenderable( renderIndex++, renderable, aCommandBuffers[i], i );
+				if ( prevRenderable != renderable )
+				{
+					prevRenderable = renderable;
+					shader->BindBuffers( renderable, aCommandBuffers[i], i );
+				}
+
+				matsys->DrawRenderable( renderIndex++, renderable, matIndex, drawData, aCommandBuffers[i], i );
 			}
 		}
 
 		// HACK HACK: Get skybox to draw last so it's the cheapest
 		if ( drawSkybox )
 		{
+			// NOTE: there should only be one here
+			size_t skyCount = std::distance( matsys->aDrawList[gpSkybox].begin(), matsys->aDrawList[gpSkybox].end() );
+
+			AssertMsg( skyCount == 1, "More than one skybox renderable, can only be one!!" );
+
 			gpSkybox->Bind( aCommandBuffers[i], i );
 
-			for ( auto& renderable: matsys->aDrawList[gpSkybox] )
+			for ( auto& [renderable, matIndex, drawData] : matsys->aDrawList[gpSkybox] )
 			{
-				matsys->DrawRenderable( 0, renderable, aCommandBuffers[i], i );
+				gpSkybox->BindBuffers( renderable, aCommandBuffers[i], i );
+				matsys->DrawRenderable( 0, renderable, matIndex, drawData, aCommandBuffers[i], i );
 			}
 		}
 
@@ -386,10 +490,7 @@ void Renderer::ReinitSwapChain(  )
 
 	for ( auto& model : aModels )
 	{
-		for ( auto& mesh : model->aMeshes )
-		{
-			matsys->MeshReInit( mesh );
-		}
+		matsys->MeshReInit( model );
 	}
 }
 
@@ -409,10 +510,7 @@ void Renderer::DestroySwapChain(  )
 
 	for ( auto& model : aModels )
 	{
-		for ( auto& mesh : model->aMeshes )
-		{
-			matsys->MeshFreeOldResources( mesh );
-		}
+		matsys->MeshFreeOldResources( model );
 	}
 	
 	for ( auto framebuffer : aSwapChainFramebuffers )
@@ -423,105 +521,11 @@ void Renderer::DestroySwapChain(  )
 		vkDestroyImageView( DEVICE, imageView, NULL );
 }
 
-
-bool LoadBaseMeshes( Model* sModel, const std::string& srPath, std::vector< MeshPtr* >& meshPtrs )
-{
-	std::vector< IMesh* > meshes;
-
-	if ( srPath.substr(srPath.size() - 4) == ".obj" )
-	{
-		LoadObj( srPath, meshes );
-	}
-	else if ( srPath.substr(srPath.size() - 4) == ".glb" || srPath.substr(srPath.size() - 5) == ".gltf" )
-	{
-		LogDev( 1, "[Renderer] GLTF currently not supported, on TODO list\n" );
-		return false;
-	}
-
-	// TODO: load in an error model here somehow?
-	if (meshes.empty())
-		return false;
-
-	for (std::size_t i = 0; i < meshes.size(); ++i)
-	{
-		IMesh* mesh = meshes[i];
-
-		matsys->CreateVertexBuffer( mesh );
-
-		// if the vertex count is different than the index count, use the index buffer
-		if ( mesh->GetVertices().size() != mesh->GetIndices().size() )
-			matsys->CreateIndexBuffer( mesh );
-
-		//mesh->aRadius = glm::distance( mesh->aMinSize, mesh->aMaxSize ) / 2.0f;
-
-#if 0
-		sModel->aVertices.insert( sModel->aVertices.end(), mesh->aVertices.begin(), mesh->aVertices.end() );
-
-		size_t indCount = sModel->aIndices.size();
-		for ( uint32_t ind: mesh->aIndices )
-			sModel->aIndices.push_back( ind + indCount );
-#endif
-
-		MeshPtr* meshptr = new MeshPtr;
-		meshptr->apMesh = mesh;
-		meshptr->apModel = sModel;
-		meshPtrs.emplace_back( meshptr );
-
-		matsys->MeshInit( sModel->aMeshes[i] );
-	}
-
-	return true;
-}
-
-
-bool Renderer::LoadModel( Model* sModel, const std::string &srPath )
-{
-	sModel->aPath = srPath;
-
-	Model* dupeModel = nullptr;
-
-	// shitty cache system
-	for ( const auto& model: aModels )
-	{
-		if ( model->aPath == srPath )
-		{
-			dupeModel = model;
-			break;
-		}
-	}
-
-	if ( dupeModel )  // copy over stuf from the other loaded model
-	{
-		sModel->aMeshes.resize( dupeModel->aMeshes.size() );
-
-		for (std::size_t i = 0; i < sModel->aMeshes.size(); ++i)
-		{
-			sModel->aMeshes[i] = new MeshPtr;
-			sModel->aMeshes[i]->apModel = sModel;
-			sModel->aMeshes[i]->apMesh = dupeModel->aMeshes[i];
-
-			matsys->RegisterRenderable( sModel->aMeshes[i] );
-			matsys->MeshInit( sModel->aMeshes[i] );
-		}
-	}
-	else  // we haven't loaded this model yet
-	{
-		LoadBaseMeshes( sModel, srPath, sModel->aMeshes );
-	}
-
-	// TODO: load in an error model here somehow?
-	if ( sModel->aMeshes.empty() )
-		return false;
-
-	aModels.push_back( sModel );
-	return true;
-}
-
 bool Renderer::LoadSprite( Sprite &srSprite, const String &srSpritePath )
 {
-	srSprite.SetMaterial( matsys->CreateMaterial() );
-	srSprite.GetMaterial()->SetShader( "basic_2d" );
-	srSprite.GetMaterial()->SetVar( "diffuse", matsys->CreateTexture( srSpritePath ) );
+	srSprite.SetMaterial( 0, matsys->CreateMaterial() );
+	srSprite.GetMaterial( 0 )->SetShader( "basic_2d" );
+	srSprite.GetMaterial( 0 )->SetVar( "diffuse", matsys->CreateTexture( srSpritePath ) );
 
 	std::vector< vertex_2d_t > aVertices =
 	{

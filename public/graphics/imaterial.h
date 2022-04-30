@@ -124,9 +124,11 @@ public:
 	//virtual std::string         GetName(  ) = 0;
 
 	/* Set the shader for the material by the shader name */
-	virtual bool                SetShader( const char* name ) = 0;
+	virtual bool                SetShader( const std::string& name ) = 0;
 	//virtual HShader             GetShader( const char* name ) = 0;
 	virtual std::string         GetShaderName(  ) = 0;
+
+	// ----------------------------------------------------------------------------------------
 
 	virtual MaterialVar*        GetVar( const std::string& name ) = 0;
 
@@ -142,11 +144,24 @@ public:
 	// TODO: shaders should probably have some shader data struct filled with the information from the material
 	//  so it doesn't need to search multiple times every frame
 	virtual Texture*            GetTexture( const std::string& name, Texture* fallback = nullptr ) = 0;
-	virtual float               GetFloat( const std::string& name, float fallback = 0.f ) = 0;
-	virtual int                 GetInt( const std::string& name, int fallback = 0 ) = 0;
-	virtual glm::vec2           GetVec2( const std::string& name, glm::vec2 fallback = {} ) = 0;
-	virtual glm::vec3           GetVec3( const std::string& name, glm::vec3 fallback = {} ) = 0;
-	virtual glm::vec4           GetVec4( const std::string& name, glm::vec4 fallback = {} ) = 0;
+
+	// virtual const float               GetFloat( const std::string& name, float fallback = 0.f ) = 0;
+	// virtual const int                 GetInt( const std::string& name, int fallback = 0 ) = 0;
+	virtual const glm::vec2&           GetVec2( const std::string& name ) = 0;
+	virtual const glm::vec3&           GetVec3( const std::string& name ) = 0;
+	virtual const glm::vec4&           GetVec4( const std::string& name ) = 0;
+
+	virtual const float&               GetFloat( const std::string& name, const float& fallback = 0.f ) = 0;
+	virtual const int&                 GetInt( const std::string& name, const int& fallback = 0 ) = 0;
+	virtual const glm::vec2&           GetVec2( const std::string& name, const glm::vec2& fallback = {} ) = 0;
+	virtual const glm::vec3&           GetVec3( const std::string& name, const glm::vec3& fallback = {} ) = 0;
+	virtual const glm::vec4&           GetVec4( const std::string& name, const glm::vec4& fallback = {} ) = 0;
+
+	// ----------------------------------------------------------------------------------------
+	
+	// virtual IDK    GetVertexFormat() = 0;
+
+	// ----------------------------------------------------------------------------------------
 
 	std::string                 aName;
 };

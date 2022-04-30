@@ -24,7 +24,7 @@ void Material::Destroy()
 }
 
 
-bool Material::SetShader( const char* name )
+bool Material::SetShader( const std::string& name )
 {
 	return (apShader = matsys->GetShader( name ));
 }
@@ -73,18 +73,35 @@ void Material::SetVar( const std::string& name, const glm::vec4 &data )   { SET_
 #undef SET_VAR
 
 
-#define GET_VAR( func ) \
+#define GET_VAR( func, fallback ) \
 	MaterialVar *var = GetVar( name ); \
 	if ( var == nullptr ) \
 		return fallback; \
 	return var->func( fallback )
 
-Texture*    Material::GetTexture( const std::string& name, Texture *fallback )    { GET_VAR( GetTexture ); }
-float       Material::GetFloat(   const std::string& name, float fallback )       { GET_VAR( GetFloat );   }
-int         Material::GetInt(     const std::string& name, int fallback )         { GET_VAR( GetInt );     }
-glm::vec2   Material::GetVec2(    const std::string& name, glm::vec2 fallback )   { GET_VAR( GetVec2 );    }
-glm::vec3   Material::GetVec3(    const std::string& name, glm::vec3 fallback )   { GET_VAR( GetVec3 );    }
-glm::vec4   Material::GetVec4(    const std::string& name, glm::vec4 fallback )   { GET_VAR( GetVec4 );    }
+const int       gFallbackInt{};
+const float     gFallbackFloat{};
+const glm::vec2 gFallbackVec2{};
+const glm::vec3 gFallbackVec3{};
+const glm::vec4 gFallbackVec4{};
+
+Texture*           Material::GetTexture( const std::string& name, Texture *fallback )    { GET_VAR( GetTexture, fallback ); }
+
+// make const ref?
+const float&       Material::GetFloat(   const std::string& name, const float& fallback )       { GET_VAR( GetFloat, fallback );   }
+const int&         Material::GetInt(     const std::string& name, const int& fallback )         { GET_VAR( GetInt, fallback );     }
+
+const glm::vec2&   Material::GetVec2(    const std::string& name, const glm::vec2& fallback )   { GET_VAR( GetVec2, fallback );    }
+const glm::vec3&   Material::GetVec3(    const std::string& name, const glm::vec3& fallback )   { GET_VAR( GetVec3, fallback );    }
+const glm::vec4&   Material::GetVec4(    const std::string& name, const glm::vec4& fallback )   { GET_VAR( GetVec4, fallback );    }
+
+
+// const float&       Material::GetFloat(   const std::string& name )   { GET_VAR( GetFloat, gFallbackInt );    }
+// const int&         Material::GetInt(     const std::string& name )   { GET_VAR( GetInt, gFallbackFloat );    }
+
+const glm::vec2&   Material::GetVec2(    const std::string& name )   { GET_VAR( GetVec2, gFallbackVec2 );    }
+const glm::vec3&   Material::GetVec3(    const std::string& name )   { GET_VAR( GetVec3, gFallbackVec3 );    }
+const glm::vec4&   Material::GetVec4(    const std::string& name )   { GET_VAR( GetVec4, gFallbackVec4 );    }
 
 #undef GET_VAR
 

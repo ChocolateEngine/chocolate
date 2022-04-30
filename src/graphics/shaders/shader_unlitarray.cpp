@@ -7,10 +7,6 @@ The Basic 3D Shader, starting point shader
 #include "shader_unlitarray.h"
 
 
-extern size_t gModelDrawCalls;
-extern size_t gVertsDrawn;
-
-
 // =========================================================
 
 // =========================================================
@@ -67,8 +63,8 @@ void ShaderUnlitArray::CreateGraphicsPipeline(  )
 	pShaderStages[ 0 ] = vertShaderStageInfo;
 	pShaderStages[ 1 ] = fragShaderStageInfo;
 
-	auto attributeDescriptions 	= vertex_3d_t::GetAttributeDesc(  );
-	auto bindingDescription 	= vertex_3d_t::GetBindingDesc(  );      
+	auto attributeDescriptions 	= Vertex3D_GetAttributeDesc(  );
+	auto bindingDescription 	= Vertex3D_GetBindingDesc(  );      
 
 	VkPipelineVertexInputStateCreateInfo vertexInputInfo{  };	//	Format of vertex data
 	vertexInputInfo.sType 				= VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
@@ -187,10 +183,8 @@ void ShaderUnlitArray::CreateGraphicsPipeline(  )
 }
 
 
-void ShaderUnlitArray::Draw( size_t renderableIndex, BaseRenderable* renderable, VkCommandBuffer c, uint32_t commandBufferIndex )
+void ShaderUnlitArray::Draw( size_t renderableIndex, IRenderable* renderable, size_t matIndex, const RenderableDrawData& instanceDrawData, VkCommandBuffer c, uint32_t commandBufferIndex )
 {
-	IMesh* mesh = static_cast<IMesh*>(renderable);
-
 	UnlitArrayPushConstant* p = (UnlitArrayPushConstant*)(aDrawDataPool.GetStart() + (sizeof( UnlitArrayPushConstant ) * renderableIndex));
 
 	vkCmdPushConstants(
@@ -204,13 +198,7 @@ void ShaderUnlitArray::Draw( size_t renderableIndex, BaseRenderable* renderable,
 
 	vkCmdBindDescriptorSets( c, VK_PIPELINE_BIND_POINT_GRAPHICS, aPipelineLayout, 0, 1, sets, 0, NULL );
 
-	if ( matsys->HasIndexBuffer( renderable ) )
-		vkCmdDrawIndexed( c, (uint32_t)mesh->GetIndices().size(), 1, 0, 0, 0);
-	else
-		vkCmdDraw( c, (uint32_t)mesh->GetVertices().size(), 1, 0, 0);
-
-	gModelDrawCalls++;
-	gVertsDrawn += mesh->GetVertices().size();
+	CmdDraw( renderable, matIndex, c );
 }
 
 
@@ -226,16 +214,13 @@ static std::string MatVar_Diffuse = "diffuse";
 static std::string MatVar_Frame = "frame";
 
 
-void ShaderUnlitArray::PrepareDrawData( size_t renderableIndex, BaseRenderable* renderable, uint32_t commandBufferCount )
+void ShaderUnlitArray::PrepareDrawData( size_t renderableIndex, IRenderable* renderable, size_t matIndex, const RenderableDrawData& instanceDrawData, uint32_t commandBufferCount )
 {
-	// there is the old DataBuffer class as well, hmm
-	IMesh* mesh = static_cast<IMesh*>(renderable);
-
 	UnlitArrayPushConstant* push = (UnlitArrayPushConstant*)(aDrawDataPool.GetStart() + (sizeof( UnlitArrayPushConstant ) * renderableIndex));
 
-	auto mat = (Material*)mesh->GetMaterial();
+	auto mat = (Material*)renderable->GetMaterial( matIndex );
 
-	push->trans	= renderer->aView.projViewMatrix * mesh->GetModelMatrix();
+	push->trans	= renderer->aView.projViewMatrix * instanceDrawData.aTransform.ToMatrix();
 	push->index = mat->GetTextureId( MatVar_Diffuse );
 	push->layer = mat->GetInt( MatVar_Frame );
 }

@@ -90,7 +90,6 @@ void InputSystem::ParseInput()
 {
 	static BaseGuiSystem* gui = GET_SYSTEM( BaseGuiSystem );
 
-	aEvents.clear();
 	SDL_PumpEvents();
 
 	int mouseEventCount = 0;

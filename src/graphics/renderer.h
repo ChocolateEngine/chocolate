@@ -12,7 +12,6 @@ Vulkan.
 #include "core/core.h"
 #include "system.h"
 #include "graphics/renderertypes.h"
-#include "graphics/imesh.h"
 #include "graphics/sprite.h"
 #include "gui/gui.h"
 #include "materialsystem.h"
@@ -92,8 +91,6 @@ public:
 	void 	InitVulkan(  );
 	/* Waaaaah!!!  */
 	void	EnableImgui(  );
-	/* A.  */
-	bool 	LoadModel( Model* sModel, const String &srPath );
 	/* A.  */
 	bool 	LoadSprite( Sprite &srSprite, const String &srPath );
 	/* A.  */

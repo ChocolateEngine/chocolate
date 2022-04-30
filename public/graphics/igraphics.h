@@ -8,7 +8,6 @@ by the renderer.
 #pragma once
 
 #include "system.h"
-#include "graphics/imesh.h"
 #include "graphics/imaterialsystem.h"
 
 #include <SDL2/SDL.h>

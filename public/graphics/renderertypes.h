@@ -34,17 +34,6 @@ public:
 	bool    Complete(  ){ return ( aPresentFamily > -1 ) && ( aGraphicsFamily > -1 ); }
 };
 
-class SwapChainSupportInfo
-{
-private:
-	typedef std::vector< VkSurfaceFormatKHR > 	SurfaceFormats;
-	typedef std::vector< VkPresentModeKHR >		PresentModes;
-public:
-	VkSurfaceCapabilitiesKHR        aCapabilities;
-        SurfaceFormats 			aFormats;
-	PresentModes 			aPresentModes;
-};
-
 struct combined_buffer_info_t
 {
 	VkDescriptorType type;
@@ -74,55 +63,6 @@ struct push_constant_t
 	alignas( 16 )int       aTexIndex;
 };
 
-struct vertex_3d_t
-{
-	glm::vec3 pos{};
-	glm::vec3 color{};
-	glm::vec2 texCoord{};
-	glm::vec3 normal{};
-	
-	bool operator==( const vertex_3d_t& other ) const
-	{
-		//return pos == other.pos && color == other.color && texCoord == other.texCoord && normal == other.normal;
-		return pos == other.pos && texCoord == other.texCoord && normal == other.normal;
-	}
-
-	static inline VkVertexInputBindingDescription GetBindingDesc()
-	{
-		VkVertexInputBindingDescription bindingDescription{};
-		bindingDescription.binding = 0;
-		bindingDescription.stride = sizeof( vertex_3d_t );
-		bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
-
-		return bindingDescription;
-	}
-
-	static inline std::array< VkVertexInputAttributeDescription, 4 > GetAttributeDesc()
-	{
-		std::array< VkVertexInputAttributeDescription, 4 >attributeDescriptions{  };
-		attributeDescriptions[0].binding = 0;
-		attributeDescriptions[0].location = 0;
-		attributeDescriptions[0].format = VK_FORMAT_R32G32B32_SFLOAT;
-		attributeDescriptions[0].offset = offsetof( vertex_3d_t, pos );
-
-		attributeDescriptions[1].binding = 0;
-		attributeDescriptions[1].location = 1;
-		attributeDescriptions[1].format = VK_FORMAT_R32G32B32_SFLOAT;
-		attributeDescriptions[1].offset = offsetof( vertex_3d_t, color );
-
-		attributeDescriptions[2].binding = 0;
-		attributeDescriptions[2].location = 2;
-		attributeDescriptions[2].format = VK_FORMAT_R32G32_SFLOAT;
-		attributeDescriptions[2].offset = offsetof( vertex_3d_t, texCoord );
-
-		attributeDescriptions[3].binding = 0;
-		attributeDescriptions[3].location = 3;
-		attributeDescriptions[3].format = VK_FORMAT_R32G32B32_SFLOAT;
-		attributeDescriptions[3].offset = offsetof( vertex_3d_t, normal );
-
-		return attributeDescriptions;
-	}
-};
 
 struct vertex_cube_3d_t
 {
@@ -161,7 +101,7 @@ struct vertex_line_3d_t
 	glm::vec3 pos{};
 	glm::vec3 color{};
 	
-	bool operator==( const vertex_3d_t& other ) const
+	bool operator==( const vertex_line_3d_t& other ) const
 	{
 		return pos == other.pos && color == other.color;
 	}
@@ -238,17 +178,6 @@ struct vertex_2d_t
 
 namespace std	//	Black magic!! don't touch!!!!
 {
-	template<  > struct hash< vertex_3d_t >
-	{
-		size_t operator(  )( vertex_3d_t const& vertex ) const
-		{
-			return  ( ( hash< glm::vec3 >(  )( vertex.pos ) ^
-               //    		( hash< glm::vec3 >(  )( vertex.color ) << 1 ) ) >> 1 ) ^
-               //    		( hash< glm::vec3 >(  )( vertex.normal ) << 1 ) ) >> 1 ) ^
-                   		( hash< glm::vec3 >(  )( vertex.normal ) << 1 ) ) ) ^
-				( hash< glm::vec2 >(  )( vertex.texCoord ) << 1 );
-		}
-	};
 	template<  > struct hash< vertex_cube_3d_t >
 	{
 		size_t operator(  )( vertex_cube_3d_t const& vertex ) const

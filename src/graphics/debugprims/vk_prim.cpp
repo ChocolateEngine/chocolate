@@ -30,7 +30,7 @@ void VulkanPrimitiveMaterials::ResetMesh()
 		return;
 
 	aFinalMesh = new PrimitiveMesh;
-	aFinalMesh->SetMaterial( apMaterial );
+	aFinalMesh->SetMaterial( 0, apMaterial );
 }
 
 void VulkanPrimitiveMaterials::PrepareMeshForDraw()
@@ -56,8 +56,7 @@ void VulkanPrimitiveMaterials::InitLine( const glm::vec3& sX, const glm::vec3& s
 
 void VulkanPrimitiveMaterials::Init()
 {
-	apMaterial = (Material*)matsys->CreateMaterial();
-	apMaterial->SetShader( "debug_line" );
+	apMaterial = (Material*)matsys->CreateMaterial( "debug_line" );
 
 	ResetMesh();
 }

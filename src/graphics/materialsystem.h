@@ -28,6 +28,47 @@ constexpr VkBufferUsageFlags gVertexBufferFlags = VK_BUFFER_USAGE_VERTEX_BUFFER_
 constexpr VkBufferUsageFlags gIndexBufferFlags  = VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
 
 
+// uh
+static inline VkVertexInputBindingDescription Vertex3D_GetBindingDesc()
+{
+	VkVertexInputBindingDescription bindingDescription{};
+	bindingDescription.binding = 0;
+	bindingDescription.stride = sizeof( vertex_3d_t );
+	bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+
+	return bindingDescription;
+}
+
+
+static inline std::array< VkVertexInputAttributeDescription, 3 > Vertex3D_GetAttributeDesc()
+{
+	std::array< VkVertexInputAttributeDescription, 3 >attributeDescriptions{  };
+	attributeDescriptions[0].binding = 0;
+	attributeDescriptions[0].location = VertexElement_Position;
+	attributeDescriptions[0].format = VK_FORMAT_R32G32B32_SFLOAT;
+	attributeDescriptions[0].offset = offsetof( vertex_3d_t, pos );
+
+	attributeDescriptions[1].binding = 0;
+	attributeDescriptions[1].location = VertexElement_Normal;
+	attributeDescriptions[1].format = VK_FORMAT_R32G32B32_SFLOAT;
+	attributeDescriptions[1].offset = offsetof( vertex_3d_t, normal );
+
+	attributeDescriptions[2].binding = 0;
+	attributeDescriptions[2].location = VertexElement_TexCoord;
+	attributeDescriptions[2].format = VK_FORMAT_R32G32_SFLOAT;
+	attributeDescriptions[2].offset = offsetof( vertex_3d_t, texCoord );
+
+	return attributeDescriptions;
+}
+
+
+struct UniformData
+{
+	VkDescriptorSetLayout   aLayout;
+	UniformDescriptor       aDesc;
+};
+
+
 class MaterialSystem: public IMaterialSystem
 {
 	using Sets   = std::vector< VkDescriptorSet >;
@@ -43,6 +84,7 @@ public:
 
 	/* Create a new empty material */
 	IMaterial*	                CreateMaterial() override;
+	IMaterial*	                CreateMaterial( const std::string& srShader ) override;
 
 	/* Find an already loaded material by it's name if it exists */
 	IMaterial*                  FindMaterial( const std::string &name ) override;
@@ -68,19 +110,19 @@ public:
 	//TextureDescriptor          *FindTexture( const std::string &path ) override;
 
 	/* Create a Vertex and Index buffer for a Renderable. */
-	void                        CreateVertexBuffer( BaseRenderable* renderable ) override;
-	void                        CreateIndexBuffer( BaseRenderable* renderable ) override;
+	void                        CreateVertexBuffer( IRenderable* renderable ) override;
+	void                        CreateIndexBuffer( IRenderable* renderable ) override;
 
 	/* Check if a Renderable has a Vertex and/or Index buffer. */
-	bool                        HasVertexBuffer( BaseRenderable* renderable ) override;
-	bool                        HasIndexBuffer( BaseRenderable* renderable ) override;
+	bool                        HasVertexBuffer( IRenderable* renderable ) override;
+	bool                        HasIndexBuffer( IRenderable* renderable ) override;
 
 	/* Free a Vertex and Index buffer for a Renderable. */
-	void                        FreeVertexBuffer( BaseRenderable* renderable ) override;
-	void                        FreeIndexBuffer( BaseRenderable* renderable ) override;
+	void                        FreeVertexBuffer( IRenderable* renderable ) override;
+	void                        FreeIndexBuffer( IRenderable* renderable ) override;
 
 	// Free all buffers from this renderable
-	void                        FreeAllBuffers( BaseRenderable* renderable ) override;
+	void                        FreeAllBuffers( IRenderable* renderable ) override;
 
 	// New buffer methods
 	// void                        CreateBuffers( BaseRenderable* renderable, RenderableBufferFlags flags ) override;
@@ -88,19 +130,19 @@ public:
 	// void                        FreeBuffers( BaseRenderable* renderable, RenderableBufferFlags flags ) override;
 
 	/* Get Vector of Buffers for a Renderable. */
-	const std::vector< RenderableBuffer* >& GetRenderBuffers( BaseRenderable* renderable );
+	const std::vector< RenderableBuffer* >& GetRenderBuffers( IRenderable* renderable );
 
 	// Does a buffer exist with these flags for this renderable already?
-	bool                        HasBufferInternal( BaseRenderable* renderable, VkBufferUsageFlags flags );
+	bool                        HasBufferInternal( IRenderable* renderable, VkBufferUsageFlags flags );
 
 	void                        ReInitSwapChain();
 	void                        DestroySwapChain();
 
 	// BLECH
-	void                        InitUniformBuffer( IMesh* mesh );
+	void                        InitUniformBuffer( IRenderable* mesh );
 
-	inline UniformDescriptor&       GetUniformData( size_t id )            { return aUniformDataMap[id]; }
-	inline VkDescriptorSetLayout    GetUniformLayout( size_t id )          { return aUniformLayoutMap[id]; }
+	// inline UniformDescriptor&       GetUniformData( size_t id )            { return aUniformDataMap[id]; }
+	// inline VkDescriptorSetLayout    GetUniformLayout( size_t id )          { return aUniformLayoutMap[id]; }
 
 	BaseShader*                 GetShader( const std::string& name ) override;
 	bool                        AddShader( BaseShader* spShader, const std::string& name );
@@ -124,29 +166,31 @@ public:
 	}
 
 	// Call this on renderable creation to assign it an Id
-	void                        RegisterRenderable( BaseRenderable* renderable ) override;
+	void                        RegisterRenderable( IRenderable* renderable ) override;
 
 	// Destroy a Renderable's Vertex and Index buffers, and anything else it may use
-	void                        DestroyRenderable( BaseRenderable* renderable ) override;
-	constexpr void              DestroyRenderable( BaseRenderableGroup *group ) override;
+	void                        DestroyRenderable( IRenderable* renderable ) override;
 
 	// Add a Renderable to be drawn next frame, list is cleared after drawing
-	void                        AddRenderable( BaseRenderable* renderable ) override;
-	constexpr void              AddRenderable( BaseRenderableGroup *group ) override;
+	void                        AddRenderable( IRenderable* renderable ) override;
+	void                        AddRenderable( IRenderable* renderable, const RenderableDrawData& srDrawData ) override;
 
-	// Get the Renderable ID
-	constexpr size_t            GetRenderableID( BaseRenderable* renderable ) override;
+	// Bind Vertex/Index Buffers of a Renderable (idk if i should have this here but oh well)
+	void                        BindRenderBuffers( IRenderable* renderable, VkCommandBuffer c, uint32_t cIndex );
 
 	// Draw a renderable (just calls shader draw lmao)
-	void                        DrawRenderable( BaseRenderable* renderable, VkCommandBuffer c, uint32_t commandBufferIndex );
-	void                        DrawRenderable( size_t renderableIndex, BaseRenderable* renderable, VkCommandBuffer c, uint32_t commandBufferIndex );
-
-	void                        DrawRenderable( BaseRenderableGroup *group, VkCommandBuffer c, uint32_t commandBufferIndex );
+	void                        DrawRenderable( size_t renderableIndex, IRenderable* renderable, size_t matIndex, const RenderableDrawData& srDrawData, VkCommandBuffer c, uint32_t commandBufferIndex );
 
 	// Awful Mesh Functions, here until i abstract what's used in it
-	void                        MeshInit( IMesh* mesh ) override;
-	void                        MeshReInit( IMesh* mesh ) override;
-	void                        MeshFreeOldResources( IMesh* mesh ) override;
+	void                        MeshInit( Model* mesh ) override;
+	void                        MeshReInit( Model* mesh ) override;
+	void                        MeshFreeOldResources( IRenderable* mesh ) override;
+
+	VkFormat                    ToVkFormat( ColorFormat colorFmt );
+
+	VkFormat                    GetVertexElementVkFormat( VertexElement element );
+	ColorFormat                 GetVertexElementFormat( VertexElement element ) override;
+	size_t                      GetVertexElementSize( VertexElement element ) override;
 
 
 	VkSampler                  *apSampler;
@@ -158,20 +202,23 @@ public:
 	Sets                        aUniformSets;
 
 	// TODO: remove this
-	std::unordered_map< size_t, UniformDescriptor >         aUniformDataMap;
-	std::unordered_map< size_t, VkDescriptorSetLayout >     aUniformLayoutMap;
+	std::unordered_map< size_t, std::vector< UniformData > > aUniformMap;
+	// std::unordered_map< size_t, VkDescriptorSetLayout >     aUniformLayoutMap;
 
 	std::vector< ITextureLoader* >                          aTextureLoaders;
 	
 private:
 	std::unordered_map< std::string, BaseShader* >          aShaders;
 
-	std::vector< BaseRenderable* >                          aRenderables;
+	std::vector< IRenderable* >                             aRenderables;
 
 	std::unordered_map< size_t, std::vector< RenderableBuffer* > >   aRenderBuffers;
 
-	//std::vector< BaseRenderable* >                          aDrawList;
-	std::unordered_map< BaseShader*, std::vector< BaseRenderable* > > aDrawList;
+	std::unordered_map<
+		BaseShader*,
+		// renderable, material index to draw, and draw data (WHY)
+		std::forward_list< std::tuple< IRenderable*, size_t, RenderableDrawData > >
+	> aDrawList;
 
 	std::vector< Material* >                                aMaterials;
 	std::vector< Material* >                                aErrorMaterials;

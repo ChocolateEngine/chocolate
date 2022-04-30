@@ -6,6 +6,9 @@ Defines shader effect stuff.
 #include "../renderer.h"
 #include "shaders.h"
 
+extern size_t gModelDrawCalls;
+extern size_t gVertsDrawn;
+
 // =========================================================
 
 BaseShader::BaseShader()
@@ -49,7 +52,7 @@ void BaseShader::CreateLayouts(  )
 }
 
 
-void BaseShader::BindBuffers( BaseRenderable* renderable, VkCommandBuffer c, uint32_t cIndex )
+void BaseShader::BindBuffers( IRenderable* renderable, VkCommandBuffer c, uint32_t cIndex )
 {
 	const std::vector< RenderableBuffer* >& renderBuffers = matsys->GetRenderBuffers( renderable );
 
@@ -74,5 +77,32 @@ void BaseShader::BindBuffers( BaseRenderable* renderable, VkCommandBuffer c, uin
 void BaseShader::Bind( VkCommandBuffer c, uint32_t cIndex )
 {
 	vkCmdBindPipeline( c, VK_PIPELINE_BIND_POINT_GRAPHICS, aPipeline );
+}
+
+
+void BaseShader::CmdDraw( IRenderable* renderable, size_t matIndex, VkCommandBuffer c )
+{
+	if ( matsys->HasIndexBuffer( renderable ) )
+		// um do i put in the vertex offset here too?
+		vkCmdDrawIndexed(
+			c,
+			renderable->GetIndexCount( matIndex ),
+			1,
+			renderable->GetIndexOffset( matIndex ),
+			renderable->GetVertexOffset( matIndex ),
+			0
+		);
+
+	else
+		vkCmdDraw(
+			c,
+			renderable->GetVertexCount( matIndex ),
+			1,
+			renderable->GetVertexOffset( matIndex ),
+			0
+		);
+
+	gModelDrawCalls++;
+	gVertsDrawn += renderable->GetVertexCount( matIndex );
 }
 

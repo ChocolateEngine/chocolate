@@ -229,10 +229,10 @@ public:
 
 	// operators !!!!!!
 
-	operator float()                                    { return aValueFloat; }
+	operator const float&()                             { return aValueFloat; }
 	//operator double()                                   { return aValueFloat; }
 	//operator bool()                                     { return GetBool(); }
-	operator std::string()                              { return aValue; }
+	operator const std::string&()                       { return aValue; }
 	operator const char*()                              { return aValue.c_str(); }
 
 	bool    operator==( const bool& other )             { return other == GetBool(); }

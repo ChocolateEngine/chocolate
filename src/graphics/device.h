@@ -19,6 +19,19 @@ functions that utilize GPU functionality.
 typedef std::vector< const char* > 	StringList;
 
 
+
+class SwapChainSupportInfo
+{
+private:
+	typedef std::vector< VkSurfaceFormatKHR > 	SurfaceFormats;
+	typedef std::vector< VkPresentModeKHR >		PresentModes;
+public:
+	VkSurfaceCapabilitiesKHR    aCapabilities;
+	SurfaceFormats              aFormats;
+	PresentModes                aPresentModes;
+};
+
+
 extern const bool 	gEnableValidationLayers;
 
 class Device
@@ -124,7 +137,7 @@ public:
 	/* A.  */
 	VkQueue 				GetPresentQueue(  ){ return aPresentQueue; }
 	/* Returns the swap chain.  */
-	SwapChain				GetSwapChain(  ){ return aSwapChain; }
+	SwapChain&				GetSwapChain(  ){ return aSwapChain; }
 	/* Returns the number of msaa samples supported by the device.  */
         VkSampleCountFlagBits		        GetSamples(  ){ return aMsaaSamples; }
 	/* A.  */

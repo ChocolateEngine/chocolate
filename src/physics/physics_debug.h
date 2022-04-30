@@ -15,20 +15,54 @@
 //  feel like it should be isolated and only use ch_core.dll
 
 // class PhysDebugMesh:  public JPH::RefTargetVirtual, public JPH::RefTarget<IMesh>
-class PhysDebugMesh:  public JPH::RefTargetVirtual, public IMesh
+class PhysDebugMesh:  public JPH::RefTargetVirtual, public IRenderable
 {
 public:
 	PhysDebugMesh();
 	~PhysDebugMesh();
 
-	virtual void					AddRef() override			{ aRefCount++; }
-	virtual void					Release() override			{ if (--aRefCount == 0) delete this; }
+	virtual void                    AddRef() override           { IRenderable::AddRef(); }
+	virtual void					Release() override          { IRenderable::Release(); }
 
-	virtual glm::mat4               GetModelMatrix() override { return aMatrix; }
+	IMaterial*                      apMaterial = nullptr;
 
-	size_t aRefCount = 0;
+	std::vector< vertex_debug_t >   aVertices;
+	std::vector< uint32_t >         aIndices;
 
-	glm::mat4 aMatrix{};
+	// --------------------------------------------------------------------------------------
+	// Materials
+
+	virtual size_t     GetMaterialCount() override                          { return 1; }
+	virtual IMaterial* GetMaterial( size_t i ) override                     { return apMaterial; }
+	virtual void       SetMaterial( size_t i, IMaterial* mat ) override     { apMaterial = mat; }
+
+	virtual void SetShader( size_t i, const std::string& name ) override
+	{
+		if ( apMaterial )
+			apMaterial->SetShader( name );
+	}
+
+	// --------------------------------------------------------------------------------------
+	// Drawing Info
+
+	virtual u32 GetVertexOffset( size_t material ) override     { return 0; }
+	virtual u32 GetVertexCount( size_t material ) override      { return aVertices.size(); }
+
+	virtual u32 GetIndexOffset( size_t material ) override      { return 0; }
+	virtual u32 GetIndexCount( size_t material ) override       { return aIndices.size(); }
+
+	// --------------------------------------------------------------------------------------
+	// Part of IModel only, i still don't know how i would handle different vertex formats
+	// maybe store it in some kind of unordered_map containing these models and the vertex type?
+	// but, the vertex and index type needs to be determined by the shader pipeline actually, hmm
+
+	virtual VertexFormatFlags                   GetVertexFormatFlags() override     { return vertex_debug_t::GetFormatFlags(); }
+	virtual size_t                              GetVertexFormatSize() override      { return sizeof( vertex_debug_t ); }
+	virtual void*                               GetVertexData() override            { return aVertices.data(); };
+	virtual size_t                              GetTotalVertexCount() override      { return aVertices.size(); };
+
+	virtual std::vector< vertex_debug_t >&      GetVertices()                       { return aVertices; };
+	virtual std::vector< uint32_t >&            GetIndices() override               { return aIndices; };
 };
 
 

@@ -9,17 +9,52 @@
  */
 #pragma once
 
-#include "graphics/imesh.h"
 #include "graphics/primvtx.hh"
 #include "graphics/renderertypes.h"
 
 #include "../types/material.h"
 
-class PrimitiveMesh: public IMesh
+class PrimitiveMesh: public IRenderable
 {
 public:
-	virtual glm::mat4               GetModelMatrix() override { return glm::mat4( 1.f ); }
+	IMaterial*                       apMaterial = nullptr;
+
+	std::vector< vertex_debug_t >    aVertices;
+	std::vector< uint32_t >          aIndices;
+
+	// --------------------------------------------------------------------------------------
+	// Materials
+
+	virtual size_t     GetMaterialCount() override                          { return 1; }
+	virtual IMaterial* GetMaterial( size_t i = 0 ) override                 { return apMaterial; }
+	virtual void       SetMaterial( size_t i, IMaterial* mat ) override     { apMaterial = mat; }
+
+	virtual void SetShader( size_t i, const std::string& name ) override
+	{
+		if ( apMaterial )
+			apMaterial->SetShader( name );
+	}
+
+	// --------------------------------------------------------------------------------------
+	// Drawing Info
+
+	virtual u32 GetVertexOffset( size_t material ) override     { return 0; }
+	virtual u32 GetVertexCount( size_t material ) override      { return aVertices.size(); }
+
+	virtual u32 GetIndexOffset( size_t material ) override      { return 0; }
+	virtual u32 GetIndexCount( size_t material ) override       { return aIndices.size(); }
+
+	// --------------------------------------------------------------------------------------
+
+	virtual VertexFormatFlags                   GetVertexFormatFlags() override     { return g_vertex_flags_debug; }
+	virtual size_t                              GetVertexFormatSize() override      { return sizeof( vertex_debug_t ); }
+	virtual void*                               GetVertexData() override            { return aVertices.data(); };
+	virtual size_t                              GetTotalVertexCount() override      { return aVertices.size(); };
+
+	virtual std::vector< vertex_debug_t >&      GetVertices()                       { return aVertices; };
+	virtual std::vector< uint32_t >&            GetIndices() override               { return aIndices; };
 };
+
 
 class VulkanPrimitiveMaterials {
 	using Sets       = std::vector< VkDescriptorSet >;

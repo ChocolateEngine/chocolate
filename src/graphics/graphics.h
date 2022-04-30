@@ -28,6 +28,8 @@ protected:
 	ModelList 	aModels;
 	Renderer 	aRenderer;
 
+	std::unordered_map< std::string, Model* > aModelPaths;
+
 	/*   */
 	void 		Init(  );
 	/* Initializes all commands the system can respond to.  */

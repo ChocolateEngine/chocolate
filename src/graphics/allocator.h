@@ -95,9 +95,10 @@ void			GenerateMipMaps( VkImage sImage, VkFormat sFormat, uint32_t sWidth, uint3
 TextureDescriptor       *InitTexture( const String &srImagePath, VkDescriptorSetLayout sLayout, VkDescriptorPool sPool, VkSampler sSampler,
 				      float *spWidth = NULL, float *spHeight = NULL );
 TextureDescriptor       *InitTexture( const String &srImagePath, VkDescriptorSetLayout sLayout, VkDescriptorPool sPool, VkSampler sSampler, int b );
-/* A.  */
-template< typename T >
-void 	        	InitTexBuffer( const std::vector< T > &srData, VkBuffer &srBuffer, VkDeviceMemory &srBufferMem, VkBufferUsageFlags sUsage );
+
+// BufferSize is sizeof(element) * count
+void 	        	InitRenderableBuffer( void* srData, size_t sBufferSize, VkBuffer &srBuffer, VkDeviceMemory &srBufferMem, VkBufferUsageFlags sUsage );
+
 /* A.  */
 void 			InitUniformBuffers( DataBuffer< VkBuffer > &srUBuffers, DataBuffer< VkDeviceMemory > &srUBuffersMem, size_t uboSize );
 /* A.  */

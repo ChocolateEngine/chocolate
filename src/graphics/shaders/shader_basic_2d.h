@@ -18,12 +18,12 @@ public:
 
 	virtual void        CreateGraphicsPipeline(  ) override;
 
-	virtual void        Draw( size_t renderableIndex, BaseRenderable* renderable, VkCommandBuffer c, uint32_t commandBufferIndex ) override;
+	virtual void        Draw( size_t renderableIndex, IRenderable* renderable, size_t matIndex, VkCommandBuffer c, uint32_t commandBufferIndex ) override;
 
 	inline bool         UsesUniformBuffers(  ) override { return false; };
 
 	virtual void        AllocDrawData( size_t sRenderableCount ) override;
-	virtual void        PrepareDrawData( size_t renderableIndex, BaseRenderable* renderable, uint32_t commandBufferCount ) override;
+	virtual void        PrepareDrawData( size_t renderableIndex, IRenderable* renderable, size_t material, uint32_t commandBufferCount ) override;
 
 	MemPool aDrawDataPool;
 };

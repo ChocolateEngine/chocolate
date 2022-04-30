@@ -742,25 +742,15 @@ void GetModelVerts( Model* spModel, std::vector< JPH::Vec3 >& srVertices )
 {
 	PROF_SCOPE();
 
-	for ( uint32_t r = 0; r < spModel->GetRenderableCount(); r++ )
-	{
-		MeshPtr* mesh = (MeshPtr*)spModel->GetRenderable( r );
+	auto& verts = spModel->GetVertices();
+	auto& ind = spModel->GetIndices();
 
-		Assert( mesh );
-
-		if ( mesh == nullptr )
-			continue;
-
-		auto& verts = mesh->GetVertices();
-		auto& ind = mesh->GetIndices();
-
-		size_t origSize = srVertices.size();
-		srVertices.resize( srVertices.size() + ind.size() );
+	size_t origSize = srVertices.size();
+	srVertices.resize( srVertices.size() + ind.size() );
 			
-		for ( size_t i = 0; i < ind.size(); i++ )
-		{
-			srVertices[origSize + i] = toJolt( verts[i].pos );
-		}
+	for ( size_t i = 0; i < ind.size(); i++ )
+	{
+		srVertices[origSize + i] = toJolt( verts[i].pos );
 	}
 }
 
@@ -769,29 +759,19 @@ void GetModelTris( Model* spModel, std::vector< JPH::Triangle >& srTris )
 {
 	PROF_SCOPE();
 
-	for ( uint32_t r = 0; r < spModel->GetRenderableCount(); r++ )
+	auto& verts = spModel->GetVertices();
+	auto& ind = spModel->GetIndices();
+
+	// size_t origSize = srTris.size();
+	// srTris.reserve( srTris.size() + ind.size() );
+
+	for ( size_t i = 0; i < ind.size(); i += 3 )
 	{
-		MeshPtr* mesh = (MeshPtr*)spModel->GetRenderable( r );
-
-		Assert( mesh );
-
-		if ( mesh == nullptr )
-			continue;
-
-		auto& verts = mesh->GetVertices();
-		auto& ind = mesh->GetIndices();
-
-		// size_t origSize = srTris.size();
-		// srTris.reserve( srTris.size() + ind.size() );
-
-		for ( size_t i = 0; i < ind.size(); i += 3 )
-		{
-			srTris.emplace_back(
-				toJolt( verts[ind[i]  ].pos ),
-				toJolt( verts[ind[i+1]].pos ),
-				toJolt( verts[ind[i+2]].pos )
-			);
-		}
+		srTris.emplace_back(
+			toJolt( verts[ind[i]  ].pos ),
+			toJolt( verts[ind[i+1]].pos ),
+			toJolt( verts[ind[i+2]].pos )
+		);
 	}
 
 #if 0
@@ -819,38 +799,28 @@ void GetModelInd( Model* spModel, std::vector< JPH::Float3 >& srVerts, std::vect
 {
 	PROF_SCOPE();
 
-	for ( uint32_t r = 0; r < spModel->GetRenderableCount(); r++ )
+	auto& verts = spModel->GetVertices();
+	auto& ind = spModel->GetIndices();
+
+	JPH::uint32 origSize = (JPH::uint32)srVerts.size();
+
+	// TODO: do these faster, memcpy the indices maybe?
+	srVerts.resize( origSize + verts.size() );
+	// std::memcpy( srVerts.data() + origSize, verts.data(), verts.size() * sizeof( );
+
+	for ( size_t i = 0; i < verts.size(); i++ )
 	{
-		MeshPtr* mesh = (MeshPtr*)spModel->GetRenderable( r );
+		// srVerts.emplace_back( toJoltFl( verts[i].pos ) );
+		srVerts[origSize + i] = toJoltFl( verts[i].pos );
+	}
 
-		Assert( mesh );
-
-		if ( mesh == nullptr )
-			continue;
-
-		auto& verts = mesh->GetVertices();
-		auto& ind = mesh->GetIndices();
-
-		JPH::uint32 origSize = (JPH::uint32)srVerts.size();
-
-		// TODO: do these faster, memcpy the indices maybe?
-		srVerts.resize( origSize + verts.size() );
-		// std::memcpy( srVerts.data() + origSize, verts.data(), verts.size() * sizeof( );
-
-		for ( size_t i = 0; i < verts.size(); i++ )
-		{
-			// srVerts.emplace_back( toJoltFl( verts[i].pos ) );
-			srVerts[origSize + i] = toJoltFl( verts[i].pos );
-		}
-
-		for ( size_t i = 0; i < ind.size(); i += 3 )
-		{
-			srInd.emplace_back(
-			 	origSize + ind[i],
-			 	origSize + ind[i + 1],
-			 	origSize + ind[i + 2]
-			);
-		}
+	for ( size_t i = 0; i < ind.size(); i += 3 )
+	{
+		srInd.emplace_back(
+			origSize + ind[i],
+			origSize + ind[i + 1],
+			origSize + ind[i + 2]
+		);
 	}
 }
 
@@ -874,7 +844,8 @@ JPH::ShapeSettings* PhysicsEnvironment::LoadModel( const PhysicsShapeInfo& physI
 
 			if ( vertices.empty() )
 			{
-				LogWarn( gPhysicsChannel, "No vertices in model? - \"%s\"\n", physInfo.aMeshData.apModel->aPath.c_str() );
+				// LogWarn( gPhysicsChannel, "No vertices in model? - \"%s\"\n", physInfo.aMeshData.apModel->aPath.c_str() );
+				LogWarn( gPhysicsChannel, "No vertices in model?\n" );
 				return nullptr;
 			}
 
@@ -892,7 +863,8 @@ JPH::ShapeSettings* PhysicsEnvironment::LoadModel( const PhysicsShapeInfo& physI
 
 			if ( ind.empty() )
 			{
-				LogWarn( gPhysicsChannel, "No vertices in model? - \"%s\"\n", physInfo.aMeshData.apModel->aPath.c_str() );
+				// LogWarn( gPhysicsChannel, "No vertices in model? - \"%s\"\n", physInfo.aMeshData.apModel->aPath.c_str() );
+				LogWarn( gPhysicsChannel, "No vertices in model?\n" );
 				return nullptr;
 			}
 

@@ -209,33 +209,31 @@ void GenerateMipMaps( VkImage sImage, VkFormat sFormat, uint32_t sWidth, uint32_
 								  0, 0, nullptr, 0, nullptr, 1, &barrier ); } );
 }
 
-template< typename T >
-void InitTexBuffer( const std::vector< T > &srData, VkBuffer &srBuffer, VkDeviceMemory &srBufferMem, VkBufferUsageFlags sUsage )
+void InitRenderableBuffer( void* srData, size_t sBufferSize, VkBuffer &srBuffer, VkDeviceMemory &srBufferMem, VkBufferUsageFlags sUsage )
 {
-	VkBuffer 	stagingBuffer;
-	VkDeviceMemory 	stagingBufferMemory;
-	VkDeviceSize 	bufferSize = sizeof( srData[ 0 ] ) * srData.size(  );
+	VkBuffer        stagingBuffer;
+	VkDeviceMemory  stagingBufferMemory;
+	VkDeviceSize    bufferSize = sBufferSize;
 
-	if ( !bufferSize ) {
+	if ( !bufferSize )
+	{
 		srBuffer    = 0;
 		srBufferMem = 0;
-
-	        IDPF( "Tried to create a vertex buffer / index buffer with no size!\n" );
-
+		
+		LogError( "Tried to create a vertex buffer / index buffer with no size!\n" );
 		return;
 	}
 	
 	InitBuffer( bufferSize, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
 		    VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer, stagingBufferMemory );
 	
-        MapMemory( stagingBufferMemory, bufferSize, srData.data(  ) );
+	MapMemory( stagingBufferMemory, bufferSize, srData );
 
-        InitBuffer( bufferSize, sUsage, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-		    srBuffer, srBufferMem );
+	InitBuffer( bufferSize, sUsage, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, srBuffer, srBufferMem );
+	CopyBuffer( stagingBuffer, srBuffer, bufferSize );
 
-        CopyBuffer( stagingBuffer, srBuffer, bufferSize );
 	vkDestroyBuffer( DEVICE, stagingBuffer, NULL );
-        vkFreeMemory( DEVICE, stagingBufferMemory, NULL );
+	vkFreeMemory( DEVICE, stagingBufferMemory, NULL );
 }
 
 void InitUniformBuffers( DataBuffer< VkBuffer > &srUBuffers, DataBuffer< VkDeviceMemory > &srUBuffersMem, size_t uboSize )
@@ -669,8 +667,3 @@ void FreeResources(  )
 		rFunc(  );
 }
 
-template void 		InitTexBuffer< uint32_t >( const std::vector< uint32_t >&, VkBuffer&, VkDeviceMemory&, VkBufferUsageFlags );
-template void 		InitTexBuffer< vertex_2d_t >( const std::vector< vertex_2d_t >&, VkBuffer&, VkDeviceMemory&, VkBufferUsageFlags );
-template void 		InitTexBuffer< vertex_3d_t >( const std::vector< vertex_3d_t >&, VkBuffer&, VkDeviceMemory&, VkBufferUsageFlags );
-template void 		InitTexBuffer< vertex_cube_3d_t >( const std::vector< vertex_cube_3d_t >&, VkBuffer&, VkDeviceMemory&, VkBufferUsageFlags );
-template void       InitTexBuffer< PrimVtx >( const std::vector< PrimVtx >&, VkBuffer&, VkDeviceMemory&, VkBufferUsageFlags );

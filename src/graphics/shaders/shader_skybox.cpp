@@ -210,13 +210,8 @@ inline void ToViewMatrixY( glm::mat4& viewMatrix, const glm::vec3& ang )
 }
 
 
-void ShaderSkybox::Draw( size_t renderableIndex, BaseRenderable* renderable, VkCommandBuffer c, uint32_t commandBufferIndex )
+void ShaderSkybox::Draw( size_t renderableIndex, IRenderable* renderable, size_t matIndex, const RenderableDrawData& instanceDrawData, VkCommandBuffer c, uint32_t commandBufferIndex )
 {
-	// why did i do this, remove this ASAP
-	ISkyboxMesh* mesh = static_cast<ISkyboxMesh*>(renderable);
-
-	assert(mesh != nullptr);
-
 	SkyboxPushConst* p = (SkyboxPushConst*)(aDrawDataPool.GetStart() + (sizeof( SkyboxPushConst ) * renderableIndex));
 
 	vkCmdPushConstants(
@@ -230,13 +225,10 @@ void ShaderSkybox::Draw( size_t renderableIndex, BaseRenderable* renderable, VkC
 
 	vkCmdBindDescriptorSets( c, VK_PIPELINE_BIND_POINT_GRAPHICS, aPipelineLayout, 0, 1, sets, 0, NULL );
 
-	if ( matsys->HasIndexBuffer( renderable ) )
-		vkCmdDrawIndexed( c, (uint32_t)mesh->GetIndices().size(), 1, 0, 0, 0 );
-	else
-		vkCmdDraw( c, (uint32_t)mesh->GetVertices().size(), 1, 0, 0 );
+	CmdDraw( renderable, matIndex, c );
 
 	gModelDrawCalls++;
-	gVertsDrawn += mesh->GetVertices().size();
+	gVertsDrawn += renderable->GetVertexCount( matIndex );
 }
 
 
@@ -257,15 +249,11 @@ static std::string MatVar_Ang = "ang";
 static std::string MatVar_Sky = "sky";
 
 
-void ShaderSkybox::PrepareDrawData( size_t renderableIndex, BaseRenderable* renderable, uint32_t commandBufferCount )
+void ShaderSkybox::PrepareDrawData( size_t renderableIndex, IRenderable* renderable, size_t matIndex, uint32_t commandBufferCount )
 {
-	// there is the old DataBuffer class as well, hmm
-
-	IMesh* mesh = static_cast<IMesh*>(renderable);
-
 	SkyboxPushConst* push = (SkyboxPushConst*)(aDrawDataPool.GetStart() + (sizeof(SkyboxPushConst) * renderableIndex));
 
-	Material* mat = (Material*)mesh->GetMaterial();
+	Material* mat = (Material*)renderable->GetMaterial( matIndex );
 
 	// TODO: add GetMat4 to MaterialVar types
 	glm::mat4 viewMat( 1.f );

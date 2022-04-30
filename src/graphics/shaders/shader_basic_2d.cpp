@@ -176,12 +176,9 @@ void Basic2D::CreateGraphicsPipeline(  )
 }
 
 
-void Basic2D::Draw( size_t renderableIndex, BaseRenderable* renderable, VkCommandBuffer c, uint32_t commandBufferIndex )
+void Basic2D::Draw( size_t renderableIndex, IRenderable* mesh, size_t matIndex, VkCommandBuffer c, uint32_t commandBufferIndex )
 {
-	Sprite* sprite = dynamic_cast<Sprite*>(renderable);
-	Assert( sprite != nullptr );
-
-	int diffuse = matsys->GetTextureId( sprite->GetMaterial()->GetTexture("diffuse"));
+	int diffuse = matsys->GetTextureId( mesh->GetMaterial( matIndex )->GetTexture( "diffuse" ) );
 	VkDescriptorSet sets[  ] = { matsys->aImageSets[ commandBufferIndex ] };
 
 	vkCmdBindDescriptorSets( c, VK_PIPELINE_BIND_POINT_GRAPHICS, aPipelineLayout, 0, 1, sets, 0, NULL );
@@ -198,12 +195,9 @@ void Basic2D::Draw( size_t renderableIndex, BaseRenderable* renderable, VkComman
 		push
 	);
 
-	if ( matsys->HasIndexBuffer( renderable ) )
-		vkCmdDrawIndexed( c, (uint32_t)sprite->GetIndices().size(), 1, 0, 0, 0 );
-	else
-		vkCmdDraw( c, (uint32_t)sprite->GetVertices().size(), 1, 0, 0 );
+	CmdDraw( mesh, matIndex, c );
 
-	gVertsDrawn += sprite->GetVertices().size();
+	gVertsDrawn += mesh->GetVertexCount( matIndex );
 }
 
 
@@ -218,7 +212,7 @@ void Basic2D::AllocDrawData( size_t sRenderableCount )
 static std::string MatVar_Diffuse = "diffuse";
 
 
-void Basic2D::PrepareDrawData( size_t renderableIndex, BaseRenderable* renderable, uint32_t commandBufferCount )
+void Basic2D::PrepareDrawData( size_t renderableIndex, IRenderable* renderable, size_t matIndex, uint32_t commandBufferCount )
 {
 	// there is the old DataBuffer class as well, hmm
 
@@ -226,7 +220,7 @@ void Basic2D::PrepareDrawData( size_t renderableIndex, BaseRenderable* renderabl
 
 	push_constant_t* push = (push_constant_t*)(aDrawDataPool.GetStart() + (sizeof( push_constant_t ) * renderableIndex));
 
-	auto mat = (Material*)sprite->GetMaterial();
+	auto mat = (Material*)sprite->GetMaterial( matIndex );
 
 	push->aMatrix	= sprite->GetMatrix();
 	push->aTexIndex  = mat->GetTextureId( MatVar_Diffuse );

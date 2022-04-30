@@ -11,26 +11,65 @@ functionality where a STL vector may cause segfaults.
 template< class T >
 class DataBuffer
 {
+public:
 	T			*apBuffers 	= nullptr;
 	uint32_t		aBufferCount    = 0;
-public:
+
 	/* Returns true if there are allocated buffers, false if the memory isn't and should not be accessed.  */
 	bool			IsValid(  ){ return apBuffers; }
+
 	/* Returns the buffer.  */
         T			*&GetBuffer(  ){ return apBuffers; }
+
 	/* Returns the size of the buffer.  */
 	uint32_t		GetSize(  ){ return aBufferCount; }
+
 	/* Returns the topmost buffer.  */
 	T			&GetTop(  ){ return apBuffers[ aBufferCount - 1 ]; }
+
 	/* Allocates memory for the buffer.  */
-	void			Allocate( uint32_t sSize ){ apBuffers = new T[ sSize + 1 ]; aBufferCount = sSize; }
+	void			Allocate( uint32_t sSize )
+	{
+		apBuffers = new T[ sSize + 1 ];
+		aBufferCount = sSize;
+	}
+
 	/* Reallocates the buffer.  */
-	void			Reallocate( uint32_t sSize ){ T *pTemp = new T[ sSize + 1 ]; if ( IsValid(  ) ){ for ( uint32_t i = 0; i < aBufferCount && i < sSize; ++i ) pTemp[ i ] = apBuffers[ i ]; delete[  ] apBuffers; } apBuffers = pTemp; aBufferCount = sSize; }
+	void			Reallocate( uint32_t sSize )
+	{
+		T *pTemp = new T[ sSize + 1 ];
+
+		if ( IsValid(  ) )
+		{
+			for ( uint32_t i = 0; i < aBufferCount && i < sSize; ++i )
+				pTemp[ i ] = apBuffers[ i ];
+
+			delete[] apBuffers;
+		}
+
+		apBuffers = pTemp;
+		aBufferCount = sSize;
+	}
+
 	/* Add one element to the buffer.  */
 	void			Increment(  ){ Reallocate( aBufferCount + 1 ); }
+
 	/* Index into the buffer.  */
 	T			&operator[  ]( uint32_t sIndex ){ return apBuffers[ sIndex ]; }
+
 	explicit		DataBuffer(  ) : apBuffers( nullptr ), aBufferCount( 0 ){  }
+
 	/* Frees the buffer when no longer in use.  */
 				~DataBuffer(  ){ delete[  ] apBuffers; }
+
+	// range based for loop support
+	T* begin()
+	{
+		return apBuffers;
+	}
+
+	T* end()
+	{
+		return apBuffers[ aBufferCount ];
+	}
 };

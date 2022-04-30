@@ -32,8 +32,8 @@ public:
 	//std::string         GetName(  ) override;
 
 	/* Set the shader for the material by the shader name */
-	bool                SetShader( const char* name ) override;
-	//HShader             GetShader( const char* name ) override;
+	bool                SetShader( const std::string& name ) override;
+
 	std::string         GetShaderName(  ) { return apShader ? apShader->aName : ""; };
 
 	MaterialVar        *GetVar( const std::string& name ) override;
@@ -49,11 +49,18 @@ public:
 	void                SetVar( const std::string& name, const glm::vec4 &data ) override;
 
 	Texture            *GetTexture( const std::string& name, Texture *fallback = nullptr ) override;
-	float               GetFloat( const std::string& name, float fallback = 0.f ) override;
-	int                 GetInt( const std::string& name, int fallback = 0 ) override;
-	glm::vec2           GetVec2( const std::string& name, glm::vec2 fallback = {} ) override;
-	glm::vec3           GetVec3( const std::string& name, glm::vec3 fallback = {} ) override;
-	glm::vec4           GetVec4( const std::string& name, glm::vec4 fallback = {} ) override;
+
+	// const float&               GetFloat( const std::string& name ) override;
+	// const int&                 GetInt( const std::string& name ) override;
+	const glm::vec2&           GetVec2( const std::string& name ) override;
+	const glm::vec3&           GetVec3( const std::string& name ) override;
+	const glm::vec4&           GetVec4( const std::string& name ) override;
+
+	const float&               GetFloat( const std::string& name, const float& fallback = 0.f ) override;
+	const int&                 GetInt( const std::string& name, const int& fallback = 0 ) override;
+	const glm::vec2&           GetVec2( const std::string& name, const glm::vec2& fallback ) override;
+	const glm::vec3&           GetVec3( const std::string& name, const glm::vec3& fallback ) override;
+	const glm::vec4&           GetVec4( const std::string& name, const glm::vec4& fallback ) override;
 
 	size_t              GetTextureId( const std::string& name, Texture *fallback = nullptr );
 

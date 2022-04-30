@@ -45,7 +45,6 @@
 
 #include "types/transform.h"
 #include "graphics/renderertypes.h"
-#include "graphics/imesh.h"
 
 
 inline glm::mat4 fromJolt( const JPH::Mat44& from ) {

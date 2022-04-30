@@ -55,14 +55,10 @@ void ShaderDebugLine::ReInit()
 }
 
 
-void ShaderDebugLine::CmdPushConst( BaseRenderable* renderable, VkCommandBuffer c, uint32_t cIndex )
+void ShaderDebugLine::CmdPushConst( IRenderable* renderable, size_t matIndex, const RenderableDrawData& instanceDrawData, VkCommandBuffer c, uint32_t cIndex )
 {
-	IMesh* mesh = static_cast<IMesh*>(renderable);
-
-	// NOTE: should get the MeshPtr directly so there can be less matvar calls since it would always be the same material
-
 	DebugLinePushConstant p = {
-		renderer->aView.projViewMatrix * mesh->GetModelMatrix()
+		renderer->aView.projViewMatrix * instanceDrawData.aTransform.ToMatrix()
 	};
 
 	vkCmdPushConstants(
@@ -105,6 +101,35 @@ void ShaderDebug::ReInit()
 }
 
 
+// uh
+static inline VkVertexInputBindingDescription VertexDebug_GetBindingDesc()
+{
+	VkVertexInputBindingDescription bindingDescription{};
+	bindingDescription.binding = 0;
+	bindingDescription.stride = sizeof( vertex_debug_t );
+	bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+
+	return bindingDescription;
+}
+
+
+static inline std::array< VkVertexInputAttributeDescription, 2 > VertexDebug_GetAttributeDesc()
+{
+	std::array< VkVertexInputAttributeDescription, 2 >attributeDescriptions{  };
+	attributeDescriptions[0].binding = 0;
+	attributeDescriptions[0].location = VertexElement_Position;
+	attributeDescriptions[0].format = VK_FORMAT_R32G32B32_SFLOAT;
+	attributeDescriptions[0].offset = offsetof( vertex_debug_t, pos );
+
+	attributeDescriptions[1].binding = 0;
+	attributeDescriptions[1].location = 1;
+	attributeDescriptions[1].format = VK_FORMAT_R32G32_SFLOAT;
+	attributeDescriptions[1].offset = offsetof( vertex_debug_t, color );
+
+	return attributeDescriptions;
+}
+
+
 void ShaderDebug::CreateGraphicsPipeline(  )
 {
 	VkPipelineShaderStageCreateInfo vertShaderStageInfo{  };
@@ -124,8 +149,8 @@ void ShaderDebug::CreateGraphicsPipeline(  )
 	pShaderStages[ 0 ] = vertShaderStageInfo;
 	pShaderStages[ 1 ] = fragShaderStageInfo;
 
-	auto attributeDescriptions 	= vertex_3d_t::GetAttributeDesc(  );
-	auto bindingDescription 	= vertex_3d_t::GetBindingDesc(  );
+	auto attributeDescriptions 	= VertexDebug_GetAttributeDesc();
+	auto bindingDescription 	= VertexDebug_GetBindingDesc();
 
 	VkPipelineVertexInputStateCreateInfo vertexInputInfo{  };	//	Format of vertex data
 	vertexInputInfo.sType 				= VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
@@ -244,33 +269,21 @@ void ShaderDebug::CreateGraphicsPipeline(  )
 }
 
 
-void ShaderDebug::Draw( BaseRenderable* renderable, VkCommandBuffer c, uint32_t cIndex )
+void ShaderDebug::Draw( size_t renderableIndex, IRenderable* renderable, size_t matIndex, const RenderableDrawData& instanceDrawData, VkCommandBuffer c, uint32_t cIndex )
 {
-	// just kinda hope that it's a mesh for now to be slightly faster lmao, graphics 2 will have this done much better
-	// IMesh* mesh = dynamic_cast<IMesh*>(renderable);
-	IMesh* mesh = static_cast<IMesh*>(renderable);
-
-	CmdPushConst( renderable, c, cIndex );
-
-	if ( matsys->HasIndexBuffer( renderable ) )
-		vkCmdDraw( c, (uint32_t)mesh->GetVertices().size(), 1, 0, 0 );
-	else
-		vkCmdDraw( c, (uint32_t)mesh->GetVertices().size(), 1, 0, 0 );
-
-	gModelDrawCalls++;
-	gVertsDrawn += mesh->GetVertices().size();
+	CmdPushConst( renderable, matIndex, instanceDrawData, c, cIndex );
+	CmdDraw( renderable, matIndex, c );
 }
 
 
-void ShaderDebug::CmdPushConst( BaseRenderable* renderable, VkCommandBuffer c, uint32_t cIndex )
+void ShaderDebug::CmdPushConst( IRenderable* renderable, size_t matIndex, const RenderableDrawData& instanceDrawData, VkCommandBuffer c, uint32_t cIndex )
 {
-	IMesh* mesh = static_cast<IMesh*>(renderable);
-	auto mat = (Material*)mesh->GetMaterial();
+	auto mat = (Material*)renderable->GetMaterial( matIndex );
 
 	// NOTE: should get the MeshPtr directly so there can be less matvar calls since it would always be the same material
 
 	DebugPushConstant p = {
-		renderer->aView.projViewMatrix * mesh->GetModelMatrix(),
+		renderer->aView.projViewMatrix * instanceDrawData.aMatrix,
 		mat->GetVec4( "color", vec4_default )
 	};
 

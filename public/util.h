@@ -11,6 +11,7 @@
 #include <vector>
 #include <string>
 #include <algorithm>
+#include <atomic>
 
 #include <time.h>
 
@@ -190,6 +191,49 @@ std::vector< float >        CORE_API KV_GetVecFloat( const std::string& value );
 glm::vec2                   CORE_API KV_GetVec2( const std::string& value, const glm::vec2& fallback = {} );
 glm::vec3                   CORE_API KV_GetVec3( const std::string& value, const glm::vec3& fallback = {} );
 glm::vec4                   CORE_API KV_GetVec4( const std::string& value, const glm::vec4& fallback = {} );
+
+
+// ==============================================================================
+// Ref Counter Class
+
+
+class RefCounted
+{
+public:
+	virtual            ~RefCounted() = default;
+
+	inline RefCounted&  operator=( const RefCounted &srRef )        { return *this; }
+	
+	u32                 GetRefCount() const                         { return aRefCount; }
+
+	// Add or release a reference to this object
+	inline void         AddRef() const                              { ++aRefCount; }
+	inline void         Release() const                             { if (--aRefCount == 0) delete this; }
+
+private:
+
+	mutable std::atomic< u32 > aRefCount = 0;  // Current reference count
+};
+
+
+template <class T>
+class RefTarget
+{
+public:
+	virtual            ~RefTarget() = default;
+
+	inline RefTarget&   operator=( const RefTarget &srRef )        { return *this; }
+	
+	u32                 GetRefCount() const                         { return aRefCount; }
+
+	// Add or release a reference to this object
+	inline void         AddRef() const                              { ++aRefCount; }
+	inline void         Release() const                             { if (--aRefCount == 0) delete static_cast<const T *>(this); }
+
+private:
+
+	mutable std::atomic< u32 > aRefCount = 0;  // Current reference count
+};
 
 
 // ==============================================================================
