@@ -17,9 +17,6 @@ struct UnlitPushConstant
 
 class ShaderUnlit : public BaseShader
 {
-protected:
-
-
 public:	
 	                    ShaderUnlit(): BaseShader() {}
 
@@ -34,6 +31,11 @@ public:
 
 	virtual void        AllocDrawData( size_t sRenderableCount ) override;
 	virtual void        PrepareDrawData( size_t renderableIndex, IRenderable* renderable, size_t matIndex, const RenderableDrawData& instanceDrawData, uint32_t commandBufferCount ) override;
+
+	virtual VertexFormat GetVertexFormat() override
+	{
+		return VertexFormat_Position | VertexFormat_TexCoord;
+	}
 
 	MemPool aDrawDataPool;
 };

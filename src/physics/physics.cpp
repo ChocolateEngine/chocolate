@@ -503,7 +503,6 @@ void PhysicsEnvironment::Init()
 	apPhys->SetContactListener( &gContactListener );
 
 	apDebugDraw = new PhysDebugDraw;
-	// apDebugDraw->setDebugMode( btIDebugDraw::DBG_NoDebug );
 }
 
 
@@ -525,30 +524,35 @@ void PhysicsEnvironment::Simulate( float sDT )
 
 	apPhys->Update( sDT, phys_collisionsteps, phys_substeps, phys.apAllocator, phys.apJobSystem );
 
-	if ( phys_dbg )
-	{
-		for ( auto physObj : aPhysObjs )
-		{
-			physObj->apShape->aShape->Draw(
-				apDebugDraw,
-				JPH::Mat44::sRotationTranslation( physObj->GetRotationJolt(), physObj->GetPositionJolt() ),
-				{1, 1, 1},
-				{1, 0, 0},
-				false,
-				phys_dbg_wireframe.GetBool()
-			);
-		}
+	if ( !phys_dbg && apDebugDraw->aValid )
+		return;
 
-		// shape->Draw(mDebugRenderer, shape_transform, Vec3::sReplicate(1.0f), had_hit? Color::sGreen : Color::sGrey, false, false);
+	if ( !apDebugDraw->aValid )
+	{
+		LogError( gPhysicsChannel, "Debug Drawer is Not Valid???\n" );
+		return;
+	}
+
+	for ( auto physObj : aPhysObjs )
+	{
+		if ( !physObj->aAllowDebugDraw )
+			continue;
+
+		physObj->apShape->aShape->Draw(
+			apDebugDraw,
+			JPH::Mat44::sRotationTranslation( physObj->GetRotationJolt(), physObj->GetPositionJolt() ),
+			// physObj->GetWorldTransformJolt(),
+			{1, 1, 1},
+			{1, 0, 0},
+			false,
+			phys_dbg_wireframe.GetBool()
+		);
 	}
 
 	// if ( phys_fast )
 	// 	apWorld->stepSimulation( sDT );
 	// else
 	// 	apWorld->stepSimulation( sDT, 100, 1 / 240.0 );
-
-	// if ( phys_dbg )
-	//	apWorld->debugDrawWorld();
 }
 
 
@@ -742,15 +746,36 @@ void GetModelVerts( Model* spModel, std::vector< JPH::Vec3 >& srVertices )
 {
 	PROF_SCOPE();
 
-	auto& verts = spModel->GetVertices();
-	auto& ind = spModel->GetIndices();
-
-	size_t origSize = srVertices.size();
-	srVertices.resize( srVertices.size() + ind.size() );
-			
-	for ( size_t i = 0; i < ind.size(); i++ )
+	for ( size_t s = 0; s < spModel->GetSurfaceCount(); s++ )
 	{
-		srVertices[origSize + i] = toJolt( verts[i].pos );
+		auto& ind = spModel->GetSurfaceIndices( s );
+		auto& vertData = spModel->GetSurfaceVertexData( s );
+
+		float* data = nullptr;
+		for ( auto& attrib : vertData.aData )
+		{
+			if ( attrib.aAttrib == VertexAttribute_Position )
+			{
+				data = (float*)attrib.apData;
+				break;
+			}
+		}
+
+		if ( ind.size() )
+		{
+			for ( size_t i = 0; i < ind.size(); i++ )
+			{
+				size_t i0 = ind[i] * 3;
+				srVertices.emplace_back( data[i0], data[i0 + 1], data[i0 + 2] );
+			}
+		}
+		else
+		{
+			for ( size_t i = 0; i < vertData.aCount * 3; )
+			{
+				srVertices.emplace_back( data[i++], data[i++], data[i++] );
+			}
+		}
 	}
 }
 
@@ -759,68 +784,89 @@ void GetModelTris( Model* spModel, std::vector< JPH::Triangle >& srTris )
 {
 	PROF_SCOPE();
 
-	auto& verts = spModel->GetVertices();
-	auto& ind = spModel->GetIndices();
-
-	// size_t origSize = srTris.size();
-	// srTris.reserve( srTris.size() + ind.size() );
-
-	for ( size_t i = 0; i < ind.size(); i += 3 )
+	for ( size_t s = 0; s < spModel->GetSurfaceCount(); s++ )
 	{
-		srTris.emplace_back(
-			toJolt( verts[ind[i]  ].pos ),
-			toJolt( verts[ind[i+1]].pos ),
-			toJolt( verts[ind[i+2]].pos )
-		);
+		auto& ind = spModel->GetSurfaceIndices( s );
+		auto& vertData = spModel->GetSurfaceVertexData( s );
+
+		float* data = nullptr;
+		for ( auto& attrib : vertData.aData )
+		{
+			if ( attrib.aAttrib == VertexAttribute_Position )
+			{
+				data = (float*)attrib.apData;
+				break;
+			}
+		}
+
+		// shouldn't be using this function if we have indices lol
+		// could even calculate them in GetModelInd as well
+		if ( ind.size() )
+		{
+			for ( size_t i = 0; i < ind.size(); i += 3)
+			{
+				size_t i0 = ind[i + 0] * 3;
+				size_t i1 = ind[i + 1] * 3;
+				size_t i2 = ind[i + 2] * 3;
+
+				JPH::Vec3 vec0 = {data[i0], data[i0 + 1], data[i0 + 2]};
+				JPH::Vec3 vec1 = {data[i1], data[i1 + 1], data[i1 + 2]};
+				JPH::Vec3 vec2 = {data[i2], data[i2 + 1], data[i2 + 2]};
+
+				srTris.emplace_back( vec0, vec1, vec2 );
+			}
+		}
+		else
+		{
+			for ( size_t i = 0; i < vertData.aCount * 3; )
+			{
+				JPH::Vec3 vec0 = {data[i++], data[i++], data[i++]};
+				JPH::Vec3 vec1 = {data[i++], data[i++], data[i++]};
+				JPH::Vec3 vec2 = {data[i++], data[i++], data[i++]};
+
+				srTris.emplace_back( vec0, vec1, vec2 );
+			}
+		}
 	}
-
-#if 0
-	for (int i = 0; i < physInfo.indices.size() / 3; i++)
-		//for (int i = 0; i < model.aIndices.size() / 3; i++)
-	{
-		//glm::vec3 v0 = model.aVertices[ model.aIndices[i * 3]     ].pos;
-		//glm::vec3 v1 = model.aVertices[ model.aIndices[i * 3 + 1] ].pos;
-		//glm::vec3 v2 = model.aVertices[ model.aIndices[i * 3 + 2] ].pos;
-
-		glm::vec3 v0 = physInfo.vertices[ physInfo.indices[i * 3]     ].pos;
-		glm::vec3 v1 = physInfo.vertices[ physInfo.indices[i * 3 + 1] ].pos;
-		glm::vec3 v2 = physInfo.vertices[ physInfo.indices[i * 3 + 2] ].pos;
-
-		meshInterface->addTriangle(btVector3(v0[0], v0[1], v0[2]),
-			btVector3(v1[0], v1[1], v1[2]),
-			btVector3(v2[0], v2[1], v2[2]));
-	}
-#endif
 }
 
 
-// something is very broken here
 void GetModelInd( Model* spModel, std::vector< JPH::Float3 >& srVerts, std::vector< JPH::IndexedTriangle >& srInd )
 {
 	PROF_SCOPE();
 
-	auto& verts = spModel->GetVertices();
-	auto& ind = spModel->GetIndices();
-
 	JPH::uint32 origSize = (JPH::uint32)srVerts.size();
 
-	// TODO: do these faster, memcpy the indices maybe?
-	srVerts.resize( origSize + verts.size() );
-	// std::memcpy( srVerts.data() + origSize, verts.data(), verts.size() * sizeof( );
-
-	for ( size_t i = 0; i < verts.size(); i++ )
+	for ( size_t s = 0; s < spModel->GetSurfaceCount(); s++ )
 	{
-		// srVerts.emplace_back( toJoltFl( verts[i].pos ) );
-		srVerts[origSize + i] = toJoltFl( verts[i].pos );
-	}
+		auto& ind = spModel->GetSurfaceIndices( s );
+		auto& vertData = spModel->GetSurfaceVertexData( s );
 
-	for ( size_t i = 0; i < ind.size(); i += 3 )
-	{
-		srInd.emplace_back(
-			origSize + ind[i],
-			origSize + ind[i + 1],
-			origSize + ind[i + 2]
-		);
+		float* data = nullptr;
+		for ( auto& attrib : vertData.aData )
+		{
+			if ( attrib.aAttrib == VertexAttribute_Position )
+			{
+				data = (float*)attrib.apData;
+				break;
+			}
+		}
+
+		origSize = (JPH::uint32)srVerts.size();
+
+		for ( size_t i = 0; i < vertData.aCount * 3; i += 3 )
+		{
+			srVerts.emplace_back( data[i+0], data[i+1], data[i+2] );
+		}
+
+		for ( size_t i = 0; i < ind.size(); i += 3 )
+		{
+			srInd.emplace_back(
+				origSize + ind[i + 0],
+				origSize + ind[i + 1],
+				origSize + ind[i + 2]
+			);
+		}
 	}
 }
 
@@ -863,8 +909,7 @@ JPH::ShapeSettings* PhysicsEnvironment::LoadModel( const PhysicsShapeInfo& physI
 
 			if ( ind.empty() )
 			{
-				// LogWarn( gPhysicsChannel, "No vertices in model? - \"%s\"\n", physInfo.aMeshData.apModel->aPath.c_str() );
-				LogWarn( gPhysicsChannel, "No vertices in model?\n" );
+				LogWarn( gPhysicsChannel, "No vertices in model? - \"%s\"\n", graphics->GetModelPath( physInfo.aMeshData.apModel ).c_str() );
 				return nullptr;
 			}
 
@@ -876,7 +921,7 @@ JPH::ShapeSettings* PhysicsEnvironment::LoadModel( const PhysicsShapeInfo& physI
 
 			if ( tris.empty() )
 			{
-				LogWarn( gPhysicsChannel, "No vertices in model? - \"%s\"\n", physInfo.aMeshData.apModel->aPath.c_str() );
+				LogWarn( gPhysicsChannel, "No vertices in model? - \"%s\"\n", graphics->GetModelPath( physInfo.aMeshData.apModel ).c_str() );
 				return nullptr;
 			}
 

@@ -5,8 +5,8 @@ Interface for the material class to be used outside graphics
 */
 #pragma once
 
-#include "types/databuffer.hh"
 #include "graphics/renderertypes.h"
+#include "graphics/imaterialsystem.h"
 
 #include <filesystem>
 #include <string>
@@ -100,11 +100,18 @@ public:
 	inline void        SetVec4( const glm::vec4 &val )              { aType = MatVar::Vec4; aDataVec4 = val; }
 
 	inline Texture*    GetTexture( Texture *fallback = nullptr )	{ return (aType == MatVar::Texture) ? aDataTexture : fallback; }
-	inline float       GetFloat( float fallback = 0.f )             { return (aType == MatVar::Float) ? aDataFloat : fallback; }
-	inline int         GetInt( int fallback = 0 )                   { return (aType == MatVar::Int) ? aDataInt : fallback; }
-	inline glm::vec2   GetVec2( const glm::vec2 &fallback )         { return (aType == MatVar::Vec2) ? aDataVec2 : fallback; }
-	inline glm::vec3   GetVec3( const glm::vec3 &fallback )         { return (aType == MatVar::Vec3) ? aDataVec3 : fallback; }
-	inline glm::vec4   GetVec4( const glm::vec4 &fallback )         { return (aType == MatVar::Vec4) ? aDataVec4 : fallback; }
+
+	// inline float       GetFloat( float fallback = 0.f )             { return (aType == MatVar::Float) ? aDataFloat : fallback; }
+	// inline int         GetInt( int fallback = 0 )                   { return (aType == MatVar::Int) ? aDataInt : fallback; }
+	// inline glm::vec2   GetVec2( const glm::vec2 &fallback )         { return (aType == MatVar::Vec2) ? aDataVec2 : fallback; }
+	// inline glm::vec3   GetVec3( const glm::vec3 &fallback )         { return (aType == MatVar::Vec3) ? aDataVec3 : fallback; }
+	// inline glm::vec4   GetVec4( const glm::vec4 &fallback )         { return (aType == MatVar::Vec4) ? aDataVec4 : fallback; }
+
+	inline const float&       GetFloat( float fallback = 0.f )             { return (aType == MatVar::Float) ? aDataFloat : fallback; }
+	inline const int&         GetInt( int fallback = 0 )                   { return (aType == MatVar::Int) ? aDataInt : fallback; }
+	inline const glm::vec2&   GetVec2( const glm::vec2 &fallback )         { return (aType == MatVar::Vec2) ? aDataVec2 : fallback; }
+	inline const glm::vec3&   GetVec3( const glm::vec3 &fallback )         { return (aType == MatVar::Vec3) ? aDataVec3 : fallback; }
+	inline const glm::vec4&   GetVec4( const glm::vec4 &fallback )         { return (aType == MatVar::Vec4) ? aDataVec4 : fallback; }
 };
 
 
@@ -112,20 +119,16 @@ public:
 //using HShader = ResourceHandle;
 
 
+class IMaterialSystem;
+
+
 class IMaterial
 {
 public:
 	virtual                    ~IMaterial() = default;
 
-	//virtual void                SetHandle( HMaterial mat ) = 0;
-	//virtual HMaterial           GetHandle() = 0;
-
-	//virtual void                SetName( const char* name ) = 0;
-	//virtual std::string         GetName(  ) = 0;
-
-	/* Set the shader for the material by the shader name */
+	// Set the shader for the material by the shader name 
 	virtual bool                SetShader( const std::string& name ) = 0;
-	//virtual HShader             GetShader( const char* name ) = 0;
 	virtual std::string         GetShaderName(  ) = 0;
 
 	// ----------------------------------------------------------------------------------------
@@ -159,7 +162,11 @@ public:
 
 	// ----------------------------------------------------------------------------------------
 	
-	// virtual IDK    GetVertexFormat() = 0;
+	// Get Vertex Format used by the current shader
+	virtual VertexFormat               GetVertexFormat() = 0;
+
+	// cool epic convienence function
+	virtual IMaterialSystem*           GetMaterialSystem() = 0;
 
 	// ----------------------------------------------------------------------------------------
 

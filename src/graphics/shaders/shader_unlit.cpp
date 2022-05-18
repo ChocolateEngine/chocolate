@@ -68,15 +68,18 @@ void ShaderUnlit::CreateGraphicsPipeline(  )
 	pShaderStages[ 0 ] = vertShaderStageInfo;
 	pShaderStages[ 1 ] = fragShaderStageInfo;
 
-	auto attributeDescriptions 	= Vertex3D_GetAttributeDesc();
-	auto bindingDescription 	= Vertex3D_GetBindingDesc();      
+	std::vector< VkVertexInputBindingDescription > bindingDescriptions;
+	std::vector< VkVertexInputAttributeDescription > attributeDescriptions;
+
+	matsys->GetVertexBindingDesc( GetVertexFormat(), bindingDescriptions );
+	matsys->GetVertexAttributeDesc( GetVertexFormat(), attributeDescriptions );
 
 	VkPipelineVertexInputStateCreateInfo vertexInputInfo{  };	//	Format of vertex data
 	vertexInputInfo.sType 				= VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-	vertexInputInfo.vertexBindingDescriptionCount 	= 1;
-	vertexInputInfo.pVertexBindingDescriptions 	= &bindingDescription;			//	Contains details for loading vertex data
-	vertexInputInfo.vertexAttributeDescriptionCount = ( uint32_t )( attributeDescriptions.size(  ) );
-	vertexInputInfo.pVertexAttributeDescriptions 	= attributeDescriptions.data(  );	//	Same as above
+	vertexInputInfo.vertexBindingDescriptionCount 	= ( u32 )bindingDescriptions.size();
+	vertexInputInfo.pVertexBindingDescriptions 	= bindingDescriptions.data();			//	Contains details for loading vertex data
+	vertexInputInfo.vertexAttributeDescriptionCount = ( u32 )( attributeDescriptions.size() );
+	vertexInputInfo.pVertexAttributeDescriptions 	= attributeDescriptions.data();	//	Same as above
 
 	VkPipelineInputAssemblyStateCreateInfo inputAssembly{  };	//	Collects raw vertex data from buffers
 	inputAssembly.sType 			= VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
@@ -227,4 +230,5 @@ void ShaderUnlit::PrepareDrawData( size_t renderableIndex, IRenderable* renderab
 	push->trans	= renderer->aView.projViewMatrix * instanceDrawData.aTransform.ToMatrix();
 	push->index = mat->GetTextureId( MatVar_Diffuse );
 }
+
 

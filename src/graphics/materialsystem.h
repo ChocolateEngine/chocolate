@@ -15,51 +15,81 @@ TODO: move this to graphics level abstraction so the game can use this
 #include "textures/itextureloader.h"
 
 
-// for vertex and index buffers
-struct RenderableBuffer
+struct VertexBuffer
+{
+	VkBufferUsageFlags              aFlags     = 0;
+
+	std::vector< VkBuffer >         aBuffers;
+	std::vector< VkDeviceMemory >   aBufferMem;
+	std::vector< VkDeviceSize >     aOffsets;
+
+	inline void Bind( VkCommandBuffer c )
+	{
+		// NOTE: maybe you could make use of this first binding thing?
+		vkCmdBindVertexBuffers( c, 0, aBuffers.size(), aBuffers.data(), aOffsets.data() );
+	}
+
+	inline void Free()
+	{
+		for ( size_t v = 0; v < aBuffers.size(); v++ )
+		{
+			vkDestroyBuffer( DEVICE, aBuffers[v], nullptr );
+			vkFreeMemory( DEVICE, aBufferMem[v], nullptr );
+		}
+
+		aBuffers.clear();
+		aBufferMem.clear();
+		aOffsets.clear();
+	}
+};
+
+
+struct IndexBuffer
 {
 	VkBufferUsageFlags      aFlags     = 0;
 	VkBuffer                aBuffer    = nullptr;
 	VkDeviceMemory          aBufferMem = nullptr;
+	// VkDeviceSize            aOffset    = 0;
+	VkIndexType             aIndexType = VK_INDEX_TYPE_UINT32;
+
+	inline void Bind( VkCommandBuffer c )
+	{
+		// NOTE: in godot when vkCmdDrawIndexed is called, it uses the offset stored in the index buffer
+		// so, how does this offset actually work anyway?
+		vkCmdBindIndexBuffer( c, aBuffer, 0, aIndexType );
+	}
+
+	inline void Free()
+	{
+		if ( aBuffer )
+			vkDestroyBuffer( DEVICE, aBuffer, nullptr );
+
+		if ( aBufferMem )
+			vkFreeMemory( DEVICE, aBufferMem, nullptr );
+
+		aBuffer = nullptr;
+		aBufferMem = nullptr;
+	}
 };
 
 
+// two other types to put here eventually:
+// - shader storage buffers
+// - uniform buffers
+
+
+// Data for each mesh surface
+struct InternalMeshData_t
+{
+	// std::vector< VertexBuffer >     aVertexBuffers;
+	// std::vector< IndexBuffer >      aIndexBuffers;
+
+	VertexBuffer*    apVertexBuffer;
+	IndexBuffer*     apIndexBuffer;
+};
+
 constexpr VkBufferUsageFlags gVertexBufferFlags = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
 constexpr VkBufferUsageFlags gIndexBufferFlags  = VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
-
-
-// uh
-static inline VkVertexInputBindingDescription Vertex3D_GetBindingDesc()
-{
-	VkVertexInputBindingDescription bindingDescription{};
-	bindingDescription.binding = 0;
-	bindingDescription.stride = sizeof( vertex_3d_t );
-	bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
-
-	return bindingDescription;
-}
-
-
-static inline std::array< VkVertexInputAttributeDescription, 3 > Vertex3D_GetAttributeDesc()
-{
-	std::array< VkVertexInputAttributeDescription, 3 >attributeDescriptions{  };
-	attributeDescriptions[0].binding = 0;
-	attributeDescriptions[0].location = VertexElement_Position;
-	attributeDescriptions[0].format = VK_FORMAT_R32G32B32_SFLOAT;
-	attributeDescriptions[0].offset = offsetof( vertex_3d_t, pos );
-
-	attributeDescriptions[1].binding = 0;
-	attributeDescriptions[1].location = VertexElement_Normal;
-	attributeDescriptions[1].format = VK_FORMAT_R32G32B32_SFLOAT;
-	attributeDescriptions[1].offset = offsetof( vertex_3d_t, normal );
-
-	attributeDescriptions[2].binding = 0;
-	attributeDescriptions[2].location = VertexElement_TexCoord;
-	attributeDescriptions[2].format = VK_FORMAT_R32G32_SFLOAT;
-	attributeDescriptions[2].offset = offsetof( vertex_3d_t, texCoord );
-
-	return attributeDescriptions;
-}
 
 
 struct UniformData
@@ -109,17 +139,26 @@ public:
 	/* Find an already loaded texture in vram */
 	//TextureDescriptor          *FindTexture( const std::string &path ) override;
 
-	/* Create a Vertex and Index buffer for a Renderable. */
-	void                        CreateVertexBuffer( IRenderable* renderable ) override;
-	void                        CreateIndexBuffer( IRenderable* renderable ) override;
+	// Create a Vertex and Index buffer for a Renderable.
+	void                        CreateVertexBuffer( IRenderable* renderable, size_t surface ) override;
+	void                        CreateIndexBuffer( IRenderable* renderable, size_t surface ) override;
 
-	/* Check if a Renderable has a Vertex and/or Index buffer. */
-	bool                        HasVertexBuffer( IRenderable* renderable ) override;
-	bool                        HasIndexBuffer( IRenderable* renderable ) override;
+	void                        CreateVertexBuffers( IRenderable* renderable ) override;
+	void                        CreateIndexBuffers( IRenderable* renderable ) override;
 
-	/* Free a Vertex and Index buffer for a Renderable. */
-	void                        FreeVertexBuffer( IRenderable* renderable ) override;
-	void                        FreeIndexBuffer( IRenderable* renderable ) override;
+	void                        CreateVertexBufferInt( IRenderable* renderable, size_t surface, InternalMeshData_t& meshData );
+	void                        CreateIndexBufferInt( IRenderable* renderable, size_t surface, InternalMeshData_t& meshData );
+
+	// Check if a Renderable has a Vertex and/or Index buffer. 
+	bool                        HasVertexBuffer( IRenderable* renderable, size_t surface ) override;
+	bool                        HasIndexBuffer( IRenderable* renderable, size_t surface ) override;
+
+	// Free a Vertex and Index buffer for a Renderable.
+	void                        FreeVertexBuffer( IRenderable* renderable, size_t surface ) override;
+	void                        FreeIndexBuffer( IRenderable* renderable, size_t surface ) override;
+
+	void                        FreeVertexBuffers( IRenderable* renderable ) override;
+	void                        FreeIndexBuffers( IRenderable* renderable ) override;
 
 	// Free all buffers from this renderable
 	void                        FreeAllBuffers( IRenderable* renderable ) override;
@@ -129,17 +168,14 @@ public:
 	// bool                        HasBuffers( BaseRenderable* renderable, RenderableBufferFlags flags ) override;
 	// void                        FreeBuffers( BaseRenderable* renderable, RenderableBufferFlags flags ) override;
 
-	/* Get Vector of Buffers for a Renderable. */
-	const std::vector< RenderableBuffer* >& GetRenderBuffers( IRenderable* renderable );
+	/* Get Internal Mesh Data for a Renderable. */
+	const std::vector< InternalMeshData_t >& GetMeshData( IRenderable* renderable );
 
-	// Does a buffer exist with these flags for this renderable already?
-	bool                        HasBufferInternal( IRenderable* renderable, VkBufferUsageFlags flags );
-
-	void                        ReInitSwapChain();
-	void                        DestroySwapChain();
+	void                        OnReInitSwapChain();
+	void                        OnDestroySwapChain();
 
 	// BLECH
-	void                        InitUniformBuffer( IRenderable* mesh );
+	void                        InitUniformBuffer( IRenderable* mesh ) override;
 
 	// inline UniformDescriptor&       GetUniformData( size_t id )            { return aUniformDataMap[id]; }
 	// inline VkDescriptorSetLayout    GetUniformLayout( size_t id )          { return aUniformLayoutMap[id]; }
@@ -175,23 +211,27 @@ public:
 	void                        AddRenderable( IRenderable* renderable ) override;
 	void                        AddRenderable( IRenderable* renderable, const RenderableDrawData& srDrawData ) override;
 
-	// Bind Vertex/Index Buffers of a Renderable (idk if i should have this here but oh well)
-	void                        BindRenderBuffers( IRenderable* renderable, VkCommandBuffer c, uint32_t cIndex );
-
 	// Draw a renderable (just calls shader draw lmao)
 	void                        DrawRenderable( size_t renderableIndex, IRenderable* renderable, size_t matIndex, const RenderableDrawData& srDrawData, VkCommandBuffer c, uint32_t commandBufferIndex );
 
 	// Awful Mesh Functions, here until i abstract what's used in it
-	void                        MeshInit( Model* mesh ) override;
-	void                        MeshReInit( Model* mesh ) override;
 	void                        MeshFreeOldResources( IRenderable* mesh ) override;
 
-	VkFormat                    ToVkFormat( ColorFormat colorFmt );
+	VkFormat                    ToVkFormat( GraphicsFormat colorFmt );
 
-	VkFormat                    GetVertexElementVkFormat( VertexElement element );
-	ColorFormat                 GetVertexElementFormat( VertexElement element ) override;
-	size_t                      GetVertexElementSize( VertexElement element ) override;
+	VkFormat                    GetVertexAttributeVkFormat( VertexAttribute attrib );
+	GraphicsFormat              GetVertexAttributeFormat( VertexAttribute attrib ) override;
+	size_t                      GetVertexAttributeTypeSize( VertexAttribute attrib ) override;
+	size_t                      GetVertexAttributeSize( VertexAttribute attrib ) override;
+	size_t                      GetVertexFormatSize( VertexFormat format ) override;
 
+	// size_t                      GetFormatSize( DataFormat format ) override;
+
+	// VkVertexInputBindingDescription GetVertexBindingDesc( VertexFormat format );
+	void                            GetVertexBindingDesc( VertexFormat format, std::vector< VkVertexInputBindingDescription >& srAttrib );
+	void                            GetVertexAttributeDesc( VertexFormat format, std::vector< VkVertexInputAttributeDescription >& srAttrib );
+
+	// -----------------------------------------------------------------------------------------
 
 	VkSampler                  *apSampler;
 
@@ -212,7 +252,7 @@ private:
 
 	std::vector< IRenderable* >                             aRenderables;
 
-	std::unordered_map< size_t, std::vector< RenderableBuffer* > >   aRenderBuffers;
+	std::unordered_map< size_t, std::vector< InternalMeshData_t > > aMeshData;
 
 	std::unordered_map<
 		BaseShader*,
@@ -236,4 +276,11 @@ MaterialSystem* GetMaterialSystem();
 
 
 void AddTextureLoader( ITextureLoader* loader );
+
+
+// remove me
+static inline void Vertex3D_GetBindingDesc( std::vector< VkVertexInputBindingDescription >& srDescs )
+{
+	return matsys->GetVertexBindingDesc( VertexFormat_Position | VertexFormat_Normal | VertexFormat_TexCoord, srDescs );
+}
 

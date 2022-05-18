@@ -6,8 +6,6 @@ The Basic 3D Shader, starting point shader
 #include "../renderer.h"
 #include "shaders.h"
 
-#include <mutex>
-
 
 extern size_t gModelDrawCalls;
 extern size_t gVertsDrawn;
@@ -103,6 +101,11 @@ public:
 	virtual void        AllocDrawData( size_t sRenderableCount ) override;
 	virtual void        PrepareDrawData( size_t renderableIndex, IRenderable* renderable, size_t matIndex, const RenderableDrawData& instanceDrawData, uint32_t commandBufferCount ) override;
 
+	VertexFormat        GetVertexFormat() override
+	{
+		return VertexFormat_Position | VertexFormat_Normal | VertexFormat_TexCoord;
+	}
+
 	MemPool aDrawDataPool;
 };
 
@@ -118,7 +121,7 @@ void Basic3D::CreateLayouts()
 }
 
 
-void Basic3D::CreateGraphicsPipeline(  )
+void Basic3D::CreateGraphicsPipeline()
 {
 	aPipelineLayout = InitPipelineLayouts( aLayouts.GetBuffer(  ), aLayouts.GetSize(  ), sizeof( Basic3D_PushConst ) );
 
@@ -139,15 +142,18 @@ void Basic3D::CreateGraphicsPipeline(  )
 	pShaderStages[ 0 ] = vertShaderStageInfo;
 	pShaderStages[ 1 ] = fragShaderStageInfo;
 
-	auto attributeDescriptions 	= Vertex3D_GetAttributeDesc();
-	auto bindingDescription 	= Vertex3D_GetBindingDesc();
+	std::vector< VkVertexInputBindingDescription > bindingDescriptions;
+	std::vector< VkVertexInputAttributeDescription > attributeDescriptions;
+
+	matsys->GetVertexBindingDesc( GetVertexFormat(), bindingDescriptions );
+	matsys->GetVertexAttributeDesc( GetVertexFormat(), attributeDescriptions );
 
 	VkPipelineVertexInputStateCreateInfo vertexInputInfo{  };	//	Format of vertex data
 	vertexInputInfo.sType 				= VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-	vertexInputInfo.vertexBindingDescriptionCount 	= 1;
-	vertexInputInfo.pVertexBindingDescriptions 	= &bindingDescription;			//	Contains details for loading vertex data
-	vertexInputInfo.vertexAttributeDescriptionCount = ( uint32_t )( attributeDescriptions.size(  ) );
-	vertexInputInfo.pVertexAttributeDescriptions 	= attributeDescriptions.data(  );	//	Same as above
+	vertexInputInfo.vertexBindingDescriptionCount 	= ( u32 )bindingDescriptions.size();
+	vertexInputInfo.pVertexBindingDescriptions 	= bindingDescriptions.data();			//	Contains details for loading vertex data
+	vertexInputInfo.vertexAttributeDescriptionCount = ( u32 )( attributeDescriptions.size() );
+	vertexInputInfo.pVertexAttributeDescriptions 	= attributeDescriptions.data();	//	Same as above
 
 	VkPipelineInputAssemblyStateCreateInfo inputAssembly{  };	//	Collects raw vertex data from buffers
 	inputAssembly.sType 			= VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
@@ -233,7 +239,7 @@ void Basic3D::CreateGraphicsPipeline(  )
 
 	VkPipelineDynamicStateCreateInfo dynamicState{  };
 	dynamicState.sType 		= VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
-	dynamicState.dynamicStateCount  = 2;
+	dynamicState.dynamicStateCount  = ARR_SIZE( dynamicStates );
 	dynamicState.pDynamicStates 	= dynamicStates;
 
 	VkGraphicsPipelineCreateInfo pipelineInfo{  };	//	Combine all the objects above into one parameter for graphics pipeline creation
@@ -270,9 +276,9 @@ void Basic3D::InitUniformBuffer( IRenderable* mesh )
 		return;
 
 	std::vector< UniformData >& uniformList = matsys->aUniformMap[mesh->GetID()];
-	uniformList.resize( mesh->GetMaterialCount() );
+	uniformList.resize( mesh->GetSurfaceCount() );
 
-	for ( size_t i = 0; i < mesh->GetMaterialCount(); i++ )
+	for ( size_t i = 0; i < mesh->GetSurfaceCount(); i++ )
 	{
 		// uniformList.emplace_back(
 		// 	InitDescriptorSetLayout( {{ DescriptorLayoutBinding( VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, NULL ) }} )

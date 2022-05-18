@@ -26,6 +26,11 @@ public:
 
 	virtual VkPrimitiveTopology GetTopologyType() { return VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST; }
 	virtual void        CmdPushConst( IRenderable* renderable, size_t matIndex, const RenderableDrawData& instanceDrawData, VkCommandBuffer c, uint32_t cIndex );
+
+	VertexFormat        GetVertexFormat() override
+	{
+		return VertexFormat_Position | VertexFormat_Color;
+	}
 };
 
 

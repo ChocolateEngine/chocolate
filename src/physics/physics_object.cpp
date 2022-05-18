@@ -208,6 +208,17 @@ bool PhysicsObject::IsSensor()
 }
 
 
+void PhysicsObject::SetAllowDebugDraw( bool sAllow )
+{
+	aAllowDebugDraw = sAllow;
+}
+
+bool PhysicsObject::GetAllowDebugDraw()
+{
+	return aAllowDebugDraw;
+}
+
+
 void PhysicsObject::SetInverseMass( float inverseMass )
 {
 	apBody->GetMotionProperties()->SetInverseMass( 1.0f / aPhysInfo.aMass );
@@ -341,4 +352,8 @@ JPH::Quat PhysicsObject::GetRotationJolt()
 	return apBody->GetRotation();
 }
 
+JPH::Mat44 PhysicsObject::GetWorldTransformJolt()
+{
+	return apBody->GetWorldTransform();
+}
 

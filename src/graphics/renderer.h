@@ -15,7 +15,6 @@ Vulkan.
 #include "graphics/sprite.h"
 #include "gui/gui.h"
 #include "materialsystem.h"
-#include "debugprims/primcreator.h"
 #include "types/databuffer.hh"
 
 #include "allocator.h"
@@ -29,6 +28,8 @@ Vulkan.
 
 #include <optional>
 
+class DebugRenderer;
+
 class Renderer	//	Most of these objects are used to make new objects by initializing them with certain parameters, then creating and storing them
 {
 protected:
@@ -39,7 +40,7 @@ protected:
 	typedef std::vector< VkSemaphore >		SemaphoreList;
 	typedef std::vector< VkFence >			FenceList;
 	typedef std::vector< Model* >		ModelList;
-	typedef std::vector< Sprite* >		SpriteList;
+	// typedef std::vector< Sprite* >		SpriteList;
 	typedef std::string				String;
 
 	ImageViews                  aSwapChainImageViews;       // View into an image, describing which part to access, one needed for each image
@@ -81,9 +82,7 @@ public:
 	
 	View            aView;
 	ModelList       aModels;
-	SpriteList      aSprites;
-
-	DebugRenderer   aDbgDrawer;
+	// SpriteList      aSprites;
 
 	/* A.  */
 	void    Init(  );
@@ -92,7 +91,7 @@ public:
 	/* Waaaaah!!!  */
 	void	EnableImgui(  );
 	/* A.  */
-	bool 	LoadSprite( Sprite &srSprite, const String &srPath );
+	// bool 	LoadSprite( Sprite &srSprite, const String &srPath );
 	/* A.  */
 	void 	DrawFrame(  );
 	/* Create a line and add it to drawing.  */

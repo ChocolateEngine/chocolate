@@ -1,10 +1,12 @@
+#include "graphics/meshbuilder.hpp"
+
 #include "physics.h"
 #include "physics_object.h"
-
 
 #include <Renderer/DebugRenderer.cpp>
 
 #include "physics_debug.h"
+
 
 BaseGraphicsSystem* graphics = nullptr;
 IMaterialSystem* matsys = nullptr;
@@ -47,9 +49,11 @@ PhysDebugDraw::PhysDebugDraw()
 
 	// apMatSolid->SetShader( "basic_3d" );
 	apMatSolid->SetShader( "debug" );
-	apMatWire->SetShader( "debug_line" );
+	apMatWire->SetShader( "debug" );
 
 	Initialize();
+
+	aValid = true;
 }
 
 
@@ -91,15 +95,15 @@ void PhysDebugDraw::DrawTriangle(
 }
 
 
-vertex_debug_t ToVertDBG( const JPH::DebugRenderer::Vertex& inVert )
-{
-	return {
-		.pos        = fromJolt(inVert.mPosition),
-		.color      = fromJolt(inVert.mColor),
-		// .texCoord   = fromJolt(inVert.mUV),
-		// .normal     = fromJolt(inVert.mNormal),
-	};
-}
+// vertex_debug_t ToVertDBG( const JPH::DebugRenderer::Vertex& inVert )
+// {
+// 	return {
+// 		.pos        = fromJolt(inVert.mPosition),
+// 		.color      = fromJolt(inVert.mColor),
+// 		// .texCoord   = fromJolt(inVert.mUV),
+// 		// .normal     = fromJolt(inVert.mNormal),
+// 	};
+// }
 
 
 PhysDebugDraw::Batch PhysDebugDraw::CreateTriangleBatch(
@@ -109,24 +113,44 @@ PhysDebugDraw::Batch PhysDebugDraw::CreateTriangleBatch(
 	if ( inTriangles == nullptr || inTriangleCount == 0 )
 		return nullptr; // mEmptyBatch;
 
-	PhysDebugMesh* mesh = aMeshes.emplace_back( new PhysDebugMesh );
+	PhysDebugMesh* mesh = new PhysDebugMesh;
+	aMeshes.push_back( mesh );
 
-	mesh->SetMaterial( 0, apMatSolid );
-
-	auto& vert = mesh->GetVertices();
-	auto& ind = mesh->GetIndices();
+	MeshBuilder meshBuilder;
+	meshBuilder.Start( matsys, mesh );
+	meshBuilder.SetMaterial( apMatSolid );
 
 	// convert vertices
-	vert.resize( inTriangleCount * 3 );
-	for ( int i = 0, t = 0; t < inTriangleCount; i++, t++ )
+	// vert.resize( inTriangleCount * 3 );
+	for ( int i = 0; i < inTriangleCount; i++ )
 	{
-		vert[i * 3 + 0] = ToVertDBG( inTriangles[i].mV[0] );
-		vert[i * 3 + 1] = ToVertDBG( inTriangles[i].mV[1] );
-		vert[i * 3 + 2] = ToVertDBG( inTriangles[i].mV[2] );
+		meshBuilder.SetPos( fromJolt( inTriangles[i].mV[0].mPosition ) );
+		// meshBuilder.SetNormal( fromJolt( inTriangles[i].mV[0].mNormal ) );
+		meshBuilder.SetColor( fromJolt( inTriangles[i].mV[0].mColor ) );
+		// meshBuilder.SetTexCoord( fromJolt( inTriangles[i].mV[0].mUV ) );
+		meshBuilder.NextVertex();
+
+		meshBuilder.SetPos( fromJolt( inTriangles[i].mV[1].mPosition ) );
+		// meshBuilder.SetNormal( fromJolt( inTriangles[i].mV[1].mNormal ) );
+		meshBuilder.SetColor( fromJolt( inTriangles[i].mV[1].mColor ) );
+		// meshBuilder.SetTexCoord( fromJolt( inTriangles[i].mV[1].mUV ) );
+		meshBuilder.NextVertex();
+
+		meshBuilder.SetPos( fromJolt( inTriangles[i].mV[2].mPosition ) );
+		// meshBuilder.SetNormal( fromJolt( inTriangles[i].mV[2].mNormal ) );
+		meshBuilder.SetColor( fromJolt( inTriangles[i].mV[2].mColor ) );
+		// meshBuilder.SetTexCoord( fromJolt( inTriangles[i].mV[2].mUV ) );
+		meshBuilder.NextVertex();
+
+		// vert[i * 3 + 0] = ToVertDBG( inTriangles[i].mV[0] );
+		// vert[i * 3 + 1] = ToVertDBG( inTriangles[i].mV[1] );
+		// vert[i * 3 + 2] = ToVertDBG( inTriangles[i].mV[2] );
 	}
 
+	meshBuilder.End();
+
 	// create buffers
-	matsys->CreateVertexBuffer( mesh );
+	// matsys->CreateVertexBuffer( mesh );
 	// matsys->CreateIndexBuffer( mesh );
 
 	return mesh;
@@ -142,35 +166,33 @@ PhysDebugDraw::Batch PhysDebugDraw::CreateTriangleBatch(
 	if ( inVertices == nullptr || inVertexCount == 0 || inIndices == nullptr || inIndexCount == 0 )
 		return nullptr; // mEmptyBatch;
 
-	PhysDebugMesh* mesh = aMeshes.emplace_back( new PhysDebugMesh );
-
-	mesh->SetMaterial( 0, apMatWire );
-
-	auto& vert = mesh->GetVertices();
-	auto& ind = mesh->GetIndices();
+	PhysDebugMesh* mesh = new PhysDebugMesh;
+	aMeshes.push_back( mesh );
+	
+	MeshBuilder meshBuilder;
+	meshBuilder.Start( matsys, mesh );
+	meshBuilder.SetMaterial( apMatSolid );
 
 	// convert vertices
-	vert.resize( inVertexCount );
-	for ( int i = 0; i < inVertexCount; i++ )
-	{
-		vert[i] = ToVertDBG( inVertices[i] );
-	}
-
-	// convert indices
-	ind.resize( inIndexCount );
 	for ( int i = 0; i < inIndexCount; i++ )
 	{
-		ind[i] = inIndices[i];
+		meshBuilder.SetPos( fromJolt( inVertices[inIndices[i]].mPosition ) );
+		// meshBuilder.SetNormal( fromJolt( inVertices[inIndices[i]].mNormal ) );
+		meshBuilder.SetColor( fromJolt( inVertices[inIndices[i]].mColor ) );
+		// meshBuilder.SetTexCoord( fromJolt( inVertices[inIndices[i]].mUV ) );
+		meshBuilder.NextVertex();
 	}
 
-	// create material
-	IMaterial* mat = aMaterials.emplace_back( matsys->CreateMaterial() );
-	mat->SetShader( "debug" );
-	mat->SetVar( "color", vec4_default );
+	meshBuilder.End();
 
-	// create buffers
-	matsys->CreateVertexBuffer( mesh );
-	matsys->CreateIndexBuffer( mesh );
+	// create material
+	// IMaterial* mat = matsys->CreateMaterial();
+	// aMaterials.push_back( mat );
+	// 
+	// mat->SetShader( "debug" );
+	// mat->SetVar( "color", vec4_default );
+	// 
+	// mesh->SetMaterial( 0, mat );
 
 	return mesh;
 }
@@ -205,38 +227,28 @@ void PhysDebugDraw::DrawGeometry(
 	{
 		if ( shader != gShader_DebugLine )
 			mat->SetShader( gShader_DebugLine );
-
-		auto& verts = mesh->GetVertices();
-		for ( auto& vert : verts )
-		{
-			vert.color.x = inModelColor.r;
-			vert.color.y = inModelColor.g;
-			vert.color.z = inModelColor.b;
-		}
 	}
 	else
 	{
 		if ( shader != gShader_Debug )
 			mat->SetShader( gShader_Debug );
-
-		mat->SetVar(
-			"color",
-			{
-				inModelColor.r,
-				inModelColor.g,
-				inModelColor.b,
-				inModelColor.a,
-			}
-		);
 	}
 
-	matsys->AddRenderable(
-		mesh,
+	mat->SetVar(
+		"color",
 		{
-			.aTransform = {},
-			.aMatrix = fromJolt( inModelMatrix ),
+			inModelColor.r,
+			inModelColor.g,
+			inModelColor.b,
+			inModelColor.a,
 		}
 	);
+
+	RenderableDrawData drawData;
+	drawData.aUsesMatrix = true;
+	drawData.aMatrix = fromJolt( inModelMatrix );
+
+	matsys->AddRenderable( mesh, drawData );
 
 	return;
 }

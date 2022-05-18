@@ -16,6 +16,7 @@ class MaterialSystem;
 class IRenderable;
 
 
+// Note: a lot of laziness going on here lmao
 class BaseShader
 {
 	typedef DataBuffer< VkDescriptorSetLayout >     Layouts;
@@ -44,6 +45,9 @@ public:
 
 	virtual void                       CreateGraphicsPipeline() = 0;
 
+	// Graphics Pipeline Creation
+	// virtual VkPipelineVertexInputStateCreateInfo        CreateVertexInputInfo();
+
 	inline virtual void                InitUniformBuffer( IRenderable* mesh ) {};
 
 	virtual void                       UpdateBuffers( uint32_t sCurrentImage, size_t renderableIndex, IRenderable* spRenderable, size_t matIndex ) {};
@@ -54,7 +58,7 @@ public:
 		UpdateBuffers( sCurrentImage, 0, spRenderable, 0 );
 	}
 
-	virtual void                       BindBuffers( IRenderable* renderable, VkCommandBuffer c, uint32_t cIndex );
+	virtual void                       BindBuffers( IRenderable* renderable, size_t matIndex, VkCommandBuffer c, uint32_t cIndex );
 
 	virtual void                       Bind( VkCommandBuffer c, uint32_t cIndex );
 	virtual void                       Draw( IRenderable* renderable, VkCommandBuffer c, uint32_t commandBufferIndex ) {};
@@ -84,6 +88,7 @@ public:
 
 	inline VkPipeline                  GetPipeline() const        { return aPipeline; }
 	inline VkPipelineLayout            GetPipelineLayout() const  { return aPipelineLayout; }
-};
 
+	virtual VertexFormat               GetVertexFormat() = 0;
+};
 

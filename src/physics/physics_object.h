@@ -61,6 +61,9 @@ public:
 	// Check if this is a sensor. A sensor will receive collision callbacks, but will not cause any collision responses and can be used as a trigger volume.
 	bool                  IsSensor() override;
 
+	void                  SetAllowDebugDraw( bool sAllow ) override;
+	bool                  GetAllowDebugDraw() override;
+
 	// ===============================================================
 	// Part of Motion Properties
 
@@ -78,9 +81,12 @@ public:
 
 	JPH::Vec3             GetPositionJolt();
 	JPH::Quat             GetRotationJolt();
+	JPH::Mat44            GetWorldTransformJolt();
 
 	JPH::Body*            apBody = nullptr;
 	PhysicsShape*         apShape = nullptr;
+
+	bool                  aAllowDebugDraw = true;
 
 	// The layer the body is in
 	JPH::ObjectLayer      aLayer;

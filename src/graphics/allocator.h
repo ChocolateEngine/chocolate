@@ -96,9 +96,6 @@ TextureDescriptor       *InitTexture( const String &srImagePath, VkDescriptorSet
 				      float *spWidth = NULL, float *spHeight = NULL );
 TextureDescriptor       *InitTexture( const String &srImagePath, VkDescriptorSetLayout sLayout, VkDescriptorPool sPool, VkSampler sSampler, int b );
 
-// BufferSize is sizeof(element) * count
-void 	        	InitRenderableBuffer( void* srData, size_t sBufferSize, VkBuffer &srBuffer, VkDeviceMemory &srBufferMem, VkBufferUsageFlags sUsage );
-
 /* A.  */
 void 			InitUniformBuffers( DataBuffer< VkBuffer > &srUBuffers, DataBuffer< VkDeviceMemory > &srUBuffersMem, size_t uboSize );
 /* A.  */

@@ -1,11 +1,14 @@
 #include "graphics.h"
 #include "util.h"
 #include "util/modelloader.h"
+#include "debugprims/primcreator.h"
 
 #include <cstdlib>
 #include <ctime>
 
 LOG_REGISTER_CHANNEL( Graphics, LogColor::Cyan );
+
+DebugRenderer   gDbgDrawer;
 
 GraphicsSystem* graphics = new GraphicsSystem;
 
@@ -13,38 +16,6 @@ extern "C" {
 	DLL_EXPORT void* cframework_get() {
 		return graphics;
 	}
-}
-
-
-bool LoadBaseMeshes( Model* sModel, const std::string& srPath )
-{
-	std::string fileExt = filesys->GetFileExt( srPath );
-
-	if ( fileExt == "obj" )
-	{
-		LoadObj( srPath, sModel );
-	}
-	else if ( fileExt == "glb" || fileExt == "gltf" )
-	{
-		LogDev( 1, "[Renderer] GLTF currently not supported, on TODO list\n" );
-		return false;
-	}
-
-	// TODO: load in an error model here somehow?
-	if ( sModel->GetMaterialCount() == 0 )
-		return false;
-
-	matsys->CreateVertexBuffer( sModel );
-
-	// if the vertex count is different than the index count, use the index buffer
-	if ( sModel->GetVertices().size() != sModel->GetIndices().size() )
-		matsys->CreateIndexBuffer( sModel );
-
-	//mesh->aRadius = glm::distance( mesh->aMinSize, mesh->aMaxSize ) / 2.0f;
-
-	matsys->MeshInit( sModel );
-
-	return true;
 }
 
 
@@ -60,11 +31,36 @@ Model* GraphicsSystem::LoadModel( const std::string &srPath )
 		return it->second;
 	}
 
-	// We have not, so load this model in
-	Model* model = new Model;
-	LoadBaseMeshes( model, srPath );
+	// We have not, so try to load this model in
+	std::string fullPath = filesys->FindFile( srPath );
 
-	if ( model->GetMaterialCount() == 0 )
+	if ( fullPath.empty() )
+	{
+		LogDev( gGraphicsChannel, 1, "LoadModel: Failed to Find Model: %s\n", srPath.c_str() );
+		return nullptr;
+	}
+
+	std::string fileExt = filesys->GetFileExt( srPath );
+
+	Model* model = new Model;
+
+	if ( fileExt == "obj" )
+	{
+		LoadObj( fullPath, model );
+	}
+	else if ( fileExt == "glb" || fileExt == "gltf" )
+	{
+		LoadGltf( fullPath, fileExt, model );
+	}
+	else
+	{
+		LogDev( gGraphicsChannel, 1, "Unknown Model File Extension: %s\n", fileExt.c_str() );
+	}
+
+	//sModel->aRadius = glm::distance( mesh->aMinSize, mesh->aMaxSize ) / 2.0f;
+
+	// TODO: load in an error model here instead
+	if ( model->GetSurfaceCount() == 0 )
 	{
 		delete model;
 		return nullptr;
@@ -80,8 +76,7 @@ Model* GraphicsSystem::LoadModel( const std::string &srPath )
 
 void GraphicsSystem::DrawLine( const glm::vec3& sX, const glm::vec3& sY, const glm::vec3& sColor )
 {
-	// amazing, fantastic, awful
-	aRenderer.aDbgDrawer.aMaterials.InitLine( sX, sY, sColor );
+	gDbgDrawer.aMaterials.InitLine( sX, sY, sColor );
 }
 
 void GraphicsSystem::FreeModel( Model *spModel )
@@ -93,10 +88,6 @@ void GraphicsSystem::FreeModel( Model *spModel )
 
 	if ( refCount == 1 )
 	{
-		matsys->DestroyRenderable( spModel );
-		vec_remove( aRenderer.aModels, spModel );
-
-		// man
 		for ( auto& [path, model] : aModelPaths )
 		{
 			if ( model == spModel )
@@ -105,13 +96,32 @@ void GraphicsSystem::FreeModel( Model *spModel )
 				break;
 			}
 		}
+
+		matsys->DestroyRenderable( spModel );
+		vec_remove( aRenderer.aModels, spModel );
 	}
 
 	spModel->Release();
 }
 
+static std::string gStrEmpty;
+
+const std::string& GraphicsSystem::GetModelPath( Model* spModel )
+{
+	for ( auto& [path, model] : aModelPaths )
+	{
+		if ( model == spModel )
+			return path;
+	}
+
+	return gStrEmpty;
+}
+
+
+#if 0
 Sprite *GraphicsSystem::LoadSprite( const std::string& srPath )
 {
+	return nullptr;
 	Sprite *sprite = new Sprite;
 
 	if ( !aRenderer.LoadSprite( *sprite, srPath ) )
@@ -130,6 +140,7 @@ void GraphicsSystem::FreeSprite( Sprite *spSprite )
 	vec_remove( aSprites, spSprite );
 	delete spSprite;
 }
+#endif
 
 SDL_Window *GraphicsSystem::GetWindow(  )
 {
@@ -157,7 +168,9 @@ GraphicsSystem::GraphicsSystem(  ) : BaseGraphicsSystem(  )
 void GraphicsSystem::Init(  )
 {
 	aRenderer.Init();
-	aRenderer.InitVulkan(  );
+	aRenderer.InitVulkan();
+
+	gDbgDrawer.Init();
 
 	gui->Init();
 }
@@ -172,11 +185,4 @@ extern MaterialSystem* matsys;
 IMaterialSystem* GraphicsSystem::GetMaterialSystem(  )
 {
 	return matsys;
-}
-
-Model* GraphicsSystem::CreateModel(  )
-{
-	Model* model = new Model;
-	aRenderer.aModels.push_back( model );
-	return model;
 }

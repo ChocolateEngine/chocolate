@@ -3,6 +3,9 @@ shader_basic_2d.cpp ( Authored by Demez )
 
 The Basic 2D Shader, starting point shader
 */
+
+
+#if TEMP_DISABLE_SHADERS
 #include "../renderer.h"
 #include "shader_basic_2d.h"
 #include "graphics/sprite.h"
@@ -225,3 +228,5 @@ void Basic2D::PrepareDrawData( size_t renderableIndex, IRenderable* renderable, 
 	push->aMatrix	= sprite->GetMatrix();
 	push->aTexIndex  = mat->GetTextureId( MatVar_Diffuse );
 }
+
+#endif

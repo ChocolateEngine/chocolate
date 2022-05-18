@@ -3,6 +3,8 @@ shader_basic_3d.cpp ( Authored by Demez )
 
 The Basic 3D Shader, starting point shader
 */
+
+#if TEMP_DISABLE_SHADERS
 #include "../renderer.h"
 #include "shader_unlitarray.h"
 
@@ -225,3 +227,4 @@ void ShaderUnlitArray::PrepareDrawData( size_t renderableIndex, IRenderable* ren
 	push->layer = mat->GetInt( MatVar_Frame );
 }
 
+#endif

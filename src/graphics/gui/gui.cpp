@@ -125,8 +125,8 @@ void GuiSystem::StyleImGui()
 	colors[ImGuiCol_TabActive]                        = ImVec4(0.59f, 0.54f, 0.18f, 1.00f);
 	colors[ImGuiCol_TabUnfocused]              = ImVec4(0.24f, 0.27f, 0.20f, 1.00f);
 	colors[ImGuiCol_TabUnfocusedActive]      = ImVec4(0.35f, 0.42f, 0.31f, 1.00f);
-	//colors[ImGuiCol_DockingPreview]          = ImVec4(0.59f, 0.54f, 0.18f, 1.00f);
-	//colors[ImGuiCol_DockingEmptyBg]          = ImVec4(0.20f, 0.20f, 0.20f, 1.00f);
+	colors[ImGuiCol_DockingPreview]          = ImVec4(0.59f, 0.54f, 0.18f, 1.00f);
+	colors[ImGuiCol_DockingEmptyBg]          = ImVec4(0.20f, 0.20f, 0.20f, 1.00f);
 	colors[ImGuiCol_PlotLines]                        = ImVec4(0.61f, 0.61f, 0.61f, 1.00f);
 	colors[ImGuiCol_PlotLinesHovered]          = ImVec4(0.59f, 0.54f, 0.18f, 1.00f);
 	colors[ImGuiCol_PlotHistogram]            = ImVec4(1.00f, 0.78f, 0.28f, 1.00f);
@@ -177,6 +177,8 @@ void GuiSystem::AssignWindow( SDL_Window* spWindow )
 
 constexpr int MAX_DEBUG_MESSAGE_SIZE = 512;
 
+// IDEA: Change this GuiSystem::DebugMessage to not use vargs, and make a DebugMessageF for that
+
 // Append a Debug Message
 void GuiSystem::DebugMessage( const char* format, ... )
 {
@@ -185,7 +187,7 @@ void GuiSystem::DebugMessage( const char* format, ... )
 
 	char buf[MAX_DEBUG_MESSAGE_SIZE];
 	int len = vsnprintf( buf, MAX_DEBUG_MESSAGE_SIZE, format, args );
-	aDebugMessages.push_back(buf);
+	aDebugMessages.emplace_back( buf );
 
 	va_end(args);
 }

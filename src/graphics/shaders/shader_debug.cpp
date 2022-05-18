@@ -3,6 +3,7 @@ shader_debug.cpp ( Authored by Demez )
 
 The Debug Shader, used for wireframe
 */
+
 #include "../renderer.h"
 #include "shader_debug.h"
 
@@ -101,35 +102,6 @@ void ShaderDebug::ReInit()
 }
 
 
-// uh
-static inline VkVertexInputBindingDescription VertexDebug_GetBindingDesc()
-{
-	VkVertexInputBindingDescription bindingDescription{};
-	bindingDescription.binding = 0;
-	bindingDescription.stride = sizeof( vertex_debug_t );
-	bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
-
-	return bindingDescription;
-}
-
-
-static inline std::array< VkVertexInputAttributeDescription, 2 > VertexDebug_GetAttributeDesc()
-{
-	std::array< VkVertexInputAttributeDescription, 2 >attributeDescriptions{  };
-	attributeDescriptions[0].binding = 0;
-	attributeDescriptions[0].location = VertexElement_Position;
-	attributeDescriptions[0].format = VK_FORMAT_R32G32B32_SFLOAT;
-	attributeDescriptions[0].offset = offsetof( vertex_debug_t, pos );
-
-	attributeDescriptions[1].binding = 0;
-	attributeDescriptions[1].location = 1;
-	attributeDescriptions[1].format = VK_FORMAT_R32G32_SFLOAT;
-	attributeDescriptions[1].offset = offsetof( vertex_debug_t, color );
-
-	return attributeDescriptions;
-}
-
-
 void ShaderDebug::CreateGraphicsPipeline(  )
 {
 	VkPipelineShaderStageCreateInfo vertShaderStageInfo{  };
@@ -149,20 +121,23 @@ void ShaderDebug::CreateGraphicsPipeline(  )
 	pShaderStages[ 0 ] = vertShaderStageInfo;
 	pShaderStages[ 1 ] = fragShaderStageInfo;
 
-	auto attributeDescriptions 	= VertexDebug_GetAttributeDesc();
-	auto bindingDescription 	= VertexDebug_GetBindingDesc();
+	std::vector< VkVertexInputBindingDescription > bindingDescriptions;
+	std::vector< VkVertexInputAttributeDescription > attributeDescriptions;
+
+	matsys->GetVertexBindingDesc( GetVertexFormat(), bindingDescriptions );
+	matsys->GetVertexAttributeDesc( GetVertexFormat(), attributeDescriptions );
 
 	VkPipelineVertexInputStateCreateInfo vertexInputInfo{  };	//	Format of vertex data
 	vertexInputInfo.sType 				= VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-	vertexInputInfo.vertexBindingDescriptionCount 	= 1;
-	vertexInputInfo.pVertexBindingDescriptions 	= &bindingDescription;			//	Contains details for loading vertex data
-	vertexInputInfo.vertexAttributeDescriptionCount = ( uint32_t )( attributeDescriptions.size(  ) );
-	vertexInputInfo.pVertexAttributeDescriptions 	= attributeDescriptions.data(  );	//	Same as above
+	vertexInputInfo.vertexBindingDescriptionCount 	= ( u32 )bindingDescriptions.size();
+	vertexInputInfo.pVertexBindingDescriptions 	= bindingDescriptions.data();			//	Contains details for loading vertex data
+	vertexInputInfo.vertexAttributeDescriptionCount = ( u32 )( attributeDescriptions.size() );
+	vertexInputInfo.pVertexAttributeDescriptions 	= attributeDescriptions.data();	//	Same as above
 
 	VkPipelineInputAssemblyStateCreateInfo inputAssembly{  };	//	Collects raw vertex data from buffers
 	inputAssembly.sType 			= VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
-	// inputAssembly.topology 			= GetTopologyType();
-	inputAssembly.topology 			= VK_PRIMITIVE_TOPOLOGY_LINE_LIST;
+	inputAssembly.topology 			= GetTopologyType();
+	// inputAssembly.topology 			= VK_PRIMITIVE_TOPOLOGY_LINE_LIST;
 	inputAssembly.primitiveRestartEnable 	= VK_FALSE;
 
 	/* Region of frambuffer to be rendered to, likely will always use 0, 0 and width, height  */
@@ -292,4 +267,3 @@ void ShaderDebug::CmdPushConst( IRenderable* renderable, size_t matIndex, const 
 		0, sizeof( DebugPushConstant ), &p
 	);
 }
-

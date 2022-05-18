@@ -84,14 +84,21 @@ void TransitionImageLayout( VkImage sImage, VkImageLayout sOldLayout, VkImageLay
 /* Creates a buffer and maps the memory.  */
 void InitBuffer( VkDeviceSize sSize, VkBufferUsageFlags sUsage, VkMemoryPropertyFlags sProperties, VkBuffer &srBuffer, VkDeviceMemory &srBufferMemory )
 {
-	VkBufferCreateInfo bufferInfo = BufferCreate( sSize, sUsage );
+	VkBufferCreateInfo bufferInfo{};
+	bufferInfo.sType        = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+	bufferInfo.size         = sSize;
+	bufferInfo.usage        = sUsage;
+	bufferInfo.sharingMode  = VK_SHARING_MODE_EXCLUSIVE;
 
 	CheckVKResult( vkCreateBuffer( DEVICE, &bufferInfo, NULL, &srBuffer ), "Failed to create buffer!" );
 
 	VkMemoryRequirements memRequirements;
 	vkGetBufferMemoryRequirements( DEVICE, srBuffer, &memRequirements );
 
-	VkMemoryAllocateInfo allocInfo = MemoryAllocate( memRequirements.size, gpDevice->FindMemoryType( memRequirements.memoryTypeBits, sProperties ) );
+	VkMemoryAllocateInfo allocInfo{};
+	allocInfo.sType             = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+	allocInfo.allocationSize    = memRequirements.size;
+	allocInfo.memoryTypeIndex   = gpDevice->FindMemoryType( memRequirements.memoryTypeBits, sProperties );
 
 	CheckVKResult( vkAllocateMemory( DEVICE, &allocInfo, nullptr, &srBufferMemory ), "Failed to allocate buffer memory!" );
 
@@ -207,33 +214,6 @@ void GenerateMipMaps( VkImage sImage, VkFormat sFormat, uint32_t sWidth, uint32_
 
 	Submit( [ & ]( VkCommandBuffer c ){ vkCmdPipelineBarrier( c, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
 								  0, 0, nullptr, 0, nullptr, 1, &barrier ); } );
-}
-
-void InitRenderableBuffer( void* srData, size_t sBufferSize, VkBuffer &srBuffer, VkDeviceMemory &srBufferMem, VkBufferUsageFlags sUsage )
-{
-	VkBuffer        stagingBuffer;
-	VkDeviceMemory  stagingBufferMemory;
-	VkDeviceSize    bufferSize = sBufferSize;
-
-	if ( !bufferSize )
-	{
-		srBuffer    = 0;
-		srBufferMem = 0;
-		
-		LogError( "Tried to create a vertex buffer / index buffer with no size!\n" );
-		return;
-	}
-	
-	InitBuffer( bufferSize, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-		    VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer, stagingBufferMemory );
-	
-	MapMemory( stagingBufferMemory, bufferSize, srData );
-
-	InitBuffer( bufferSize, sUsage, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, srBuffer, srBufferMem );
-	CopyBuffer( stagingBuffer, srBuffer, bufferSize );
-
-	vkDestroyBuffer( DEVICE, stagingBuffer, NULL );
-	vkFreeMemory( DEVICE, stagingBufferMemory, NULL );
 }
 
 void InitUniformBuffers( DataBuffer< VkBuffer > &srUBuffers, DataBuffer< VkDeviceMemory > &srUBuffersMem, size_t uboSize )

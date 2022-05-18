@@ -235,6 +235,9 @@ public:
 	// A sensor will receive collision callbacks, but will not cause any collision responses and can be used as a trigger volume.
 	virtual bool                  IsSensor() = 0;
 
+	virtual void                  SetAllowDebugDraw( bool sAllow ) = 0;
+	virtual bool                  GetAllowDebugDraw() = 0;
+
 	// ===============================================================
 	// Part of Motion Properties
 

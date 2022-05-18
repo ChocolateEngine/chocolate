@@ -10,6 +10,7 @@ Declares the Sprite class
 #include "graphics/imaterialsystem.h"
 
 
+#if 0
 class Sprite: public IRenderable
 {
 protected:
@@ -72,5 +73,6 @@ private:
 	std::vector< vertex_2d_t >		aVertices;
 	std::vector< uint32_t >         aIndices;
 };
+#endif
 
 

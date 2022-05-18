@@ -137,22 +137,7 @@ struct Transform
 	glm::vec3 aAng = {};
 	glm::vec3 aScale = { 1.0f, 1.0f, 1.0f };
 
-	inline glm::mat4 ToMatrix( bool useScale = true ) const
-	{
-		glm::mat4 matrix = glm::translate( aPos );
-
-		matrix *= glm::rotate( glm::radians(aAng[YAW]), vec_up );
-		matrix *= glm::rotate( glm::radians(aAng[PITCH]), vec_right );
-		matrix *= glm::rotate( glm::radians(aAng[ROLL]), vec_forward );
-
-		if ( !useScale )
-			return matrix;
-
-		if ( aScale.x == 1.0 && aScale.y == 1.0 && aScale.z == 1.0 )
-			return matrix;
-
-		return matrix * glm::scale( aScale );
-	}
+	glm::mat4 ToMatrix( bool useScale = true ) const;
 
 	/* Y Up version of the ViewMatrix */
 	inline glm::mat4 ToViewMatrixY(  ) const

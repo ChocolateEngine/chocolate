@@ -7,14 +7,14 @@ Provides a public interface to the materialsystem so that the game can use this
 #pragma once
 
 #include "util.h"
-#include "imaterial.h"
 #include "types/transform.h"
 
+using VertexFormat = u16;
 
-using VertexFormatFlags = u64;
+#include "imaterial.h"
 
 // Flags to Determine what the Vertex Data contains
-enum : VertexFormatFlags
+enum : VertexFormat
 {
 	VertexFormat_None           = 0,
 	VertexFormat_Position       = (1 << 0),
@@ -24,41 +24,127 @@ enum : VertexFormatFlags
 
 	VertexFormat_Position2D     = (1 << 4),
 
-	// VertexFormat_BoneIndex      = (1 << 4),
-	// VertexFormat_BoneWeight     = (1 << 5),
+	VertexFormat_BoneIndex      = (1 << 5),
+	VertexFormat_BoneWeight     = (1 << 6),
 };
 
 
 // Always in order from top to bottom in terms of order in each vertex
-enum VertexElement
+enum VertexAttribute : u8
 {
-	VertexElement_Position,         // vec3
-	VertexElement_Normal,           // vec3
-	VertexElement_TexCoord,         // vec2
-	VertexElement_Color,            // vec3 (should be vec4 probably)
+	VertexAttribute_Position,         // vec3
+	VertexAttribute_Normal,           // vec3
+	VertexAttribute_TexCoord,         // vec2
+	VertexAttribute_Color,            // vec3 (should be vec4 probably)
 
-	VertexElement_Position2D,       // vec2
+	VertexAttribute_Position2D,       // vec2
 
-	// VertexElement_BoneIndex,        // uvec4
-	// VertexElement_BoneWeight,       // vec4
+	VertexAttribute_BoneIndex,        // uvec4
+	VertexAttribute_BoneWeight,       // vec4
 
-	VertexElement_Count = VertexElement_Position2D
+	VertexAttribute_Count = VertexAttribute_BoneWeight
 };
-
-
-constexpr VertexFormatFlags g_vertex_flags_3d       = VertexFormat_Position    | VertexFormat_Normal   | VertexFormat_TexCoord;
-constexpr VertexFormatFlags g_vertex_flags_2d       = VertexFormat_Position2D  | VertexFormat_TexCoord;
-constexpr VertexFormatFlags g_vertex_flags_cube     = VertexFormat_Position;
-constexpr VertexFormatFlags g_vertex_flags_debug    = VertexFormat_Position    | VertexFormat_Color;
 
 
 // could be CH_FORMAT_R32G32B32_SFLOAT
 // or CH_FORMAT_RGB323232_SFLOAT
-enum class ColorFormat
+enum class GraphicsFormat
 {
 	INVALID,
-	R32G32B32_SFLOAT,
+
+	// -------------------------
+
+	R8_SRGB,
+	R8_SINT,
+	R8_UINT,
+
+	R8G8_SRGB,
+	R8G8_SINT,
+	R8G8_UINT,
+
+	R8G8B8_SRGB,
+	R8G8B8_SINT,
+	R8G8B8_UINT,
+
+	// B8G8R8_SNORM,
+	// BGR888_SNORM,
+
+	R8G8B8A8_SRGB,
+	R8G8B8A8_SINT,
+	R8G8B8A8_UINT,
+
+	// -------------------------
+
+	R16_SFLOAT,
+	R16_SINT,
+	R16_UINT,
+
+	R16G16_SFLOAT,
+	R16G16_SINT,
+	R16G16_UINT,
+
+	R16G16B16_SFLOAT,
+	R16G16B16_SINT,
+	R16G16B16_UINT,
+
+	R16G16B16A16_SFLOAT,
+	R16G16B16A16_SINT,
+	R16G16B16A16_UINT,
+
+	// -------------------------
+
+	R32_SFLOAT,
+	R32_SINT,
+	R32_UINT,
+
 	R32G32_SFLOAT,
+	R32G32_SINT,
+	R32G32_UINT,
+
+	R32G32B32_SFLOAT,
+	R32G32B32_SINT,
+	R32G32B32_UINT,
+
+	R32G32B32A32_SFLOAT,
+	R32G32B32A32_SINT,
+	R32G32B32A32_UINT,
+
+	// -------------------------
+	// GPU Compressed Formats
+
+	BC1_RGB_UNORM_BLOCK,
+	BC1_RGB_SRGB_BLOCK,
+	BC1_RGBA_UNORM_BLOCK,
+	BC1_RGBA_SRGB_BLOCK,
+	BC2_UNORM_BLOCK,
+	BC2_SRGB_BLOCK,
+	BC3_UNORM_BLOCK,
+	BC3_SRGB_BLOCK,
+	BC4_UNORM_BLOCK,
+	BC4_SNORM_BLOCK,
+	BC5_UNORM_BLOCK,
+	BC5_SNORM_BLOCK,
+	BC6H_UFLOAT_BLOCK,
+	BC6H_SFLOAT_BLOCK,
+	BC7_UNORM_BLOCK,
+	BC7_SRGB_BLOCK,
+};
+
+
+enum class VertexInputRate : bool
+{
+	Vertex,
+	Instance
+};
+
+
+struct VertexAttribute_t
+{
+	VertexFormat    aUsage      = 0;
+	GraphicsFormat  aFormat     = GraphicsFormat::INVALID;
+	VertexInputRate aInputRate  = VertexInputRate::Vertex;
+	u32             aStride     = 0;
+	u32             aOffset     = 0;
 };
 
 
@@ -74,141 +160,312 @@ enum class ShaderMatrix
 };
 
 
-struct vertex_3d_t
+enum TextureType
 {
-	glm::vec3 pos{};
-	glm::vec3 normal{};
-	glm::vec2 texCoord{};
+	TextureType_1D,
+	TextureType_2D,
+	TextureType_3D,
+	TextureType_Cube,
+	TextureType_1DArray,
+	TextureType_2DArray,
+	TextureType_CubeArray,
 
-	bool operator==( const vertex_3d_t& other ) const
-	{
-		return pos == other.pos && normal == other.normal && texCoord == other.texCoord;
-	}
-
-	static inline VertexFormatFlags GetFormatFlags()
-	{
-		return g_vertex_flags_3d;
-	}
+	TextureType_Count = TextureType_CubeArray
 };
 
 
-struct vertex_debug_t
+enum TextureSamples
 {
-	glm::vec3 pos{};
-	glm::vec3 color{};
-
-	bool operator==( const vertex_debug_t& other ) const
-	{
-		return pos == other.pos && color == other.color;
-	}
-
-	static inline VertexFormatFlags GetFormatFlags()
-	{
-		return VertexFormat_Position | VertexFormat_Color;
-	}
+	TextureSamples_1,
+	TextureSamples_2,
+	TextureSamples_4,
+	TextureSamples_8,
+	TextureSamples_16,
+	TextureSamples_32,
+	TextureSamples_64,
+	TextureSamples_Max,
 };
 
 
-// Hashing Support for these vertex formats
-namespace std
+enum TextureUsageBits
 {
-	template<  > struct hash< vertex_3d_t >
+	TextureUsageBit_Sampling                = (1 << 0),
+	TextureUsageBit_ColorAttachment         = (1 << 1),
+	TextureUsageBit_InputAttachment         = (1 << 2),
+	TextureUsageBit_DepthStencilAttachment  = (1 << 3),
+	TextureUsageBit_Storage                 = (1 << 4),
+	TextureUsageBit_StorageAtomic           = (1 << 5),
+	TextureUsageBit_CpuRead                 = (1 << 6),
+	TextureUsageBit_CanUpdate               = (1 << 7),
+	TextureUsageBit_CanCopyFrom             = (1 << 8),
+	TextureUsageBit_CanCopyTo               = (1 << 9),
+};
+
+
+enum MeshPrimType
+{
+	MeshPrim_Point,
+	MeshPrim_Line,
+	MeshPrim_LineStrip,
+	MeshPrim_Tri,
+	MeshPrim_TriStrip,
+
+	MeshPrim_Count = MeshPrim_LineStrip,
+};
+
+
+enum PipelineDynamicStateFlags
+{
+	DynamicState_None                   = 0,
+	DynamicState_LineWidth              = (1 << 0),
+	DynamicState_DepthBias              = (1 << 1),
+	DynamicState_DepthBounds            = (1 << 2),
+	DynamicState_BlendConstants         = (1 << 3),
+	DynamicState_StencilCompareMask     = (1 << 4),
+	DynamicState_StencilWriteMask       = (1 << 5),
+	DynamicState_StencilReference       = (1 << 6),
+};
+
+
+// maybe these two are useless?
+enum PolygonCullMode
+{
+	PolygonCull_Disabled,
+	PolygonCull_Front,
+	PolygonCull_Back,
+};
+
+
+enum PolygonFrontFace
+{
+	PolygonFrontFace_Clockwise,
+	PolygonFrontFace_CounterClockwise,
+};
+
+
+// Stencil Operation
+// Logic Operation
+// Blend Factor
+// Blend Operation
+
+
+// ===================================================================
+
+
+struct VertAttribData_t
+{
+	VertexAttribute                     aAttrib = VertexAttribute_Position;
+	void*                               apData = nullptr;
+
+	VertAttribData_t()
 	{
-		size_t operator(  )( vertex_3d_t const& vertex ) const
-		{
-			return  ( ( hash< glm::vec3 >(  )( vertex.pos ) ^
-				//    		( hash< glm::vec3 >(  )( vertex.color ) << 1 ) ) >> 1 ) ^
-				//    		( hash< glm::vec3 >(  )( vertex.normal ) << 1 ) ) >> 1 ) ^
-				( hash< glm::vec3 >(  )( vertex.normal ) << 1 ) ) ) ^
-				( hash< glm::vec2 >(  )( vertex.texCoord ) << 1 );
-		}
-	};
-	template<  > struct hash< vertex_debug_t >
+	}
+
+	~VertAttribData_t()
 	{
-		size_t operator(  )( vertex_debug_t const& vertex ) const
-		{
-			return std::hash< glm::vec3 >{}( vertex.pos ) ^ std::hash< glm::vec3 >{}( vertex.color );
-		}
-	};
-}
+		if ( apData )
+			free( apData );
+
+		// TEST
+		apData = nullptr;
+	}
+
+	// REALLY should be uncommented but idc right now
+// private:
+// 	VertAttribData_t( const VertAttribData_t& other );
+};
 
 
-// Store the vertex format in the IMaterial class
+struct VertexData_t
+{
+	VertexFormat                        aFormat;
+	u32                                 aCount;
+	std::vector< VertAttribData_t >     aData;
+	bool                                aLocked;  // if locked, we can create a vertex buffer
+};
 
 
+// could change to IMesh or IDrawable, idk
+// NOTE: may need to go partly back to that Mesh/Model setup i had before
+// because they way this Renderable is setup, if the shaders used in this renderable
+// expect different vertex formats, then this will fall apart from only having shared vertex data
+// we need some kind of specific vertex data or something, idk
 class IRenderable : public RefCounted
 {
 public:
-	virtual                        ~IRenderable() = default;
+	virtual                            ~IRenderable() = default;
 
-	virtual size_t                  GetID() { return (size_t)this; }
+	inline size_t                       GetID() { return (size_t)this; }
 
 	// --------------------------------------------------------------------------------------
-	// Materials
+	// Surfaces, only have one material
+	
+	virtual size_t                      GetSurfaceCount() = 0;
 
-	virtual size_t                  GetMaterialCount() = 0;
+	// for creating new surfaces
+	virtual void                        SetSurfaceCount( size_t sCount ) = 0;
+	virtual void                        AddSurface() = 0;
 
-	virtual IMaterial*              GetMaterial( size_t i ) = 0;
-	virtual void                    SetMaterial( size_t i, IMaterial* mat ) = 0;
+	// NOTE: Upon setting material, recreate vertex and index buffers if the vertex format changed
+	virtual IMaterial*                  GetMaterial( size_t i ) = 0;
+	virtual void                        SetMaterial( size_t i, IMaterial* spMaterial ) = 0;
 
-	virtual void                    SetShader( size_t i, const std::string& name ) = 0;
+	virtual VertexData_t&               GetSurfaceVertexData( size_t i ) = 0;
+	virtual std::vector< uint32_t >&    GetSurfaceIndices( size_t i ) = 0;
+
+	virtual bool                        GetVertexDataLocked( size_t i ) = 0;
+	virtual void                        SetVertexDataLocked( size_t i, bool sLocked ) = 0;
+
+	// TODO: make some kind of aabb thing
+	// virtual aabb_t                  GetAABB() = 0;
+
+	// --------------------------------------------------------------------------------------
+	// Blend Shapes
+
+	// virtual size_t                      GetBlendShapeCount() = 0;
+	// virtual std::string_view            GetBlendShapeName( size_t i ) = 0;
+	// virtual float                       GetBlendShapeValue( size_t i ) = 0;
+	// virtual void                        SetBlendShapeValue( size_t i, float val ) = 0;
+
+	// --------------------------------------------------------------------------------------
+	// Skeleton
 
 	// --------------------------------------------------------------------------------------
 	// Drawing Info
+	// TODO: BRING THIS BACK
 
 	// Get Vertex Offset and Count for drawing this part of the renderable with this material
-	virtual u32                     GetVertexOffset( size_t material ) = 0;
-	virtual u32                     GetVertexCount( size_t material ) = 0;
+	// virtual u32                        GetVertexOffset( size_t material ) = 0;
+	// virtual u32                        GetVertexCount( size_t material ) = 0;
+	// 								    
+	// virtual u32                        GetIndexOffset( size_t material ) = 0;
+	// virtual u32                        GetIndexCount( size_t material ) = 0;
 
-	virtual u32                     GetIndexOffset( size_t material ) = 0;
-	virtual u32                     GetIndexCount( size_t material ) = 0;
+	// --------------------------------------------------------------------------------------
+	// Other Info
 
 	// --------------------------------------------------------------------------------------
 	// Vertices/Indices Info
 	// NOTE: these are stored in the material in source, so idk if im doing this right lol
 
-	// VertexFormatFlags               aVertexFormatFlags;
+	// might become SurfaceData_t
+	// VertexData_t                       aVertexData;
 
-	virtual VertexFormatFlags       GetVertexFormatFlags() = 0;
-	virtual size_t                  GetVertexFormatSize() = 0;
-	virtual void*                   GetVertexData() = 0;
-	virtual size_t                  GetTotalVertexCount() = 0;
+	// virtual void*                      GetVertexData() = 0;
+	// get offset to data
+	// virtual VertexData_t&              GetVertexData( VertexAttribute attrib ) = 0;
 
-	virtual std::vector< uint32_t >&            GetIndices() = 0;
+	// inline VertexData_t&               GetVertexData()      { return aVertexData; }
+	// inline VertexFormat                GetVertexFormat()    { return aVertexData.aFormat; }
+	// inline size_t                      GetVertexCount()     { return aVertexData.aSize; }
+
+	// virtual std::vector< uint32_t >&            GetIndices() = 0;
 };
 
+
+// IDEA: create a model with specific vertex formats passed in?
+// like create a model for position and color only, idk
 
 
 // Simple Model Class
 class Model : public IRenderable
 {
 public:
-	class MaterialGroup
+	class Surface
 	{
 	public:
-		inline void             SetShader( const std::string& name ) { if ( apMaterial ) apMaterial->SetShader( name ); };
+		inline void                     SetShader( const std::string& name ) { if ( apMaterial ) apMaterial->SetShader( name ); };
 
-		IMaterial*              apMaterial = nullptr;
+		IMaterial*                      apMaterial = nullptr;
 
-		u32                     aVertexOffset = 0;
-		u32                     aVertexCount = 0;
+		// NOTE: these could be a pointer, and multiple surfaces could share the same vertex data and indices 
+		VertexData_t                    aVertexData;
+		std::vector< uint32_t >         aIndices;
 
-		// maybe use either this or above? idk
-		u32                     aIndexOffset = 0;
-		u32                     aIndexCount = 0;
+		// u32                     aVertexOffset = 0;
+		// u32                     aVertexCount = 0;
+		// 
+		// // maybe use either this or above? idk
+		// u32                     aIndexOffset = 0;
+		// u32                     aIndexCount = 0;
 	};
 
+	std::vector< Surface* >    aMeshes{};
+
 	// --------------------------------------------------------------------------------------
-	// Model Data (make part of a Model class and have this be IModel?)
+	// Surfaces, only have one material for now
 
-	std::vector< vertex_3d_t >       aVertices;
-	std::vector< uint32_t >          aIndices;
+	virtual size_t GetSurfaceCount() override
+	{
+		return aMeshes.size();
+	}
 
-	std::vector< MaterialGroup* >    aMeshes{};
+	// for creating new surfaces
+	virtual void SetSurfaceCount( size_t sCount ) override
+	{
+		if ( sCount < aMeshes.size() )
+		{
+			// delete meshes after that count
+			for ( size_t i = sCount; i < aMeshes.size(); i++ )
+			{
+				if ( aMeshes[i] )
+					delete aMeshes[i];
+			}
+
+			aMeshes.resize( sCount );
+		}
+		else
+		{
+			size_t i = sCount - aMeshes.size();
+			aMeshes.resize( sCount );
+
+			for ( ; i < sCount; i++ )
+				aMeshes[i] = new Surface;
+		}
+
+	}
+
+	virtual void AddSurface() override
+	{
+		aMeshes.push_back( new Surface );
+	}
+
+	virtual IMaterial* GetMaterial( size_t i )  override
+	{
+		Assert( i < aMeshes.size() );
+		return aMeshes[i]->apMaterial;
+	}
+
+	virtual void SetMaterial( size_t i, IMaterial* spMaterial ) override;
+
+	virtual VertexData_t& GetSurfaceVertexData( size_t i ) override
+	{
+		Assert( i < aMeshes.size() );
+		return aMeshes[i]->aVertexData;
+	}
+
+	virtual std::vector< uint32_t >& GetSurfaceIndices( size_t i ) override
+	{
+		Assert( i < aMeshes.size() );
+		return aMeshes[i]->aIndices;
+	}
+
+	virtual bool GetVertexDataLocked( size_t i ) override
+	{
+		Assert( i < aMeshes.size() );
+		return aMeshes[i]->aVertexData.aLocked;
+	}
+
+	virtual void SetVertexDataLocked( size_t i, bool sLocked ) override
+	{
+		Assert( i < aMeshes.size() );
+		aMeshes[i]->aVertexData.aLocked = sLocked;
+	}
 
 	// --------------------------------------------------------------------------------------
 	// Materials
 
+#if 0
 	virtual size_t GetMaterialCount() override
 	{
 		return aMeshes.size();
@@ -220,16 +477,10 @@ public:
 		return aMeshes[i]->apMaterial;
 	}
 
-	virtual void SetMaterial( size_t i, IMaterial* mat ) override
+	virtual void SetMaterial( size_t i, IMaterial* spMaterial ) override
 	{
 		Assert( i < aMeshes.size() );
-		aMeshes[i]->apMaterial = mat;
-	}
-
-	virtual void SetShader( size_t i, const std::string& name ) override
-	{
-		Assert( i < aMeshes.size() );
-		aMeshes[i]->SetShader( name );
+		aMeshes[i]->apMaterial = spMaterial;
 	}
 
 	// --------------------------------------------------------------------------------------
@@ -259,22 +510,7 @@ public:
 		Assert( material < aMeshes.size() );
 		return aMeshes[material]->aIndexCount;
 	}
-
-	// --------------------------------------------------------------------------------------
-	// Part of IModel only, i still don't know how i would handle different vertex formats
-	// maybe store it in some kind of unordered_map containing these models and the vertex type?
-	// but, the vertex and index type needs to be determined by the shader pipeline actually, hmm
-
-	virtual VertexFormatFlags           GetVertexFormatFlags() override     { return vertex_3d_t::GetFormatFlags(); }
-	virtual size_t                      GetVertexFormatSize() override      { return sizeof( vertex_3d_t ); }
-	virtual void*                       GetVertexData() override            { return aVertices.data(); };
-	virtual size_t                      GetTotalVertexCount() override      { return aVertices.size(); };
-
-	virtual std::vector< vertex_3d_t >& GetVertices()                       { return aVertices; };
-	virtual std::vector< uint32_t >&    GetIndices() override               { return aIndices; };
-
-	// virtual std::vector< vertex_3d_t >& GetVertices() { return aVertices; };
-	// virtual std::vector< uint32_t >&    GetIndices() override  { return aIndices; };
+#endif
 
 	Model() :
 		aMeshes()
@@ -291,70 +527,28 @@ public:
 };
 
 
-// NOTE: this should be just a single mesh class with one material
-// and the vertex format shouldn't matter because we have this other stuff
-class SkyboxMesh : public IRenderable
-{
-public:
 
-	IMaterial*                       apMaterial = nullptr;
-
-	std::vector< vertex_cube_3d_t >  aVertices;
-	std::vector< uint32_t >          aIndices;
-
-	// --------------------------------------------------------------------------------------
-	// Materials
-
-	virtual size_t     GetMaterialCount() override                          { return 1; }
-	virtual IMaterial* GetMaterial( size_t i = 0 ) override                 { return apMaterial; }
-	virtual void       SetMaterial( size_t i, IMaterial* mat ) override     { apMaterial = mat; }
-
-	virtual void SetShader( size_t i, const std::string& name ) override
-	{
-		if ( apMaterial )
-			apMaterial->SetShader( name );
-	}
-
-	// --------------------------------------------------------------------------------------
-	// Drawing Info
-
-	virtual u32 GetVertexOffset( size_t material ) override     { return 0; }
-	virtual u32 GetVertexCount( size_t material ) override      { return aVertices.size(); }
-
-	virtual u32 GetIndexOffset( size_t material ) override      { return 0; }
-	virtual u32 GetIndexCount( size_t material ) override       { return aIndices.size(); }
-
-	// --------------------------------------------------------------------------------------
-	// Part of IModel only, i still don't know how i would handle different vertex formats
-	// maybe store it in some kind of unordered_map containing these models and the vertex type?
-	// but, the vertex and index type needs to be determined by the shader pipeline actually, hmm
-
-	virtual VertexFormatFlags                   GetVertexFormatFlags() override     { return g_vertex_flags_cube; }
-	virtual size_t                              GetVertexFormatSize() override      { return sizeof( vertex_cube_3d_t ); }
-	virtual void*                               GetVertexData() override            { return aVertices.data(); };
-	virtual size_t                              GetTotalVertexCount() override      { return aVertices.size(); };
-
-	virtual std::vector< vertex_cube_3d_t >&    GetVertices()                       { return aVertices; };
-	virtual std::vector< uint32_t >&            GetIndices() override               { return aIndices; };
-
-	SkyboxMesh()  {};
-	~SkyboxMesh() {}
-};
+// ===================================================================
 
 
 // AWFUL
 struct RenderableDrawData
 {
-	// REMOVE ME ASAP AAAAAAA
-	Transform aTransform;
+	RenderableDrawData() : aUsesMatrix( false )
+	{
+	}
 
-	// should be this only, and probably view and projection
-	glm::mat4 aMatrix;
+	bool aUsesMatrix = false;
+
+	// union
+	// {
+		// REMOVE ME ASAP AAAAAAA
+		Transform aTransform{};
+
+		// should be this only, and probably view and projection
+		glm::mat4 aMatrix{};
+	// };
 };
-
-
-class Model;
-class Sprite;
 
 
 using RenderableBufferFlags = u32;
@@ -368,6 +562,20 @@ enum : RenderableBufferFlags
 	RenderableBuffer_Index      = (1 << 1),
 	RenderableBuffer_Uniform    = (1 << 2),
 };
+
+
+struct Viewport_t
+{
+	float x;
+	float y;
+	float width;
+	float height;
+	float minDepth;
+	float maxDepth;
+};
+
+
+// ===================================================================
 
 
 class IMaterialSystem
@@ -405,18 +613,26 @@ public:
 	// virtual TextureDescriptor          *FindTexture( const std::string &path ) = 0;
 
 	// Create a Vertex and Index buffer for a Renderable.
-	virtual void                        CreateVertexBuffer( IRenderable* renderable ) = 0;
-	virtual void                        CreateIndexBuffer( IRenderable* renderable ) = 0;
+	virtual void                        CreateVertexBuffer( IRenderable* renderable, size_t surface ) = 0;
+	virtual void                        CreateIndexBuffer( IRenderable* renderable, size_t surface ) = 0;
+
+	virtual void                        CreateVertexBuffers( IRenderable* renderable ) = 0;
+	virtual void                        CreateIndexBuffers( IRenderable* renderable ) = 0;
 
 	// Check if a Renderable has a Vertex and/or Index buffer.
-	virtual bool                        HasVertexBuffer( IRenderable* renderable ) = 0;
-	virtual bool                        HasIndexBuffer( IRenderable* renderable ) = 0;
+	virtual bool                        HasVertexBuffer( IRenderable* renderable, size_t surface ) = 0;
+	virtual bool                        HasIndexBuffer( IRenderable* renderable, size_t surface ) = 0;
 
 	// Free a Vertex and Index buffer for a Renderable.
-	virtual void                        FreeVertexBuffer( IRenderable* renderable ) = 0;
-	virtual void                        FreeIndexBuffer( IRenderable* renderable ) = 0;
+	virtual void                        FreeVertexBuffer( IRenderable* renderable, size_t surface ) = 0;
+	virtual void                        FreeIndexBuffer( IRenderable* renderable, size_t surface ) = 0;
+
+	virtual void                        FreeVertexBuffers( IRenderable* renderable ) = 0;
+	virtual void                        FreeIndexBuffers( IRenderable* renderable ) = 0;
 
 	virtual void                        FreeAllBuffers( IRenderable* renderable ) = 0;
+
+	virtual void                        InitUniformBuffer( IRenderable* renderable ) = 0;
 
 	// New buffer methods
 	// virtual void                        CreateBuffers( IRenderable* renderable, RenderableBufferFlags flags ) = 0;
@@ -436,14 +652,74 @@ public:
 	virtual BaseShader*                 GetShader( const std::string& name ) = 0;
 
 	// Awful Mesh Functions
-	virtual void                        MeshInit( Model* mesh ) = 0;
-	virtual void                        MeshReInit( Model* mesh ) = 0;
 	virtual void                        MeshFreeOldResources( IRenderable* mesh ) = 0;
 
-	virtual ColorFormat                 GetVertexElementFormat( VertexElement element ) = 0;
-	virtual size_t                      GetVertexElementSize( VertexElement element ) = 0;
+	virtual GraphicsFormat              GetVertexAttributeFormat( VertexAttribute element ) = 0;
+	virtual size_t                      GetVertexAttributeTypeSize( VertexAttribute element ) = 0;
+	virtual size_t                      GetVertexAttributeSize( VertexAttribute element ) = 0;
+	virtual size_t                      GetVertexFormatSize( VertexFormat format ) = 0;
+
+	// virtual size_t                      GetFormatSize( DataFormat format ) = 0;
+
+	// calls vkCmdSetViewport? but we would need to call this during a render pass
+	// which we have no access to currently in the game code
+	// virtual void                     SetViewport( const Viewport_t& viewport );
+	// virtual const Viewport_t&        GetViewport();
 
 	// =====================================================================================
 	// Material Handle Functions
 };
+
+
+inline void Model::SetMaterial( size_t i, IMaterial* spMaterial )
+{
+	Assert( i < aMeshes.size() );
+
+	if ( aMeshes[i]->apMaterial == spMaterial )
+		return;
+
+	if ( aMeshes[i]->apMaterial == nullptr )
+	{
+		aMeshes[i]->apMaterial = spMaterial;
+
+		if ( aMeshes[i]->aVertexData.aLocked )
+		{
+			auto matSys = spMaterial->GetMaterialSystem();
+			matSys->CreateVertexBuffer( this, i );
+		}
+
+		return;
+	}
+
+	// NOTE: THIS NEEDS TO BE RE-THOUGHT !!!
+	// spMaterial could be nullptr and apMaterial could of been deleted earlier
+	// so there's no way to get the material system, aaaa
+
+	if ( aMeshes[i]->aVertexData.aLocked )
+	{
+		if ( spMaterial == nullptr )
+		{
+			auto matSys = aMeshes[i]->apMaterial->GetMaterialSystem();
+
+			if ( matSys->HasVertexBuffer( this, i ) )
+				matSys->FreeVertexBuffer( this, i );
+		}
+
+		// Is the vertex format between the two different?
+		else if ( aMeshes[i]->apMaterial->GetVertexFormat() != spMaterial->GetVertexFormat() )
+		{
+			auto matSys = spMaterial->GetMaterialSystem();
+
+			// Only Recreate this vertex buffer if we already have one
+			if ( matSys->HasVertexBuffer( this, i ) )
+			{
+				matSys->FreeVertexBuffer( this, i );
+				matSys->CreateVertexBuffer( this, i );
+			}
+		}
+	}
+
+	aMeshes[i]->apMaterial = spMaterial;
+}
+
 

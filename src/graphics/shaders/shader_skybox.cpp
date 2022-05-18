@@ -3,6 +3,7 @@ shader_skybox.cpp ( Authored by Demez )
 
 3D Skybox Shader
 */
+
 #include "../renderer.h"
 #include "shader_skybox.h"
 
@@ -60,22 +61,18 @@ void ShaderSkybox::CreateGraphicsPipeline(  )
 	pShaderStages[ 0 ] = vertShaderStageInfo;
 	pShaderStages[ 1 ] = fragShaderStageInfo;
 
-#if 0
-	VkPipelineVertexInputStateCreateInfo vertexInputInfo{  };	//	Format of vertex data
-	vertexInputInfo.sType 				= VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-	vertexInputInfo.vertexBindingDescriptionCount 	= 0;
-	vertexInputInfo.vertexAttributeDescriptionCount = 0;
-#else
-	auto attributeDescriptions 	= vertex_cube_3d_t::GetAttributeDesc(  );
-	auto bindingDescription 	= vertex_cube_3d_t::GetBindingDesc(  );      
+	std::vector< VkVertexInputBindingDescription > bindingDescriptions;
+	std::vector< VkVertexInputAttributeDescription > attributeDescriptions;
+
+	matsys->GetVertexBindingDesc( GetVertexFormat(), bindingDescriptions );
+	matsys->GetVertexAttributeDesc( GetVertexFormat(), attributeDescriptions );
 
 	VkPipelineVertexInputStateCreateInfo vertexInputInfo{  };	//	Format of vertex data
 	vertexInputInfo.sType 				= VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-	vertexInputInfo.vertexBindingDescriptionCount 	= 1;
-	vertexInputInfo.pVertexBindingDescriptions 	= &bindingDescription;			//	Contains details for loading vertex data
-	vertexInputInfo.vertexAttributeDescriptionCount = ( uint32_t )( attributeDescriptions.size(  ) );
-	vertexInputInfo.pVertexAttributeDescriptions 	= attributeDescriptions.data(  );	//	Same as above
-#endif
+	vertexInputInfo.vertexBindingDescriptionCount 	= ( u32 )bindingDescriptions.size();
+	vertexInputInfo.pVertexBindingDescriptions 	= bindingDescriptions.data();			//	Contains details for loading vertex data
+	vertexInputInfo.vertexAttributeDescriptionCount = ( u32 )( attributeDescriptions.size() );
+	vertexInputInfo.pVertexAttributeDescriptions 	= attributeDescriptions.data();	//	Same as above
 
 	VkPipelineInputAssemblyStateCreateInfo inputAssembly{  };	//	Collects raw vertex data from buffers
 	inputAssembly.sType 			= VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
@@ -226,9 +223,6 @@ void ShaderSkybox::Draw( size_t renderableIndex, IRenderable* renderable, size_t
 	vkCmdBindDescriptorSets( c, VK_PIPELINE_BIND_POINT_GRAPHICS, aPipelineLayout, 0, 1, sets, 0, NULL );
 
 	CmdDraw( renderable, matIndex, c );
-
-	gModelDrawCalls++;
-	gVertsDrawn += renderable->GetVertexCount( matIndex );
 }
 
 

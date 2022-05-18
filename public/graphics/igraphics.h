@@ -15,21 +15,22 @@ by the renderer.
 class BaseGraphicsSystem : public BaseSystem
 {
 public:
-	virtual void            DrawLine( const glm::vec3& sX, const glm::vec3& sY, const glm::vec3& sColor ) = 0;
+	virtual void                        DrawLine( const glm::vec3& sX, const glm::vec3& sY, const glm::vec3& sColor ) = 0;
 
-	/* Loads a model given a path for the model and texture, 
-	   spModel is optional for external management.  */
-	virtual Model*          LoadModel( const std::string& srModelPath ) = 0;
+	// Loads a model from a file
+	virtual Model*                      LoadModel( const std::string& srModelPath ) = 0;
 
 	/* Unload a model.  */
-	virtual void 		FreeModel( Model *spModel ) = 0;
+	virtual void 		                FreeModel( Model *spModel ) = 0;
+
+	virtual const std::string&          GetModelPath( Model* mesh ) = 0;
 
 	/* Loads a sprite given a path to the sprite,
 	   spSprite is optional for external management.  */
-	virtual Sprite*     LoadSprite( const std::string& srSpritePath ) = 0;
+	// virtual Sprite*     LoadSprite( const std::string& srSpritePath ) = 0;
 
 	/* Fre a sprite. */
-	virtual void 		FreeSprite( Sprite *spSprite ) = 0;
+	// virtual void 		FreeSprite( Sprite *spSprite ) = 0;
 
 	/* Sets the view  */
 	virtual void        SetView( View& view ) = 0;
@@ -42,9 +43,6 @@ public:
 
 	/*  */
 	virtual IMaterialSystem *GetMaterialSystem(  ) = 0;
-
-	/* Creates a model and stores it for drawing use */
-	virtual Model *CreateModel(  ) = 0;
 
 	/* Draws to the screen.  */
 	virtual void   DrawFrame() = 0;

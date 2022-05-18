@@ -5,8 +5,6 @@ material.h ( Authored by Demez )
 */
 #pragma once
 
-#include "types/databuffer.hh"
-#include "../allocator.h"
 #include "../shaders/shaders.h"
 #include "graphics/imaterial.h"
 
@@ -19,36 +17,33 @@ class Renderer;
 class Material: public IMaterial
 {
 public:
-	                    Material() {}
-	virtual            ~Material() {}
+	                           Material() {}
+	virtual                   ~Material() {}
 
-	void                Init();
-	void                Destroy();
+	void                       Init();
+	void                       Destroy();
 
-	//void                SetHandle( HMaterial mat ) override;
-	//HMaterial           GetHandle() override;
+	// Set the shader for the material by the shader name 
+	bool                       SetShader( const std::string& name ) override;
 
-	//void                SetName( const char* name ) override;
-	//std::string         GetName(  ) override;
+	std::string                GetShaderName(  ) { return apShader ? apShader->aName : ""; };
 
-	/* Set the shader for the material by the shader name */
-	bool                SetShader( const std::string& name ) override;
+	// ----------------------------------------------------------------------------------------
 
-	std::string         GetShaderName(  ) { return apShader ? apShader->aName : ""; };
-
-	MaterialVar        *GetVar( const std::string& name ) override;
+	MaterialVar               *GetVar( const std::string& name ) override;
 	
 	template <typename T>
-	MaterialVar        *CreateVar( const std::string& name, T data );
+	MaterialVar               *CreateVar( const std::string& name, T data );
 
-	void                SetVar( const std::string& name, Texture *data ) override;
-	void                SetVar( const std::string& name, float data ) override;
-	void                SetVar( const std::string& name, int data ) override;
-	void                SetVar( const std::string& name, const glm::vec2 &data ) override;
-	void                SetVar( const std::string& name, const glm::vec3 &data ) override;
-	void                SetVar( const std::string& name, const glm::vec4 &data ) override;
+	void                       SetVar( const std::string& name, Texture *data ) override;
+	void                       SetVar( const std::string& name, float data ) override;
+	void                       SetVar( const std::string& name, int data ) override;
+	void                       SetVar( const std::string& name, const glm::vec2 &data ) override;
+	void                       SetVar( const std::string& name, const glm::vec3 &data ) override;
+	void                       SetVar( const std::string& name, const glm::vec4 &data ) override;
 
-	Texture            *GetTexture( const std::string& name, Texture *fallback = nullptr ) override;
+	size_t                     GetTextureId( const std::string& name, Texture *fallback = nullptr );
+	Texture                   *GetTexture( const std::string& name, Texture *fallback = nullptr ) override;
 
 	// const float&               GetFloat( const std::string& name ) override;
 	// const int&                 GetInt( const std::string& name ) override;
@@ -62,9 +57,14 @@ public:
 	const glm::vec3&           GetVec3( const std::string& name, const glm::vec3& fallback ) override;
 	const glm::vec4&           GetVec4( const std::string& name, const glm::vec4& fallback ) override;
 
-	size_t              GetTextureId( const std::string& name, Texture *fallback = nullptr );
+	// ----------------------------------------------------------------------------------------
 
+	// Get Vertex Format used by the current shader
+	VertexFormat               GetVertexFormat() override;
 	//HMaterial                   aMat;
+	
+	// cool epic convienence function
+	IMaterialSystem*           GetMaterialSystem() override;
 
 	BaseShader*                 apShader = nullptr;
 	std::vector< MaterialVar* > aVars;

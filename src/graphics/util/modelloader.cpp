@@ -10,6 +10,8 @@ Class dedicated for loading models, and caches them too for multiple uses
 
 #include "util.h"
 #include "core/console.h"
+#include "graphics/meshbuilder.hpp"
+
 
 #define TINYOBJLOADER_IMPLEMENTATION
 #define TINYGLTF_IMPLEMENTATION
@@ -25,7 +27,7 @@ Class dedicated for loading models, and caches them too for multiple uses
 #include "fast_obj/fast_obj.h"
 #endif
 
-std::string GetBaseDir( const std::string &srPath )
+static std::string GetBaseDir( const std::string &srPath )
 {
 	if ( srPath.find_last_of( "/\\" ) != std::string::npos )
 		return srPath.substr( 0, srPath.find_last_of( "/\\" ) );
@@ -68,14 +70,18 @@ void LoadObj_Tiny( const std::string &srPath, Model* spModel )
 	
 	spModel->aMeshes.resize( objMaterials.size() );
 
-	for ( size_t i = 0; i < spModel->aMeshes.size(); i++ )
-		spModel->aMeshes[i] = new Model::MaterialGroup;
+	// for ( size_t i = 0; i < spModel->aMeshes.size(); i++ )
+	// 	spModel->aMeshes[i] = new Model::MaterialGroup;
 
 	// assert( objMaterials.size() > 0 );
 	Assert( objMaterials.size() > 0 );
 
 	// --------------------------------------------------------
 	// Parse Materials
+
+	MeshBuilder meshBuilder;
+	meshBuilder.Start( matsys, spModel );
+	meshBuilder.SetSurfaceCount( objMaterials.size() );
 
 	for ( size_t i = 0; i < objMaterials.size(); ++i )
 	{
@@ -112,15 +118,16 @@ void LoadObj_Tiny( const std::string &srPath, Model* spModel )
 			SetTexture( MatVar_Emissive, objMaterial.emissive_texname );
 		}
 
-		spModel->SetMaterial( i, material );
+		meshBuilder.SetCurrentSurface( i );
+		meshBuilder.SetMaterial( material );
 	}
 
-	matsys->MeshInit( spModel );
+	meshBuilder.SetCurrentSurface( 0 );
 
 	// --------------------------------------------------------
 	// Parse Model Data
 
-	std::unordered_map< vertex_3d_t, uint32_t > vertIndexes;
+	// std::unordered_map< vertex_3d_t, uint32_t > vertIndexes;
 
 	for (std::size_t shapeIndex = 0; shapeIndex < objShapes.size(); ++shapeIndex)
 	{
@@ -131,9 +138,8 @@ void LoadObj_Tiny( const std::string &srPath, Model* spModel )
 		size_t mdlVertexOffset = 0;
 		size_t mdlIndexOffset = 0;
 		size_t prevMaterialIndex = 0;
-		Model::MaterialGroup* prevMaterialGroup = nullptr;
-		Model::MaterialGroup* materialGroup = nullptr;
-
+		// Model::MaterialGroup* prevMaterialGroup = nullptr;
+		// Model::MaterialGroup* materialGroup = nullptr;
 
 		for (size_t faceIndex = 0; faceIndex < objShapes[shapeIndex].mesh.num_face_vertices.size(); ++faceIndex)
 		{
@@ -149,6 +155,8 @@ void LoadObj_Tiny( const std::string &srPath, Model* spModel )
 			// assert(materialIndex < objMaterials.size());
 			Assert(materialIndex < objMaterials.size());
 
+			meshBuilder.SetCurrentSurface( materialIndex );
+
 			// NOTE: this should only be set once per group
 			// if ( prevMaterialIndex != materialIndex )
 			// {
@@ -161,24 +169,25 @@ void LoadObj_Tiny( const std::string &srPath, Model* spModel )
 			// 	prevMaterialIndex = materialIndex;
 			// }
 
-			materialGroup = spModel->aMeshes[materialIndex];
-
-			if ( prevMaterialGroup && prevMaterialGroup != materialGroup )
-			{
-				materialGroup->aIndexOffset  = prevMaterialGroup->aIndexOffset + prevMaterialGroup->aIndexCount;
-				materialGroup->aVertexOffset = prevMaterialGroup->aVertexOffset + prevMaterialGroup->aVertexCount;
-				materialGroup->aVertexCount = 0;
-				materialGroup->aIndexCount = 0;
-			}
-			
-			prevMaterialGroup = materialGroup;
+			// materialGroup = spModel->aMeshes[materialIndex];
+			// 
+			// if ( prevMaterialGroup && prevMaterialGroup != materialGroup )
+			// {
+			// 	materialGroup->aIndexOffset  = prevMaterialGroup->aIndexOffset + prevMaterialGroup->aIndexCount;
+			// 	materialGroup->aVertexOffset = prevMaterialGroup->aVertexOffset + prevMaterialGroup->aVertexCount;
+			// 	materialGroup->aVertexCount = 0;
+			// 	materialGroup->aIndexCount = 0;
+			// }
+			// 
+			// prevMaterialGroup = materialGroup;
 
 			struct tinyobj_vec2 { tinyobj::real_t x, y; };
 			struct tinyobj_vec3 { tinyobj::real_t x, y, z; };
 
 			for (std::size_t v = 0; v < faceVertexCount; ++v)
 			{
-				vertex_3d_t vert{};
+
+				// vertex_3d_t vert{};
 
 				constexpr int posStride = 3;
 				constexpr int normStride = 3;
@@ -190,31 +199,47 @@ void LoadObj_Tiny( const std::string &srPath, Model* spModel )
 					vert.attrib = {tiny_##out.x, tiny_##out.y, tiny_##out.z}; }
 
 				const tinyobj::index_t idx = objShapes[shapeIndex].mesh.indices[indexOffset + v];
-				ToVec3( pos, pos, objAttrib.vertices[posStride * idx.vertex_index] );
+				const tinyobj_vec3& tiny_pos = reinterpret_cast<const tinyobj_vec3&>(objAttrib.vertices[posStride * idx.vertex_index]);
+				meshBuilder.SetPos( tiny_pos.x, tiny_pos.y, tiny_pos.z );
+
+				// ToVec3( pos, pos, objAttrib.vertices[posStride * idx.vertex_index] );
 
 				// wtf do i do if there is no normals (like in the bsp2obj thing)
 				if ( objAttrib.normals.size() > 0 && idx.normal_index >= 0 )
-					ToVec3( normal, norm, objAttrib.normals[normStride * idx.normal_index] );
+				{
+					const tinyobj_vec3& tiny_norm = reinterpret_cast<const tinyobj_vec3&>(objAttrib.normals[posStride * idx.normal_index]);
+					meshBuilder.SetNormal( tiny_norm.x, tiny_norm.y, tiny_norm.z );
+					// ToVec3( normal, norm, objAttrib.normals[normStride * idx.normal_index] );
+				}
+				else
+				{
+					meshBuilder.SetNormal( 0.f, 0.f, 0.f );
+				}
 
 				if (idx.texcoord_index >= 0)
 				{
 					const tinyobj_vec2& texcoord = reinterpret_cast<const tinyobj_vec2&>(objAttrib.texcoords[uvStride * idx.texcoord_index]);
-					vert.texCoord = {texcoord.x, 1.0f - texcoord.y};
+					meshBuilder.SetTexCoord( texcoord.x, 1.0f - texcoord.y );
+					// vert.texCoord = {texcoord.x, 1.0f - texcoord.y};
+				}
+				else
+				{
+					meshBuilder.SetTexCoord( 0.f, 0.f );
 				}
 
 				// ToVec3( color, col, objAttrib.colors[colStride * idx.vertex_index] );
-				//const tinyobj_vec3& color = reinterpret_cast<const tinyobj_vec3&>(objAttrib.colors[colStride * static_cast<std::size_t>(idx.vertex_index)]);
-				//vColor = {color.x, color.y, color.z, /*1.0f*/ };
+				const tinyobj_vec3& color = reinterpret_cast<const tinyobj_vec3&>(objAttrib.colors[colStride * static_cast<std::size_t>(idx.vertex_index)]);
+				meshBuilder.SetColor( color.x, color.y, color.z /*1.0f*/ );
 
-				#undef ToVec3
+				meshBuilder.NextVertex();
 
-				bool uniqueVertex = true;
-				uint32_t newIndex = static_cast<uint32_t>(spModel->GetVertices().size());
+				// bool uniqueVertex = true;
+				// uint32_t newIndex = static_cast<uint32_t>(spModel->GetVertices().size());
 
 				// assert( spModel->GetVertices().size() < std::numeric_limits<uint32_t>::max() );
-				Assert( spModel->GetVertices().size() < std::numeric_limits<uint32_t>::max() );
+				// Assert( spModel->GetVertices().size() < std::numeric_limits<uint32_t>::max() );
 
-				auto iterSavedIndex = vertIndexes.find(vert);
+				// auto iterSavedIndex = vertIndexes.find(vert);
 
 				// Is this a duplicate vertex?
 				/*if ( iterSavedIndex != vertIndexes.end() )
@@ -223,29 +248,31 @@ void LoadObj_Tiny( const std::string &srPath, Model* spModel )
 					newIndex = iterSavedIndex->second;
 				}*/
 
-				if ( uniqueVertex )
-				{
-					spModel->GetVertices().push_back( vert );
-					materialGroup->aVertexCount++;
-					// vertexOffset++;
-					//mesh.aMinSize = glm::min( pos, mesh.aMinSize );
-					//mesh.aMaxSize = glm::max( pos, mesh.aMaxSize );
-				}
-
-				vertIndexes[vert] = newIndex;
-				spModel->GetIndices().emplace_back( newIndex );
-				materialGroup->aIndexCount++;
+				// if ( uniqueVertex )
+				// {
+				// 	spModel->GetVertices().push_back( vert );
+				// 	materialGroup->aVertexCount++;
+				// 	// vertexOffset++;
+				// 	//mesh.aMinSize = glm::min( pos, mesh.aMinSize );
+				// 	//mesh.aMaxSize = glm::max( pos, mesh.aMaxSize );
+				// }
+				// 
+				// vertIndexes[vert] = newIndex;
+				// spModel->GetIndices().emplace_back( newIndex );
+				// materialGroup->aIndexCount++;
 			}
 
 			indexOffset += faceVertexCount;
 		}
 
-		if ( materialGroup )
-		{
-			// materialGroup->aIndexOffset  = indexOffset - materialGroup->aIndexCount;
-			// materialGroup->aVertexOffset = vertexOffset - materialGroup->aVertexCount;
-		}
+		// if ( materialGroup )
+		// {
+		// 	// materialGroup->aIndexOffset  = indexOffset - materialGroup->aIndexCount;
+		// 	// materialGroup->aVertexOffset = vertexOffset - materialGroup->aVertexCount;
+		// }
 	}
+
+	meshBuilder.End();
 
 	auto currentTime = std::chrono::high_resolution_clock::now();
 	float time = std::chrono::duration< float, std::chrono::seconds::period >( currentTime - startTime ).count(  );

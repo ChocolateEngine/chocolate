@@ -114,3 +114,16 @@ size_t Material::GetTextureId( const std::string& name, Texture *fallback )
 	return matsys->GetMissingTexture()->aId;
 }
 
+
+VertexFormat Material::GetVertexFormat()
+{
+	return (apShader) ? apShader->GetVertexFormat() : VertexFormat_None;
+}
+
+
+// cool epic convienence function
+IMaterialSystem* Material::GetMaterialSystem()
+{
+	return matsys;
+}
+

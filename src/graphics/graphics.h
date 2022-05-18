@@ -20,12 +20,9 @@ public:
 	typedef BaseSystem BaseClass;
 
 protected:
-	typedef std::vector< Sprite* > 	SpriteList;
-	typedef std::vector< Model* >	ModelList;
-
 	int 		aRandom = time( 0 );
-	SpriteList 	aSprites;
-	ModelList 	aModels;
+	// std::vector< Sprite* > 	aSprites;
+	std::vector< Model* > 	aModels;
 	Renderer 	aRenderer;
 
 	std::unordered_map< std::string, Model* > aModelPaths;
@@ -53,11 +50,13 @@ public:
 	/* Unload a model.  */
 	void 		FreeModel( Model *spModel ) override;
 
-	/* Loads a sprite given a path to the sprite */
-	Sprite*    LoadSprite( const std::string& srSpritePath ) override;
+	const std::string&          GetModelPath( Model* mesh ) override;
 
-	/* Unload a sprite.  */
-	void 		FreeSprite( Sprite *spSprite ) override;
+	// /* Loads a sprite given a path to the sprite */
+	// Sprite*    LoadSprite( const std::string& srSpritePath ) override;
+	// 
+	// /* Unload a sprite.  */
+	// void 		FreeSprite( Sprite *spSprite ) override;
 
 	/* Sets the view  */
 	void        SetView( View& view ) override;
@@ -67,7 +66,6 @@ public:
 	SDL_Window  *GetWindow(  ) override;
 
 	IMaterialSystem *GetMaterialSystem(  ) override;
-	Model *CreateModel(  ) override;
 
 	/* Sets some renderer parameters.  */
 	explicit 	GraphicsSystem(  );

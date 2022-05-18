@@ -10,10 +10,12 @@
 #pragma once
 
 #include "graphics/primvtx.hh"
+#include "graphics/meshbuilder.hpp"
 #include "graphics/renderertypes.h"
 
 #include "../types/material.h"
 
+#if 0
 class PrimitiveMesh: public IRenderable
 {
 public:
@@ -54,6 +56,10 @@ public:
 	virtual std::vector< vertex_debug_t >&      GetVertices()                       { return aVertices; };
 	virtual std::vector< uint32_t >&            GetIndices() override               { return aIndices; };
 };
+#else
+// lazy
+using PrimitiveMesh = Model;
+#endif
 
 
 class VulkanPrimitiveMaterials {
@@ -61,6 +67,8 @@ class VulkanPrimitiveMaterials {
 protected:
 	PrimitiveMesh*        aFinalMesh = nullptr;
 	Material*             apMaterial = nullptr;
+
+	MeshBuilder           aMeshBuilder;
 
 public:
 	/* Create one large primative for one draw call  */

@@ -13,6 +13,9 @@ file(
 	${CH_PUBLIC}/*.h
 	${CH_PUBLIC}/core/*.h
 	${CH_PUBLIC}/graphics/*.h
+	${CH_PUBLIC}/graphics/*.hpp
+	${CH_PUBLIC}/types/*.cpp
+	${CH_PUBLIC}/types/*.h
 	${CH_THIRDPARTY}/io/*.h
 	${CH_THIRDPARTY}/speedykeyv/KeyValue.cpp
 	${CH_THIRDPARTY}/speedykeyv/KeyValue.h
@@ -25,6 +28,10 @@ link_libraries(
 	ImGui
 )
 
+include_directories(
+	// "${CH_THIRDPARTY}/fx-gltf"
+	"${CH_THIRDPARTY}/nlohmann_json/include"
+)
 
 add_library( Graphics SHARED ${SRC_FILES} ${PUBLIC_FILES} )
 

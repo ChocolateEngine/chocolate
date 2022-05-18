@@ -20,7 +20,7 @@ void VulkanPrimitiveMaterials::ResetMesh()
 {
 	if ( aFinalMesh )
 	{
-		matsys->FreeVertexBuffer( aFinalMesh );
+		matsys->FreeAllBuffers( aFinalMesh );
 
 		delete aFinalMesh;
 		aFinalMesh = nullptr;
@@ -30,16 +30,23 @@ void VulkanPrimitiveMaterials::ResetMesh()
 		return;
 
 	aFinalMesh = new PrimitiveMesh;
-	aFinalMesh->SetMaterial( 0, apMaterial );
+	// aFinalMesh->SetMaterial( 0, apMaterial );
+
+	aMeshBuilder.Reset();
+	aMeshBuilder.Start( matsys, aFinalMesh );
+	aMeshBuilder.SetMaterial( apMaterial );
 }
 
 void VulkanPrimitiveMaterials::PrepareMeshForDraw()
 {
-	if ( !g_debug_draw || !aFinalMesh || aFinalMesh->GetVertices().empty() )
+	if ( !g_debug_draw || !aFinalMesh || aMeshBuilder.aSurfaces.empty() )
 		return;
 
-	matsys->CreateVertexBuffer( aFinalMesh );
+	aMeshBuilder.End();
+
 	matsys->AddRenderable( aFinalMesh );
+
+	aMeshBuilder.Reset();
 }
 
 void VulkanPrimitiveMaterials::InitLine( const glm::vec3& sX, const glm::vec3& sY, const glm::vec3& sColor )
@@ -47,11 +54,13 @@ void VulkanPrimitiveMaterials::InitLine( const glm::vec3& sX, const glm::vec3& s
 	if ( !g_debug_draw || !aFinalMesh )
 		return;
 
-	aFinalMesh->GetVertices().resize( aFinalMesh->GetVertices().size() + 2 );
+	aMeshBuilder.SetPos( sX );
+	aMeshBuilder.SetColor( sColor );
+	aMeshBuilder.NextVertex();
 
-	size_t size = aFinalMesh->GetVertices().size();
-	aFinalMesh->GetVertices()[size-2] = {sX, sColor};
-	aFinalMesh->GetVertices()[size-1] = {sY, sColor};
+	aMeshBuilder.SetPos( sY );
+	aMeshBuilder.SetColor( sColor );
+	aMeshBuilder.NextVertex();
 }
 
 void VulkanPrimitiveMaterials::Init()
@@ -63,6 +72,14 @@ void VulkanPrimitiveMaterials::Init()
 
 VulkanPrimitiveMaterials::~VulkanPrimitiveMaterials()
 {
+	if ( aFinalMesh )
+	{
+		matsys->FreeAllBuffers( aFinalMesh );
+
+		delete aFinalMesh;
+		aFinalMesh = nullptr;
+	} 
+
 	matsys->DeleteMaterial( apMaterial );
 	apMaterial = nullptr;
 }

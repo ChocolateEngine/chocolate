@@ -11,6 +11,7 @@ draw to the screen.
 #include "types/material.h"
 #include "types/transform.h"
 #include "graphics/sprite.h"
+#include "debugprims/primcreator.h"
 #include "util.h"
 
 #define GLM_FORCE_RADIANS
@@ -46,9 +47,9 @@ CONVAR( r_showDrawCalls, 1 );
 
 size_t gModelDrawCalls = 0;
 size_t gVertsDrawn = 0;
-size_t gLinesDrawn = 0;
 
 extern GuiSystem* gui;
+extern DebugRenderer gDbgDrawer;
 
 Renderer* renderer = nullptr;
 
@@ -238,8 +239,6 @@ void Renderer::InitVulkan(  )
 	gLayoutBuilder.BuildLayouts(  );
 	gPipelineBuilder.BuildPipelines(  );
 
-	aDbgDrawer.Init();
-
 	// start up threads
 	gThreadPool.resize( THREAD_COUNT );
 	gTaskQueue.resize( THREAD_COUNT );
@@ -263,7 +262,7 @@ void Renderer::InitCommandBuffers(  )
 
 	gFileMonitor.Update();
 
-	aDbgDrawer.PrepareMeshForDraw();
+	gDbgDrawer.PrepareMeshForDraw();
 	
 	aCommandBuffers.resize( aSwapChainFramebuffers.size(  ) );
 	VkCommandBufferAllocateInfo allocInfo{  };
@@ -404,6 +403,8 @@ void Renderer::InitCommandBuffers(  )
 		// IDEA: make a batched mesh vector so that way we can bind everything needed, and then just draw draw draw draw
 
 		size_t renderIndex = 0;
+		IRenderable* prevRenderable = nullptr;
+		size_t prevMatIndex = SIZE_MAX;
 
 		// TODO: still could be better, but it's better than what we used to have
 		for ( auto& [shader, renderList]: matsys->aDrawList )
@@ -418,14 +419,15 @@ void Renderer::InitCommandBuffers(  )
 			shader->Bind( aCommandBuffers[i], i );
 
 			renderIndex = 0;
-			IRenderable* prevRenderable = nullptr;
 
 			for ( auto& [renderable, matIndex, drawData]: renderList )
 			{
-				if ( prevRenderable != renderable )
+				if ( prevRenderable != renderable || prevMatIndex != matIndex )
 				{
 					prevRenderable = renderable;
-					shader->BindBuffers( renderable, aCommandBuffers[i], i );
+					prevMatIndex = matIndex;
+
+					shader->BindBuffers( renderable, matIndex, aCommandBuffers[i], i );
 				}
 
 				matsys->DrawRenderable( renderIndex++, renderable, matIndex, drawData, aCommandBuffers[i], i );
@@ -444,7 +446,7 @@ void Renderer::InitCommandBuffers(  )
 
 			for ( auto& [renderable, matIndex, drawData] : matsys->aDrawList[gpSkybox] )
 			{
-				gpSkybox->BindBuffers( renderable, aCommandBuffers[i], i );
+				gpSkybox->BindBuffers( renderable, matIndex, aCommandBuffers[i], i );
 				matsys->DrawRenderable( 0, renderable, matIndex, drawData, aCommandBuffers[i], i );
 			}
 		}
@@ -483,14 +485,14 @@ void Renderer::ReinitSwapChain(  )
 	InitDepthResources( aDepthImage, aDepthImageMemory, aDepthImageView );
 	InitFrameBuffer( aSwapChainFramebuffers, aSwapChainImageViews, aDepthImageView, aColorImageView );
 
-	matsys->ReInitSwapChain();
+	matsys->OnReInitSwapChain();
 
 	gLayoutBuilder.BuildLayouts(  );
 	gPipelineBuilder.BuildPipelines(  );
 
 	for ( auto& model : aModels )
 	{
-		matsys->MeshReInit( model );
+		matsys->InitUniformBuffer( model );
 	}
 }
 
@@ -506,7 +508,7 @@ void Renderer::DestroySwapChain(  )
 	vkDestroyImage( DEVICE, aColorImage, nullptr );
 	vkFreeMemory( DEVICE, aColorImageMemory, nullptr );
 
-	matsys->DestroySwapChain();
+	matsys->OnDestroySwapChain();
 
 	for ( auto& model : aModels )
 	{
@@ -521,6 +523,7 @@ void Renderer::DestroySwapChain(  )
 		vkDestroyImageView( DEVICE, imageView, NULL );
 }
 
+#if 0
 bool Renderer::LoadSprite( Sprite &srSprite, const String &srSpritePath )
 {
 	srSprite.SetMaterial( 0, matsys->CreateMaterial() );
@@ -548,6 +551,7 @@ bool Renderer::LoadSprite( Sprite &srSprite, const String &srSpritePath )
 
 	return true;
 }
+#endif
 
 void Renderer::DrawFrame(  )
 {
@@ -556,21 +560,17 @@ void Renderer::DrawFrame(  )
 	if ( aCommandBuffers.size() > 0 && r_showDrawCalls.GetBool() )
 	{
 		int buh = 0;
-		gui->InsertDebugMessage( buh++, "Model Draw Calls: %u (%u / %u Command Buffers)",
+		gui->InsertDebugMessage( buh++, "Draw Calls: %u (%u / %u Command Buffers)",
 			gModelDrawCalls / aCommandBuffers.size(), gModelDrawCalls, aCommandBuffers.size() );
 
-		gui->InsertDebugMessage( buh++, "Vertices Drawn: %u (%u / %u Command Buffers)",
+		gui->InsertDebugMessage( buh++, "Vertices:   %u (%u / %u Command Buffers)",
 			gVertsDrawn / aCommandBuffers.size(), gVertsDrawn, aCommandBuffers.size() );
-
-		gui->InsertDebugMessage( buh++, "Prims Drawn: %u (%u / %u Command Buffers)",
-			gLinesDrawn / aCommandBuffers.size(), gLinesDrawn, aCommandBuffers.size() );
 
 		gui->InsertDebugMessage( buh++, "" );  // spacer
 	}
 
 	gModelDrawCalls = 0;
 	gVertsDrawn = 0;
-	gLinesDrawn = 0;
 
 	/*for ( auto& renderable : matsys->aDrawList )
 	{
@@ -636,18 +636,22 @@ void Renderer::DrawFrame(  )
 	else if ( res != VK_SUCCESS && res != VK_SUBOPTIMAL_KHR )
 		throw std::runtime_error( "Failed ot present swap chain image!" );
 	
-	vkQueueWaitIdle( gpDevice->GetPresentQueue(  ) );
+	// probably a more effective reminder
+#pragma message ("IDEA: maybe change this vkQueueWaitIdle to be called at the start of the DrawFrame function," \
+				"cause this does take up some cpu time")
 
-	aCurrentFrame = ( aCurrentFrame + 1 ) % MAX_FRAMES_PROCESSING;
+	vkQueueWaitIdle( gpDevice->GetPresentQueue() );
+
+	aCurrentFrame = ++aCurrentFrame % MAX_FRAMES_PROCESSING;
 	vkFreeCommandBuffers( DEVICE, gpDevice->GetCommandPool(  ), ( uint32_t )aCommandBuffers.size(  ), aCommandBuffers.data(  ) );
 
 	matsys->aDrawList.clear();
-	aDbgDrawer.ResetMesh();
+	gDbgDrawer.ResetMesh();
 }
 
 /* Create a line and add it to drawing.  */
 void Renderer::CreateLine( glm::vec3 sX, glm::vec3 sY, glm::vec3 sColor ) {
-	aDbgDrawer.CreateLine( sX, sY, sColor );
+	gDbgDrawer.CreateLine( sX, sY, sColor );
 }
 
 void Renderer::Cleanup(  )

@@ -32,6 +32,11 @@ public:
 	virtual void        AllocDrawData( size_t sRenderableCount ) override;
 	virtual void        PrepareDrawData( size_t renderableIndex, IRenderable* renderable, size_t material, uint32_t commandBufferCount ) override;
 
+	VertexFormat        GetVertexFormat() override
+	{
+		return VertexFormat_Position;
+	}
+
 	MemPool aDrawDataPool;
 };
 

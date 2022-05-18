@@ -34,6 +34,22 @@
 #define IS_TYPE( var1, var2 ) typeid(var1) == typeid(var2)
 #define IS_NOT_TYPE( var1, var2 ) typeid(var1) != typeid(var2)
 
+// need macro for constant expression
+#define CH_ALIGN_VALUE( val, alignment ) ( ( val + alignment - 1 ) & ~( alignment - 1 ) ) 
+
+// msvc
+#if _MSC_VER
+	#define CH_STACK_ALLOC( size )      _alloca( CH_ALIGN_VALUE( size, 16 ) )
+
+	// obtain size of block of memory allocated from heap
+	#define CH_MALLOC_SIZE( block )     ( _msize( block ) )
+#else
+	#define CH_STACK_ALLOC( size )      alloca( CH_ALIGN_VALUE( size, 16 ) )
+
+	// obtain size of block of memory allocated from heap
+	#define CH_MALLOC_SIZE( block )     ( malloc_usable_size( block ) )
+#endif
+
 
 // ==============================================================================
 // Short Types

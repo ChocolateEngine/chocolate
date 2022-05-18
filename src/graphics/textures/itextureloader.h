@@ -6,8 +6,6 @@ Interface for loading textures in the engine
 
 #pragma once
 
-#include "types/databuffer.hh"
-#include "../allocator.h"
 #include "../types/material.h"
 
 

@@ -38,7 +38,7 @@ constexpr char const *VKString( VkResult sResult ) {
     }
 }
 
-void CheckVKResult( VkResult sResult ) {
+static void CheckVKResult( VkResult sResult ) {
     if ( sResult == VK_SUCCESS )
         return;
 

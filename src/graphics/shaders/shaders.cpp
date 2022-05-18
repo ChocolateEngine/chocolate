@@ -45,32 +45,31 @@ void BaseShader::Destroy()
 // base stuff, feel free to override
 
 
-void BaseShader::CreateLayouts(  )
+void BaseShader::CreateLayouts()
 {
 	aLayouts.Allocate( 1 );
 	aLayouts[0] = matsys->aImageLayout;
 }
 
 
-void BaseShader::BindBuffers( IRenderable* renderable, VkCommandBuffer c, uint32_t cIndex )
+void BaseShader::BindBuffers( IRenderable* renderable, size_t matIndex, VkCommandBuffer c, uint32_t cIndex )
 {
-	const std::vector< RenderableBuffer* >& renderBuffers = matsys->GetRenderBuffers( renderable );
+	// temp debugging
+	const std::vector< InternalMeshData_t >& meshDataList = matsys->GetMeshData( renderable );
+
+	const InternalMeshData_t& meshData = meshDataList[matIndex];
 
 	// Bind the mesh's vertex and index buffers
-	for ( RenderableBuffer* buffer : renderBuffers )
+	if ( !meshData.apVertexBuffer )
 	{
-		if ( buffer->aFlags & gVertexBufferFlags )
-		{
-			VkBuffer        vBuffers[]  = { buffer->aBuffer };
-			VkDeviceSize	offsets[]   = { 0 };
-
-			vkCmdBindVertexBuffers( c, 0, 1, vBuffers, offsets );
-		}
-		else if ( buffer->aFlags & gIndexBufferFlags )
-		{
-			vkCmdBindIndexBuffer( c, buffer->aBuffer, 0, VK_INDEX_TYPE_UINT32 );
-		}
+		LogWarn( "Mesh Without a Vertex Buffer Trying to Draw !!!!\n" );
+		return;
 	}
+
+	meshData.apVertexBuffer->Bind( c );
+
+	if ( meshData.apIndexBuffer )
+		meshData.apIndexBuffer->Bind( c );
 }
 
 
@@ -82,6 +81,34 @@ void BaseShader::Bind( VkCommandBuffer c, uint32_t cIndex )
 
 void BaseShader::CmdDraw( IRenderable* renderable, size_t matIndex, VkCommandBuffer c )
 {
+	// TODO: figure out a way to get back to the design below with this vertex format stuff
+	// ideally, it would be less vertex buffer binding, but would be harder to pull off
+#if 1
+	if ( matsys->HasIndexBuffer( renderable, matIndex ) )
+		// um do i put in the vertex offset here too?
+		vkCmdDrawIndexed(
+			c,
+			renderable->GetSurfaceIndices( matIndex ).size(),
+			1,
+			0,  // first index
+			0,  // vertex offset
+			0
+		);
+
+	else
+		vkCmdDraw(
+			c,
+			renderable->GetSurfaceVertexData( matIndex ).aCount,
+			1,
+			0,  // no offset
+			0
+		);
+
+	gModelDrawCalls++;
+	gVertsDrawn += renderable->GetSurfaceVertexData( matIndex ).aCount;
+
+#else
+
 	if ( matsys->HasIndexBuffer( renderable ) )
 		// um do i put in the vertex offset here too?
 		vkCmdDrawIndexed(
@@ -104,5 +131,7 @@ void BaseShader::CmdDraw( IRenderable* renderable, size_t matIndex, VkCommandBuf
 
 	gModelDrawCalls++;
 	gVertsDrawn += renderable->GetVertexCount( matIndex );
+
+#endif
 }
 
