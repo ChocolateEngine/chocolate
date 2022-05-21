@@ -25,6 +25,20 @@ out/
 *.vcxproj
 *.vcxproj.*
 
+# cmake stuff
+*.dir/
+*.tlog
+
+# downloaded from thirdparty.py
+thirdparty/glm
+thirdparty/libvorbis
+thirdparty/libogg
+thirdparty/KTX-Software
+thirdparty/JoltPhysics
+thirdparty/SDL2
+thirdparty/steamaudio
+thirdparty/tracy
+
 #qpc generated files
 scripts/*.mak
 
@@ -36,8 +50,14 @@ scripts/*.mak
 cmake_install.cmake
 CMakeFiles/
 public/SDL2/
-thirdparty/
 Makefile
+.idea
+
+*.zip
+*.7z
+*.tar
+*.tar.gz
 
 #ide
 .vs/
+*.pdb

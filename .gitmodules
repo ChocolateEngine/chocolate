@@ -1,3 +1,6 @@
 [submodule "thirdparty/speedykeyv"]
 	path = thirdparty/speedykeyv
 	url = https://github.com/ozxybox/SpeedyKeyV
+[submodule "thirdparty/cgltf"]
+	path = thirdparty/cgltf
+	url = https://github.com/jkuhlmann/cgltf
