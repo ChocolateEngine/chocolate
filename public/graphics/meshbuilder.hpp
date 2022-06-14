@@ -23,6 +23,10 @@ struct MeshBuilderVertex
 	// glm::vec2 texCoord2;
 	glm::vec3 color{};
 
+	// only one thing for morph data at the moment
+	glm::vec3 morphPos{};
+	
+	// bones and weights
 	// std::vector<int> bones;
 	// std::vector<float> weights;
 
@@ -45,6 +49,38 @@ struct MeshBuilderVertex
 };
 
 
+// Vertex containing all possible morph values
+struct MeshBuilderMorphVertex
+{
+	// Vertex Index to affect
+	int       vert;
+
+	// Morph Target it came from
+	int       morph;
+	
+	// Position and Normal deltas
+	glm::vec3 pos{};
+	glm::vec3 normal{};
+
+	inline bool operator==( const MeshBuilderMorphVertex& srOther ) const
+	{
+		if ( vert != srOther.vert )
+			return false;
+		
+		if ( morph != srOther.morph )
+			return false;
+
+		if ( pos != srOther.pos )
+			return false;
+
+		if ( normal != srOther.normal )
+			return false;
+
+		return true;
+	}
+};
+
+
 // Hashing Support for this vertex struct
 namespace std
 {
@@ -59,6 +95,18 @@ namespace std
 			return value;
 		}
 	};
+	
+	template<  > struct hash< MeshBuilderMorphVertex >
+	{
+		size_t operator(  )( MeshBuilderMorphVertex const& vertex ) const
+		{
+			size_t value = (hash< int >()(vertex.vert));
+			value ^= (hash< int >()(vertex.morph));
+			value ^= (hash< glm::vec3 >()(vertex.pos));
+			value ^= (hash< glm::vec3 >()(vertex.normal));
+			return value;
+		}
+	};
 }
 
 
@@ -68,8 +116,19 @@ namespace std
 class MeshBuilder
 {
 public:
-	
 
+	struct BlendShape
+	{
+		std::string aName;
+	};
+
+	struct BlendShapeData
+	{
+		size_t                              aIndex;
+		std::vector< MeshBuilderMorphVertex >    aVertices;
+		MeshBuilderVertex                   aVertex;
+	};
+	
 	struct Surface
 	{
 		std::vector< MeshBuilderVertex >    aVertices;
@@ -81,13 +140,18 @@ public:
 		MeshBuilderVertex                   aVertex;
 		VertexFormat                        aFormat    = VertexFormat_None;
 		IMaterial*                          apMaterial = nullptr;
+
+		// is this a per surface thing? i would imagine so
+		std::vector< BlendShapeData >       aBlendShapes;
 	};
 
-	IMaterialSystem*        apMatSys = nullptr;
-	IRenderable*            apMesh = nullptr;
-	std::vector< Surface >  aSurfaces;
-	size_t                  aSurf = 0;
-	Surface*                apSurf = 0;  // pointer to current surface
+	IMaterialSystem*            apMatSys = nullptr;
+	IRenderable*                apMesh = nullptr;
+
+	std::vector< BlendShape >   aBlendShapes;
+	std::vector< Surface >      aSurfaces;
+	size_t                      aSurf = 0;
+	Surface*                    apSurf = 0;  // pointer to current surface
 
 	// std::vector< Vertex >   aVertices;
 	// VertexFormat            aFormat = VertexFormat_None;
@@ -176,6 +240,8 @@ public:
 				else MOVE_VERT_DATA( VertexAttribute_Normal,   normal,   3 )
 				else MOVE_VERT_DATA( VertexAttribute_Color,    color,    3 )
 				else MOVE_VERT_DATA( VertexAttribute_TexCoord, texCoord, 2 )
+				
+				else MOVE_VERT_DATA( VertexAttribute_MorphPos, morphPos, 3 )
 
 				#undef MOVE_VERT_DATA
 				j++;
@@ -281,6 +347,7 @@ public:
 		Assert( aSurfaces.size() ); \
 		Assert( apSurf );
 
+
 	inline void SetPos( const glm::vec3& data )
 	{
 		VERT_EMPTY_CHECK();
@@ -360,6 +427,33 @@ public:
 	}
 
 
+	// ------------------------------------------------------------------------
+	// Blend Shapes
+
+
+	inline void SetMorphPos( const glm::vec3& data )
+	{
+		VERT_EMPTY_CHECK();
+
+		apSurf->aFormat |= VertexFormat_MorphPos;
+		apSurf->aVertex.morphPos = data;
+	}
+
+
+	inline void SetMorphPos( float x, float y, float z )
+	{
+		VERT_EMPTY_CHECK();
+
+		apSurf->aFormat |= VertexFormat_MorphPos;
+		apSurf->aVertex.morphPos.x = x;
+		apSurf->aVertex.morphPos.y = y;
+		apSurf->aVertex.morphPos.z = z;
+	}
+
+
+	// ------------------------------------------------------------------------
+
+
 	inline void SetMaterial( IMaterial* spMaterial )
 	{
 		Assert( aSurfaces.size() );
@@ -401,6 +495,9 @@ public:
 		Assert( apSurf );
 		return *( apSurf->aVertices.end() );
 	}
+
+
+	// ------------------------------------------------------------------------
 
 
 	inline glm::vec3 CalculatePlaneNormal( const glm::vec3& a, const glm::vec3& b, const glm::vec3& c )

@@ -22,7 +22,9 @@ enum : VertexFormat
 	VertexFormat_TexCoord       = (1 << 2),
 	VertexFormat_Color          = (1 << 3),
 
-	VertexFormat_Position2D     = (1 << 4),
+	VertexFormat_MorphPos       = (1 << 4),
+	
+	// VertexFormat_Position2D     = (1 << 5),  // uh
 
 	VertexFormat_BoneIndex      = (1 << 5),
 	VertexFormat_BoneWeight     = (1 << 6),
@@ -37,7 +39,7 @@ enum VertexAttribute : u8
 	VertexAttribute_TexCoord,         // vec2
 	VertexAttribute_Color,            // vec3 (should be vec4 probably)
 
-	VertexAttribute_Position2D,       // vec2
+	VertexAttribute_MorphPos,         // vec3
 
 	VertexAttribute_BoneIndex,        // uvec4
 	VertexAttribute_BoneWeight,       // vec4
@@ -285,6 +287,18 @@ struct VertexData_t
 };
 
 
+struct BlendShapeData_t
+{
+	std::string aName;
+	float       aValue;
+
+	// std::vector<> aData;
+};
+
+
+// ===================================================================
+
+
 // could change to IMesh or IDrawable, idk
 // NOTE: may need to go partly back to that Mesh/Model setup i had before
 // because they way this Renderable is setup, if the shaders used in this renderable
@@ -322,10 +336,14 @@ public:
 	// --------------------------------------------------------------------------------------
 	// Blend Shapes
 
-	// virtual size_t                      GetBlendShapeCount() = 0;
-	// virtual std::string_view            GetBlendShapeName( size_t i ) = 0;
-	// virtual float                       GetBlendShapeValue( size_t i ) = 0;
-	// virtual void                        SetBlendShapeValue( size_t i, float val ) = 0;
+	virtual size_t                      GetBlendShapeCount() = 0;
+	virtual void                        SetBlendShapeCount( size_t sCount ) = 0;
+
+	virtual std::string_view            GetBlendShapeName( size_t i ) = 0;
+	virtual size_t                      GetBlendShapeIndex( std::string_view sName ) = 0;
+
+	virtual float                       GetBlendShapeValue( size_t i ) = 0;
+	virtual void                        SetBlendShapeValue( size_t i, float val ) = 0;
 
 	// --------------------------------------------------------------------------------------
 	// Skeleton
@@ -461,6 +479,43 @@ public:
 		Assert( i < aMeshes.size() );
 		aMeshes[i]->aVertexData.aLocked = sLocked;
 	}
+
+	// --------------------------------------------------------------------------------------
+	// Blend Shapes
+
+	virtual size_t GetBlendShapeCount() override
+	{
+		return 0;
+	}
+
+	virtual void SetBlendShapeCount( size_t sCount ) override
+	{
+	}
+
+	// virtual BlendShapeData_t& GetBlendShapeData( size_t i ) override
+	// {
+	// }
+
+#if 1
+	virtual std::string_view GetBlendShapeName( size_t i ) override
+	{
+		return "";
+	}
+
+	virtual size_t GetBlendShapeIndex( std::string_view sName ) override
+	{
+		return 0;
+	}
+
+	virtual float GetBlendShapeValue( size_t i ) override
+	{
+		return 0.f;
+	}
+
+	virtual void SetBlendShapeValue( size_t i, float val ) override
+	{
+	}
+#endif
 
 	// --------------------------------------------------------------------------------------
 	// Materials

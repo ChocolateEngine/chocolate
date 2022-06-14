@@ -1045,8 +1045,8 @@ GraphicsFormat MaterialSystem::GetVertexAttributeFormat( VertexAttribute attrib 
 		case VertexAttribute_TexCoord:
 			return GraphicsFormat::R32G32_SFLOAT;
 
-		case VertexAttribute_Position2D:
-			return GraphicsFormat::R32G32_SFLOAT;
+		case VertexAttribute_MorphPos:
+			return GraphicsFormat::R32G32B32_SFLOAT;
 	}
 }
 

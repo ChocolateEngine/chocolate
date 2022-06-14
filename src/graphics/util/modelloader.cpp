@@ -230,6 +230,9 @@ void LoadObj_Tiny( const std::string &srPath, Model* spModel )
 				// ToVec3( color, col, objAttrib.colors[colStride * idx.vertex_index] );
 				const tinyobj_vec3& color = reinterpret_cast<const tinyobj_vec3&>(objAttrib.colors[colStride * static_cast<std::size_t>(idx.vertex_index)]);
 				meshBuilder.SetColor( color.x, color.y, color.z /*1.0f*/ );
+				
+				// AAAAAAAAAAAAAA
+				meshBuilder.SetMorphPos( 0.f, 0.f, 0.f );
 
 				meshBuilder.NextVertex();
 

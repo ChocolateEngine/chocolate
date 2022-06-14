@@ -26,6 +26,10 @@ struct Basic3D_UBO
 {
 	int diffuse, ao, emissive;
 	float aoPower, emissivePower;
+
+	// morphs
+	// int morphCount;
+	float morphWeight;
 };
 
 
@@ -103,7 +107,8 @@ public:
 
 	VertexFormat        GetVertexFormat() override
 	{
-		return VertexFormat_Position | VertexFormat_Normal | VertexFormat_TexCoord;
+		// return VertexFormat_Position | VertexFormat_Normal | VertexFormat_TexCoord;
+		return VertexFormat_Position | VertexFormat_Normal | VertexFormat_TexCoord | VertexFormat_MorphPos;
 	}
 
 	MemPool aDrawDataPool;
@@ -116,7 +121,7 @@ Basic3D* gpBasic3D = new Basic3D;
 void Basic3D::CreateLayouts()
 {
 	aLayouts.Allocate( 2 );
-	aLayouts[0] = InitDescriptorSetLayout( DescriptorLayoutBinding( VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr ) );
+	aLayouts[0] = InitDescriptorSetLayout( DescriptorLayoutBinding( VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, nullptr ) );
 	aLayouts[1] = matsys->aImageLayout;
 }
 
@@ -310,6 +315,10 @@ static std::string MatVar_AOPower          = "ao_power";
 static std::string MatVar_EmissivePower    = "emissive_power";
 
 
+// TEMP AAAAA
+CONVAR( morph_weight, 0.f );
+
+
 // GO BACK TO THREADING THIS WITH (renderableIndex + matIndex)
 // NOTE: sometimes crashes here? something with debug rendering from physics, hmm, memory leaking or overstepping?
 void Basic3D::UpdateBuffers( uint32_t sCurrentImage, size_t memIndex, IRenderable* spRenderable, size_t matIndex )
@@ -325,6 +334,8 @@ void Basic3D::UpdateBuffers( uint32_t sCurrentImage, size_t memIndex, IRenderabl
 
 	ubo.aoPower         = mat->GetFloat( MatVar_AOPower, 1.f );
 	ubo.emissivePower   = mat->GetFloat( MatVar_EmissivePower, 1.f );
+	
+	ubo.morphWeight     = morph_weight;
 
 	auto it = matsys->aUniformMap.find( spRenderable->GetID() );
 
