@@ -52,17 +52,32 @@ void BaseShader::CreateLayouts()
 }
 
 
-void BaseShader::BindBuffers( IRenderable* renderable, size_t matIndex, VkCommandBuffer c, uint32_t cIndex )
+void BaseShader::BindBuffers( IRenderable* spRenderable, size_t matIndex, VkCommandBuffer c, uint32_t cIndex )
 {
+	// check if renderable is nullptr
+	if ( spRenderable == nullptr )
+	{
+		LogError( "BaseShader::BindBuffers: spRenderable is nullptr\n" );
+		return;
+	}
+
+	// get model and check if it's nullptr
+	IModel* model = spRenderable->GetModel();
+	if ( model == nullptr )
+	{
+		LogError( "BaseShader::BindBuffers: model is nullptr\n" );
+		return;
+	}
+	
 	// temp debugging
-	const std::vector< InternalMeshData_t >& meshDataList = matsys->GetMeshData( renderable );
+	const std::vector< InternalMeshData_t >& meshDataList = matsys->GetMeshData( model );
 
 	const InternalMeshData_t& meshData = meshDataList[matIndex];
 
 	// Bind the mesh's vertex and index buffers
 	if ( !meshData.apVertexBuffer )
 	{
-		LogWarn( "Mesh Without a Vertex Buffer Trying to Draw !!!!\n" );
+		LogError( "Mesh Without a Vertex Buffer Trying to Draw !!!!\n" );
 		return;
 	}
 
@@ -79,7 +94,7 @@ void BaseShader::Bind( VkCommandBuffer c, uint32_t cIndex )
 }
 
 
-void BaseShader::CmdDraw( IRenderable* renderable, size_t matIndex, VkCommandBuffer c )
+void BaseShader::CmdDraw( IModel* renderable, size_t matIndex, VkCommandBuffer c )
 {
 	// TODO: figure out a way to get back to the design below with this vertex format stuff
 	// ideally, it would be less vertex buffer binding, but would be harder to pull off

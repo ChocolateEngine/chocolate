@@ -13,7 +13,7 @@ Declares shader effect stuff.
 
 class Renderer;
 class MaterialSystem;
-class IRenderable;
+class IModel;
 
 
 // Note: a lot of laziness going on here lmao
@@ -48,7 +48,7 @@ public:
 	// Graphics Pipeline Creation
 	// virtual VkPipelineVertexInputStateCreateInfo        CreateVertexInputInfo();
 
-	inline virtual void                InitUniformBuffer( IRenderable* mesh ) {};
+	inline virtual void                InitUniformBuffer( IModel* mesh ) {};
 
 	virtual void                       UpdateBuffers( uint32_t sCurrentImage, size_t renderableIndex, IRenderable* spRenderable, size_t matIndex ) {};
 
@@ -69,20 +69,10 @@ public:
 		Draw( renderable, c, commandBufferIndex );
 	}
 
-	virtual void                       Draw( size_t renderableIndex, IRenderable* renderable, size_t matIndex, const RenderableDrawData& instanceDrawData, VkCommandBuffer c, uint32_t commandBufferIndex )
-	{
-		Draw( renderableIndex, renderable, matIndex, c, commandBufferIndex );
-	}
-
-	virtual void                       CmdDraw( IRenderable* renderable, size_t matIndex, VkCommandBuffer c );
+	virtual void                       CmdDraw( IModel* renderable, size_t matIndex, VkCommandBuffer c );
 
 	virtual void                       AllocDrawData( size_t sRenderableCount ) {};
 	virtual void                       PrepareDrawData( size_t renderableIndex, IRenderable* renderable, size_t matIndex, uint32_t commandBufferCount ) {};
-	virtual void                       PrepareDrawData( size_t renderableIndex, IRenderable* renderable, size_t matIndex, const RenderableDrawData& instanceDrawData, uint32_t commandBufferCount )
-	{
-		// call the old one cause lazy
-		PrepareDrawData( renderableIndex, renderable, matIndex, commandBufferCount );
-	};
 
 	virtual bool                       UsesUniformBuffers() = 0;
 

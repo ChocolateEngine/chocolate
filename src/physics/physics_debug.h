@@ -21,8 +21,8 @@ public:
 	PhysDebugMesh();
 	~PhysDebugMesh();
 
-	virtual void AddRef() override   { IRenderable::AddRef(); }
-	virtual void Release() override  { IRenderable::Release(); }
+	virtual void AddRef() override   { IModel::AddRef(); }
+	virtual void Release() override  { IModel::Release(); }
 };
 
 
@@ -77,13 +77,14 @@ public:
 							JPH::ColorArg inColor,
 							float inHeight ) override;
 
-	std::vector< PhysDebugMesh* > aMeshes;
-	std::vector< IMaterial* >     aMaterials;
+	std::vector< PhysDebugMesh* >     aMeshes;
+	std::vector< DefaultRenderable* > aRenderables;
+	std::vector< IMaterial* >         aMaterials;
 
-	IMaterial*                    apMatSolid;
-	IMaterial*                    apMatWire;
+	IMaterial*                        apMatSolid;
+	IMaterial*                        apMatWire;
 
-	bool                          aValid = false;
+	bool                              aValid = false;
 };
 
 

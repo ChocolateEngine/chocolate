@@ -112,6 +112,10 @@ namespace std
 
 #define MESH_BUILDER_USE_IND 1
 
+// TODO:
+// - Add a way to add bones and weights to the vertex
+// - Add a way to add morph targets to the vertex
+// - probably add a "AddBlendShape( std::string_view name )" function
 
 class MeshBuilder
 {
@@ -146,7 +150,7 @@ public:
 	};
 
 	IMaterialSystem*            apMatSys = nullptr;
-	IRenderable*                apMesh = nullptr;
+	IModel*                apMesh = nullptr;
 
 	std::vector< BlendShape >   aBlendShapes;
 	std::vector< Surface >      aSurfaces;
@@ -162,7 +166,7 @@ public:
 
 
 	// source uses some IVertexBuffer and IIndexBuffer class here? hmm
-	inline void Start( IMaterialSystem* spMatSys, IRenderable* spMesh )
+	inline void Start( IMaterialSystem* spMatSys, IModel* spMesh )
 	{
 		apMatSys = spMatSys;
 		apMesh = spMesh;

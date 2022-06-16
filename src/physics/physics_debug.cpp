@@ -244,11 +244,12 @@ void PhysDebugDraw::DrawGeometry(
 		}
 	);
 
-	RenderableDrawData drawData;
-	drawData.aUsesMatrix = true;
-	drawData.aMatrix = fromJolt( inModelMatrix );
+	// AWFUL
+	DefaultRenderable* renderable = new DefaultRenderable;
+	renderable->aMatrix = fromJolt( inModelMatrix );
+	renderable->apModel = mesh;
 
-	matsys->AddRenderable( mesh, drawData );
+	matsys->AddRenderable( renderable );
 
 	return;
 }

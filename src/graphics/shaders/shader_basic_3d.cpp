@@ -94,7 +94,7 @@ public:
 
 	virtual void        CreateGraphicsPipeline(  ) override;
 
-	virtual void        InitUniformBuffer( IRenderable* mesh ) override;
+	virtual void        InitUniformBuffer( IModel* mesh ) override;
 
 	virtual void        UpdateBuffers( uint32_t sCurrentImage, size_t renderableIndex, IRenderable* spRenderable, size_t matIndex ) override;
 
@@ -103,7 +103,7 @@ public:
 	virtual void        Draw( size_t renderableIndex, IRenderable* renderable, size_t material, VkCommandBuffer c, uint32_t commandBufferIndex ) override;
 
 	virtual void        AllocDrawData( size_t sRenderableCount ) override;
-	virtual void        PrepareDrawData( size_t renderableIndex, IRenderable* renderable, size_t matIndex, const RenderableDrawData& instanceDrawData, uint32_t commandBufferCount ) override;
+	virtual void        PrepareDrawData( size_t renderableIndex, IRenderable* renderable, size_t matIndex, uint32_t commandBufferCount ) override;
 
 	VertexFormat        GetVertexFormat() override
 	{
@@ -272,7 +272,7 @@ void Basic3D::CreateGraphicsPipeline()
 }
 
 
-void Basic3D::InitUniformBuffer( IRenderable* mesh )
+void Basic3D::InitUniformBuffer( IModel* mesh )
 {
 	auto it = matsys->aUniformMap.find( mesh->GetID() );
 
@@ -289,7 +289,7 @@ void Basic3D::InitUniformBuffer( IRenderable* mesh )
 		// 	InitDescriptorSetLayout( {{ DescriptorLayoutBinding( VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, NULL ) }} )
 		// );
 
-		uniformList[i].aLayout = InitDescriptorSetLayout( {{ DescriptorLayoutBinding( VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, NULL ) }} );
+		uniformList[i].aLayout = InitDescriptorSetLayout( {{ DescriptorLayoutBinding( VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, NULL ) }} );
 
 		InitUniformData( uniformList[i].aDesc, uniformList[i].aLayout, sizeof( Basic3D_UBO ) );
 	}
@@ -323,9 +323,24 @@ CONVAR( morph_weight, 0.f );
 // NOTE: sometimes crashes here? something with debug rendering from physics, hmm, memory leaking or overstepping?
 void Basic3D::UpdateBuffers( uint32_t sCurrentImage, size_t memIndex, IRenderable* spRenderable, size_t matIndex )
 {
+	// check if renderable is nullptr
+	if ( spRenderable == nullptr )
+	{
+		LogError( "Basic3D::UpdateBuffers: spRenderable is nullptr\n" );
+		return;
+	}
+
+	// get model and check if it's nullptr
+	IModel* model = spRenderable->GetModel();
+	if ( model == nullptr )
+	{
+		LogError( "Basic3D::UpdateBuffers: model is nullptr\n" );
+		return;
+	}
+	
 	// Basic3D_DrawData* drawData = (Basic3D_DrawData*)(aDrawDataPool.GetStart() + (sizeof( Basic3D_DrawData ) * memIndex));
 
-	auto mat = (Material*)spRenderable->GetMaterial( matIndex );
+	auto mat = (Material*)model->GetMaterial( matIndex );
 	Basic3D_UBO ubo;
 
 	ubo.diffuse         = mat->GetTextureId( MatVar_Diffuse );
@@ -337,13 +352,13 @@ void Basic3D::UpdateBuffers( uint32_t sCurrentImage, size_t memIndex, IRenderabl
 	
 	ubo.morphWeight     = morph_weight;
 
-	auto it = matsys->aUniformMap.find( spRenderable->GetID() );
+	auto it = matsys->aUniformMap.find( model->GetID() );
 
 	// make sure there is one
 	if ( it == matsys->aUniformMap.end() )
 	{
 		LogError( "No Uniform Buffer/Layout Created For Mesh yet?\n" );
-		InitUniformBuffer( spRenderable );
+		InitUniformBuffer( model );
 	}
 
 	// auto& uniformDataMem = drawData->apUniformDesc->aMem[ sCurrentImage ];
@@ -368,11 +383,26 @@ void Basic3D::Bind( VkCommandBuffer c, uint32_t cIndex )
 // TODO: make a BaseShader::BindBuffers function to be per BaseRenderableGroup
 
 
-void Basic3D::Draw( size_t memIndex, IRenderable* mesh, size_t matIndex, VkCommandBuffer c, uint32_t i )
+void Basic3D::Draw( size_t memIndex, IRenderable* spRenderable, size_t matIndex, VkCommandBuffer c, uint32_t i )
 {
-	Basic3D_DrawData* drawData = (Basic3D_DrawData*)(aDrawDataPool.GetStart() + (sizeof( Basic3D_DrawData ) * memIndex));
+	// check if renderable is nullptr
+	if ( spRenderable == nullptr )
+	{
+		LogError( "Basic3D::Draw: spRenderable is nullptr\n" );
+		return;
+	}
 
-	auto it = matsys->aUniformMap.find( mesh->GetID() );
+	// get model and check if it's nullptr
+	IModel* model = spRenderable->GetModel();
+	if ( model == nullptr )
+	{
+		LogError( "Basic3D::Draw: model is nullptr\n" );
+		return;
+	}
+	
+	Basic3D_DrawData* drawData = (Basic3D_DrawData*)(aDrawDataPool.GetStart() + (sizeof( Basic3D_DrawData ) * memIndex));
+	
+	auto it = matsys->aUniformMap.find( model->GetID() );
 
 	// make sure there is one
 	if ( it == matsys->aUniformMap.end() )
@@ -394,7 +424,7 @@ void Basic3D::Draw( size_t memIndex, IRenderable* mesh, size_t matIndex, VkComma
 
 	vkCmdBindDescriptorSets( c, VK_PIPELINE_BIND_POINT_GRAPHICS, aPipelineLayout, 0, 2, sets, 0, NULL );
 
-	CmdDraw( mesh, matIndex, c );
+	CmdDraw( model, matIndex, c );
 }
 
 
@@ -413,12 +443,11 @@ void Basic3D::AllocDrawData( size_t sRenderableCount )
 }
 
 
-void Basic3D::PrepareDrawData( size_t memIndex, IRenderable* mesh, size_t matIndex, const RenderableDrawData& instanceDrawData, uint32_t commandBufferCount )
+void Basic3D::PrepareDrawData( size_t memIndex, IRenderable* mesh, size_t matIndex, uint32_t commandBufferCount )
 {
 	Basic3D_DrawData* drawData = (Basic3D_DrawData*)(aDrawDataPool.GetStart() + (sizeof( Basic3D_DrawData ) * memIndex));
 
-	// TODO: WHERE TF WILL I GET THE MODEL MATRIX NOW ????
-	drawData->aPushConst = {renderer->aView.projViewMatrix, instanceDrawData.aTransform.ToMatrix()};
+	drawData->aPushConst = {renderer->aView.projViewMatrix, mesh->GetModelMatrix()};
 	// drawData->apUniformDesc = &matsys->GetUniformData( mesh->GetID() );
 
 	// auto mat = (Material*)mesh->GetMaterial( matIndex );

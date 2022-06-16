@@ -43,8 +43,10 @@ void VulkanPrimitiveMaterials::PrepareMeshForDraw()
 		return;
 
 	aMeshBuilder.End();
+	
+	aRenderable.apModel = aFinalMesh;
 
-	matsys->AddRenderable( aFinalMesh );
+	matsys->AddRenderable( &aRenderable );
 
 	aMeshBuilder.Reset();
 }

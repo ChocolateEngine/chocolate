@@ -185,8 +185,23 @@ void ShaderUnlitArray::CreateGraphicsPipeline(  )
 }
 
 
-void ShaderUnlitArray::Draw( size_t renderableIndex, IRenderable* renderable, size_t matIndex, const RenderableDrawData& instanceDrawData, VkCommandBuffer c, uint32_t commandBufferIndex )
+void ShaderUnlitArray::Draw( size_t renderableIndex, IModel* renderable, size_t matIndex, const RenderableDrawData& instanceDrawData, VkCommandBuffer c, uint32_t commandBufferIndex )
 {
+	// check if renderable is nullptr
+	if ( spRenderable == nullptr )
+	{
+		LogError( "ShaderUnlitArray::Draw: spRenderable is nullptr\n" );
+		return;
+	}
+
+	// get model and check if it's nullptr
+	IModel* model = spRenderable->GetModel();
+	if ( model == nullptr )
+	{
+		LogError( "ShaderUnlitArray::Draw: model is nullptr\n" );
+		return;
+	}
+	
 	UnlitArrayPushConstant* p = (UnlitArrayPushConstant*)(aDrawDataPool.GetStart() + (sizeof( UnlitArrayPushConstant ) * renderableIndex));
 
 	vkCmdPushConstants(
@@ -200,7 +215,7 @@ void ShaderUnlitArray::Draw( size_t renderableIndex, IRenderable* renderable, si
 
 	vkCmdBindDescriptorSets( c, VK_PIPELINE_BIND_POINT_GRAPHICS, aPipelineLayout, 0, 1, sets, 0, NULL );
 
-	CmdDraw( renderable, matIndex, c );
+	CmdDraw( model, matIndex, c );
 }
 
 
@@ -216,13 +231,28 @@ static std::string MatVar_Diffuse = "diffuse";
 static std::string MatVar_Frame = "frame";
 
 
-void ShaderUnlitArray::PrepareDrawData( size_t renderableIndex, IRenderable* renderable, size_t matIndex, const RenderableDrawData& instanceDrawData, uint32_t commandBufferCount )
+void ShaderUnlitArray::PrepareDrawData( size_t renderableIndex, IRenderable* spRenderable, size_t matIndex, uint32_t commandBufferCount )
 {
+	// check if renderable is nullptr
+	if ( spRenderable == nullptr )
+	{
+		LogError( "ShaderUnlitArray::Draw: spRenderable is nullptr\n" );
+		return;
+	}
+
+	// get model and check if it's nullptr
+	IModel* model = spRenderable->GetModel();
+	if ( model == nullptr )
+	{
+		LogError( "ShaderUnlitArray::Draw: model is nullptr\n" );
+		return;
+	}
+	
 	UnlitArrayPushConstant* push = (UnlitArrayPushConstant*)(aDrawDataPool.GetStart() + (sizeof( UnlitArrayPushConstant ) * renderableIndex));
 
-	auto mat = (Material*)renderable->GetMaterial( matIndex );
+	auto mat = (Material*)model->GetMaterial( matIndex );
 
-	push->trans	= renderer->aView.projViewMatrix * instanceDrawData.aTransform.ToMatrix();
+	push->trans	= renderer->aView.projViewMatrix * spRenderable->GetModelMatrix();
 	push->index = mat->GetTextureId( MatVar_Diffuse );
 	push->layer = mat->GetInt( MatVar_Frame );
 }

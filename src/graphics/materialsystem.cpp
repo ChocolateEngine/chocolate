@@ -375,7 +375,7 @@ void InitRenderableBuffer( void* srData, size_t sBufferSize, VkBuffer &srBuffer,
 // ---------------------------------------------------------------------------------------
 
 
-void MaterialSystem::CreateVertexBufferInt( IRenderable* renderable, size_t surface, InternalMeshData_t& meshData )
+void MaterialSystem::CreateVertexBufferInt( IModel* renderable, size_t surface, InternalMeshData_t& meshData )
 {
 	Assert( meshData.apVertexBuffer == nullptr );
 
@@ -430,7 +430,7 @@ void MaterialSystem::CreateVertexBufferInt( IRenderable* renderable, size_t surf
 }
 
 
-void MaterialSystem::CreateVertexBuffer( IRenderable* renderable, size_t surface )
+void MaterialSystem::CreateVertexBuffer( IModel* renderable, size_t surface )
 {
 	if ( !renderable )
 	{
@@ -444,7 +444,7 @@ void MaterialSystem::CreateVertexBuffer( IRenderable* renderable, size_t surface
 }
 
 
-void MaterialSystem::CreateVertexBuffers( IRenderable* renderable )
+void MaterialSystem::CreateVertexBuffers( IModel* renderable )
 {
 	if ( !renderable )
 	{
@@ -465,7 +465,7 @@ void MaterialSystem::CreateVertexBuffers( IRenderable* renderable )
 // ---------------------------------------------------------------------------------------
 
 
-void MaterialSystem::CreateIndexBufferInt( IRenderable* renderable, size_t surface, InternalMeshData_t& meshData )
+void MaterialSystem::CreateIndexBufferInt( IModel* renderable, size_t surface, InternalMeshData_t& meshData )
 {
 	Assert( meshData.apIndexBuffer == nullptr );
 
@@ -491,7 +491,7 @@ void MaterialSystem::CreateIndexBufferInt( IRenderable* renderable, size_t surfa
 }
 
 
-void MaterialSystem::CreateIndexBuffer( IRenderable* renderable, size_t surface )
+void MaterialSystem::CreateIndexBuffer( IModel* renderable, size_t surface )
 {
 	if ( !renderable )
 	{
@@ -505,7 +505,7 @@ void MaterialSystem::CreateIndexBuffer( IRenderable* renderable, size_t surface 
 }
 
 
-void MaterialSystem::CreateIndexBuffers( IRenderable* renderable )
+void MaterialSystem::CreateIndexBuffers( IModel* renderable )
 {
 	if ( !renderable )
 	{
@@ -523,7 +523,7 @@ void MaterialSystem::CreateIndexBuffers( IRenderable* renderable )
 }
 
 
-bool MaterialSystem::HasVertexBuffer( IRenderable* item, size_t surface )
+bool MaterialSystem::HasVertexBuffer( IModel* item, size_t surface )
 {
 	if ( !item )
 	{
@@ -551,7 +551,7 @@ bool MaterialSystem::HasVertexBuffer( IRenderable* item, size_t surface )
 }
 
 
-bool MaterialSystem::HasIndexBuffer( IRenderable* item, size_t surface )
+bool MaterialSystem::HasIndexBuffer( IModel* item, size_t surface )
 {
 	if ( !item )
 	{
@@ -579,7 +579,7 @@ bool MaterialSystem::HasIndexBuffer( IRenderable* item, size_t surface )
 }
 
 
-void MaterialSystem::FreeVertexBuffer( IRenderable* item, size_t surface )
+void MaterialSystem::FreeVertexBuffer( IModel* item, size_t surface )
 {
 	auto it = aMeshData.find( item->GetID() );
 
@@ -597,7 +597,7 @@ void MaterialSystem::FreeVertexBuffer( IRenderable* item, size_t surface )
 }
 
 
-void MaterialSystem::FreeVertexBuffers( IRenderable* item )
+void MaterialSystem::FreeVertexBuffers( IModel* item )
 {
 	auto it = aMeshData.find( item->GetID() );
 
@@ -618,7 +618,7 @@ void MaterialSystem::FreeVertexBuffers( IRenderable* item )
 }
 
 
-void MaterialSystem::FreeIndexBuffer( IRenderable* item, size_t surface )
+void MaterialSystem::FreeIndexBuffer( IModel* item, size_t surface )
 {
 	auto it = aMeshData.find( item->GetID() );
 
@@ -636,7 +636,7 @@ void MaterialSystem::FreeIndexBuffer( IRenderable* item, size_t surface )
 }
 
 
-void MaterialSystem::FreeIndexBuffers( IRenderable* item )
+void MaterialSystem::FreeIndexBuffers( IModel* item )
 {
 	auto it = aMeshData.find( item->GetID() );
 
@@ -657,7 +657,7 @@ void MaterialSystem::FreeIndexBuffers( IRenderable* item )
 }
 
 
-void MaterialSystem::FreeAllBuffers( IRenderable* item )
+void MaterialSystem::FreeAllBuffers( IModel* item )
 {
 	auto it = aMeshData.find( item->GetID() );
 
@@ -690,7 +690,7 @@ void MaterialSystem::FreeAllBuffers( IRenderable* item )
 static std::vector< InternalMeshData_t > gMeshDataEmpty;
 
 /* Get Vector of Buffers for a Renderable. */
-const std::vector< InternalMeshData_t >& MaterialSystem::GetMeshData( IRenderable* renderable )
+const std::vector< InternalMeshData_t >& MaterialSystem::GetMeshData( IModel* renderable )
 {
 	auto it = aMeshData.find( renderable->GetID() );
 
@@ -731,7 +731,7 @@ BaseShader* MaterialSystem::GetShader( const std::string& name )
 }
 
 
-void MaterialSystem::InitUniformBuffer( IRenderable* model )
+void MaterialSystem::InitUniformBuffer( IModel* model )
 {
 	// AWFUL
 	// check if any material needs a uniform buffer
@@ -751,13 +751,15 @@ void MaterialSystem::InitUniformBuffer( IRenderable* model )
 }
 
 
-void MaterialSystem::RegisterRenderable( IRenderable* renderable )
+#if 0
+Handle MaterialSystem::RegisterRenderable( IModel* renderable )
 {
 	// eh
 	//static size_t id = 0;
 	//renderable->aId = id++;
 	aRenderables.push_back( renderable );
 }
+#endif
 
 
 void MaterialSystem::AddRenderable( IRenderable* renderable )
@@ -765,13 +767,20 @@ void MaterialSystem::AddRenderable( IRenderable* renderable )
 	if ( !renderable )
 		return;
 
-	for ( size_t i = 0; i < renderable->GetSurfaceCount(); i++ )
+	IModel* model = renderable->GetModel();
+	if ( !model )
 	{
-		Material* mat = (Material*)renderable->GetMaterial( i );
+		LogWarn( gGraphicsChannel, "Renderable has no model!\n" );
+		return;
+	}
+
+	for ( size_t i = 0; i < model->GetSurfaceCount(); i++ )
+	{
+		Material* mat = (Material*)model->GetMaterial( i );
 
 		if ( !mat )
 		{
-			LogError( gGraphicsChannel, "Renderable part \"%d\" has no material!\n", i );
+			LogError( gGraphicsChannel, "Model part \"%d\" has no material!\n", i );
 			continue;
 		}
 
@@ -789,64 +798,43 @@ void MaterialSystem::AddRenderable( IRenderable* renderable )
 		// 	aDrawList[mat->apShader].push_back( renderable );
 
 		// aDrawList[mat->apShader].push_front( renderable );
-		aDrawList[mat->apShader].emplace_front( renderable, i, RenderableDrawData() );
+		aDrawList[mat->apShader].emplace_front( renderable, i );
 	}
 }
 
 
-void MaterialSystem::AddRenderable( IRenderable* renderable, const RenderableDrawData& srDrawData )
+void MaterialSystem::DrawRenderable( size_t memIndex, IRenderable* renderable, size_t matIndex, VkCommandBuffer c, uint32_t commandBufferIndex )
 {
 	if ( !renderable )
-		return;
-
-	for ( size_t i = 0; i < renderable->GetSurfaceCount(); i++ )
 	{
-		Material* mat = (Material*)renderable->GetMaterial( i );
-
-		if ( !mat )
-		{
-			LogError( gGraphicsChannel, "Renderable part \"%d\" has no material!\n", i );
-			continue;
-		}
-
-		if ( !mat->apShader )
-		{
-			LogError( gGraphicsChannel, "Material has no shader!\n" );
-			continue;
-		}
-
-		// auto search = aDrawList.find( mat->apShader );
-		// 
-		// if ( search != aDrawList.end() )
-		// 	search->second.push_back( renderable );
-		// else
-		// 	aDrawList[mat->apShader].push_back( renderable );
-
-		// aDrawList[mat->apShader].push_front( renderable );
-		aDrawList[mat->apShader].emplace_front( renderable, i, srDrawData );
+		LogError( gGraphicsChannel, "Renderable is null!\n" );
+		return;
 	}
-}
 
+	IModel* model = renderable->GetModel();
+	if ( !model )
+	{
+		LogError( gGraphicsChannel, "Renderable has no model!\n" );
+		return;
+	}
 
-void MaterialSystem::DrawRenderable( size_t memIndex, IRenderable* renderable, size_t matIndex, const RenderableDrawData& srDrawData, VkCommandBuffer c, uint32_t commandBufferIndex )
-{
-	Material* mat = (Material*)renderable->GetMaterial( matIndex );
+	Material* mat = (Material*)model->GetMaterial( matIndex );
 	if ( !mat )
 		return;
 
 	// mat->apShader->BindBuffers( renderable, c, commandBufferIndex );
-	mat->apShader->Draw( memIndex, renderable, matIndex, srDrawData, c, commandBufferIndex );
+	mat->apShader->Draw( memIndex, renderable, matIndex, c, commandBufferIndex );
 }
 
 
-void MaterialSystem::DestroyRenderable( IRenderable* renderable )
+void MaterialSystem::DestroyModel( IModel* renderable )
 {
 	MeshFreeOldResources( renderable );
 	FreeAllBuffers( renderable );
 }
 
 
-void MaterialSystem::MeshFreeOldResources( IRenderable* mesh )
+void MaterialSystem::MeshFreeOldResources( IModel* mesh )
 {
 	auto it = aUniformMap.find( mesh->GetID() );
 

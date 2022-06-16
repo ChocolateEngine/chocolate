@@ -140,28 +140,28 @@ public:
 	//TextureDescriptor          *FindTexture( const std::string &path ) override;
 
 	// Create a Vertex and Index buffer for a Renderable.
-	void                        CreateVertexBuffer( IRenderable* renderable, size_t surface ) override;
-	void                        CreateIndexBuffer( IRenderable* renderable, size_t surface ) override;
+	void                        CreateVertexBuffer( IModel* renderable, size_t surface ) override;
+	void                        CreateIndexBuffer( IModel* renderable, size_t surface ) override;
 
-	void                        CreateVertexBuffers( IRenderable* renderable ) override;
-	void                        CreateIndexBuffers( IRenderable* renderable ) override;
+	void                        CreateVertexBuffers( IModel* renderable ) override;
+	void                        CreateIndexBuffers( IModel* renderable ) override;
 
-	void                        CreateVertexBufferInt( IRenderable* renderable, size_t surface, InternalMeshData_t& meshData );
-	void                        CreateIndexBufferInt( IRenderable* renderable, size_t surface, InternalMeshData_t& meshData );
+	void                        CreateVertexBufferInt( IModel* renderable, size_t surface, InternalMeshData_t& meshData );
+	void                        CreateIndexBufferInt( IModel* renderable, size_t surface, InternalMeshData_t& meshData );
 
 	// Check if a Renderable has a Vertex and/or Index buffer. 
-	bool                        HasVertexBuffer( IRenderable* renderable, size_t surface ) override;
-	bool                        HasIndexBuffer( IRenderable* renderable, size_t surface ) override;
+	bool                        HasVertexBuffer( IModel* renderable, size_t surface ) override;
+	bool                        HasIndexBuffer( IModel* renderable, size_t surface ) override;
 
 	// Free a Vertex and Index buffer for a Renderable.
-	void                        FreeVertexBuffer( IRenderable* renderable, size_t surface ) override;
-	void                        FreeIndexBuffer( IRenderable* renderable, size_t surface ) override;
+	void                        FreeVertexBuffer( IModel* renderable, size_t surface ) override;
+	void                        FreeIndexBuffer( IModel* renderable, size_t surface ) override;
 
-	void                        FreeVertexBuffers( IRenderable* renderable ) override;
-	void                        FreeIndexBuffers( IRenderable* renderable ) override;
+	void                        FreeVertexBuffers( IModel* renderable ) override;
+	void                        FreeIndexBuffers( IModel* renderable ) override;
 
 	// Free all buffers from this renderable
-	void                        FreeAllBuffers( IRenderable* renderable ) override;
+	void                        FreeAllBuffers( IModel* renderable ) override;
 
 	// New buffer methods
 	// void                        CreateBuffers( BaseRenderable* renderable, RenderableBufferFlags flags ) override;
@@ -169,13 +169,13 @@ public:
 	// void                        FreeBuffers( BaseRenderable* renderable, RenderableBufferFlags flags ) override;
 
 	/* Get Internal Mesh Data for a Renderable. */
-	const std::vector< InternalMeshData_t >& GetMeshData( IRenderable* renderable );
+	const std::vector< InternalMeshData_t >& GetMeshData( IModel* renderable );
 
 	void                        OnReInitSwapChain();
 	void                        OnDestroySwapChain();
 
 	// BLECH
-	void                        InitUniformBuffer( IRenderable* mesh ) override;
+	void                        InitUniformBuffer( IModel* mesh ) override;
 
 	// inline UniformDescriptor&       GetUniformData( size_t id )            { return aUniformDataMap[id]; }
 	// inline VkDescriptorSetLayout    GetUniformLayout( size_t id )          { return aUniformLayoutMap[id]; }
@@ -202,20 +202,19 @@ public:
 	}
 
 	// Call this on renderable creation to assign it an Id
-	void                        RegisterRenderable( IRenderable* renderable ) override;
+	// Handle                      RegisterRenderable( IModel* renderable ) override;
 
 	// Destroy a Renderable's Vertex and Index buffers, and anything else it may use
-	void                        DestroyRenderable( IRenderable* renderable ) override;
+	void                        DestroyModel( IModel* renderable ) override;
 
 	// Add a Renderable to be drawn next frame, list is cleared after drawing
 	void                        AddRenderable( IRenderable* renderable ) override;
-	void                        AddRenderable( IRenderable* renderable, const RenderableDrawData& srDrawData ) override;
 
 	// Draw a renderable (just calls shader draw lmao)
-	void                        DrawRenderable( size_t renderableIndex, IRenderable* renderable, size_t matIndex, const RenderableDrawData& srDrawData, VkCommandBuffer c, uint32_t commandBufferIndex );
+	void                        DrawRenderable( size_t renderableIndex, IRenderable* renderable, size_t matIndex, VkCommandBuffer c, uint32_t commandBufferIndex );
 
 	// Awful Mesh Functions, here until i abstract what's used in it
-	void                        MeshFreeOldResources( IRenderable* mesh ) override;
+	void                        MeshFreeOldResources( IModel* mesh ) override;
 
 	VkFormat                    ToVkFormat( GraphicsFormat colorFmt );
 
@@ -250,14 +249,14 @@ public:
 private:
 	std::unordered_map< std::string, BaseShader* >          aShaders;
 
-	std::vector< IRenderable* >                             aRenderables;
+	std::vector< IModel* >                             aRenderables;
 
 	std::unordered_map< size_t, std::vector< InternalMeshData_t > > aMeshData;
 
 	std::unordered_map<
 		BaseShader*,
-		// renderable, material index to draw, and draw data (WHY)
-		std::forward_list< std::tuple< IRenderable*, size_t, RenderableDrawData > >
+		// renderable, material index to draw (WHY)
+		std::forward_list< std::tuple< IRenderable*, size_t > >
 	> aDrawList;
 
 	std::vector< Material* >                                aMaterials;

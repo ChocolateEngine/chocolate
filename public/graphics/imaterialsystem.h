@@ -32,6 +32,7 @@ enum : VertexFormat
 
 
 // Always in order from top to bottom in terms of order in each vertex
+// technically, you could use the above only
 enum VertexAttribute : u8
 {
 	VertexAttribute_Position,         // vec3
@@ -304,10 +305,10 @@ struct BlendShapeData_t
 // because they way this Renderable is setup, if the shaders used in this renderable
 // expect different vertex formats, then this will fall apart from only having shared vertex data
 // we need some kind of specific vertex data or something, idk
-class IRenderable : public RefCounted
+class IModel : public RefCounted
 {
 public:
-	virtual                            ~IRenderable() = default;
+	virtual                            ~IModel() = default;
 
 	inline size_t                       GetID() { return (size_t)this; }
 
@@ -386,7 +387,7 @@ public:
 
 
 // Simple Model Class
-class Model : public IRenderable
+class Model : public IModel
 {
 public:
 	class Surface
@@ -584,39 +585,55 @@ public:
 
 
 // ===================================================================
-
-
-// AWFUL
-struct RenderableDrawData
+// New IRenderable idea, rename the one above to IModel or IMesh
+// 
+// ch_graphics.dll will call these functions when drawing
+// in game code, you can calculate everything before hand
+// might work well for threading as well since it's only going to read already calculated data, idk
+// 
+// but what about for something like an eye look shader?
+// where a parameter of this could be eye look position or a direction, a vec3
+// or a cubemap for a model (could be a graphics dll thing technically)
+// you could material var it, but i don't like that too much, oh well
+// ===================================================================
+class IRenderable : public RefCounted
 {
-	RenderableDrawData() : aUsesMatrix( false )
+public:
+	virtual IModel*                         GetModel() = 0;
+	virtual const glm::mat4&                GetModelMatrix() = 0;
+	virtual const std::vector< float >&     GetMorphWeights() = 0;
+	// virtual void                            GetBoneWeights() = 0;
+};
+
+
+class DefaultRenderable : public IRenderable
+{
+public:
+	virtual IModel*                         GetModel() override
 	{
+		return apModel;
 	}
 
-	bool aUsesMatrix = false;
+	virtual const glm::mat4&                GetModelMatrix() override
+	{
+		return aMatrix;
+	}
 
-	// union
-	// {
-		// REMOVE ME ASAP AAAAAAA
-		Transform aTransform{};
+	virtual const std::vector< float >&     GetMorphWeights() override
+	{
+		return aMorphWeights;
+	}
 
-		// should be this only, and probably view and projection
-		glm::mat4 aMatrix{};
-	// };
+	IModel*                 apModel = nullptr;
+	glm::mat4               aMatrix{};
+	std::vector< float >	aMorphWeights;
 };
 
 
-using RenderableBufferFlags = u32;
+using RenderableHandle_t = size_t;
 
 
-// TODO: use this later probably idk
-enum : RenderableBufferFlags
-{
-	RenderableBuffer_None       = 0,
-	RenderableBuffer_Vertex     = (1 << 0),
-	RenderableBuffer_Index      = (1 << 1),
-	RenderableBuffer_Uniform    = (1 << 2),
-};
+// ===================================================================
 
 
 struct Viewport_t
@@ -668,46 +685,47 @@ public:
 	// virtual TextureDescriptor          *FindTexture( const std::string &path ) = 0;
 
 	// Create a Vertex and Index buffer for a Renderable.
-	virtual void                        CreateVertexBuffer( IRenderable* renderable, size_t surface ) = 0;
-	virtual void                        CreateIndexBuffer( IRenderable* renderable, size_t surface ) = 0;
+	virtual void                        CreateVertexBuffer( IModel* renderable, size_t surface ) = 0;
+	virtual void                        CreateIndexBuffer( IModel* renderable, size_t surface ) = 0;
 
-	virtual void                        CreateVertexBuffers( IRenderable* renderable ) = 0;
-	virtual void                        CreateIndexBuffers( IRenderable* renderable ) = 0;
+	virtual void                        CreateVertexBuffers( IModel* renderable ) = 0;
+	virtual void                        CreateIndexBuffers( IModel* renderable ) = 0;
 
 	// Check if a Renderable has a Vertex and/or Index buffer.
-	virtual bool                        HasVertexBuffer( IRenderable* renderable, size_t surface ) = 0;
-	virtual bool                        HasIndexBuffer( IRenderable* renderable, size_t surface ) = 0;
+	virtual bool                        HasVertexBuffer( IModel* renderable, size_t surface ) = 0;
+	virtual bool                        HasIndexBuffer( IModel* renderable, size_t surface ) = 0;
 
 	// Free a Vertex and Index buffer for a Renderable.
-	virtual void                        FreeVertexBuffer( IRenderable* renderable, size_t surface ) = 0;
-	virtual void                        FreeIndexBuffer( IRenderable* renderable, size_t surface ) = 0;
+	virtual void                        FreeVertexBuffer( IModel* renderable, size_t surface ) = 0;
+	virtual void                        FreeIndexBuffer( IModel* renderable, size_t surface ) = 0;
 
-	virtual void                        FreeVertexBuffers( IRenderable* renderable ) = 0;
-	virtual void                        FreeIndexBuffers( IRenderable* renderable ) = 0;
+	virtual void                        FreeVertexBuffers( IModel* renderable ) = 0;
+	virtual void                        FreeIndexBuffers( IModel* renderable ) = 0;
 
-	virtual void                        FreeAllBuffers( IRenderable* renderable ) = 0;
+	virtual void                        FreeAllBuffers( IModel* renderable ) = 0;
 
-	virtual void                        InitUniformBuffer( IRenderable* renderable ) = 0;
+	virtual void                        InitUniformBuffer( IModel* renderable ) = 0;
 
 	// New buffer methods
-	// virtual void                        CreateBuffers( IRenderable* renderable, RenderableBufferFlags flags ) = 0;
-	// virtual RenderableBufferFlags       GetBuffers( IRenderable* renderable ) = 0;
-	// virtual void                        FreeBuffers( IRenderable* renderable, RenderableBufferFlags flags ) = 0;
+	// virtual void                        CreateBuffers( IModel* renderable, RenderableBufferFlags flags ) = 0;
+	// virtual RenderableBufferFlags       GetBuffers( IModel* renderable ) = 0;
+	// virtual void                        FreeBuffers( IModel* renderable, RenderableBufferFlags flags ) = 0;
 
-	// Call this on renderable creation to assign it an Id
-	virtual void                        RegisterRenderable( IRenderable* renderable ) = 0;
+	// Create a renderable to add components to control how this model will be drawn
+	// virtual Handle                      CreateRenderable( IModel* model ) = 0;
+
+	// virtual Handle                      DestroyRenderable( IModel* model ) = 0;
 
 	// Destroy a Renderable's Vertex and Index buffers, and anything else it may use
-	virtual void                        DestroyRenderable( IRenderable* renderable ) = 0;
+	virtual void                        DestroyModel( IModel* renderable ) = 0;
 
 	// Add a Renderable to be drawn next frame, list is cleared after drawing
 	virtual void                        AddRenderable( IRenderable* spRenderable ) = 0;
-	virtual void                        AddRenderable( IRenderable* spRenderable, const RenderableDrawData& srDrawData ) = 0;
 
 	virtual BaseShader*                 GetShader( const std::string& name ) = 0;
 
 	// Awful Mesh Functions
-	virtual void                        MeshFreeOldResources( IRenderable* mesh ) = 0;
+	virtual void                        MeshFreeOldResources( IModel* mesh ) = 0;
 
 	virtual GraphicsFormat              GetVertexAttributeFormat( VertexAttribute element ) = 0;
 	virtual size_t                      GetVertexAttributeTypeSize( VertexAttribute element ) = 0;

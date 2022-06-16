@@ -11,7 +11,7 @@ Declares the Sprite class
 
 
 #if 0
-class Sprite: public IRenderable
+class Sprite: public IModel
 {
 protected:
 	glm::mat4       aMatrix;

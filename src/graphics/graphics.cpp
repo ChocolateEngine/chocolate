@@ -97,7 +97,7 @@ void GraphicsSystem::FreeModel( Model *spModel )
 			}
 		}
 
-		matsys->DestroyRenderable( spModel );
+		matsys->DestroyModel( spModel );
 		vec_remove( aRenderer.aModels, spModel );
 	}
 

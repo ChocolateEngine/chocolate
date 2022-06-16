@@ -179,7 +179,7 @@ void Basic2D::CreateGraphicsPipeline(  )
 }
 
 
-void Basic2D::Draw( size_t renderableIndex, IRenderable* mesh, size_t matIndex, VkCommandBuffer c, uint32_t commandBufferIndex )
+void Basic2D::Draw( size_t renderableIndex, IModel* mesh, size_t matIndex, VkCommandBuffer c, uint32_t commandBufferIndex )
 {
 	int diffuse = matsys->GetTextureId( mesh->GetMaterial( matIndex )->GetTexture( "diffuse" ) );
 	VkDescriptorSet sets[  ] = { matsys->aImageSets[ commandBufferIndex ] };
@@ -215,7 +215,7 @@ void Basic2D::AllocDrawData( size_t sRenderableCount )
 static std::string MatVar_Diffuse = "diffuse";
 
 
-void Basic2D::PrepareDrawData( size_t renderableIndex, IRenderable* renderable, size_t matIndex, uint32_t commandBufferCount )
+void Basic2D::PrepareDrawData( size_t renderableIndex, IModel* renderable, size_t matIndex, uint32_t commandBufferCount )
 {
 	// there is the old DataBuffer class as well, hmm
 

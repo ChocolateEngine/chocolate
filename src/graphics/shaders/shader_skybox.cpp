@@ -191,24 +191,26 @@ void ShaderSkybox::CreateGraphicsPipeline(  )
 constexpr const char* gFallback = "materials/base/black.png";
 
 
-#define VIEWMAT_ANG( axis ) glm::vec3(viewMatrix[0][axis], viewMatrix[1][axis], viewMatrix[2][axis])
 
-/* Y Up version of the ViewMatrix */
-inline void ToViewMatrixY( glm::mat4& viewMatrix, const glm::vec3& ang )
+
+
+void ShaderSkybox::Draw( size_t renderableIndex, IRenderable* spRenderable, size_t matIndex, VkCommandBuffer c, uint32_t commandBufferIndex )
 {
-	/* Y Rotation - YAW (Mouse X for Y up) */
-	viewMatrix = glm::rotate( viewMatrix, glm::radians(ang[YAW]), vec_right );
+	// check if renderable is nullptr
+	if ( spRenderable == nullptr )
+	{
+		LogError( "ShaderSkybox::Draw: mesh is nullptr\n" );
+		return;
+	}
 
-	/* X Rotation - PITCH (Mouse Y) */
-	viewMatrix = glm::rotate( viewMatrix, glm::radians(ang[PITCH]), VIEWMAT_ANG(0) );
-
-	/* Z Rotation - ROLL */
-	viewMatrix = glm::rotate( viewMatrix, glm::radians(ang[ROLL]), VIEWMAT_ANG(2) );
-}
-
-
-void ShaderSkybox::Draw( size_t renderableIndex, IRenderable* renderable, size_t matIndex, const RenderableDrawData& instanceDrawData, VkCommandBuffer c, uint32_t commandBufferIndex )
-{
+	// get model and check if it's nullptr
+	IModel* model = spRenderable->GetModel();
+	if ( model == nullptr )
+	{
+		LogError( "ShaderSkybox::Draw: model is nullptr\n" );
+		return;
+	}
+	
 	SkyboxPushConst* p = (SkyboxPushConst*)(aDrawDataPool.GetStart() + (sizeof( SkyboxPushConst ) * renderableIndex));
 
 	vkCmdPushConstants(
@@ -222,7 +224,7 @@ void ShaderSkybox::Draw( size_t renderableIndex, IRenderable* renderable, size_t
 
 	vkCmdBindDescriptorSets( c, VK_PIPELINE_BIND_POINT_GRAPHICS, aPipelineLayout, 0, 1, sets, 0, NULL );
 
-	CmdDraw( renderable, matIndex, c );
+	CmdDraw( model, matIndex, c );
 }
 
 
@@ -239,21 +241,31 @@ void ShaderSkybox::AllocDrawData( size_t sRenderableCount )
 // if doing strlen and strcmp can reach the same speed as std::string
 // ... which i doubt
 
-static std::string MatVar_Ang = "ang";
 static std::string MatVar_Sky = "sky";
 
 
-void ShaderSkybox::PrepareDrawData( size_t renderableIndex, IRenderable* renderable, size_t matIndex, uint32_t commandBufferCount )
+void ShaderSkybox::PrepareDrawData( size_t renderableIndex, IRenderable* spRenderable, size_t matIndex, uint32_t commandBufferCount )
 {
+	// check if renderable is nullptr
+	if ( spRenderable == nullptr )
+	{
+		LogError( "ShaderSkybox::Draw: mesh is nullptr\n" );
+		return;
+	}
+
+	// get model and check if it's nullptr
+	IModel* model = spRenderable->GetModel();
+	if ( model == nullptr )
+	{
+		LogError( "ShaderSkybox::Draw: model is nullptr\n" );
+		return;
+	}
+	
 	SkyboxPushConst* push = (SkyboxPushConst*)(aDrawDataPool.GetStart() + (sizeof(SkyboxPushConst) * renderableIndex));
 
-	Material* mat = (Material*)renderable->GetMaterial( matIndex );
+	Material* mat = (Material*)model->GetMaterial( matIndex );
 
-	// TODO: add GetMat4 to MaterialVar types
-	glm::mat4 viewMat( 1.f );
-	ToViewMatrixY( viewMat, mat->GetVec3( MatVar_Ang ) );
-
-	push->trans = renderer->aView.projMatrix * viewMat;
+	push->trans = renderer->aView.projMatrix * spRenderable->GetModelMatrix();
 	push->sky   = mat->GetTextureId( MatVar_Sky );
 }
 

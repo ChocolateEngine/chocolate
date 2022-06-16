@@ -67,7 +67,6 @@ struct RenderableData_t
 	size_t index;
 	IRenderable* renderable;
 	size_t matIndex;
-	RenderableDrawData drawData;
 };
 
 
@@ -172,7 +171,6 @@ void RenderWorker( int sThreadId )
 					renderData.index,
 					renderData.renderable,
 					renderData.matIndex,
-					renderData.drawData,
 					data->aCommandBufferCount
 				);
 			}
@@ -306,9 +304,9 @@ void Renderer::InitCommandBuffers(  )
 	for ( auto& [shader, renderList]: matsys->aDrawList )
 	{
 		size_t renderIndex = 0;
-		for ( auto& [renderable, matIndex, drawData]: renderList )
+		for ( auto& [renderable, matIndex]: renderList )
 		{
-			workerData[curTask].aDrawList.emplace_front( shader, renderIndex++, renderable, matIndex, drawData );
+			workerData[curTask].aDrawList.emplace_front( shader, renderIndex++, renderable, matIndex );
 			workerData[curTask].aCommandBufferCount = aCommandBuffers.size();
 
 			// RenderWorkerData_t& data = gTaskQueue[curTask].front();
@@ -377,9 +375,9 @@ void Renderer::InitCommandBuffers(  )
 			}
 			
 			size_t renderIndex = 0;
-			for ( auto& [renderable, matIndex, drawData] : renderList )
+			for ( auto& [renderable, matIndex] : renderList )
 			{
-				Material* mat = (Material*)renderable->GetMaterial( matIndex );
+				Material* mat = (Material*)renderable->GetModel()->GetMaterial( matIndex );
 				mat->apShader->UpdateBuffers( i, renderIndex++, renderable, matIndex );
 			}
 		}
@@ -420,7 +418,7 @@ void Renderer::InitCommandBuffers(  )
 
 			renderIndex = 0;
 
-			for ( auto& [renderable, matIndex, drawData]: renderList )
+			for ( auto& [renderable, matIndex]: renderList )
 			{
 				if ( prevRenderable != renderable || prevMatIndex != matIndex )
 				{
@@ -430,7 +428,7 @@ void Renderer::InitCommandBuffers(  )
 					shader->BindBuffers( renderable, matIndex, aCommandBuffers[i], i );
 				}
 
-				matsys->DrawRenderable( renderIndex++, renderable, matIndex, drawData, aCommandBuffers[i], i );
+				matsys->DrawRenderable( renderIndex++, renderable, matIndex, aCommandBuffers[i], i );
 			}
 		}
 
@@ -444,10 +442,10 @@ void Renderer::InitCommandBuffers(  )
 
 			gpSkybox->Bind( aCommandBuffers[i], i );
 
-			for ( auto& [renderable, matIndex, drawData] : matsys->aDrawList[gpSkybox] )
+			for ( auto& [renderable, matIndex] : matsys->aDrawList[gpSkybox] )
 			{
 				gpSkybox->BindBuffers( renderable, matIndex, aCommandBuffers[i], i );
-				matsys->DrawRenderable( 0, renderable, matIndex, drawData, aCommandBuffers[i], i );
+				matsys->DrawRenderable( 0, renderable, matIndex, aCommandBuffers[i], i );
 			}
 		}
 

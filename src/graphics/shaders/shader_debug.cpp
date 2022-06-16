@@ -56,10 +56,10 @@ void ShaderDebugLine::ReInit()
 }
 
 
-void ShaderDebugLine::CmdPushConst( IRenderable* renderable, size_t matIndex, const RenderableDrawData& instanceDrawData, VkCommandBuffer c, uint32_t cIndex )
+void ShaderDebugLine::CmdPushConst( IRenderable* renderable, size_t matIndex, VkCommandBuffer c, uint32_t cIndex )
 {
 	DebugLinePushConstant p = {
-		renderer->aView.projViewMatrix * instanceDrawData.aTransform.ToMatrix()
+		renderer->aView.projViewMatrix * renderable->GetModelMatrix()
 	};
 
 	vkCmdPushConstants(
@@ -102,7 +102,7 @@ void ShaderDebug::ReInit()
 }
 
 
-void ShaderDebug::CreateGraphicsPipeline(  )
+void ShaderDebug::CreateGraphicsPipeline()
 {
 	VkPipelineShaderStageCreateInfo vertShaderStageInfo{  };
 	vertShaderStageInfo.sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;	//	Tells Vulkan which stage the shader is going to be used
@@ -244,21 +244,51 @@ void ShaderDebug::CreateGraphicsPipeline(  )
 }
 
 
-void ShaderDebug::Draw( size_t renderableIndex, IRenderable* renderable, size_t matIndex, const RenderableDrawData& instanceDrawData, VkCommandBuffer c, uint32_t cIndex )
+void ShaderDebug::Draw( size_t renderableIndex, IRenderable* spRenderable, size_t matIndex, VkCommandBuffer c, uint32_t cIndex )
 {
-	CmdPushConst( renderable, matIndex, instanceDrawData, c, cIndex );
-	CmdDraw( renderable, matIndex, c );
+	// check if renderable is nullptr
+	if ( spRenderable == nullptr )
+	{
+		LogError( "ShaderSkybox::Draw: mesh is nullptr\n" );
+		return;
+	}
+
+	// get model and check if it's nullptr
+	IModel* model = spRenderable->GetModel();
+	if ( model == nullptr )
+	{
+		LogError( "ShaderSkybox::Draw: model is nullptr\n" );
+		return;
+	}
+	
+	CmdPushConst( spRenderable, matIndex, c, cIndex );
+	CmdDraw( model, matIndex, c );
 }
 
 
-void ShaderDebug::CmdPushConst( IRenderable* renderable, size_t matIndex, const RenderableDrawData& instanceDrawData, VkCommandBuffer c, uint32_t cIndex )
+void ShaderDebug::CmdPushConst( IRenderable* spRenderable, size_t matIndex, VkCommandBuffer c, uint32_t cIndex )
 {
-	auto mat = (Material*)renderable->GetMaterial( matIndex );
+	// check if renderable is nullptr
+	if ( spRenderable == nullptr )
+	{
+		LogError( "ShaderSkybox::Draw: mesh is nullptr\n" );
+		return;
+	}
+
+	// get model and check if it's nullptr
+	IModel* model = spRenderable->GetModel();
+	if ( model == nullptr )
+	{
+		LogError( "ShaderSkybox::Draw: model is nullptr\n" );
+		return;
+	}
+
+	auto mat = (Material*)model->GetMaterial( matIndex );
 
 	// NOTE: should get the MeshPtr directly so there can be less matvar calls since it would always be the same material
 
 	DebugPushConstant p = {
-		renderer->aView.projViewMatrix * instanceDrawData.aMatrix,
+		renderer->aView.projViewMatrix * spRenderable->GetModelMatrix(),
 		mat->GetVec4( "color", vec4_default )
 	};
 

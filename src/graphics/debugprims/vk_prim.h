@@ -16,7 +16,7 @@
 #include "../types/material.h"
 
 #if 0
-class PrimitiveMesh: public IRenderable
+class PrimitiveMesh: public IModel
 {
 public:
 	IMaterial*                       apMaterial = nullptr;
@@ -67,6 +67,7 @@ class VulkanPrimitiveMaterials {
 protected:
 	PrimitiveMesh*        aFinalMesh = nullptr;
 	Material*             apMaterial = nullptr;
+	DefaultRenderable     aRenderable{};
 
 	MeshBuilder           aMeshBuilder;
 
