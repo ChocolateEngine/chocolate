@@ -380,9 +380,6 @@ void Basic3D::Bind( VkCommandBuffer c, uint32_t cIndex )
 }
 
 
-// TODO: make a BaseShader::BindBuffers function to be per BaseRenderableGroup
-
-
 void Basic3D::Draw( size_t memIndex, IRenderable* spRenderable, size_t matIndex, VkCommandBuffer c, uint32_t i )
 {
 	// check if renderable is nullptr

@@ -70,6 +70,7 @@ struct RenderableData_t
 };
 
 
+#if RENDER_THREADS
 struct RenderWorkerData_t
 {
 	// std::vector< BaseRenderable* > aRenderables;
@@ -182,27 +183,7 @@ void RenderWorker( int sThreadId )
 
 // TEST BASIC MULTITHREADING, MOVE TO CH_CORE LATER AND PROPERLY GET CPU THREAD COUNT
 std::vector< std::thread > gThreadPool;
-
-
-// ------------------------------------------------------------
-// New Task Testing
-
-
-struct Task_PrepareDrawData
-{
-	// CH_DECLARE_TASK(
-	//		Task_PrepareDrawData, 
-	//		ETaskStackReq::Standard, 
-	//		ETaskPriotiry::Normal, 
-	//		LogColor::Blue,  // um 
-	// );
-
-	void Run()
-	{
-		// ... do thing here ...
-	}
-};
-
+#endif
 
 
 // ------------------------------------------------------------
@@ -238,12 +219,14 @@ void Renderer::InitVulkan(  )
 	gPipelineBuilder.BuildPipelines(  );
 
 	// start up threads
+#if RENDER_THREADS
 	gThreadPool.resize( THREAD_COUNT );
 	gTaskQueue.resize( THREAD_COUNT );
 	for ( int i = 0; i < THREAD_COUNT; i++ )
 	{
 		gThreadPool[i] = std::thread( RenderWorker, i );
 	}
+#endif
 
 	gui->StyleImGui();
 }
@@ -273,11 +256,11 @@ void Renderer::InitCommandBuffers(  )
 		throw std::runtime_error( "Failed to allocate command buffers!" );
 	
 	// reset and allocate data for worker threads
-	gTaskMutex.lock();
-	gThreadsPaused = true;
+	// gTaskMutex.lock();
+	// gThreadsPaused = true;
 
 	// reset thread finished state
-	gTaskFinishedCount = 0;
+	// gTaskFinishedCount = 0;
 
 	// calculate work for threads
 	size_t drawCount = 0;
@@ -287,12 +270,34 @@ void Renderer::InitCommandBuffers(  )
 		shader->AllocDrawData( size );
 	}
 
+#if RENDER_THREADS
 	// reset queue
 	for ( int i = 0; i < THREAD_COUNT; i++ )
 	{
 	 	gTaskQueue[i].aCount = 0;
 	}
+#endif
 
+
+#if !RENDER_THREADS
+	// well, the multithreaded way is actually much slower now
+	// and kinda pointless
+	// so we'll just do it all on the main thread
+	for ( auto& [shader, renderList] : matsys->aDrawList )
+	{
+		size_t renderIndex = 0;
+		for ( auto& [renderable, matIndex] : renderList )
+		{
+			shader->PrepareDrawData(
+				renderIndex++,
+				renderable,
+				matIndex,
+				aCommandBuffers.size()
+			);
+		}
+	}
+	
+#else
 	// i would like to use a global memory pool for this instead
 	// ...but then the forward list not allocated
 	// luckily though, the data accessing still works fine (i think)
@@ -322,6 +327,8 @@ void Renderer::InitCommandBuffers(  )
 		}
 	}
 
+	
+	
 	curTask = 0;
 	for ( int curThread = 0; curTask < CH_RENDER_WORKER_TASKS; curTask++ )
 	{
@@ -335,7 +342,7 @@ void Renderer::InitCommandBuffers(  )
 			curThread = 0;
 	}
 
-	gTaskMutex.unlock();
+	// gTaskMutex.unlock();
 	gThreadsPaused = false;
 
 	// wait for threads to finish
@@ -344,6 +351,7 @@ void Renderer::InitCommandBuffers(  )
 	{
 		sys_sleep( 0.01 );
 	}
+#endif
 
 	for ( int i = 0; i < aCommandBuffers.size(); i++ )
 	{
