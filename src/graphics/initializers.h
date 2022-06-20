@@ -43,6 +43,7 @@ static inline VkDescriptorSetLayoutBinding DescriptorLayoutBinding( VkDescriptor
 /* Creates a structure specifying the parameters of an image memory barrier.  */
 static inline VkImageMemoryBarrier ImageMemoryBarrier( VkImage sImage, VkImageLayout sOldLayout, VkImageLayout sNewLayout, uint32_t sMipLevels )
 {
+#pragma message ("lmao depth using color bit")
 	VkImageMemoryBarrier 	barrier{  };
         barrier.sType 				= VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
         barrier.oldLayout 			= sOldLayout;

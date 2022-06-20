@@ -18,9 +18,10 @@ class CommandPool
 {
     VkCommandPool aCommandPool;
 public:
-     CommandPool( VkCommandPoolCreateFlags sFlags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT );
+     CommandPool();
     ~CommandPool();
 
+    void Init( VkCommandPoolCreateFlags sFlags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT );
     void Reset();
     void Reset( VkCommandPoolResetFlags sFlags );
 
@@ -28,4 +29,5 @@ public:
     VkCommandPool GetHandle( VkCommandPoolResetFlags sFlags );
 };
 
+CommandPool& GetSingleTimeCommandPool();
 void SingleCommand( std::function< void( VkCommandBuffer ) > sFunc );

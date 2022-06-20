@@ -735,9 +735,6 @@ void Renderer::Init(  )
 	gpDevice = new Device;
 	gpDevice->InitDevice(  );
 
-	auto gui = GET_SYSTEM( BaseGuiSystem );
-	gui->AssignWindow( gpDevice->GetWindow(  ) );
-
 	uint32_t w, h;
 	GetWindowSize( &w, &h );
 

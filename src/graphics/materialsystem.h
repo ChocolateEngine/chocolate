@@ -86,6 +86,10 @@ struct InternalMeshData_t
 
 	VertexBuffer*    apVertexBuffer;
 	IndexBuffer*     apIndexBuffer;
+	
+	// TODO: figure out a better way to do this
+	// for custom vertex buffers modified by a compute shader
+	VertexBuffer*    apCustomVertexBuffer;
 };
 
 constexpr VkBufferUsageFlags gVertexBufferFlags = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;

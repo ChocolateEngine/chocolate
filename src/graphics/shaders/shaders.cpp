@@ -81,7 +81,11 @@ void BaseShader::BindBuffers( IRenderable* spRenderable, size_t matIndex, VkComm
 		return;
 	}
 
-	meshData.apVertexBuffer->Bind( c );
+	// If the mesh has a custom vertex buffer, use it
+	if ( meshData.apCustomVertexBuffer )
+		meshData.apCustomVertexBuffer->Bind( c );
+	else
+		meshData.apVertexBuffer->Bind( c );
 
 	if ( meshData.apIndexBuffer )
 		meshData.apIndexBuffer->Bind( c );

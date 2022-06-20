@@ -13,9 +13,23 @@
 #include "gutil.hh"
 #include "instance.h"
 
-CommandPool gSingleTimeCommandPool;
+CommandPool& GetSingleTimeCommandPool()
+{
+	static CommandPool sSingleTimeCommandPool;
+	return sSingleTimeCommandPool;
+}
 
-CommandPool::CommandPool( VkCommandPoolCreateFlags sFlags )
+CommandPool::CommandPool()
+{
+    Init();
+}
+
+CommandPool::~CommandPool()
+{
+    vkDestroyCommandPool( GetDevice(), aCommandPool, nullptr );
+}
+
+void CommandPool::Init( VkCommandPoolCreateFlags sFlags )
 {
     QueueFamilyIndices q = GetGInstance().FindQueueFamilies( GetPhysicalDevice() );
 
@@ -25,21 +39,17 @@ CommandPool::CommandPool( VkCommandPoolCreateFlags sFlags )
     aCommandPoolInfo.flags                = sFlags;
     aCommandPoolInfo.queueFamilyIndex     = q.aGraphicsFamily;
 
-    CheckVKResult( vkCreateCommandPool( GetLogicDevice(), &aCommandPoolInfo, nullptr, &aCommandPool ), "Failed to create command pool!" );
-}
-
-CommandPool::~CommandPool()
-{
-    vkDestroyCommandPool( GetLogicDevice(), aCommandPool, nullptr );
+    CheckVKResult( vkCreateCommandPool( GetDevice(), &aCommandPoolInfo, nullptr, &aCommandPool ), "Failed to create command pool!" );
 }
 
 void CommandPool::Reset()
 {
     Reset( 0 );
 }
+
 void CommandPool::Reset( VkCommandPoolResetFlags sFlags )
 {
-    CheckVKResult( vkResetCommandPool( GetLogicDevice(), aCommandPool, sFlags ), "Failed to reset command pool!" );
+    CheckVKResult( vkResetCommandPool( GetDevice(), aCommandPool, sFlags ), "Failed to reset command pool!" );
 }
 
 VkCommandPool CommandPool::GetHandle() const
@@ -52,17 +62,18 @@ VkCommandPool CommandPool::GetHandle( VkCommandPoolResetFlags sFlags )
     return aCommandPool;
 }
 
+
 void SingleCommand( std::function< void( VkCommandBuffer ) > sFunc )
 {
     VkCommandBufferAllocateInfo aCommandBufferAllocateInfo = {};
     aCommandBufferAllocateInfo.sType                          = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
     aCommandBufferAllocateInfo.pNext                          = nullptr;
-    aCommandBufferAllocateInfo.commandPool                   = gSingleTimeCommandPool.GetHandle();
+    aCommandBufferAllocateInfo.commandPool                    = GetSingleTimeCommandPool().GetHandle();
     aCommandBufferAllocateInfo.level                          = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
     aCommandBufferAllocateInfo.commandBufferCount             = 1;
 
     VkCommandBuffer aCommandBuffer;
-    CheckVKResult( vkAllocateCommandBuffers( GetLogicDevice(), &aCommandBufferAllocateInfo, &aCommandBuffer ), "Failed to allocate command buffer!" );
+    CheckVKResult( vkAllocateCommandBuffers( GetDevice(), &aCommandBufferAllocateInfo, &aCommandBuffer ), "Failed to allocate command buffer!" );
 
     VkCommandBufferBeginInfo aCommandBufferBeginInfo = {};
     aCommandBufferBeginInfo.sType                    = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;

@@ -1,22 +1,23 @@
 #include "gui.h"
 #include "util.h"
 
-#include "../gutil.hh"
-#include "../config.hh"
+#include "graphics/igraphics2.h"
 
-#include "../instance.h"
-#include "../commandpool.h"
-#include "../swapchain.h"
-#include "../renderpass.h"
-#include "../descriptormanager.h"
-
-#include "imgui/imgui.h"
 #include "imgui/imgui_impl_vulkan.h"
 #include "imgui/imgui_impl_sdl.h"
 
-GuiSystem* gui = new GuiSystem;
+GuiSystem* gui = nullptr;
 
 ImFont* gBuiltInFont = nullptr;
+
+extern "C" 
+{
+	DLL_EXPORT void *cframework_get()
+	{
+		gui = new GuiSystem;
+		return gui;
+	}
+}
 
 void GuiSystem::Update( float sDT )
 {
@@ -25,14 +26,11 @@ void GuiSystem::Update( float sDT )
 
 void GuiSystem::DrawGui(  )
 {
-	if ( !apWindow )
-		return;
-
 	static bool wasConsoleOpen = false;
 	static Uint32 prevtick = 0;
 	static Uint32 curtick = 0;
 
-	ImGui::PushFont( gBuiltInFont );
+	// ImGui::PushFont( gBuiltInFont );
 
 	if ( aConsoleShown )
 		DrawConsole( wasConsoleOpen );
@@ -70,7 +68,7 @@ void GuiSystem::DrawGui(  )
 
 	aDrawnFrame = true;
 
-	ImGui::PopFont();
+	// ImGui::PopFont();
 }
 
 void GuiSystem::StyleImGui()
@@ -173,11 +171,6 @@ ImFont* GuiSystem::BuildFont( const char* spPath, float sSizePixels, const ImFon
 	return font;
 }
 
-void GuiSystem::AssignWindow( SDL_Window* spWindow )
-{
-	apWindow = spWindow;
-}
-
 constexpr int MAX_DEBUG_MESSAGE_SIZE = 512;
 
 // Append a Debug Message
@@ -226,36 +219,18 @@ void GuiSystem::InsertDebugMessage( size_t index, const char* format, ... )
 */
 void GuiSystem::StartFrame()
 {
-	if ( !apWindow )
-		return;
-		
+	static IGraphics* GET_SYSTEM_CHECK( graphics, IGraphics )
+	
+	Window* surface = graphics->GetSurface();
+	
 	ImGui_ImplVulkan_NewFrame();
-	ImGui_ImplSDL2_NewFrame( apWindow );
+	ImGui_ImplSDL2_NewFrame( surface->apWindow );
 	ImGui::NewFrame();
 }
 
 void GuiSystem::Init()
 {
 	InitConsole();
-	ImGui::CreateContext();
-
-	ImGui_ImplSDL2_InitForVulkan( apWindow );
-
-	ImGui_ImplVulkan_InitInfo init_info = {};
-	init_info.Instance        = GetInst();
-	init_info.PhysicalDevice  = GetPhysicalDevice();
-	init_info.Device          = GetLogicDevice();
-	init_info.Queue           = GetGInstance().GetGraphicsQueue();
-	init_info.DescriptorPool  = GetDescriptorManager().GetHandle();
-	init_info.MinImageCount   = GetSwapchain().GetImageCount();
-	init_info.ImageCount      = GetSwapchain().GetImageCount();
-	init_info.MSAASamples     = GetMSAASamples();
-	//init_info.CheckVkResultFn = CheckVKResult;
-
-	ImGui_ImplVulkan_Init( &init_info, GetRenderPass( RenderPass_Color | RenderPass_Depth | RenderPass_Resolve ) );
-
-	SingleCommand( []( VkCommandBuffer c ){ ImGui_ImplVulkan_CreateFontsTexture( c ); } );
-	ImGui_ImplVulkan_DestroyFontUploadObjects();
 }
 
 GuiSystem::GuiSystem(  ) : BaseGuiSystem(  )

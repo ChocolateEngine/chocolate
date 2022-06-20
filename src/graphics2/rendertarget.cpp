@@ -3,6 +3,7 @@
 #include "config.hh"
 
 #include "swapchain.h"
+#include "commandpool.h"
 
 static std::vector< RenderTarget* >  gRenderTargets;
 static RenderTarget                 *gpBackBuffer = nullptr;
@@ -11,10 +12,11 @@ RenderTarget::RenderTarget( const std::vector< Texture2 >& srImages, const glm::
 {
     aImages.resize( srImages.size() );
     aFrameBuffers.resize( srSwapImages.size() );
-    for ( int i = 0; i < srImages.size(); ++i )
+
+    for ( size_t i = 0; i < srImages.size(); ++i )
         aImages[ i ] = srImages[ i ];
 
-    for ( int i = 0; i < GetSwapchain().GetImageCount(); ++i )
+    for ( u32 i = 0; i < GetSwapchain().GetImageCount(); ++i )
     {
         std::vector< VkImageView > attachments;
         for ( auto image : srImages )
@@ -32,7 +34,7 @@ RenderTarget::RenderTarget( const std::vector< Texture2 >& srImages, const glm::
         framebufferInfo.height                  = srExtent.y;
         framebufferInfo.layers                  = 1;
 
-        CheckVKResult( vkCreateFramebuffer( GetLogicDevice(), &framebufferInfo, nullptr, &aFrameBuffers[ i ] ), "Failed to create framebuffer" );
+        CheckVKResult( vkCreateFramebuffer( GetDevice(), &framebufferInfo, nullptr, &aFrameBuffers[ i ] ), "Failed to create framebuffer" );
     }
 
     gRenderTargets.push_back( this );
@@ -41,8 +43,60 @@ RenderTarget::RenderTarget( const std::vector< Texture2 >& srImages, const glm::
 RenderTarget::~RenderTarget()
 {
     for ( auto frameBuffer : aFrameBuffers )
-        vkDestroyFramebuffer( GetLogicDevice(), frameBuffer, nullptr );
+        vkDestroyFramebuffer( GetDevice(), frameBuffer, nullptr );
 }
+
+
+// TEMP !!!!
+void TransitionImageLayout( VkImage sImage, VkImageLayout sOldLayout, VkImageLayout sNewLayout, VkImageAspectFlags sAspectMask, uint32_t sMipLevels )
+{
+    VkImageMemoryBarrier barrier{};
+    barrier.sType                           = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+    barrier.oldLayout                       = sOldLayout;
+    barrier.newLayout                       = sNewLayout;
+    barrier.srcQueueFamilyIndex             = VK_QUEUE_FAMILY_IGNORED;
+    barrier.dstQueueFamilyIndex             = VK_QUEUE_FAMILY_IGNORED;
+    barrier.image                           = sImage;
+    barrier.subresourceRange.aspectMask 	= sAspectMask;
+    barrier.subresourceRange.baseMipLevel 	= 0;
+    barrier.subresourceRange.levelCount 	= sMipLevels;
+    barrier.subresourceRange.baseArrayLayer = 0;
+    barrier.subresourceRange.layerCount 	= 1;
+
+    VkPipelineStageFlags 	sourceStage;
+    VkPipelineStageFlags 	destinationStage;
+
+    if ( sOldLayout == VK_IMAGE_LAYOUT_UNDEFINED && sNewLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL )
+    {
+        barrier.srcAccessMask 	= 0;
+        barrier.dstAccessMask 	= VK_ACCESS_TRANSFER_WRITE_BIT;
+
+        sourceStage 		= VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+        destinationStage	= VK_PIPELINE_STAGE_TRANSFER_BIT;
+    }
+    else if ( sOldLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL && sNewLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL )
+    {
+        barrier.srcAccessMask 	= VK_ACCESS_TRANSFER_WRITE_BIT;
+        barrier.dstAccessMask 	= VK_ACCESS_SHADER_READ_BIT;
+
+        sourceStage 		= VK_PIPELINE_STAGE_TRANSFER_BIT;
+        destinationStage 	= VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+    }
+    else if ( sOldLayout == VK_IMAGE_LAYOUT_UNDEFINED && sNewLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL )
+    {
+        barrier.srcAccessMask 	= 0;
+        barrier.dstAccessMask 	= VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+
+        sourceStage 		= VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+        destinationStage 	= VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
+    }
+    else
+        LogFatal( "Unsupported layout transition!\n" );
+	
+    /* Submit to the GPU.  */
+    SingleCommand( [ & ]( VkCommandBuffer c ){ vkCmdPipelineBarrier( c, sourceStage, destinationStage, 0, 0, NULL, 0, NULL, 1, &barrier ); } );
+}
+
 
 RenderTarget *CreateBackBuffer()
 {
@@ -64,16 +118,18 @@ RenderTarget *CreateBackBuffer()
     color.arrayLayers           = 1;
     color.samples               = GetMSAASamples();
     color.tiling                = VK_IMAGE_TILING_OPTIMAL;
+    // DEMEZ TEST
     color.usage                 = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+    // color.usage                 = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT;
     color.sharingMode           = VK_SHARING_MODE_EXCLUSIVE;
     color.queueFamilyIndexCount = 0;
     color.pQueueFamilyIndices   = nullptr;
     color.initialLayout         = VK_IMAGE_LAYOUT_UNDEFINED;
 
-    CheckVKResult( vkCreateImage( GetLogicDevice(), &color, nullptr, &colorTex.GetImage() ), "Failed to create color image!" );
+    CheckVKResult( vkCreateImage( GetDevice(), &color, nullptr, &colorTex.GetImage() ), "Failed to create color image!" );
 
     VkMemoryRequirements memReqs;
-    vkGetImageMemoryRequirements( GetLogicDevice(), colorTex.GetImage(), &memReqs );
+    vkGetImageMemoryRequirements( GetDevice(), colorTex.GetImage(), &memReqs );
 
     VkMemoryAllocateInfo allocInfo = {};
     allocInfo.sType                = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
@@ -81,9 +137,9 @@ RenderTarget *CreateBackBuffer()
     allocInfo.allocationSize       = memReqs.size;
     allocInfo.memoryTypeIndex      = GetGInstance().GetMemoryType( memReqs.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT );
 
-    CheckVKResult( vkAllocateMemory( GetLogicDevice(), &allocInfo, nullptr, &colorTex.GetMemory() ), "Failed to allocate color image memory!" );
+    CheckVKResult( vkAllocateMemory( GetDevice(), &allocInfo, nullptr, &colorTex.GetMemory() ), "Failed to allocate color image memory!" );
 
-    vkBindImageMemory( GetLogicDevice(), colorTex.GetImage(), colorTex.GetMemory(), 0 );
+    vkBindImageMemory( GetDevice(), colorTex.GetImage(), colorTex.GetMemory(), 0 );
     
     VkImageViewCreateInfo colorView;
     colorView.sType         = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
@@ -99,7 +155,10 @@ RenderTarget *CreateBackBuffer()
     colorView.subresourceRange.baseArrayLayer = 0;
     colorView.subresourceRange.layerCount     = 1;
 
-    CheckVKResult( vkCreateImageView( GetLogicDevice(), &colorView, nullptr, &colorTex.GetImageView() ), "Failed to create color image view!" );
+    CheckVKResult( vkCreateImageView( GetDevice(), &colorView, nullptr, &colorTex.GetImageView() ), "Failed to create color image view!" );
+
+	// ------------------------------------------------------
+	// Create Depth Texture
 
     Texture2 depthTex{};
     VkImageCreateInfo depth;
@@ -121,16 +180,16 @@ RenderTarget *CreateBackBuffer()
     depth.pQueueFamilyIndices   = nullptr;
     depth.initialLayout         = VK_IMAGE_LAYOUT_UNDEFINED;
 
-    CheckVKResult( vkCreateImage( GetLogicDevice(), &depth, nullptr, &depthTex.GetImage() ), "Failed to create depth image!" );
+    CheckVKResult( vkCreateImage( GetDevice(), &depth, nullptr, &depthTex.GetImage() ), "Failed to create depth image!" );
 
-    vkGetImageMemoryRequirements( GetLogicDevice(), depthTex.GetImage(), &memReqs );
+    vkGetImageMemoryRequirements( GetDevice(), depthTex.GetImage(), &memReqs );
     
     allocInfo.allocationSize = memReqs.size;
     allocInfo.memoryTypeIndex = GetGInstance().GetMemoryType( memReqs.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT );
     
-    CheckVKResult( vkAllocateMemory( GetLogicDevice(), &allocInfo, nullptr, &depthTex.GetMemory() ), "Failed to allocate depth image memory!" );
+    CheckVKResult( vkAllocateMemory( GetDevice(), &allocInfo, nullptr, &depthTex.GetMemory() ), "Failed to allocate depth image memory!" );
 
-    vkBindImageMemory( GetLogicDevice(), depthTex.GetImage(), depthTex.GetMemory(), 0 );
+    vkBindImageMemory( GetDevice(), depthTex.GetImage(), depthTex.GetMemory(), 0 );
     
     VkImageViewCreateInfo depthView;
     depthView.sType         = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
@@ -146,7 +205,12 @@ RenderTarget *CreateBackBuffer()
     depthView.subresourceRange.baseArrayLayer = 0;
     depthView.subresourceRange.layerCount     = 1;
 
-    CheckVKResult( vkCreateImageView( GetLogicDevice(), &depthView, nullptr, &depthTex.GetImageView() ), "Failed to create depth image view!" );
+    CheckVKResult( vkCreateImageView( GetDevice(), &depthView, nullptr, &depthTex.GetImageView() ), "Failed to create depth image view!" );
+
+    // TEMP (doesn't actually seem to be needed in graphics 1?)
+    // TransitionImageLayout( depthTex.GetImage(), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_IMAGE_ASPECT_DEPTH_BIT, depth.mipLevels );
+    // TransitionImageLayout( colorTex.GetImage(), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT, depth.mipLevels );
+    // TransitionImageLayout( colorTex.GetImage(), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT, color.mipLevels );
 
     std::vector< Texture2 > textures = { colorTex, depthTex };
 

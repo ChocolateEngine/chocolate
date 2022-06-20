@@ -15,8 +15,28 @@ class Renderer;
 class MaterialSystem;
 class IModel;
 
+using ShaderType_t = u8;
+
+
+enum : ShaderType_t
+{
+	ShaderType_None                     = (0 << 0),
+	ShaderType_Vertex                   = (1 << 0),
+	ShaderType_Fragment                 = (1 << 1),
+	ShaderType_Compute                  = (1 << 2),
+	// ShaderType_Geometry                 = (1 << 2),
+	// ShaderType_TessellationControl      = (1 << 3),
+	// ShaderType_TessellationEval         = (1 << 4),
+	// ShaderType_Intersection             = (1 << 5),
+	// ShaderType_RayGeneration            = (1 << 6),
+
+	ShaderType_VertFrag                 = ShaderType_Vertex | ShaderType_Fragment,
+};
+
 
 // Note: a lot of laziness going on here lmao
+// This is horrible
+// I'm sorry
 class BaseShader
 {
 	typedef DataBuffer< VkDescriptorSetLayout >     Layouts;
@@ -30,6 +50,7 @@ public:
 	ShaderModules                      aModules;
 
 	std::string                        aName;
+	ShaderType_t                       aShaderType = ShaderType_VertFrag;  // default
 
 public:
 	                                   BaseShader();
@@ -80,5 +101,8 @@ public:
 	inline VkPipelineLayout            GetPipelineLayout() const  { return aPipelineLayout; }
 
 	virtual VertexFormat               GetVertexFormat() = 0;
+
+	// Compute Shader stuff
+	// virtual void                       ComputeDispatch( VkCommandBuffer c, uint32_t x, uint32_t y, uint32_t z ) {};
 };
 

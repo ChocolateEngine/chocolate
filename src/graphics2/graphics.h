@@ -44,22 +44,6 @@ public:
 	void 		     FreeModel( HModel sModel ) override;
 
 	/*
-     *    Loads a sprite from a path.
-     *
-     *    @param const std::string &    The path to the sprite.
-     *
-     *    @return HSprite               The handle to the sprite.
-     */
-	HSprite          LoadSprite( const std::string& srSpritePath ) override;
-
-	/*
-     *    Frees a sprite.
-     *
-     *    @param HSprite    The handle to the sprite.
-     */
-	void 		     FreeSprite( HSprite sSprite ) override;
-
-	/*
      *    Sets the view.
      *
      *    @param View &    The view to set.

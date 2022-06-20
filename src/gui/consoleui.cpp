@@ -9,6 +9,7 @@
 
 
 static LogChannel gConsoleChannel = LogGetChannel( "Console" );
+static LogChannel gValidationChannel = LogGetChannel( "Validation" );
 
 CONVAR( con_spam_test, 0 );
 
@@ -378,9 +379,6 @@ void DrawInputDropDownBox( const std::vector< std::string >& cvarAutoComplete, I
 void DrawLogChannelButtons()
 {
 }
-
-
-LOG_CHANNEL( Validation );
 
 
 LogColor GetConsoleTextColor( const Log& log )

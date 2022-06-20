@@ -19,8 +19,12 @@ protected:
 
 	/* Draw the gui.  */
 	void 		DrawGui(  );
+
 	/* Draw the console, move to it's own class later  */
 	void 		DrawConsole( bool wasConsoleOpen );
+	
+	/* Gets the window pointer from the renderer.  */
+	void 		AssignWindow();
 
 public:
 	/* Set to VGUI Style 😎 */
@@ -31,12 +35,13 @@ public:
 
 	/* Per-Frame Update  */
 	void 		Update( float dt ) override;
-	/* Gets the window pointer from the renderer.  */
-	void 		AssignWindow( SDL_Window* spWindow ) override;
+	
 	/* Shows the console window.  */
 	void		ShowConsole(  ) override;
+
 	/* Is the console shown.  */
 	bool		IsConsoleShown(  ) override;
+	
 	/* Debug Text on the side of the screen  */
 	void		DebugMessage( const char* format, ... ) override;
 	void		DebugMessage( size_t index, const char* format, ... ) override;
@@ -44,7 +49,7 @@ public:
 	/*
 	 *    Starts a new ImGui frame.
 	 */
-	void 		StartFrame() override;
+	void 		StartFrame() override;	
 
 	void            InitConsole();
 	void            Init();

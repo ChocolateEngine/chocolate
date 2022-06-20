@@ -15,6 +15,8 @@ public:
     MaterialSystem();
     ~MaterialSystem();
 
+    void      Init();
+
     Handle    CreateTexture( const std::string &srName );
     Texture2  *GetTexture( Handle shTex );
 

@@ -39,14 +39,14 @@ RenderPass::RenderPass( const std::vector< VkAttachmentDescription >& srAttachme
     renderPassInfo.dependencyCount        = static_cast< uint32_t >( srDependencies.size() );
     renderPassInfo.pDependencies          = srDependencies.data();
 
-    CheckVKResult( vkCreateRenderPass( GetLogicDevice(), &renderPassInfo, nullptr, &aRenderPass ), "Failed to create render pass!" );
+    CheckVKResult( vkCreateRenderPass( GetDevice(), &renderPassInfo, nullptr, &aRenderPass ), "Failed to create render pass!" );
 
     aStage = sStage;
 }
 
 RenderPass::~RenderPass()
 {
-    vkDestroyRenderPass( GetLogicDevice(), aRenderPass, nullptr );
+    vkDestroyRenderPass( GetDevice(), aRenderPass, nullptr );
 }
 
 std::vector< RenderPass* > &GetRenderPasses()
@@ -69,7 +69,12 @@ std::vector< RenderPass* > &GetRenderPasses()
     colorAttachment.stencilLoadOp           = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
     colorAttachment.stencilStoreOp          = VK_ATTACHMENT_STORE_OP_DONT_CARE;
     colorAttachment.initialLayout           = VK_IMAGE_LAYOUT_UNDEFINED;
+
+#pragma message( "GetRenderPasses(): colorAttachment finalLayout is different than graphics1" )
+    // was color attachment in graphics 1
     colorAttachment.finalLayout             = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+    // colorAttachment.finalLayout             = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
     colorAttachment.samples                 = GetMSAASamples();
 
     VkAttachmentDescription depthAttachment = {};
@@ -115,10 +120,13 @@ std::vector< RenderPass* > &GetRenderPasses()
     VkSubpassDependency dependency = {};
     dependency.srcSubpass                  = VK_SUBPASS_EXTERNAL;
     dependency.dstSubpass                  = 0;
-    dependency.srcStageMask                = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    // dependency.srcStageMask                = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    dependency.srcStageMask                = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
     dependency.srcAccessMask               = 0;
-    dependency.dstStageMask                = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-    dependency.dstAccessMask               = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+    // dependency.dstStageMask                = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    dependency.dstStageMask                = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
+    // dependency.dstAccessMask               = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+    dependency.dstAccessMask               = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
 
     std::vector< VkAttachmentDescription > attachments  = { colorAttachment, depthAttachment, colorAttachmentResolve };
     std::vector< VkSubpassDescription    > subpasses    = { subpass };
@@ -144,4 +152,6 @@ VkRenderPass GetRenderPass( RenderPassStage sStage )
         if ( renderPass->GetStage() == sStage )
             return renderPass->GetRenderPass();
     }
+
+    return nullptr;
 }

@@ -21,6 +21,8 @@ void GuiSystem::Update( float sDT )
 
 void GuiSystem::DrawGui(  )
 {
+	AssignWindow();
+	
 	if ( !apWindow )
 		return;
 
@@ -170,9 +172,12 @@ ImFont* GuiSystem::BuildFont( const char* spPath, float sSizePixels, const ImFon
 	return font;
 }
 
-void GuiSystem::AssignWindow( SDL_Window* spWindow )
+void GuiSystem::AssignWindow()
 {
-	apWindow = spWindow;
+	if ( apWindow )
+		return;
+
+	apWindow = renderer->GetWindow();
 }
 
 constexpr int MAX_DEBUG_MESSAGE_SIZE = 512;
@@ -225,6 +230,8 @@ void GuiSystem::InsertDebugMessage( size_t index, const char* format, ... )
 */
 void GuiSystem::StartFrame()
 {
+	AssignWindow();
+	
 	if ( !apWindow )
 		return;
 		

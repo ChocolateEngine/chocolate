@@ -609,7 +609,7 @@ void LoadGltf( const std::string &srPath, const std::string &srExt, Model* spMod
 			// ---------------------------------------------------------------
 			// Blend Shapes
 
-			LoadBlendShapes( meshBuilder, prim );
+			// LoadBlendShapes( meshBuilder, prim );
 		}
 	}
 

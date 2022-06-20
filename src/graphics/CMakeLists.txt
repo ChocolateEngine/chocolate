@@ -29,7 +29,7 @@ link_libraries(
 )
 
 include_directories(
-	// "${CH_THIRDPARTY}/fx-gltf"
+	# "${CH_THIRDPARTY}/fx-gltf"
 	"${CH_THIRDPARTY}/nlohmann_json/include"
 )
 

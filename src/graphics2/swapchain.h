@@ -15,7 +15,7 @@ public:
      Swapchain();
     ~Swapchain();
 
-    uint32_t                   GetImageCount()        { return aImages.size();            }
+    u32                        GetImageCount()        { return aImages.size();            }
     std::vector< VkImage >     GetImages()            { return aImages;                   }
     std::vector< VkImageView > GetImageViews()        { return aImageViews;               }
     VkExtent2D                 GetExtent()            { return aExtent;                   }
@@ -26,3 +26,12 @@ public:
 };
 
 Swapchain &GetSwapchain();
+
+
+struct SwapChainSupportInfo
+{
+    VkSurfaceCapabilitiesKHR                       aCapabilities;
+    std::vector< VkSurfaceFormatKHR >              aFormats;
+    std::vector< VkPresentModeKHR >                aPresentModes;
+};
+

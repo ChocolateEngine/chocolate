@@ -14,9 +14,10 @@ void DescriptorManager::CreateDescriptorPool()
     aDescriptorPoolInfo.pPoolSizes    = aPoolSizes;
     aDescriptorPoolInfo.maxSets       = aDescriptorCount;
 
-    CheckVKResult( vkCreateDescriptorPool( GetLogicDevice(), &aDescriptorPoolInfo, nullptr, &aDescriptorPool ), "Failed to create descriptor pool!" );
+    CheckVKResult( vkCreateDescriptorPool( GetDevice(), &aDescriptorPoolInfo, nullptr, &aDescriptorPool ), "Failed to create descriptor pool!" );
 }
 
+// TODO: Rethink this
 void DescriptorManager::CreateDescriptorSetLayouts()
 {
     VkDescriptorSetLayoutBinding aLayoutBindings[] = {
@@ -31,7 +32,7 @@ void DescriptorManager::CreateDescriptorSetLayouts()
     bufferLayout.bindingCount                    = 1;
     bufferLayout.pBindings                       = &aLayoutBindings[ 0 ];
 
-    CheckVKResult( vkCreateDescriptorSetLayout( GetLogicDevice(), &bufferLayout, nullptr, &aBufferLayout ), "Failed to create descriptor set layout!" );
+    CheckVKResult( vkCreateDescriptorSetLayout( GetDevice(), &bufferLayout, nullptr, &aBufferLayout ), "Failed to create descriptor set layout!" );
 
     VkDescriptorSetLayoutCreateInfo imageLayout = {};
     imageLayout.sType                           = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
@@ -40,33 +41,33 @@ void DescriptorManager::CreateDescriptorSetLayouts()
     imageLayout.bindingCount                    = 1;
     imageLayout.pBindings                       = &aLayoutBindings[ 1 ];
 
-    CheckVKResult( vkCreateDescriptorSetLayout( GetLogicDevice(), &imageLayout, nullptr, &aImageLayout ), "Failed to create descriptor set layout!" );    
+    CheckVKResult( vkCreateDescriptorSetLayout( GetDevice(), &imageLayout, nullptr, &aImageLayout ), "Failed to create descriptor set layout!" );    
 }
 
 DescriptorManager::DescriptorManager( uint32_t sSets, VkDescriptorPoolCreateFlags sFlags )
 {
     aDescriptorCount   = sSets;
 
-    CreateDescriptorPool();
-    CreateDescriptorSetLayouts();
+    // CreateDescriptorPool();
+    // CreateDescriptorSetLayouts();
 }
 
 DescriptorManager::~DescriptorManager()
 {
-    vkDestroyDescriptorSetLayout( GetLogicDevice(), aBufferLayout, nullptr );
-    vkDestroyDescriptorSetLayout( GetLogicDevice(), aImageLayout, nullptr );
-    vkDestroyDescriptorPool( GetLogicDevice(), aDescriptorPool, nullptr );
+    vkDestroyDescriptorSetLayout( GetDevice(), aBufferLayout, nullptr );
+    vkDestroyDescriptorSetLayout( GetDevice(), aImageLayout, nullptr );
+    vkDestroyDescriptorPool( GetDevice(), aDescriptorPool, nullptr );
 }
 
 bool DescriptorManager::UpdateBuffer( Handle shBuf )
-{   
-
+{
+    return false;
 }
 
 /*
  *    unfinished
  */
-bool DescriptorManager::UpdateImage( Handle shImage )
+void DescriptorManager::UpdateImage( Handle shImage )
 {
     auto image = matsys.GetTexture( shImage );
 
@@ -75,7 +76,7 @@ bool DescriptorManager::UpdateImage( Handle shImage )
     imageInfo.imageView   = image->GetImageView();
     imageInfo.sampler     = image->GetSampler();
 
-    for ( int i = 0; i < GetSwapchain().GetImageCount(); ++i ) {
+    for ( u32 i = 0; i < GetSwapchain().GetImageCount(); ++i ) {
         VkWriteDescriptorSet writeDescriptor = {};
         writeDescriptor.sType                  = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
         writeDescriptor.pNext                  = nullptr;
@@ -89,7 +90,7 @@ bool DescriptorManager::UpdateImage( Handle shImage )
         writeDescriptor.pBufferInfo            = nullptr;
         writeDescriptor.pTexelBufferView       = nullptr;
 
-        vkUpdateDescriptorSets( GetLogicDevice(), 1, &writeDescriptor, 0, nullptr );
+        vkUpdateDescriptorSets( GetDevice(), 1, &writeDescriptor, 0, nullptr );
     }
 }
 

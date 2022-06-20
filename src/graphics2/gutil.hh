@@ -2,14 +2,18 @@
 
 #include <vulkan/vulkan.hpp>
 
-#include "graphics/renderertypes.h"
 #include "instance.h"
 #include "core/log.h"
 
 #include <SDL.h>
 
-constexpr char const *VKString( VkResult sResult ) {
-    switch ( sResult ) {
+
+constexpr char const *VKString( VkResult sResult )
+{
+    switch ( sResult )
+    {
+        default:
+            return "Unknown";
         case VK_SUCCESS:
             return "VK_SUCCESS";
         case VK_ERROR_OUT_OF_HOST_MEMORY:
@@ -36,6 +40,7 @@ constexpr char const *VKString( VkResult sResult ) {
             return "VK_ERROR_NATIVE_WINDOW_IN_USE_KHR";
     }
 }
+
 #if 0
 void CheckVKResult( VkResult sResult ) {
     if ( sResult == VK_SUCCESS )
@@ -49,7 +54,8 @@ void CheckVKResult( VkResult sResult ) {
 }
 #endif
 
-constexpr void CheckVKResult( VkResult sResult, char const *spMsg ) {
+constexpr void CheckVKResult( VkResult sResult, char const *spMsg )
+{
     if ( sResult == VK_SUCCESS )
         return;
 
@@ -59,29 +65,3 @@ constexpr void CheckVKResult( VkResult sResult, char const *spMsg ) {
     SDL_ShowSimpleMessageBox( SDL_MESSAGEBOX_ERROR, "Vulkan Error", pBuf, nullptr );
     LogFatal( pBuf );
 }
-
-static inline SwapChainSupportInfo CheckSwapChainSupport( VkPhysicalDevice sDevice )
-{
-    auto surf = GetGInstance().GetSurface();
-	SwapChainSupportInfo details;
-	vkGetPhysicalDeviceSurfaceCapabilitiesKHR( sDevice, surf, &details.aCapabilities );
-
-	uint32_t formatCount;
-	vkGetPhysicalDeviceSurfaceFormatsKHR( sDevice, surf, &formatCount, NULL );
-
-	if ( formatCount != 0 )
-	{
-		details.aFormats.resize( formatCount );
-		vkGetPhysicalDeviceSurfaceFormatsKHR( sDevice, surf, &formatCount, details.aFormats.data(  ) );
-	}
-	uint32_t presentModeCount;
-	vkGetPhysicalDeviceSurfacePresentModesKHR( sDevice, surf, &presentModeCount, NULL );
-
-	if ( presentModeCount != 0 )
-	{
-		details.aPresentModes.resize( presentModeCount );
-		vkGetPhysicalDeviceSurfacePresentModesKHR( sDevice, surf, &presentModeCount, details.aPresentModes.data(  ) );
-	}
-	return details;
-}
-

@@ -42,7 +42,8 @@ protected:
 	typedef std::vector< VkImage > 			ImageSet;
 	typedef std::vector< VkFormat >			FormatSet;
 
-	const StringList 		aValidationLayers = { "VK_LAYER_KHRONOS_validation" };
+	// const StringList 		aValidationLayers = { "VK_LAYER_KHRONOS_validation" };
+	const StringList 		aValidationLayers = { "VK_LAYER_KHRONOS_validation", "VK_LAYER_LUNARG_api_dump" };
 	const StringList 		aDeviceExtensions = { VK_KHR_SWAPCHAIN_EXTENSION_NAME, "VK_EXT_descriptor_indexing" };
 	
 	SDL_Window  			*apWindow;		        	//	Window to display stuff

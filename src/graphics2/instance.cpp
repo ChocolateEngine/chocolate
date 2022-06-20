@@ -4,6 +4,7 @@
 
 #include "config.hh"
 #include "gutil.hh"
+#include "swapchain.h"
 
 #include "core/core.h"
 
@@ -12,21 +13,63 @@ constexpr char const *gpDeviceExtensions[] = { VK_KHR_SWAPCHAIN_EXTENSION_NAME, 
 VkSampleCountFlagBits gMaxSamples = VK_SAMPLE_COUNT_1_BIT;
 
 LOG_REGISTER_CHANNEL( Validation, LogColor::Blue );
+LOG_REGISTER_CHANNEL( Vulkan, LogColor::Blue );
+
+#ifdef NDEBUG
+// const bool 	gEnableValidationLayers = false;
+bool g_vk_verbose = false;
+#else
+// const bool 	gEnableValidationLayers = cmdline->Find( "-vlayers" );
+CONVAR( g_vk_verbose, 1 );
+#endif
+
+// lengths to chop off from warnings:
+
+// "Validation Performance Warning: "
+int gVkStripPerf = 32;
+
+// "Validation Error: "
+int gVkStripError = 18;
+
 
 VKAPI_ATTR VkBool32 VKAPI_CALL DebugCallback( VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, VkDebugUtilsMessageTypeFlagsEXT messageType,
-					                          const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData )
+	const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData )
 {
-	static bool dumpVLayers = cmdline->Find( "-dump-vlayers" ) || cmdline->Find( "-vlayers" );
-	if ( dumpVLayers )
-	{
-		const Log* log = LogGetLastLog();
+	if ( !gEnableValidationLayers )
+		return VK_FALSE;
 
-		// blech
-		if ( log && log->aChannel != gValidationChannel )
-			LogEx( gValidationChannel, LogType::Raw, "\n" );
-		
-		LogMsg( gValidationChannel, "%s\n\n", pCallbackData->pMessage );
+	const Log* log = LogGetLastLog();
+
+	// blech
+	if ( log && log->aChannel != gVulkanChannel )
+		LogEx( gVulkanChannel, LogType::Raw, "\n" );
+
+	std::string formatted;
+
+	if ( messageType & VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT )
+		vstring( formatted, "Validation: %s\n\n", pCallbackData->pMessage + gVkStripError );
+
+	else if ( messageType & VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT )
+		vstring( formatted, "Performance: %s\n\n", pCallbackData->pMessage + gVkStripPerf );
+
+	else
+		vstring( formatted, "%s\n\n", pCallbackData->pMessage );
+
+
+	if ( messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT )
+	{
+		if ( g_vk_verbose )
+			LogPutsDev( gVulkanChannel, 1, formatted.c_str() );
 	}
+
+	else if ( messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT )
+		LogEx( gVulkanChannel, LogType::Error, formatted.c_str() );
+
+	else if ( messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT )
+		LogEx( gVulkanChannel, LogType::Warning, formatted.c_str() );
+
+	else
+		LogPuts( gVulkanChannel, formatted.c_str() );
 
 	return VK_FALSE;
 }
@@ -127,7 +170,7 @@ void GInstance::CreateInstance( void )
 	std::vector< VkExtensionProperties > extensions( extensionCount );
 	vkEnumerateInstanceExtensionProperties( NULL, &extensionCount, extensions.data(  ) );
 
-	Print( "[Device] %d Vulkan extensions available:\n", extensionCount );
+	LogDev( gVulkanChannel, "%d Vulkan extensions available:\n", extensionCount );
 
 	for ( const auto& extension : extensions )
 		Print( "\t%s\n", extension.extensionName );
@@ -137,7 +180,7 @@ void GInstance::CreateInstance( void )
 
 std::vector< const char* > GInstance::InitRequiredExtensions()
 {
-    uint32_t extensionCount = 0;
+    u32 extensionCount = 0;
 	if ( !SDL_Vulkan_GetInstanceExtensions( aWindow.apWindow, &extensionCount, NULL ) )
 		LogFatal( "Unable to query the number of Vulkan instance extensions\n" );
 
@@ -148,11 +191,11 @@ std::vector< const char* > GInstance::InitRequiredExtensions()
 		LogFatal( "Unable to query the number of Vulkan instance extension names\n" );
 
 	// Display names
-	Print( "[Device] Found %d Vulkan extensions:\n", extensionCount );
-	for ( int i = 0; i < extensionCount; ++i )
-		Print( "\t%i : %s\n", i, extensions[ i ] );
+	LogDev( gVulkanChannel, "Found % d Vulkan extensions : \n", extensionCount );
+	for ( u32 i = 0; i < extensionCount; ++i )
+		LogDev( gVulkanChannel, "\t%u : %s\n", i, extensions[ i ] );
 
-	Print( "\n" );
+	LogPutsDev( gVulkanChannel, "\n" );
 
 	// Add debug display extension, we need this to relay debug messages
 	extensions.push_back( VK_EXT_DEBUG_UTILS_EXTENSION_NAME );
@@ -347,17 +390,6 @@ void GInstance::CreateDevice()
 
 GInstance::GInstance()
 {
-
-	CreateWindow();
-    CreateInstance();
-	if ( gEnableValidationLayers && CreateValidationLayers() != VK_SUCCESS )
-		LogFatal( "Failed to create validation layers!" );
-
-	if ( !SDL_Vulkan_CreateSurface( aWindow.apWindow, aInstance, &aSurface ) )
-		LogFatal( "Failed to create Vulkan surface!" );
-
-	SetupPhysicalDevice();
-	CreateDevice();
 }
 
 GInstance::~GInstance()
@@ -367,6 +399,20 @@ GInstance::~GInstance()
 	vkDestroyInstance( aInstance, NULL );
 	SDL_DestroyWindow( aWindow.apWindow );
 	SDL_Quit();
+}
+
+void GInstance::Init()
+{
+	CreateWindow();
+	CreateInstance();
+	if ( gEnableValidationLayers && CreateValidationLayers() != VK_SUCCESS )
+		LogFatal( "Failed to create validation layers!" );
+
+	if ( !SDL_Vulkan_CreateSurface( aWindow.apWindow, aInstance, &aSurface ) )
+		LogFatal( "Failed to create Vulkan surface!" );
+
+	SetupPhysicalDevice();
+	CreateDevice();
 }
 
 uint32_t GInstance::GetMemoryType( uint32_t sTypeFilter, VkMemoryPropertyFlags sProperties )
@@ -398,7 +444,7 @@ VkInstance GetInst()
 	return GetGInstance().GetInstance();
 }
 
-VkDevice GetLogicDevice()
+VkDevice GetDevice()
 {
 	return GetGInstance().GetDevice();
 }

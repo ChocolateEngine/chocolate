@@ -21,16 +21,26 @@ file(
 
 include( ${CH_ROOT}/scripts/vulkan.cmake )
 
-link_directories(
-    ${CH_THIRDPARTY}/libspirv/lib
-)
+if (WIN32)
+	link_directories(
+		# ${VK_DIR}/lib
+	)
+else()
+	link_directories(
+		${CH_THIRDPARTY}/libspirv/lib
+	)
+endif()
 
 link_libraries(
 	Core
 	ImGui
-	SPIRV-Tools
 )
 
+if (WIN32)
+	link_libraries( ${CH_THIRDPARTY}/SPIRV-Tools/build/source/Debug/SPIRV-Tools.lib )
+else()
+	link_libraries( SPIRV-Tools )
+endif()
 
 add_library( Graphics2 SHARED ${SRC_FILES} ${PUBLIC_FILES} )
 
@@ -38,7 +48,7 @@ add_dependencies( Graphics2 "Core" "ImGui" )
 
 set_target_properties(
 	Graphics2 PROPERTIES
-	OUTPUT_NAME graphics2
+	OUTPUT_NAME ch_graphics
 )
 
 if ( VULKAN_DEBUG )

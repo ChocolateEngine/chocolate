@@ -32,7 +32,12 @@ std::vector< DrawThread >      gDrawThreads;
  *    allocated by a primary command pool.
  */
 std::vector< VkCommandBuffer > gCommandBuffers;
-CommandPool                    gPrimCmdPool;
+
+CommandPool& GetPrimaryCommandPool()
+{
+	static CommandPool sPrimaryCommandPool;
+	return sPrimaryCommandPool;
+}
 
 std::vector< VkCommandBuffer > gImGuiCommandBuffers; 
 
@@ -54,7 +59,7 @@ void CreateFences()
 
     for( u32 i = 0; i < MAX_FRAMES_IN_FLIGHT; i++ )
     {
-        CheckVKResult( vkCreateFence( GetLogicDevice(), &info, nullptr, &gFences[ i ] ), "Failed to create fence!" );
+        CheckVKResult( vkCreateFence( GetDevice(), &info, nullptr, &gFences[ i ] ), "Failed to create fence!" );
     }
 }
 
@@ -68,30 +73,31 @@ void CreateSemaphores()
 
     for( u32 i = 0; i < MAX_FRAMES_IN_FLIGHT; i++ )
     {
-        CheckVKResult( vkCreateSemaphore( GetLogicDevice(), &info, nullptr, &gImageAvailableSemaphores[ i ] ), "Failed to create semaphore!" );
-        CheckVKResult( vkCreateSemaphore( GetLogicDevice(), &info, nullptr, &gRenderFinishedSemaphores[ i ] ), "Failed to create semaphore!" );
+        CheckVKResult( vkCreateSemaphore( GetDevice(), &info, nullptr, &gImageAvailableSemaphores[ i ] ), "Failed to create semaphore!" );
+        CheckVKResult( vkCreateSemaphore( GetDevice(), &info, nullptr, &gRenderFinishedSemaphores[ i ] ), "Failed to create semaphore!" );
     }
 }
 
 void CreateDrawThreads()
 {
-    for ( u32 i = 0; i < DRAW_THREADS; i++ )
-    {
-        gDrawThreads.emplace_back();
-    }
+    gDrawThreads.resize( DRAW_THREADS );
 
     CreateFences();
     CreateSemaphores();
 }
 
-void RecordImGuiCommands( u32 sCmdIndex,  VkCommandBufferInheritanceInfo sInfo ) {
+void RecordImGuiCommands( u32 sCmdIndex,  VkCommandBufferInheritanceInfo sInfo )
+{
+    // TEMP
+    ImGui::Render();
+	
     VkCommandBufferAllocateInfo allocInfo = {};
     allocInfo.sType              = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-    allocInfo.commandPool        = gPrimCmdPool.GetHandle();
+    allocInfo.commandPool        = GetPrimaryCommandPool().GetHandle();
     allocInfo.level              = VK_COMMAND_BUFFER_LEVEL_SECONDARY;
     allocInfo.commandBufferCount = 1;
 
-    CheckVKResult( vkAllocateCommandBuffers( GetLogicDevice(), &allocInfo, &gImGuiCommandBuffers[ sCmdIndex ] ), "Failed to allocate command buffer!" );
+    CheckVKResult( vkAllocateCommandBuffers( GetDevice(), &allocInfo, &gImGuiCommandBuffers[ sCmdIndex ] ), "Failed to allocate command buffer!" );
 
     VkCommandBufferBeginInfo beginInfo = {};
     beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
@@ -142,11 +148,11 @@ void RecordCommands()
     VkCommandBufferAllocateInfo primAlloc{};
     primAlloc.sType              = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
     primAlloc.pNext              = nullptr;
-    primAlloc.commandPool        = gPrimCmdPool.GetHandle();
+    primAlloc.commandPool        = GetPrimaryCommandPool().GetHandle();
     primAlloc.level              = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
     primAlloc.commandBufferCount = gCommandBuffers.size();
 
-    CheckVKResult( vkAllocateCommandBuffers( GetLogicDevice(), &primAlloc, gCommandBuffers.data() ), "Failed to allocate primary command buffers" );
+    CheckVKResult( vkAllocateCommandBuffers( GetDevice(), &primAlloc, gCommandBuffers.data() ), "Failed to allocate primary command buffers" );
 
     /*
      *    For each draw thread, allocate secondary
@@ -165,7 +171,7 @@ void RecordCommands()
         aCommandBufferAllocateInfo.level                    = VK_COMMAND_BUFFER_LEVEL_SECONDARY;
         aCommandBufferAllocateInfo.commandBufferCount       = gDrawThreads[ i ].aCommandBuffers.size();
 
-        CheckVKResult( vkAllocateCommandBuffers( GetLogicDevice(), &aCommandBufferAllocateInfo, gDrawThreads[ i ].aCommandBuffers.data() ), "Failed to allocate command buffers!" );
+        CheckVKResult( vkAllocateCommandBuffers( GetDevice(), &aCommandBufferAllocateInfo, gDrawThreads[ i ].aCommandBuffers.data() ), "Failed to allocate command buffers!" );
     }
     
     /*
@@ -229,7 +235,7 @@ void RecordCommands()
         /*
          *    Render UI.
          */
-        ImGui::Render();
+        // ImGui::Render();
         /*
          *    Run ImGui commands.
          */
@@ -246,11 +252,11 @@ void RecordCommands()
 
 void Present()
 {
-    vkWaitForFences( GetLogicDevice(), 1, &gFences[ gFrameIndex ], VK_TRUE, UINT64_MAX );
+    vkWaitForFences( GetDevice(), 1, &gFences[ gFrameIndex ], VK_TRUE, UINT64_MAX );
 
     u32 imageIndex;
     
-    VkResult res = vkAcquireNextImageKHR( GetLogicDevice(), GetSwapchain().GetHandle(), UINT64_MAX, gImageAvailableSemaphores[ gFrameIndex ], VK_NULL_HANDLE, &imageIndex );
+    VkResult res = vkAcquireNextImageKHR( GetDevice(), GetSwapchain().GetHandle(), UINT64_MAX, gImageAvailableSemaphores[ gFrameIndex ], VK_NULL_HANDLE, &imageIndex );
 
     if ( res == VK_ERROR_OUT_OF_DATE_KHR )
     {
@@ -269,7 +275,7 @@ void Present()
 
     if ( gInFlightFences[ imageIndex ] != VK_NULL_HANDLE )
     {
-        vkWaitForFences( GetLogicDevice(), 1, &gInFlightFences[ imageIndex ], VK_TRUE, UINT64_MAX );
+        vkWaitForFences( GetDevice(), 1, &gInFlightFences[ imageIndex ], VK_TRUE, UINT64_MAX );
     }
 
     gInFlightFences[ imageIndex ] = gFences[ gFrameIndex ];
@@ -289,7 +295,7 @@ void Present()
     submitInfo.signalSemaphoreCount = ARR_SIZE( signalSemaphores );
     submitInfo.pSignalSemaphores    = signalSemaphores;
 
-    vkResetFences( GetLogicDevice(), 1, &gFences[ gFrameIndex ] );
+    vkResetFences( GetDevice(), 1, &gFences[ gFrameIndex ] );
 
     CheckVKResult( vkQueueSubmit( GetGInstance().GetGraphicsQueue(), 1, &submitInfo, gFences[ gFrameIndex ] ), "Failed to submit draw command buffer!" );
 
@@ -323,9 +329,9 @@ void Present()
 
     gFrameIndex = ( gFrameIndex + 1 ) % MAX_FRAMES_IN_FLIGHT;
     
-    vkResetCommandPool( GetLogicDevice(), gPrimCmdPool.GetHandle(), 0 );
+    vkResetCommandPool( GetDevice(), GetPrimaryCommandPool().GetHandle(), 0);
     for ( u32 i = 0; i < DRAW_THREADS; i++ )
     {
-        vkResetCommandPool( GetLogicDevice(), gDrawThreads[ i ].aCommandPool.GetHandle(), 0 );
+        vkResetCommandPool( GetDevice(), gDrawThreads[ i ].aCommandPool.GetHandle(), 0 );
     }
 }

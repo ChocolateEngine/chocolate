@@ -1,6 +1,7 @@
 #include "shader.h"
 
-#include "libspirv/include/spirv-tools/libspirv.hpp"
+#include "SPIRV-tools/include/spirv-tools/libspirv.h"
+#include "SPIRV-tools/include/spirv-tools/libspirv.hpp"
 
 #include "instance.h"
 #include "swapchain.h"
@@ -787,7 +788,7 @@ VkShaderModule CreateModule( const std::vector< char > &srData )
     shaderModuleCreateInfo.pCode = reinterpret_cast< const uint32_t * >( srData.data() );
 
     VkShaderModule shaderModule;
-    VkResult result = vkCreateShaderModule( GetLogicDevice(), &shaderModuleCreateInfo, nullptr, &shaderModule );
+    VkResult result = vkCreateShaderModule( GetDevice(), &shaderModuleCreateInfo, nullptr, &shaderModule );
     if ( result != VK_SUCCESS )
     {
         LogError( gGraphics2Channel, "Failed to create shader module: %d\n", result );
@@ -894,7 +895,7 @@ VkPipelineLayout CreateLayout( const ShaderRequirements &srVert, const ShaderReq
     pipelineLayoutCreateInfo.pPushConstantRanges = pushConstantRanges.data();
 
     VkPipelineLayout pipelineLayout;
-    VkResult result = vkCreatePipelineLayout( GetLogicDevice(), &pipelineLayoutCreateInfo, nullptr, &pipelineLayout );
+    VkResult result = vkCreatePipelineLayout( GetDevice(), &pipelineLayoutCreateInfo, nullptr, &pipelineLayout );
     if ( result != VK_SUCCESS )
     {
         LogError( gGraphics2Channel, "Failed to create pipeline layout: %d\n", result );
@@ -1063,7 +1064,7 @@ VkPipeline CreatePipeline( const std::string &srVertPath, const std::string &srF
     pipelineInfo.subpass = 0;
     pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
 
-    CheckVKResult( vkCreateGraphicsPipelines( GetLogicDevice(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &pipeline ), "Failed to create graphics pipeline!" );
+    CheckVKResult( vkCreateGraphicsPipelines( GetDevice(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &pipeline ), "Failed to create graphics pipeline!" );
 
     return pipeline;
 }

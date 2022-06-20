@@ -41,7 +41,7 @@ VkSampler &GetSampler()
 	samplerInfo.minLod 			            = 0.0f;
 	samplerInfo.maxLod 			            = 1000.0f;
 
-	CheckVKResult( vkCreateSampler( GetLogicDevice(), &samplerInfo, NULL, &gSampler ), "Failed to create sampler!" );
+	CheckVKResult( vkCreateSampler( GetDevice(), &samplerInfo, NULL, &gSampler ), "Failed to create sampler!" );
 
     return gSampler;
 }

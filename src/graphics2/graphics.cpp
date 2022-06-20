@@ -1,17 +1,23 @@
 #include "graphics.h"
 
+#include "materialsystem.h"
+#include "commandpool.h"
 #include "instance.h"
 #include "present.h"
+#include "renderpass.h"
+#include "descriptormanager.h"
+#include "swapchain.h"
+#include "rendertarget.h"
+#include "config.hh"
 
-#include "gui/gui.h"
+#include "imgui/imgui_impl_vulkan.h"
+#include "imgui/imgui_impl_sdl.h"
 
 LOG_REGISTER_CHANNEL( Graphics2, LogColor::DarkYellow );
 
-extern GuiSystem* gui;
-
 extern "C" 
 {
-    void *cframework_get()
+    DLL_EXPORT void *cframework_get()
     {
         static Graphics graphics;
         return &graphics;
@@ -39,7 +45,7 @@ void Graphics::DrawLine( glm::vec3 sX, glm::vec3 sY, glm::vec3 sColor )
  */
 HModel Graphics::LoadModel( const std::string& srModelPath )
 {
-
+    return InvalidHandle;
 }
 
 /*
@@ -48,28 +54,6 @@ HModel Graphics::LoadModel( const std::string& srModelPath )
  *    @param HModel     The handle to the model.
  */
 void Graphics::FreeModel( HModel sModel )
-{
-
-}
-
-/*
- *    Loads a sprite from a path.
- *
- *    @param const std::string &    The path to the sprite.
- *
- *    @return HSprite               The handle to the sprite.
- */
-HSprite Graphics::LoadSprite( const std::string& srSpritePath )
-{
-
-}
-
-/*
- *    Frees a sprite.
- *
- *    @param HSprite    The handle to the sprite.
- */
-void Graphics::FreeSprite( HSprite sSprite )
 {
 
 }
@@ -91,7 +75,8 @@ void Graphics::SetView( View& view )
  */
 Window *Graphics::GetSurface()
 {
-
+#pragma message ("lisa and andrew came over and got a surface")
+    return &GetGInstance().GetWindow();
 }
 
 /*
@@ -101,7 +86,7 @@ Window *Graphics::GetSurface()
  */
 HMaterial Graphics::CreateMat()
 {
-
+    return InvalidHandle;
 }
 
 /*
@@ -123,7 +108,7 @@ void Graphics::FreeMat( HMaterial sMat )
  */
 HMaterial Graphics::LoadMat( const std::string& srMatPath )
 {
-
+    return InvalidHandle;
 }
 
 /*
@@ -135,7 +120,7 @@ HMaterial Graphics::LoadMat( const std::string& srMatPath )
  */
 HTexture Graphics::CreateTexture( const std::string& srTexturePath )
 {
-
+    return InvalidHandle;
 }
 
 /*
@@ -148,7 +133,7 @@ HTexture Graphics::CreateTexture( const std::string& srTexturePath )
  */
 HTexture Graphics::CreateTexture( void *pData, uint32_t width, uint32_t height, uint32_t format )
 {
-
+    return InvalidHandle;
 }
 
 /*
@@ -166,8 +151,56 @@ void Graphics::FreeTexture( HTexture sTexture )
  */
 void Graphics::Init() 
 {
+    GetGInstance().Init();
+	
+    // init single time command pool
+    GetSingleTimeCommandPool();
+
+    // init swapchain
+    GetSwapchain();
+
+    // init renderpass
+    GetRenderPass( RenderPass_Color | RenderPass_Depth | RenderPass_Resolve );
+	
+    // create color and depth backbuffer (transitions from image layout/format undefined)
+    GetBackBuffer();
+
+    // create texture sampler
+    GetSampler();
+
+    // create descriptor pool
+    GetDescriptorManager().CreateDescriptorPool();
+    // CreateDescriptorSetLayouts();
+
+    // init imgui (in between it? um ok)
+    ImGui::CreateContext();
+
+    Window& window = GetGInstance().GetWindow();
+
+    ImGui_ImplSDL2_InitForVulkan( window.apWindow );
+
+    ImGui_ImplVulkan_InitInfo init_info = {};
+    init_info.Instance        = GetInst();
+    init_info.PhysicalDevice  = GetPhysicalDevice();
+    init_info.Device          = GetDevice();
+    init_info.Queue           = GetGInstance().GetGraphicsQueue();
+    init_info.DescriptorPool  = GetDescriptorManager().GetHandle();
+    init_info.MinImageCount   = GetSwapchain().GetImageCount();
+    init_info.ImageCount      = GetSwapchain().GetImageCount();
+    init_info.MSAASamples     = GetMSAASamples();
+    //init_info.CheckVkResultFn = CheckVKResult;
+
+    // maybe don't use resolve on imgui renderpass???? idk
+    ImGui_ImplVulkan_Init( &init_info, GetRenderPass( RenderPass_Color | RenderPass_Depth | RenderPass_Resolve ) );
+
+    SingleCommand( []( VkCommandBuffer c ){ ImGui_ImplVulkan_CreateFontsTexture( c ); } );
+    ImGui_ImplVulkan_DestroyFontUploadObjects();
+	
     CreateDrawThreads();
-    gui->AssignWindow( GetGInstance().GetWindow().apWindow );
+	
+    GetDescriptorManager().CreateDescriptorSetLayouts();
+
+    matsys.Init();
 }
 
 /*
@@ -177,7 +210,7 @@ void Graphics::Init()
  */
 void Graphics::Update( float sDT )
 {
-    gui->Update( sDT );
     RecordCommands();
     Present();
 }
+
