@@ -6,10 +6,9 @@
 #include <SDL.h>
 #include <glm/glm.hpp>
 
-using HModel    = size_t;
-using HMaterial = size_t;
-using HTexture  = size_t;
-using HSprite   = size_t;
+using HModel    = Handle;
+using HMaterial = Handle;
+using HTexture  = Handle;
 
 struct Window 
 {
@@ -45,22 +44,6 @@ public:
      *    @param HModel     The handle to the model.
      */
 	virtual void 		     FreeModel( HModel sModel ) = 0;
-
-	/*
-     *    Loads a sprite from a path.
-     *
-     *    @param const std::string &    The path to the sprite.
-     *
-     *    @return HSprite               The handle to the sprite.
-     */
-	virtual HSprite          LoadSprite( const std::string& srSpritePath ) = 0;
-
-	/*
-     *    Frees a sprite.
-     *
-     *    @param HSprite    The handle to the sprite.
-     */
-	virtual void 		     FreeSprite( HSprite sSprite ) = 0;
 
 	/*
      *    Sets the view.
