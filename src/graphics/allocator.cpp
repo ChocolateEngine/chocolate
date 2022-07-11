@@ -264,7 +264,6 @@ void InitDescriptorSets( DataBuffer< VkDescriptorSet > &srDescSets, VkDescriptor
 	}
 }
 
-constexpr int MAX_IMAGES = 1000;
 
 void AllocImageSets( std::vector< VkDescriptorSet > &srSets, VkDescriptorSetLayout &srLayout, VkDescriptorPool &srPool )
 {
@@ -520,7 +519,7 @@ void InitDepthResources( VkImage &srDepthImage, VkDeviceMemory &srDepthImageMemo
 
 	auto i = ImageView( srDepthImage, depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT, 1 );
     InitImageView( srDepthImageView, i );
-    TransitionImageLayout( srDepthImage, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, 1 );
+    // TransitionImageLayout( srDepthImage, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, 1 );
 }
 /* Initializes the multisampling image.  */
 void InitColorResources( VkImage &srColorImage, VkDeviceMemory &srColorImageMemory, VkImageView &srColorImageView )

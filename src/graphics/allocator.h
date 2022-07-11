@@ -35,6 +35,8 @@ many of the Vk objects used in the renderer.
 #define NO_CULLING 1 << 0
 #define NO_DEPTH   1 << 1
 
+constexpr int MAX_IMAGES = 1000;
+
 typedef std::vector< char >     		        ByteArray;
 typedef std::string				        String;
 typedef std::vector< std::function< void(  ) > >        FunctionList;

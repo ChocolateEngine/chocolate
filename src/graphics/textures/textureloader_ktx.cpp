@@ -104,9 +104,6 @@ public:
 
 		LogDev( gGraphicsChannel, 2, "Loaded Image: %s - dataSize: %d\n", srPath.c_str(  ), pTexture->kTexture->dataSize );
 
-		ktxTexture_Destroy( pTexture->kTexture );
-		ktxVulkanDeviceInfo_Destruct( &vdi );
-
 		pTexture->aMipLevels = pTexture->kTexture->numLevels;
 		pTexture->aTextureImage = pTexture->texture.image;
 		pTexture->aTextureImageMem = pTexture->texture.deviceMemory;
@@ -115,6 +112,9 @@ public:
 			VK_IMAGE_ASPECT_COLOR_BIT, pTexture->aMipLevels, pTexture->texture.viewType, pTexture->texture.layerCount );
 
 		InitImageView( pTexture->aTextureImageView, i );
+
+		ktxTexture_Destroy( pTexture->kTexture );
+		ktxVulkanDeviceInfo_Destruct( &vdi );
 
 		return pTexture;
 	}

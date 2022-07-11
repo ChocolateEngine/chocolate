@@ -370,6 +370,7 @@ void Renderer::InitCommandBuffers(  )
 		renderPassInfo.renderArea.offset = { 0, 0 };
 		renderPassInfo.renderArea.extent = SWAPCHAIN.GetExtent(  );
 
+#if 1
 		// HACK: check for skybox
 		bool drawSkybox = false;
 
@@ -389,6 +390,7 @@ void Renderer::InitCommandBuffers(  )
 				mat->apShader->UpdateBuffers( i, renderIndex++, renderable, matIndex );
 			}
 		}
+#endif
 
 		// if we have a skybox, don't bother to clear the previous frame
 		// um, why does not clearing it crash it
@@ -406,6 +408,7 @@ void Renderer::InitCommandBuffers(  )
 
 		vkCmdBeginRenderPass( aCommandBuffers[ i ], &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE );
 
+#if 1
 		// IDEA: make a batched mesh vector so that way we can bind everything needed, and then just draw draw draw draw
 
 		size_t renderIndex = 0;
@@ -456,6 +459,7 @@ void Renderer::InitCommandBuffers(  )
 				matsys->DrawRenderable( 0, renderable, matIndex, aCommandBuffers[i], i );
 			}
 		}
+#endif
 
 	//	aDbgDrawer.RenderPrims( aCommandBuffers[ i ], aView );
 		

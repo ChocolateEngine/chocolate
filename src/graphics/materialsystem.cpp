@@ -51,7 +51,7 @@ MaterialSystem::MaterialSystem()
 void MaterialSystem::Init()
 {
 	VkDescriptorSetLayoutBinding imageBinding{};
-	imageBinding.descriptorCount = 1000;
+	imageBinding.descriptorCount = MAX_IMAGES;
 	imageBinding.descriptorType  = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 	imageBinding.stageFlags      = VK_SHADER_STAGE_FRAGMENT_BIT;
 
@@ -343,14 +343,37 @@ int MaterialSystem::GetTextureId( Texture *spTexture )
 }
 
 
-// BufferSize is sizeof(element) * count
+void CreateBuffer( VkBuffer& srBuffer, VkDeviceMemory& srBufferMem, u32 sBufferSize, VkBufferUsageFlags sUsage, int sMemBits )
+{
+	// create a vertex buffer
+	VkBufferCreateInfo aBufferInfo = {};
+	aBufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+	aBufferInfo.size = sBufferSize;
+	aBufferInfo.usage = sUsage;
+	aBufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+	CheckVKResult( vkCreateBuffer( DEVICE, &aBufferInfo, nullptr, &srBuffer ), "Failed to create vertex buffer" );
+
+	// allocate memory for the vertex buffer
+	VkMemoryRequirements aMemReqs;
+	vkGetBufferMemoryRequirements( DEVICE, srBuffer, &aMemReqs );
+
+	u32 memType = gpDevice->FindMemoryType( aMemReqs.memoryTypeBits, sMemBits );
+
+	VkMemoryAllocateInfo aMemAllocInfo = {};
+	aMemAllocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+	aMemAllocInfo.allocationSize = aMemReqs.size;
+	aMemAllocInfo.memoryTypeIndex = memType;
+	CheckVKResult( vkAllocateMemory( DEVICE, &aMemAllocInfo, nullptr, &srBufferMem ), "Failed to allocate vertex buffer memory" );
+
+	// bind the vertex buffer to the device memory
+	CheckVKResult( vkBindBufferMemory( DEVICE, srBuffer, srBufferMem, 0 ), "Failed to bind vertex buffer" );
+}
+
+// sBufferSize is sizeof(element) * count
 void InitRenderableBuffer( void* srData, size_t sBufferSize, VkBuffer &srBuffer, VkDeviceMemory &srBufferMem, VkBufferUsageFlags sUsage )
 {
-	VkBuffer        stagingBuffer;
-	VkDeviceMemory  stagingBufferMemory;
-	VkDeviceSize    bufferSize = sBufferSize;
-
-	if ( !bufferSize )
+	if ( !sBufferSize )
 	{
 		srBuffer    = 0;
 		srBufferMem = 0;
@@ -358,19 +381,33 @@ void InitRenderableBuffer( void* srData, size_t sBufferSize, VkBuffer &srBuffer,
 		LogError( "Tried to create a vertex buffer / index buffer with no size!\n" );
 		return;
 	}
+	
+	VkBuffer        stagingBuffer;
+	VkDeviceMemory  stagingBufferMemory;
+	
+	CreateBuffer(
+		stagingBuffer,
+		stagingBufferMemory,
+		sBufferSize,
+		sUsage | VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+		VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
+	);
 
-	InitBuffer( bufferSize, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-		VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer, stagingBufferMemory );
+	MapMemory( stagingBufferMemory, sBufferSize, srData );
 
-	MapMemory( stagingBufferMemory, bufferSize, srData );
+	CreateBuffer(
+		srBuffer,
+		srBufferMem,
+		sBufferSize,
+		sUsage | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
+	);
 
-	InitBuffer( bufferSize, sUsage, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, srBuffer, srBufferMem );
-	CopyBuffer( stagingBuffer, srBuffer, bufferSize );
+	CopyBuffer( stagingBuffer, srBuffer, sBufferSize );
 
 	vkDestroyBuffer( DEVICE, stagingBuffer, NULL );
 	vkFreeMemory( DEVICE, stagingBufferMemory, NULL );
 }
-
 
 // ---------------------------------------------------------------------------------------
 
@@ -424,7 +461,7 @@ void MaterialSystem::CreateVertexBufferInt( IModel* renderable, size_t surface, 
 			GetVertexAttributeSize( data->aAttrib ) * vertData.aCount,
 			meshData.apVertexBuffer->aBuffers[j],
 			meshData.apVertexBuffer->aBufferMem[j],
-			VK_BUFFER_USAGE_TRANSFER_DST_BIT | meshData.apVertexBuffer->aFlags
+			meshData.apVertexBuffer->aFlags
 		);
 	}
 }

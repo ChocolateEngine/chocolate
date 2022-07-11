@@ -277,7 +277,8 @@ void Device::InitLogicalDevice(  )
 	}
 
 	VkPhysicalDeviceFeatures deviceFeatures{  };
-	deviceFeatures.samplerAnisotropy = VK_FALSE;	//	Temporarily disabled for PBP builds
+	deviceFeatures.samplerAnisotropy = VK_TRUE;
+	deviceFeatures.fillModeNonSolid = VK_TRUE;
 
 	VkPhysicalDeviceDescriptorIndexingFeaturesEXT indexing{};
 	indexing.sType                                    = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES_EXT;
@@ -540,10 +541,12 @@ void Device::InitSwapChain(  )
 	VkExtent2D 		extent 		        = ChooseSwapExtent( swapChainSupport.aCapabilities );
 	VkSwapchainKHR		swapChain;
 	ImageSet		swapChainImages;
+	uint32_t imageCount 				= swapChainSupport.aCapabilities.minImageCount + 1;
+	
 	/* haha fuck you screen terring!!!  */
-	uint32_t imageCount 				= 1;// swapChainSupport.aCapabilities.minImageCount + 1;
-	if ( swapChainSupport.aCapabilities.maxImageCount > 0 && imageCount > swapChainSupport.aCapabilities.maxImageCount )
-		imageCount = swapChainSupport.aCapabilities.maxImageCount;
+	// uint32_t imageCount 				= 1;// swapChainSupport.aCapabilities.minImageCount + 1;
+	// if ( swapChainSupport.aCapabilities.maxImageCount > 0 && imageCount > swapChainSupport.aCapabilities.maxImageCount )
+	// 	imageCount = swapChainSupport.aCapabilities.maxImageCount;
 
 	VkSwapchainCreateInfoKHR createInfo{  };
 	createInfo.sType 		= VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
