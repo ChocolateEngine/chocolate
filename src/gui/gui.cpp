@@ -21,10 +21,10 @@ extern "C"
 
 void GuiSystem::Update( float sDT )
 {
-	DrawGui(  );
+	DrawGui();
 }
 
-void GuiSystem::DrawGui(  )
+void GuiSystem::DrawGui()
 {
 	static bool wasConsoleOpen = false;
 	static Uint32 prevtick = 0;
@@ -66,8 +66,6 @@ void GuiSystem::DrawGui(  )
 	ImGui::End(  );
 	prevtick = SDL_GetTicks();
 
-	aDrawnFrame = true;
-
 	// ImGui::PopFont();
 }
 
@@ -76,7 +74,7 @@ void GuiSystem::StyleImGui()
 	auto& io = ImGui::GetIO();
 
 	// gBuiltInFont = BuildFont( "fonts/CascadiaMono.ttf" );
-	gBuiltInFont = BuildFont( "fonts/MonoxRegular.ttf", 15.f );
+	// gBuiltInFont = BuildFont( "fonts/MonoxRegular.ttf", 15.f );
 
 
 	if ( cmdline->Find( "-no-vgui-style" ) )
@@ -230,6 +228,7 @@ void GuiSystem::StartFrame()
 
 void GuiSystem::Init()
 {
+	StyleImGui();
 	InitConsole();
 }
 

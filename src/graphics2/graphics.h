@@ -14,6 +14,8 @@
 
 LOG_CHANNEL( Graphics2 );
 
+class Texture2;
+
 class Graphics : public IGraphics
 {
 protected:  
@@ -87,7 +89,7 @@ public:
 	 * 
 	 *	  @return HTexture              The handle to the texture.
 	 */
-	HTexture         CreateTexture( const std::string& srTexturePath ) override;
+	HTexture         LoadTexture( const std::string& srTexturePath ) override;
 	
 	/*
 	 *   Creates a texture from pixel data.
@@ -107,6 +109,11 @@ public:
 	void 		     FreeTexture( HTexture sTexture ) override;
 
     /*
+	 *    Initializes ImGui.
+	 */
+	void             InitImGui();
+
+    /*
 	 *    Initializes the API.
 	 */
 	void             Init() override;
@@ -117,4 +124,23 @@ public:
 	 *	  @param float    The time since the last update.
 	 */
 	void             Update( float sDT ) override;
+	
+private:
+	// TEMP TEMP TEMP TEMP !!!!!!!!!!!!!!!!!!!!!
+	void             AllocImageSets();
+	void             UpdateImageSets();
+
+public:
+	
+	HTexture  aMissingTexHandle = InvalidHandle;
+	Texture2* apMissingTex = nullptr;
+
+	std::unordered_map< std::string, HTexture > aTexturePaths;
+	ResourceManager< Texture2 >                 aTextures;
+
+private:
+	
+	// TODO: MOVE THIS TO DESCRIPTOR MANAGER (PROBABLY)
+	std::vector< VkDescriptorSet > aImageSets;
+	VkDescriptorSetLayout          aImageLayout;
 };

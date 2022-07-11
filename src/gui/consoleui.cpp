@@ -530,7 +530,12 @@ void GuiSystem::DrawConsole( bool wasConsoleOpen )
 	if ( con_spam_test.GetBool() )
 		LogMsg( "TEST\n" );
 
-	ImGui::Begin( "Developer Console" );
+	if ( !ImGui::Begin( "Developer Console" ) )
+	{
+		ImGui::End();
+		return;
+	}
+	
 	static char buf[ 256 ] = "";
 
 	DrawColorTest();

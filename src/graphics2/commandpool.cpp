@@ -85,4 +85,15 @@ void SingleCommand( std::function< void( VkCommandBuffer ) > sFunc )
     sFunc( aCommandBuffer );
 
     CheckVKResult( vkEndCommandBuffer( aCommandBuffer ), "Failed to end command buffer!" );
+
+    // From Graphics 1
+    VkSubmitInfo submitInfo{  };
+    submitInfo.sType 		= VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    submitInfo.commandBufferCount 	= 1;
+    submitInfo.pCommandBuffers 	= &aCommandBuffer;
+
+    vkQueueSubmit( GetGInstance().GetGraphicsQueue(), 1, &submitInfo, VK_NULL_HANDLE );
+    vkQueueWaitIdle( GetGInstance().GetGraphicsQueue() );
+
+    vkFreeCommandBuffers( GetDevice(), GetSingleTimeCommandPool().GetHandle(), 1, &aCommandBuffer );
 }

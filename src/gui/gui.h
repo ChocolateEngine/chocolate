@@ -9,7 +9,6 @@ class GuiSystem : public BaseGuiSystem
 {
 protected:
 	bool 		aConsoleShown 	= true;
-	bool		aDrawnFrame	= false;
 	bool		aCursorLocked	= false;
 
 	std::vector< std::string > aDebugMessages;

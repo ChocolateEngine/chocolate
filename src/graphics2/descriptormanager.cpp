@@ -48,8 +48,8 @@ DescriptorManager::DescriptorManager( uint32_t sSets, VkDescriptorPoolCreateFlag
 {
     aDescriptorCount   = sSets;
 
-    // CreateDescriptorPool();
-    // CreateDescriptorSetLayouts();
+    CreateDescriptorPool();
+    CreateDescriptorSetLayouts();
 }
 
 DescriptorManager::~DescriptorManager()

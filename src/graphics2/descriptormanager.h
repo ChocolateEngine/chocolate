@@ -13,15 +13,11 @@ class DescriptorManager
     VkDescriptorSetLayout aImageLayout;
     VkDescriptorSetLayout aBufferLayout;
 
-    // void CreateDescriptorPool();
-    // void CreateDescriptorSetLayouts();
+    void CreateDescriptorPool();
+    void CreateDescriptorSetLayouts();
 public:
      DescriptorManager( uint32_t sSets, VkDescriptorPoolCreateFlags sFlags = 0 );
     ~DescriptorManager();
-	
-    // TEST
-    void CreateDescriptorPool();
-    void CreateDescriptorSetLayouts();
 
     bool UpdateBuffer( Handle shBuf );
     void UpdateImage( Handle shImage );

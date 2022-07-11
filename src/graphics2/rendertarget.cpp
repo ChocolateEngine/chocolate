@@ -48,7 +48,8 @@ RenderTarget::~RenderTarget()
 
 
 // TEMP !!!!
-void TransitionImageLayout( VkImage sImage, VkImageLayout sOldLayout, VkImageLayout sNewLayout, VkImageAspectFlags sAspectMask, uint32_t sMipLevels )
+// void SetImageLayout( VkImage sImage, VkImageLayout sOldLayout, VkImageLayout sNewLayout, VkImageAspectFlags sAspectMask, uint32_t sMipLevels )
+void SetImageLayout( VkImage sImage, VkImageLayout sOldLayout, VkImageLayout sNewLayout, VkImageSubresourceRange& sSubresourceRange )
 {
     VkImageMemoryBarrier barrier{};
     barrier.sType                           = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
@@ -57,18 +58,56 @@ void TransitionImageLayout( VkImage sImage, VkImageLayout sOldLayout, VkImageLay
     barrier.srcQueueFamilyIndex             = VK_QUEUE_FAMILY_IGNORED;
     barrier.dstQueueFamilyIndex             = VK_QUEUE_FAMILY_IGNORED;
     barrier.image                           = sImage;
-    barrier.subresourceRange.aspectMask 	= sAspectMask;
-    barrier.subresourceRange.baseMipLevel 	= 0;
-    barrier.subresourceRange.levelCount 	= sMipLevels;
-    barrier.subresourceRange.baseArrayLayer = 0;
-    barrier.subresourceRange.layerCount 	= 1;
+    barrier.subresourceRange 	            = sSubresourceRange;
 
     VkPipelineStageFlags 	sourceStage;
     VkPipelineStageFlags 	destinationStage;
 
+#if 1
+    switch ( sOldLayout )
+    {
+        case VK_IMAGE_LAYOUT_UNDEFINED:
+		    barrier.srcAccessMask = 0;
+		    sourceStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+		    break;
+			
+        case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL:
+			barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+			sourceStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+			break;
+			
+        default:
+            LogFatal( "Unsupported old layout transition!\n" );
+		    break;
+    }
+
+    switch ( sNewLayout )
+    {
+        case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL:
+            barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+            destinationStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+            break;
+
+        case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:
+            barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+            destinationStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+            break;
+
+        case VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL:
+			barrier.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+			destinationStage = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
+			break;
+
+        default:
+            LogFatal( "Unsupported new layout transition!\n" );
+            break;
+    }
+
+#else
+
     if ( sOldLayout == VK_IMAGE_LAYOUT_UNDEFINED && sNewLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL )
     {
-        barrier.srcAccessMask 	= 0;
+        barrier.srcAccessMask 	= VK_ACCESS_NONE_KHR;
         barrier.dstAccessMask 	= VK_ACCESS_TRANSFER_WRITE_BIT;
 
         sourceStage 		= VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
@@ -84,7 +123,7 @@ void TransitionImageLayout( VkImage sImage, VkImageLayout sOldLayout, VkImageLay
     }
     else if ( sOldLayout == VK_IMAGE_LAYOUT_UNDEFINED && sNewLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL )
     {
-        barrier.srcAccessMask 	= 0;
+        barrier.srcAccessMask 	= VK_ACCESS_NONE_KHR;
         barrier.dstAccessMask 	= VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
 
         sourceStage 		= VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
@@ -92,6 +131,7 @@ void TransitionImageLayout( VkImage sImage, VkImageLayout sOldLayout, VkImageLay
     }
     else
         LogFatal( "Unsupported layout transition!\n" );
+#endif
 	
     /* Submit to the GPU.  */
     SingleCommand( [ & ]( VkCommandBuffer c ){ vkCmdPipelineBarrier( c, sourceStage, destinationStage, 0, 0, NULL, 0, NULL, 1, &barrier ); } );
@@ -119,7 +159,9 @@ RenderTarget *CreateBackBuffer()
     color.samples               = GetMSAASamples();
     color.tiling                = VK_IMAGE_TILING_OPTIMAL;
     // DEMEZ TEST
-    color.usage                 = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+    color.usage                 = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+    // color.usage                 = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+    // color.usage                 = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
     // color.usage                 = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT;
     color.sharingMode           = VK_SHARING_MODE_EXCLUSIVE;
     color.queueFamilyIndexCount = 0;
@@ -208,15 +250,20 @@ RenderTarget *CreateBackBuffer()
     CheckVKResult( vkCreateImageView( GetDevice(), &depthView, nullptr, &depthTex.GetImageView() ), "Failed to create depth image view!" );
 
     // TEMP (doesn't actually seem to be needed in graphics 1?)
-    // TransitionImageLayout( depthTex.GetImage(), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_IMAGE_ASPECT_DEPTH_BIT, depth.mipLevels );
-    // TransitionImageLayout( colorTex.GetImage(), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT, depth.mipLevels );
-    // TransitionImageLayout( colorTex.GetImage(), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT, color.mipLevels );
+    // SetImageLayout( depthTex.GetImage(), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_IMAGE_ASPECT_DEPTH_BIT, depth.mipLevels );
+    // SetImageLayout( colorTex.GetImage(), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT, depth.mipLevels );
+    // SetImageLayout( colorTex.GetImage(), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT, color.mipLevels );
 
     std::vector< Texture2 > textures = { colorTex, depthTex };
 
     glm::uvec2 swapchainSize = { GetSwapchain().GetExtent().width, GetSwapchain().GetExtent().height };
 
-    return new RenderTarget( textures, swapchainSize, RenderPass_Color | RenderPass_Depth | RenderPass_Resolve, GetSwapchain().GetImageViews() );
+	RenderTarget* rt = new RenderTarget( textures, swapchainSize, RenderPass_Color | RenderPass_Depth | RenderPass_Resolve, GetSwapchain().GetImageViews() );
+
+    // SetImageLayout( depthTex.GetImage(), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, depthView.subresourceRange );
+    // SetImageLayout( colorTex.GetImage(), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, colorView.subresourceRange );
+
+    return rt;
 }
 
 /*

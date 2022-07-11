@@ -17,7 +17,7 @@ void MaterialSystem::Init()
 {
     aTexPool.Resize( 1000000 );
 
-    Shader *pShader = new Shader( "shader", "shaders/unlit.vert.spv", "shaders/unlit.frag.spv" );
+    // Shader *pShader = new Shader( "shader", "shaders/unlit.vert.spv", "shaders/unlit.frag.spv" );
 }
 
 Handle MaterialSystem::CreateTexture( const std::string &srName )

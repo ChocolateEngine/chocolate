@@ -89,7 +89,7 @@ public:
 	 * 
 	 *	  @return HTexture              The handle to the texture.
 	 */
-	virtual HTexture         CreateTexture( const std::string& srTexturePath ) = 0;
+	virtual HTexture         LoadTexture( const std::string& srTexturePath ) = 0;
 	
 	/*
 	 *   Creates a texture from pixel data.

@@ -41,8 +41,9 @@ constexpr char const *VKString( VkResult sResult )
     }
 }
 
-#if 0
-void CheckVKResult( VkResult sResult ) {
+
+constexpr void CheckVKResult( VkResult sResult )
+{
     if ( sResult == VK_SUCCESS )
         return;
 
@@ -50,9 +51,9 @@ void CheckVKResult( VkResult sResult ) {
     snprintf( pBuf, sizeof( pBuf ), "Vulkan Error: %s", VKString( sResult ) );
 
     SDL_ShowSimpleMessageBox( SDL_MESSAGEBOX_ERROR, "Vulkan Error", pBuf, nullptr );
-    throw std::runtime_error( pBuf );
+    LogFatal( pBuf );
 }
-#endif
+
 
 constexpr void CheckVKResult( VkResult sResult, char const *spMsg )
 {
@@ -65,3 +66,4 @@ constexpr void CheckVKResult( VkResult sResult, char const *spMsg )
     SDL_ShowSimpleMessageBox( SDL_MESSAGEBOX_ERROR, "Vulkan Error", pBuf, nullptr );
     LogFatal( pBuf );
 }
+

@@ -9,6 +9,9 @@
 #include "rendertarget.h"
 #include "renderpass.h"
 
+// TEMP
+#include "freemans_tshirt.hpp"
+
 #include "imgui/imgui.h"
 #include "imgui/imgui_impl_vulkan.h"
 
@@ -88,22 +91,19 @@ void CreateDrawThreads()
 
 void RecordImGuiCommands( u32 sCmdIndex,  VkCommandBufferInheritanceInfo sInfo )
 {
-    // TEMP
-    ImGui::Render();
-	
-    VkCommandBufferAllocateInfo allocInfo = {};
-    allocInfo.sType              = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-    allocInfo.commandPool        = GetPrimaryCommandPool().GetHandle();
-    allocInfo.level              = VK_COMMAND_BUFFER_LEVEL_SECONDARY;
-    allocInfo.commandBufferCount = 1;
-
-    CheckVKResult( vkAllocateCommandBuffers( GetDevice(), &allocInfo, &gImGuiCommandBuffers[ sCmdIndex ] ), "Failed to allocate command buffer!" );
-
+    // VkCommandBufferAllocateInfo allocInfo = {};
+    // allocInfo.sType              = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    // allocInfo.commandPool        = GetPrimaryCommandPool().GetHandle();
+    // allocInfo.level              = VK_COMMAND_BUFFER_LEVEL_SECONDARY;
+    // allocInfo.commandBufferCount = 1;
+    // 
+    // CheckVKResult( vkAllocateCommandBuffers( GetDevice(), &allocInfo, &gImGuiCommandBuffers[ sCmdIndex ] ), "Failed to allocate command buffer!" );
+    
     VkCommandBufferBeginInfo beginInfo = {};
     beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
     beginInfo.flags = VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT;
     beginInfo.pInheritanceInfo = &sInfo;
-
+    
     CheckVKResult( vkBeginCommandBuffer( gImGuiCommandBuffers[ sCmdIndex ], &beginInfo ), "Failed to begin command buffer!" );
 
     auto stuff = ImGui::GetDrawData();
@@ -127,6 +127,8 @@ void RecordSecondaryCommands( u32 sThreadIndex, u32 cmdIndex, VkCommandBufferInh
     /*
      *    Add viewports and scissors to the command buffer in the future.
      */
+    // TEMP
+    freemans_tshirt.Draw( gDrawThreads[ sThreadIndex ].aCommandBuffers[ cmdIndex ], cmdIndex );
 
     /*
      *    Record draw commands.
@@ -137,14 +139,14 @@ void RecordSecondaryCommands( u32 sThreadIndex, u32 cmdIndex, VkCommandBufferInh
     CheckVKResult( vkEndCommandBuffer( gDrawThreads[ sThreadIndex ].aCommandBuffers[ cmdIndex ] ), "Failed to end secondary command buffer" );
 }
 
-void RecordCommands() 
+void AllocateCommands()
 {
     gCommandBuffers.resize( GetSwapchain().GetImageCount() );
     gImGuiCommandBuffers.resize( GetSwapchain().GetImageCount() );
 
     /*
-     *    Allocate primary command buffers
-     */
+    *    Allocate primary command buffers
+    */
     VkCommandBufferAllocateInfo primAlloc{};
     primAlloc.sType              = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
     primAlloc.pNext              = nullptr;
@@ -155,11 +157,11 @@ void RecordCommands()
     CheckVKResult( vkAllocateCommandBuffers( GetDevice(), &primAlloc, gCommandBuffers.data() ), "Failed to allocate primary command buffers" );
 
     /*
-     *    For each draw thread, allocate secondary
-     *    command buffers.
-     * 
-     *    Will be deprecated in the future.
-     */
+    *    For each draw thread, allocate secondary
+    *    command buffers.
+    * 
+    *    Will be deprecated in the future.
+    */
     for ( u32 i = 0; i < DRAW_THREADS; i++ )
     {
         gDrawThreads[ i ].aCommandBuffers.resize( GetSwapchain().GetImageCount() );
@@ -173,7 +175,22 @@ void RecordCommands()
 
         CheckVKResult( vkAllocateCommandBuffers( GetDevice(), &aCommandBufferAllocateInfo, gDrawThreads[ i ].aCommandBuffers.data() ), "Failed to allocate command buffers!" );
     }
-    
+
+    // Allocate ImGui's command buffers
+    for ( u32 i = 0; i < gImGuiCommandBuffers.size(); i++ )
+	{
+        VkCommandBufferAllocateInfo allocInfo = {};
+        allocInfo.sType              = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+        allocInfo.commandPool        = GetPrimaryCommandPool().GetHandle();
+        allocInfo.level              = VK_COMMAND_BUFFER_LEVEL_SECONDARY;
+        allocInfo.commandBufferCount = 1;
+
+        CheckVKResult( vkAllocateCommandBuffers( GetDevice(), &allocInfo, &gImGuiCommandBuffers[ i ] ), "Failed to allocate command buffer!" );
+    }
+}
+
+void RecordCommands() 
+{
     /*
      *    For each framebuffer, allocate a primary
      *    command buffer, and record the commands.
@@ -235,7 +252,7 @@ void RecordCommands()
         /*
          *    Render UI.
          */
-        // ImGui::Render();
+        ImGui::Render();
         /*
          *    Run ImGui commands.
          */
@@ -318,6 +335,7 @@ void Present()
         /*
          *    Recreate all resources.
          */
+        LogFatal( "RECREATE ALL RESOURCES !!!\n" );
         return;
     }
     else if ( res != VK_SUCCESS && res != VK_SUBOPTIMAL_KHR )

@@ -138,8 +138,8 @@ void GInstance::CreateInstance( void )
 	appInfo.pApplicationName 	= "Test";
 	appInfo.applicationVersion 	= VK_MAKE_VERSION( 1, 0, 0 );
 	appInfo.pEngineName 		= "Chocolate";
-	appInfo.engineVersion 		= VK_MAKE_VERSION( 1, 1, 0 );
-	appInfo.apiVersion 		    = VK_API_VERSION_1_0;
+	appInfo.engineVersion 		= VK_MAKE_VERSION( 1, 0, 0 );
+	appInfo.apiVersion 		    = VK_HEADER_VERSION_COMPLETE;
 
 	VkInstanceCreateInfo createInfo{  };
 	createInfo.sType 		= VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
@@ -270,16 +270,18 @@ SwapChainSupportInfo GInstance::CheckSwapChainSupport( VkPhysicalDevice sDevice 
 	if ( formatCount != 0 )
 	{
 		details.aFormats.resize( formatCount );
-		vkGetPhysicalDeviceSurfaceFormatsKHR( sDevice, surf, &formatCount, details.aFormats.data(  ) );
+		vkGetPhysicalDeviceSurfaceFormatsKHR( sDevice, surf, &formatCount, details.aFormats.data() );
 	}
+	
 	uint32_t presentModeCount;
 	vkGetPhysicalDeviceSurfacePresentModesKHR( sDevice, surf, &presentModeCount, NULL );
 
 	if ( presentModeCount != 0 )
 	{
 		details.aPresentModes.resize( presentModeCount );
-		vkGetPhysicalDeviceSurfacePresentModesKHR( sDevice, surf, &presentModeCount, details.aPresentModes.data(  ) );
+		vkGetPhysicalDeviceSurfacePresentModesKHR( sDevice, surf, &presentModeCount, details.aPresentModes.data() );
 	}
+	
 	return details;
 }
 
@@ -359,7 +361,7 @@ void GInstance::CreateDevice()
 	}
 
 	VkPhysicalDeviceFeatures deviceFeatures{  };
-	deviceFeatures.samplerAnisotropy = VK_FALSE;	//	Temporarily disabled for PBP builds
+	deviceFeatures.samplerAnisotropy = VK_TRUE;
 
 	VkPhysicalDeviceDescriptorIndexingFeaturesEXT indexing{};
     indexing.sType                                    = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES_EXT;
@@ -367,7 +369,6 @@ void GInstance::CreateDevice()
     indexing.descriptorBindingPartiallyBound          = VK_TRUE;
     indexing.runtimeDescriptorArray                   = VK_TRUE;
     indexing.descriptorBindingVariableDescriptorCount = VK_TRUE;
-
 
 	VkDeviceCreateInfo createInfo = {
 	    .sType 			         = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
@@ -430,7 +431,6 @@ uint32_t GInstance::GetMemoryType( uint32_t sTypeFilter, VkMemoryPropertyFlags s
 
 	return INT32_MAX;
 }
-
 
 
 GInstance &GetGInstance()
