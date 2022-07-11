@@ -11,8 +11,6 @@ Declares the Sprite class
 #include "graphics/renderertypes.h"
 #include "graphics/imaterialsystem.h"
 
-#include <xhash>
-
 
 // Vertex containing all possible values
 struct MeshBuilderVertex
