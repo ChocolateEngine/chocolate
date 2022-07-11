@@ -26,11 +26,12 @@ template < typename T >
 class ResourceManager
 {
     MemPool aPool;
+    size_t  aSize;
 public:
     /*
      *    Construct a resource manager.
      */
-    ResourceManager() : aPool() 
+    ResourceManager() : aPool(), aSize()
     {
 
     }
@@ -83,6 +84,8 @@ public:
         LogDev( gResourceChannel, 3, "ResourceManager::Add( T* ): Allocated resource at index %u\n", index );
 #endif
 
+        aSize++;
+
         return index | magic << 32;
     }
     /*
@@ -117,6 +120,8 @@ public:
          *    Free the chunk of memory.
          */
         aPool.Free( pBuf );
+
+        aSize--;
 
 #if RESOURCE_DEV
         LogDev( gResourceChannel, 3, "ResourceManager::Remove( Handle ): Removed resource at index %u\n", index );
@@ -163,5 +168,39 @@ public:
          *    Return the data.
          */
         return ( T* )( pBuf + sizeof( magic ) );
+    }
+    /*
+    *    Get a resource by index.
+    *
+    *    @param size_t    The index of the resource.
+    *
+    *    @return T *      The resource, nullptr if the handle
+    *                     is invalid/ points to a different type.
+    */	
+	T     *GetByIndex( size_t sIndex )
+    {
+		if ( sIndex >= aSize )
+			return nullptr;
+
+		/*
+		 *    Get the chunk of memory.
+		 */
+		s8 *pBuf = aPool.GetStart() + sIndex * ( sizeof( T ) + sizeof( Handle ) );
+
+		/*
+        *   Return the data.
+		*/
+		// return ( T* )( pBuf + sizeof( magic ) );
+		return ( T* )( pBuf + sizeof( size_t ) );
+	}
+    /*
+    * 
+    *    Get the number of resources.
+    * 
+    *    @return size_t    The number of resources.
+	*/
+    size_t size()
+    {
+		return aSize;
     }
 };
