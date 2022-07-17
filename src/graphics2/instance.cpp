@@ -89,7 +89,7 @@ bool CheckValidationLayerSupport()
 	vkEnumerateInstanceLayerProperties( &layerCount, NULL );
 
 	std::vector< VkLayerProperties > availableLayers( layerCount );
-	vkEnumerateInstanceLayerProperties( &layerCount, availableLayers.data(  ) );
+	vkEnumerateInstanceLayerProperties( &layerCount, availableLayers.data() );
 	
 	for ( auto layerName : gpValidationLayers )
 	{
@@ -130,7 +130,7 @@ void GInstance::CreateWindow()
 
 void GInstance::CreateInstance( void ) 
 {
-    if ( gEnableValidationLayers && !CheckValidationLayerSupport(  ) )
+    if ( gEnableValidationLayers && !CheckValidationLayerSupport() )
 		LogFatal( "Validation layers requested, but not available!" );
 
 	VkApplicationInfo appInfo{  };
@@ -157,10 +157,10 @@ void GInstance::CreateInstance( void )
 		createInfo.pNext	            = NULL;
 	}
 
-	auto SDLExtensions = InitRequiredExtensions(  );
+	auto SDLExtensions = GetRequiredExtensions();
 	
-	createInfo.enabledExtensionCount 	= ( uint32_t )SDLExtensions.size(  );
-	createInfo.ppEnabledExtensionNames 	= SDLExtensions.data(  );
+	createInfo.enabledExtensionCount 	= ( uint32_t )SDLExtensions.size();
+	createInfo.ppEnabledExtensionNames 	= SDLExtensions.data();
 
 	CheckVKResult( vkCreateInstance( &createInfo, NULL, &aInstance ), "Failed to create instance!" );
 
@@ -168,7 +168,7 @@ void GInstance::CreateInstance( void )
 	vkEnumerateInstanceExtensionProperties( NULL, &extensionCount, NULL );
 	
 	std::vector< VkExtensionProperties > extensions( extensionCount );
-	vkEnumerateInstanceExtensionProperties( NULL, &extensionCount, extensions.data(  ) );
+	vkEnumerateInstanceExtensionProperties( NULL, &extensionCount, extensions.data() );
 
 	LogDev( gVulkanChannel, "%d Vulkan extensions available:\n", extensionCount );
 
@@ -178,7 +178,7 @@ void GInstance::CreateInstance( void )
 	Print( "\n" );
 }
 
-std::vector< const char* > GInstance::InitRequiredExtensions()
+std::vector< const char* > GInstance::GetRequiredExtensions()
 {
     u32 extensionCount = 0;
 	if ( !SDL_Vulkan_GetInstanceExtensions( aWindow.apWindow, &extensionCount, NULL ) )
@@ -187,7 +187,7 @@ std::vector< const char* > GInstance::InitRequiredExtensions()
 	/* Use the amount of extensions queried before to retrieve the names of the extensions.  */
     std::vector< const char * > extensions( extensionCount );
 
-	if ( !SDL_Vulkan_GetInstanceExtensions( aWindow.apWindow, &extensionCount, extensions.data(  ) ) )
+	if ( !SDL_Vulkan_GetInstanceExtensions( aWindow.apWindow, &extensionCount, extensions.data() ) )
 		LogFatal( "Unable to query the number of Vulkan instance extension names\n" );
 
 	// Display names
@@ -223,9 +223,10 @@ bool CheckDeviceExtensionSupport( VkPhysicalDevice sDevice )
 
 	for ( const auto& extension : availableExtensions )
 	{
-		requiredExtensions.erase( extension.extensionName  );
+		requiredExtensions.erase( extension.extensionName );
 	}
-	return requiredExtensions.empty(  );
+	
+	return requiredExtensions.empty();
 }
 
 QueueFamilyIndices GInstance::FindQueueFamilies( VkPhysicalDevice sDevice )
@@ -249,7 +250,7 @@ QueueFamilyIndices GInstance::FindQueueFamilies( VkPhysicalDevice sDevice )
 			}
 			indices.aGraphicsFamily = i;
 		}
-		if ( indices.Complete(  ) )
+		if ( indices.Complete() )
 		{
 			break;
 		}

@@ -67,3 +67,24 @@ constexpr void CheckVKResult( VkResult sResult, char const *spMsg )
     LogFatal( pBuf );
 }
 
+
+constexpr void CheckVkResultF( VkResult sResult, char const *spFmt, ... )
+{
+    if ( sResult == VK_SUCCESS )
+        return;
+
+    va_list args;
+    va_start( args, spFmt );
+	
+    GetLogSystem().LogMsg( channel, level, str, args );
+
+    va_end( args );
+
+	
+    char pBuf[ 1024 ];
+    snprintf( pBuf, sizeof( pBuf ), "Vulkan Error %s: %s", spMsg, VKString( sResult ) );
+
+    SDL_ShowSimpleMessageBox( SDL_MESSAGEBOX_ERROR, "Vulkan Error", pBuf, nullptr );
+    LogFatal( pBuf );
+}
+

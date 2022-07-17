@@ -163,48 +163,6 @@ enum class ShaderMatrix
 };
 
 
-enum TextureType
-{
-	TextureType_1D,
-	TextureType_2D,
-	TextureType_3D,
-	TextureType_Cube,
-	TextureType_1DArray,
-	TextureType_2DArray,
-	TextureType_CubeArray,
-
-	TextureType_Count = TextureType_CubeArray
-};
-
-
-enum TextureSamples
-{
-	TextureSamples_1,
-	TextureSamples_2,
-	TextureSamples_4,
-	TextureSamples_8,
-	TextureSamples_16,
-	TextureSamples_32,
-	TextureSamples_64,
-	TextureSamples_Max,
-};
-
-
-enum TextureUsageBits
-{
-	TextureUsageBit_Sampling                = (1 << 0),
-	TextureUsageBit_ColorAttachment         = (1 << 1),
-	TextureUsageBit_InputAttachment         = (1 << 2),
-	TextureUsageBit_DepthStencilAttachment  = (1 << 3),
-	TextureUsageBit_Storage                 = (1 << 4),
-	TextureUsageBit_StorageAtomic           = (1 << 5),
-	TextureUsageBit_CpuRead                 = (1 << 6),
-	TextureUsageBit_CanUpdate               = (1 << 7),
-	TextureUsageBit_CanCopyFrom             = (1 << 8),
-	TextureUsageBit_CanCopyTo               = (1 << 9),
-};
-
-
 enum MeshPrimType
 {
 	MeshPrim_Point,
@@ -636,6 +594,7 @@ using RenderableHandle_t = size_t;
 // ===================================================================
 
 
+#if 0
 struct Viewport_t
 {
 	float x;
@@ -645,6 +604,7 @@ struct Viewport_t
 	float minDepth;
 	float maxDepth;
 };
+#endif
 
 
 // ===================================================================

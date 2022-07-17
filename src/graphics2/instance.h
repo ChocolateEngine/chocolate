@@ -14,6 +14,15 @@ struct SwapChainSupportInfo;
     // constexpr char const *gpValidationLayers[]    = { "VK_LAYER_KHRONOS_validation", "VK_LAYER_LUNARG_api_dump" };
 #endif
 
+struct QueueFamilyIndices
+{
+    int 	aPresentFamily 	= -1;
+    int	    aGraphicsFamily = -1;
+	
+    // Function that returns true if there is a valid queue family available.
+    bool    Complete() { return ( aPresentFamily > -1 ) && ( aGraphicsFamily > -1 ); }
+};
+
 class GInstance
 {
 protected:
@@ -30,7 +39,7 @@ protected:
     VkQueue                     aPresentQueue;
 
     void                        CreateWindow();
-    std::vector< const char* >  InitRequiredExtensions();
+    std::vector< const char* >  GetRequiredExtensions();
     void                        CreateInstance();
     VkResult                    CreateValidationLayers();
                                 

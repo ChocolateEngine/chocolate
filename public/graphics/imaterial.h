@@ -122,18 +122,31 @@ public:
 class IMaterialSystem;
 
 
+// NOTE: if we use IMaterial in graphics2, we should have some function to iterate through all material var names
+// so we don't have to call GetVar multiple times in a row, iterating through the list multiple times, pretty slow
+// unless we opt for a hash map
+
+// also, we should a "compiled" version of a material for a specific shader
+// just "Basic3D_UBO" stored in the shader as a hash map with material as key and the data as value
+// the data goes directly to the gpu, maybe just a shader storage buffer? idk, would be up to the shader to be honest
+// and this version will only get updated if part of the material was marked "dirty"
+// though we would probably resort to updating every part of the material
+// even though we really don't need to, and should find a way to mark specific parts of it as dirty
 class IMaterial
 {
 public:
 	virtual                    ~IMaterial() = default;
 
 	// Set the shader for the material by the shader name 
-	virtual bool                SetShader( const std::string& name ) = 0;
-	virtual std::string         GetShaderName(  ) = 0;
+	virtual bool                SetShader( std::string_view name ) = 0;
+	virtual const std::string&  GetShaderName() = 0;
 
 	// ----------------------------------------------------------------------------------------
 
 	virtual MaterialVar*        GetVar( const std::string& name ) = 0;
+	
+	virtual MaterialVar*        GetVar( size_t sIndex ) = 0;
+	virtual size_t              GetVarCount() = 0;
 
 	virtual void                SetVar( const std::string& name, Texture* data ) = 0;
 	virtual void                SetVar( const std::string& name, float data ) = 0;
@@ -166,7 +179,7 @@ public:
 	virtual VertexFormat               GetVertexFormat() = 0;
 
 	// cool epic convienence function
-	virtual IMaterialSystem*           GetMaterialSystem() = 0;
+	// virtual IMaterialSystem*           GetMaterialSystem() = 0;
 
 	// ----------------------------------------------------------------------------------------
 
