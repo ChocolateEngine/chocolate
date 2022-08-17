@@ -36,6 +36,7 @@ protected:
     VkPhysicalDevice            aPhysicalDevice;
     VkDevice                    aDevice;
     VkQueue                     aGraphicsQueue;
+    // VkQueue                     aComputeQueue;
     VkQueue                     aPresentQueue;
 
     void                        CreateWindow();
@@ -63,6 +64,7 @@ public:
     constexpr VkSurfaceKHR      GetSurface()         { return aSurface;        }
                                 
     constexpr VkQueue           GetGraphicsQueue()   { return aGraphicsQueue;  }
+    // constexpr VkQueue           GetGraphicsQueue()   { return aComputeQueue;  }
     constexpr VkQueue           GetPresentQueue()    { return aPresentQueue;   }
                                 
     constexpr VkPhysicalDevice  GetPhysicalDevice()  { return aPhysicalDevice; }

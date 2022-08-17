@@ -15,6 +15,9 @@ struct DeviceCommand;
 struct CommandBufferHelper;
 
 
+using HRenderPass = Handle;
+
+
 // uhh
 enum TextureSizing
 {
@@ -54,6 +57,8 @@ struct BufferInfo
 using HRenderResource        = Handle;
 using HRenderResourceBuffer  = Handle;
 using HRenderResourceTexture = Handle;
+
+using HBuffer = Handle;
 
 
 enum class ERenderResource
@@ -137,11 +142,19 @@ struct RenderTextureResource : public RenderResource
 };
 
 
+struct RenderResourceVersion
+{
+	Handle aHandle;
+	u16 aVersion;
+};
+
+
 struct RenderPassInfo
 {
 };
 
-
+// NOTE: only use handles for the render graph data management
+// this is more like a "RenderNode" in the graph
 class RenderGraphPass
 {
 public:
@@ -154,8 +167,7 @@ public:
 	};
 
 	// uhhh
-	RenderGraph*             apGraph;
-	u32                      aIndex;
+	u32                      aIndex = 0;
 	RenderGraphQueueFlagBits aQueue;
 
 	// maybe change to store a list of indices for each resource, or handles even
@@ -170,9 +182,8 @@ public:
 
 	// ------------------------------------------------------------------
 
-	RenderGraphPass( RenderGraph* sGraph, u32 sIndex, RenderGraphQueueFlagBits sQueue ) :
-		apGraph( sGraph ), aIndex( sIndex ), aQueue( sQueue )
-	{}
+	RenderGraphPass( std::string sName, RenderGraphQueueFlagBits sQueue ) :
+		aName( sName ), aQueue( sQueue ) {}
 
 	// RenderTextureResource& AddAttachmentInput( const AttachmentInfo& srInfo );
 	// void AddSubpass( const std::vector<std::string>& srInputs, const std::vector<std::string>& srOutputs );
@@ -191,12 +202,22 @@ public:
 	RenderBufferResource& AddBufferInput( const std::string& srName, VkPipelineStageFlags sStages, VkAccessFlags sAccess, VkBufferUsageFlags sUsage );
 	RenderBufferResource& AddVertexBufferInput( const std::string& srName );
 	RenderBufferResource& AddIndexBufferInput( const std::string& srName );
-
 	// RenderBufferResource&  AddIndirectBufferInput( const std::string& srName );
+
+	// uh
+	// draw will take a model input, and add handles to buffers in it with indexes to each draw or whatever
+	// then the render graph pass will go through a list of draws, find out what each draw uses, and bind or push whatever it needs idfk
+	void AddDraw();
 
 	void SetBuildRenderPass();
 	void SetGetClearDepthStencil();
 	void SetGetClearColor();
+	
+	// ------------------------------------------------------------------
+	// new ideas
+
+	// importing resources:
+	HBuffer ImportBuffer();
 
 	// ------------------------------------------------------------------
 
@@ -210,8 +231,9 @@ public:
 class RenderGraph
 {
 public:
-	HRenderPass CreateRenderPass( const std::string& srName, RenderGraphQueueFlagBits sStage );
-	RenderGraphPass* GetRenderPass( HRenderPass handle );
+	// HRenderPass CreateRenderPass( const std::string& srName, RenderGraphQueueFlagBits sStage );
+	void AddRenderPass( HRenderPass hPass, RenderGraphPass* spPass );
+	// RenderGraphPass* GetRenderPass( HRenderPass handle );
 
 	void SetBackbufferSource( const std::string& srName );
 
@@ -224,18 +246,26 @@ private:
 	// ensure the data in each renderpass makes sense
 	bool ValidatePasses();
 
+	void RunTopologySort( std::vector< std::vector< RenderGraphPass* > >& srPassLists );
+
 	// flatten down into an array of render passes
 	// void FlattenPasses();
 
 	// void ReorderPasses();
 
-	std::unordered_map< std::string, HRenderPass > aPassToIndex;
+	// std::unordered_map< std::string, HRenderPass > aPassToIndex;
+	std::unordered_map< HRenderPass, u32 > aPassToIndex;
 	std::unordered_map< std::string, u32 >         aResourceToIndex;
 
 	std::vector< RenderResource* > aResources;
 	// std::vector< RenderGraphPass > aPasses;
 
-	ResourceManager< RenderGraphPass > aPasses;
+	// store a version number for each resource
+	// this is used to determine how many passes produces an output to this resource (or writes to it)
+	// use a hash map that map versioned handles to nodes to make these lookups fast
+
+	std::unordered_set< HRenderPass > aPassHandles;
+	// std::unordered_map< HRenderPass, RenderGraphPass* > aPasses;
 };
 
 
@@ -366,24 +396,4 @@ public:
 
 	void AddPushConstants( void* spData, u32 sOffset, u32 sSize, u32 sStageFlags );
 };
-
-
-#if 0
-struct RenderList
-{
-	RenderGraphPass* apPass;
-	
-	std::vector< DeviceCommand > aCommands;
-
-	void AddModel( Model_t* spModel, const glm::mat4& sModelMatrix );
-	void AddViewportCamera( const ViewportCamera_t& sViewportCamera );
-
-	void BeginRenderPass( VkCommandBuffer cmd, u32 cmdIndex );
-	void EndRenderPass( VkCommandBuffer cmd );
-	
-	// void Build( CommandBufferHelper cmd );
-	void Execute( VkCommandBuffer cmd );
-	// void End( VkCommandBuffer cmd );
-};
-#endif
 

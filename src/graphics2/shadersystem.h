@@ -39,7 +39,12 @@ enum class EShaderDataType
 };
 
 
+typedef void (*ShaderPrepareDataGraphicsF)();
+
+
 // this should eventually be able to be loaded in a single file on disk
+// NOTE: this is everything for a graphics pipeline
+// but a compute pipeline will be different
 struct ShaderCreateInfo_t
 {
 	// shader module info
@@ -59,8 +64,8 @@ struct ShaderCreateInfo_t
 	VkPrimitiveTopology       aPrimitiveTopology;
 
 	// Viewport State
-	std::vector< VkViewport > aViewports;
-	std::vector< VkRect2D >   aScissors;
+	// std::vector< VkViewport > aViewports;
+	// std::vector< VkRect2D >   aScissors;
 
 	// Rasterization State
 	VkPolygonMode             aPolygonMode;
@@ -73,8 +78,8 @@ struct ShaderCreateInfo_t
 	bool                      aAlphaToOneEnable = false;
 	
 	// Depth Stencil
-	bool                      aEnableDepthTest = true;
-	bool                      aEnableDepthWrite = true;
+	bool                      aDepthTest = true;
+	bool                      aDepthWrite = true;
 	VkCompareOp               aDepthCompareOp = VK_COMPARE_OP_LESS;
 
 	// Dynamic States
@@ -87,6 +92,10 @@ struct ShaderCreateInfo_t
 	// Pipeline Layout
 	std::vector< VkPushConstantRange > aPushConstantRanges;
 	std::vector< VkDescriptorSetLayout > aSetLayouts;
+
+	// sort of hack:
+	// function pointer that will set the data for the shader draw
+	ShaderPrepareDataGraphicsF aPrepareDataFuncGraphics = nullptr;
 };
 
 
@@ -152,12 +161,20 @@ enum class ShaderPipelineType
 };
 
 
-struct GraphicsPipeline_t
+struct ShaderPipeline_t
 {
 	VkPipeline aPipeline = VK_NULL_HANDLE;
+	VkPipelineBindPoint aPipelineBindPoint;
+	VkPipelineLayout aPipelineLayout = VK_NULL_HANDLE;
+};
+
+
+struct GraphicsPipeline_t
+{
+	// VkPipeline aPipeline = VK_NULL_HANDLE;
 	// if it's a graphics pipeline, it's VK_PIPELINE_BIND_POINT_GRAPHICS, so this is useless
 	// VkPipelineBindPoint aPipelineBindPoint;
-	VkPipelineLayout aPipelineLayout = VK_NULL_HANDLE;
+	// VkPipelineLayout aPipelineLayout = VK_NULL_HANDLE;
 	
 	std::vector< VkDescriptorSetLayout > aDescriptorSetLayouts;
 	
@@ -168,16 +185,12 @@ struct GraphicsPipeline_t
 
 struct ComputePipeline_t
 {
-	VkPipeline aPipeline = VK_NULL_HANDLE;
-	VkPipelineLayout aPipelineLayout = VK_NULL_HANDLE;
 };
 
 
 // for future use
 struct RayTracingPipeline_t
 {
-	VkPipeline aPipeline = VK_NULL_HANDLE;
-	VkPipelineLayout aPipelineLayout = VK_NULL_HANDLE;
 };
 
 
@@ -194,12 +207,21 @@ struct RayTracingPipeline_t
 // 
 
 
+// NOTE: you could actually look into VkPipelineCache lol
+struct PipelineStorage_t
+{
+	VkPipelineLayout aPipelineLayout;
+	VkPipelineBindPoint aPipelineBindPoint;
+	std::unordered_map< VkRenderPass, VkPipeline > aPipelines;
+};
+
+
 class ShaderSystem
 {
 private:
 	VkShaderModule        CreateShaderModule( const std::string& aPath );
 
-	VkPipeline            CreateGraphicsPipeline();
+	VkPipeline            CreateGraphicsPipeline( const ShaderCreateInfo_t& srInfo, VkPipelineLayout sLayout, VkRenderPass sRenderPass );
 	VkPipeline            CreateComputePipeline();
 	VkPipeline            CreateRayTracingPipeline();
 
@@ -238,10 +260,16 @@ public:
 	
 	// -----------------------------------------------------------------------
 
-	ResourceManager< GraphicsPipeline_t >                        aShaderPipelines;
+	ResourceManager< GraphicsPipeline_t >                        aGraphicsPipelines;
+	
+	ResourceManager< ShaderCreateInfo_t >                        aShaderCreateInfos;
 
-	std::unordered_map< std::string_view, ShaderCreateInfo_t >   aShaderCreateInfos;
+	// std::unordered_map< std::string_view, ShaderCreateInfo_t >   aShaderCreateInfos;
 	std::unordered_map< std::string_view, HShader >              aShaderNames;
+
+	// make some sort of pipeline cache system here
+	// and create new pipelines when they're needed
+	std::unordered_map< HShader, PipelineStorage_t >             aPipelineStorage;
 	
 	// std::unordered_map< HShader, GraphicsPipeline_t >            aGraphicsPipelines;
 };
@@ -256,6 +284,16 @@ ShaderSystem& GetShaderSystem();
 using HBuffer = Handle;
 
 
+enum class EBufferMemory
+{
+	Device,
+	Host,
+	HostCached,
+	DeviceAndHost,
+	Count
+};
+
+
 struct BufferCreateInfo_t
 {
 	std::string aName;
@@ -267,6 +305,8 @@ struct BufferCreateInfo_t
 
 // TODO:
 // look into vma stuff and look at stuff like a "Dynamic Buffer Ring", and other things like that
+// maybe this could be renamed to ResourceManager
+// and manage Buffers, Images, and other resources
 class BufferManager
 {
 public:

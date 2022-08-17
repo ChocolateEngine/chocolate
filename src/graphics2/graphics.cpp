@@ -122,7 +122,12 @@ void Graphics::Init()
  */
 void Graphics::Update( float sDT )
 {
-    RecordCommands();
+    // new render graph version
+	
+
+	// old below
+
+    // RecordCommands();
     Present();
 }
 
@@ -397,7 +402,33 @@ HRenderPass Graphics::CreateRenderPass( const std::string& srName, RenderGraphQu
 		return InvalidHandle;
 	}
 
-	return apRenderGraph->CreateRenderPass( srName, sStage );
+    return aPasses.Add( new RenderGraphPass( srName, sStage ) );
+}
+
+
+void Graphics::FreeRenderPass( HRenderPass sRenderPass )
+{
+    aPasses.Remove( sRenderPass );
+}
+
+
+void Graphics::AddRenderPass( HRenderPass sRenderPass )
+{
+	if ( !apRenderGraph )
+	{
+		LogWarn( gGraphics2Channel, "AddRenderPass(): RenderGraph not created\n" );
+		return;
+	}
+
+	// get render pass data
+	RenderGraphPass* renderPass = aPasses.Get( sRenderPass );
+	if ( !renderPass )
+	{
+		LogWarn( gGraphics2Channel, "AddRenderPass(): Invalid RenderPass handle\n" );
+		return;
+	}
+
+	apRenderGraph->AddRenderPass( sRenderPass, renderPass );
 }
 
 

@@ -4,7 +4,110 @@
 #include "config.hh"
 #include "swapchain.h"
 
+// built-in shaders
+#include "shaders/shader_basic3d.hpp"
+
 #include <vulkan/vulkan.h>
+
+
+struct Basic3D_PushConst
+{
+	glm::mat4 projView;
+	glm::mat4 model;
+};
+
+
+struct Basic3D_UBO
+{
+	int diffuse = 0, ao = 0, emissive = 0;
+	float aoPower = 1.f, emissivePower = 1.f;
+};
+
+
+// probably temp
+VkDescriptorSetLayout CreateDescriptorSetLayout( VkDescriptorSetLayoutBinding sBinding )
+{
+	VkDescriptorSetLayout layout;
+	sBinding.binding = 0;
+
+	VkDescriptorBindingFlagsEXT bindFlag = VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT_EXT | VK_DESCRIPTOR_BINDING_VARIABLE_DESCRIPTOR_COUNT_BIT_EXT;
+
+	VkDescriptorSetLayoutBindingFlagsCreateInfoEXT extend{ VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO_EXT };
+	extend.pNext            = nullptr;
+	extend.bindingCount     = 1;
+	extend.pBindingFlags    = &bindFlag;
+
+	VkDescriptorSetLayoutCreateInfo layoutInfo{ VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO };
+	layoutInfo.pNext        = &extend;
+	layoutInfo.bindingCount = 1;
+	layoutInfo.pBindings    = &sBinding;
+
+	CheckVKResult( vkCreateDescriptorSetLayout( GetDevice(), &layoutInfo, NULL, &layout ), "Failed to create descriptor set layout!" );
+
+	return layout;
+}
+
+
+// graphics shader data
+void PrepareDataFunc_Basic3D()
+{
+	// setup ubo's, push constants, and descriptor sets
+
+	// maybe input is handle to render pass
+
+	// idea:
+	// generic resource type somehow, enum for type
+}
+
+
+ShaderCreateInfo_t GetInternalShader_Basic3D()
+{
+	ShaderCreateInfo_t createInfo{};
+	createInfo.aName = "basic_3d";
+	
+	createInfo.aModules.emplace_back( "shaders/basic3d.vert.spv", "main", VK_SHADER_STAGE_VERTEX_BIT );
+	createInfo.aModules.emplace_back( "shaders/basic3d.frag.spv", "main", VK_SHADER_STAGE_FRAGMENT_BIT );
+	
+	createInfo.aVertexFormat = VertexFormat_Position | VertexFormat_Normal | VertexFormat_UV;
+	
+	// potentially good idea
+	// createInfo.aVertexInputs.emplace_back( "position", 0, VK_FORMAT_R32G32B32_SFLOAT, 0 );
+	// createInfo.aVertexInputs.emplace_back( "normal", 0, VK_FORMAT_R32G32B32_SFLOAT, sizeof( float ) * 3 );
+	// createInfo.aVertexInputs.emplace_back( "uv", 0, VK_FORMAT_R32G32_SFLOAT, sizeof( float ) * 6 );
+	
+	createInfo.aPrimitiveTopology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+	createInfo.aPolygonMode = VK_POLYGON_MODE_FILL;
+	createInfo.aCullMode = VK_CULL_MODE_BACK_BIT;
+	createInfo.aFrontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
+	createInfo.aDepthTest = VK_TRUE;
+	createInfo.aDepthWrite = VK_TRUE;
+	createInfo.aDepthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL;
+	
+	createInfo.aDynamicStates = {
+		VK_DYNAMIC_STATE_VIEWPORT,
+		VK_DYNAMIC_STATE_SCISSOR,
+	};
+	
+	VkPushConstantRange pushConstantRange{};
+	pushConstantRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
+	pushConstantRange.offset     = 0;
+	pushConstantRange.size       = sizeof( Basic3D_PushConst );
+	
+	createInfo.aPushConstantRanges.push_back( pushConstantRange );
+
+	// TODO: need to replace this with handles, because these will supposedly be recreated during a swapchain recreation
+	VkDescriptorSetLayoutBinding layoutBinding{};
+	layoutBinding.descriptorCount = 1;
+	layoutBinding.descriptorType  = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+	layoutBinding.stageFlags      = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
+
+	createInfo.aSetLayouts.push_back( CreateDescriptorSetLayout( layoutBinding ) );
+	createInfo.aSetLayouts.push_back( graphics.aImageLayout );
+
+	createInfo.aPrepareDataFuncGraphics = &PrepareDataFunc_Basic3D;
+	
+	return createInfo;
+}
 
 
 ShaderSystem& GetShaderSystem()
@@ -16,6 +119,10 @@ ShaderSystem& GetShaderSystem()
 
 void ShaderSystem::Init()
 {
+	// TEMP: create built-in shaders
+	ShaderCreateInfo_t basic3dInfo = GetInternalShader_Basic3D();
+	
+	CreateShader( basic3dInfo );
 }
 
 
@@ -30,13 +137,28 @@ HShader ShaderSystem::CreateShader( const ShaderCreateInfo_t& srInfo )
 {
 	// check if we already made this shader
 	auto it = aShaderNames.find( srInfo.aName );
-	
-	if( it != aShaderNames.end() )
+
+	if ( it != aShaderNames.end() )
 	{
 		LogWarn( gGraphics2Channel, "Shader \"%s\" already exists\n", srInfo.aName.c_str() );
 		return it->second;
 	}
 
+	// ---------------------------------------------------------------------------------------------------------------------
+	// setup the pipeline layout
+	VkPipelineLayoutCreateInfo pipelineLayoutInfo{ VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO };
+	pipelineLayoutInfo.setLayoutCount = srInfo.aSetLayouts.size();
+	pipelineLayoutInfo.pSetLayouts = srInfo.aSetLayouts.data();
+	pipelineLayoutInfo.pushConstantRangeCount = srInfo.aPushConstantRanges.size();
+	pipelineLayoutInfo.pPushConstantRanges = srInfo.aPushConstantRanges.data();
+	VkPipelineLayout pipelineLayout;
+	CheckVkResultF( vkCreatePipelineLayout( GetDevice(), &pipelineLayoutInfo, nullptr, &pipelineLayout ), "Failed to create pipeline layout for shader \"%s\"", srInfo.aName.c_str() );
+
+}
+
+
+VkPipeline ShaderSystem::CreateGraphicsPipeline( const ShaderCreateInfo_t& srInfo, VkPipelineLayout sLayout, VkRenderPass sRenderPass )
+{
 	// ---------------------------------------------------------------------------------------------------------------------
 	// create the shader stage create infos
 	std::vector< VkPipelineShaderStageCreateInfo > shaderStages;
@@ -52,7 +174,7 @@ HShader ShaderSystem::CreateShader( const ShaderCreateInfo_t& srInfo )
 		if ( shaderModule == VK_NULL_HANDLE )
 		{
 			LogError( gGraphics2Channel, "Failed to create shader module \"%s\"\n", moduleInfo.aPath.c_str() );
-			return InvalidHandle;
+			return nullptr;
 		}
 
 		// create the shader stage info
@@ -86,10 +208,29 @@ HShader ShaderSystem::CreateShader( const ShaderCreateInfo_t& srInfo )
 	// ---------------------------------------------------------------------------------------------------------------------
 	// setup the viewport state
 	VkPipelineViewportStateCreateInfo viewportStateInfo{ VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO };
-	viewportStateInfo.viewportCount = srInfo.aViewports.size();
-	viewportStateInfo.scissorCount = srInfo.aScissors.size();
-	viewportStateInfo.pScissors = srInfo.aScissors.data();
-	viewportStateInfo.pViewports = srInfo.aViewports.data();
+	// viewportStateInfo.viewportCount = srInfo.aViewports.size();
+	// viewportStateInfo.scissorCount = srInfo.aScissors.size();
+	// viewportStateInfo.pScissors = srInfo.aScissors.data();
+	// viewportStateInfo.pViewports = srInfo.aViewports.data();
+	
+	VkViewport viewport = {
+		0,
+		GetSwapchain().GetExtent().height,
+		GetSwapchain().GetExtent().width,
+		GetSwapchain().GetExtent().height * -1.f,
+		0.0,
+		1.0
+	};
+
+	VkRect2D scissor{};
+	scissor.offset = { 0, 0 };
+	scissor.extent = GetSwapchain().GetExtent();
+
+	// TEMP
+	viewportStateInfo.viewportCount = 1;
+	viewportStateInfo.scissorCount = 1;
+	viewportStateInfo.pScissors = &scissor;
+	viewportStateInfo.pViewports = &viewport;
 
 	// ---------------------------------------------------------------------------------------------------------------------
 	// setup the rasterizer state
@@ -130,8 +271,8 @@ HShader ShaderSystem::CreateShader( const ShaderCreateInfo_t& srInfo )
 	// ---------------------------------------------------------------------------------------------------------------------
 	// setup depth stencil state
 	VkPipelineDepthStencilStateCreateInfo depthStencilInfo{ VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO };
-	depthStencilInfo.depthTestEnable = srInfo.aEnableDepthTest;
-	depthStencilInfo.depthWriteEnable = srInfo.aEnableDepthWrite;
+	depthStencilInfo.depthTestEnable = srInfo.aDepthTest;
+	depthStencilInfo.depthWriteEnable = srInfo.aDepthWrite;
 	depthStencilInfo.depthCompareOp = srInfo.aDepthCompareOp;
 	depthStencilInfo.depthBoundsTestEnable = VK_FALSE;
 	depthStencilInfo.stencilTestEnable = VK_FALSE;
@@ -160,13 +301,13 @@ HShader ShaderSystem::CreateShader( const ShaderCreateInfo_t& srInfo )
 	
 	// ---------------------------------------------------------------------------------------------------------------------
 	// setup the pipeline layout
-	VkPipelineLayoutCreateInfo pipelineLayoutInfo{ VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO };
-	pipelineLayoutInfo.setLayoutCount = srInfo.aSetLayouts.size();
-	pipelineLayoutInfo.pSetLayouts = srInfo.aSetLayouts.data();
-	pipelineLayoutInfo.pushConstantRangeCount = srInfo.aPushConstantRanges.size();
-	pipelineLayoutInfo.pPushConstantRanges = srInfo.aPushConstantRanges.data();
-	VkPipelineLayout pipelineLayout;
-	CheckVkResultF( vkCreatePipelineLayout( GetDevice(), &pipelineLayoutInfo, nullptr, &pipelineLayout ), "Failed to create pipeline layout for shader \"%s\"", srInfo.aName.c_str() );
+	// VkPipelineLayoutCreateInfo pipelineLayoutInfo{ VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO };
+	// pipelineLayoutInfo.setLayoutCount = srInfo.aSetLayouts.size();
+	// pipelineLayoutInfo.pSetLayouts = srInfo.aSetLayouts.data();
+	// pipelineLayoutInfo.pushConstantRangeCount = srInfo.aPushConstantRanges.size();
+	// pipelineLayoutInfo.pPushConstantRanges = srInfo.aPushConstantRanges.data();
+	// VkPipelineLayout pipelineLayout;
+	// CheckVkResultF( vkCreatePipelineLayout( GetDevice(), &pipelineLayoutInfo, nullptr, &pipelineLayout ), "Failed to create pipeline layout for shader \"%s\"", srInfo.aName.c_str() );
 
 	// ---------------------------------------------------------------------------------------------------------------------
 	// setup the pipeline
@@ -181,22 +322,25 @@ HShader ShaderSystem::CreateShader( const ShaderCreateInfo_t& srInfo )
 	pipelineInfo.pDepthStencilState = &depthStencilInfo;
 	pipelineInfo.pColorBlendState = &colorBlendInfo;
 	pipelineInfo.pDynamicState = &dynamicStateInfo;
-	pipelineInfo.layout = pipelineLayout;
-
-	// NOTE: because of the render graph system going to allow multiple render passes, how will this work here?
-	pipelineInfo.renderPass = renderPass;
-	
+	pipelineInfo.layout = sLayout;
+	pipelineInfo.renderPass = sRenderPass;
 	pipelineInfo.subpass = 0;
 	pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
 	pipelineInfo.basePipelineIndex = -1;
 	VkPipeline pipeline;
 	CheckVkResultF( vkCreateGraphicsPipelines( GetDevice(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &pipeline ), "Failed to create pipeline for shader \"%s\"", srInfo.aName.c_str() );
 	
+	return pipeline;
+	
+
 	// ---------------------------------------------------------------------------------------------------------------------
 	// store the pipeline
+	ShaderPipeline_t* shaderPipeline = new ShaderPipeline_t;
+	shaderPipeline->aPipeline = pipeline;
+	shaderPipeline->aPipelineLayout = sLayout;
+	shaderPipeline->aPipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+	
 	GraphicsPipeline_t* shader = new GraphicsPipeline_t;
-	shader->aPipeline = pipeline;
-	shader->aPipelineLayout = pipelineLayout;
 	shader->aPushConstantCount = srInfo.aPushConstantRanges.size();
 
 	// take all VkShaderStageFlags and turn them into a bitmask
@@ -233,12 +377,6 @@ VkShaderModule ShaderSystem::CreateShaderModule( const std::string& aPath )
 	CheckVKResult( vkCreateShaderModule( GetDevice(), &createInfo, NULL, &shaderModule ), "Failed to create shader module!" );
 	
 	return shaderModule;
-}
-
-
-void ShaderSystem::CreateShaderPipeline( const ShaderCreateInfo_t& aCreateInfo, ShaderPipelineInfo_t& aPipelineInfo )
-{
-	
 }
 
 
@@ -499,7 +637,7 @@ GraphicsFmt ShaderSystem::GetVertexAttributeFormat( VertexAttribute attrib )
 		case VertexAttribute_Color:
 			return GraphicsFmt::RGB323232_SFLOAT;
 
-		case VertexAttribute_TexCoord:
+		case VertexAttribute_UV:
 			return GraphicsFmt::RG3232_SFLOAT;
 	}
 }

@@ -10,7 +10,8 @@
 // also it most likely missing some things, like more lighting things probably
 // 
 // - if needed, run skeleton compute shader to update the vertex buffer for morphs and bone weights
-// - deferred lighting shadowmapping pass (push new render target, render on that, and use as texture in game? not sure)
+// - deferred lighting - gbuffer pass
+// - deferred lighting - lighting pass
 // - set viewport depth for viewmodel
 // - draw viewmodel
 // - reset viewport depth
@@ -18,7 +19,7 @@
 // - set viewport depth for skybox (maybe not needed?)
 // - skybox shader pass
 // - reset viewport depth
-// - draw screenspace effects (like screenspace reflections maybe?)
+// - draw screenspace effects (like screenspace reflections, or bloom (needs it's own pass))
 // - draw imgui (if it wasn't transparent, we could technically move it to before viewmodel drawing, unless it's possible in some way to prevent overdraw)
 // - present to screen
 //
@@ -27,7 +28,7 @@
 RenderBufferResource& RenderGraphPass::AddBufferInput(
 	const std::string& srName, VkPipelineStageFlags sStages, VkAccessFlags sAccess, VkBufferUsageFlags sUsage )
 {
-	RenderBufferResource& res = apGraph->GetBufferResource( srName );
+	RenderBufferResource& res = graphics.apRenderGraph->GetBufferResource( srName );
 	res.aUsedQueues |= aQueue;
 	res.aBufferUsage |= sUsage;
 	res.aReadInPasses.insert( aIndex );
@@ -58,6 +59,7 @@ RenderBufferResource& RenderGraphPass::AddIndexBufferInput( const std::string& s
 // ------------------------------------------------------------------------
 
 
+#if 0
 HRenderPass RenderGraph::CreateRenderPass( const std::string& srName, RenderGraphQueueFlagBits sStage )
 {
 	auto it = aPassToIndex.find( srName );
@@ -79,12 +81,30 @@ HRenderPass RenderGraph::CreateRenderPass( const std::string& srName, RenderGrap
 		return it->second;
 	}
 }
+#endif
 
 
-RenderGraphPass* RenderGraph::GetRenderPass( HRenderPass handle )
+void RenderGraph::AddRenderPass( HRenderPass hPass, RenderGraphPass* spPass )
 {
-	return aPasses.Get( handle );
+	auto it = aPassHandles.find( hPass );
+
+	if ( it == aPassHandles.end() )
+	{
+		spPass->aIndex = aPassHandles.size();
+		aPassHandles.emplace( hPass );
+		aPassToIndex[ hPass ] = spPass->aIndex;
+	}
+	else
+	{
+		LogWarn( "Render pass %s already added to render graph\n", spPass->aName.c_str() );
+	}
 }
+
+
+// RenderGraphPass* RenderGraph::GetRenderPass( HRenderPass handle )
+// {
+// 	return aPasses.Get( handle );
+// }
 
 
 RenderBufferResource& RenderGraph::GetBufferResource( const std::string& srName )
@@ -140,7 +160,16 @@ bool RenderGraph::Bake()
 	
 	// TODO: make sure we have a backbuffer
 
-	// TODO: do sorting of dependencies by working our way back from the backbuffer
+	// TODO: do sorting of dependencies by working our way back from the backbuffer/final texture output
+
+	// TODO: remove nodes that have no contribution to final output (probably throw a warning as well to let the user know)
+
+	// now do a topology sort to find out where memory barriers need to be placed
+	std::vector< std::vector< RenderGraphPass* > > srPassLists;
+	RunTopologySort( srPassLists );
+
+	// now we can execute the nodes and record them in the command buffer
+	// placing a memory barrier in between each sub-list
 
 	// 
 	// FlattenPasses();
@@ -154,6 +183,7 @@ bool RenderGraph::Bake()
 
 bool RenderGraph::ValidatePasses()
 {
+#if 0
 	for ( size_t i = 0; i < aPasses.size(); i++ )
 	{
 		RenderGraphPass* pass = aPasses.GetByIndex( i );
@@ -170,6 +200,15 @@ bool RenderGraph::ValidatePasses()
 			// check dimensions
 		}
 	}
+#endif
+}
+
+
+void RenderGraph::RunTopologySort( std::vector< std::vector< RenderGraphPass* > >& srPassLists )
+{
+	// start at all the nodes that have read dependencies
+	// remove all those from the graph, and add them to the list of nodes to process
+	// and repeat until there are no nodes left to process
 }
 
 

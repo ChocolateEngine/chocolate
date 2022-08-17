@@ -215,7 +215,7 @@ public:
 	bool             FinishRenderGraph() override;
 
 	/*
-	 *    Creates a render pass in the current render graph.
+	 *    Creates a render pass.
 	 * 
 	 *    @param const std::string&        The render pass name
 	 *    @param RenderGraphQueueFlagBits  The render pass type
@@ -223,6 +223,20 @@ public:
 	 *	  @return HRenderPass    The handle to the render pass.
 	 */
 	HRenderPass      CreateRenderPass( const std::string& srName, RenderGraphQueueFlagBits sStage ) override;
+	
+	/*
+	 *    Frees a render pass.
+	 *
+	 *    @param HRenderPass    The handle to the render pass.
+	 */
+	void 		     FreeRenderPass( HRenderPass sRenderPass ) override;
+
+	/*
+	 *    Adds a render pass to the render graph.
+	 * 
+	 *    @param HRenderPass    The handle to the render pass.
+	 */
+	void 		     AddRenderPass( HRenderPass sRenderPass ) override;
 	
 	/*
 	 *    Adds a model to a render pass.
@@ -272,6 +286,9 @@ public:
 	std::unordered_map< std::string, HTexture > aTexturePaths;
 	ResourceManager< Texture2 >                 aTextures;
 
+	// All render passes created
+	ResourceManager< RenderGraphPass >          aPasses;
+
 	// Render Graph being built by the game code
 	RenderGraph*                                apRenderGraph = nullptr;
 
@@ -279,8 +296,6 @@ public:
 	RenderGraph*                                apRenderGraphDraw = nullptr;
 	
 	CommandBufferHelper                         aCmdHelper;
-
-private:
 	
 	// TODO: MOVE THIS TO DESCRIPTOR MANAGER (PROBABLY)
 	std::vector< VkDescriptorSet > aImageSets;
