@@ -32,15 +32,15 @@ Model* GraphicsSystem::LoadModel( const std::string &srPath )
 	}
 
 	// We have not, so try to load this model in
-	std::string fullPath = filesys->FindFile( srPath );
+	std::string fullPath = FileSys_FindFile( srPath );
 
 	if ( fullPath.empty() )
 	{
-		LogDev( gGraphicsChannel, 1, "LoadModel: Failed to Find Model: %s\n", srPath.c_str() );
+		Log_DevF( gGraphicsChannel, 1, "LoadModel: Failed to Find Model: %s\n", srPath.c_str() );
 		return nullptr;
 	}
 
-	std::string fileExt = filesys->GetFileExt( srPath );
+	std::string fileExt = FileSys_GetFileExt( srPath );
 
 	Model* model = new Model;
 
@@ -54,7 +54,7 @@ Model* GraphicsSystem::LoadModel( const std::string &srPath )
 	}
 	else
 	{
-		LogDev( gGraphicsChannel, 1, "Unknown Model File Extension: %s\n", fileExt.c_str() );
+		Log_DevF( gGraphicsChannel, 1, "Unknown Model File Extension: %s\n", fileExt.c_str() );
 	}
 
 	//sModel->aRadius = glm::distance( mesh->aMinSize, mesh->aMaxSize ) / 2.0f;

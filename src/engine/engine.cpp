@@ -33,7 +33,7 @@ void Engine::Init( const std::vector< std::string >& srModulePaths )
 		sys->Init();
 
 	// Register the convars that are declared.
-	console->RegisterConVars();
+	Con_RegisterConVars();
 
 	// Get systems that the engine needs to specificallykeep track of.
 	apGuiSystem = GET_SYSTEM( BaseGuiSystem );
@@ -47,23 +47,23 @@ BaseSystem* Engine::LoadModule( const std::string& srDlPath )
 	Module handle = NULL;
 	BaseSystem *( *cframework_get )() = 0;
 
-	std::string path = filesys->FindFile( srDlPath + EXT_DLL );
+	std::string path = FileSys_FindFile( srDlPath + EXT_DLL );
 
 	if ( path == "" )
 	{
-		LogWarn( gEngineChannel, "No module named %s found in search paths\n", ( srDlPath + EXT_DLL ).c_str() );
+		Log_WarnF( gEngineChannel, "No module named %s found in search paths\n", ( srDlPath + EXT_DLL ).c_str() );
 		return nullptr;
 	}
 
 	handle = sys_load_library( path.c_str() );
 	if ( !handle )
 	{
-		LogFatal( gEngineChannel, "Unable to load shared librarys: %s\n", sys_get_error() );
+		Log_FatalF( gEngineChannel, "Unable to load shared librarys: %s\n", sys_get_error() );
 	}
 	
     *( void** )( &cframework_get ) = sys_load_func( handle, "cframework_get" );
 	if ( !cframework_get ) {
-		LogFatal( gEngineChannel, "Unable to link library function: %s\n", sys_get_error() );
+		Log_FatalF( gEngineChannel, "Unable to link library function: %s\n", sys_get_error() );
 	}
 
 	aDlHandles.push_back( handle );
@@ -72,12 +72,12 @@ BaseSystem* Engine::LoadModule( const std::string& srDlPath )
 
 	if ( pSys == nullptr )
 	{
-		LogFatal( "Failed to Load Framework From DLL: %s\n", srDlPath.c_str() );
+		Log_FatalF( "Failed to Load Framework From DLL: %s\n", srDlPath.c_str() );
 		return nullptr;
 	}
 
 	systems->Add( pSys );
-    LogMsg( gEngineChannel, "Loaded Module: %s\n", srDlPath.c_str() );
+    Log_MsgF( gEngineChannel, "Loaded Module: %s\n", srDlPath.c_str() );
 
 	return pSys;
 }

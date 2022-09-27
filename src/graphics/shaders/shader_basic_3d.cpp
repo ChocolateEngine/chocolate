@@ -24,12 +24,12 @@ struct Basic3D_PushConst
 
 struct Basic3D_UBO
 {
-	int diffuse, ao, emissive;
-	float aoPower, emissivePower;
+	int diffuse = 0, ao = 0, emissive = 0;
+	float aoPower = 1.f, emissivePower = 1.f;
 
 	// morphs
 	// int morphCount;
-	float morphWeight;
+	float morphWeight = 0.f;
 };
 
 
@@ -71,8 +71,8 @@ public:
 	virtual void Init() override
 	{
 		aModules.Allocate(2);
-		aModules[0] = CreateShaderModule( filesys->ReadFile( pVShader ) ); // Processes incoming verticies, taking world position, color, and texture coordinates as an input
-		aModules[1] = CreateShaderModule( filesys->ReadFile( pFShader ) ); // Fills verticies with fragments to produce color, and depth
+		aModules[0] = CreateShaderModule( FileSys_ReadFile( pVShader ) ); // Processes incoming verticies, taking world position, color, and texture coordinates as an input
+		aModules[1] = CreateShaderModule( FileSys_ReadFile( pFShader ) ); // Fills verticies with fragments to produce color, and depth
 
 		gFallbackEmissive = matsys->CreateTexture( gFallbackEmissivePath );
 		gFallbackAO       = matsys->CreateTexture( gFallbackAOPath );
@@ -83,8 +83,8 @@ public:
 
 	virtual void ReInit() override
 	{
-		aModules[0] = CreateShaderModule( filesys->ReadFile( pVShader ) ); // Processes incoming verticies, taking world position, color, and texture coordinates as an input
-		aModules[1] = CreateShaderModule( filesys->ReadFile( pFShader ) ); // Fills verticies with fragments to produce color, and depth
+		aModules[0] = CreateShaderModule( FileSys_ReadFile( pVShader ) ); // Processes incoming verticies, taking world position, color, and texture coordinates as an input
+		aModules[1] = CreateShaderModule( FileSys_ReadFile( pFShader ) ); // Fills verticies with fragments to produce color, and depth
 
 		BaseShader::ReInit();
 	}
@@ -315,6 +315,18 @@ static std::string MatVar_AOPower          = "ao_power";
 static std::string MatVar_EmissivePower    = "emissive_power";
 
 
+// testing some wacky looking potential speed up
+enum : char
+{
+	kMatVar_None = 0,
+	kMatVar_Diffuse = (1 << 0),
+	kMatVar_Emissive = (1 << 1),
+	kMatVar_AO = (1 << 2),
+	kMatVar_AOPower = (1 << 3),
+	kMatVar_EmissivePower = (1 << 4),
+};
+
+
 // TEMP AAAAA
 CONVAR( morph_weight, 0.f );
 
@@ -326,7 +338,7 @@ void Basic3D::UpdateBuffers( uint32_t sCurrentImage, size_t memIndex, IRenderabl
 	// check if renderable is nullptr
 	if ( spRenderable == nullptr )
 	{
-		LogError( "Basic3D::UpdateBuffers: spRenderable is nullptr\n" );
+		Log_Error( "Basic3D::UpdateBuffers: spRenderable is nullptr\n" );
 		return;
 	}
 
@@ -334,7 +346,7 @@ void Basic3D::UpdateBuffers( uint32_t sCurrentImage, size_t memIndex, IRenderabl
 	IModel* model = spRenderable->GetModel();
 	if ( model == nullptr )
 	{
-		LogError( "Basic3D::UpdateBuffers: model is nullptr\n" );
+		Log_Error( "Basic3D::UpdateBuffers: model is nullptr\n" );
 		return;
 	}
 	
@@ -342,13 +354,58 @@ void Basic3D::UpdateBuffers( uint32_t sCurrentImage, size_t memIndex, IRenderabl
 
 	auto mat = (Material*)model->GetMaterial( matIndex );
 	Basic3D_UBO ubo;
+	ubo.emissive = gFallbackEmissive->aId;
+	ubo.ao = gFallbackAO->aId;
 
-	ubo.diffuse         = mat->GetTextureId( MatVar_Diffuse );
-	ubo.emissive        = mat->GetTextureId( MatVar_Emissive, gFallbackEmissive );
-	ubo.ao              = mat->GetTextureId( MatVar_AO, gFallbackAO );
+	char flags = kMatVar_None;
 
-	ubo.aoPower         = mat->GetFloat( MatVar_AOPower, 1.f );
-	ubo.emissivePower   = mat->GetFloat( MatVar_EmissivePower, 1.f );
+	size_t varCount = mat->GetVarCount();
+
+	// go in reverse order to let the last var override the previous ones
+	if ( varCount > 0 )
+	{
+		for ( size_t i = varCount; i > 0; )
+		{
+			MaterialVar* var = mat->GetVar( --i );
+		
+			if ( !(flags & kMatVar_Diffuse) && var->aName == MatVar_Diffuse )
+			{
+				ubo.diffuse = var->GetTexture()->aId;
+				flags |= kMatVar_Diffuse;
+			}
+		
+			else if ( !(flags & kMatVar_Emissive) && var->aName == MatVar_Emissive )
+			{
+				ubo.emissive = var->GetTexture( gFallbackEmissive )->aId;
+				flags |= kMatVar_Emissive;
+			}
+		
+			else if ( !(flags & kMatVar_AO) && var->aName == MatVar_AO )
+			{
+				ubo.ao = var->GetTexture( gFallbackAO )->aId;
+				flags |= kMatVar_AO;
+			}
+		
+			else if ( !(flags & kMatVar_AOPower) && var->aName == MatVar_AOPower )
+			{
+				ubo.aoPower = var->GetFloat( ubo.aoPower );
+				flags |= kMatVar_AOPower;
+			}
+		
+			else if ( !(flags & kMatVar_EmissivePower) && var->aName == MatVar_EmissivePower )
+			{
+				ubo.emissivePower = var->GetFloat( ubo.emissivePower );
+				flags |= kMatVar_EmissivePower;
+			}
+		}
+	}
+
+	// ubo.diffuse         = mat->GetTextureId( MatVar_Diffuse );
+	// ubo.emissive        = mat->GetTextureId( MatVar_Emissive, gFallbackEmissive );
+	// ubo.ao              = mat->GetTextureId( MatVar_AO, gFallbackAO );
+	// 
+	// ubo.aoPower         = mat->GetFloat( MatVar_AOPower, 1.f );
+	// ubo.emissivePower   = mat->GetFloat( MatVar_EmissivePower, 1.f );
 	
 	ubo.morphWeight     = morph_weight;
 
@@ -357,7 +414,7 @@ void Basic3D::UpdateBuffers( uint32_t sCurrentImage, size_t memIndex, IRenderabl
 	// make sure there is one
 	if ( it == matsys->aUniformMap.end() )
 	{
-		LogError( "No Uniform Buffer/Layout Created For Mesh yet?\n" );
+		Log_Error( "No Uniform Buffer/Layout Created For Mesh yet?\n" );
 		InitUniformBuffer( model );
 	}
 
@@ -385,7 +442,7 @@ void Basic3D::Draw( size_t memIndex, IRenderable* spRenderable, size_t matIndex,
 	// check if renderable is nullptr
 	if ( spRenderable == nullptr )
 	{
-		LogError( "Basic3D::Draw: spRenderable is nullptr\n" );
+		Log_Error( "Basic3D::Draw: spRenderable is nullptr\n" );
 		return;
 	}
 
@@ -393,7 +450,7 @@ void Basic3D::Draw( size_t memIndex, IRenderable* spRenderable, size_t matIndex,
 	IModel* model = spRenderable->GetModel();
 	if ( model == nullptr )
 	{
-		LogError( "Basic3D::Draw: model is nullptr\n" );
+		Log_Error( "Basic3D::Draw: model is nullptr\n" );
 		return;
 	}
 	
@@ -404,7 +461,7 @@ void Basic3D::Draw( size_t memIndex, IRenderable* spRenderable, size_t matIndex,
 	// make sure there is one
 	if ( it == matsys->aUniformMap.end() )
 	{
-		LogError( "No Uniform Buffer/Layout Created For Mesh yet?\n" );
+		Log_Error( "No Uniform Buffer/Layout Created For Mesh yet?\n" );
 		return;
 	}
 

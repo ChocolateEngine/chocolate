@@ -80,7 +80,7 @@ public:
         size_t index = ( ( size_t )pBuf - ( size_t )aPool.GetStart() ) / ( sizeof( T ) + sizeof( magic ) );
 
 #if RESOURCE_DEBUG
-        LogDev( gResourceChannel, 3, "ResourceManager::Add( T* ): Allocated resource at index %u\n", index );
+        Log_DevF( gResourceChannel, 3, "ResourceManager::Add( T* ): Allocated resource at index %u\n", index );
 #endif
 
         return index | magic << 32;
@@ -119,7 +119,7 @@ public:
         aPool.Free( pBuf );
 
 #if RESOURCE_DEV
-        LogDev( gResourceChannel, 3, "ResourceManager::Remove( Handle ): Removed resource at index %u\n", index );
+        Log_DevF( gResourceChannel, 3, "ResourceManager::Remove( Handle ): Removed resource at index %u\n", index );
 #endif
     }
     /*
@@ -151,12 +151,12 @@ public:
          *    Check the magic number.
          */
         if( *( size_t* )pBuf != magic ) {
-            LogWarn( gResourceChannel, "*ResourceManager::Get( Handle ): Invalid handle: %d\n", sHandle );
+            Log_WarnF( gResourceChannel, "*ResourceManager::Get( Handle ): Invalid handle: %d\n", sHandle );
             return nullptr;
         }
 
 #if RESOURCE_DEV
-        LogDev( gResourceChannel, 4, "*ResourceManager::Get( Handle ): Retrieved resource at index %u\n", index );
+        Log_DevF( gResourceChannel, 4, "*ResourceManager::Get( Handle ): Retrieved resource at index %u\n", index );
 #endif
 
         /*

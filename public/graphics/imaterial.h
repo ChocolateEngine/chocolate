@@ -124,53 +124,56 @@ class IMaterialSystem;
 
 class IMaterial
 {
-public:
-	virtual                    ~IMaterial() = default;
+  public:
+	virtual ~IMaterial()                                                                        = default;
 
-	// Set the shader for the material by the shader name 
-	virtual bool                SetShader( const std::string& name ) = 0;
-	virtual std::string         GetShaderName(  ) = 0;
+	// Set the shader for the material by the shader name
+	virtual bool             SetShader( const std::string& name )                               = 0;
+	virtual std::string      GetShaderName()                                                    = 0;
 
 	// ----------------------------------------------------------------------------------------
 
-	virtual MaterialVar*        GetVar( const std::string& name ) = 0;
+	virtual MaterialVar*     GetVar( const std::string& name )                                  = 0;
 
-	virtual void                SetVar( const std::string& name, Texture* data ) = 0;
-	virtual void                SetVar( const std::string& name, float data ) = 0;
-	virtual void                SetVar( const std::string& name, int data ) = 0;
-	virtual void                SetVar( const std::string& name, const glm::vec2 &data ) = 0;
-	virtual void                SetVar( const std::string& name, const glm::vec3 &data ) = 0;
-	virtual void                SetVar( const std::string& name, const glm::vec4 &data ) = 0;
-	
+	virtual MaterialVar*     GetVar( size_t sIndex )                                            = 0;
+	virtual size_t           GetVarCount()                                                      = 0;
+
+	virtual void             SetVar( const std::string& name, Texture* data )                   = 0;
+	virtual void             SetVar( const std::string& name, float data )                      = 0;
+	virtual void             SetVar( const std::string& name, int data )                        = 0;
+	virtual void             SetVar( const std::string& name, const glm::vec2& data )           = 0;
+	virtual void             SetVar( const std::string& name, const glm::vec3& data )           = 0;
+	virtual void             SetVar( const std::string& name, const glm::vec4& data )           = 0;
+
 	// Quicker Access to getting the data from the material vars stored for the shader
 	// So it doesn't need to check for if MaterialVar is null and can get a quick fallback in the 2nd default parameter
 	// TODO: shaders should probably have some shader data struct filled with the information from the material
 	//  so it doesn't need to search multiple times every frame
-	virtual Texture*            GetTexture( const std::string& name, Texture* fallback = nullptr ) = 0;
+	virtual Texture*         GetTexture( const std::string& name, Texture* fallback = nullptr ) = 0;
 
 	// virtual const float               GetFloat( const std::string& name, float fallback = 0.f ) = 0;
 	// virtual const int                 GetInt( const std::string& name, int fallback = 0 ) = 0;
-	virtual const glm::vec2&           GetVec2( const std::string& name ) = 0;
-	virtual const glm::vec3&           GetVec3( const std::string& name ) = 0;
-	virtual const glm::vec4&           GetVec4( const std::string& name ) = 0;
+	virtual const glm::vec2& GetVec2( const std::string& name )                                 = 0;
+	virtual const glm::vec3& GetVec3( const std::string& name )                                 = 0;
+	virtual const glm::vec4& GetVec4( const std::string& name )                                 = 0;
 
-	virtual const float&               GetFloat( const std::string& name, const float& fallback = 0.f ) = 0;
-	virtual const int&                 GetInt( const std::string& name, const int& fallback = 0 ) = 0;
-	virtual const glm::vec2&           GetVec2( const std::string& name, const glm::vec2& fallback = {} ) = 0;
-	virtual const glm::vec3&           GetVec3( const std::string& name, const glm::vec3& fallback = {} ) = 0;
-	virtual const glm::vec4&           GetVec4( const std::string& name, const glm::vec4& fallback = {} ) = 0;
+	virtual const float&     GetFloat( const std::string& name, const float& fallback = 0.f )   = 0;
+	virtual const int&       GetInt( const std::string& name, const int& fallback = 0 )         = 0;
+	virtual const glm::vec2& GetVec2( const std::string& name, const glm::vec2& fallback = {} ) = 0;
+	virtual const glm::vec3& GetVec3( const std::string& name, const glm::vec3& fallback = {} ) = 0;
+	virtual const glm::vec4& GetVec4( const std::string& name, const glm::vec4& fallback = {} ) = 0;
 
 	// ----------------------------------------------------------------------------------------
-	
+
 	// Get Vertex Format used by the current shader
-	virtual VertexFormat               GetVertexFormat() = 0;
+	virtual VertexFormat     GetVertexFormat()                                                  = 0;
 
 	// cool epic convienence function
-	virtual IMaterialSystem*           GetMaterialSystem() = 0;
+	virtual IMaterialSystem* GetMaterialSystem()                                                = 0;
 
 	// ----------------------------------------------------------------------------------------
 
-	std::string                 aName;
+	std::string              aName;
 };
 
 

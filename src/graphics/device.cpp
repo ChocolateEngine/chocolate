@@ -11,7 +11,7 @@ LOG_REGISTER_CHANNEL( Vulkan, LogColor::Blue );
 const bool 	gEnableValidationLayers = false;
 bool g_vk_verbose = false;
 #else
-const bool 	gEnableValidationLayers = cmdline->Find( "-vlayers" );
+const bool 	gEnableValidationLayers = Args_Find( "-vlayers" );
 CONVAR( g_vk_verbose, "1" );
 #endif
 
@@ -32,11 +32,11 @@ VKAPI_ATTR VkBool32 VKAPI_CALL Device::DebugCallback( VkDebugUtilsMessageSeverit
 	if ( !gEnableValidationLayers )
 		return VK_FALSE;
 
-	const Log* log = LogGetLastLog();
+	const Log* log = Log_GetLastLog();
 
 	// blech
 	if ( log && log->aChannel != gVulkanChannel )
-		LogEx( gVulkanChannel, LogType::Raw, "\n" );
+		Log_Ex( gVulkanChannel, LogType::Raw, "\n" );
 
 	std::string formatted;
 		
@@ -53,28 +53,29 @@ VKAPI_ATTR VkBool32 VKAPI_CALL Device::DebugCallback( VkDebugUtilsMessageSeverit
 	if ( messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT )
 	{
 		if ( g_vk_verbose )
-			LogPutsDev( gVulkanChannel, 1, formatted.c_str() );
+			Log_Dev( gVulkanChannel, 1, formatted.c_str() );
 	}
 
 	else if ( messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT )
-		LogEx( gVulkanChannel, LogType::Error, formatted.c_str() );
+		Log_Ex( gVulkanChannel, LogType::Error, formatted.c_str() );
 
 	else if ( messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT )
-		LogEx( gVulkanChannel, LogType::Warning, formatted.c_str() );
+		Log_Ex( gVulkanChannel, LogType::Warning, formatted.c_str() );
 
 	else
-		LogPuts( gVulkanChannel, formatted.c_str() );
+		Log_Msg( gVulkanChannel, formatted.c_str() );
 
 	return VK_FALSE;
 }
 
 void Device::InitWindow(  )
 {
-	aWidth = cmdline->GetValue( "-w", aWidth ); 
-	aHeight = cmdline->GetValue( "-h", aHeight ); 
+	aWidth = Args_GetInt( "-w", aWidth ); 
+	aHeight = Args_GetInt( "-h", aHeight ); 
 
 	if ( SDL_Init( SDL_INIT_VIDEO | SDL_INIT_EVENTS | SDL_INIT_AUDIO ) != 0 )
-		throw std::runtime_error( "Unable to initialize SDL2!" );
+		Log_Fatal( "Unable to initialize SDL2!" );
+
 	apWindow = SDL_CreateWindow( " - Chocolate Engine - Compiled on " __DATE__, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
 				     aWidth, aHeight, SDL_WINDOW_VULKAN | SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE );
 }
@@ -99,12 +100,12 @@ StringList Device::InitRequiredExtensions(  )
 		throw std::runtime_error( "Unable to query the number of Vulkan instance extension names\n" );
 	}
 	// Display names
-	LogDev( gDeviceChannel, 1, "Found %d Vulkan extensions:\n", extensionCount );
+	Log_DevF( gDeviceChannel, 1, "Found %d Vulkan extensions:\n", extensionCount );
 	for ( uint32_t i = 0; i < extensionCount; ++i )
 	{
-		LogDev( gDeviceChannel, 1, "\t%i : %s\n", i, extensions[ i ] );
+		Log_DevF( gDeviceChannel, 1, "\t%i : %s\n", i, extensions[ i ] );
 	}
-	LogPutsDev( gDeviceChannel, 1, "\n" );
+	Log_Dev( gDeviceChannel, 1, "\n" );
 
 	// Add debug display extension, we need this to relay debug messages
 	extensions.push_back( VK_EXT_DEBUG_UTILS_EXTENSION_NAME );
@@ -123,7 +124,7 @@ void Device::InitInstance(  )
 	appInfo.applicationVersion 	= VK_MAKE_VERSION( 1, 0, 0 );
 	appInfo.pEngineName 		= "Chocolate";
 	appInfo.engineVersion 		= VK_MAKE_VERSION( 1, 0, 0 );
-	appInfo.apiVersion 		= VK_API_VERSION_1_0;
+	appInfo.apiVersion 		= VK_HEADER_VERSION_COMPLETE;
 
 	VkInstanceCreateInfo createInfo{  };
 	createInfo.sType 		= VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
@@ -159,14 +160,14 @@ void Device::InitInstance(  )
 	std::vector< VkExtensionProperties > extensions( extensionCount );
 	vkEnumerateInstanceExtensionProperties( NULL, &extensionCount, extensions.data(  ) );
 
-	LogDev( gDeviceChannel, 1, "%d Vulkan extensions available:\n", extensionCount );
+	Log_DevF( gDeviceChannel, 1, "%d Vulkan extensions available:\n", extensionCount );
 
 	for ( const auto& extension : extensions )
 	{
-		LogDev( gDeviceChannel, 1, "\t%s\n", extension.extensionName );
+		Log_DevF( gDeviceChannel, 1, "\t%s\n", extension.extensionName );
 	}
 
-	LogPutsDev( gDeviceChannel, 1, "\n" );
+	Log_Dev( gDeviceChannel, 1, "\n" );
 }
 
 void Device::InitDebugMessengerInfo( VkDebugUtilsMessengerCreateInfoEXT &srCreateInfo )
@@ -277,7 +278,8 @@ void Device::InitLogicalDevice(  )
 	}
 
 	VkPhysicalDeviceFeatures deviceFeatures{  };
-	deviceFeatures.samplerAnisotropy = VK_FALSE;	//	Temporarily disabled for PBP builds
+	deviceFeatures.samplerAnisotropy = VK_TRUE;
+	deviceFeatures.fillModeNonSolid = VK_TRUE;
 
 	VkPhysicalDeviceDescriptorIndexingFeaturesEXT indexing{};
 	indexing.sType                                    = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES_EXT;
@@ -332,9 +334,9 @@ void Device::InitCommandPool(  )
 bool Device::CheckValidationLayerSupport(  )
 {
 	// just gonna put this here to make sure we don't use this old one anymore
-	if ( cmdline->Find( "-dump-vlayers" ) )
+	if ( Args_Find( "-dump-vlayers" ) )
 	{
-		LogFatal( " *** Use \"-vlayers\" instead of \"-dump-vlayers\" *** \n" );
+		Log_Fatal( " *** Use \"-vlayers\" instead of \"-dump-vlayers\" *** \n" );
 	}
 
 	bool layerFound;
@@ -540,10 +542,13 @@ void Device::InitSwapChain(  )
 	VkExtent2D 		extent 		        = ChooseSwapExtent( swapChainSupport.aCapabilities );
 	VkSwapchainKHR		swapChain;
 	ImageSet		swapChainImages;
+	// uint32_t imageCount 				= swapChainSupport.aCapabilities.minImageCount + 1;
+	uint32_t imageCount 				= swapChainSupport.aCapabilities.minImageCount;
+	
 	/* haha fuck you screen terring!!!  */
-	uint32_t imageCount 				= 1;// swapChainSupport.aCapabilities.minImageCount + 1;
-	if ( swapChainSupport.aCapabilities.maxImageCount > 0 && imageCount > swapChainSupport.aCapabilities.maxImageCount )
-		imageCount = swapChainSupport.aCapabilities.maxImageCount;
+	// uint32_t imageCount 				= 1;// swapChainSupport.aCapabilities.minImageCount + 1;
+	// if ( swapChainSupport.aCapabilities.maxImageCount > 0 && imageCount > swapChainSupport.aCapabilities.maxImageCount )
+	// 	imageCount = swapChainSupport.aCapabilities.maxImageCount;
 
 	VkSwapchainCreateInfoKHR createInfo{  };
 	createInfo.sType 		= VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;

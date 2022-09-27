@@ -60,11 +60,11 @@ public:
 	static ConVarBase*      spConVarBases;
 	ConVarBase*             apNext = nullptr;
 
-private:
 	std::string             aName;
 	std::string             aDesc;
 	ConVarFlag_t            aFlags;
 
+private:
 	// NO COPYING!!
 	ConVarBase( const ConVarBase& );
 };
@@ -272,13 +272,13 @@ public:
 	friend class Console;
 	friend class ConVarRef;
 
-private:
 	std::string aDefaultValue;
 	std::string aValue;
 	float       aDefaultValueFloat;
 	float       aValueFloat;
 	ConVarFunc  aFunc;
 
+private:
 	// NO COPYING!!
 	ConVar( const ConVar& );
 };
@@ -399,86 +399,57 @@ private:
 	ConCommand* name = new ConCommand( #name, [ & ]( std::vector< std::string > sArgs )
 
 
-
-class CORE_API Console
-{
-	typedef std::string 			String;
-	typedef std::vector< std::string >	StringList;
-
-protected:
-	int                                 aCmdIndex = -1;
-	StringList                          aQueue;
-	StringList                          aCommandHistory;
-	std::string                         aTextBuffer;
-	StringList                          aAutoCompleteList;
-
-	std::vector< ConCommand* >          aInstantConVars;
-
-	void                                AddToCommandHistory( const std::string& srCmd );
-	void                                CheckInstantCommands( const std::string& srCmd );
-
-public:
-
-	/* Register all the ConCommands and ConVars created from static initialization.  */
-	void                                RegisterConVars(  );
-
-	const std::vector< std::string >&   GetCommandHistory(  );
-
-	// Checks if the current ConVar is a reference, if so, then return what it's pointing to
-	// return nullptr if it doesn't point to anything, and return the normal cvar if it's not a ConVarRef
-	ConVarBase*                         CheckForConVarRef( ConVarBase* cvar );
-
-	/* Set and get current user text input.  */
-	void                                SetTextBuffer( const std::string& str, bool recalculateList = true );
-	const std::string&                  GetTextBuffer(  );
-
-	void                                CalculateAutoCompleteList( const std::string& textBuffer );
-	const std::vector< std::string >&   GetAutoCompleteList(  );
-
-	ConVar*                             GetConVar( const std::string& name );
-	ConVarBase*                         GetConVarBase( const std::string& name );
-
-	const std::string&                  GetConVarValue( const std::string& name );
-	float                               GetConVarFloat( const std::string& name );
-
-	void                                PrintAllConVars(  );
-
-	/* Add a command to the queue  */
-	void                                QueueCommand( const std::string& srCmd );
-	void                                QueueCommandSilent( const std::string& srCmd, bool sAddToHistory = true );
-
-	/* Go through and run every command inputed into the console last frame  */
-	void                                Update(  );
-
-	/* Find and run a command instantly  */
-	void                                RunCommand( const std::string& command );
-	void                                RunCommandF( const char* command, ... );
-
-	/* Find and run a parsed command instantly  */
-	bool                                RunCommand( const std::string &name, const std::vector< std::string > &args );
-
-	void                                ParseCommandLine( const std::string& command, std::string &name, std::vector< std::string > &args );
-	void                                ParseCommandLine( const std::string& command, std::string &name, std::vector< std::string > &args, size_t& i );
-
-	ConVarFlag_t                        CreateCvarFlag( const char* name );
-	const char*                         GetCvarFlagName( ConVarFlag_t flag );
-	ConVarFlag_t                        GetCvarFlag( const char* name );
-
-	/* A.  */
-		Console(  );
-	/* A.  */
-		~Console(  );
-
-friend class ConCommand;
-};
+// ----------------------------------------------------------------
+// Console Functions
 
 
-CORE_API extern Console* console;
+// Register all the ConCommands and ConVars created from static initialization
+CORE_API void                                Con_RegisterConVars(  );
 
-CORE_API Console& GetConsole();  // maybe Core_GetConsole()?
+CORE_API const std::vector< std::string >&   Con_GetCommandHistory(  );
+
+// Checks if the current ConVar is a reference, if so, then return what it's pointing to
+// return nullptr if it doesn't point to anything, and return the normal cvar if it's not a ConVarRef
+CORE_API ConVarBase*                         Con_CheckForConVarRef( ConVarBase* cvar );
+
+/* Set and get current user text input.  */
+CORE_API void                                Con_SetTextBuffer( const std::string& str, bool recalculateList = true );
+CORE_API const std::string&                  Con_GetTextBuffer(  );
+
+CORE_API void                                Con_CalculateAutoCompleteList( const std::string& textBuffer );
+CORE_API const std::vector< std::string >&   Con_GetAutoCompleteList(  );
+
+CORE_API ConVar*                             Con_GetConVar( const std::string_view& name );
+CORE_API ConVarBase*                         Con_GetConVarBase( const std::string_view& name );
+
+CORE_API const std::string&                  Con_GetConVarValue( const std::string_view& name );
+CORE_API float                               Con_GetConVarFloat( const std::string_view& name );
+
+CORE_API void                                Con_PrintAllConVars(  );
+
+// Add a command to the queue
+CORE_API void                                Con_QueueCommand( const std::string& srCmd );
+CORE_API void                                Con_QueueCommandSilent( const std::string& srCmd, bool sAddToHistory = true );
+
+// Go through and run every command inputed into the console last frame
+CORE_API void                                Con_Update();
+
+// Find and run a command instantly
+CORE_API void                                Con_RunCommand( const std::string& command );
+CORE_API void                                Con_RunCommandF( const char* command, ... );
+
+// Find and run a parsed command instantly
+CORE_API bool                                Con_RunCommandArgs( const std::string &name, const std::vector< std::string > &args );
+
+CORE_API void                                Con_ParseCommandLine( const std::string& command, std::string &name, std::vector< std::string > &args );
+CORE_API void                                Con_ParseCommandLineEx( const std::string& command, std::string &name, std::vector< std::string > &args, size_t& i );
+
+CORE_API ConVarFlag_t                        Con_CreateCvarFlag( const char* name );
+CORE_API const char*                         Con_GetCvarFlagName( ConVarFlag_t flag );
+CORE_API ConVarFlag_t                        Con_GetCvarFlag( const char* name );
 
 
-#define NEW_CVAR_FLAG( name ) ConVarFlag_t name = GetConsole().CreateCvarFlag( #name )
+#define NEW_CVAR_FLAG( name ) ConVarFlag_t name = Con_CreateCvarFlag( #name )
 #define EXT_CVAR_FLAG( name ) extern ConVarFlag_t name
 
 

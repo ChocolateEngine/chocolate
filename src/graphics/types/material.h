@@ -31,6 +31,9 @@ public:
 	// ----------------------------------------------------------------------------------------
 
 	MaterialVar               *GetVar( const std::string& name ) override;
+
+	MaterialVar*               GetVar( size_t sIndex ) override;
+	size_t                     GetVarCount() override;
 	
 	template <typename T>
 	MaterialVar               *CreateVar( const std::string& name, T data );

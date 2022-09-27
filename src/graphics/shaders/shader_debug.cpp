@@ -47,8 +47,8 @@ ShaderDebugLine::ShaderDebugLine( const std::string& name )
 
 void ShaderDebugLine::ReInit()
 {
-	aModules[0] = CreateShaderModule( filesys->ReadFile( pVShader ) ); // Processes incoming verticies, taking world position, color, and texture coordinates as an input
-	aModules[1] = CreateShaderModule( filesys->ReadFile( pFShader ) ); // Fills verticies with fragments to produce color, and depth
+	aModules[0] = CreateShaderModule( FileSys_ReadFile( pVShader ) ); // Processes incoming verticies, taking world position, color, and texture coordinates as an input
+	aModules[1] = CreateShaderModule( FileSys_ReadFile( pFShader ) ); // Fills verticies with fragments to produce color, and depth
 
 	aPipelineLayout = InitPipelineLayouts( nullptr, 0, sizeof( DebugLinePushConstant ) );
 
@@ -93,8 +93,8 @@ void ShaderDebug::Init()
 
 void ShaderDebug::ReInit()
 {
-	aModules[0] = CreateShaderModule( filesys->ReadFile( pVShaderCol ) ); // Processes incoming verticies, taking world position, color, and texture coordinates as an input
-	aModules[1] = CreateShaderModule( filesys->ReadFile( pFShader ) ); // Fills verticies with fragments to produce color, and depth
+	aModules[0] = CreateShaderModule( FileSys_ReadFile( pVShaderCol ) ); // Processes incoming verticies, taking world position, color, and texture coordinates as an input
+	aModules[1] = CreateShaderModule( FileSys_ReadFile( pFShader ) ); // Fills verticies with fragments to produce color, and depth
 	
 	aPipelineLayout = InitPipelineLayouts( nullptr, 0, sizeof( DebugPushConstant ) );
 
@@ -249,7 +249,7 @@ void ShaderDebug::Draw( size_t renderableIndex, IRenderable* spRenderable, size_
 	// check if renderable is nullptr
 	if ( spRenderable == nullptr )
 	{
-		LogError( "ShaderSkybox::Draw: mesh is nullptr\n" );
+		Log_Error( "ShaderSkybox::Draw: mesh is nullptr\n" );
 		return;
 	}
 
@@ -257,7 +257,7 @@ void ShaderDebug::Draw( size_t renderableIndex, IRenderable* spRenderable, size_
 	IModel* model = spRenderable->GetModel();
 	if ( model == nullptr )
 	{
-		LogError( "ShaderSkybox::Draw: model is nullptr\n" );
+		Log_Error( "ShaderSkybox::Draw: model is nullptr\n" );
 		return;
 	}
 	
@@ -271,7 +271,7 @@ void ShaderDebug::CmdPushConst( IRenderable* spRenderable, size_t matIndex, VkCo
 	// check if renderable is nullptr
 	if ( spRenderable == nullptr )
 	{
-		LogError( "ShaderSkybox::Draw: mesh is nullptr\n" );
+		Log_Error( "ShaderSkybox::Draw: mesh is nullptr\n" );
 		return;
 	}
 
@@ -279,7 +279,7 @@ void ShaderDebug::CmdPushConst( IRenderable* spRenderable, size_t matIndex, VkCo
 	IModel* model = spRenderable->GetModel();
 	if ( model == nullptr )
 	{
-		LogError( "ShaderSkybox::Draw: model is nullptr\n" );
+		Log_Error( "ShaderSkybox::Draw: model is nullptr\n" );
 		return;
 	}
 

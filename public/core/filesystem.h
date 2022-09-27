@@ -16,13 +16,6 @@ constexpr char PATH_SEP = '/';
 #endif
 
 
-#ifdef _MSC_VER
-	// Disable this useless warning of vars in a class needing a DLL Interface when exported
-	#pragma warning(push)
-	#pragma warning(disable:4251)
-#endif
-
-
 using DirHandle = void*;
 
 
@@ -39,122 +32,99 @@ enum ReadDirFlags_: unsigned char
 using ReadDirFlags = unsigned char;
 
 
-class CORE_API FileSystem
-{
-public:
-	FileSystem();
-	~FileSystem();
+CORE_API int                FileSys_Init( const char* workingDir );
 
-	int                                     Init( const char* workingDir );
+CORE_API const std::string& FileSys_GetWorkingDir();
+CORE_API void               FileSys_SetWorkingDir( const std::string& workingDir );
 
-	const std::string&                      GetWorkingDir(  );
-	void                                    SetWorkingDir( const std::string& workingDir );
+CORE_API const std::string& FileSys_GetExePath();
 
-	const std::string&                      GetExePath(  );
+// ================================================================================
+// Modify Search Paths
 
-	// ================================================================================
-	// Modify Search Paths
+CORE_API const std::vector< std::string >& FileSys_GetSearchPaths();
+CORE_API void                              FileSys_ClearSearchPaths();
+CORE_API void                              FileSys_DefaultSearchPaths();
 
-	const std::vector< std::string >&       GetSearchPaths(  );
-	void                                    ClearSearchPaths(  );
-	void                                    DefaultSearchPaths(  );
+CORE_API void                              FileSys_AddSearchPath( const std::string& path );
+CORE_API void                              FileSys_RemoveSearchPath( const std::string& path );
+CORE_API void                              FileSys_InsertSearchPath( size_t index, const std::string& path );
 
-	void                                    AddSearchPath( const std::string& path );
-	void                                    RemoveSearchPath( const std::string& path );
-	void                                    InsertSearchPath( size_t index, const std::string& path );
+// ================================================================================
+// Main Funcs
 
-	// ================================================================================
-	// Main Funcs
+// Find the path to a file within the search paths with printf syntax.
+CORE_API std::string FileSys_FindFileF( const char* spFmt, ... );
 
-	/* Find the path to a file within the search paths with printf syntax.  */
-	std::string                             FindFileF( const char* spFmt, ... );
+// Find the path to a file within the search paths.
+CORE_API std::string FileSys_FindFile( const std::string& file );
 
-	/* Find the path to a file within the search paths.  */
-	std::string                             FindFile( const std::string& file );
+// Find the path to a directory within the search paths.  */
+CORE_API std::string FileSys_FindDir( const std::string& dir );
 
-	/* Find the path to a directory within the search paths.  */
-	std::string                             FindDir( const std::string& dir );
+// Reads a file - Returns an empty array if it doesn't exist.  */
+CORE_API std::vector< char > FileSys_ReadFile( const std::string& file );
 
-	/* Reads a file - Returns an empty array if it doesn't exist.  */
-	std::vector< char >                     ReadFile( const std::string& file );
+// ================================================================================
+// File Information
 
-	// ================================================================================
-	// File Information
+// Is path an absolute path?
+CORE_API bool                FileSys_IsAbsolute( const std::string& path );
 
-	/* Is path an absolute path?  */
-	bool                                    IsAbsolute( const std::string &path );
+// Is path a relative path?
+CORE_API bool                FileSys_IsRelative( const std::string& path );
 
-	/* Is path a relative path?  */
-	bool                                    IsRelative( const std::string &path );
+// Is path a directory? Set noPaths to true to not use search paths for these three functions
+CORE_API bool                FileSys_IsDir( const std::string& path, bool noPaths = false );
 
-	/* Is path a directory? Set noPaths to true to not use search paths for these three functions  */
-	bool                                    IsDir( const std::string &path, bool noPaths = false );
+// Is path a file?
+CORE_API bool                FileSys_IsFile( const std::string& path, bool noPaths = false );
 
-	/* Is path a file?  */
-	bool                                    IsFile( const std::string &path, bool noPaths = false );
+// Does a file/folder exist?
+CORE_API bool                FileSys_Exists( const std::string& path, bool noPaths = false );
 
-	/* Does a file/folder exist?  */
-	bool                                    Exists( const std::string &path, bool noPaths = false );
+// Call access on a file
+CORE_API int                 FileSys_Access( const std::string& path, int mode = 0 );
 
-	/* Call access on a file  */
-	int                                     Access( const std::string &path, int mode = 0 );
+// Call stat on a file
+CORE_API int                 FileSys_Stat( const std::string& path, struct stat* info );
 
-	/* Call stat on a file  */
-	int                                     Stat( const std::string &path, struct stat* info );
+// ================================================================================
+// Path Utils
 
-	// ================================================================================
-	// Path Utils
+// Return the parent path of this path - No Trailing Slash */
+CORE_API std::string FileSys_GetDirName( const std::string& path );
 
-	/* Return the parent path of this path - No Trailing Slash */
-	std::string                             GetDirName( const std::string &path );
+// Return the parent path of this path - Has Trailing Slash */
+CORE_API std::string FileSys_GetBaseName( const std::string& path );
 
-	/* Return the parent path of this path - Has Trailing Slash */
-	std::string                             GetBaseName( const std::string &path );
+// Return the filename in this path  */
+CORE_API std::string FileSys_GetFileName( const std::string& path );
 
-	/* Return the filename in this path  */
-	std::string                             GetFileName( const std::string &path );
+// Return the file extension */
+CORE_API std::string FileSys_GetFileExt( const std::string& path );
 
-	/* Return the file extension */
-	std::string                             GetFileExt( const std::string &path );
+// Return the file name without the extension */
+CORE_API std::string FileSys_GetFileNameNoExt( const std::string& path );
 
-	/* Return the file name without the extension */
-	std::string                             GetFileNameNoExt( const std::string &path );
+// Cleans up the path, removes useless ".." and "."  */
+CORE_API std::string FileSys_CleanPath( const std::string& path );
 
-	/* Cleans up the path, removes useless ".." and "."  */
-	std::string                             CleanPath( const std::string &path );
+// ================================================================================
+// Directory Reading
 
-	// ================================================================================
-	// Directory Reading
+// Read the first file in a Directory  */
+CORE_API DirHandle   FileSys_ReadFirst( const std::string& path, std::string& file, ReadDirFlags flags = ReadDir_None );
 
-	/* Read the first file in a Directory  */
-	DirHandle                               ReadFirst( const std::string &path, std::string &file, ReadDirFlags flags = ReadDir_None );
+// Get the next file in the Directory */
+CORE_API bool        FileSys_ReadNext( DirHandle dirh, std::string& file );
 
-	/* Get the next file in the Directory */
-	bool                                    ReadNext( DirHandle dirh, std::string& file );
+// Close a Directory  */
+CORE_API bool        FileSys_ReadClose( DirHandle dirh );
 
-	/* Close a Directory  */
-	bool                                    ReadClose( DirHandle dirh );
+// Scan an entire Directory  */
+CORE_API std::vector< std::string > FileSys_ScanDir( const std::string& path, ReadDirFlags flags = ReadDir_None );
 
-	/* Scan an entire Directory  */
-	std::vector< std::string >              ScanDir( const std::string &path, ReadDirFlags flags = ReadDir_None );
-
-	//DirHandle                               ReadFirst( const std::string &path, const std::string& wildcard, std::string &file );
-	//std::vector< std::string >              ScanDir( const std::string &path, const std::string& wildcard, bool allPaths = false );
-
-	// ================================================================================
-
-private:
-
-	std::string                             aWorkingDir;
-	std::string                             aExePath;
-
-	std::vector< std::string >              aSearchPaths;
-};
-
-
-CORE_API extern FileSystem* filesys;
-
-#ifdef _MSC_VER
-	#pragma warning(pop)
-#endif
+//DirHandle                               FileSys_ReadFirst( const std::string &path, const std::string& wildcard, std::string &file );
+//std::vector< std::string >              FileSys_ScanDir( const std::string &path, const std::string& wildcard, bool allPaths = false );
 

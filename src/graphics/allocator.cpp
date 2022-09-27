@@ -296,7 +296,7 @@ void UpdateImageSets( std::vector< VkDescriptorSet > &srSets, std::vector< Textu
 	// also would this be >= or just >, lol
 	if ( srImages.size() >= MAX_IMAGES )
 	{
-		LogFatal( gGraphicsChannel, "Over Max Images allocated (at %d, max is %d)", (int)srImages.size(), MAX_IMAGES );
+		Log_FatalF( gGraphicsChannel, "Over Max Images allocated (at %d, max is %d)", (int)srImages.size(), MAX_IMAGES );
 	}
 
 	for ( uint32_t i = 0; i < srSets.size(); ++i ) {

@@ -41,7 +41,7 @@ public:
 			// This texture loader handles missing texture creation, i know, awful right?
 			if ( matsys->GetMissingTexture() )
 			{
-				LogWarn( "Failed to open texture: %s\n", path.c_str() );
+				Log_WarnF( "Failed to open texture: %s\n", path.c_str() );
 				return matsys->GetMissingTexture();
 			}
 

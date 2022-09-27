@@ -16,6 +16,8 @@ input.h
 
 InputSystem *input = new InputSystem;
 
+LOG_REGISTER_CHANNEL( InputSystem, LogColor::Default );
+
 CONVAR( in_show_mouse_events, 0 );
 
 extern "C" {
@@ -113,7 +115,7 @@ void InputSystem::ParseInput()
 			case SDL_QUIT:
 			{
 				// lazy way to tell engine to quit
-				console->RunCommand( "quit" );
+				Con_RunCommand( "quit" );
 				break;
 			}
 
@@ -295,7 +297,7 @@ KeyState InputSystem::GetKeyState( SDL_Scancode key )
 		if ( state == aKeyStates.end() )
 		{
 			// would be odd if this got hit
-			LogWarn( "[Input System] Invalid Key: \"%s\"\n", SDL_GetKeyName( SDL_GetKeyFromScancode(key) ) );
+			Log_WarnF( gInputSystemChannel, "Invalid Key: \"%s\"\n", SDL_GetKeyName( SDL_GetKeyFromScancode(key) ) );
 			return KeyState_Invalid;
 		}
 	}
