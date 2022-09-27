@@ -83,7 +83,7 @@ void GuiSystem::StyleImGui()
 	// gBuiltInFont = BuildFont( "fonts/CascadiaMono.ttf" );
 	gBuiltInFont = BuildFont( "fonts/MonoxRegular.ttf", 15.f );
 
-	if ( cmdline->Find( "-no-vgui-style" ) )
+	if ( Args_Find( "-no-vgui-style" ) )
 		return;
 
 	// Classic VGUI2 Style Color Scheme
@@ -153,10 +153,10 @@ void GuiSystem::StyleImGui()
 
 ImFont* GuiSystem::BuildFont( const char* spPath, float sSizePixels, const ImFontConfig* spFontConfig )
 {
-	if ( cmdline->Find( "-no-imgui-font" ) )
+	if ( Args_Find( "-no-imgui-font" ) )
 		return nullptr;
 
-	auto fontPath = filesys->FindFile( spPath );
+	auto fontPath = FileSys_FindFile( spPath );
 	if ( fontPath == "" )
 		return nullptr;
 

@@ -44,7 +44,7 @@ public:
 	*/
 	void Update( float sDT ) override
 	{
-		console->Update();
+		Con_Update();
 		UpdateSystems( sDT );	
 	}
 
@@ -63,7 +63,7 @@ public:
 		else {
 			apGuiSystem = GET_SYSTEM( BaseGuiSystem );
 			if ( !apGuiSystem ) {
-				LogWarn( "No GUI found!" );
+				Log_Warn( "No GUI found!" );
 			}
 		}
 	};

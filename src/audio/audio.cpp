@@ -46,13 +46,13 @@ extern "C" {
 bool HandleSteamAudioReturn(IPLerror ret, const char* msg)
 {
 	if (ret == IPL_STATUS_OUTOFMEMORY)
-		LogError( gAduioChannel, "%s: %d - Out Of Memory\n", msg, (int)ret );
+		Log_ErrorF( gAduioChannel, "%s: %d - Out Of Memory\n", msg, (int)ret );
 
 	else if (ret == IPL_STATUS_INITIALIZATION)
-		LogError( gAduioChannel, "%s: %d - An error occurred while initializing an external dependency\n", msg, (int)ret );
+		Log_ErrorF( gAduioChannel, "%s: %d - An error occurred while initializing an external dependency\n", msg, (int)ret );
 
 	else if (ret == IPL_STATUS_FAILURE)
-		LogError( gAduioChannel, "%s: %d - Failure\n", msg, (int)ret );
+		Log_ErrorF( gAduioChannel, "%s: %d - Failure\n", msg, (int)ret );
 
 	return ret == IPL_STATUS_SUCCESS;
 }
@@ -105,7 +105,7 @@ void AudioSystem::Init(  )
 	aOutputDeviceID = SDL_OpenAudioDevice( NULL, 0, &wantedSpec, &aAudioSpec, SDL_AUDIO_ALLOW_ANY_CHANGE );
 	if ( aOutputDeviceID == 0 )
 	{
-		LogMsg( gAduioChannel, "SDL_OpenAudioDevice failed: %s\n", SDL_GetError() );
+		Log_MsgF( gAduioChannel, "SDL_OpenAudioDevice failed: %s\n", SDL_GetError() );
 		return;
 	}
 
@@ -200,11 +200,11 @@ bool AudioSystem::RegisterCodec( BaseCodec *codec )
 		codec->SetAudioSystem( this );
 		codec->Init(  ); 
 
-		LogMsg( gAduioChannel, "Loaded Audio Codec - \"%s\"\n", codec->GetName() );
+		Log_MsgF( gAduioChannel, "Loaded Audio Codec - \"%s\"\n", codec->GetName() );
 		return true;
 	}
 
-	LogMsg( gAduioChannel, "Audio Codec already loaded - \"%s\"\n", codec->GetName() );
+	Log_MsgF( gAduioChannel, "Audio Codec already loaded - \"%s\"\n", codec->GetName() );
 	return false;
 }
 
@@ -220,7 +220,7 @@ IPLHRTF gpHrtf = nullptr;
 bool AudioSystem::InitSteamAudio()
 {
 	IPLContextSettings contextSettings{};
-	contextSettings.logCallback = []( IPLLogLevel level, const char* message ) { LogMsg( gAduioChannel, "Steam Audio LVL %d: %s\n", (int)level, message ); };
+	contextSettings.logCallback = []( IPLLogLevel level, const char* message ) { Log_MsgF( gAduioChannel, "Steam Audio LVL %d: %s\n", (int)level, message ); };
 	contextSettings.version = STEAMAUDIO_VERSION;
 
 	IPLerror ret = iplContextCreate( &contextSettings, &aCtx );
@@ -305,19 +305,19 @@ Handle AudioSystem::LoadSound( std::string soundPath )
 	// check for too many streams
 	/*if ( aStreams.size() == MAX_STREAMS )
 	{
-		LogMsg( gAduioChannel, "At Max Audio Streams: \"%d\"\n", MAX_STREAMS );
+		Log_Msg( gAduioChannel, "At Max Audio Streams: \"%d\"\n", MAX_STREAMS );
 		return nullptr;
 	}*/
 
-	if ( !filesys->Exists( soundPath ) )
+	if ( !FileSys_Exists( soundPath ) )
 	{
 		std::string tmp = soundPath;
 
-		soundPath = filesys->FindFile( soundPath );
+		soundPath = FileSys_FindFile( soundPath );
 
 		if ( soundPath == "" )
 		{
-			LogError( gAduioChannel, "Sound does not exist: \"%s\"\n", tmp.c_str() );
+			Log_ErrorF( gAduioChannel, "Sound does not exist: \"%s\"\n", tmp.c_str() );
 			return InvalidHandle;
 		}
 	}
@@ -339,7 +339,7 @@ Handle AudioSystem::LoadSound( std::string soundPath )
 
 		if ( !(stream->valid = LoadSoundInternal( stream )) )
 		{
-			LogError( gAduioChannel, "Could not load sound: \"%s\"\n", soundPath.c_str() );
+			Log_ErrorF( gAduioChannel, "Could not load sound: \"%s\"\n", soundPath.c_str() );
 			delete stream;
 			return InvalidHandle;
 		}
@@ -350,7 +350,7 @@ Handle AudioSystem::LoadSound( std::string soundPath )
 		}
 	}
 
-	LogError( gAduioChannel, "Could not load sound: \"%s\"\n", soundPath.c_str() );
+	Log_ErrorF( gAduioChannel, "Could not load sound: \"%s\"\n", soundPath.c_str() );
 	delete stream;
 	return InvalidHandle;
 }
@@ -395,7 +395,7 @@ bool AudioSystem::LoadSoundInternal( AudioStream *stream )
 		stream->audioStream = SDL_NewAudioStream(stream->format, stream->channels, stream->rate, aAudioSpec.format, 2, aAudioSpec.freq);
 		if (stream->audioStream == nullptr)
 		{
-			LogError( gAduioChannel, "SDL_NewAudioStream failed: %s\n", SDL_GetError() );
+			Log_ErrorF( gAduioChannel, "SDL_NewAudioStream failed: %s\n", SDL_GetError() );
 			return false;
 		}
 	}
@@ -422,7 +422,7 @@ AudioStream* AudioSystem::GetStream( Handle streamHandle )
 	AudioStream *stream = *aStreams.Get( streamHandle );
 
 	if ( !stream )
-		LogWarn( gAduioChannel, "Invalid Stream Handle: %u\n", (size_t)streamHandle );
+		Log_WarnF( gAduioChannel, "Invalid Stream Handle: %u\n", (size_t)streamHandle );
 
 	return stream;
 }
@@ -473,7 +473,7 @@ bool AudioSystem::PreloadSound( Handle streamHandle )
 		// NOTE: "read" NEEDS TO BE 4 TIMES THE AMOUNT FOR SOME REASON, no clue why
 		if ( SDL_AudioStreamPut( stream->audioStream, rawAudio.data(), read * snd_read_mult ) == -1 )
 		{
-			LogMsg( gAduioChannel, "SDL_AudioStreamPut - Failed to put samples in stream: %s\n", SDL_GetError() );
+			Log_MsgF( gAduioChannel, "SDL_AudioStreamPut - Failed to put samples in stream: %s\n", SDL_GetError() );
 			return false;
 		}
 	}
@@ -731,7 +731,7 @@ bool AudioSystem::ReadAudio( AudioStream *stream )
 		// NOTE: "read" NEEDS TO BE 4 TIMES THE AMOUNT FOR SOME REASON, no clue why
 		if ( SDL_AudioStreamPut(stream->audioStream, rawAudio.data(), read * snd_read_mult) == -1 )
 		{
-			Print( "[AudioSystem] SDL_AudioStreamPut - Failed to put samples in stream: %s\n", SDL_GetError() );
+			Log_WarnF( gAduioChannel, "SDL_AudioStreamPut - Failed to put samples in stream: %s\n", SDL_GetError() );
 			return false;
 		}
 
@@ -797,7 +797,7 @@ bool AudioSystem::ApplyEffects( AudioStream *stream )
 
 	if ( read == -1 )
 	{
-		LogMsg( gAduioChannel, "SDL_AudioStreamGet - Failed to get converted data: %s\n", SDL_GetError() );
+		Log_ErrorF( gAduioChannel, "SDL_AudioStreamGet - Failed to get converted data: %s\n", SDL_GetError() );
 		return false;
 	}
 
@@ -878,7 +878,7 @@ bool AudioSystem::QueueAudio()
 
 	if ( SDL_QueueAudio( aOutputDeviceID, apMixBufferAudio, FRAME_SIZE ) == -1 )
 	{
-		LogMsg( gAduioChannel, "SDL_QueueAudio Error: %s\n", SDL_GetError() );
+		Log_ErrorF( gAduioChannel, "SDL_QueueAudio Error: %s\n", SDL_GetError() );
 		return false;
 	}
 

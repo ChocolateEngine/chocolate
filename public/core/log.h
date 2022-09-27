@@ -4,7 +4,6 @@
 #include "util.h"
 
 
-/* Colors!!! */
 enum class LogColor: unsigned char
 {
 	Default,
@@ -48,115 +47,119 @@ enum class LogType: unsigned char
 };
 
 
-/* Manage Console Color */
-void                  CORE_API  LogSetColor( LogColor color );
-LogColor              CORE_API  LogGetColor();
-const char            CORE_API *LogColorToStr( LogColor color );
-
-
-constexpr LogColor LOG_COLOR_WARNING = LogColor::Yellow;
-constexpr LogColor LOG_COLOR_ERROR   = LogColor::Red;
-
-
-/* Channels!!! */
 struct LogChannel_t
 {
-	bool            aShown;
-	std::string     aName;
-	LogColor        aColor;
+	bool        aShown;
+	std::string aName;
+	LogColor    aColor;
 };
 
 using LogChannel = unsigned char;
-constexpr LogChannel INVALID_LOG_CHANNEL = 255;
-
-/* Register Log Channel */
-LogChannel                  CORE_API  LogRegisterChannel( const char *sName, LogColor sColor = LogColor::Default );
-LogChannel                  CORE_API  LogGetChannel( const char *sName );
-LogColor                    CORE_API  LogGetChannelColor( LogChannel handle );
-const std::string           CORE_API &LogGetChannelName( LogChannel handle );
-bool                        CORE_API  LogChannelIsShown( LogChannel handle );
-unsigned char               CORE_API  LogGetChannelCount();
 
 
 struct Log
 {
-	LogChannel      aChannel;
-	LogType         aType;
-	std::string     aMessage;
-	std::string     aFormatted;
+	LogChannel  aChannel;
+	LogType     aType;
+	std::string aMessage;
+	std::string aFormatted;
 };
-
-const std::string           CORE_API &LogGetHistoryStr( int maxSize );
-const std::vector< Log >    CORE_API &LogGetLogHistory();
-const Log                   CORE_API *LogGetLastLog();
-bool                        CORE_API  LogIsVisible( const Log& log );
 
 
 /*ReBuildConsoleOutput*/
-typedef std::function< void(  ) > LogChannelShownCallbackF;
-
-void CORE_API LogAddChannelShownCallback( LogChannelShownCallbackF callback );
+typedef std::function< void() > LogChannelShownCallbackF;
 
 
-#define LOG_REGISTER_CHANNEL( name, ... ) LogChannel g##name##Channel = LogRegisterChannel( #name, __VA_ARGS__ );
+constexpr LogColor   LOG_COLOR_WARNING   = LogColor::Yellow;
+constexpr LogColor   LOG_COLOR_ERROR     = LogColor::Red;
+constexpr LogChannel INVALID_LOG_CHANNEL = 255;
+
+void CORE_API                         Log_Init();
+
+// Manage Console Color
+void                        CORE_API  Log_SetColor( LogColor color );
+LogColor                    CORE_API  Log_GetColor();
+const char                  CORE_API *Log_ColorToStr( LogColor color );
+
+// Manage Log Channels
+CORE_API LogChannel                   Log_RegisterChannel( const char* sName, LogColor sColor = LogColor::Default );
+LogChannel                  CORE_API  Log_GetChannel( const char *sName );
+LogColor                    CORE_API  Log_GetChannelColor( LogChannel handle );
+const std::string           CORE_API &Log_GetChannelName( LogChannel handle );
+bool                        CORE_API  Log_ChannelIsShown( LogChannel handle );
+unsigned char               CORE_API  Log_GetChannelCount();
+
+// Log Information
+const std::string           CORE_API &Log_GetHistoryStr( int maxSize );
+const std::vector< Log >    CORE_API &Log_GetLogHistory();
+const Log                   CORE_API *Log_GetLastLog();
+bool                        CORE_API  Log_IsVisible( const Log& log );
+
+void                        CORE_API  Log_AddChannelShownCallback( LogChannelShownCallbackF callback );
+
+
+#define LOG_REGISTER_CHANNEL( name, ... ) LogChannel g##name##Channel = Log_RegisterChannel( #name, __VA_ARGS__ );
 #define LOG_CHANNEL( name ) extern LogChannel g##name##Channel;
 
-/* Deprecated */
-void CORE_API Print( const char* str, ... );
-void CORE_API Puts( const char* str );
+// ----------------------------------------------------------------
+// System printing, skip logging
+
+void CORE_API PrintF( const char* str, ... );
+void CORE_API Print( const char* str );
 
 
 // ----------------------------------------------------------------
-// Specify a custom channel.
+// Extended Logging Functions
 
-/* General Logging Function.  */
-void CORE_API LogEx(  LogChannel channel, LogType sLevel, const char *spBuf );
-void CORE_API LogExF( LogChannel channel, LogType sLevel, const char *spFmt, ... );
-void CORE_API LogExV( LogChannel channel, LogType sLevel, const char *spFmt, va_list args );
+void CORE_API Log_Ex(  LogChannel channel, LogType sLevel, const char *spBuf );
+void CORE_API Log_ExF( LogChannel channel, LogType sLevel, const char *spFmt, ... );
+void CORE_API Log_ExV( LogChannel channel, LogType sLevel, const char* spFmt, va_list args );
 
-/* Lowest severity.  */
-void CORE_API LogMsg( LogChannel channel, const char *spFmt, ... );
 
-/* Lowest severity, no format.  */
-void CORE_API LogPuts( LogChannel channel, const char *spBuf );
+// ----------------------------------------------------------------
+// Standard Logging Functions
 
-/* Medium severity.  */
-void CORE_API LogWarn( LogChannel channel, const char *spFmt, ... );
+// Lowest severity.
+void CORE_API Log_Msg( LogChannel channel, const char* spBuf );
+void CORE_API Log_MsgF( LogChannel channel, const char* spFmt, ... );
 
-/* High severity.  */
-void CORE_API LogError( LogChannel channel, const char *spFmt, ... );
+// Medium severity.
+void CORE_API Log_Warn( LogChannel channel, const char* spBuf );
+void CORE_API Log_WarnF( LogChannel channel, const char* spFmt, ... );
 
-/* Extreme severity.  */
-void CORE_API LogFatal( LogChannel channel, const char *spFmt, ... );
+// High severity.
+void CORE_API Log_Error( LogChannel channel, const char* spBuf );
+void CORE_API Log_ErrorF( LogChannel channel, const char* spFmt, ... );
 
-/* Dev only.  */
-void CORE_API LogDev( LogChannel channel, u8 sLvl, const char *spFmt, ... );
+// Extreme severity.
+void CORE_API Log_Fatal( LogChannel channel, const char* spBuf );
+void CORE_API Log_FatalF( LogChannel channel, const char* spFmt, ... );
 
-/* Dev only.  */
-void CORE_API LogPutsDev( LogChannel channel, u8 sLvl, const char *spBuf );
+// Dev only.
+void CORE_API Log_Dev( LogChannel channel, u8 sLvl, const char* spBuf );
+void CORE_API Log_DevF( LogChannel channel, u8 sLvl, const char* spFmt, ... );
 
 
 // ----------------------------------------------------------------
 // Default to general channel.
 
-/* Lowest severity.  */
-void CORE_API LogMsg( const char *spFmt, ... );
+// Lowest severity.
+void CORE_API Log_Msg( const char* spFmt );
+void CORE_API Log_MsgF( const char* spFmt, ... );
 
-/* Lowest severity, no format.  */
-void CORE_API LogPuts( const char *spBuf );
+// Medium severity.
+void CORE_API Log_Warn( const char* spFmt );
+void CORE_API Log_WarnF( const char* spFmt, ... );
 
-/* Medium severity.  */
-void CORE_API LogWarn( const char *spFmt, ... );
+// High severity.
+void CORE_API Log_Error( const char* spFmt );
+void CORE_API Log_ErrorF( const char* spFmt, ... );
 
-/* High severity.  */
-void CORE_API LogError( const char *spFmt, ... );
+// Extreme severity.
+void CORE_API Log_Fatal( const char* spFmt );
+void CORE_API Log_FatalF( const char* spFmt, ... );
 
-/* Extreme severity.  */
-void CORE_API LogFatal( const char *spFmt, ... );
-
-/* Dev only.  */
-void CORE_API LogDev( u8 sLvl, const char *spFmt, ... );
-
-/* Dev only.  */
-void CORE_API LogPutsDev( u8 sLvl, const char *spBuf );
+// Dev only.
+void CORE_API Log_Dev( u8 sLvl, const char* spFmt );
+void CORE_API Log_DevF( u8 sLvl, const char* spFmt, ... );
 

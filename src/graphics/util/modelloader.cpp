@@ -54,7 +54,7 @@ void LoadObj_Tiny( const std::string &srPath, Model* spModel )
 	if ( !reader.ParseFromFile( srPath, reader_config ) )
 	{
 		if ( !reader.Error().empty() )
-			LogError( gGraphicsChannel, "Obj %s\n", reader.Error().c_str() );
+			Log_ErrorF( gGraphicsChannel, "Obj %s\n", reader.Error().c_str() );
 
 		return;
 	}
@@ -62,7 +62,7 @@ void LoadObj_Tiny( const std::string &srPath, Model* spModel )
 	startTime = std::chrono::high_resolution_clock::now(  );
 
 	if ( !reader.Warning().empty() )
-		LogWarn( gGraphicsChannel, "Obj %s\n", reader.Warning().c_str() );
+		Log_WarnF( gGraphicsChannel, "Obj %s\n", reader.Warning().c_str() );
 
 	auto &objAttrib = reader.GetAttrib();
 	auto &objShapes = reader.GetShapes();
@@ -92,7 +92,7 @@ void LoadObj_Tiny( const std::string &srPath, Model* spModel )
 		if ( material == nullptr )
 		{
 			std::string matPath = baseDir + "/" + objMaterial.name + ".cmt";
-			if ( filesys->IsFile( matPath ) )
+			if ( FileSys_IsFile( matPath ) )
 				material = matsys->ParseMaterial( matPath );
 		}
 
@@ -107,7 +107,7 @@ void LoadObj_Tiny( const std::string &srPath, Model* spModel )
 			{
 				if ( !texname.empty() )
 				{
-					if ( filesys->IsRelative( texname ) )
+					if ( FileSys_IsRelative( texname ) )
 						material->SetVar( param, matsys->CreateTexture( baseDir + "/" + texname ) );
 					else
 						material->SetVar( param, matsys->CreateTexture( texname ) );
@@ -131,7 +131,7 @@ void LoadObj_Tiny( const std::string &srPath, Model* spModel )
 
 	for (std::size_t shapeIndex = 0; shapeIndex < objShapes.size(); ++shapeIndex)
 	{
-		LogDev( gGraphicsChannel, 1, "Obj Shape Index: %u\n", shapeIndex );
+		Log_DevF( gGraphicsChannel, 1, "Obj Shape Index: %u\n", shapeIndex );
 
 		size_t indexOffset = 0;
 
@@ -147,7 +147,7 @@ void LoadObj_Tiny( const std::string &srPath, Model* spModel )
 			if (faceVertexCount != 3)
 			{
 				// TODO: This really shouldn't happen, and we should have better error handling in the event it does
-				LogWarn( "Model is not trianglated: \"%s\"\n", srPath.c_str() );
+				Log_WarnF( gGraphicsChannel, "Model is not trianglated: \"%s\"\n", srPath.c_str() );
 			}
 
 			const size_t materialIndex = objShapes[shapeIndex].mesh.material_ids[faceIndex] < 0 ? objMaterials.size() - 1 : objShapes[shapeIndex].mesh.material_ids[faceIndex];
@@ -280,7 +280,7 @@ void LoadObj_Tiny( const std::string &srPath, Model* spModel )
 	auto currentTime = std::chrono::high_resolution_clock::now();
 	float time = std::chrono::duration< float, std::chrono::seconds::period >( currentTime - startTime ).count(  );
 
-	LogDev( gGraphicsChannel, 1, "Parsed Obj in %.6f sec: %s\n", time, srPath.c_str() );
+	Log_DevF( gGraphicsChannel, 1, "Parsed Obj in %.6f sec: %s\n", time, srPath.c_str() );
 }
 
 
@@ -298,11 +298,11 @@ void LoadObj_Fast( const std::string &srPath, Model* spModel )
 	auto currentTime = std::chrono::high_resolution_clock::now();
 	float time = std::chrono::duration< float, std::chrono::seconds::period >( currentTime - startTime ).count();
 
-	LogDev( gGraphicsChannel, 1, "Fast Obj:        %.6f sec: %s\n", time, srPath.c_str() );
+	Log_Dev( gGraphicsChannel, 1, "Fast Obj:        %.6f sec: %s\n", time, srPath.c_str() );
 
 	if ( obj == nullptr )
 	{
-		LogError( gGraphicsChannel, "Failed to parse obj\n" );
+		Log_Error( gGraphicsChannel, "Failed to parse obj\n" );
 		return;
 	}
 
@@ -323,7 +323,7 @@ void LoadObj_Fast( const std::string &srPath, Model* spModel )
 		if ( material == nullptr )
 		{
 			std::string matPath = baseDir + "/" + objMat.name + ".cmt";
-			if ( filesys->IsFile( matPath ) )
+			if ( FileSys_IsFile( matPath ) )
 				material = matsys->ParseMaterial( matPath );
 		}
 
@@ -762,8 +762,8 @@ void LoadObj( const std::string &srPath, Model* spModel )
 	// auto currentTime = std::chrono::high_resolution_clock::now();
 	// time = std::chrono::duration< float, std::chrono::seconds::period >( currentTime - startTime ).count();
 	// 
-	// //LogDev( gGraphicsChannel, 1, "Tiny Obj Loader: %.6f sec: %s\n", time, srPath.c_str() );
-	// LogDev( gGraphicsChannel, 1, "Fast Obj:        %.6f sec: %s\n", time, srPath.c_str() );
+	// //Log_Dev( gGraphicsChannel, 1, "Tiny Obj Loader: %.6f sec: %s\n", time, srPath.c_str() );
+	// Log_Dev( gGraphicsChannel, 1, "Fast Obj:        %.6f sec: %s\n", time, srPath.c_str() );
 	// 
 	// 
 	// // for ( auto mesh : meshes )
@@ -779,8 +779,8 @@ void LoadObj( const std::string &srPath, Model* spModel )
 	// currentTime = std::chrono::high_resolution_clock::now();
 	// time = std::chrono::duration< float, std::chrono::seconds::period >( currentTime - startTime ).count();
 	// 
-	// LogDev( gGraphicsChannel, 1, "Tiny Obj Loader: %.6f sec: %s\n", time, srPath.c_str() );
-	//LogDev( gGraphicsChannel, 1, "Fast Obj:        %.6f sec: %s\n", time, srPath.c_str() );
+	// Log_Dev( gGraphicsChannel, 1, "Tiny Obj Loader: %.6f sec: %s\n", time, srPath.c_str() );
+	//Log_Dev( gGraphicsChannel, 1, "Fast Obj:        %.6f sec: %s\n", time, srPath.c_str() );
 }
 
 

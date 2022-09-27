@@ -28,7 +28,7 @@ public:
 
 		if ( !pTex )
 		{
-			LogError( gGraphicsChannel, "oops no ctx\n" );
+			Log_Error( gGraphicsChannel, "oops no ctx\n" );
 			return nullptr;
 		}
 

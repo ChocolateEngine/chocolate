@@ -12,52 +12,28 @@ Simple Parser for command line options
 #include "core/platform.h"
 
 
-#ifdef _MSC_VER
-	// Disable this useless warning of vars in a class needing a DLL Interface when exported
-	#pragma warning(push)
-	#pragma warning(disable:4251)
-#endif
-
-
 // call this after the other dlls are loaded, but not initialized yet
 // it runs all startup config files, like config.cfg to store saved cvar values
 void CORE_API core_post_load();
 
 
-// Simple CommandLine parser
+// Global Argument Parser
 // TODO: maybe try to make this closer to argparse in python and setup arg registering
-class CORE_API CommandLine
+extern "C"
 {
-private:
-	std::vector< std::string >          aArgs;
+	CORE_API void                                        Args_Init( int argc, char* argv[] );
+	CORE_API int                                         Args_GetIndex( const std::string& search );
+	CORE_API constexpr const std::vector< std::string >& Args_GetArgs();
+	CORE_API size_t                                      Args_GetCount();
+	CORE_API bool                                        Args_Find( const std::string& search );
 
-public:
-
-	void                                Init( int argc, char *argv[] );
-	int                                 GetIndex( const std::string& search );
-	constexpr const std::vector<std::string>& GetArgs(  );
-	size_t                              GetCount(  );
-
-	bool                                Find( const std::string& search );
-
-	const std::string&                  GetValue( const std::string& search, const std::string& fallback = "" );
-	int                                 GetValue( const std::string& search, int fallback );
-	float                               GetValue( const std::string& search, float fallback );
-	double                              GetValue( const std::string& search, double fallback );
+	CORE_API const std::string& Args_GetString( const std::string& search, const std::string& fallback = "" );
+	CORE_API int                Args_GetInt( const std::string& search, int fallback );
+	CORE_API float              Args_GetFloat( const std::string& search, float fallback );
+	CORE_API double             Args_GetDouble( const std::string& search, double fallback );
 
 	// function to be able to find all values like this
 	// returns true if it finds a value, false if it fails to
-	bool                                GetValueNext( int& index, const std::string& search, std::string& ret );
-	
-	CommandLine(  );
-	~CommandLine(  );
+	CORE_API bool               Args_GetValueNext( int& index, const std::string& search, std::string& ret );
 };
-
-
-CORE_API extern CommandLine* cmdline;
-
-
-#ifdef _MSC_VER
-	#pragma warning(pop)
-#endif
 

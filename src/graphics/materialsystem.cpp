@@ -148,19 +148,19 @@ IMaterial* MaterialSystem::ParseMaterial( const std::string &path )
 	if ( !fullPath.ends_with( ".cmt" ) )
 		fullPath += ".cmt";
 
-	fullPath = filesys->FindFile( fullPath );
+	fullPath = FileSys_FindFile( fullPath );
 
 	if ( fullPath.empty() )
 	{
-		LogWarn( gGraphicsChannel, "Failed to find material: %s\n", path.c_str() );
+		Log_WarnF( gGraphicsChannel, "Failed to find material: %s\n", path.c_str() );
 		return nullptr;
 	}
 
-	std::vector< char > rawData = filesys->ReadFile( fullPath );
+	std::vector< char > rawData = FileSys_ReadFile( fullPath );
 
 	if ( rawData.empty() )
 	{
-		LogWarn( gGraphicsChannel, "Failed to read material: %s\n", fullPath.c_str() );
+		Log_WarnF( gGraphicsChannel, "Failed to read material: %s\n", fullPath.c_str() );
 		return nullptr;
 	}
 
@@ -172,7 +172,7 @@ IMaterial* MaterialSystem::ParseMaterial( const std::string &path )
 
 	if ( err != KeyValueErrorCode::NO_ERROR )
 	{
-		LogWarn( gGraphicsChannel, "Failed to parse material: %s\n", fullPath.c_str() );
+		Log_WarnF( gGraphicsChannel, "Failed to parse material: %s\n", fullPath.c_str() );
 		return nullptr;
 	}
 
@@ -182,7 +182,7 @@ IMaterial* MaterialSystem::ParseMaterial( const std::string &path )
 	KeyValue* kvShader = kvRoot.children;
 
 	IMaterial *mat = CreateMaterial();
-	mat->aName = filesys->GetFileNameNoExt( path );
+	mat->aName = FileSys_GetFileNameNoExt( path );
 	// mat->aName = std::filesystem::path( path ).filename().string();
 	mat->SetShader( kvShader->key.string );
 
@@ -191,7 +191,7 @@ IMaterial* MaterialSystem::ParseMaterial( const std::string &path )
 	{
 		if ( kv->hasChildren )
 		{
-			LogDev( gGraphicsChannel, 1, "Skipping extra children in material: %s", fullPath.c_str() );
+			Log_DevF( gGraphicsChannel, 1, "Skipping extra children in material: %s", fullPath.c_str() );
 			kv = kv->next;
 			continue;
 		}
@@ -224,18 +224,18 @@ IMaterial* MaterialSystem::ParseMaterial( const std::string &path )
 			if ( !texPath.ends_with( ".ktx" ) )
 				texPath += ".ktx";
 
-			std::string absTexPath = filesys->FindFile( texPath );
+			std::string absTexPath = FileSys_FindFile( texPath );
 			if ( absTexPath == "" )
 			{
-				if ( !filesys->IsAbsolute( texPath ) && !texPath.starts_with( "materials" ) )
+				if ( !FileSys_IsAbsolute( texPath ) && !texPath.starts_with( "materials" ) )
 					texPath = "materials/" + texPath;
 
-				absTexPath = filesys->FindFile( texPath );
+				absTexPath = FileSys_FindFile( texPath );
 			}
 
 			if ( absTexPath == "" )
 			{
-				LogMsg( gGraphicsChannel, "\"%s\":\n\tCan't Find Texture: \"%s\": \"%s\"\n", fullPath.c_str(), kv->key.string, kv->value.string );
+				Log_MsgF( gGraphicsChannel, "\"%s\":\n\tCan't Find Texture: \"%s\": \"%s\"\n", fullPath.c_str(), kv->key.string, kv->value.string );
 				mat->SetVar( kv->key.string, CreateTexture( kv->value.string ) );
 			}
 			else
@@ -247,7 +247,7 @@ IMaterial* MaterialSystem::ParseMaterial( const std::string &path )
 				}
 				else
 				{
-					LogMsg( gGraphicsChannel, "\"%s\":n\tUnknown Material Var Type: \"%s\": \"%s\"\n", fullPath.c_str(), kv->key.string, kv->value.string );
+					Log_MsgF( gGraphicsChannel, "\"%s\":n\tUnknown Material Var Type: \"%s\": \"%s\"\n", fullPath.c_str(), kv->key.string, kv->value.string );
 					mat->SetVar( kv->key.string, 0 );
 				}
 			}
@@ -302,14 +302,14 @@ Texture *MaterialSystem::CreateTexture( const std::string &path )
 		return it->second;
 
 	// Not found, so try to load it
-	std::string absPath = filesys->FindFile( path );
+	std::string absPath = FileSys_FindFile( path );
 	if ( absPath == "" && apMissingTex )
 	{
-		LogWarn( gGraphicsChannel, "Failed to Find Texture \"%s\"\n", path.c_str() );
+		Log_WarnF( gGraphicsChannel, "Failed to Find Texture \"%s\"\n", path.c_str() );
 		return nullptr;
 	}
 
-	std::string fileExt = filesys->GetFileExt( path );
+	std::string fileExt = FileSys_GetFileExt( path );
 
 	for ( ITextureLoader* loader: aTextureLoaders )
 	{
@@ -378,7 +378,7 @@ void InitRenderableBuffer( void* srData, size_t sBufferSize, VkBuffer &srBuffer,
 		srBuffer    = 0;
 		srBufferMem = 0;
 
-		LogError( "Tried to create a vertex buffer / index buffer with no size!\n" );
+		Log_Error( "Tried to create a vertex buffer / index buffer with no size!\n" );
 		return;
 	}
 	
@@ -418,7 +418,7 @@ void MaterialSystem::CreateVertexBufferInt( IModel* renderable, size_t surface, 
 
 	if ( meshData.apVertexBuffer )
 	{
-		LogWarn( gGraphicsChannel, "Vertex Buffer already exists for renderable surface %d\n", surface );
+		Log_WarnF( gGraphicsChannel, "Vertex Buffer already exists for renderable surface %d\n", surface );
 		return;
 	}
 
@@ -471,7 +471,7 @@ void MaterialSystem::CreateVertexBuffer( IModel* renderable, size_t surface )
 {
 	if ( !renderable )
 	{
-		LogWarn( gGraphicsChannel, "MaterialSystem::CreateVertexBuffer - Renderable is nullptr\n" );
+		Log_Warn( gGraphicsChannel, "MaterialSystem::CreateVertexBuffer - Renderable is nullptr\n" );
 		return;
 	}
 
@@ -485,7 +485,7 @@ void MaterialSystem::CreateVertexBuffers( IModel* renderable )
 {
 	if ( !renderable )
 	{
-		LogWarn( gGraphicsChannel, "MaterialSystem::CreateVertexBuffers - Renderable is nullptr\n" );
+		Log_Warn( gGraphicsChannel, "MaterialSystem::CreateVertexBuffers - Renderable is nullptr\n" );
 		return;
 	}
 
@@ -508,7 +508,7 @@ void MaterialSystem::CreateIndexBufferInt( IModel* renderable, size_t surface, I
 
 	if ( meshData.apIndexBuffer )
 	{
-		LogWarn( gGraphicsChannel, "Index Buffer already exists for renderable surface %d\n", surface );
+		Log_WarnF( gGraphicsChannel, "Index Buffer already exists for renderable surface %d\n", surface );
 		return;
 	}
 
@@ -532,7 +532,7 @@ void MaterialSystem::CreateIndexBuffer( IModel* renderable, size_t surface )
 {
 	if ( !renderable )
 	{
-		LogWarn( gGraphicsChannel, "MaterialSystem::CreateIndexBuffer - Renderable is nullptr\n" );
+		Log_Warn( gGraphicsChannel, "MaterialSystem::CreateIndexBuffer - Renderable is nullptr\n" );
 		return;
 	}
 
@@ -546,7 +546,7 @@ void MaterialSystem::CreateIndexBuffers( IModel* renderable )
 {
 	if ( !renderable )
 	{
-		LogWarn( gGraphicsChannel, "MaterialSystem::CreateIndexBuffers - Renderable is nullptr\n" );
+		Log_Warn( gGraphicsChannel, "MaterialSystem::CreateIndexBuffers - Renderable is nullptr\n" );
 		return;
 	}
 
@@ -564,13 +564,13 @@ bool MaterialSystem::HasVertexBuffer( IModel* item, size_t surface )
 {
 	if ( !item )
 	{
-		LogWarn( gGraphicsChannel, "MaterialSystem::HasVertexBuffer - Renderable is nullptr\n" );
+		Log_Warn( gGraphicsChannel, "MaterialSystem::HasVertexBuffer - Renderable is nullptr\n" );
 		return false;
 	}
 
 	if ( surface > item->GetSurfaceCount() )
 	{
-		LogWarn( gGraphicsChannel, "Surface Requested is higher than Mesh Surface Count! (%d < %d)\n", surface, item->GetSurfaceCount() );
+		Log_WarnF( gGraphicsChannel, "Surface Requested is higher than Mesh Surface Count! (%d < %d)\n", surface, item->GetSurfaceCount() );
 		return false;
 	}
 
@@ -592,13 +592,13 @@ bool MaterialSystem::HasIndexBuffer( IModel* item, size_t surface )
 {
 	if ( !item )
 	{
-		LogWarn( gGraphicsChannel, "MaterialSystem::HasIndexBuffer - Renderable is nullptr\n" );
+		Log_Warn( gGraphicsChannel, "MaterialSystem::HasIndexBuffer - Renderable is nullptr\n" );
 		return false;
 	}
 
 	if ( surface > item->GetSurfaceCount() )
 	{
-		LogWarn( gGraphicsChannel, "Surface Requested is higher than Mesh Surface Count! (%d < %d)\n", surface, item->GetSurfaceCount() );
+		Log_WarnF( gGraphicsChannel, "Surface Requested is higher than Mesh Surface Count! (%d < %d)\n", surface, item->GetSurfaceCount() );
 		return false;
 	}
 
@@ -763,7 +763,7 @@ BaseShader* MaterialSystem::GetShader( const std::string& name )
 	if (search != aShaders.end())
 		return search->second;
 
-	LogError( gGraphicsChannel, "Shader not found: %s\n", name.c_str() );
+	Log_ErrorF( gGraphicsChannel, "Shader not found: %s\n", name.c_str() );
 	return nullptr;
 }
 
@@ -807,7 +807,7 @@ void MaterialSystem::AddRenderable( IRenderable* renderable )
 	IModel* model = renderable->GetModel();
 	if ( !model )
 	{
-		LogWarn( gGraphicsChannel, "Renderable has no model!\n" );
+		Log_Warn( gGraphicsChannel, "Renderable has no model!\n" );
 		return;
 	}
 
@@ -817,13 +817,13 @@ void MaterialSystem::AddRenderable( IRenderable* renderable )
 
 		if ( !mat )
 		{
-			LogError( gGraphicsChannel, "Model part \"%d\" has no material!\n", i );
+			Log_ErrorF( gGraphicsChannel, "Model part \"%d\" has no material!\n", i );
 			continue;
 		}
 
 		if ( !mat->apShader )
 		{
-			LogError( gGraphicsChannel, "Material has no shader!\n" );
+			Log_Error( gGraphicsChannel, "Material has no shader!\n" );
 			continue;
 		}
 
@@ -844,14 +844,14 @@ void MaterialSystem::DrawRenderable( size_t memIndex, IRenderable* renderable, s
 {
 	if ( !renderable )
 	{
-		LogError( gGraphicsChannel, "Renderable is null!\n" );
+		Log_Error( gGraphicsChannel, "Renderable is null!\n" );
 		return;
 	}
 
 	IModel* model = renderable->GetModel();
 	if ( !model )
 	{
-		LogError( gGraphicsChannel, "Renderable has no model!\n" );
+		Log_Error( gGraphicsChannel, "Renderable has no model!\n" );
 		return;
 	}
 
@@ -903,7 +903,7 @@ VkFormat MaterialSystem::ToVkFormat( GraphicsFormat colorFmt )
 	{
 		case GraphicsFormat::INVALID:
 		default:
-			LogError( gGraphicsChannel, "Unspecified Color Format to VkFormat Conversion!\n" );
+			Log_Error( gGraphicsChannel, "Unspecified Color Format to VkFormat Conversion!\n" );
 			return VK_FORMAT_UNDEFINED;
 
 		// ------------------------------------------
@@ -1054,7 +1054,7 @@ GraphicsFormat MaterialSystem::GetVertexAttributeFormat( VertexAttribute attrib 
 	switch ( attrib )
 	{
 		default:
-			LogError( gGraphicsChannel, "GetVertexAttributeFormat: Invalid VertexAttribute specified: %d\n", attrib );
+			Log_ErrorF( gGraphicsChannel, "GetVertexAttributeFormat: Invalid VertexAttribute specified: %d\n", attrib );
 			return GraphicsFormat::INVALID;
 
 		case VertexAttribute_Position:
@@ -1083,7 +1083,7 @@ size_t MaterialSystem::GetVertexAttributeTypeSize( VertexAttribute attrib )
 	switch ( format )
 	{
 		default:
-			LogError( gGraphicsChannel, "GetVertexAttributeTypeSize: Invalid DataFormat specified from vertex attribute: %d\n", format );
+			Log_ErrorF( gGraphicsChannel, "GetVertexAttributeTypeSize: Invalid DataFormat specified from vertex attribute: %d\n", format );
 			return 0;
 
 		case GraphicsFormat::INVALID:
@@ -1106,7 +1106,7 @@ size_t MaterialSystem::GetVertexAttributeSize( VertexAttribute attrib )
 	switch ( format )
 	{
 		default:
-			LogError( gGraphicsChannel, "GetVertexAttributeSize: Invalid DataFormat specified from vertex attribute: %d\n", format );
+			Log_ErrorF( gGraphicsChannel, "GetVertexAttributeSize: Invalid DataFormat specified from vertex attribute: %d\n", format );
 			return 0;
 
 		case GraphicsFormat::INVALID:
@@ -1145,7 +1145,7 @@ size_t MaterialSystem::GetFormatSize( DataFormat format )
 	switch ( format )
 	{
 		default:
-			LogError( gGraphicsChannel, "GetFormatSize: Invalid DataFormat specified: %d\n", format );
+			Log_Error( gGraphicsChannel, "GetFormatSize: Invalid DataFormat specified: %d\n", format );
 			return 0;
 
 		case DataFormat::R32G32B32_SFLOAT:

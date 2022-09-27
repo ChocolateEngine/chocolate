@@ -16,7 +16,7 @@ Module          sys_load_library( const char* path )
     auto pHandle = dlopen( path, RTLD_LAZY );
     if ( !pHandle )
     {
-        LogDev(  1, "Failed to load library: %s!\n", dlerror() );
+        Log_Dev(  1, "Failed to load library: %s!\n", dlerror() );
         return nullptr;
     }
     return ( Module )pHandle;
@@ -35,7 +35,7 @@ void*           sys_load_func( Module mod, const char* path )
     auto pFunc = dlsym( mod, path );
     if ( !pFunc )
     {
-        LogDev( 1, "Failed to load function: %s!\n", dlerror() );
+        Log_Dev( 1, "Failed to load function: %s!\n", dlerror() );
         return nullptr;
     }
     return pFunc;

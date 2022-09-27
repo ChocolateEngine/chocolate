@@ -431,7 +431,8 @@ void Renderer::InitCommandBuffers(  )
 
 			for ( auto& [renderable, matIndex]: renderList )
 			{
-				if ( prevRenderable != renderable || prevMatIndex != matIndex )
+				// if ( prevRenderable != renderable || prevMatIndex != matIndex )
+				if ( prevRenderable && prevRenderable->GetModel() != renderable->GetModel() || prevMatIndex != matIndex )
 				{
 					prevRenderable = renderable;
 					prevMatIndex = matIndex;
@@ -694,7 +695,7 @@ void LoadRenderDocAPI()
 	// enable validation layers in renderdoc
 	if ( !renderdoc )
 	{
-		LogWarn( gGraphicsChannel, "(-renderdoc) Renderdoc DLL not found: %s\n", SDL_GetError() );
+		Log_Warn( gGraphicsChannel, "(-renderdoc) Renderdoc DLL not found: %s\n", SDL_GetError() );
 		return;
 	}
 
@@ -711,7 +712,7 @@ void LoadRenderDocAPI()
 	int ret = rdGet( eRENDERDOC_API_Version_1_5_0, (void **)&gpRenderDoc );
 	if ( ret != 1 )
 	{
-		LogWarn( gGraphicsChannel, "(-renderdoc) Failed to Get Renderdoc API\n" );
+		Log_Warn( gGraphicsChannel, "(-renderdoc) Failed to Get Renderdoc API\n" );
 		SDL_UnloadObject( gpRenderDoc );
 		return;
 	}
@@ -720,7 +721,7 @@ void LoadRenderDocAPI()
 	ret = gpRenderDoc->SetCaptureOptionU32( eRENDERDOC_Option_DebugOutputMute, 0 );
 	if ( ret != 1 )
 	{
-		LogWarn( gGraphicsChannel, "(-renderdoc) Failed to Get Renderdoc API\n" );
+		Log_Warn( gGraphicsChannel, "(-renderdoc) Failed to Get Renderdoc API\n" );
 		SDL_UnloadObject( gpRenderDoc );
 		return;
 	}
@@ -732,7 +733,7 @@ void LoadRenderDocAPI()
 void Renderer::Init(  )
 {
 #if RENDER_DOC
-	if ( cmdline->Find( "-renderdoc" ) )
+	if ( Args_Find( "-renderdoc" ) )
 		LoadRenderDocAPI();
 #endif
 

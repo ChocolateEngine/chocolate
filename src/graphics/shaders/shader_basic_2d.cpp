@@ -25,8 +25,8 @@ constexpr const char *pFShader = "shaders/basic2d.frag.spv";
 void Basic2D::Init()
 {
 	aModules.Allocate(2);
-	aModules[0] = CreateShaderModule( filesys->ReadFile( pVShader ) ); // Processes incoming verticies, taking world position, color, and texture coordinates as an input
-	aModules[1] = CreateShaderModule( filesys->ReadFile( pFShader ) ); // Fills verticies with fragments to produce color, and depth
+	aModules[0] = CreateShaderModule( FileSys_ReadFile( pVShader ) ); // Processes incoming verticies, taking world position, color, and texture coordinates as an input
+	aModules[1] = CreateShaderModule( FileSys_ReadFile( pFShader ) ); // Fills verticies with fragments to produce color, and depth
 
 	BaseShader::Init();
 }
@@ -34,8 +34,8 @@ void Basic2D::Init()
 
 void Basic2D::ReInit()
 {
-	aModules[0] = CreateShaderModule( filesys->ReadFile( pVShader ) ); // Processes incoming verticies, taking world position, color, and texture coordinates as an input
-	aModules[1] = CreateShaderModule( filesys->ReadFile( pFShader ) ); // Fills verticies with fragments to produce color, and depth
+	aModules[0] = CreateShaderModule( FileSys_ReadFile( pVShader ) ); // Processes incoming verticies, taking world position, color, and texture coordinates as an input
+	aModules[1] = CreateShaderModule( FileSys_ReadFile( pFShader ) ); // Fills verticies with fragments to produce color, and depth
 
 	BaseShader::ReInit();
 }

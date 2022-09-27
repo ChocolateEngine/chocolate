@@ -17,15 +17,15 @@ CONVAR_CMD( assert_show_box, !gNoAssertBox )
 }
 
 
-void AssertInit()
+void Assert_Init()
 {
-    if ( cmdline->Find( "-no-asserts" ) )
+    if ( Args_Find( "-no-asserts" ) )
     {
         gNoAsserts = true;
         assert_show.SetValue( 0 );
     }
 
-    if ( cmdline->Find( "-no-assert-box" ) )
+    if ( Args_Find( "-no-assert-box" ) )
     {
         gNoAssertBox = true;
         assert_show_box.SetValue( 0 );
@@ -86,7 +86,7 @@ int ShowAssert_SDL2( const char* file, u32 line, const char* cond, const char* t
 
     if ( SDL_ShowMessageBox( &data, &buttonId ) < 0 )
     {
-        LogError( "Error Displaying Assert Message Box: %s\n", SDL_GetErrorMsg( errmsg, 1024 ) );
+        Log_ErrorF( "Error Displaying Assert Message Box: %s\n", SDL_GetErrorMsg( errmsg, 1024 ) );
         gNoAssertBox = true;
         return -1;
     }
@@ -142,7 +142,7 @@ void HandleAssert( const char* file, u32 line, const char* cond, const char* tit
     }
 
     // All clear to show this assert
-    LogError( "%s\n  File: %s: %d\n  Cond: %s\n  %s\n", title, file, line, cond, msg );
+    Log_ErrorF( "%s\n  File: %s: %d\n  Cond: %s\n  %s\n", title, file, line, cond, msg );
 	ShowAssert( file, line, cond, title, msg );
 }
 
@@ -164,14 +164,14 @@ void HandleAssert( const char* file, u32 line, const char* cond, const char* msg
     }
 
     // All clear to show this assert
-    LogError( "Assertion Failed\n  File: %s: %d\n  Cond: %s\n  %s\n", file, line, cond, msg );
+    Log_ErrorF( "Assertion Failed\n  File: %s: %d\n  Cond: %s\n  %s\n", file, line, cond, msg );
     ShowAssert( file, line, cond, "Assertion Failed", msg );
 }
 
 
 #else
 
-void AssertInit()
+void Assert_Init()
 {
 }
 

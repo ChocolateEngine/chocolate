@@ -38,7 +38,7 @@ bool CodecVorbis::Open( const char* soundPath, AudioStream *stream )
     FILE *soundFileHandle = fopen(soundPath, "rb");
     if (!soundFileHandle)
     {
-        LogMsg( gVorbisChannel, "File does not exist: \"%s\"\n", soundPath );
+        Log_MsgF( gVorbisChannel, "File does not exist: \"%s\"\n", soundPath );
         return false;
     }
 
@@ -48,14 +48,14 @@ bool CodecVorbis::Open( const char* soundPath, AudioStream *stream )
     // check if valid
     if (ov_open_callbacks(soundFileHandle, oggFile, NULL, 0, OV_CALLBACKS_NOCLOSE) < 0)
     {
-        LogMsg( gVorbisChannel, "Not a valid ogg file: \"{}\"\n", soundPath );
+        Log_MsgF( gVorbisChannel, "Not a valid ogg file: \"{}\"\n", soundPath );
         ov_clear(oggFile);
         return false;
     }
 
     if (!ov_seekable(oggFile))
     {
-        LogMsg( gVorbisChannel, "Stream not seekable: \"{}\"\n", soundPath );
+        Log_MsgF( gVorbisChannel, "Stream not seekable: \"{}\"\n", soundPath );
         ov_clear(oggFile);
         return false;
     }
@@ -63,7 +63,7 @@ bool CodecVorbis::Open( const char* soundPath, AudioStream *stream )
     ovfInfo = ov_info(oggFile, 0);
     if (!ovfInfo)
     {
-        LogMsg( gVorbisChannel, "Unable to get stream info: \"{}\".\n", soundPath );
+        Log_MsgF( gVorbisChannel, "Unable to get stream info: \"{}\".\n", soundPath );
         ov_clear(oggFile);
         return false;
     }
@@ -71,7 +71,7 @@ bool CodecVorbis::Open( const char* soundPath, AudioStream *stream )
     long numStreams = ov_streams(oggFile);
     if (numStreams != 1)
     {
-        LogMsg( gVorbisChannel, "More than one ({0}) stream in \"{1}\".\n", numStreams, stream->name );
+        Log_MsgF( gVorbisChannel, "More than one ({0}) stream in \"{1}\".\n", numStreams, stream->name );
         ov_clear(oggFile);
         return false;
     }
@@ -174,7 +174,7 @@ long CodecVorbis::Read( AudioStream *stream, size_t size, std::vector<float> &da
                 if (remain != 0)
                     remain--;
                 else
-                    LogMsg( gVorbisChannel, "WHAT!!!\n");
+                    Log_Msg( gVorbisChannel, "WHAT!!!\n");
             }
         }
 

@@ -29,7 +29,7 @@ static void TraceCallback( const char *pFmt, ... )
 	char buffer[1024];
 	vsnprintf( buffer, sizeof(buffer), pFmt, list );
 
-	LogMsg( gPhysicsChannel, "%s\n", pFmt );
+	Log_MsgF( gPhysicsChannel, "%s\n", pFmt );
 }
 
 
@@ -529,7 +529,7 @@ void PhysicsEnvironment::Simulate( float sDT )
 
 	if ( !apDebugDraw->aValid )
 	{
-		LogError( gPhysicsChannel, "Debug Drawer is Not Valid???\n" );
+		Log_Error( gPhysicsChannel, "Debug Drawer is Not Valid???\n" );
 		return;
 	}
 
@@ -601,7 +601,7 @@ IPhysicsShape* PhysicsEnvironment::CreateShape( const PhysicsShapeInfo& physInfo
 		// 	break;
 
 		default:
-			LogError( gPhysicsChannel, "Physics Shape Type Not Currently Supported: %s\n", PhysShapeType2Str( physInfo.aShapeType ) );
+			Log_ErrorF( gPhysicsChannel, "Physics Shape Type Not Currently Supported: %s\n", PhysShapeType2Str( physInfo.aShapeType ) );
 			return nullptr;
 	}
 
@@ -614,14 +614,14 @@ IPhysicsShape* PhysicsEnvironment::CreateShape( const PhysicsShapeInfo& physInfo
 	{
 		if ( result.HasError() )
 		{
-			LogError( gPhysicsChannel, "Failed to create \"%s\" Physics Shape - %s\n",
+			Log_ErrorF( gPhysicsChannel, "Failed to create \"%s\" Physics Shape - %s\n",
 				PhysShapeType2Str( physInfo.aShapeType ),
 				result.GetError().c_str()
 			);
 		}
 		else
 		{
-			LogError( gPhysicsChannel, "Failed to create \"%s\" Physics Shape\n", PhysShapeType2Str( physInfo.aShapeType ) );
+			Log_ErrorF( gPhysicsChannel, "Failed to create \"%s\" Physics Shape\n", PhysShapeType2Str( physInfo.aShapeType ) );
 		}
 		// TODO: use HasError() and GetError() on the result
 		delete shapeSettings;
@@ -697,7 +697,7 @@ IPhysicsObject* PhysicsEnvironment::CreateObject( IPhysicsShape* spShape, const 
 
 	if ( body == nullptr )
 	{
-		LogError( gPhysicsChannel, "Failed to create physics body\n" );
+		Log_Error( gPhysicsChannel, "Failed to create physics body\n" );
 		return nullptr;
 	}
 
@@ -890,8 +890,8 @@ JPH::ShapeSettings* PhysicsEnvironment::LoadModel( const PhysicsShapeInfo& physI
 
 			if ( vertices.empty() )
 			{
-				// LogWarn( gPhysicsChannel, "No vertices in model? - \"%s\"\n", physInfo.aMeshData.apModel->aPath.c_str() );
-				LogWarn( gPhysicsChannel, "No vertices in model?\n" );
+				// Log_Warn( gPhysicsChannel, "No vertices in model? - \"%s\"\n", physInfo.aMeshData.apModel->aPath.c_str() );
+				Log_Warn( gPhysicsChannel, "No vertices in model?\n" );
 				return nullptr;
 			}
 
@@ -909,7 +909,7 @@ JPH::ShapeSettings* PhysicsEnvironment::LoadModel( const PhysicsShapeInfo& physI
 
 			if ( ind.empty() )
 			{
-				LogWarn( gPhysicsChannel, "No vertices in model? - \"%s\"\n", graphics->GetModelPath( physInfo.aMeshData.apModel ).c_str() );
+				Log_WarnF( gPhysicsChannel, "No vertices in model? - \"%s\"\n", graphics->GetModelPath( physInfo.aMeshData.apModel ).c_str() );
 				return nullptr;
 			}
 
@@ -921,7 +921,7 @@ JPH::ShapeSettings* PhysicsEnvironment::LoadModel( const PhysicsShapeInfo& physI
 
 			if ( tris.empty() )
 			{
-				LogWarn( gPhysicsChannel, "No vertices in model? - \"%s\"\n", graphics->GetModelPath( physInfo.aMeshData.apModel ).c_str() );
+				Log_Warn( gPhysicsChannel, "No vertices in model? - \"%s\"\n", graphics->GetModelPath( physInfo.aMeshData.apModel ).c_str() );
 				return nullptr;
 			}
 
@@ -930,7 +930,7 @@ JPH::ShapeSettings* PhysicsEnvironment::LoadModel( const PhysicsShapeInfo& physI
 		}
 
 		default:
-			LogError( gPhysicsChannel, "Invalid Shape Type Being Passed into PhysicsEnvironment::LoadModel: %s\n", PhysShapeType2Str( physInfo.aShapeType ) );
+			Log_ErrorF( gPhysicsChannel, "Invalid Shape Type Being Passed into PhysicsEnvironment::LoadModel: %s\n", PhysShapeType2Str( physInfo.aShapeType ) );
 			return nullptr;
 	}
 }

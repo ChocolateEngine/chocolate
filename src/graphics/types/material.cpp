@@ -42,6 +42,26 @@ MaterialVar* Material::GetVar( const std::string& name )
 }
 
 
+MaterialVar* Material::GetVar( size_t sIndex )
+{
+	Assert( sIndex < aVars.size() );
+
+	if ( sIndex >= aVars.size() )
+	{
+		Log_Error( "Material::GetVar: Index out of range\n" );
+		return nullptr;
+	}
+	
+	return aVars[sIndex];
+}
+
+
+size_t Material::GetVarCount()
+{
+	return aVars.size();
+}
+
+
 template <typename T>
 MaterialVar* Material::CreateVar( const std::string& name, T data )
 {

@@ -13,11 +13,17 @@ Load KTX Textures
 #endif
 
 
-#define LogError( channel, ... ) \
-	LogError( g##channel##Channel, __VA_ARGS__ )
+#define Log_Error( channel, ... ) \
+	Log_Error( g##channel##Channel, __VA_ARGS__ )
 
-#define LogWarn( channel, ... ) \
-	LogWarn( g##channel##Channel, __VA_ARGS__ )
+#define Log_ErrorF( channel, ... ) \
+	Log_ErrorF( g##channel##Channel, __VA_ARGS__ )
+
+#define Log_Warn( channel, ... ) \
+	Log_Warn( g##channel##Channel, __VA_ARGS__ )
+
+#define Log_WarnF( channel, ... ) \
+	Log_WarnF( g##channel##Channel, __VA_ARGS__ )
 
 
 class KTXTextureLoader: public ITextureLoader
@@ -47,7 +53,7 @@ public:
 
 		if ( result != KTX_SUCCESS )
 		{
-			LogError( Graphics, "KTX Error %d: %s - Failed to Construct KTX Vulkan Device\n", result, ktxErrorString(result) );
+			Log_ErrorF( Graphics, "KTX Error %d: %s - Failed to Construct KTX Vulkan Device\n", result, ktxErrorString(result) );
 			return nullptr;
 		}
 
@@ -57,7 +63,7 @@ public:
 
 		if ( result != KTX_SUCCESS )
 		{
-			LogError( Graphics, "KTX Error %d: %s - Failed to open texture: %s\n", result, ktxErrorString(result), srPath.c_str(  ) );
+			Log_ErrorF( Graphics, "KTX Error %d: %s - Failed to open texture: %s\n", result, ktxErrorString(result), srPath.c_str(  ) );
 			ktxVulkanDeviceInfo_Destruct( &vdi );
 			delete pTexture;
 			return nullptr;
@@ -68,7 +74,7 @@ public:
 		// WHY does this happen so often, wtf
 		if ( vkFormat == VK_FORMAT_UNDEFINED )
 		{
-			LogWarn( Graphics, "KTX Warning: - No Vulkan Format Found in KTX File: %s\n", srPath.c_str(  ) );
+			Log_WarnF( Graphics, "KTX Warning: - No Vulkan Format Found in KTX File: %s\n", srPath.c_str(  ) );
 			//ktxVulkanDeviceInfo_Destruct( &vdi );
 			//delete pTexture;
 			//return nullptr;
@@ -95,14 +101,14 @@ public:
 
 		if ( result != KTX_SUCCESS )
 		{
-			LogError( Graphics, "KTX Error %d: %s - Failed to upload texture: %s\n", result, ktxErrorString(result), srPath.c_str(  ) );
+			Log_ErrorF( Graphics, "KTX Error %d: %s - Failed to upload texture: %s\n", result, ktxErrorString(result), srPath.c_str(  ) );
 			ktxTexture_Destroy( pTexture->kTexture );
 			ktxVulkanDeviceInfo_Destruct( &vdi );
 			delete pTexture;
 			return nullptr;
 		}
 
-		LogDev( gGraphicsChannel, 2, "Loaded Image: %s - dataSize: %d\n", srPath.c_str(  ), pTexture->kTexture->dataSize );
+		Log_DevF( gGraphicsChannel, 2, "Loaded Image: %s - dataSize: %d\n", srPath.c_str(  ), pTexture->kTexture->dataSize );
 
 		pTexture->aMipLevels = pTexture->kTexture->numLevels;
 		pTexture->aTextureImage = pTexture->texture.image;
@@ -130,7 +136,7 @@ public:
 			result = ktxTexture2_CompressBasis(kTexture2, 0);
 			if (KTX_SUCCESS != result)
 			{
-				LogError( Graphics, "Encoding of ktxTexture2 to Basis failed: %s", ktxErrorString( result ) );
+				Log_ErrorF( Graphics, "Encoding of ktxTexture2 to Basis failed: %s", ktxErrorString( result ) );
 				return false;
 			}
 		}
@@ -140,7 +146,7 @@ public:
 
 		if (KTX_SUCCESS != result)
 		{
-			LogError( Graphics, "Transcoding of ktxTexture2 to %s failed: %s\n", ktxTranscodeFormatString( KTX_TTF_BC3_RGBA ), ktxErrorString( result ) );
+			Log_ErrorF( Graphics, "Transcoding of ktxTexture2 to %s failed: %s\n", ktxTranscodeFormatString( KTX_TTF_BC3_RGBA ), ktxErrorString( result ) );
 			return false;
 		}
 

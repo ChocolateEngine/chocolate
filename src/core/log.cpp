@@ -9,11 +9,23 @@
 
 CONVAR( developer, 1 );
 
-LogColor          gCurrentColor = LogColor::Default;
-LogChannel        gGeneralChannel = INVALID_LOG_CHANNEL;
-static std::mutex gLogMutex;
+LogColor                                gCurrentColor       = LogColor::Default;
+LogChannel                              gGeneralChannel     = INVALID_LOG_CHANNEL;
+static std::string                      gDefaultChannelName = "[General]";
+static std::mutex                       gLogMutex;
 
-constexpr glm::vec4 gVecTo255(255, 255, 255, 255);
+std::vector< LogChannel_t >             gChannels;
+std::vector< Log >                      gLogHistory;
+
+// filtered text output for game console
+std::string                             gLogHistoryStr;
+std::string                             gFilterEx;  // super basic exclude filter
+std::string                             gFilterIn;  // super basic include filter
+
+std::vector< LogChannelShownCallbackF > gCallbacksChannelShown;
+
+constexpr glm::vec4                     gVecTo255( 255, 255, 255, 255 );
+
 
 static void StripTrailingLines( const char* pText, size_t& len )
 {
@@ -35,429 +47,511 @@ static void StripTrailingLines( const char* pText, size_t& len )
     }
 }
 
-class LogSystem
+
+
+/* Windows Specific Functions for console text colors.  */
+#ifdef _WIN32
+#include <Windows.h>
+
+constexpr int Win32GetColor( LogColor color )
 {
-public:
-    LogSystem()
-    {
-        gGeneralChannel = RegisterChannel( "General", LogColor::Default );
-    }
+	switch ( color )
+	{
+		case LogColor::Black:
+			return 0;
+		case LogColor::White:
+			return FOREGROUND_INTENSITY | FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE;
 
-    LogChannel RegisterChannel( const char *sName, LogColor sColor )
-    {
-        for ( int i = 0; i < aChannels.size(); i++ )
-        {
-            LogChannel_t* channel = &aChannels[i];
-            if ( channel->aName != sName )
-                continue;
-            
-            return i;
-        }
+		case LogColor::DarkBlue:
+			return FOREGROUND_BLUE;
+		case LogColor::DarkGreen:
+			return FOREGROUND_GREEN;
+		case LogColor::DarkCyan:
+			return FOREGROUND_GREEN | FOREGROUND_BLUE;
+		case LogColor::DarkRed:
+			return FOREGROUND_RED;
+		case LogColor::DarkMagenta:
+			return FOREGROUND_RED | FOREGROUND_BLUE;
+		case LogColor::DarkYellow:
+			return FOREGROUND_RED | FOREGROUND_GREEN;
+		case LogColor::DarkGray:
+			return FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE;
 
-        aChannels.push_back( { true, sName, sColor } );
-        return (LogChannel)aChannels.size() - 1;
-    }
+		case LogColor::Blue:
+			return FOREGROUND_INTENSITY | FOREGROUND_BLUE;
+		case LogColor::Green:
+			return FOREGROUND_INTENSITY | FOREGROUND_GREEN;
+		case LogColor::Cyan:
+			return FOREGROUND_INTENSITY | FOREGROUND_GREEN | FOREGROUND_BLUE;
+		case LogColor::Red:
+			return FOREGROUND_INTENSITY | FOREGROUND_RED;
+		case LogColor::Magenta:
+			return FOREGROUND_INTENSITY | FOREGROUND_RED | FOREGROUND_BLUE;
+		case LogColor::Yellow:
+			return FOREGROUND_INTENSITY | FOREGROUND_RED | FOREGROUND_GREEN;
+		case LogColor::Gray:
+			return FOREGROUND_INTENSITY;
 
-    LogChannel_t *GetChannel( LogChannel sChannel )
-    {
-        if ( sChannel >= aChannels.size() )
-            return nullptr;
+		case LogColor::Default:
+		default:
+			return 7;
+	}
+}
 
-        return &aChannels[sChannel];
-    }
+void Win32SetColor( LogColor color )
+{
+	// um
+	static HANDLE handle = sys_get_console_window();
 
-    LogChannel_t* GetChannel( const char* sChannel )
-    {
-        for ( int i = 0; i < aChannels.size(); i++ )
-        {
-            LogChannel_t *channel = &aChannels[i];
-            if ( channel->aName != sChannel )
-                continue;
+	if ( !handle )
+	{
+		Print( "*** Failed to Get Console Window\n" );
+		return;
+	}
 
-            return channel;
-        }
+	BOOL result = SetConsoleTextAttribute( handle, Win32GetColor( color ) );
 
-        return nullptr;
-    }
+	if ( !result )
+	{
+		PrintF( "*** Failed to set console color: %s\n", sys_get_error() );
+	}
+}
 
-    // Format for system console output
-    void FormatLog( LogChannel_t *channel, Log &log )
-    {
-        PROF_SCOPE();
-
-        switch ( log.aType )
-        {
-            default:
-            case LogType::Normal:
-                vstring( log.aFormatted, "[%s] %s", channel->aName.c_str(), log.aMessage.c_str() );
-                break;
-
-            case LogType::Dev:
-            case LogType::Dev2:
-            case LogType::Dev3:
-            case LogType::Dev4:
-                vstring( log.aFormatted, "[%s] [DEV %u] %s", channel->aName.c_str(), log.aType, log.aMessage.c_str() );
-                break;
-
-            case LogType::Input:
-                vstring( log.aFormatted, "] %s\n", log.aMessage.c_str() );
-                break;
-
-            case LogType::Raw:
-                vstring( log.aFormatted, "%s", log.aMessage.c_str() );
-                break;
-
-            case LogType::Warning:
-                vstring( log.aFormatted, "[%s] [WARNING] %s", channel->aName.c_str(), log.aMessage.c_str() );
-                break;
-
-            case LogType::Error:
-                vstring( log.aFormatted, "[%s] [ERROR] %s", channel->aName.c_str(), log.aMessage.c_str() );
-                break;
-
-            case LogType::Fatal:
-                vstring( log.aFormatted, "[%s] [FATAL] %s", channel->aName.c_str(), log.aMessage.c_str() );
-                break;
-        }
-    }
-
-    constexpr LogColor GetColor( LogChannel_t *channel, const Log& log )
-    {
-        switch ( log.aType )
-        {
-            default:
-            case LogType::Normal:
-            case LogType::Dev:
-            case LogType::Dev2:
-            case LogType::Dev3:
-            case LogType::Dev4:
-            case LogType::Input:
-            case LogType::Raw:
-                return channel->aColor;
-
-            case LogType::Warning:
-                return LOG_COLOR_WARNING;
-
-            case LogType::Error:
-            case LogType::Fatal:
-                return LOG_COLOR_ERROR;
-        }
-    }
-
-    // copied from graphics/gui/consoleui.cpp
-    constexpr glm::vec4 GetColorRGBA( LogColor col )
-    {
-        switch (col)
-        {
-            // hmm
-            case LogColor::Black:
-                return {0.3, 0.3, 0.3, 1};
-            case LogColor::White:
-                return {1, 1, 1, 1};
-
-            case LogColor::DarkBlue:
-                return {0, 0.3, 0.8, 1};
-            case LogColor::DarkGreen:
-                return {0.25, 0.57, 0.25, 1};
-            case LogColor::DarkCyan:
-                return {0, 0.35, 0.75, 1};
-            case LogColor::DarkRed:
-                return {0.7, 0, 0.25, 1};
-            case LogColor::DarkMagenta:
-                return {0.45, 0, 0.7, 1};
-            case LogColor::DarkYellow:
-                return {0.6, 0.6, 0, 1};
-            case LogColor::DarkGray:
-                return {0.45, 0.45, 0.45, 1};
-
-            case LogColor::Blue:
-                return {0, 0.4, 1, 1};
-            case LogColor::Green:
-                return {0.4, 0.9, 0.4, 1};
-            case LogColor::Cyan:
-                return {0, 0.85, 1, 1};
-            case LogColor::Red:
-                return {0.9, 0, 0.4, 1};
-            case LogColor::Magenta:
-                return {0.6, 0, 0.9, 1};
-            case LogColor::Yellow:
-                return {1, 1, 0, 1};
-            case LogColor::Gray:
-                return {0.7, 0.7, 0.7, 1};
-
-            case LogColor::Default:
-            default:
-                return {1, 1, 1, 1};
-        }
-    }
-
-    constexpr glm::vec4 GetColorRGBA( LogChannel_t *channel, const Log& log )
-    {
-        return GetColorRGBA( GetColor( channel, log ) );
-    }
-    
-    constexpr u32 GetColorU32( LogChannel_t *channel, const Log& log )
-    {
-        // i don't like this
-        glm::vec4 colorVec = GetColorRGBA( GetColor( channel, log ) );
-
-        u8 colorU8[4] = {
-            colorVec.x * 255,
-            colorVec.y * 255,
-            colorVec.z * 255,
-            colorVec.w * 255,
-        };
-
-        // what
-        u32 color = *( (u32 *)colorU8 );
-
-        return color;
-    }
-
-    void LogMsg( LogChannel sChannel, LogType sLevel, const char* spFmt, va_list args )
-    {
-        PROF_SCOPE();
-
-        gLogMutex.lock();
-
-        aLogHistory.push_back( { sChannel, sLevel, "" } );
-        Log& log = aLogHistory[aLogHistory.size() - 1];
-
-        va_list copy;
-        va_copy( copy, args );
-        int len = std::vsnprintf( nullptr, 0, spFmt, copy );
-        va_end( copy );
-
-        if ( len < 0 )
-        {
-            Print( "\n *** LogSystem: vsnprintf failed?\n\n" );
-            gLogMutex.unlock();
-            return;
-        }
-
-        log.aMessage.resize( std::size_t(len) + 1, '\0' );
-        std::vsnprintf( log.aMessage.data(), log.aMessage.size(), spFmt, args );
-        log.aMessage.resize( len );
-
-        AddLogInternal( log );
-
-        gLogMutex.unlock();
-    }
-
-    void LogMsg( LogChannel sChannel, LogType sLevel, const char* spBuf )
-    {
-        PROF_SCOPE();
-
-        gLogMutex.lock();
-
-        aLogHistory.push_back( { sChannel, sLevel, spBuf } );
-        Log& log = aLogHistory[aLogHistory.size() - 1];
-
-        AddLogInternal( log );
-
-        gLogMutex.unlock();
-    }
-
-    void AddLogInternal( Log& log )
-    {
-        PROF_SCOPE();
-
-        LogChannel_t* channel = GetChannel( log.aChannel );
-        if ( !channel )
-        {
-            Print( "\n *** LogSystem: Channel Not Found for message: \"%s\"\n", log.aMessage.c_str() );
-            return;
-        }
-
-        FormatLog( channel, log );
-
-        if ( channel->aShown )
-        {
-            switch ( log.aType )
-            {
-                default:
-                case LogType::Normal:
-                case LogType::Input:
-                case LogType::Raw:
-                    LogSetColor( channel->aColor );
-                    fputs( log.aFormatted.c_str(), stdout );
-                    fflush( stdout );
-                    LogSetColor( LogColor::Default );
-                    break;
-
-                case LogType::Dev:
-                case LogType::Dev2:
-                case LogType::Dev3:
-                case LogType::Dev4:
-                    if ( !DevLevelVisible( log ) )
-                        break;
-
-                    LogSetColor( channel->aColor );
-                    fputs( log.aFormatted.c_str(), stdout );
-                    fflush( stdout );
-                    LogSetColor( LogColor::Default );
-                    break;
-
-                case LogType::Warning:
-                    LogSetColor( LOG_COLOR_WARNING );
-                    fputs( log.aFormatted.c_str(), stdout );
-                    fflush( stdout );
-                    LogSetColor( LogColor::Default );
-                    break;
-
-                case LogType::Error:
-                    LogSetColor( LOG_COLOR_ERROR );
-                    fputs( log.aFormatted.c_str(), stdout );
-                    fflush( stdout );
-                    LogSetColor( LogColor::Default );
-                    break;
-
-                case LogType::Fatal:
-                    LogSetColor( LOG_COLOR_ERROR );
-                    fputs( log.aFormatted.c_str(), stderr );
-                    fflush( stderr );
-                    LogSetColor( LogColor::Default );
-
-                    std::string messageBoxTitle;
-                    vstring( messageBoxTitle, "[%s] Fatal Error", channel->aName.c_str() );
-
-                    if ( log.aMessage.ends_with("\n") )
-                        SDL_ShowSimpleMessageBox( SDL_MESSAGEBOX_ERROR, messageBoxTitle.c_str(), log.aMessage.substr(0, log.aMessage.size()-1 ).c_str(), NULL );
-                    else
-                        SDL_ShowSimpleMessageBox( SDL_MESSAGEBOX_ERROR, messageBoxTitle.c_str(), log.aMessage.c_str(), NULL );
-
-                    throw std::runtime_error( log.aFormatted.c_str() );
-                    break;
-            }
-        }
-
-        LogTracy( channel, log );
-        AddToHistoryString( log );
-    }
-
-    inline bool DevLevelVisible( const Log& log )
-    {
-        if ( developer.GetInt() < ( int )log.aType && ( log.aType == LogType::Dev  || 
-                                                        log.aType == LogType::Dev2 || 
-                                                        log.aType == LogType::Dev3 || 
-                                                        log.aType == LogType::Dev4    ) ) 
-            return false;
-
-        return true;
-    }
-
-    inline void LogTracy( LogChannel_t *channel, const Log& log )
-    {
-#ifdef TRACY_ENABLE
-        if ( !tracy::ProfilerAvailable() )
-            return;
-
-        size_t len = log.aFormatted.size();
-        StripTrailingLines( log.aFormatted.c_str(), len );
-        TracyMessageC( log.aFormatted.c_str(), len, GetColorU32( channel, log ) );
 #endif
+
+// TODO: setup the rest of the colors here
+constexpr const char* UnixGetColor( LogColor color )
+{
+	switch ( color )
+	{
+		case LogColor::Red:
+			return "\033[0;31m";
+		case LogColor::DarkGreen:
+			return "\033[0;32m";
+		case LogColor::Green:
+			return "\033[1;32m";
+		case LogColor::Yellow:
+			return "\033[0;33m";
+		case LogColor::Blue:
+			return "\033[0;34m";
+		case LogColor::Cyan:
+			return "\033[0;36m";
+		case LogColor::Magenta:
+			return "\033[1;35m";
+
+		case LogColor::Default:
+		default:
+			return "\033[0m";
+	}
+}
+
+void UnixSetColor( LogColor color )
+{
+	fputs( UnixGetColor( color ), stdout );
+}
+
+
+void Log_Init()
+{
+	gGeneralChannel = Log_RegisterChannel( "General", LogColor::Default );
+}
+
+
+LogChannel Log_RegisterChannel( const char *sName, LogColor sColor )
+{
+    for ( int i = 0; i < gChannels.size(); i++ )
+    {
+        LogChannel_t* channel = &gChannels[i];
+        if ( channel->aName != sName )
+            continue;
+            
+        return i;
     }
 
-    // -----------------------------------------------------------------------------
-    // Maybe move this stuff to some separate class, for different variations of "log listeners"? idk
+    gChannels.push_back( { true, sName, sColor } );
+    return (LogChannel)gChannels.size() - 1;
+}
 
-    // TODO: make this async and probably store elsewhere
-    void BuildHistoryString( int maxSize )
+
+LogChannel Log_GetChannel( const char* sChannel )
+{
+	for ( int i = 0; i < gChannels.size(); i++ )
+	{
+		LogChannel_t* channel = &gChannels[ i ];
+		if ( channel->aName != sChannel )
+			continue;
+
+		return (LogChannel)i;
+	}
+
+	return INVALID_LOG_CHANNEL;
+}
+
+
+LogChannel_t* Log_GetChannelData( LogChannel sChannel )
+{
+    if ( sChannel >= gChannels.size() )
+        return nullptr;
+
+    return &gChannels[sChannel];
+}
+
+
+LogChannel_t* Log_GetChannelByName( const char* sChannel )
+{
+    for ( int i = 0; i < gChannels.size(); i++ )
     {
-        PROF_SCOPE();
+        LogChannel_t *channel = &gChannels[i];
+        if ( channel->aName != sChannel )
+            continue;
 
-        aLogHistoryStr = "";
+        return channel;
+    }
 
-        // No limit
-        if ( maxSize == -1 )
-        {
-            for ( auto& log : aLogHistory )
-                AddToHistoryString( log );
+    return nullptr;
+}
 
-            goto BuildHistoryStringEnd;
-        }
 
-        // go from latest to oldest
-        for ( size_t i = aLogHistory.size() - 1; i > 0; i-- )
-        {
-            auto& log = aLogHistory[i];
+// Format for system console output
+void FormatLog( LogChannel_t *channel, Log &log )
+{
+    PROF_SCOPE();
 
-            if ( !DevLevelVisible( log ) )
-                continue;
+    switch ( log.aType )
+    {
+        default:
+        case LogType::Normal:
+            vstring( log.aFormatted, "[%s] %s", channel->aName.c_str(), log.aMessage.c_str() );
+            break;
 
-            LogChannel_t* channel = GetChannel( log.aChannel );
-            if ( !channel || !channel->aShown )
-                continue;
+        case LogType::Dev:
+        case LogType::Dev2:
+        case LogType::Dev3:
+        case LogType::Dev4:
+            vstring( log.aFormatted, "[%s] [DEV %u] %s", channel->aName.c_str(), log.aType, log.aMessage.c_str() );
+            break;
 
-            int strLen = glm::min( maxSize, (int)log.aFormatted.length() );
-            int strStart = log.aFormatted.length() - strLen;
+        case LogType::Input:
+            vstring( log.aFormatted, "] %s\n", log.aMessage.c_str() );
+            break;
 
-            // if the length wanted is less then the string length, then start at an offset
-            aLogHistoryStr = log.aFormatted.substr( strStart, strLen ) + aLogHistoryStr;
+        case LogType::Raw:
+            vstring( log.aFormatted, "%s", log.aMessage.c_str() );
+            break;
 
-            maxSize -= strLen;
+        case LogType::Warning:
+            vstring( log.aFormatted, "[%s] [WARNING] %s", channel->aName.c_str(), log.aMessage.c_str() );
+            break;
 
-            if ( maxSize == 0 )
-                break;
-        }
+        case LogType::Error:
+            vstring( log.aFormatted, "[%s] [ERROR] %s", channel->aName.c_str(), log.aMessage.c_str() );
+            break;
+
+        case LogType::Fatal:
+            vstring( log.aFormatted, "[%s] [FATAL] %s", channel->aName.c_str(), log.aMessage.c_str() );
+            break;
+    }
+}
+
+
+constexpr LogColor GetColor( LogChannel_t *channel, const Log& log )
+{
+    switch ( log.aType )
+    {
+        default:
+        case LogType::Normal:
+        case LogType::Dev:
+        case LogType::Dev2:
+        case LogType::Dev3:
+        case LogType::Dev4:
+        case LogType::Input:
+        case LogType::Raw:
+            return channel->aColor;
+
+        case LogType::Warning:
+            return LOG_COLOR_WARNING;
+
+        case LogType::Error:
+        case LogType::Fatal:
+            return LOG_COLOR_ERROR;
+    }
+}
+
+
+// copied from graphics/gui/consoleui.cpp
+constexpr glm::vec4 GetColorRGBA( LogColor col )
+{
+    switch (col)
+    {
+        // hmm
+        case LogColor::Black:
+            return {0.3, 0.3, 0.3, 1};
+        case LogColor::White:
+            return {1, 1, 1, 1};
+
+        case LogColor::DarkBlue:
+            return {0, 0.3, 0.8, 1};
+        case LogColor::DarkGreen:
+            return {0.25, 0.57, 0.25, 1};
+        case LogColor::DarkCyan:
+            return {0, 0.35, 0.75, 1};
+        case LogColor::DarkRed:
+            return {0.7, 0, 0.25, 1};
+        case LogColor::DarkMagenta:
+            return {0.45, 0, 0.7, 1};
+        case LogColor::DarkYellow:
+            return {0.6, 0.6, 0, 1};
+        case LogColor::DarkGray:
+            return {0.45, 0.45, 0.45, 1};
+
+        case LogColor::Blue:
+            return {0, 0.4, 1, 1};
+        case LogColor::Green:
+            return {0.4, 0.9, 0.4, 1};
+        case LogColor::Cyan:
+            return {0, 0.85, 1, 1};
+        case LogColor::Red:
+            return {0.9, 0, 0.4, 1};
+        case LogColor::Magenta:
+            return {0.6, 0, 0.9, 1};
+        case LogColor::Yellow:
+            return {1, 1, 0, 1};
+        case LogColor::Gray:
+            return {0.7, 0.7, 0.7, 1};
+
+        case LogColor::Default:
+        default:
+            return {1, 1, 1, 1};
+    }
+}
+
+
+constexpr glm::vec4 GetColorRGBA( LogChannel_t *channel, const Log& log )
+{
+    return GetColorRGBA( GetColor( channel, log ) );
+}
+
+    
+constexpr u32 GetColorU32( LogChannel_t *channel, const Log& log )
+{
+    // i don't like this
+    glm::vec4 colorVec = GetColorRGBA( GetColor( channel, log ) );
+
+    u8 colorU8[4] = {
+        colorVec.x * 255,
+        colorVec.y * 255,
+        colorVec.z * 255,
+        colorVec.w * 255,
+    };
+
+    // what
+    u32 color = *( (u32 *)colorU8 );
+
+    return color;
+}
+
+
+inline bool Log_DevLevelVisible( const Log& log )
+{
+	if ( developer.GetInt() < (int)log.aType && ( log.aType == LogType::Dev ||
+	                                              log.aType == LogType::Dev2 ||
+	                                              log.aType == LogType::Dev3 ||
+	                                              log.aType == LogType::Dev4 ) )
+		return false;
+
+	return true;
+}
+
+
+inline void Log_Tracy( LogChannel_t* channel, const Log& log )
+{
+#ifdef TRACY_ENABLE
+	if ( !tracy::ProfilerAvailable() )
+		return;
+
+	size_t len = log.aFormatted.size();
+	StripTrailingLines( log.aFormatted.c_str(), len );
+	TracyMessageC( log.aFormatted.c_str(), len, GetColorU32( channel, log ) );
+#endif
+}
+
+
+void Log_RunCallbacksChannelShown()
+{
+	for ( LogChannelShownCallbackF callback : gCallbacksChannelShown )
+	{
+		callback();
+	}
+}
+
+
+void Log_AddChannelShownCallback( LogChannelShownCallbackF callback )
+{
+	gCallbacksChannelShown.push_back( callback );
+}
+
+
+inline void Log_AddToHistoryString( const Log& log )
+{
+	if ( !Log_DevLevelVisible( log ) )
+		return;
+
+	LogChannel_t* channel = Log_GetChannelData( log.aChannel );
+	if ( !channel || !channel->aShown )
+		return;
+
+	gLogHistoryStr += log.aFormatted;
+}
+
+
+// TODO: make this async and probably store elsewhere
+void Log_BuildHistoryString( int maxSize )
+{
+	PROF_SCOPE();
+
+	gLogHistoryStr = "";
+
+	// No limit
+	if ( maxSize == -1 )
+	{
+		for ( auto& log : gLogHistory )
+			Log_AddToHistoryString( log );
+
+		goto BuildHistoryStringEnd;
+	}
+
+	// go from latest to oldest
+	for ( size_t i = gLogHistory.size() - 1; i > 0; i-- )
+	{
+		auto& log = gLogHistory[ i ];
+
+		if ( !Log_DevLevelVisible( log ) )
+			continue;
+
+		LogChannel_t* channel = Log_GetChannelData( log.aChannel );
+		if ( !channel || !channel->aShown )
+			continue;
+
+		int strLen     = glm::min( maxSize, (int)log.aFormatted.length() );
+		int strStart   = log.aFormatted.length() - strLen;
+
+		// if the length wanted is less then the string length, then start at an offset
+		gLogHistoryStr = log.aFormatted.substr( strStart, strLen ) + gLogHistoryStr;
+
+		maxSize -= strLen;
+
+		if ( maxSize == 0 )
+			break;
+	}
 
 BuildHistoryStringEnd:
-        RunCallbacksChannelShown();
-    }
-
-    inline void AddToHistoryString( const Log& log )
-    {
-        if ( !DevLevelVisible( log ) )
-            return;
-
-        LogChannel_t* channel = GetChannel( log.aChannel );
-        if ( !channel || !channel->aShown )
-            return;
-
-        aLogHistoryStr += log.aFormatted;
-    }
-
-    const std::string& GetHistoryStr( int maxSize )
-    {
-        // lazy
-        if ( maxSize != -1 )
-        {
-            BuildHistoryString( maxSize );
-        }
-
-        return aLogHistoryStr;
-    }
-    
-    void RunCallbacksChannelShown()
-    {
-        for ( LogChannelShownCallbackF callback : aCallbacksChannelShown )
-        {
-            callback();
-        }
-    }
-
-    std::vector< LogChannel_t > aChannels;
-    std::vector< Log >          aLogHistory;
-
-    // filtered text output for game console
-    std::string                 aLogHistoryStr;
-    std::string                 aFilterEx;  // super basic exclude filter
-    std::string                 aFilterIn;  // super basic include filter
-
-    std::vector< LogChannelShownCallbackF > aCallbacksChannelShown;
-};
-
-LogSystem& GetLogSystem()
-{
-    static LogSystem logsystem;
-    return logsystem;
+	Log_RunCallbacksChannelShown();
 }
+
+
+const std::string& Log_GetHistoryStr( int maxSize )
+{
+	// lazy
+	if ( maxSize != -1 )
+	{
+		Log_BuildHistoryString( maxSize );
+	}
+
+	return gLogHistoryStr;
+}
+
+
+void Log_AddLogInternal( Log& log )
+{
+    PROF_SCOPE();
+
+    LogChannel_t* channel = Log_GetChannelData( log.aChannel );
+    if ( !channel )
+    {
+        PrintF( "\n *** LogSystem: Channel Not Found for message: \"%s\"\n", log.aMessage.c_str() );
+        return;
+    }
+
+    FormatLog( channel, log );
+
+    if ( channel->aShown )
+	{
+#ifdef _WIN32
+        // doesn't work?
+        // http://unixwiz.net/techtips/outputdebugstring.html
+		// OutputDebugStringA( log.aFormatted.c_str() );
+#endif
+        switch ( log.aType )
+        {
+            default:
+            case LogType::Normal:
+            case LogType::Input:
+            case LogType::Raw:
+                Log_SetColor( channel->aColor );
+                fputs( log.aFormatted.c_str(), stdout );
+                fflush( stdout );
+				Log_SetColor( LogColor::Default );
+                break;
+
+            case LogType::Dev:
+            case LogType::Dev2:
+            case LogType::Dev3:
+            case LogType::Dev4:
+				if ( !Log_DevLevelVisible( log ) )
+                    break;
+
+                Log_SetColor( channel->aColor );
+                fputs( log.aFormatted.c_str(), stdout );
+                fflush( stdout );
+				Log_SetColor( LogColor::Default );
+                break;
+
+            case LogType::Warning:
+				Log_SetColor( LOG_COLOR_WARNING );
+                fputs( log.aFormatted.c_str(), stdout );
+                fflush( stdout );
+				Log_SetColor( LogColor::Default );
+                break;
+
+            case LogType::Error:
+				Log_SetColor( LOG_COLOR_ERROR );
+                fputs( log.aFormatted.c_str(), stdout );
+                fflush( stdout );
+				Log_SetColor( LogColor::Default );
+                break;
+
+            case LogType::Fatal:
+				Log_SetColor( LOG_COLOR_ERROR );
+                fputs( log.aFormatted.c_str(), stderr );
+                fflush( stderr );
+				Log_SetColor( LogColor::Default );
+
+                std::string messageBoxTitle;
+                vstring( messageBoxTitle, "[%s] Fatal Error", channel->aName.c_str() );
+
+                if ( log.aMessage.ends_with("\n") )
+                    SDL_ShowSimpleMessageBox( SDL_MESSAGEBOX_ERROR, messageBoxTitle.c_str(), log.aMessage.substr(0, log.aMessage.size()-1 ).c_str(), NULL );
+                else
+                    SDL_ShowSimpleMessageBox( SDL_MESSAGEBOX_ERROR, messageBoxTitle.c_str(), log.aMessage.c_str(), NULL );
+
+                throw std::runtime_error( log.aFormatted.c_str() );
+                break;
+        }
+    }
+
+    Log_Tracy( channel, log );
+    Log_AddToHistoryString( log );
+}
+
+
+// =====================================================================================
+// Log ConCommands
 
 void log_channel_dropdown(
 	const std::vector< std::string >& args,  // arguments currently typed in by the user
 	std::vector< std::string >& results )      // results to populate the dropdown list with
 {
-	for ( const auto &channel : GetLogSystem().aChannels )
+	for ( const auto &channel : gChannels )
 	{
 		if ( args.size() && !channel.aName.starts_with( args[0] ) )
 			continue;
@@ -466,148 +560,47 @@ void log_channel_dropdown(
 	}
 }
 
+
 CONCMD_DROP( log_channel_hide, log_channel_dropdown )
 {
     if ( args.size() == 0 )
         return;
 
-    LogChannel_t* channel = GetLogSystem().GetChannel( args[0].c_str() );
+    LogChannel_t* channel = Log_GetChannelByName( args[0].c_str() );
     if ( !channel )
         return;
 
     channel->aShown = false;
 
-    GetLogSystem().BuildHistoryString( -1 );
+    Log_BuildHistoryString( -1 );
 }
+
 
 CONCMD_DROP( log_channel_show, log_channel_dropdown )
 {
     if ( args.size() == 0 )
         return;
 
-    LogChannel_t* channel = GetLogSystem().GetChannel( args[0].c_str() );
+    LogChannel_t* channel = Log_GetChannelByName( args[ 0 ].c_str() );
     if ( !channel )
         return;
 
     channel->aShown = true;
 
-    GetLogSystem().BuildHistoryString( -1 );
+    Log_BuildHistoryString( -1 );
 }
 
 CONCMD( log_channel_dump )
 {
-    LogPuts( "Log Channels: \n" );
-    for ( const auto& channel : GetLogSystem().aChannels )
+    Log_Msg( "Log Channels: \n" );
+    for ( const auto& channel : gChannels )
     {
-        LogMsg( "\t%s - Visibility: %s, Color: %d\n", channel.aName.c_str(), channel.aShown ? "Shown" : "Hidden", channel.aColor );
-    }
-}
-
-/* Windows Specific Functions for console text colors.  */
-#ifdef _WIN32
-
-#include <Windows.h>
-
-
-constexpr int Win32GetColor( LogColor color ) 
-{
-    switch ( color )
-    {
-        case LogColor::Black:
-            return 0;
-        case LogColor::White:
-            return FOREGROUND_INTENSITY | FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE;
-
-        case LogColor::DarkBlue:
-            return FOREGROUND_BLUE;
-        case LogColor::DarkGreen:
-            return FOREGROUND_GREEN;
-        case LogColor::DarkCyan:
-            return FOREGROUND_GREEN | FOREGROUND_BLUE;
-        case LogColor::DarkRed:
-            return FOREGROUND_RED;
-        case LogColor::DarkMagenta:
-            return FOREGROUND_RED | FOREGROUND_BLUE;
-        case LogColor::DarkYellow:
-            return FOREGROUND_RED | FOREGROUND_GREEN;
-        case LogColor::DarkGray:
-            return FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE;
-
-        case LogColor::Blue:
-            return FOREGROUND_INTENSITY | FOREGROUND_BLUE;
-        case LogColor::Green:
-            return FOREGROUND_INTENSITY | FOREGROUND_GREEN;
-        case LogColor::Cyan:
-            return FOREGROUND_INTENSITY | FOREGROUND_GREEN | FOREGROUND_BLUE;
-        case LogColor::Red:
-            return FOREGROUND_INTENSITY | FOREGROUND_RED;
-        case LogColor::Magenta:
-            return FOREGROUND_INTENSITY | FOREGROUND_RED | FOREGROUND_BLUE;
-        case LogColor::Yellow:
-            return FOREGROUND_INTENSITY | FOREGROUND_RED | FOREGROUND_GREEN;
-        case LogColor::Gray:
-            return FOREGROUND_INTENSITY;
-
-        case LogColor::Default:
-        default:
-            return 7;
-    }
-}
-
-void Win32SetColor( LogColor color )
-{
-    // um
-    static HANDLE handle = sys_get_console_window();
-
-    if ( !handle )
-    {
-        Print( "*** Failed to Get Console Window\n" );
-        return;
-    }
-
-    BOOL result = SetConsoleTextAttribute( handle, Win32GetColor( color ) );
-
-    if ( !result )
-    {
-        Print( "*** Failed to set console color: %s\n", sys_get_error() );
-    }
-}
-
-#endif
-
-// TODO: setup the rest of the colors here
-constexpr const char* UnixGetColor( LogColor color ) 
-{
-    switch ( color )
-    {
-    case LogColor::Red:
-        return "\033[0;31m";
-    case LogColor::DarkGreen:
-        return "\033[0;32m";
-    case LogColor::Green:
-        return "\033[1;32m";
-    case LogColor::Yellow:
-        return "\033[0;33m";
-    case LogColor::Blue:
-        return "\033[0;34m";
-    case LogColor::Cyan:
-        return "\033[0;36m";
-    case LogColor::Magenta:
-        return "\033[1;35m";
-
-    case LogColor::Default:
-    default:
-        return "\033[0m";
+		Log_MsgF( "\t%s - Visibility: %s, Color: %d\n", channel.aName.c_str(), channel.aShown ? "Shown" : "Hidden", channel.aColor );
     }
 }
 
 
-void UnixSetColor( LogColor color )
-{
-    fputs( UnixGetColor( color ), stdout );
-}
-
-void LogSetColor( LogColor color )
+void Log_SetColor( LogColor color )
 {
     gCurrentColor = color;
 
@@ -619,13 +612,13 @@ void LogSetColor( LogColor color )
 #endif
 }
 
-LogColor LogGetColor()
+LogColor Log_GetColor()
 {
     return gCurrentColor;
 }
 
 
-const char* LogColorToStr( LogColor color )
+const char* Log_ColorToStr( LogColor color )
 {
     switch ( color )
     {
@@ -671,15 +664,9 @@ const char* LogColorToStr( LogColor color )
 }
 
 
-LogChannel LogRegisterChannel( const char* sName, LogColor sColor )
-{
-    return GetLogSystem().RegisterChannel( sName, sColor );
-}
-
-
 LogChannel LogGetChannel( const char* name )
 {
-    for ( size_t i = 0; auto channel : GetLogSystem().aChannels )
+    for ( size_t i = 0; const auto& channel : gChannels )
     {
         // if ( GetLogSystem().aChannels[i].aName == name )
         if ( channel.aName == name )
@@ -692,20 +679,19 @@ LogChannel LogGetChannel( const char* name )
 }
 
 
-LogColor LogGetChannelColor( LogChannel handle )
+LogColor Log_GetChannelColor( LogChannel handle )
 {
-    LogChannel_t* channel = GetLogSystem().GetChannel( handle );
+	LogChannel_t* channel = Log_GetChannelData( handle );
     if ( !channel )
         return LogColor::Default;
 
     return channel->aColor;
 }
 
-static std::string gDefaultChannelName = "[General]";
 
-const std::string& LogGetChannelName( LogChannel handle )
+const std::string& Log_GetChannelName( LogChannel handle )
 {
-    LogChannel_t* channel = GetLogSystem().GetChannel( handle );
+	LogChannel_t* channel = Log_GetChannelData( handle );
     if ( !channel )
         return gDefaultChannelName;
 
@@ -713,27 +699,21 @@ const std::string& LogGetChannelName( LogChannel handle )
 }
 
 
-unsigned char LogGetChannelCount()
+unsigned char Log_GetChannelCount()
 {
-    return (unsigned char)GetLogSystem().aChannels.size();
+    return (unsigned char)gChannels.size();
 }
 
 
-const std::string& LogGetHistoryStr( int maxSize )
+const std::vector< Log >& Log_GetLogHistory()
 {
-    return GetLogSystem().GetHistoryStr( maxSize );
+    return gLogHistory;
 }
 
 
-const std::vector< Log >& LogGetLogHistory()
+bool Log_ChannelIsShown( LogChannel handle )
 {
-    return GetLogSystem().aLogHistory;
-}
-
-
-bool LogChannelIsShown( LogChannel handle )
-{
-    LogChannel_t* channel = GetLogSystem().GetChannel( handle );
+	LogChannel_t* channel = Log_GetChannelData( handle );
     if ( !channel )
         return false;
 
@@ -741,27 +721,21 @@ bool LogChannelIsShown( LogChannel handle )
 }
 
 
-const Log* LogGetLastLog()
+const Log* Log_GetLastLog()
 {
-    if ( GetLogSystem().aLogHistory.size() == 0 )
+    if ( gLogHistory.size() == 0 )
         return nullptr;
 
-    return &GetLogSystem().aLogHistory[ GetLogSystem().aLogHistory.size() - 1 ];
+    return &gLogHistory[ gLogHistory.size() - 1 ];
 }
 
 
-bool LogIsVisible( const Log& log )
+bool Log_IsVisible( const Log& log )
 {
-    if ( !GetLogSystem().DevLevelVisible( log ) )
+	if ( !Log_DevLevelVisible( log ) )
         return false;
 
-    return LogChannelIsShown( log.aChannel );
-}
-
-
-void LogAddChannelShownCallback( LogChannelShownCallbackF callback )
-{
-
+    return Log_ChannelIsShown( log.aChannel );
 }
 
 
@@ -769,8 +743,7 @@ void LogAddChannelShownCallback( LogChannelShownCallbackF callback )
 // System printing, skip logging
 
 
-/* Deprecated (... or is it?!) */
-void Print( const char* format, ... )
+void PrintF( const char* format, ... )
 {
     std::string buffer;
 	VSTRING( buffer, format );
@@ -778,161 +751,200 @@ void Print( const char* format, ... )
 }
 
 
-void Puts( const char* buffer )
+void Print( const char* buffer )
 {
 	fputs( buffer, stdout );
 }
 
 
 // ----------------------------------------------------------------
-// Specify a custom channel.
+// Extended Logging Functions
 
 
 #define LOG_SYS_MSG_VA( str, channel, level ) \
     va_list args; \
     va_start( args, str ); \
-    GetLogSystem().LogMsg( channel, level, str, args ); \
+    Log_ExV( channel, level, str, args ); \
     va_end( args )
 
 
-/* General Logging Function.  */
-void LogEx( LogChannel channel, LogType sLevel, const char *spBuf )
+void Log_Ex( LogChannel sChannel, LogType sLevel, const char* spBuf )
 {
-    GetLogSystem().LogMsg( channel, sLevel, spBuf );
-}
+	PROF_SCOPE();
 
-void LogExF( LogChannel channel, LogType sLevel, const char *spFmt, ... )
-{
-    LOG_SYS_MSG_VA( spFmt, channel, sLevel );
-}
+	gLogMutex.lock();
 
-void LogExV( LogChannel channel, LogType sLevel, const char *spFmt, va_list args )
-{
-    GetLogSystem().LogMsg( channel, sLevel, spFmt, args );
-}
+	gLogHistory.push_back( { sChannel, sLevel, spBuf } );
+	Log& log = gLogHistory[ gLogHistory.size() - 1 ];
 
+	Log_AddLogInternal( log );
 
-// maybe later, don't feel like unrestricting it from the channels
-#if 0
-void LogEx( LogChannel channel, LogType sLevel, LogColor color, const char *spBuf )
-{
-    GetLogSystem().LogMsg( channel, sLevel, color, spBuf );
-}
-
-void LogExF( LogChannel channel, LogType sLevel, LogColor color, const char *spFmt, ... )
-{
-    va_list args;
-    va_start( args, str );
-    GetLogSystem().LogMsg( channel, sLevel, color, str, args );
-    va_end( args );
-}
-#endif
-
-
-/* Lowest severity.  */
-void LogMsg( LogChannel channel, const char *spFmt, ... ) 
-{
-    LOG_SYS_MSG_VA( spFmt, channel, LogType::Normal );
-}
-
-/* Lowest severity, no format.  */
-void LogPuts( LogChannel channel, const char *spBuf )
-{
-    GetLogSystem().LogMsg( channel, LogType::Normal, spBuf );
-}
-
-/* Medium severity.  */
-void LogWarn( LogChannel channel, const char *spFmt, ... )
-{
-    LOG_SYS_MSG_VA( spFmt, channel, LogType::Warning );
-}
-
-/* Medium severity.  */
-void LogPutsWarn( LogChannel channel, const char *spBuf )
-{
-    GetLogSystem().LogMsg( channel, LogType::Warning, spBuf );
-}
-
-/* High severity.  */
-/* TODO: maybe have this print to stderr? */
-void LogError( LogChannel channel, const char *spFmt, ... )
-{
-    LOG_SYS_MSG_VA( spFmt, channel, LogType::Error );
-}
-
-/* Extreme severity.  */
-void LogFatal( LogChannel channel, const char *spFmt, ... )
-{
-    LOG_SYS_MSG_VA( spFmt, channel, LogType::Fatal );
-}
-
-/* Dev only.  */
-void LogDev( LogChannel channel, u8 sLvl, const char *spFmt, ... )
-{
-    if ( sLvl < 1 || sLvl > 4)
-        sLvl = 4;
-
-    LOG_SYS_MSG_VA( spFmt, channel, (LogType)sLvl );
+	gLogMutex.unlock();
 }
 
 
-/* Dev only.  */
-void LogPutsDev( LogChannel channel, u8 sLvl, const char *spBuf )
+void Log_ExF( LogChannel sChannel, LogType sLevel, const char* spFmt, ... )
 {
-    GetLogSystem().LogMsg( channel, LogType::Dev, spBuf );
+	LOG_SYS_MSG_VA( spFmt, sChannel, sLevel );
+}
+
+
+void Log_ExV( LogChannel sChannel, LogType sLevel, const char* spFmt, va_list args )
+{
+	PROF_SCOPE();
+
+	gLogMutex.lock();
+
+	gLogHistory.push_back( { sChannel, sLevel, "" } );
+	Log&    log = gLogHistory[ gLogHistory.size() - 1 ];
+
+	va_list copy;
+	va_copy( copy, args );
+	int len = std::vsnprintf( nullptr, 0, spFmt, copy );
+	va_end( copy );
+
+	if ( len < 0 )
+	{
+		Print( "\n *** LogSystem: vsnprintf failed?\n\n" );
+		gLogMutex.unlock();
+		return;
+	}
+
+	log.aMessage.resize( std::size_t( len ) + 1, '\0' );
+	std::vsnprintf( log.aMessage.data(), log.aMessage.size(), spFmt, args );
+	log.aMessage.resize( len );
+
+	Log_AddLogInternal( log );
+
+	gLogMutex.unlock();
+}
+
+
+// ----------------------------------------------------------------
+// Standard Logging Functions
+
+// Lowest severity.
+void CORE_API Log_Msg( LogChannel channel, const char* spBuf )
+{
+	Log_Ex( channel, LogType::Normal, spBuf );
+}
+
+void CORE_API Log_MsgF( LogChannel channel, const char* spFmt, ... )
+{
+	LOG_SYS_MSG_VA( spFmt, channel, LogType::Normal );
+}
+
+// Medium severity.
+void CORE_API Log_Warn( LogChannel channel, const char* spBuf )
+{
+	Log_Ex( channel, LogType::Warning, spBuf );
+}
+
+void CORE_API Log_WarnF( LogChannel channel, const char* spFmt, ... )
+{
+	LOG_SYS_MSG_VA( spFmt, channel, LogType::Warning );
+}
+
+// High severity.
+void CORE_API Log_Error( LogChannel channel, const char* spBuf )
+{
+	Log_Ex( channel, LogType::Error, spBuf );
+}
+
+void CORE_API Log_ErrorF( LogChannel channel, const char* spFmt, ... )
+{
+	LOG_SYS_MSG_VA( spFmt, channel, LogType::Error );
+}
+
+// Extreme severity.
+void CORE_API Log_Fatal( LogChannel channel, const char* spBuf )
+{
+	Log_Ex( channel, LogType::Error, spBuf );
+}
+
+void CORE_API Log_FatalF( LogChannel channel, const char* spFmt, ... )
+{
+	LOG_SYS_MSG_VA( spFmt, channel, LogType::Fatal );
+}
+
+// Dev only.
+void CORE_API Log_Dev( LogChannel channel, u8 sLvl, const char* spBuf )
+{
+	if ( sLvl < 1 || sLvl > 4 )
+		sLvl = 4;
+
+	Log_Ex( channel, (LogType)sLvl, spBuf );
+}
+
+void CORE_API Log_DevF( LogChannel channel, u8 sLvl, const char* spFmt, ... )
+{
+	if ( sLvl < 1 || sLvl > 4 )
+		sLvl = 4;
+
+	LOG_SYS_MSG_VA( spFmt, channel, (LogType)sLvl );
 }
 
 
 // ----------------------------------------------------------------
 // Default to general channel.
 
-/* Lowest severity.  */
-void LogMsg( const char *spFmt, ... ) 
+// Lowest severity.
+void CORE_API Log_Msg( const char* spBuf )
 {
-    LOG_SYS_MSG_VA( spFmt, gGeneralChannel, LogType::Normal );
+	Log_Ex( gGeneralChannel, LogType::Normal, spBuf );
 }
 
-/* Lowest severity, no format.  */
-void LogPuts( const char *spBuf )
+void CORE_API Log_MsgF( const char* spFmt, ... )
 {
-    GetLogSystem().LogMsg( gGeneralChannel, LogType::Normal, spBuf );
+	LOG_SYS_MSG_VA( spFmt, gGeneralChannel, LogType::Normal );
 }
 
-/* Medium severity.  */
-void LogWarn( const char *spFmt, ... )
+// Medium severity.
+void CORE_API Log_Warn( const char* spBuf )
 {
-    LOG_SYS_MSG_VA( spFmt, gGeneralChannel, LogType::Warning );
+	Log_Ex( gGeneralChannel, LogType::Warning, spBuf );
 }
 
-/* Medium severity.  */
-void LogPutsWarn( const char *spBuf )
+void CORE_API Log_WarnF( const char* spFmt, ... )
 {
-    GetLogSystem().LogMsg( gGeneralChannel, LogType::Warning, spBuf );
+	LOG_SYS_MSG_VA( spFmt, gGeneralChannel, LogType::Warning );
 }
 
-/* High severity.  */
-/* TODO: maybe have this print to stderr? */
-void LogError( const char *spFmt, ... )
+// High severity.
+void CORE_API Log_Error( const char* spBuf )
 {
-    LOG_SYS_MSG_VA( spFmt, gGeneralChannel, LogType::Error );
+	Log_Ex( gGeneralChannel, LogType::Error, spBuf );
 }
 
-/* Extreme severity.  */
-void LogFatal( const char *spFmt, ... )
+void CORE_API Log_ErrorF( const char* spFmt, ... )
 {
-    LOG_SYS_MSG_VA( spFmt, gGeneralChannel, LogType::Fatal );
+	LOG_SYS_MSG_VA( spFmt, gGeneralChannel, LogType::Error );
 }
 
-/* Dev only.  */
-void LogDev( u8 sLvl, const char *spFmt, ... )
+// Extreme severity.
+void CORE_API Log_Fatal( const char* spBuf )
 {
-    LOG_SYS_MSG_VA( spFmt, gGeneralChannel, LogType::Dev );
+	Log_Ex( gGeneralChannel, LogType::Error, spBuf );
 }
 
-
-/* Dev only.  */
-void LogPutsDev( u8 sLvl, const char *spBuf )
+void CORE_API Log_FatalF( const char* spFmt, ... )
 {
-    GetLogSystem().LogMsg( gGeneralChannel, LogType::Dev, spBuf );
+	LOG_SYS_MSG_VA( spFmt, gGeneralChannel, LogType::Fatal );
 }
 
+// Dev only.
+void CORE_API Log_Dev( u8 sLvl, const char* spBuf )
+{
+	if ( sLvl < 1 || sLvl > 4 )
+		sLvl = 4;
+
+	Log_Ex( gGeneralChannel, (LogType)sLvl, spBuf );
+}
+
+void CORE_API Log_DevF( u8 sLvl, const char* spFmt, ... )
+{
+	if ( sLvl < 1 || sLvl > 4 )
+		sLvl = 4;
+
+	LOG_SYS_MSG_VA( spFmt, gGeneralChannel, (LogType)sLvl );
+}

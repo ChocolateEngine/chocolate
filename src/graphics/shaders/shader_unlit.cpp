@@ -24,8 +24,8 @@ constexpr const char *pFShader = "shaders/unlit.frag.spv";
 void ShaderUnlit::Init()
 {
 	aModules.Allocate(2);
-	aModules[0] = CreateShaderModule( filesys->ReadFile( pVShader ) ); // Processes incoming verticies, taking world position, color, and texture coordinates as an input
-	aModules[1] = CreateShaderModule( filesys->ReadFile( pFShader ) ); // Fills verticies with fragments to produce color, and depth
+	aModules[0] = CreateShaderModule( FileSys_ReadFile( pVShader ) ); // Processes incoming verticies, taking world position, color, and texture coordinates as an input
+	aModules[1] = CreateShaderModule( FileSys_ReadFile( pFShader ) ); // Fills verticies with fragments to produce color, and depth
 
 	// very rough idea for now for material parameters for this shader:
 	// AddParameter<TextureDescriptor*>( "MainTexture", DEFAULT_TYPE );
@@ -40,8 +40,8 @@ void ShaderUnlit::Init()
 
 void ShaderUnlit::ReInit()
 {
-	aModules[0] = CreateShaderModule( filesys->ReadFile( pVShader ) ); // Processes incoming verticies, taking world position, color, and texture coordinates as an input
-	aModules[1] = CreateShaderModule( filesys->ReadFile( pFShader ) ); // Fills verticies with fragments to produce color, and depth
+	aModules[0] = CreateShaderModule( FileSys_ReadFile( pVShader ) ); // Processes incoming verticies, taking world position, color, and texture coordinates as an input
+	aModules[1] = CreateShaderModule( FileSys_ReadFile( pFShader ) ); // Fills verticies with fragments to produce color, and depth
 
 	BaseShader::ReInit();
 }
@@ -196,7 +196,7 @@ void ShaderUnlit::Draw( size_t renderableIndex, IRenderable* spRenderable, size_
 	// check if renderable is nullptr
 	if ( spRenderable == nullptr )
 	{
-		LogError( "ShaderUnlit::Draw: spRenderable is nullptr\n" );
+		Log_Error( "ShaderUnlit::Draw: spRenderable is nullptr\n" );
 		return;
 	}
 
@@ -204,7 +204,7 @@ void ShaderUnlit::Draw( size_t renderableIndex, IRenderable* spRenderable, size_
 	IModel* model = spRenderable->GetModel();
 	if ( model == nullptr )
 	{
-		LogError( "ShaderUnlit::Draw: model is nullptr\n" );
+		Log_Error( "ShaderUnlit::Draw: model is nullptr\n" );
 		return;
 	}
 
@@ -241,7 +241,7 @@ void ShaderUnlit::PrepareDrawData( size_t renderableIndex, IRenderable* spRender
 	// check if renderable is nullptr
 	if ( spRenderable == nullptr )
 	{
-		LogError( "ShaderUnlitArray::Draw: spRenderable is nullptr\n" );
+		Log_Error( "ShaderUnlitArray::Draw: spRenderable is nullptr\n" );
 		return;
 	}
 
@@ -249,7 +249,7 @@ void ShaderUnlit::PrepareDrawData( size_t renderableIndex, IRenderable* spRender
 	IModel* model = spRenderable->GetModel();
 	if ( model == nullptr )
 	{
-		LogError( "ShaderUnlitArray::Draw: model is nullptr\n" );
+		Log_Error( "ShaderUnlitArray::Draw: model is nullptr\n" );
 		return;
 	}
 	

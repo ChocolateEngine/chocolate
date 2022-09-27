@@ -57,7 +57,7 @@ void BaseShader::BindBuffers( IRenderable* spRenderable, size_t matIndex, VkComm
 	// check if renderable is nullptr
 	if ( spRenderable == nullptr )
 	{
-		LogError( "BaseShader::BindBuffers: spRenderable is nullptr\n" );
+		Log_Error( "BaseShader::BindBuffers: spRenderable is nullptr\n" );
 		return;
 	}
 
@@ -65,7 +65,7 @@ void BaseShader::BindBuffers( IRenderable* spRenderable, size_t matIndex, VkComm
 	IModel* model = spRenderable->GetModel();
 	if ( model == nullptr )
 	{
-		LogError( "BaseShader::BindBuffers: model is nullptr\n" );
+		Log_Error( "BaseShader::BindBuffers: model is nullptr\n" );
 		return;
 	}
 	
@@ -77,7 +77,7 @@ void BaseShader::BindBuffers( IRenderable* spRenderable, size_t matIndex, VkComm
 	// Bind the mesh's vertex and index buffers
 	if ( !meshData.apVertexBuffer )
 	{
-		LogError( "Mesh Without a Vertex Buffer Trying to Draw !!!!\n" );
+		Log_Error( "Mesh Without a Vertex Buffer Trying to Draw !!!!\n" );
 		return;
 	}
 

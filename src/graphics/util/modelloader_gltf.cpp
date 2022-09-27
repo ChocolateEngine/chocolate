@@ -150,7 +150,7 @@ void LoadBlendShapes( MeshBuilder& meshBuilder, cgltf_primitive& prim )
 				weightsBuffer = attrib.data;
 
 			else
-				LogWarn( "Unknown GLTF attribute: %s\n", attrib.name );
+				Log_WarnF( "Unknown GLTF attribute: %s\n", attrib.name );
 		}
 
 		Assert( vertexBuffer->component_type == cgltf_component_type_r_32f );
@@ -198,7 +198,7 @@ void LoadGltf( const std::string &srPath, const std::string &srExt, Model* spMod
 
 	if ( result != cgltf_result_success )
 	{
-		LogError( "Failed Loading GLTF File: \"%d\" - \"%s\"", Result2Str( result ), srPath.c_str() );
+		Log_ErrorF( "Failed Loading GLTF File: \"%d\" - \"%s\"", Result2Str( result ), srPath.c_str() );
 		return;
 	}
 
@@ -207,7 +207,7 @@ void LoadGltf( const std::string &srPath, const std::string &srExt, Model* spMod
 
 	if ( result != cgltf_result_success )
 	{
-		LogError( "Failed Loading GLTF Buffers: \"%d\" - \"%s\"", Result2Str( result ), srPath.c_str() );
+		Log_ErrorF( "Failed Loading GLTF Buffers: \"%d\" - \"%s\"", Result2Str( result ), srPath.c_str() );
 		return;
 	}
 
@@ -229,7 +229,7 @@ void LoadGltf( const std::string &srPath, const std::string &srExt, Model* spMod
 		if ( material == nullptr )
 		{
 			std::string matPath = baseDir + "/" + gltfMat.name + ".cmt";
-			if ( filesys->IsFile( matPath ) )
+			if ( FileSys_IsFile( matPath ) )
 				material = matsys->ParseMaterial( matPath );
 		}
 
@@ -249,7 +249,7 @@ void LoadGltf( const std::string &srPath, const std::string &srExt, Model* spMod
 				// TODO: use std::string_view
 				const std::string texName = texture->name;
 
-				if ( filesys->IsRelative( texName ) )
+				if ( FileSys_IsRelative( texName ) )
 					material->SetVar( param, matsys->CreateTexture( baseDir + "/" + texName ) );
 				else
 					material->SetVar( param, matsys->CreateTexture( texName ) );
@@ -294,7 +294,7 @@ void LoadGltf( const std::string &srPath, const std::string &srExt, Model* spMod
 
 			if ( prim.type != cgltf_primitive_type_triangles )
 			{
-				LogWarn( "uh skipping non tri's for now lol\n" );
+				Log_Warn( "uh skipping non tri's for now lol\n" );
 				continue;
 			}
 
@@ -351,7 +351,7 @@ void LoadGltf( const std::string &srPath, const std::string &srExt, Model* spMod
 				}
 				else
 				{
-					LogWarn( "Unknown GLTF attribute: %s\n", attrib.name );
+					Log_WarnF( "Unknown GLTF attribute: %s\n", attrib.name );
 				}
 			}
 
@@ -445,7 +445,7 @@ void LoadGltf( const std::string &srPath, const std::string &srExt, Model* spMod
 						}
 						else
 						{
-							LogWarn( "gltf position index out of bounds\n" );
+							Log_Warn( "gltf position index out of bounds\n" );
 							meshBuilder.SetPos( 0.f, 0.f, 0.f );
 						}
 					}
@@ -466,7 +466,7 @@ void LoadGltf( const std::string &srPath, const std::string &srExt, Model* spMod
 						}
 						else
 						{
-							LogWarn( "gltf normal index out of bounds\n" );
+							Log_Warn( "gltf normal index out of bounds\n" );
 							meshBuilder.SetNormal( 0.f, 0.f, 0.f );
 						}
 					}
@@ -489,7 +489,7 @@ void LoadGltf( const std::string &srPath, const std::string &srExt, Model* spMod
 						}
 						else
 						{
-							LogWarn( "gltf color index out of bounds\n" );
+							Log_Warn( "gltf color index out of bounds\n" );
 							meshBuilder.SetColor( 1.f, 1.f, 1.f );
 						}
 					}
@@ -511,7 +511,7 @@ void LoadGltf( const std::string &srPath, const std::string &srExt, Model* spMod
 						}
 						else
 						{
-							LogWarn( "gltf texture coordinate index out of bounds\n" );
+							Log_Warn( "gltf texture coordinate index out of bounds\n" );
 							meshBuilder.SetTexCoord( 0.f, 0.f );
 						}
 					}
@@ -539,7 +539,7 @@ void LoadGltf( const std::string &srPath, const std::string &srExt, Model* spMod
 						}
 						else
 						{
-							LogWarn( "gltf joint 0 index out of bounds\n" );
+							Log_Warn( "gltf joint 0 index out of bounds\n" );
 							meshBuilder.SetJoint0( 0.f, 0.f, 0.f, 0.f );
 						}
 					}
@@ -560,7 +560,7 @@ void LoadGltf( const std::string &srPath, const std::string &srExt, Model* spMod
 						}
 						else
 						{
-							LogWarn( "gltf weight 0 index out of bounds\n" );
+							Log_Warn( "gltf weight 0 index out of bounds\n" );
 							meshBuilder.SetWeight0( 0.f, 0.f, 0.f, 0.f );
 						}
 					}
