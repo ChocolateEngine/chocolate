@@ -590,7 +590,5 @@ bool GuiSystem::IsConsoleShown()
 void GuiSystem::InitConsole()
 {
 	Log_AddChannelShownCallback( ReBuildConsoleOutput );
-
-	gConHistory.resize( 4096 );
 }
 
