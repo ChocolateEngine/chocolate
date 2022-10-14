@@ -9,22 +9,29 @@
 
 CONVAR( developer, 1 );
 
-LogColor                                gCurrentColor       = LogColor::Default;
-LogChannel                              gGeneralChannel     = INVALID_LOG_CHANNEL;
-static std::string                      gDefaultChannelName = "[General]";
-static std::mutex                       gLogMutex;
+LogColor                                       gCurrentColor       = LogColor::Default;
+LogChannel                                     gGeneralChannel     = INVALID_LOG_CHANNEL;
+static std::string                             gDefaultChannelName = "[General]";
+static std::mutex                              gLogMutex;
 
-std::vector< LogChannel_t >             gChannels;
-std::vector< Log >                      gLogHistory;
+// apparently you could of added stuff to this before dynamic initialization got to this, and then you lose some log channels as a result
+std::vector< LogChannel_t >& GetLogChannels()
+{
+	static std::vector< LogChannel_t > gChannels;
+	return gChannels;
+}
+
+// static std::vector< LogChannel_t >             gChannels;
+static std::vector< Log >                      gLogHistory;
 
 // filtered text output for game console
-std::string                             gLogHistoryStr;
-std::string                             gFilterEx;  // super basic exclude filter
-std::string                             gFilterIn;  // super basic include filter
+static std::string                             gLogHistoryStr;
+static std::string                             gFilterEx;  // super basic exclude filter
+static std::string                             gFilterIn;  // super basic include filter
 
-std::vector< LogChannelShownCallbackF > gCallbacksChannelShown;
+static std::vector< LogChannelShownCallbackF > gCallbacksChannelShown;
 
-constexpr glm::vec4                     gVecTo255( 255, 255, 255, 255 );
+constexpr glm::vec4                            gVecTo255( 255, 255, 255, 255 );
 
 
 static void StripTrailingLines( const char* pText, size_t& len )
@@ -159,25 +166,25 @@ void Log_Init()
 
 LogChannel Log_RegisterChannel( const char *sName, LogColor sColor )
 {
-    for ( int i = 0; i < gChannels.size(); i++ )
+	for ( int i = 0; i < GetLogChannels().size(); i++ )
     {
-        LogChannel_t* channel = &gChannels[i];
+		LogChannel_t* channel = &GetLogChannels()[ i ];
         if ( channel->aName != sName )
             continue;
             
         return i;
     }
 
-    gChannels.push_back( { true, sName, sColor } );
-    return (LogChannel)gChannels.size() - 1;
+    GetLogChannels().push_back( { true, sName, sColor } );
+	return (LogChannel)GetLogChannels().size() - 1;
 }
 
 
 LogChannel Log_GetChannel( const char* sChannel )
 {
-	for ( int i = 0; i < gChannels.size(); i++ )
+	for ( int i = 0; i < GetLogChannels().size(); i++ )
 	{
-		LogChannel_t* channel = &gChannels[ i ];
+		LogChannel_t* channel = &GetLogChannels()[ i ];
 		if ( channel->aName != sChannel )
 			continue;
 
@@ -190,18 +197,18 @@ LogChannel Log_GetChannel( const char* sChannel )
 
 LogChannel_t* Log_GetChannelData( LogChannel sChannel )
 {
-    if ( sChannel >= gChannels.size() )
+	if ( sChannel >= GetLogChannels().size() )
         return nullptr;
 
-    return &gChannels[sChannel];
+    return &GetLogChannels()[ sChannel ];
 }
 
 
 LogChannel_t* Log_GetChannelByName( const char* sChannel )
 {
-    for ( int i = 0; i < gChannels.size(); i++ )
+	for ( int i = 0; i < GetLogChannels().size(); i++ )
     {
-        LogChannel_t *channel = &gChannels[i];
+		LogChannel_t* channel = &GetLogChannels()[ i ];
         if ( channel->aName != sChannel )
             continue;
 
@@ -551,7 +558,7 @@ void log_channel_dropdown(
 	const std::vector< std::string >& args,  // arguments currently typed in by the user
 	std::vector< std::string >& results )      // results to populate the dropdown list with
 {
-	for ( const auto &channel : gChannels )
+	for ( const auto& channel : GetLogChannels() )
 	{
 		if ( args.size() && !channel.aName.starts_with( args[0] ) )
 			continue;
@@ -593,7 +600,7 @@ CONCMD_DROP( log_channel_show, log_channel_dropdown )
 CONCMD( log_channel_dump )
 {
     Log_Msg( "Log Channels: \n" );
-    for ( const auto& channel : gChannels )
+	for ( const auto& channel : GetLogChannels() )
     {
 		Log_MsgF( "\t%s - Visibility: %s, Color: %d\n", channel.aName.c_str(), channel.aShown ? "Shown" : "Hidden", channel.aColor );
     }
@@ -666,7 +673,7 @@ const char* Log_ColorToStr( LogColor color )
 
 LogChannel LogGetChannel( const char* name )
 {
-    for ( size_t i = 0; const auto& channel : gChannels )
+	for ( size_t i = 0; const auto& channel : GetLogChannels() )
     {
         // if ( GetLogSystem().aChannels[i].aName == name )
         if ( channel.aName == name )
@@ -701,7 +708,7 @@ const std::string& Log_GetChannelName( LogChannel handle )
 
 unsigned char Log_GetChannelCount()
 {
-    return (unsigned char)gChannels.size();
+	return (unsigned char)GetLogChannels().size();
 }
 
 
