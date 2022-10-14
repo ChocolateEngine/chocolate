@@ -1,355 +1,345 @@
-#include "present.h"
+#include "core/platform.h"
+#include "core/log.h"
+#include "core/resources.hh"
+#include "util.h"
+
+#include "render_vk.h"
+
+#include "imgui_impl_vulkan.h"
 
 #include <thread>
+#include <mutex>
 
-#include "gutil.hh"
+#include "imgui.h"
+#include "imgui_impl_vulkan.h"
 
-#include "commandpool.h"
-#include "swapchain.h"
-#include "rendertarget.h"
-#include "renderpass.h"
 
-// TEMP
-#include "freemans_tshirt.hpp"
+constexpr u32                  MAX_FRAMES_IN_FLIGHT = 2;
 
-#include "imgui/imgui.h"
-#include "imgui/imgui_impl_vulkan.h"
+// Primary Command Buffers
+std::vector< VkCommandBuffer >  gCommandBuffers;
+ResourceList< VkCommandBuffer > gCommandBufferHandles;  // wtf
+VkCommandBuffer                 gSingleCommandBuffer;
 
-class DrawThread
+std::vector< VkSemaphore >      gImageAvailableSemaphores;
+std::vector< VkSemaphore >      gRenderFinishedSemaphores;
+std::vector< VkFence >          gFences;
+std::vector< VkFence >          gInFlightFences;
+
+u8                              gFrameIndex      = 0;
+u8                              gCmdIndex        = 0;
+
+bool                            gInPresentQueue  = false;
+bool                            gInGraphicsQueue = false;
+
+std::mutex                      gGraphicsMutex;
+
+
+VkCommandBuffer VK_GetCommandBuffer()
 {
-public:
-    CommandPool                    aCommandPool;
-    std::vector< VkCommandBuffer > aCommandBuffers;
-};
-
-constexpr u32 MAX_FRAMES_IN_FLIGHT = 2;
-constexpr u32 DRAW_THREADS         = 1;
-
-/*
- *    All draw commands in threads are in secondary
- *    commands buffers.
- */
-std::vector< DrawThread >      gDrawThreads;
-/*
- *    These are the primary command buffers,
- *    allocated by a primary command pool.
- */
-std::vector< VkCommandBuffer > gCommandBuffers;
-
-CommandPool& GetPrimaryCommandPool()
-{
-	static CommandPool sPrimaryCommandPool;
-	return sPrimaryCommandPool;
+	return gCommandBuffers[ gCmdIndex ];
 }
 
-std::vector< VkCommandBuffer > gImGuiCommandBuffers; 
 
-std::vector< VkSemaphore > gImageAvailableSemaphores;
-std::vector< VkSemaphore > gRenderFinishedSemaphores;
-std::vector< VkFence >     gFences;
-std::vector< VkFence >     gInFlightFences;
-
-u32 gFrameIndex = 0;
-
-void CreateFences() 
+VkCommandBuffer VK_GetCommandBuffer( Handle cmd )
 {
-    gFences.resize( MAX_FRAMES_IN_FLIGHT );
-    gInFlightFences.resize( GetSwapchain().GetImageCount() );
-
-    VkFenceCreateInfo info = {};
-    info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-    info.flags = VK_FENCE_CREATE_SIGNALED_BIT;
-
-    for( u32 i = 0; i < MAX_FRAMES_IN_FLIGHT; i++ )
-    {
-        CheckVKResult( vkCreateFence( GetDevice(), &info, nullptr, &gFences[ i ] ), "Failed to create fence!" );
-    }
+	return *gCommandBufferHandles.Get( cmd );
 }
 
-void CreateSemaphores()
+
+u32 VK_GetCommandIndex()
 {
-    gImageAvailableSemaphores.resize( MAX_FRAMES_IN_FLIGHT );
-    gRenderFinishedSemaphores.resize( MAX_FRAMES_IN_FLIGHT );
-
-    VkSemaphoreCreateInfo info = {};
-    info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-
-    for( u32 i = 0; i < MAX_FRAMES_IN_FLIGHT; i++ )
-    {
-        CheckVKResult( vkCreateSemaphore( GetDevice(), &info, nullptr, &gImageAvailableSemaphores[ i ] ), "Failed to create semaphore!" );
-        CheckVKResult( vkCreateSemaphore( GetDevice(), &info, nullptr, &gRenderFinishedSemaphores[ i ] ), "Failed to create semaphore!" );
-    }
+	return gCmdIndex;
 }
 
-void CreateDrawThreads()
+
+void VK_CreateFences()
 {
-    gDrawThreads.resize( DRAW_THREADS );
+	gFences.resize( MAX_FRAMES_IN_FLIGHT );
+	gInFlightFences.resize( VK_GetSwapImageCount() );
 
-    CreateFences();
-    CreateSemaphores();
-}
+	VkFenceCreateInfo info{ VK_STRUCTURE_TYPE_FENCE_CREATE_INFO };
+	info.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 
-void RecordImGuiCommands( u32 sCmdIndex,  VkCommandBufferInheritanceInfo sInfo )
-{
-    // VkCommandBufferAllocateInfo allocInfo = {};
-    // allocInfo.sType              = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-    // allocInfo.commandPool        = GetPrimaryCommandPool().GetHandle();
-    // allocInfo.level              = VK_COMMAND_BUFFER_LEVEL_SECONDARY;
-    // allocInfo.commandBufferCount = 1;
-    // 
-    // CheckVKResult( vkAllocateCommandBuffers( GetDevice(), &allocInfo, &gImGuiCommandBuffers[ sCmdIndex ] ), "Failed to allocate command buffer!" );
-    
-    VkCommandBufferBeginInfo beginInfo = {};
-    beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-    beginInfo.flags = VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT;
-    beginInfo.pInheritanceInfo = &sInfo;
-    
-    CheckVKResult( vkBeginCommandBuffer( gImGuiCommandBuffers[ sCmdIndex ], &beginInfo ), "Failed to begin command buffer!" );
-
-    auto stuff = ImGui::GetDrawData();
-    stuff->DisplaySize = ImVec2( GetSwapchain().GetExtent().width, GetSwapchain().GetExtent().height );
-
-    ImGui_ImplVulkan_RenderDrawData( stuff, gImGuiCommandBuffers[ sCmdIndex ] );
-
-    CheckVKResult( vkEndCommandBuffer( gImGuiCommandBuffers[ sCmdIndex ] ), "Failed to end command buffer!" );
-}
-
-void RecordSecondaryCommands( u32 sThreadIndex, u32 cmdIndex, VkCommandBufferInheritanceInfo sInfo )
-{
-    VkCommandBufferBeginInfo begin{};
-    begin.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-    begin.pNext = nullptr;
-    begin.flags = VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT;
-    begin.pInheritanceInfo = &sInfo;
-
-    CheckVKResult( vkBeginCommandBuffer( gDrawThreads[ sThreadIndex ].aCommandBuffers[ cmdIndex ], &begin ), "Failed to begin secondary command buffer" );
-
-    /*
-     *    Add viewports and scissors to the command buffer in the future.
-     */
-    // TEMP
-    freemans_tshirt.Draw( gDrawThreads[ sThreadIndex ].aCommandBuffers[ cmdIndex ], cmdIndex );
-
-    /*
-     *    Record draw commands.
-     *    For each material, bind the pipeline, push constants, descriptor sets,
-     *    then group draw commands and submit an indirect draw call using one vertex buffer.
-     */
-
-    CheckVKResult( vkEndCommandBuffer( gDrawThreads[ sThreadIndex ].aCommandBuffers[ cmdIndex ] ), "Failed to end secondary command buffer" );
-}
-
-void AllocateCommands()
-{
-    gCommandBuffers.resize( GetSwapchain().GetImageCount() );
-    gImGuiCommandBuffers.resize( GetSwapchain().GetImageCount() );
-
-    /*
-    *    Allocate primary command buffers
-    */
-    VkCommandBufferAllocateInfo primAlloc{};
-    primAlloc.sType              = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-    primAlloc.pNext              = nullptr;
-    primAlloc.commandPool        = GetPrimaryCommandPool().GetHandle();
-    primAlloc.level              = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-    primAlloc.commandBufferCount = gCommandBuffers.size();
-
-    CheckVKResult( vkAllocateCommandBuffers( GetDevice(), &primAlloc, gCommandBuffers.data() ), "Failed to allocate primary command buffers" );
-
-    /*
-    *    For each draw thread, allocate secondary
-    *    command buffers.
-    * 
-    *    Will be deprecated in the future.
-    */
-    for ( u32 i = 0; i < DRAW_THREADS; i++ )
-    {
-        gDrawThreads[ i ].aCommandBuffers.resize( GetSwapchain().GetImageCount() );
-
-        VkCommandBufferAllocateInfo aCommandBufferAllocateInfo = {};
-        aCommandBufferAllocateInfo.sType                    = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-        aCommandBufferAllocateInfo.pNext                    = nullptr;
-        aCommandBufferAllocateInfo.commandPool              = gDrawThreads[ i ].aCommandPool.GetHandle();
-        aCommandBufferAllocateInfo.level                    = VK_COMMAND_BUFFER_LEVEL_SECONDARY;
-        aCommandBufferAllocateInfo.commandBufferCount       = gDrawThreads[ i ].aCommandBuffers.size();
-
-        CheckVKResult( vkAllocateCommandBuffers( GetDevice(), &aCommandBufferAllocateInfo, gDrawThreads[ i ].aCommandBuffers.data() ), "Failed to allocate command buffers!" );
-    }
-
-    // Allocate ImGui's command buffers
-    for ( u32 i = 0; i < gImGuiCommandBuffers.size(); i++ )
+	for ( u32 i = 0; i < MAX_FRAMES_IN_FLIGHT; i++ )
 	{
-        VkCommandBufferAllocateInfo allocInfo = {};
-        allocInfo.sType              = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-        allocInfo.commandPool        = GetPrimaryCommandPool().GetHandle();
-        allocInfo.level              = VK_COMMAND_BUFFER_LEVEL_SECONDARY;
-        allocInfo.commandBufferCount = 1;
-
-        CheckVKResult( vkAllocateCommandBuffers( GetDevice(), &allocInfo, &gImGuiCommandBuffers[ i ] ), "Failed to allocate command buffer!" );
-    }
+		VK_CheckResult( vkCreateFence( VK_GetDevice(), &info, nullptr, &gFences[ i ] ), "Failed to create fence!" );
+	}
 }
 
-void RecordCommands() 
+
+void VK_DestroyFences()
 {
-    /*
-     *    For each framebuffer, allocate a primary
-     *    command buffer, and record the commands.
-     */
-    for ( u32 i = 0; i < gCommandBuffers.size(); ++i ) 
-    {
-        VkCommandBufferBeginInfo begin{};
-        begin.sType            = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-        begin.pNext            = nullptr;
-        begin.flags            = 0;
-        begin.pInheritanceInfo = nullptr;
+	for ( auto& fence : gFences )
+	{
+		vkDestroyFence( VK_GetDevice(), fence, nullptr );
+	}
 
-        CheckVKResult( vkBeginCommandBuffer( gCommandBuffers[ i ], &begin ), "Failed to begin recording command buffer!" );
-
-        VkRenderPassBeginInfo renderPassBeginInfo{};
-        renderPassBeginInfo.sType             = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-        renderPassBeginInfo.pNext             = nullptr;
-        renderPassBeginInfo.renderPass        = GetRenderPass( RenderPass_Color | RenderPass_Depth | RenderPass_Resolve );
-        renderPassBeginInfo.framebuffer       = GetBackBuffer()->GetFrameBuffer()[ i ];
-        renderPassBeginInfo.renderArea.offset = { 0, 0 };
-        renderPassBeginInfo.renderArea.extent = GetSwapchain().GetExtent();
-
-        VkClearValue clearValues[ 2 ];
-        clearValues[ 0 ].color        = { 0.0f, 0.0f, 0.0f, 1.0f };
-        clearValues[ 1 ].depthStencil = { 1.0f, 0 };
-
-        renderPassBeginInfo.clearValueCount = ARR_SIZE( clearValues );
-        renderPassBeginInfo.pClearValues    = clearValues;
-
-        vkCmdBeginRenderPass( gCommandBuffers[ i ], &renderPassBeginInfo, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS );
-
-        /*
-         *    Record commmands in secondary command buffers.
-         */
-        VkCommandBufferInheritanceInfo inherit{};
-        inherit.sType                   = VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO;
-        inherit.pNext                   = nullptr;
-        inherit.renderPass              = GetRenderPass( RenderPass_Color | RenderPass_Depth | RenderPass_Resolve );
-        inherit.subpass                 = 0;
-        inherit.framebuffer             = GetBackBuffer()->GetFrameBuffer()[ i ];
-
-        for ( u32 j = 0; j < DRAW_THREADS; j++ )
-        {
-            /*
-             *    Split resources and async this.
-             */
-            RecordSecondaryCommands( j, i, inherit );
-        }
-
-        /*
-         *    Consolidate all commands into a vector for submission.
-         */
-        std::vector< VkCommandBuffer > cmds;
-        for ( u32 j = 0; j < DRAW_THREADS; j++ )
-        {
-            cmds.push_back( gDrawThreads[ j ].aCommandBuffers[ i ] );
-        }
-
-        /*
-         *    Render UI.
-         */
-        ImGui::Render();
-        /*
-         *    Run ImGui commands.
-         */
-        RecordImGuiCommands( i, inherit );
-        cmds.push_back( gImGuiCommandBuffers[ i ] );
-
-        vkCmdExecuteCommands( gCommandBuffers[ i ], cmds.size(), cmds.data() );
-
-        vkCmdEndRenderPass( gCommandBuffers[ i ] );
-
-        CheckVKResult( vkEndCommandBuffer( gCommandBuffers[ i ] ), "Failed to end recording command buffer!" );
-    }
+	gFences.clear();
+	gInFlightFences.clear();
 }
 
-void Present()
+
+void VK_CreateSemaphores()
 {
-    vkWaitForFences( GetDevice(), 1, &gFences[ gFrameIndex ], VK_TRUE, UINT64_MAX );
+	gImageAvailableSemaphores.resize( MAX_FRAMES_IN_FLIGHT );
+	gRenderFinishedSemaphores.resize( MAX_FRAMES_IN_FLIGHT );
 
-    u32 imageIndex;
-    
-    VkResult res = vkAcquireNextImageKHR( GetDevice(), GetSwapchain().GetHandle(), UINT64_MAX, gImageAvailableSemaphores[ gFrameIndex ], VK_NULL_HANDLE, &imageIndex );
+	VkSemaphoreCreateInfo info{ VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO };
 
-    if ( res == VK_ERROR_OUT_OF_DATE_KHR )
-    {
-        /*
-         *    Recreate all resources.
-         */
-        return;
-    }
-    else if ( res != VK_SUCCESS && res != VK_SUBOPTIMAL_KHR )
-    {
-        /*
-         *    Classic typo must remain.
-         */
-        CheckVKResult( res, "Failed ot acquire swapchain image!" );
-    }
-
-    if ( gInFlightFences[ imageIndex ] != VK_NULL_HANDLE )
-    {
-        vkWaitForFences( GetDevice(), 1, &gInFlightFences[ imageIndex ], VK_TRUE, UINT64_MAX );
-    }
-
-    gInFlightFences[ imageIndex ] = gFences[ gFrameIndex ];
-
-    VkSubmitInfo submitInfo{};
-    submitInfo.sType              = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-
-    VkSemaphore          waitSemaphores[]     = { gImageAvailableSemaphores[ gFrameIndex ] };
-    VkSemaphore          signalSemaphores[]   = { gRenderFinishedSemaphores[ gFrameIndex ] };
-    VkPipelineStageFlags waitStages[]         = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
-
-    submitInfo.waitSemaphoreCount   = ARR_SIZE( waitSemaphores );
-    submitInfo.pWaitSemaphores      = waitSemaphores;
-    submitInfo.pWaitDstStageMask    = waitStages;
-    submitInfo.commandBufferCount   = 1;
-    submitInfo.pCommandBuffers      = &gCommandBuffers[ imageIndex ];
-    submitInfo.signalSemaphoreCount = ARR_SIZE( signalSemaphores );
-    submitInfo.pSignalSemaphores    = signalSemaphores;
-
-    vkResetFences( GetDevice(), 1, &gFences[ gFrameIndex ] );
-
-    CheckVKResult( vkQueueSubmit( GetGInstance().GetGraphicsQueue(), 1, &submitInfo, gFences[ gFrameIndex ] ), "Failed to submit draw command buffer!" );
-
-    VkSwapchainKHR swapChains[] = { GetSwapchain().GetHandle() };
-
-    VkPresentInfoKHR presentInfo{};
-    presentInfo.sType              = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
-    presentInfo.pNext              = nullptr;
-    presentInfo.waitSemaphoreCount = ARR_SIZE( signalSemaphores );
-    presentInfo.pWaitSemaphores    = signalSemaphores;
-    presentInfo.swapchainCount     = ARR_SIZE( swapChains );
-    presentInfo.pSwapchains        = swapChains;
-    presentInfo.pImageIndices      = &imageIndex;
-    presentInfo.pResults           = nullptr;
-
-    res = vkQueuePresentKHR( GetGInstance().GetGraphicsQueue(), &presentInfo );
-
-    if ( res == VK_ERROR_OUT_OF_DATE_KHR || res == VK_SUBOPTIMAL_KHR )
-    {
-        /*
-         *    Recreate all resources.
-         */
-        LogFatal( "RECREATE ALL RESOURCES !!!\n" );
-        return;
-    }
-    else if ( res != VK_SUCCESS && res != VK_SUBOPTIMAL_KHR )
-    {
-        CheckVKResult( res, "Failed to present swapchain image!" );
-    }
-
-    vkQueueWaitIdle( GetGInstance().GetPresentQueue() );
-
-    gFrameIndex = ( gFrameIndex + 1 ) % MAX_FRAMES_IN_FLIGHT;
-    
-    vkResetCommandPool( GetDevice(), GetPrimaryCommandPool().GetHandle(), 0);
-    for ( u32 i = 0; i < DRAW_THREADS; i++ )
-    {
-        vkResetCommandPool( GetDevice(), gDrawThreads[ i ].aCommandPool.GetHandle(), 0 );
-    }
+	for ( u32 i = 0; i < MAX_FRAMES_IN_FLIGHT; i++ )
+	{
+		VK_CheckResult( vkCreateSemaphore( VK_GetDevice(), &info, nullptr, &gImageAvailableSemaphores[ i ] ), "Failed to create semaphore!" );
+		VK_CheckResult( vkCreateSemaphore( VK_GetDevice(), &info, nullptr, &gRenderFinishedSemaphores[ i ] ), "Failed to create semaphore!" );
+	}
 }
+
+
+void VK_DestroySemaphores()
+{
+	for ( auto& semaphore : gImageAvailableSemaphores )
+	{
+		vkDestroySemaphore( VK_GetDevice(), semaphore, nullptr );
+	}
+
+	for ( auto& semaphore : gRenderFinishedSemaphores )
+	{
+		vkDestroySemaphore( VK_GetDevice(), semaphore, nullptr );
+	}
+
+	gImageAvailableSemaphores.clear();
+	gRenderFinishedSemaphores.clear();
+}
+
+
+void VK_AllocateCommands()
+{
+	gCommandBuffers.resize( VK_GetSwapImageCount() );
+
+	// Allocate primary command buffers
+	VkCommandBufferAllocateInfo primAlloc{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO };
+	primAlloc.pNext              = nullptr;
+	primAlloc.commandPool        = VK_GetPrimaryCommandPool();
+	primAlloc.level              = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+	primAlloc.commandBufferCount = gCommandBuffers.size();
+
+	VK_CheckResult( vkAllocateCommandBuffers( VK_GetDevice(), &primAlloc, gCommandBuffers.data() ), "Failed to allocate primary command buffers" );
+
+	// Allocate single time command buffer
+	VkCommandBufferAllocateInfo aCommandBufferAllocateInfo{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO };
+	aCommandBufferAllocateInfo.pNext              = nullptr;
+	aCommandBufferAllocateInfo.commandPool        = VK_GetSingleTimeCommandPool();
+	aCommandBufferAllocateInfo.level              = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+	aCommandBufferAllocateInfo.commandBufferCount = 1;
+
+	VK_CheckResult( vkAllocateCommandBuffers( VK_GetDevice(), &aCommandBufferAllocateInfo, &gSingleCommandBuffer ), "Failed to allocate command buffer!" );
+
+	for ( const auto& cmd : gCommandBuffers )
+		gCommandBufferHandles.Add( cmd );
+}
+
+
+void VK_FreeCommands()
+{
+	if ( !gCommandBuffers.empty() )
+	{
+		vkFreeCommandBuffers( VK_GetDevice(), VK_GetPrimaryCommandPool(), gCommandBuffers.size(), gCommandBuffers.data() );
+		gCommandBuffers.clear();
+		gCommandBufferHandles.clear();
+	}
+
+	if ( gSingleCommandBuffer )
+		vkFreeCommandBuffers( VK_GetDevice(), VK_GetSingleTimeCommandPool(), 1, &gSingleCommandBuffer );
+}
+
+
+VkCommandBuffer VK_BeginSingleCommand()
+{
+	VkCommandBufferBeginInfo aCommandBufferBeginInfo{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
+	aCommandBufferBeginInfo.pNext = nullptr;
+	aCommandBufferBeginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+
+	VK_CheckResult( vkBeginCommandBuffer( gSingleCommandBuffer, &aCommandBufferBeginInfo ), "Failed to begin command buffer!" );
+
+	return gSingleCommandBuffer;
+}
+
+
+void VK_EndSingleCommand()
+{
+	VK_CheckResult( vkEndCommandBuffer( gSingleCommandBuffer ), "Failed to end command buffer!" );
+
+	VkSubmitInfo submitInfo{ VK_STRUCTURE_TYPE_SUBMIT_INFO };
+	submitInfo.commandBufferCount = 1;
+	submitInfo.pCommandBuffers    = &gSingleCommandBuffer;
+
+	VK_WaitForGraphicsQueue();
+	gGraphicsMutex.lock();
+
+	vkQueueSubmit( VK_GetGraphicsQueue(), 1, &submitInfo, VK_NULL_HANDLE );
+	gInGraphicsQueue = true;
+
+	VK_WaitForGraphicsQueue();
+	gGraphicsMutex.unlock();
+
+	VK_ResetCommandPool( VK_GetSingleTimeCommandPool() );
+}
+
+
+// legacy?
+void VK_SingleCommand( std::function< void( VkCommandBuffer ) > sFunc )
+{
+	VK_BeginSingleCommand();
+	sFunc( gSingleCommandBuffer );
+	VK_EndSingleCommand();
+}
+
+
+void VK_WaitForPresentQueue()
+{
+	if ( gInPresentQueue )
+		VK_CheckResult( vkQueueWaitIdle( VK_GetPresentQueue() ), "Failed waiting for present queue" );
+
+	gInPresentQueue = false;
+}
+
+
+void VK_WaitForGraphicsQueue()
+{
+	if ( gInGraphicsQueue )
+		VK_CheckResult( vkQueueWaitIdle( VK_GetGraphicsQueue() ), "Failed waiting for graphics queue" );
+
+	gInGraphicsQueue = false;
+}
+
+
+void VK_RecordCommands()
+{
+#if 0
+	gGraphicsMutex.lock();
+
+	VK_WaitForPresentQueue();
+	VK_WaitForGraphicsQueue();
+	VK_ResetCommandPool( VK_GetPrimaryCommandPool() );
+
+	// For each framebuffer, begin a primary
+    // command buffer, and record the commands.
+	for ( gCmdIndex = 0; gCmdIndex < gCommandBuffers.size(); gCmdIndex++ )
+	{
+		VkCommandBufferBeginInfo begin{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
+		begin.pNext            = nullptr;
+		begin.flags            = 0;
+		begin.pInheritanceInfo = nullptr;
+
+		VK_CheckResult( vkBeginCommandBuffer( gCommandBuffers[ gCmdIndex ], &begin ), "Failed to begin recording command buffer!" );
+
+		// Run Filter if needed
+		// VK_RunFilterShader();
+
+		VkRenderPassBeginInfo renderPassBeginInfo{ VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO };
+		renderPassBeginInfo.pNext             = nullptr;
+		renderPassBeginInfo.renderPass        = VK_GetRenderPass();
+		renderPassBeginInfo.framebuffer       = VK_GetBackBuffer()->aFrameBuffers[ gCmdIndex ];
+		renderPassBeginInfo.renderArea.offset = { 0, 0 };
+		renderPassBeginInfo.renderArea.extent = VK_GetSwapExtent();
+
+		VkClearValue clearValues[ 2 ];
+		clearValues[ 0 ].color              = { gClearR, gClearG, gClearB, 1.0f };
+		clearValues[ 1 ].depthStencil       = { 1.0f, 0 };
+
+		renderPassBeginInfo.clearValueCount = ARR_SIZE( clearValues );
+		renderPassBeginInfo.pClearValues    = clearValues;
+
+		vkCmdBeginRenderPass( gCommandBuffers[ gCmdIndex ], &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE );
+
+		// Render Image
+		// VK_BindImageShader();
+		// VK_DrawImageShader();
+
+		// Render ImGui
+		ImGui::Render();
+		ImGui_ImplVulkan_RenderDrawData( ImGui::GetDrawData(), gCommandBuffers[ gCmdIndex ] );
+
+		vkCmdEndRenderPass( gCommandBuffers[ gCmdIndex ] );
+
+		VK_CheckResult( vkEndCommandBuffer( gCommandBuffers[ gCmdIndex ] ), "Failed to end recording command buffer!" );
+	}
+#endif
+}
+
+
+void VK_Present()
+{
+	vkWaitForFences( VK_GetDevice(), 1, &gFences[ gFrameIndex ], VK_TRUE, UINT64_MAX );
+
+	u32      imageIndex;
+	VkResult res = vkAcquireNextImageKHR( VK_GetDevice(), VK_GetSwapchain(), UINT64_MAX, gImageAvailableSemaphores[ gFrameIndex ], VK_NULL_HANDLE, &imageIndex );
+
+	if ( res == VK_ERROR_OUT_OF_DATE_KHR )
+	{
+		// Recreate all resources.
+		printf( "VK_Reset - vkAcquireNextImageKHR\n" );
+		VK_Reset();
+	}
+
+	else if ( res != VK_SUCCESS && res != VK_SUBOPTIMAL_KHR )
+	{
+		// Classic typo must remain.
+		VK_CheckResult( res, "Failed ot acquire swapchain image!" );
+	}
+
+	if ( gInFlightFences[ imageIndex ] != VK_NULL_HANDLE )
+	{
+		vkWaitForFences( VK_GetDevice(), 1, &gInFlightFences[ imageIndex ], VK_TRUE, UINT64_MAX );
+	}
+
+	gInFlightFences[ imageIndex ] = gFences[ gFrameIndex ];
+
+	VkSemaphore          waitSemaphores[]   = { gImageAvailableSemaphores[ gFrameIndex ] };
+	VkSemaphore          signalSemaphores[] = { gRenderFinishedSemaphores[ gFrameIndex ] };
+	VkPipelineStageFlags waitStages[]       = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
+	VkSubmitInfo         submitInfo{ VK_STRUCTURE_TYPE_SUBMIT_INFO };
+
+	submitInfo.waitSemaphoreCount   = ARR_SIZE( waitSemaphores );
+	submitInfo.pWaitSemaphores      = waitSemaphores;
+	submitInfo.pWaitDstStageMask    = waitStages;
+	submitInfo.commandBufferCount   = 1;
+	submitInfo.pCommandBuffers      = &gCommandBuffers[ imageIndex ];
+	submitInfo.signalSemaphoreCount = ARR_SIZE( signalSemaphores );
+	submitInfo.pSignalSemaphores    = signalSemaphores;
+
+	vkResetFences( VK_GetDevice(), 1, &gFences[ gFrameIndex ] );
+
+	VK_CheckResult( vkQueueSubmit( VK_GetGraphicsQueue(), 1, &submitInfo, gFences[ gFrameIndex ] ), "Failed to submit draw command buffer!" );
+
+	VkSwapchainKHR   swapChains[] = { VK_GetSwapchain() };
+
+	VkPresentInfoKHR presentInfo{ VK_STRUCTURE_TYPE_PRESENT_INFO_KHR };
+	presentInfo.pNext              = nullptr;
+	presentInfo.waitSemaphoreCount = ARR_SIZE( signalSemaphores );
+	presentInfo.pWaitSemaphores    = signalSemaphores;
+	presentInfo.swapchainCount     = ARR_SIZE( swapChains );
+	presentInfo.pSwapchains        = swapChains;
+	presentInfo.pImageIndices      = &imageIndex;
+	presentInfo.pResults           = nullptr;
+
+	res                            = vkQueuePresentKHR( VK_GetGraphicsQueue(), &presentInfo );
+
+	if ( res == VK_ERROR_OUT_OF_DATE_KHR || res == VK_SUBOPTIMAL_KHR )
+	{
+		printf( "VK_Reset - vkQueuePresentKHR\n" );
+		vkDeviceWaitIdle( VK_GetDevice() );
+		VK_Reset();
+	}
+	else if ( res != VK_SUCCESS && res != VK_SUBOPTIMAL_KHR )
+	{
+		VK_CheckResult( res, "Failed to present swapchain image!" );
+	}
+
+	// gGraphicsMutex.unlock();
+
+	gInPresentQueue = true;
+
+	gFrameIndex = ( gFrameIndex + 1 ) % MAX_FRAMES_IN_FLIGHT;
+}
+

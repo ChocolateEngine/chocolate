@@ -3,6 +3,7 @@
 #include "platform.h"
 #include "util.h"
 
+#include <functional>
 
 enum class LogColor: unsigned char
 {
@@ -43,7 +44,7 @@ enum class LogType: unsigned char
 	Raw,      // "%s" - kind of a hack for quick new line printing
 	Warning,  // "[Channel] [WARNING] "%s"
 	Error,    // "[Channel] [ERROR] %s"
-	Fatal     // "[Channel] a[FATAL] %s"
+	Fatal     // "[Channel] [FATAL] %s"
 };
 
 
@@ -99,7 +100,11 @@ void                        CORE_API  Log_AddChannelShownCallback( LogChannelSho
 
 
 #define LOG_REGISTER_CHANNEL( name, ... ) LogChannel g##name##Channel = Log_RegisterChannel( #name, __VA_ARGS__ );
+#define LOG_REGISTER_CHANNEL2( name, ... ) LogChannel gLC_##name = Log_RegisterChannel( #name, __VA_ARGS__ );
+#define LOG_REGISTER_CHANNEL_EX( var, name, ... ) LogChannel var = Log_RegisterChannel( name, __VA_ARGS__ );
+
 #define LOG_CHANNEL( name ) extern LogChannel g##name##Channel;
+#define LOG_CHANNEL2( name ) extern LogChannel gLC_##name;
 
 // ----------------------------------------------------------------
 // System printing, skip logging

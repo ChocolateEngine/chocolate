@@ -15,14 +15,16 @@
 //  feel like it should be isolated and only use ch_core.dll
 
 // class PhysDebugMesh:  public JPH::RefTargetVirtual, public JPH::RefTarget<IMesh>
-class PhysDebugMesh:  public JPH::RefTargetVirtual, public Model
+class PhysDebugMesh:  public JPH::RefTargetVirtual, public RefCounted
 {
 public:
 	PhysDebugMesh();
 	~PhysDebugMesh();
 
-	virtual void AddRef() override   { IModel::AddRef(); }
-	virtual void Release() override  { IModel::Release(); }
+	Handle       aModel;
+
+	virtual void AddRef() override { RefCounted::AddRef(); }
+	virtual void Release() override { RefCounted::Release(); }
 };
 
 
@@ -78,17 +80,7 @@ public:
 							float inHeight ) override;
 
 	std::vector< PhysDebugMesh* >     aMeshes;
-	std::vector< DefaultRenderable* > aRenderables;
-	std::vector< IMaterial* >         aMaterials;
-
-	IMaterial*                        apMatSolid;
-	IMaterial*                        apMatWire;
 
 	bool                              aValid = false;
 };
-
-
-// for debugging
-extern BaseGraphicsSystem* graphics;
-extern IMaterialSystem* matsys;
 

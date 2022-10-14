@@ -1,5 +1,3 @@
-#include "graphics/meshbuilder.hpp"
-
 #include "physics.h"
 #include "physics_object.h"
 
@@ -7,9 +5,6 @@
 
 #include "physics_debug.h"
 
-
-BaseGraphicsSystem* graphics = nullptr;
-IMaterialSystem* matsys = nullptr;
 
 LOG_CHANNEL( Physics );
 
@@ -42,18 +37,13 @@ PhysDebugMesh::~PhysDebugMesh()
 
 PhysDebugDraw::PhysDebugDraw()
 {
-	matsys = graphics->GetMaterialSystem();
-
-	apMatSolid = matsys->CreateMaterial();
-	apMatWire = matsys->CreateMaterial();
-
-	// apMatSolid->SetShader( "basic_3d" );
-	apMatSolid->SetShader( "debug" );
-	apMatWire->SetShader( "debug" );
+#if 0
+	// do we have functions from game code ready
 
 	Initialize();
 
 	aValid = true;
+#endif
 }
 
 
@@ -70,7 +60,6 @@ void PhysDebugDraw::OnNewFrame()
 
 void PhysDebugDraw::DrawLine( const glm::vec3 &from, const glm::vec3 &to, const glm::vec3 &color )
 {
-	graphics->DrawLine( from, to, color );
 }
 
 
@@ -79,7 +68,6 @@ void PhysDebugDraw::DrawLine(
 	const JPH::Float3 &inTo,
 	JPH::ColorArg inColor )
 {
-	graphics->DrawLine( fromJolt(inFrom), fromJolt(inTo), fromJolt(inColor) );
 }
 
 
@@ -89,9 +77,6 @@ void PhysDebugDraw::DrawTriangle(
 	JPH::Vec3Arg inV3,
 	JPH::ColorArg inColor )
 {
-	graphics->DrawLine( fromJolt(inV1), fromJolt(inV2), fromJolt(inColor) );
-	graphics->DrawLine( fromJolt(inV1), fromJolt(inV3), fromJolt(inColor) );
-	graphics->DrawLine( fromJolt(inV2), fromJolt(inV3), fromJolt(inColor) );
 }
 
 
@@ -110,6 +95,7 @@ PhysDebugDraw::Batch PhysDebugDraw::CreateTriangleBatch(
 	const Triangle *inTriangles,
 	int inTriangleCount )
 {
+#if 0
 	if ( inTriangles == nullptr || inTriangleCount == 0 )
 		return nullptr; // mEmptyBatch;
 
@@ -154,6 +140,8 @@ PhysDebugDraw::Batch PhysDebugDraw::CreateTriangleBatch(
 	// matsys->CreateIndexBuffer( mesh );
 
 	return mesh;
+#endif
+	return nullptr;
 }
 
 
@@ -163,6 +151,7 @@ PhysDebugDraw::Batch PhysDebugDraw::CreateTriangleBatch(
 	const JPH::uint32 *inIndices,
 	int inIndexCount )
 {
+#if 0
 	if ( inVertices == nullptr || inVertexCount == 0 || inIndices == nullptr || inIndexCount == 0 )
 		return nullptr; // mEmptyBatch;
 
@@ -195,6 +184,8 @@ PhysDebugDraw::Batch PhysDebugDraw::CreateTriangleBatch(
 	// mesh->SetMaterial( 0, mat );
 
 	return mesh;
+#endif
+	return nullptr;
 }
 
 
@@ -208,6 +199,7 @@ void PhysDebugDraw::DrawGeometry(
 	ECastShadow inCastShadow,
 	EDrawMode inDrawMode )
 {
+#if 0
 	if ( inGeometry.GetPtr()->mLODs.empty() )
 		return;
 
@@ -250,8 +242,7 @@ void PhysDebugDraw::DrawGeometry(
 	renderable->apModel = mesh;
 
 	matsys->AddRenderable( renderable );
-
-	return;
+#endif
 }
 
 

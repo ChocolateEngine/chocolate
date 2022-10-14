@@ -128,13 +128,10 @@ std::string FileSys_FindFileF( const char* spFmt, ... )
 {
     PROF_SCOPE();
 
-    char pBuf[ 512 ];  // uh idk lol
-    va_list args;
-    va_start( args, spFmt );
-    vsprintf( pBuf, spFmt, args );
-    va_end( args );
+    std::string path;
+	VSTRING( path, spFmt );
 
-    return FileSys_FindFile( pBuf );
+    return FileSys_FindFile( path );
 }
 
 
@@ -301,14 +298,14 @@ bool FileSys_Exists( const std::string &path, bool noPaths )
 }
 
 
-int FileSys_Access( const std::string &path, int mode )
+int FileSys_Access( const char* path, int mode )
 {
-    return access( path.c_str(), mode );
+    return access( path, mode );
 }
 
-int FileSys_Stat( const std::string &path, struct stat* info )
+int FileSys_Stat( const char* path, struct stat* info )
 {
-    return stat( path.c_str(), info );
+    return stat( path, info );
 }
 
 

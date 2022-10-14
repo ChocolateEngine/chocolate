@@ -70,3 +70,8 @@ public:
 	/* Sets some renderer parameters.  */
 	explicit 	GraphicsSystem(  );
 };
+
+
+// TEMP FROM NEWER SYSTEM
+void VK_WaitForPresentQueue();
+void VK_WaitForGraphicsQueue();

@@ -1,9 +1,22 @@
 message( "Current Project: Graphics69" )
 
-file(
-	GLOB_RECURSE SRC_FILES CONFIGURE_DEPENDS
-	*.cpp
-	*.h
+set(
+	RENDER_VK_FILES
+	
+	render_vk.cpp
+	render_vk.h
+	instance.cpp
+	descriptor_set.cpp
+	present.cpp
+	render_pass.cpp
+	shaders.cpp
+	swapchain.cpp
+	texture.cpp
+	texture_ktx.cpp
+	
+	# imgui files
+	imgui_impl_vulkan.cpp
+	imgui_impl_vulkan.h
 )
 
 file(
@@ -19,36 +32,30 @@ file(
 	${CH_THIRDPARTY}/speedykeyv/KeyValue.h
 )
 
+
+add_compile_definitions( "RENDER_DLL" )
+
 include( ${CH_ROOT}/scripts/vulkan.cmake )
 
-if (WIN32)
-	link_directories(
-		# ${VK_DIR}/lib
-	)
-else()
-	link_directories(
-		${CH_THIRDPARTY}/libspirv/lib
-	)
-endif()
-
-link_libraries(
-	Core
-	ImGui
-)
-
-if (WIN32)
-	link_libraries( ${CH_THIRDPARTY}/SPIRV-Tools/build/source/Debug/SPIRV-Tools.lib )
-else()
-	link_libraries( SPIRV-Tools )
-endif()
-
-add_library( Graphics2 SHARED ${SRC_FILES} ${PUBLIC_FILES} )
+add_library( Graphics2 SHARED ${RENDER_VK_FILES} ${PUBLIC_FILES} )
 
 add_dependencies( Graphics2 "Core" "ImGui" )
 
 set_target_properties(
 	Graphics2 PROPERTIES
 	OUTPUT_NAME ch_graphics
+)
+
+target_include_directories(
+	Graphics2 PRIVATE
+	${CH_PUBLIC}/imgui
+)
+
+target_link_libraries(
+	Graphics2 PRIVATE
+	Core
+	ImGui
+	${VK_LIB}
 )
 
 if ( VULKAN_DEBUG )

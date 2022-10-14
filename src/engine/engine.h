@@ -12,7 +12,6 @@
 #include "core/core.h"
 
 #include "system.h"
-#include "graphics/igraphics.h"
 #include "iinput.h"
 #include "iaudio.h"
 #include "igui.h"

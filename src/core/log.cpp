@@ -515,8 +515,8 @@ void Log_AddLogInternal( Log& log )
 
             case LogType::Error:
 				Log_SetColor( LOG_COLOR_ERROR );
-                fputs( log.aFormatted.c_str(), stdout );
-                fflush( stdout );
+				fputs( log.aFormatted.c_str(), stderr );
+				fflush( stderr );
 				Log_SetColor( LogColor::Default );
                 break;
 
@@ -859,7 +859,7 @@ void CORE_API Log_ErrorF( LogChannel channel, const char* spFmt, ... )
 // Extreme severity.
 void CORE_API Log_Fatal( LogChannel channel, const char* spBuf )
 {
-	Log_Ex( channel, LogType::Error, spBuf );
+	Log_Ex( channel, LogType::Fatal, spBuf );
 }
 
 void CORE_API Log_FatalF( LogChannel channel, const char* spFmt, ... )

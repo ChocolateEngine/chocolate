@@ -80,7 +80,9 @@ void AudioSystem::Init(  )
     /*
 	 *    Preallocate 128 MB of memory for audio processing.
 	 */
-	aStreamPool.Resize( 128000000 );
+	// aStreamPool.Resize( 128000000 );
+	// aStreamPool.Resize( 64000 );
+	aStreamPool.Resize( 64 );
 	aStreamPool.SetStepSize( 1000000 );
 
 	aStreams.Allocate( MAX_STREAMS * 2 );

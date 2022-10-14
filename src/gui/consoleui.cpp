@@ -8,8 +8,8 @@
 #include "imgui/imgui_impl_sdl.h"
 
 
-static LogChannel gConsoleChannel = LogGetChannel( "Console" );
-static LogChannel gValidationChannel = LogGetChannel( "Validation" );
+static LogChannel gConsoleChannel    = Log_GetChannel( "Console" );
+static LogChannel gValidationChannel = Log_GetChannel( "Validation" );
 
 CONVAR( con_spam_test, 0 );
 
@@ -90,7 +90,7 @@ bool CheckAddDropDownCommand( ImGuiInputTextCallbackData* data )
 	bool downPressed = ImGui::IsKeyPressed( ImGui::GetKeyIndex(ImGuiKey_DownArrow) );
 	downPressed |= ImGui::IsKeyPressed( ImGui::GetKeyIndex(ImGuiKey_Tab) );
 
-	const auto& autoComplete = console->GetAutoCompleteList();
+	const auto& autoComplete = Con_GetAutoCompleteList();
 
 	// wrap around if over max size
 	if ( upPressed && --gCmdDropDownIndex == -2 )
@@ -122,14 +122,14 @@ bool CheckAddDropDownCommand( ImGuiInputTextCallbackData* data )
 			// No items selected in auto complete list
 			// Set back to original text and recalculate the auto complete list
 			snprintf( data->Buf, data->BufSize, gCmdUserInput.c_str() );
-			console->CalculateAutoCompleteList( data->Buf );
+			Con_CalculateAutoCompleteList( data->Buf );
 			bufDirty = true;
 		}
 		else if ( keyPressed )
 		{
 			// An arrow key or tab is pressed, so fill the buffer with the selected item from the auto complete list
-			//snprintf( data->Buf, data->BufSize, console->GetAutoCompleteList()[commandIndex].c_str() );
-			snprintf( data->Buf, data->BufSize, (console->GetAutoCompleteList()[gCmdDropDownIndex] + " ").c_str() );
+			//snprintf( data->Buf, data->BufSize, Con_GetAutoCompleteList()[commandIndex].c_str() );
+			snprintf( data->Buf, data->BufSize, (Con_GetAutoCompleteList()[gCmdDropDownIndex] + " ").c_str() );
 			bufDirty = true;
 		}
 		else if ( inDropDown )
@@ -139,24 +139,24 @@ bool CheckAddDropDownCommand( ImGuiInputTextCallbackData* data )
 			gCmdUserCursor = data->CursorPos;
 			gCmdDropDownIndex = 0;
 			gCmdUserInput = data->Buf;
-			console->CalculateAutoCompleteList( data->Buf );
+			Con_CalculateAutoCompleteList( data->Buf );
 			bufDirty = true;
 		}
 	}
 
 	if ( bufDirty )
 	{
-		console->SetTextBuffer( data->Buf, false );
-		data->BufTextLen = console->GetTextBuffer().length();
+		Con_SetTextBuffer( data->Buf, false );
+		data->BufTextLen = Con_GetTextBuffer().length();
 
 		if ( inDropDown )
-			data->CursorPos = console->GetTextBuffer().length();
+			data->CursorPos = Con_GetTextBuffer().length();
 		else if ( !textBufChanged )
 			data->CursorPos = gCmdUserCursor;
 		else
 			gCmdUserCursor = data->CursorPos;
 
-		prevTextBuffer = console->GetTextBuffer();
+		prevTextBuffer = Con_GetTextBuffer();
 	}
 	else if ( !inDropDown && gCmdUserCursor != data->CursorPos )
 	{
@@ -172,7 +172,7 @@ bool CheckAddLastCommand( ImGuiInputTextCallbackData* data )
 {
 	static std::string prevTextBuffer = "";
 
-	const auto& history = console->GetCommandHistory();
+	const auto& history = Con_GetCommandHistory();
 
 	if ( history.empty() )
 		return false;
@@ -204,13 +204,13 @@ bool CheckAddLastCommand( ImGuiInputTextCallbackData* data )
 	if ( upPressed || downPressed )
 	{
 		snprintf( data->Buf, 256, (gCmdHistoryIndex == -1) ? gCmdUserInput.c_str() : history[gCmdHistoryIndex].c_str() );
-		console->SetTextBuffer( data->Buf );
+		Con_SetTextBuffer( data->Buf );
 		prevTextBuffer = data->Buf;
 
 		if ( gCmdHistoryIndex == -1 )
 			data->CursorPos = gCmdUserCursor;
 		else
-			data->CursorPos = console->GetTextBuffer().length();
+			data->CursorPos = Con_GetTextBuffer().length();
 	}
 
 	return ( upPressed || downPressed );
@@ -224,9 +224,9 @@ bool CheckEnterPress( char* buf )
 
 	if ( isPressed )
 	{
-		console->QueueCommand( buf );
+		Con_QueueCommand( buf );
 		snprintf( buf, 256, "" );
-		console->SetTextBuffer( buf );
+		Con_SetTextBuffer( buf );
 		ImGui::SetKeyboardFocusHere(  );
 
 		gCmdUserInput = "";
@@ -255,7 +255,7 @@ int ConsoleInputCallback( ImGuiInputTextCallbackData* data )
 		data->BufDirty = CheckAddDropDownCommand( data );
 	}
 
-	if ( console->GetAutoCompleteList().empty() || gCmdHistoryIndex != -1 )
+	if ( Con_GetAutoCompleteList().empty() || gCmdHistoryIndex != -1 )
 	{
 		data->BufDirty = CheckAddLastCommand( data );
 	}
@@ -267,7 +267,7 @@ int ConsoleInputCallback( ImGuiInputTextCallbackData* data )
 
 	if ( data->BufDirty )
 	{
-		data->BufTextLen = console->GetTextBuffer().length();
+		data->BufTextLen = Con_GetTextBuffer().length();
 	}
 
 	return 0;
@@ -310,7 +310,7 @@ void DrawColorTest()
 	for ( unsigned char i = 0; i < (unsigned char)LogColor::Count; i++ )
 	{
 		ImGui::PushStyleColor( ImGuiCol_Text, ToImCol( (LogColor)i ) );
-		ImGui::Text( "Color: %hhu - %s", i, LogColorToStr( (LogColor)i ) );
+		ImGui::Text( "Color: %hhu - %s", i, Log_ColorToStr( (LogColor)i ) );
 		ImGui::PopStyleColor();
 	}
 
@@ -338,28 +338,28 @@ void DrawInputDropDownBox( const std::vector< std::string >& cvarAutoComplete, I
 
 	ImGui::PushStyleVar( ImGuiStyleVar_WindowPadding, ImVec2(0,0) );
 
-	if ( ImGui::Begin( "cvars_box", NULL,
-		ImGuiWindowFlags_NoBringToFrontOnFocus |
+	if ( ImGui::Begin( "##CvarsBox", NULL,
 		ImGuiWindowFlags_AlwaysAutoResize |
 		ImGuiWindowFlags_NoBackground |
 		ImGuiWindowFlags_NoDecoration |
 		ImGuiWindowFlags_NoTitleBar |
 		ImGuiWindowFlags_NoMove |
+		ImGuiWindowFlags_NoSavedSettings |
 		//ImGuiWindowFlags_NoNavFocus |
 		ImGuiWindowFlags_NoFocusOnAppearing ) )
 	{
-		if ( ImGui::BeginListBox( " " ) )
+		if ( ImGui::BeginListBox( "##CvarListBox" ) )
 		{
 			for ( int i = 0; i < cvarAutoComplete.size(); i++ )
 			{
 				std::string item = cvarAutoComplete[i];
 
-				item += " " + console->GetConVarValue( item );
+				item += " " + Con_GetConVarValue( item );
 
 				if ( ImGui::Selectable( item.c_str(), gCmdDropDownIndex == i ) )
 				{
 					// should we keep the value in here too?
-					console->SetTextBuffer( cvarAutoComplete[i] );
+					Con_SetTextBuffer( cvarAutoComplete[i] );
 					//break;
 				}
 			}
@@ -395,7 +395,7 @@ LogColor GetConsoleTextColor( const Log& log )
 		color = LOG_COLOR_ERROR;
 
 	else if ( (conui_colors == 2.f && log.aChannel == gValidationChannel) || conui_colors >= 3.f )
-		color = LogGetChannelColor( log.aChannel );
+		color = Log_GetChannelColor( log.aChannel );
 
 	return color;
 }
@@ -409,7 +409,7 @@ struct ConLogBuffer
 
 
 static std::vector< ConLogBuffer > gConHistory;
-static size_t gConHistoryIndex = SIZE_MAX;
+static size_t gConHistoryIndex = 0;
 
 
 void ReBuildConsoleOutput()
@@ -417,11 +417,11 @@ void ReBuildConsoleOutput()
 	gConHistory.clear();
 
 	ConLogBuffer* buffer = &gConHistory.emplace_back();
-	const std::vector< Log >& logs = LogGetLogHistory();
+	const std::vector< Log >& logs   = Log_GetLogHistory();
 
 	for ( const auto& log: logs )
 	{
-		if ( !LogChannelIsShown( log.aChannel ) )
+		if ( !Log_ChannelIsShown( log.aChannel ) )
 			continue;
 
 		LogColor color = GetConsoleTextColor( log );
@@ -445,7 +445,7 @@ void ReBuildConsoleOutput()
 
 void UpdateConsoleOutput()
 {
-	const std::vector< Log >& logs = LogGetLogHistory();
+	const std::vector< Log >& logs = Log_GetLogHistory();
 
 	if ( logs.empty() )
 		return;
@@ -462,20 +462,22 @@ void UpdateConsoleOutput()
 	for ( ; gConHistoryIndex < logs.size(); gConHistoryIndex++ )
 	{
 		ConLogBuffer* buffer = &gConHistory.at( gConHistory.size() - 1 );
-		const Log& log = logs[gConHistoryIndex];
-		LogColor nextColor = GetConsoleTextColor( log );
+		const Log&    log       = logs[ gConHistoryIndex ];
+		LogColor      nextColor = GetConsoleTextColor( log );
 
 		if ( buffer->aColor != nextColor )
+		{
 			buffer = &gConHistory.emplace_back( nextColor, log.aFormatted );
-
+		}
 		else if ( buffer->aBuffer.empty() )
 		{
 			buffer->aColor = nextColor;
 			buffer->aBuffer += log.aFormatted;
 		}
-
 		else
+		{
 			buffer->aBuffer += log.aFormatted;
+		}
 	}
 }
 
@@ -491,9 +493,14 @@ void DrawConsoleOutput()
 	bgColor.z /= 2;
 
 	ImGui::PushStyleColor( ImGuiCol_ChildBg, bgColor );
+
+
+	auto contentRegion = ImGui::GetContentRegionAvail();
 	
 	// ImGui::BeginChildFrame
-	ImGui::BeginChild( "ConsoleOutput", ImVec2( ImGui::GetWindowSize().x - 32, ImGui::GetWindowSize().y - 64 ), true );
+	// ImGui::SetNextItemWidth( -1.f );  // force it to fill the window
+	// ImGui::BeginChild( "ConsoleOutput", ImVec2( ImGui::GetWindowSize().x - 32, ImGui::GetWindowSize().y - 64 ), true );
+	ImGui::BeginChild( "ConsoleOutput", ImVec2( 0, -ImGui::GetFrameHeightWithSpacing() ), true );
 	static int scrollMax = ImGui::GetScrollMaxY();
 
 	UpdateConsoleOutput();
@@ -528,9 +535,9 @@ void DrawConsoleOutput()
 void GuiSystem::DrawConsole( bool wasConsoleOpen )
 {
 	if ( con_spam_test.GetBool() )
-		LogMsg( "TEST\n" );
+		Log_Msg( "TEST\n" );
 
-	if ( !ImGui::Begin( "Developer Console" ) )
+	if ( !ImGui::Begin( "Developer Console", 0, ImGuiWindowFlags_NoScrollbar ) )
 	{
 		ImGui::End();
 		return;
@@ -546,17 +553,23 @@ void GuiSystem::DrawConsole( bool wasConsoleOpen )
 
 	DrawConsoleOutput();
 
-	snprintf( buf, 256, console->GetTextBuffer(  ).c_str() );
-	ImGui::InputText( "send", buf, 256, ImGuiInputTextFlags_CallbackAlways, &ConsoleInputCallback );
+	snprintf( buf, 256, Con_GetTextBuffer().c_str() );
+	ImGui::SetNextItemWidth( -1.f );  // force it to fill the window
+	ImGui::InputText( "##send", buf, 256, ImGuiInputTextFlags_CallbackAlways, &ConsoleInputCallback );
 
 	if ( !wasConsoleOpen )
 		ImGui::SetKeyboardFocusHere(0);
 
 	ImVec2 dropDownPos( ImGui::GetWindowPos().x, ImGui::GetWindowSize().y + ImGui::GetWindowPos().y );
+	
+	// this is correct, but there's an issue of window ordering
+	// auto popupPos  = ImGui::GetItemRectMin();
+	// ImVec2 dropDownPos( popupPos.x, popupPos.y + ImGui::GetFrameHeight() );
+	// dropDownPos.y += ImGui::GetFrameHeight();
 
-	ImGui::End(  );
+	ImGui::End();
 
-	const std::vector< std::string >& cvarAutoComplete = console->GetAutoCompleteList();
+	const std::vector< std::string >& cvarAutoComplete = Con_GetAutoCompleteList();
 
 	if ( !cvarAutoComplete.empty() )
 	{
@@ -564,19 +577,19 @@ void GuiSystem::DrawConsole( bool wasConsoleOpen )
 	}
 }
 
-void GuiSystem::ShowConsole(  )
+void GuiSystem::ShowConsole()
 {
 	aConsoleShown = !aConsoleShown;
 }
 
-bool GuiSystem::IsConsoleShown(  )
+bool GuiSystem::IsConsoleShown()
 {
 	return aConsoleShown;
 }
 
 void GuiSystem::InitConsole()
 {
-	LogAddChannelShownCallback( ReBuildConsoleOutput );
+	Log_AddChannelShownCallback( ReBuildConsoleOutput );
 
 	gConHistory.resize( 4096 );
 }

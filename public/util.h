@@ -39,7 +39,7 @@
 
 // msvc
 #if _MSC_VER
-	#define CH_STACK_ALLOC( size )      _alloca( CH_ALIGN_VALUE( size, 16 ) )
+	#define CH_STACK_ALLOC( size )      _malloca( CH_ALIGN_VALUE( size, 16 ) )
 
 	// obtain size of block of memory allocated from heap
 	#define CH_MALLOC_SIZE( block )     ( _msize( block ) )

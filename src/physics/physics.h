@@ -1,7 +1,7 @@
 #pragma once
 
 #include "physics/iphysics.h"
-#include "graphics/igraphics.h"
+#include "render/irender.h"
 
 #ifndef JPH_DEBUG_RENDERER
 	// Hack to compile DebugRenderer
@@ -44,7 +44,6 @@
 // #include <Renderer/DebugRenderer.h>
 
 #include "types/transform.h"
-#include "graphics/renderertypes.h"
 
 
 inline glm::mat4 fromJolt( const JPH::Mat44& from ) {
@@ -184,7 +183,7 @@ public:
 
 
 // for debugging
-extern BaseGraphicsSystem* graphics;
+extern IRender* render;
 
 
 // Layer that objects can be in, determines which other objects it can collide with

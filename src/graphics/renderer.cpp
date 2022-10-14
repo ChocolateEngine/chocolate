@@ -188,6 +188,22 @@ std::vector< std::thread > gThreadPool;
 
 // ------------------------------------------------------------
 
+bool gInPresentQueue = false;
+
+// TEMP FROM NEWER SYSTEM
+void VK_WaitForPresentQueue()
+{
+	if ( gInPresentQueue )
+		vkQueueWaitIdle( gpDevice->GetPresentQueue() );
+
+	gInPresentQueue = false;
+}
+
+void VK_WaitForGraphicsQueue()
+{
+	vkQueueWaitIdle( gpDevice->GetGraphicsQueue() );
+}
+
 
 // HACK
 BaseShader* gpSkybox = nullptr;
@@ -218,6 +234,15 @@ void Renderer::InitVulkan(  )
 	gLayoutBuilder.BuildLayouts(  );
 	gPipelineBuilder.BuildPipelines(  );
 
+	aCommandBuffers.resize( aSwapChainFramebuffers.size() );
+	VkCommandBufferAllocateInfo allocInfo{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO };
+	allocInfo.commandPool        = gpDevice->GetCommandPool();
+	allocInfo.level              = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+	allocInfo.commandBufferCount = (uint32_t)aCommandBuffers.size();
+
+	if ( vkAllocateCommandBuffers( DEVICE, &allocInfo, aCommandBuffers.data() ) != VK_SUCCESS )
+		throw std::runtime_error( "Failed to allocate command buffers!" );
+
 	// start up threads
 #if RENDER_THREADS
 	gThreadPool.resize( THREAD_COUNT );
@@ -244,16 +269,19 @@ void Renderer::InitCommandBuffers(  )
 	gFileMonitor.Update();
 
 	gDbgDrawer.PrepareMeshForDraw();
-	
-	aCommandBuffers.resize( aSwapChainFramebuffers.size(  ) );
-	VkCommandBufferAllocateInfo allocInfo{  };
-	allocInfo.sType 		= VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-	allocInfo.commandPool 		= gpDevice->GetCommandPool(  );
-	allocInfo.level 		= VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-	allocInfo.commandBufferCount	= ( uint32_t )aCommandBuffers.size(  );
 
-	if ( vkAllocateCommandBuffers( DEVICE, &allocInfo, aCommandBuffers.data(  ) ) != VK_SUCCESS )
-		throw std::runtime_error( "Failed to allocate command buffers!" );
+	VK_WaitForPresentQueue();
+	vkResetCommandPool( DEVICE, gpDevice->GetCommandPool(), 0 );
+	
+	// aCommandBuffers.resize( aSwapChainFramebuffers.size(  ) );
+	// VkCommandBufferAllocateInfo allocInfo{  };
+	// allocInfo.sType 		= VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+	// allocInfo.commandPool 		= gpDevice->GetCommandPool(  );
+	// allocInfo.level 		= VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+	// allocInfo.commandBufferCount	= ( uint32_t )aCommandBuffers.size(  );
+	// 
+	// if ( vkAllocateCommandBuffers( DEVICE, &allocInfo, aCommandBuffers.data(  ) ) != VK_SUCCESS )
+	// 	throw std::runtime_error( "Failed to allocate command buffers!" );
 	
 	// reset and allocate data for worker threads
 	// gTaskMutex.lock();
@@ -640,6 +668,7 @@ void Renderer::DrawFrame(  )
 	presentInfo.pResults 			= NULL; // Optional
 
 	res = vkQueuePresentKHR( gpDevice->GetPresentQueue(  ), &presentInfo );
+	gInPresentQueue = true;
 
 	if ( res == VK_ERROR_OUT_OF_DATE_KHR )
 		ReinitSwapChain(  );
@@ -651,10 +680,10 @@ void Renderer::DrawFrame(  )
 #pragma message ("IDEA: maybe change this vkQueueWaitIdle to be called at the start of the DrawFrame function," \
 				"cause this does take up some cpu time")
 
-	vkQueueWaitIdle( gpDevice->GetPresentQueue() );
+	// vkQueueWaitIdle( gpDevice->GetPresentQueue() );
 
 	aCurrentFrame = ++aCurrentFrame % MAX_FRAMES_PROCESSING;
-	vkFreeCommandBuffers( DEVICE, gpDevice->GetCommandPool(  ), ( uint32_t )aCommandBuffers.size(  ), aCommandBuffers.data(  ) );
+	// vkFreeCommandBuffers( DEVICE, gpDevice->GetCommandPool(  ), ( uint32_t )aCommandBuffers.size(  ), aCommandBuffers.data(  ) );
 
 	matsys->aDrawList.clear();
 	gDbgDrawer.ResetMesh();
@@ -667,6 +696,9 @@ void Renderer::CreateLine( glm::vec3 sX, glm::vec3 sY, glm::vec3 sColor ) {
 
 void Renderer::Cleanup(  )
 {
+	if ( aCommandBuffers.size() )
+		vkFreeCommandBuffers( DEVICE, gpDevice->GetCommandPool(), (uint32_t)aCommandBuffers.size(), aCommandBuffers.data() );
+
 	DestroySwapChain(  );
 	vkDestroySampler( DEVICE, aTextureSampler, NULL );
 	vkDestroyDescriptorPool( DEVICE, *gpPool, NULL );
@@ -775,3 +807,4 @@ Renderer::~Renderer
 {
 	Cleanup(  );
 }
+

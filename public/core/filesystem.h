@@ -84,10 +84,10 @@ CORE_API bool                FileSys_IsFile( const std::string& path, bool noPat
 CORE_API bool                FileSys_Exists( const std::string& path, bool noPaths = false );
 
 // Call access on a file
-CORE_API int                 FileSys_Access( const std::string& path, int mode = 0 );
+CORE_API int                 FileSys_Access( const char* path, int mode = 0 );
 
 // Call stat on a file
-CORE_API int                 FileSys_Stat( const std::string& path, struct stat* info );
+CORE_API int                 FileSys_Stat( const char* path, struct stat* info );
 
 // ================================================================================
 // Path Utils

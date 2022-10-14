@@ -1,8 +1,6 @@
 #include "gui.h"
 #include "util.h"
 
-#include "graphics/igraphics2.h"
-
 #include "imgui/imgui_impl_vulkan.h"
 #include "imgui/imgui_impl_sdl.h"
 
@@ -77,7 +75,7 @@ void GuiSystem::StyleImGui()
 	// gBuiltInFont = BuildFont( "fonts/MonoxRegular.ttf", 15.f );
 
 
-	if ( cmdline->Find( "-no-vgui-style" ) )
+	if ( Args_Find( "-no-vgui-style" ) )
 		return;
 
 	// Classic VGUI2 Style Color Scheme
@@ -147,10 +145,10 @@ void GuiSystem::StyleImGui()
 
 ImFont* GuiSystem::BuildFont( const char* spPath, float sSizePixels, const ImFontConfig* spFontConfig )
 {
-	if ( cmdline->Find( "-no-imgui-font" ) )
+	if ( Args_Find( "-no-imgui-font" ) )
 		return nullptr;
 
-	auto fontPath = filesys->FindFile( spPath );
+	auto fontPath = FileSys_FindFile( spPath );
 	if ( fontPath == "" )
 		return nullptr;
 
@@ -217,12 +215,6 @@ void GuiSystem::InsertDebugMessage( size_t index, const char* format, ... )
 */
 void GuiSystem::StartFrame()
 {
-	static IGraphics* GET_SYSTEM_CHECK( graphics, IGraphics )
-	
-	Window* surface = graphics->GetSurface();
-	
-	ImGui_ImplVulkan_NewFrame();
-	ImGui_ImplSDL2_NewFrame( surface->apWindow );
 	ImGui::NewFrame();
 }
 

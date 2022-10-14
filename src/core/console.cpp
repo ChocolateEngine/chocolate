@@ -8,7 +8,7 @@
 #include <fstream>
 #include <mutex>
 
-LOG_REGISTER_CHANNEL( Console, LogColor::Gray );
+static LOG_REGISTER_CHANNEL( Console, LogColor::Gray );
 
 
 struct ConVarFlagData_t
@@ -667,7 +667,7 @@ const std::string& Con_GetTextBuffer(  )
 }
 
 
-ConVar* Con_GetConVar( const std::string_view& name )
+ConVar* Con_GetConVar( std::string_view name )
 {
 	PROF_SCOPE();
 
@@ -687,7 +687,7 @@ ConVar* Con_GetConVar( const std::string_view& name )
 }
 
 
-ConVarBase* Con_GetConVarBase( const std::string_view& name )
+ConVarBase* Con_GetConVarBase( std::string_view name )
 {
 	PROF_SCOPE();
 
@@ -707,7 +707,7 @@ ConVarBase* Con_GetConVarBase( const std::string_view& name )
 static std::string g_strEmpty = "";
 
 
-const std::string& Con_GetConVarValue( const std::string_view& name )
+const std::string& Con_GetConVarValue( std::string_view name )
 {
 	if ( ConVar* convar = Con_GetConVar( name ) )
 		return convar->aValue;
@@ -716,7 +716,7 @@ const std::string& Con_GetConVarValue( const std::string_view& name )
 }
 
 
-float Con_GetConVarFloat( const std::string_view& name )
+float Con_GetConVarFloat( std::string_view name )
 {
 	if ( ConVar* convar = Con_GetConVar( name ) )
 		return convar->aValueFloat;
@@ -920,14 +920,19 @@ bool Con_RunCommandArgs( const std::string& name, const std::vector< std::string
 
 				if ( !args.empty() )
 				{
-					std::string prevString = convar->aValue;
-					float       prevFloat  = convar->aValueFloat;
-
-					convar->SetValue( args[0] );
-
-					// TODO: convar callbacks should have different parameters
 					if ( convar->aFunc )
+					{
+						std::string prevString = convar->aValue;
+						float       prevFloat  = convar->aValueFloat;
+
+						convar->SetValue( args[ 0 ] );
+
 						convar->aFunc( prevString, prevFloat, args );
+					}
+					else
+					{
+						convar->SetValue( args[ 0 ] );
+					}
 				}
 				else
 				{

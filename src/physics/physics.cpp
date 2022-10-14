@@ -330,8 +330,6 @@ class Physics : public Ch_IPhysics
 public:
 	void Init() override
 	{
-		GET_SYSTEM_ASSERT( graphics, BaseGraphicsSystem );
-
 		// Install callbacks
 		JPH::Trace = TraceCallback;
 
@@ -365,6 +363,15 @@ public:
 	}
 
 	void Update( float sDT ) override
+	{
+	}
+
+	void SetDebugDrawFuncs( Phys_DrawLine_t               sDrawLine,
+	                        Phys_DrawTriangle_t           sDrawTriangle,
+	                        Phys_CreateTriangleBatch_t    sCreateTriBatch,
+	                        Phys_CreateTriangleBatchInd_t sCreateTriBatchInd,
+	                        Phys_DrawGeometry_t           sDrawGeometry,
+	                        Phys_DrawText_t               sDrawText ) override
 	{
 	}
 
@@ -524,14 +531,8 @@ void PhysicsEnvironment::Simulate( float sDT )
 
 	apPhys->Update( sDT, phys_collisionsteps, phys_substeps, phys.apAllocator, phys.apJobSystem );
 
-	if ( !phys_dbg && apDebugDraw->aValid )
+	if ( !phys_dbg || !apDebugDraw->aValid )
 		return;
-
-	if ( !apDebugDraw->aValid )
-	{
-		Log_Error( gPhysicsChannel, "Debug Drawer is Not Valid???\n" );
-		return;
-	}
 
 	for ( auto physObj : aPhysObjs )
 	{
@@ -741,6 +742,7 @@ void PhysicsEnvironment::DestroyObject( IPhysicsObject *spPhysObj )
 }
 
 
+#if 0
 // this is stupid, graphics2 will do this better, or i might just try doing it better in graphics1
 void GetModelVerts( Model* spModel, std::vector< JPH::Vec3 >& srVertices )
 {
@@ -869,10 +871,12 @@ void GetModelInd( Model* spModel, std::vector< JPH::Float3 >& srVerts, std::vect
 		}
 	}
 }
+#endif
 
 
 JPH::ShapeSettings* PhysicsEnvironment::LoadModel( const PhysicsShapeInfo& physInfo )
 {
+#if 0
 	PROF_SCOPE();
 
 	Assert( physInfo.aMeshData.apModel != nullptr );
@@ -933,6 +937,8 @@ JPH::ShapeSettings* PhysicsEnvironment::LoadModel( const PhysicsShapeInfo& physI
 			Log_ErrorF( gPhysicsChannel, "Invalid Shape Type Being Passed into PhysicsEnvironment::LoadModel: %s\n", PhysShapeType2Str( physInfo.aShapeType ) );
 			return nullptr;
 	}
+#endif
+	return nullptr;
 }
 
 

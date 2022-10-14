@@ -9,11 +9,12 @@
 #include "system.h"
 
 
-// blech
-class Model;
-
-
-// TODO: how tf will you do vehicles lol
+enum EPhysCullMode
+{
+	EPhysCull_BackFace,   // Don't draw backfacing polygons
+	EPhysCull_FrontFace,  // Don't draw front facing polygons
+	EPhysCull_Off         // Don't do culling and draw both sides
+};
 
 
 enum class PhysShapeType
@@ -97,12 +98,51 @@ enum class PhysMotionType
 
 // emum class PhysCollisionType
 
+struct PhysTriangle_t
+{
+	glm::vec3 aPos[ 3 ];
+};
+
+
+struct PhysVertex
+{
+	glm::vec3 pos;
+	glm::vec3 norm;
+	glm::vec2 uv;
+	glm::vec4 color;
+};
+
+
+struct PhysMeshVertex
+{
+	glm::vec3 pos;
+	glm::vec3 norm;
+};
+
 
 struct PhysicsShapeInfo
 {
 	PhysicsShapeInfo( PhysShapeType shapeType ):
 		aShapeType( shapeType )
 	{
+	}
+
+	// umm
+	PhysicsShapeInfo( const PhysicsShapeInfo& self ) :
+		aShapeType( self.aShapeType )
+	{
+		if ( aShapeType == PhysShapeType::Invalid )
+		{
+			return;
+		}
+		else if ( aShapeType == PhysShapeType::Mesh || aShapeType == PhysShapeType::Convex )
+		{
+			aMeshData = self.aMeshData;
+		}
+		else
+		{
+			aBounds = self.aBounds;
+		}
 	}
 
 	~PhysicsShapeInfo()
@@ -117,17 +157,11 @@ struct PhysicsShapeInfo
 		// use if ShapeType is Concave or Convex
 		struct
 		{
-			// Only used for when making a Convex or a Concave collision mesh
-			// i don't like this being a Model*, but idk
-			// maybe i can use IMesh** apMeshes and size_t aMeshCount?
-			Model*                      apModel = nullptr;
-
-			// IMesh*              mesh = nullptr;
-			// std::vector< vertex_3d_t >  aVertices;
-			// std::vector< uint32_t >     aIndices;
+			std::vector< PhysMeshVertex > aVertices;
+			std::vector< uint32_t >       aIndices;
 
 			// Tell the physics engine to optimize this convex collision mesh
-			bool                        aOptimizeConvex = true;
+			bool                          aOptimizeConvex = true;
 		} aMeshData;
 
 		// Otherwise, use this (maybe make a separate thing? idk)
@@ -345,10 +379,52 @@ public:
 };
 
 
+typedef void ( *Phys_DrawLine_t )(
+	const glm::vec3& from,
+	const glm::vec3& to,
+	const glm::vec3& color );
+
+typedef void ( *Phys_DrawTriangle_t )(
+	const glm::vec3& inV1,
+    const glm::vec3& inV2,
+    const glm::vec3& inV3,
+    const glm::vec4& srColor );
+
+typedef Handle ( *Phys_CreateTriangleBatch_t )(
+	const std::vector< PhysTriangle_t >& srTriangles );
+
+typedef Handle ( *Phys_CreateTriangleBatchInd_t )(
+	const std::vector< PhysVertex >& srVerts,
+	const std::vector< u32 >& srInd );
+
+typedef Handle ( *Phys_DrawGeometry_t )(
+	const glm::mat4& srModelMatrix,
+	// const JPH::AABox& inWorldSpaceBounds,
+	float            sLODScaleSq,
+	const glm::vec4& srColor,
+	Handle           sGeometry,
+	EPhysCullMode    sCullMode,
+	bool             sCastShadow,
+	bool             sWireframe );
+
+typedef Handle ( *Phys_DrawText_t )(
+	const glm::vec3&   srPos,
+	const std::string& srText,
+	const glm::vec3&   srColor,
+	float              sHeight );
+
+
 class Ch_IPhysics : public BaseSystem
 {
 public:
-	virtual IPhysicsEnvironment*           CreatePhysEnv() = 0;
-	virtual void                           DestroyPhysEnv( IPhysicsEnvironment* pEnv ) = 0;
+	virtual IPhysicsEnvironment* CreatePhysEnv()                                  = 0;
+	virtual void                 DestroyPhysEnv( IPhysicsEnvironment* pEnv )      = 0;
+
+	virtual void                 SetDebugDrawFuncs( Phys_DrawLine_t               sDrawLine,
+	                                                Phys_DrawTriangle_t           sDrawTriangle,
+	                                                Phys_CreateTriangleBatch_t    sCreateTriBatch,
+	                                                Phys_CreateTriangleBatchInd_t sCreateTriBatchInd,
+	                                                Phys_DrawGeometry_t           sDrawGeometry,
+	                                                Phys_DrawText_t               sDrawText ) = 0;
 };
 

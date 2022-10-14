@@ -419,11 +419,11 @@ CORE_API const std::string&                  Con_GetTextBuffer(  );
 CORE_API void                                Con_CalculateAutoCompleteList( const std::string& textBuffer );
 CORE_API const std::vector< std::string >&   Con_GetAutoCompleteList(  );
 
-CORE_API ConVar*                             Con_GetConVar( const std::string_view& name );
-CORE_API ConVarBase*                         Con_GetConVarBase( const std::string_view& name );
+CORE_API ConVar*                             Con_GetConVar( std::string_view name );
+CORE_API ConVarBase*                         Con_GetConVarBase( std::string_view name );
 
-CORE_API const std::string&                  Con_GetConVarValue( const std::string_view& name );
-CORE_API float                               Con_GetConVarFloat( const std::string_view& name );
+CORE_API const std::string&                  Con_GetConVarValue( std::string_view name );
+CORE_API float                               Con_GetConVarFloat( std::string_view name );
 
 CORE_API void                                Con_PrintAllConVars(  );
 
