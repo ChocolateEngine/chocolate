@@ -61,15 +61,18 @@ PFN_vkCmdDebugMarkerInsertEXT     pfnCmdDebugMarkerInsert;
 static VkInstance                        gInstance;
 static VkDebugUtilsMessengerEXT          gLayers;
 static VkSurfaceKHR                      gSurface;
-static VkSampleCountFlagBits             gSampleCount;
 static VkPhysicalDevice                  gPhysicalDevice;
 static VkDevice                          gDevice;
 static VkQueue                           gGraphicsQueue;
 static VkQueue                           gPresentQueue;
 
+static VkPhysicalDeviceProperties        gPhysicalDeviceProperties;
+
 static VkSurfaceCapabilitiesKHR          gSwapCapabilities;
 static std::vector< VkSurfaceFormatKHR > gSwapFormats;
 static std::vector< VkPresentModeKHR >   gSwapPresentModes;
+
+extern SDL_Window*                       gpWindow;
 
 
 // lengths to chop off from warnings:
@@ -300,7 +303,7 @@ uint32_t VK_GetMemoryType( uint32_t sTypeFilter, VkMemoryPropertyFlags sProperti
 		}
 	}
 
-	return INT32_MAX;
+	return UINT32_MAX;
 }
 
 
@@ -364,7 +367,7 @@ VkSurfaceFormatKHR VK_ChooseSwapSurfaceFormat()
 VkPresentModeKHR VK_ChooseSwapPresentMode()
 {
 	// if ( !GetOption( "VSync" ) )
-	return VK_PRESENT_MODE_IMMEDIATE_KHR;
+	// return VK_PRESENT_MODE_IMMEDIATE_KHR;
 
 	for ( const auto& availablePresentMode : gSwapPresentModes )
 	{
@@ -377,13 +380,12 @@ VkPresentModeKHR VK_ChooseSwapPresentMode()
 
 VkExtent2D VK_ChooseSwapExtent()
 {
-	// TODO: probably use gWidth and gHeight instead, not sure how this would behave on linux lol
-	// if ( srCapabilities.currentExtent.width != UINT32_MAX )
-	// 	return srCapabilities.currentExtent;
+	int width = 0, height = 0;
+	SDL_GetWindowSize( gpWindow, &width, &height );
 
 	VkExtent2D size{
-		std::max( gSwapCapabilities.minImageExtent.width, std::min( gSwapCapabilities.maxImageExtent.width, (u32)gWidth ) ),
-		std::max( gSwapCapabilities.minImageExtent.height, std::min( gSwapCapabilities.maxImageExtent.height, (u32)gHeight ) ),
+		std::max( gSwapCapabilities.minImageExtent.width, std::min( gSwapCapabilities.maxImageExtent.width, (u32)width ) ),
+		std::max( gSwapCapabilities.minImageExtent.height, std::min( gSwapCapabilities.maxImageExtent.height, (u32)height ) ),
 	};
 
 	return size;
@@ -472,7 +474,7 @@ void VK_SetupPhysicalDevice()
 	vkEnumeratePhysicalDevices( gInstance, &deviceCount, NULL );
 	if ( deviceCount == 0 )
 	{
-		throw std::runtime_error( "Failed to find GPUs with Vulkan support!" );
+		Log_Fatal( gLC_Render, "Failed to find GPUs with Vulkan support!" );
 	}
 	std::vector< VkPhysicalDevice > devices( deviceCount );
 	vkEnumeratePhysicalDevices( gInstance, &deviceCount, devices.data() );
@@ -482,7 +484,8 @@ void VK_SetupPhysicalDevice()
 		if ( VK_SuitableCard( device ) )
 		{
 			gPhysicalDevice = device;
-			gSampleCount = VK_FindMaxMSAASamples();
+			vkGetPhysicalDeviceProperties( gPhysicalDevice, &gPhysicalDeviceProperties );
+
 			// SetOption( "MSAA Samples", aSampleCount );
 			break;
 		}
@@ -587,12 +590,15 @@ VkQueue VK_GetPresentQueue()
 }
 
 
+VkSampleCountFlags VK_GetMaxMSAASamples()
+{
+	return gPhysicalDeviceProperties.limits.framebufferColorSampleCounts & gPhysicalDeviceProperties.limits.framebufferDepthSampleCounts;
+}
+
+
 VkSampleCountFlagBits VK_FindMaxMSAASamples()
 {
-	VkPhysicalDeviceProperties physicalDeviceProperties;
-	vkGetPhysicalDeviceProperties( gPhysicalDevice, &physicalDeviceProperties );
-
-	VkSampleCountFlags counts = physicalDeviceProperties.limits.framebufferColorSampleCounts & physicalDeviceProperties.limits.framebufferDepthSampleCounts;
+	VkSampleCountFlags counts = gPhysicalDeviceProperties.limits.framebufferColorSampleCounts & gPhysicalDeviceProperties.limits.framebufferDepthSampleCounts;
 	if ( counts & VK_SAMPLE_COUNT_64_BIT ) return VK_SAMPLE_COUNT_64_BIT;
 	if ( counts & VK_SAMPLE_COUNT_32_BIT ) return VK_SAMPLE_COUNT_32_BIT;
 	if ( counts & VK_SAMPLE_COUNT_16_BIT ) return VK_SAMPLE_COUNT_16_BIT;
@@ -601,5 +607,11 @@ VkSampleCountFlagBits VK_FindMaxMSAASamples()
 	if ( counts & VK_SAMPLE_COUNT_2_BIT ) return VK_SAMPLE_COUNT_2_BIT;
 
 	return VK_SAMPLE_COUNT_1_BIT;
+}
+
+
+const VkPhysicalDeviceProperties& VK_GetPhysicalDeviceProperties()
+{
+	return gPhysicalDeviceProperties;
 }
 

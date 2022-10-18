@@ -1,5 +1,6 @@
 #pragma once
 
+#include "render/irender.h"
 #include <vulkan/vulkan.hpp>
 
 
@@ -14,11 +15,19 @@ extern int             gHeight;
 extern VkFormat        gColorFormat;
 extern VkColorSpaceKHR gColorSpace;
 
+extern ConVar          r_msaa;
+extern ConVar          r_msaa_samples;
+
 enum class GraphicsFmt;
-using ShaderStage = int;
+using ShaderStage = char;
+using EImageUsage = unsigned short;
+enum EPipelineBindPoint;
+enum EAttachmentLoadOp;
 
 struct PipelineLayoutCreate_t;
 struct GraphicsPipelineCreate_t;
+struct TextureCreateInfo_t;
+struct RenderPassCreate_t;
 
 
 #if _DEBUG
@@ -38,23 +47,40 @@ struct BufferVK
 };
 
 
+// TODO: split this up, most of the time we don't like half of the info here, only just filling up the cpu cache more !!
 struct TextureVK
 {
 	// Vulkan Info
-	VkImage         aImage;
-	VkImageView     aImageView;
-	VkDeviceMemory  aMemory;
-	VkImageViewType aViewType;
-	VkFormat        aFormat = VK_FORMAT_UNDEFINED;
+	VkImage           aImage;
+	VkImageView       aImageView;
+	VkDeviceMemory    aMemory;
+	VkImageViewType   aViewType;
+	VkImageUsageFlags aUsage = 0;
+	VkFormat          aFormat = VK_FORMAT_UNDEFINED;
 
 	// Texture Information
-	int             aIndex;
-	glm::ivec2      aSize;
-	u8              aMipLevels    = 0;
-	int             aFrames       = 0;
-	bool            aRenderTarget = false;
+	int               aIndex;  // texture sampler index (MOVE ELSEWHERE!!)
+	glm::ivec2        aSize;
+	u8                aMipLevels    = 0;
+	int               aFrames       = 0;
+	bool              aRenderTarget = false;
 };
 
+
+struct RenderPassInfoVK
+{
+	bool aUsesMSAA = false;
+};
+
+
+// struct RenderTarget
+// {
+// 	// std::vector< TextureVK* >    aImages;
+// 	// std::vector< VkFramebuffer > aFrameBuffers;
+// 
+// 	TextureVK* aImage          = nullptr;
+// 	VkFramebuffer aFrameBuffer = VK_NULL_HANDLE;
+// };
 
 struct RenderTarget
 {
@@ -66,18 +92,24 @@ struct RenderTarget
 // --------------------------------------------------------------------------------------
 // General
 
-char const*                           VKString( VkResult sResult );
-
-VkFormat                              VK_ToVkFormat( GraphicsFmt colorFmt );
-VkShaderStageFlags                    VK_ToVkShaderStage( ShaderStage stage );
+const char*                           VKString( VkResult sResult );
 
 void                                  VK_CheckResult( VkResult sResult, char const* spMsg );
 void                                  VK_CheckResult( VkResult sResult );
 
+// General Conversion Functions
+GraphicsFmt                           VK_ToGraphicsFmt( VkFormat colorFmt );
+VkFormat                              VK_ToVkFormat( GraphicsFmt colorFmt );
+VkShaderStageFlags                    VK_ToVkShaderStage( ShaderStage stage );
+VkPipelineBindPoint                   VK_ToPipelineBindPoint( EPipelineBindPoint bindPoint );
+VkImageUsageFlags                     VK_ToVkImageUsage( EImageUsage usage );
+VkAttachmentLoadOp                    VK_ToVkLoadOp( EAttachmentLoadOp loadOp );
+
 void                                  VK_memcpy( VkDeviceMemory sBufferMemory, VkDeviceSize sSize, const void* spData );
 
-void                                  VK_Reset();
+void                                  VK_Reset( ERenderResetFlags sFlags = ERenderResetFlags_None );
 
+bool                                  VK_UseMSAA();
 VkSampleCountFlagBits                 VK_GetMSAASamples();
 
 // --------------------------------------------------------------------------------------
@@ -101,6 +133,7 @@ VkQueue                               VK_GetGraphicsQueue();
 VkQueue                               VK_GetPresentQueue();
 
 bool                                  VK_CheckValidationLayerSupport();
+VkSampleCountFlags                    VK_GetMaxMSAASamples();
 VkSampleCountFlagBits                 VK_FindMaxMSAASamples();
 
 uint32_t                              VK_GetMemoryType( uint32_t sTypeFilter, VkMemoryPropertyFlags sProperties );
@@ -112,6 +145,8 @@ VkSurfaceCapabilitiesKHR              VK_GetSwapCapabilities();
 VkSurfaceFormatKHR                    VK_ChooseSwapSurfaceFormat();
 VkPresentModeKHR                      VK_ChooseSwapPresentMode();
 VkExtent2D                            VK_ChooseSwapExtent();
+
+const VkPhysicalDeviceProperties&     VK_GetPhysicalDeviceProperties();
 
 // --------------------------------------------------------------------------------------
 // Swapchain
@@ -164,9 +199,16 @@ VkCommandPool&                        VK_GetPrimaryCommandPool();
 // --------------------------------------------------------------------------------------
 // Render Pass
 
+VkRenderPass                          VK_CreateMainRenderPass();
+void                                  VK_DestroyMainRenderPass();
+
+Handle                                VK_CreateRenderPass( const RenderPassCreate_t& srCreate );
+void                                  VK_DestroyRenderPass( Handle shHandle );
+
 void                                  VK_DestroyRenderPasses();
 VkRenderPass                          VK_GetRenderPass();
 VkRenderPass                          VK_GetRenderPass( Handle shHandle );
+RenderPassInfoVK*                     VK_GetRenderPassInfo( VkRenderPass renderPass );
 
 // --------------------------------------------------------------------------------------
 // Present
@@ -203,7 +245,13 @@ void                                  VK_DestroyShaderModule( VkShaderModule sha
 Handle                                VK_CreatePipelineLayout( PipelineLayoutCreate_t& srPipelineCreate );
 Handle                                VK_CreateGraphicsPipeline( GraphicsPipelineCreate_t& srGraphicsCreate );
 
-void                                  VK_BindShader( VkCommandBuffer c, Handle handle );
+bool                                  VK_RecreatePipelineLayout( Handle sHandle, PipelineLayoutCreate_t& srPipelineCreate );
+bool                                  VK_RecreateGraphicsPipeline( Handle sHandle, GraphicsPipelineCreate_t& srGraphicsCreate );
+
+void                                  VK_DestroyPipeline( Handle sPipeline );
+void                                  VK_DestroyPipelineLayout( Handle sPipeline );
+
+bool                                  VK_BindShader( VkCommandBuffer c, Handle handle );
 VkPipelineLayout                      VK_GetPipelineLayout( Handle handle );
 
 // --------------------------------------------------------------------------------------
@@ -219,15 +267,19 @@ VkSampler                             VK_GetSampler();
 
 TextureVK*                            VK_NewTexture();
 TextureVK*                            VK_LoadTexture( const std::string& srPath );
-TextureVK*                            VK_CreateTexture( const glm::ivec2& srSize, VkFormat sFormat );
+TextureVK*                            VK_CreateTexture( const TextureCreateInfo_t& srTextureCreateInfo );
 void                                  VK_DestroyTexture( TextureVK* spTexture );
 void                                  VK_DestroyAllTextures();
 TextureVK*                            VK_GetTexture( Handle texture );
 
+Handle                                VK_CreateFramebuffer( VkRenderPass sRenderPass, u16 sWidth, u16 sHeight, const VkImageView* spAttachments, u32 sCount );
+Handle                                VK_CreateFramebuffer( const VkFramebufferCreateInfo& sCreateInfo );
+void                                  VK_DestroyFramebuffer( Handle shHandle );
+VkFramebuffer                         VK_GetFramebuffer( Handle shHandle );
+
 RenderTarget*                         VK_CreateRenderTarget( const std::vector< TextureVK* >& srImages, u16 sWidth, u16 sHeight, const std::vector< VkImageView >& srSwapImages = {} );
 void                                  VK_DestroyRenderTarget( RenderTarget* spTarget );
 void                                  VK_DestroyRenderTargets();
-void                                  VK_RebuildRenderTargets();
 
 Handle                                VK_GetFrameBufferHandle( VkFramebuffer sFrameBuffer );
 VkFramebuffer                         VK_GetFrameBuffer( Handle shFrameBuffer );

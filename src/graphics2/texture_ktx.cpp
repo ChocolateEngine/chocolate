@@ -118,6 +118,7 @@ TextureVK* KTX_LoadTexture( const std::string srPath )
 	pTexture->aFormat    = kVkTexture.imageFormat;
 	pTexture->aViewType  = kVkTexture.viewType;
 	pTexture->aFrames    = kVkTexture.layerCount;
+	pTexture->aUsage     = VK_IMAGE_USAGE_SAMPLED_BIT;
 
 	// Create Image View
 	VkImageViewCreateInfo viewInfo{ VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO };

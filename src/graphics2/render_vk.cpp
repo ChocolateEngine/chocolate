@@ -35,7 +35,29 @@ static ResourceList< TextureVK* >         gTextureHandles;
 // static ResourceManager< BufferVK >        gBufferHandles;
 
 
-char const* VKString( VkResult sResult )
+// Static Memory Pools for Vulkan Commands
+static VkViewport*                        gpViewports = nullptr;
+static u32                                gMaxViewports = 0;
+
+static Render_OnReset_t                   gpOnResetFunc = nullptr;
+
+
+CONVAR_CMD( r_msaa, 0 )
+{
+	VK_Reset( ERenderResetFlags_MSAA );
+}
+
+
+CONVAR_CMD( r_msaa_samples, 0 )
+{
+	if ( !r_msaa )
+		return;
+
+	VK_Reset( ERenderResetFlags_MSAA );
+}
+
+
+const char* VKString( VkResult sResult )
 {
 	switch ( sResult )
 	{
@@ -111,16 +133,67 @@ char const* VKString( VkResult sResult )
 }
 
 
+void VK_CheckResult( VkResult sResult, char const* spMsg )
+{
+	if ( sResult == VK_SUCCESS )
+		return;
+
+	Log_FatalF( gLC_Render, "Vulkan Error: %s: %s", spMsg, VKString( sResult ) );
+}
+
+
+void VK_CheckResult( VkResult sResult )
+{
+	if ( sResult == VK_SUCCESS )
+		return;
+
+	Log_FatalF( gLC_Render, "Vulkan Error: %s", VKString( sResult ) );
+}
+
+
+GraphicsFmt VK_ToGraphicsFmt( VkFormat colorFmt )
+{
+	switch ( colorFmt )
+	{
+		default:
+			Log_Error( gLC_Render, "Unspecified VkFormat to Color Format Conversion!\n" );
+
+		case VK_FORMAT_UNDEFINED:
+			return GraphicsFmt::INVALID;
+
+		// ------------------------------------------
+
+		case VK_FORMAT_B8G8R8A8_SRGB:
+			return GraphicsFmt::BGRA8888_SRGB;
+
+		case VK_FORMAT_B8G8R8A8_SNORM:
+			return GraphicsFmt::BGRA8888_SNORM;
+
+		case VK_FORMAT_B8G8R8A8_UNORM:
+			return GraphicsFmt::BGRA8888_UNORM;
+
+		// ------------------------------------------
+
+		case VK_FORMAT_D16_UNORM:
+			return GraphicsFmt::D16_UNORM;
+
+		case VK_FORMAT_D32_SFLOAT:
+			return GraphicsFmt::D32_SFLOAT;
+	}
+}
+
+
 VkFormat VK_ToVkFormat( GraphicsFmt colorFmt )
 {
 	switch ( colorFmt )
 	{
-		case GraphicsFmt::INVALID:
 		default:
 			Log_Error( gLC_Render, "Unspecified Color Format to VkFormat Conversion!\n" );
+
+		case GraphicsFmt::INVALID:
 			return VK_FORMAT_UNDEFINED;
 
-			// ------------------------------------------
+		// ------------------------------------------
 
 		case GraphicsFmt::R8_SINT:
 			return VK_FORMAT_R8_SINT;
@@ -140,7 +213,18 @@ VkFormat VK_ToVkFormat( GraphicsFmt colorFmt )
 		case GraphicsFmt::RG88_UINT:
 			return VK_FORMAT_R8G8_UINT;
 
-			// ------------------------------------------
+		// ------------------------------------------
+
+		case GraphicsFmt::BGRA8888_SRGB:
+			return VK_FORMAT_B8G8R8A8_SRGB;
+
+		case GraphicsFmt::BGRA8888_SNORM:
+			return VK_FORMAT_B8G8R8A8_SNORM;
+
+		case GraphicsFmt::BGRA8888_UNORM:
+			return VK_FORMAT_B8G8R8A8_UNORM;
+
+		// ------------------------------------------
 
 		case GraphicsFmt::R16_SFLOAT:
 			return VK_FORMAT_R16_SFLOAT;
@@ -160,7 +244,7 @@ VkFormat VK_ToVkFormat( GraphicsFmt colorFmt )
 		case GraphicsFmt::RG1616_UINT:
 			return VK_FORMAT_R16G16_UINT;
 
-			// ------------------------------------------
+		// ------------------------------------------
 
 		case GraphicsFmt::R32_SFLOAT:
 			return VK_FORMAT_R32_SFLOAT;
@@ -198,7 +282,7 @@ VkFormat VK_ToVkFormat( GraphicsFmt colorFmt )
 		case GraphicsFmt::RGBA32323232_UINT:
 			return VK_FORMAT_R32G32B32A32_UINT;
 
-			// ------------------------------------------
+		// ------------------------------------------
 
 		case GraphicsFmt::BC1_RGB_UNORM_BLOCK:
 			return VK_FORMAT_BC1_RGB_UNORM_BLOCK;
@@ -247,6 +331,15 @@ VkFormat VK_ToVkFormat( GraphicsFmt colorFmt )
 
 		case GraphicsFmt::BC7_UNORM_BLOCK:
 			return VK_FORMAT_BC7_UNORM_BLOCK;
+
+		// ------------------------------------------
+		// Other Formats
+
+		case GraphicsFmt::D16_UNORM:
+			return VK_FORMAT_D16_UNORM;
+
+		case GraphicsFmt::D32_SFLOAT:
+			return VK_FORMAT_D32_SFLOAT;
 	}
 }
 
@@ -268,29 +361,70 @@ VkShaderStageFlags VK_ToVkShaderStage( ShaderStage stage )
 }
 
 
-void VK_CheckResult( VkResult sResult, char const* spMsg )
+VkPipelineBindPoint VK_ToPipelineBindPoint( EPipelineBindPoint bindPoint )
 {
-	if ( sResult == VK_SUCCESS )
-		return;
+	switch ( bindPoint )
+	{
+		default:
+			return VK_PIPELINE_BIND_POINT_MAX_ENUM;
 
-	char pBuf[ 1024 ];
-	snprintf( pBuf, sizeof( pBuf ), "Vulkan Error %s: %s", spMsg, VKString( sResult ) );
+		case EPipelineBindPoint_Graphics:
+			return VK_PIPELINE_BIND_POINT_GRAPHICS;
 
-	// SDL_ShowSimpleMessageBox( SDL_MESSAGEBOX_ERROR, "Vulkan Error", pBuf, nullptr );
-	Log_Fatal( gLC_Render, pBuf );
+		case EPipelineBindPoint_Compute:
+			return VK_PIPELINE_BIND_POINT_COMPUTE;
+	}
 }
 
 
-void VK_CheckResult( VkResult sResult )
+VkImageUsageFlags VK_ToVkImageUsage( EImageUsage usage )
 {
-	if ( sResult == VK_SUCCESS )
-		return;
+	VkImageUsageFlags flags = 0;
 
-	char pBuf[ 1024 ];
-	snprintf( pBuf, sizeof( pBuf ), "Vulkan Error: %s", VKString( sResult ) );
+	if ( usage & EImageUsage_TransferSrc )
+		flags |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
 
-	// SDL_ShowSimpleMessageBox( SDL_MESSAGEBOX_ERROR, "Vulkan Error", pBuf, nullptr );
-	Log_Fatal( gLC_Render, pBuf );
+	if ( usage & EImageUsage_TransferDst )
+		flags |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+
+	if ( usage & EImageUsage_Sampled )
+		flags |= VK_IMAGE_USAGE_SAMPLED_BIT;
+
+	if ( usage & EImageUsage_Storage )
+		flags |= VK_IMAGE_USAGE_STORAGE_BIT;
+
+	if ( usage & EImageUsage_AttachColor )
+		flags |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+
+	if ( usage & EImageUsage_AttachDepthStencil )
+		flags |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+
+	if ( usage & EImageUsage_AttachTransient )
+		flags |= VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT;
+
+	if ( usage & EImageUsage_AttachInput )
+		flags |= VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT;
+
+	return flags;
+}
+
+
+VkAttachmentLoadOp VK_ToVkLoadOp( EAttachmentLoadOp loadOp )
+{
+	switch ( loadOp )
+	{
+		default:
+			return VK_ATTACHMENT_LOAD_OP_MAX_ENUM;
+
+		case EAttachmentLoadOp_Load:
+			return VkAttachmentLoadOp::VK_ATTACHMENT_LOAD_OP_LOAD;
+
+		case EAttachmentLoadOp_Clear:
+			return VkAttachmentLoadOp::VK_ATTACHMENT_LOAD_OP_CLEAR;
+
+		case EAttachmentLoadOp_DontCare:
+			return VkAttachmentLoadOp::VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+	}
 }
 
 
@@ -304,9 +438,39 @@ void VK_memcpy( VkDeviceMemory sBufferMemory, VkDeviceSize sSize, const void* sp
 }
 
 
+bool VK_UseMSAA()
+{
+	return r_msaa;
+}
+
+
 VkSampleCountFlagBits VK_GetMSAASamples()
 {
-	return VK_SAMPLE_COUNT_1_BIT;
+	if ( !r_msaa )
+		return VK_SAMPLE_COUNT_1_BIT;
+
+	auto maxSamples = VK_GetMaxMSAASamples();
+
+	if ( r_msaa_samples >= 64 && maxSamples & VK_SAMPLE_COUNT_64_BIT )
+		return VK_SAMPLE_COUNT_64_BIT;
+
+	if ( r_msaa_samples >= 32 && maxSamples & VK_SAMPLE_COUNT_32_BIT )
+		return VK_SAMPLE_COUNT_32_BIT;
+
+	if ( r_msaa_samples >= 16 && maxSamples & VK_SAMPLE_COUNT_16_BIT )
+		return VK_SAMPLE_COUNT_16_BIT;
+
+	if ( r_msaa_samples >= 8 && maxSamples & VK_SAMPLE_COUNT_8_BIT )
+		return VK_SAMPLE_COUNT_8_BIT;
+
+	if ( r_msaa_samples >= 4 && maxSamples & VK_SAMPLE_COUNT_4_BIT )
+		return VK_SAMPLE_COUNT_4_BIT;
+
+	if ( r_msaa_samples >= 2 && maxSamples & VK_SAMPLE_COUNT_2_BIT )
+		return VK_SAMPLE_COUNT_2_BIT;
+
+	Log_Warn( gLC_Render, "Minimum Sample Count with MSAA on is 2!\n" );
+	return VK_SAMPLE_COUNT_2_BIT;
 }
 
 
@@ -388,11 +552,6 @@ void VK_DestroyBuffer( VkBuffer& srBuffer, VkDeviceMemory& srBufferMem )
 }
 
 
-void VK_ClearDrawQueue()
-{
-}
-
-
 bool VK_CreateImGuiFonts()
 {
 	VkCommandBuffer c = VK_BeginSingleCommand();
@@ -412,22 +571,28 @@ bool VK_CreateImGuiFonts()
 }
 
 
-bool VK_InitImGui()
+bool VK_InitImGui( VkRenderPass sRenderPass )
 {
-	ImGui_ImplSDL2_InitForVulkan( gpWindow );
+	ImGui_ImplVulkan_InitInfo initInfo{};
+	initInfo.Instance        = VK_GetInstance();
+	initInfo.PhysicalDevice  = VK_GetPhysicalDevice();
+	initInfo.Device          = VK_GetDevice();
+	initInfo.Queue           = VK_GetGraphicsQueue();
+	initInfo.DescriptorPool  = VK_GetDescPool();
+	initInfo.MinImageCount   = VK_GetSwapImageCount();
+	initInfo.ImageCount      = VK_GetSwapImageCount();
+	initInfo.CheckVkResultFn = VK_CheckResult;
 
-	ImGui_ImplVulkan_InitInfo init_info{};
-	init_info.Instance        = VK_GetInstance();
-	init_info.PhysicalDevice  = VK_GetPhysicalDevice();
-	init_info.Device          = VK_GetDevice();
-	init_info.Queue           = VK_GetGraphicsQueue();
-	init_info.DescriptorPool  = VK_GetDescPool();
-	init_info.MinImageCount   = VK_GetSwapImageCount();
-	init_info.ImageCount      = VK_GetSwapImageCount();
-	init_info.MSAASamples     = VK_GetMSAASamples();
-	init_info.CheckVkResultFn = VK_CheckResult;
+	RenderPassInfoVK* info   = VK_GetRenderPassInfo( sRenderPass );
+	if ( info == nullptr )
+	{
+		Log_Error( gLC_Render, "Failed to find RenderPass info\n" );
+		return false;
+	}
 
-	if ( !ImGui_ImplVulkan_Init( &init_info, VK_GetRenderPass() ) )
+	initInfo.MSAASamples = info->aUsesMSAA ? VK_GetMSAASamples() : VK_SAMPLE_COUNT_1_BIT;
+
+	if ( !ImGui_ImplVulkan_Init( &initInfo, sRenderPass ) )
 		return false;
 
 	return true;
@@ -460,20 +625,11 @@ bool Render_Init( void* spWindow )
 	VK_CreateDescSets();
 
 	VK_AllocateCommands();
-	
-	if ( !VK_InitImGui() )
-	{
-		Log_Error( gLC_Render, "Failed to init ImGui for Vulkan\n" );
-		Render_Shutdown();
-		return false;
-	}
 
-	// Load up image shader and create buffer for image mesh
-	// VK_CreateImageLayout();
-	// VK_CreateImageStorageLayout();
+	const auto& deviceProps = VK_GetPhysicalDeviceProperties();
 
-	// VK_CreateImageShader();
-	// VK_CreateFilterShader();
+	gpViewports             = new VkViewport[deviceProps.limits.maxViewports];
+	gMaxViewports           = deviceProps.limits.maxViewports;
 
 	Log_Msg( gLC_Render, "Loaded Vulkan Renderer\n" );
 
@@ -483,6 +639,9 @@ bool Render_Init( void* spWindow )
 
 void Render_Shutdown()
 {
+	if ( gpViewports )
+		delete gpViewports;
+
 	ImGui_ImplVulkan_Shutdown();
 
 	VK_DestroySwapchain();
@@ -506,20 +665,29 @@ void Render_Shutdown()
 }
 
 
-void VK_Reset()
+void VK_Reset( ERenderResetFlags sFlags )
 {
 	VK_RecreateSwapchain();
 
 	// recreate backbuffer
 	VK_DestroyRenderTargets();
+
+	if ( sFlags & ERenderResetFlags_MSAA )
+	{
+		VK_DestroyMainRenderPass();
+		VK_CreateMainRenderPass();
+	}
+
 	VK_GetBackBuffer();
+
+	if ( gpOnResetFunc )
+		gpOnResetFunc( sFlags );
 }
 
 
 void Render_NewFrame()
 {
 	ImGui_ImplVulkan_NewFrame();
-	VK_ClearDrawQueue();
 }
 
 
@@ -605,16 +773,9 @@ bool Render_BuildFonts()
 	return ret;
 }
 
-// ----------------------------------------------------------------------------------
-// Render Pipeline Ideas
-
-void Render_BindShader();
-void Render_DrawModel();
-
 
 // ----------------------------------------------------------------------------------
-// Chocolate Render Abstraction
-// need to get rid of this cause this is really stupid
+// Chocolate Engine Render Abstraction
 
 
 class RenderVK : public IRender
@@ -637,7 +798,13 @@ public:
 		                             gWidth, gHeight, SDL_WINDOW_VULKAN | SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE );
 
 		Render_Init( gpWindow );
-		Render_BuildFonts();
+
+		if ( !ImGui_ImplSDL2_InitForVulkan( gpWindow ) )
+		{
+			Log_Error( gLC_Render, "Failed to init ImGui SDL2 for Vulkan\n" );
+			Render_Shutdown();
+			return;
+		}
 	}
 
 	void Shutdown()
@@ -653,6 +820,33 @@ public:
 	// General Purpose Functions
 	// --------------------------------------------------------------------------------------------
 
+	// very odd
+	bool InitImGui( Handle shRenderPass ) override
+	{
+		VkRenderPass renderPass = VK_GetRenderPass( shRenderPass );
+
+		if ( renderPass == VK_NULL_HANDLE )
+		{
+			Log_Error( gLC_Render, "Failed to get RenderPass for ImGui\n" );
+			Render_Shutdown();
+			return false;
+		}
+
+		if ( !VK_InitImGui( renderPass ) )
+		{
+			Log_Error( gLC_Render, "Failed to init ImGui for Vulkan\n" );
+			Render_Shutdown();
+			return false;
+		}
+
+		return Render_BuildFonts();
+	}
+
+	void ShutdownImGui() override
+	{
+		ImGui_ImplVulkan_Shutdown();
+	}
+
 	SDL_Window* GetWindow() override
 	{
 		return gpWindow;
@@ -660,8 +854,7 @@ public:
 
 	void GetSurfaceSize( int& srWidth, int& srHeight ) override
 	{
-		srWidth  = gWidth;
-		srHeight = gHeight;
+		SDL_GetWindowSize( gpWindow, &srWidth, &srHeight );
 	}
 
 	// --------------------------------------------------------------------------------------------
@@ -781,7 +974,11 @@ public:
 
 	Handle CreateTexture( const TextureCreateInfo_t& srTextureCreateInfo ) override
 	{
-		return InvalidHandle;
+		TextureVK* tex = VK_CreateTexture( srTextureCreateInfo );
+		if ( tex == nullptr )
+			return InvalidHandle;
+
+		return gTextureHandles.Add( tex );
 	}
 
 	void FreeTexture( Handle sTexture ) override
@@ -793,6 +990,7 @@ public:
 			return;
 		}
 
+		VK_DestroyTexture( tex );
 		gTextureHandles.Remove( sTexture );
 	}
 
@@ -811,6 +1009,78 @@ public:
 		return tex->aIndex;
 	}
 
+#if 0
+	Handle CreateRenderTarget( const CreateRenderTarget_t& srCreate ) override
+	{
+		// VK_CreateRenderTarget();
+		return InvalidHandle;
+	}
+
+	void DestroyRenderTarget( Handle shTarget ) override
+	{
+	}
+#endif
+
+	Handle CreateFramebuffer( const CreateFramebuffer_t& srCreate ) override
+	{
+		VkRenderPass renderPass = VK_GetRenderPass( srCreate.aRenderPass );
+		if ( renderPass == nullptr )
+		{
+			Log_Error( gLC_Render, "Failed to create Framebuffer: RenderPass not found!\n" );
+			return InvalidHandle;
+		}
+
+		size_t count = srCreate.aPass.aAttachColors.size();
+
+		if ( srCreate.aPass.aAttachDepth )
+			count++;
+
+		VkImageView* attachments = (VkImageView*)CH_STACK_ALLOC( sizeof( VkImageView ) * count );
+
+		if ( attachments == nullptr )
+		{
+			Log_ErrorF( gLC_Render, "STACK OVERFLOW: Failed to allocate stack for Framebuffer attachments (%zu bytes)\n", sizeof( VkImageView ) * count );
+			return InvalidHandle;
+		}
+
+		count = 0;
+		for ( size_t i = 0; i < srCreate.aPass.aAttachColors.size(); i++ )
+		{
+			TextureVK* tex = nullptr;
+			if ( !gTextureHandles.Get( srCreate.aPass.aAttachColors[ i ], &tex ) )
+			{
+				Log_ErrorF( gLC_Render, "Failed to find texture %u while creating Framebuffer\n", i );
+				return InvalidHandle;
+			}
+			
+			attachments[ count++ ] = tex->aImageView;
+		}
+
+		if ( srCreate.aPass.aAttachDepth != InvalidHandle )
+		{
+			TextureVK* tex = nullptr;
+			if ( !gTextureHandles.Get( srCreate.aPass.aAttachDepth, &tex ) )
+			{
+				Log_Error( gLC_Render, "Failed to find depth texture while creating Framebuffer\n" );
+				return InvalidHandle;
+			}
+			
+			attachments[ count++ ] = tex->aImageView;
+		}
+
+		Handle handle = VK_CreateFramebuffer( renderPass, srCreate.aSize.x, srCreate.aSize.y, attachments, count );
+		CH_STACK_FREE( attachments );
+		return handle;
+	}
+
+	void DestroyFramebuffer( Handle shTarget ) override
+	{
+		if ( shTarget == InvalidHandle )
+			return;
+
+		VK_DestroyFramebuffer( shTarget );
+	}
+
 	// --------------------------------------------------------------------------------------------
 	// Shader System
 	// --------------------------------------------------------------------------------------------
@@ -827,9 +1097,72 @@ public:
 		return VK_CreateGraphicsPipeline( srGraphicsCreate );
 	}
 
+	bool RecreatePipelineLayout( Handle sHandle, PipelineLayoutCreate_t& srPipelineCreate ) override
+	{
+		return VK_RecreatePipelineLayout( sHandle, srPipelineCreate );
+	}
+
+	bool RecreateGraphicsPipeline( Handle sHandle, GraphicsPipelineCreate_t& srGraphicsCreate ) override
+	{
+		return VK_RecreateGraphicsPipeline( sHandle, srGraphicsCreate );
+	}
+
+	void DestroyPipeline( Handle sPipeline ) override
+	{
+		VK_DestroyPipeline( sPipeline );
+	}
+
+	void DestroyPipelineLayout( Handle sPipeline ) override
+	{
+		VK_DestroyPipelineLayout( sPipeline );
+	}
+
 	// --------------------------------------------------------------------------------------------
-	// Render List
+	// Back Buffer Info
 	// --------------------------------------------------------------------------------------------
+
+	GraphicsFmt GetSwapFormatColor() override
+	{
+		return VK_ToGraphicsFmt( VK_GetSwapFormat() );
+	}
+
+	GraphicsFmt GetSwapFormatDepth() override
+	{
+		return VK_ToGraphicsFmt( VK_FORMAT_D32_SFLOAT );
+	}
+
+	Handle GetBackBufferColor() override
+	{
+		RenderTarget* backBuf = VK_GetBackBuffer();
+		if ( !backBuf )
+		{
+			Log_Error( gLC_Render, "No Backbuffer????\n" );
+			return InvalidHandle;
+		}
+
+		return VK_GetFrameBufferHandle( backBuf->aFrameBuffers[ 0 ] );
+	}
+
+	Handle GetBackBufferDepth() override
+	{
+		RenderTarget* backBuf = VK_GetBackBuffer();
+		if ( !backBuf )
+		{
+			Log_Error( gLC_Render, "No Backbuffer????\n" );
+			return InvalidHandle;
+		}
+
+		return VK_GetFrameBufferHandle( backBuf->aFrameBuffers[ 1 ] );
+	}
+
+	// --------------------------------------------------------------------------------------------
+	// Rendering
+	// --------------------------------------------------------------------------------------------
+
+	void SetResetCallback( Render_OnReset_t sFunc ) override
+	{
+		gpOnResetFunc = sFunc;
+	}
 
 	void NewFrame() override
 	{
@@ -855,30 +1188,6 @@ public:
 	void ResetCommandPool() override
 	{
 		VK_ResetCommandPool( VK_GetPrimaryCommandPool() );
-	}
-
-	Handle GetBackBufferColor() override
-	{
-		RenderTarget* backBuf = VK_GetBackBuffer();
-		if ( !backBuf )
-		{
-			Log_Error( gLC_Render, "No Backbuffer????\n" );
-			return InvalidHandle;
-		}
-
-		return VK_GetFrameBufferHandle( backBuf->aFrameBuffers[ 0 ] );
-	}
-
-	Handle GetBackBufferDepth() override
-	{
-		RenderTarget* backBuf = VK_GetBackBuffer();
-		if ( !backBuf )
-		{
-			Log_Error( gLC_Render, "No Backbuffer????\n" );
-			return InvalidHandle;
-		}
-
-		return VK_GetFrameBufferHandle( backBuf->aFrameBuffers[ 1 ] );
 	}
 
 	// blech again
@@ -925,16 +1234,12 @@ public:
 	
 	Handle CreateRenderPass( const RenderPassCreate_t& srCreate ) override
 	{
-
-		Log_Fatal( gLC_Render, "Implement CreateRenderPass!!!\n" );
-		VK_GetRenderPass();
-		// VK_CreateRenderPass();
-
-		return InvalidHandle;
+		return VK_CreateRenderPass( srCreate );
 	}
 
-	void FreeRenderPass( Handle shPass ) override
+	void DestroyRenderPass( Handle shPass ) override
 	{
+		VK_DestroyRenderPass( shPass );
 	}
 
 	void BeginRenderPass( Handle cmd, const RenderPassBegin_t& srBegin ) override
@@ -954,12 +1259,20 @@ public:
 		renderPassBeginInfo.renderArea.offset = { 0, 0 };
 		renderPassBeginInfo.renderArea.extent = VK_GetSwapExtent();
 
-		VkClearValue clearValues[ 2 ];
-		clearValues[ 0 ].color              = { srBegin.aClearColor.x, srBegin.aClearColor.y, srBegin.aClearColor.z, srBegin.aClearColor.w };
-		clearValues[ 1 ].depthStencil       = { 1.0f, 0 };
+		if ( srBegin.aClear )
+		{
+			VkClearValue clearValues[ 2 ];
+			clearValues[ 0 ].color              = { srBegin.aClearColor.x, srBegin.aClearColor.y, srBegin.aClearColor.z, srBegin.aClearColor.w };
+			clearValues[ 1 ].depthStencil       = { 1.0f, 0 };
 
-		renderPassBeginInfo.clearValueCount = ARR_SIZE( clearValues );
-		renderPassBeginInfo.pClearValues    = clearValues;
+			renderPassBeginInfo.clearValueCount = ARR_SIZE( clearValues );
+			renderPassBeginInfo.pClearValues    = clearValues;
+		}
+		else
+		{
+			renderPassBeginInfo.clearValueCount = 0;
+			renderPassBeginInfo.pClearValues    = nullptr;
+		}
 
 		vkCmdBeginRenderPass( c, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE );
 	}
@@ -989,6 +1302,12 @@ public:
 
 	void CmdSetViewport( Handle cmd, u32 sOffset, const Viewport_t* spViewports, u32 sCount ) override
 	{
+		if ( sCount > gMaxViewports )
+		{
+			Log_ErrorF( gLC_Render, "CmdSetViewport: Trying to set more than max viewports (Max: %u - Count: %u)", gMaxViewports, sCount );
+			return;
+		}
+
 		VkCommandBuffer c = VK_GetCommandBuffer( cmd );
 
 		if ( c == nullptr )
@@ -997,35 +1316,17 @@ public:
 			return;
 		}
 
-#if 0
-		std::vector< VkViewport > vkViewports;
 		for ( u32 i = 0; i < sCount; i++ )
 		{
-			VkViewport& vkView = vkViewports.emplace_back();
-			vkView.x           = spViewports[ i ].x;
-			vkView.y           = spViewports[ i ].y;
-			vkView.width       = spViewports[ i ].width;
-			vkView.height      = spViewports[ i ].height;
-			vkView.minDepth    = spViewports[ i ].minDepth;
-			vkView.maxDepth    = spViewports[ i ].maxDepth;
+			gpViewports[ i ].x        = spViewports[ i ].x;
+			gpViewports[ i ].y        = spViewports[ i ].y;
+			gpViewports[ i ].width    = spViewports[ i ].width;
+			gpViewports[ i ].height   = spViewports[ i ].height;
+			gpViewports[ i ].minDepth = spViewports[ i ].minDepth;
+			gpViewports[ i ].maxDepth = spViewports[ i ].maxDepth;
 		}
 
-		vkCmdSetViewport( c, sOffset, sCount, vkViewports.data() );
-#else
-		VkViewport* vkViewports = (VkViewport*)CH_STACK_ALLOC( sizeof( VkViewport ) * sCount );
-
-		for ( u32 i = 0; i < sCount; i++ )
-		{
-			vkViewports[ i ].x           = spViewports[ i ].x;
-			vkViewports[ i ].y           = spViewports[ i ].y;
-			vkViewports[ i ].width       = spViewports[ i ].width;
-			vkViewports[ i ].height      = spViewports[ i ].height;
-			vkViewports[ i ].minDepth    = spViewports[ i ].minDepth;
-			vkViewports[ i ].maxDepth    = spViewports[ i ].maxDepth;
-		}
-
-		vkCmdSetViewport( c, sOffset, sCount, vkViewports );
-#endif
+		vkCmdSetViewport( c, sOffset, sCount, gpViewports );
 	}
 
 	void CmdSetScissor( Handle cmd, u32 sOffset, const Rect2D_t* spScissors, u32 sCount ) override
@@ -1051,17 +1352,17 @@ public:
 		vkCmdSetScissor( c, sOffset, vkScissors.size(), vkScissors.data() );
 	}
 
-	void CmdBindPipeline( Handle cmd, Handle shader ) override
+	bool CmdBindPipeline( Handle cmd, Handle shader ) override
 	{
 		VkCommandBuffer c = VK_GetCommandBuffer( cmd );
 
 		if ( c == nullptr )
 		{
 			Log_Error( gLC_Render, "CmdBindPipeline: Invalid Command Buffer\n" );
-			return;
+			return false;
 		}
 
-		VK_BindShader( c, shader );
+		return VK_BindShader( c, shader );
 	}
 
 	void CmdPushConstants( Handle      cmd,
@@ -1107,32 +1408,43 @@ public:
 		if ( !layout )
 			return;
 
-		VkPipelineBindPoint bindPoint{};
+		VkPipelineBindPoint bindPoint = VK_ToPipelineBindPoint( sBindPoint );
 
-		if ( sBindPoint == EPipelineBindPoint_Graphics )
-			bindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-
-		else if ( sBindPoint == EPipelineBindPoint_Graphics )
-			bindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-
-		else if ( sBindPoint == EPipelineBindPoint_Graphics )
+		if ( bindPoint == VK_PIPELINE_BIND_POINT_MAX_ENUM )
 		{
 			Log_Error( gLC_Render, "CmdBindDescriptorSets: Invalid Pipeline Bind Point\n" );
 			return;
 		}
 
-		std::vector< VkDescriptorSet > sets;
+		u32 count = 0;
 
 		if ( sSets & EDescriptorLayout_Image )
-			sets.push_back( VK_GetImageSets()[ sCmdIndex ] );
+			count++;
 
 		if ( sSets & EDescriptorLayout_ImageStorage )
-			sets.push_back( VK_GetImageStorage()[ sCmdIndex ] );
+			count++;
 
-		vkCmdBindDescriptorSets( c, bindPoint, layout, 0, sets.size(), sets.data(), 0, nullptr );
+		VkDescriptorSet* vkDescSets = (VkDescriptorSet*)CH_STACK_ALLOC( sizeof( VkDescriptorSet ) * count );
+
+		if ( bindPoint == VK_PIPELINE_BIND_POINT_MAX_ENUM )
+		{
+			Log_ErrorF( gLC_Render, "CmdBindDescriptorSets: Failed to stack alloc VkDescriptorSets (%u sets, %zu bytes)\n", count, sizeof( VkDescriptorSet ) * count );
+			return;
+		}
+
+		count = 0;
+		if ( sSets & EDescriptorLayout_Image )
+			vkDescSets[ count++ ] = VK_GetImageSets()[ sCmdIndex ];
+
+		if ( sSets & EDescriptorLayout_ImageStorage )
+			vkDescSets[ count++ ] = VK_GetImageStorage()[ sCmdIndex ];
+
+		vkCmdBindDescriptorSets( c, bindPoint, layout, 0, count, vkDescSets, 0, nullptr );
+		CH_STACK_FREE( vkDescSets );
 	}
 
-	void CmdBindVertexBuffers( Handle cmd, u32 sFirstBinding, const std::vector< Handle >& srBuffers, const std::vector< size_t >& srOffsets ) override
+	// void CmdBindVertexBuffers( Handle cmd, u32 sFirstBinding, const std::vector< Handle >& srBuffers, const std::vector< size_t >& srOffsets ) override
+	void CmdBindVertexBuffers( Handle cmd, u32 sFirstBinding, u32 sCount, const Handle* spBuffers, const size_t* spOffsets ) override
 	{
 		VkCommandBuffer c = VK_GetCommandBuffer( cmd );
 
@@ -1142,6 +1454,7 @@ public:
 			return;
 		}
 
+#if 0
 		std::vector< VkBuffer > buffers;
 
 		for ( auto& handle : srBuffers )
@@ -1158,6 +1471,18 @@ public:
 		}
 
 		vkCmdBindVertexBuffers( c, sFirstBinding, srBuffers.size(), buffers.data(), srOffsets.data() );
+#else
+		VkBuffer* vkBuffers = (VkBuffer*)CH_STACK_ALLOC( sizeof( VkBuffer ) * sCount );
+
+		for ( u32 i = 0; i < sCount; i++ )
+		{
+			BufferVK* bufVK = gBufferHandles.Get( spBuffers[ i ] );
+			vkBuffers[ i ]  = bufVK->aBuffer;
+		}
+
+		vkCmdBindVertexBuffers( c, sFirstBinding, sCount, vkBuffers, spOffsets );
+		CH_STACK_FREE( vkBuffers );
+#endif
 	}
 
 	void CmdBindIndexBuffer( Handle cmd, Handle shBuffer, size_t offset, EIndexType indexType ) override

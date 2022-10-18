@@ -132,7 +132,11 @@ void VK_UpdateImageSets()
 		for ( uint32_t j = 0; j < gTextures.size(); j++ )
 		{
 			// skip render targets (for now at least)
-			if ( gTextures[ j ]->aRenderTarget )
+			// if ( gTextures[ j ]->aRenderTarget )
+			// 	continue;
+
+			// must be a sampled image
+			if ( !(gTextures[ j ]->aUsage & VK_IMAGE_USAGE_SAMPLED_BIT) )
 				continue;
 
 			VkDescriptorImageInfo img{};
@@ -143,6 +147,9 @@ void VK_UpdateImageSets()
 			gTextures[ j ]->aIndex = index++;
 			infos.push_back( img );
 		}
+
+		if ( infos.empty() )
+			continue;
 
 		VkWriteDescriptorSet w{};
 		w.sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
@@ -177,6 +184,9 @@ void VK_UpdateImageStorage()
 			img.sampler     = VK_GetSampler();
 			infos.push_back( img );
 		}
+
+		if ( infos.empty() )
+			continue;
 
 		VkWriteDescriptorSet w{};
 		w.sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
