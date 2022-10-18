@@ -310,4 +310,30 @@ void sys_shutdown()
 }
 
 
+size_t stackavail()
+{
+	// page range
+	MEMORY_BASIC_INFORMATION mbi;
+
+	// get range
+	VirtualQuery( (PVOID)&mbi, &mbi, sizeof( mbi ) );
+
+	// subtract from top (stack grows downward on win)
+	return (UINT_PTR)&mbi - (UINT_PTR)mbi.AllocationBase;
+}
+
+
+CONCMD_VA( sys_stack_info, "Print the current stack usage" )
+{
+	// only windows 7 or later
+	NT_TIB* tib        = (NT_TIB*)NtCurrentTeb();
+	DWORD   stackBase  = (DWORD)tib->StackBase;
+	DWORD   stackLimit = (DWORD)tib->StackLimit;
+
+	Log_DevF( 1, "Stack Base: %zu bytes - Stack Limit: %zu\n", stackBase, stackLimit );
+
+	Log_DevF( 1, "stackavail: %zu bytes\n", stackavail() );
+}
+
+
 #endif // _WIN32

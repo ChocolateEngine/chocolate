@@ -65,4 +65,13 @@ void sys_wait_for_debugger()
 }
 
 
+CONCMD_VA( sys_stack_info, "Print the current stack usage" )
+{
+	struct rlimit limit;
+	getrlimit( RLIMIT_STACK, &limit );
+
+	Log_DevF( 1, "Stack Limit: %ld bytes - Stack Max: %lu bytes\n", limit.rlim_cur, limit.rlim_max );
+}
+
+
 #endif /* __unix__  */
