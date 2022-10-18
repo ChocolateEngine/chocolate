@@ -26,7 +26,8 @@ std::string                                    gTextBuffer;
 std::vector< std::string >                     gAutoCompleteList;
 std::vector< ConCommand* >                     gInstantConVars;
 std::vector< ConVarFlagData_t >                gConVarFlags;
-std::unordered_map< ConVarBase*, std::string > gConVarLowercaseNames;
+
+// std::unordered_map< ConVarBase*, std::string > gConVarLowercaseNames;
 
 
 DLL_EXPORT ConVarFlag_t CVARF_NONE = 0;
@@ -42,43 +43,43 @@ DLL_EXPORT NEW_CVAR_FLAG( CVARF_INSTANT );
 ConVarBase* ConVarBase::spConVarBases = nullptr;
 
 
-ConVarBase::ConVarBase( const std::string& name, ConVarFlag_t flags ):
+ConVarBase::ConVarBase( const char* name, ConVarFlag_t flags ) :
 	aName( name ), aDesc(), aFlags( flags )
 {
 	apNext = spConVarBases;
 	spConVarBases = this;
 }
 
-ConVarBase::ConVarBase( const std::string& name, const std::string& desc ):
+ConVarBase::ConVarBase( const char* name, std::string_view desc ) :
 	aName( name ), aDesc( desc ), aFlags()
 {
 	apNext = spConVarBases;
 	spConVarBases = this;
 }
 
-ConVarBase::ConVarBase( const std::string& name, ConVarFlag_t flags, const std::string& desc ):
+ConVarBase::ConVarBase( const char* name, ConVarFlag_t flags, std::string_view desc ) :
 	aName( name ), aDesc( desc ), aFlags( flags )
 {
 	apNext = spConVarBases;
 	spConVarBases = this;
 }
 
-const std::string& ConVarBase::GetName(  )
+const char* ConVarBase::GetName()
 {
 	return aName;
 }
 
-const std::string& ConVarBase::GetDesc(  )
+const char* ConVarBase::GetDesc()
 {
-	return aDesc;
+	return aDesc.data();
 }
 
-ConVarFlag_t ConVarBase::GetFlags(  )
+ConVarFlag_t ConVarBase::GetFlags()
 {
 	return aFlags;
 }
 
-ConVarBase* ConVarBase::GetNext(  )
+ConVarBase* ConVarBase::GetNext()
 {
 	return apNext;
 }
@@ -95,19 +96,21 @@ void ConCommand::Init( ConCommandFunc func, ConCommandDropdownFunc dropDownFunc 
 
 std::string ConCommand::GetPrintMessage(  )
 {
-	if ( aDesc.empty() )
-		return aName + "\n";
+	std::string msg = aName;
 
-	return aName + "\n\t" + aDesc + "\n";
+	if ( aDesc.empty() )
+		return msg + "\n";
+
+	return msg + "\n\t" + aDesc.data() + "\n";
 }
 
 // ================================================================================
 
 
-void ConVar::Init( const std::string& defaultValue, ConVarFunc callback )
+void ConVar::Init( std::string_view defaultValue, ConVarFunc callback )
 {
 	aDefaultValue = defaultValue;
-	aDefaultValueFloat = ToDouble( defaultValue, 0.f );
+	aDefaultValueFloat = ToDouble( defaultValue.data(), 0.f );
 	aFunc = callback;
 
 	SetValue( defaultValue );
@@ -123,21 +126,21 @@ void ConVar::Init( float defaultValue, ConVarFunc callback )
 	SetValue( aDefaultValue );
 }
 
-std::string ConVar::GetPrintMessage(  )
+std::string ConVar::GetPrintMessage()
 {
-	std::string msg = aName + " = " + GetValue() + " (" + aDefaultValue + " default)\n";
+	std::string msg = vstring( "%s = %s (%s default)\n", aName, GetValue().data(), aDefaultValue.c_str() );
 
 	if ( aDesc.size() )
-		return msg + "\t" + aDesc + "\n\n";
+		return msg + "\t" + aDesc.data() + "\n\n";
 
 	return msg;
 }
 
 
-void ConVar::SetValue( const std::string& value )
+void ConVar::SetValue( std::string_view value )
 {
 	aValue = value;
-	aValueFloat = ToDouble( value, aValueFloat );
+	aValueFloat = ToDouble( value.data(), aValueFloat );
 }
 
 void ConVar::SetValue( float value )
@@ -147,28 +150,28 @@ void ConVar::SetValue( float value )
 }
 
 
-void ConVar::Reset(  )
+void ConVar::Reset()
 {
-	Init( aDefaultValue, aFunc );
+	Init( aDefaultValue.c_str(), aFunc );
 }
 
 
-const std::string& ConVar::GetValue(  )
+std::string_view ConVar::GetValue()
 {
 	return aValue;
 }
 
-float ConVar::GetFloat(  )
+float ConVar::GetFloat()
 {
 	return aValueFloat;
 }
 
-int ConVar::GetInt(  )
+int ConVar::GetInt()
 {
 	return (int)aValueFloat;
 }
 
-bool ConVar::GetBool(  )
+bool ConVar::GetBool()
 {
 	return aValueFloat >= 1.f;
 }
@@ -190,7 +193,7 @@ float   ConVar::operator-( ConVarRef& other )               { return aValueFloat
 // ================================================================================
 
 
-void ConVarRef::Init(  )
+void ConVarRef::Init()
 {
 	// if this is created later, just search for the convar
 	SetReference( Con_GetConVar( aName ) );
@@ -205,7 +208,10 @@ void ConVarRef::SetReference( ConVar* ref )
 // should never be called on a ConVarRef really
 std::string ConVarRef::GetPrintMessage(  )
 {
-	return apRef ? apRef->GetPrintMessage(  ) : "Invalid ConVarRef: " + aName + "\n";
+	if ( apRef )
+		return apRef->GetPrintMessage();
+
+	return vstring( "Invalid ConVarRef: %s\n", aName );
 }
 
 void ConVarRef::SetValue( const std::string& value )
@@ -371,6 +377,60 @@ CONCMD_VA( echo, "Print a string to the console" )
 }
 
 
+#ifdef _WIN32
+// Find the first occurrence of find in s while ignoring case
+char* strcasestr( const char* s, const char* find )
+{
+	char   c, sc;
+
+	if ( ( c = *find++ ) != 0 )
+	{
+		// convert to lower case character
+		c   = tolower( (unsigned char)c );
+		size_t len = strlen( find );
+		do
+		{
+			// compare lower case character
+			do
+			{
+				if ( ( sc = *s++ ) == 0 )
+					return nullptr;
+
+			}
+			while ( (char)tolower( (unsigned char)sc ) != c );
+		}
+		while ( strnicmp( s, find, len ) != 0 );
+		s--;
+	}
+	return ( (char*)s );
+}
+#endif
+
+
+CONVAR( con_search_behavior, 0, "0 - must start with this string, 1 - must contain this string" );
+
+
+static bool ConVarNameCheck( const char* name, const char* search, size_t size )
+{
+	bool hasMatch = false;
+
+	if ( con_search_behavior == 0.f )
+	{
+		// Must start with string
+		if ( strnicmp( name, search, size ) == 0 )
+			return true;
+	}
+	else
+	{
+		// Must contain string
+		if ( strcasestr( name, search ) )
+			return true;
+	}
+
+	return false;
+}
+
+
 void help_dropdown(
 	const std::vector< std::string >& args,  // arguments currently typed in by the user
 	std::vector< std::string >& results )      // results to populate the dropdown list with
@@ -384,7 +444,7 @@ void help_dropdown(
 		if ( !cvar )
 			break;  // wtf
 
-		if ( !gConVarLowercaseNames[cvar].starts_with( name ) )
+		if ( !ConVarNameCheck( cvar->aName, name.c_str(), name.size() ) )
 		{
 			cvar = cvar->apNext;
 			continue;
@@ -421,7 +481,7 @@ void FindStr( bool andSearch, ConVarBase* cvar, const std::vector< std::string >
 {
 	for ( auto arg : args )
 	{
-		if ( cvar->GetName().find( arg ) != std::string::npos )
+		if ( strstr( cvar->GetName(), arg.c_str() ) )
 		{
 			results.push_back( "\t" + cvar->GetPrintMessage() );
 
@@ -432,7 +492,7 @@ void FindStr( bool andSearch, ConVarBase* cvar, const std::vector< std::string >
 }
 
 
-void CmdFind( bool andSearch, std::vector< std::string >& args )
+void CmdFind( bool andSearch, const std::vector< std::string >& args )
 {
 	std::vector< std::string > resultsCvar;
 	std::vector< std::string > resultsCCmd;
@@ -475,7 +535,7 @@ CONCMD_VA( find, "Search if cvar name contains any of the search arguments" )
 {
 	if ( args.empty() )
 	{
-		Log_MsgF( gConsoleChannel, "%s\n", find_cmd.GetDesc().c_str() );
+		Log_MsgF( gConsoleChannel, "%s\n", find_cmd.GetDesc() );
 		return;
 	}
 
@@ -486,7 +546,7 @@ CONCMD_VA( findand, "Search if cvar name contains all of the search arguments" )
 {
 	if ( args.empty() )
 	{
-		Log_MsgF( gConsoleChannel, "%s\n", findand_cmd.GetDesc().c_str() );
+		Log_MsgF( gConsoleChannel, "%s\n", findand_cmd.GetDesc() );
 		return;
 	}
 
@@ -507,7 +567,7 @@ void reset_cvar_dropdown(
 		if ( !cvar )
 			break;  // wtf
 
-		if ( IS_NOT_TYPE( *cvar, ConVar ) || !gConVarLowercaseNames[cvar].starts_with( name ) )
+		if ( IS_NOT_TYPE( *cvar, ConVar ) || !ConVarNameCheck( cvar->aName, name.c_str(), name.size() ) )
 		{
 			cvar = cvar->apNext;
 			continue;
@@ -540,6 +600,35 @@ CONCMD_DROP_VA( reset_cvar, reset_cvar_dropdown, 0, "reset a convar back to it's
 	}
 }
 
+
+CONCMD_VA( con_cvar_stack_size, "Print the stack usage of all convars" )
+{
+	size_t      size    = 0;
+	ConVarBase* current = ConVarBase::spConVarBases;
+
+	Log_DevF( gConsoleChannel, 1, "sizeof( Convar ):     %zu\n", sizeof( ConVar ) );
+	Log_DevF( gConsoleChannel, 1, "sizeof( ConCommand ): %zu\n", sizeof( ConCommand ) );
+	Log_DevF( gConsoleChannel, 1, "sizeof( ConVarRef ):  %zu\n", sizeof( ConVarRef ) );
+
+	while ( current )
+	{
+		if ( typeid( *current ) == typeid( ConVar ) )
+			size += sizeof( ConVar );
+
+		else if ( typeid( *current ) == typeid( ConCommand ) )
+			size += sizeof( ConCommand );
+
+		else if ( typeid( *current ) == typeid( ConVarRef ) )
+			size += sizeof( ConVarRef );
+
+		else
+			size += sizeof( *current );
+
+		current = current->apNext;
+	}
+
+	Log_DevF( gConsoleChannel, 1, "Convar Stack Size: %zu bytes\n", size );
+}
 
 // use if you need to quit the engine right now
 CONCMD_VA( _abort, CVARF_INSTANT, "funny" )
@@ -632,8 +721,6 @@ void Con_RegisterConVars(  )
 
 		if ( current->GetFlags() & CVARF_INSTANT && typeid(*current) == typeid(ConCommand) )
 			gInstantConVars.push_back( static_cast<ConCommand*>(current) );
-
-		gConVarLowercaseNames[current] = str_lower2( current->GetName() );
 
 		current = current->apNext;
 	}
@@ -764,7 +851,7 @@ ConVarBase* Con_CheckForConVarRef( ConVarBase* cvar )
 
 		if ( cvarRef->apRef == nullptr )
 		{
-			Log_WarnF( gConsoleChannel, "Found unlinked cvar ref: %s\n", cvarRef->GetName().c_str() );
+			Log_WarnF( gConsoleChannel, "Found unlinked cvar ref: %s\n", cvarRef->GetName() );
 			return nullptr;
 		}
 
@@ -798,14 +885,14 @@ void Con_CalculateAutoCompleteList( const std::string& textBuffer )
 			continue;
 
 		// this SHOULD be fine, if the convar doesn't exist in here, something is very wrong
-		if ( !gConVarLowercaseNames[cvar].starts_with( commandName ) )
+		if ( !ConVarNameCheck( cvar->aName, commandName.c_str(), commandName.size() ) )
 		{
 			cvar = cvar->apNext;
 			continue;
 		}
 		
 		// if ( args.empty() )
-		if ( cvar->aName.length() >= textBuffer.length() )
+		if ( strlen( cvar->aName ) >= textBuffer.length() )
 		{
 			gAutoCompleteList.push_back( cvar->aName );
 			cvar = cvar->apNext;
@@ -824,7 +911,7 @@ void Con_CalculateAutoCompleteList( const std::string& textBuffer )
 
 				for ( auto dropArg: dropDownArgs )
 				{
-					gAutoCompleteList.push_back( cvar->aName + " " + dropArg );
+					gAutoCompleteList.push_back( vstring( "%s %s", cvar->aName, dropArg.c_str() ) );
 				}
 			}
 			else
@@ -906,7 +993,14 @@ bool Con_RunCommandArgs( const std::string& name, const std::vector< std::string
 	ConVarBase* cvar = ConVarBase::spConVarBases;
 	while ( cvar )
 	{
-		if ( gConVarLowercaseNames[cvar] == name )
+		size_t cvarNameLen = strlen( cvar->aName );
+		if ( name.size() != cvarNameLen )
+		{
+			cvar = cvar->apNext;
+			continue;
+		}
+
+		if ( strnicmp( cvar->aName, name.c_str(), cvarNameLen ) == 0 )
 		{
 			cvar = Con_CheckForConVarRef( cvar );
 			if ( !cvar )

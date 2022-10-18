@@ -129,7 +129,7 @@ double Args_GetDouble( const std::string& search, double fallback )
 	if ( i == -1 || i + 1 > gArgs.size() )
 		return fallback;
 
-	return ToDouble( gArgs[i + 1], fallback );
+	return ToDouble( gArgs[ i + 1 ].c_str(), fallback );
 }
 
 

@@ -40,11 +40,13 @@
 // msvc
 #if _MSC_VER
 	#define CH_STACK_ALLOC( size )      _malloca( CH_ALIGN_VALUE( size, 16 ) )
+	#define CH_STACK_FREE( data )       _freea( data )
 
 	// obtain size of block of memory allocated from heap
 	#define CH_MALLOC_SIZE( block )     ( _msize( block ) )
 #else
 	#define CH_STACK_ALLOC( size )      alloca( CH_ALIGN_VALUE( size, 16 ) )
+	#define CH_STACK_FREE( data )       free( data )
 
 	// obtain size of block of memory allocated from heap
 	#define CH_MALLOC_SIZE( block )     ( malloc_usable_size( block ) )
@@ -180,7 +182,7 @@ std::string    CORE_API vstring( const char* format, va_list args );
 std::string     CORE_API Vec2Str( const glm::vec3& in );
 std::string     CORE_API Quat2Str( const glm::quat& in );
 
-double          CORE_API ToDouble( const std::string& value, double prev );
+double          CORE_API ToDouble( const char* value, double prev );
 long            CORE_API ToLong( const std::string& value, int prev );
 
 bool            CORE_API ToDouble2( const std::string &value, double &out );

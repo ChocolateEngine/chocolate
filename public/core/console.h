@@ -40,15 +40,14 @@ class ConVarRef;
 class CORE_API ConVarBase
 {
 public:
-	ConVarBase( const std::string& name, ConVarFlag_t flags = 0 );
+	ConVarBase( const char* name, ConVarFlag_t flags = 0 );
+	ConVarBase( const char* name, std::string_view desc );
+	ConVarBase( const char* name, ConVarFlag_t flags, std::string_view desc );
 
-	ConVarBase( const std::string& name, const std::string& desc );
-	ConVarBase( const std::string& name, ConVarFlag_t flags, const std::string& desc );
+	virtual std::string		GetPrintMessage() = 0;
 
-	virtual std::string		GetPrintMessage(  ) = 0;
-
-	const std::string&      GetName();
-	const std::string&      GetDesc();
+	const char*             GetName();
+	const char*             GetDesc();
 	ConVarFlag_t            GetFlags();
 	ConVarBase*             GetNext();
 
@@ -60,8 +59,8 @@ public:
 	static ConVarBase*      spConVarBases;
 	ConVarBase*             apNext = nullptr;
 
-	std::string             aName;
-	std::string             aDesc;
+	const char*             aName;
+	std::string_view        aDesc;
 	ConVarFlag_t            aFlags;
 
 private:
@@ -74,37 +73,37 @@ class CORE_API ConCommand : public ConVarBase
 {
 public:
 
-	ConCommand( const std::string& name, ConCommandFunc func, ConVarFlag_t flags = 0 ):
+	ConCommand( const char* name, ConCommandFunc func, ConVarFlag_t flags = 0 ):
 		ConVarBase( name, flags )
 	{
 		Init( func, aDropDownFunc );
 	}
 
-	ConCommand( const std::string& name, ConCommandFunc func, const std::string& desc ):
+	ConCommand( const char* name, ConCommandFunc func, const char* desc ) :
 		ConVarBase( name, desc )
 	{
 		Init( func, aDropDownFunc );
 	}
 
-	ConCommand( const std::string& name, ConCommandFunc func, ConCommandDropdownFunc dropDownFunc ):
+	ConCommand( const char* name, ConCommandFunc func, ConCommandDropdownFunc dropDownFunc ):
 		ConVarBase( name )
 	{
 		Init( func, dropDownFunc );
 	}
 
-	ConCommand( const std::string& name, ConCommandFunc func, ConVarFlag_t flags, ConCommandDropdownFunc dropDownFunc ):
+	ConCommand( const char* name, ConCommandFunc func, ConVarFlag_t flags, ConCommandDropdownFunc dropDownFunc ):
 		ConVarBase( name, flags )
 	{
 		Init( func, dropDownFunc );
 	}
 	
-	ConCommand( const std::string& name, ConCommandFunc func, ConVarFlag_t flags, const std::string& desc ):
+	ConCommand( const char* name, ConCommandFunc func, ConVarFlag_t flags, const char* desc ) :
 		ConVarBase( name, flags, desc )
 	{
 		Init( func, aDropDownFunc );
 	}
 
-	ConCommand( const std::string& name, ConCommandFunc func, ConVarFlag_t flags, const std::string& desc, ConCommandDropdownFunc dropDownFunc ):
+	ConCommand( const char* name, ConCommandFunc func, ConVarFlag_t flags, const char* desc, ConCommandDropdownFunc dropDownFunc ) :
 		ConVarBase( name, flags, desc )
 	{
 		Init( func, dropDownFunc );
@@ -149,83 +148,83 @@ class CORE_API ConVar : public ConVarBase
 {
 public:
 
-	ConVar( const std::string& name, const std::string& defaultValue, ConVarFlag_t flags = 0 ):
+	ConVar( const char* name, std::string_view defaultValue, ConVarFlag_t flags = 0 ) :
 		ConVarBase( name, flags )
 	{
 		Init( defaultValue, aFunc );
 	}
 
-	ConVar( const std::string& name, const std::string& defaultValue, const std::string& desc ):
+	ConVar( const char* name, std::string_view defaultValue, std::string_view desc ) :
 		ConVarBase( name, desc )
 	{
 		Init( defaultValue, aFunc );
 	}
 
-	ConVar( const std::string& name, const std::string& defaultValue, ConVarFlag_t flags, const std::string& desc ):
+	ConVar( const char* name, std::string_view defaultValue, ConVarFlag_t flags, std::string_view desc ) :
 		ConVarBase( name, flags, desc )
 	{
 		Init( defaultValue, aFunc );
 	}
 
-	ConVar( const std::string& name, const std::string& defaultValue, ConVarFlag_t flags, const std::string& desc, ConVarFunc callback ):
+	ConVar( const char* name, std::string_view defaultValue, ConVarFlag_t flags, std::string_view desc, ConVarFunc callback ) :
 		ConVarBase( name, flags, desc )
 	{
 		Init( defaultValue, callback );
 	}
 
 
-	ConVar( const std::string& name, float defaultValue, ConVarFlag_t flags = 0 ):
+	ConVar( const char* name, float defaultValue, ConVarFlag_t flags = 0 ):
 		ConVarBase( name, flags )
 	{
 		Init( defaultValue, aFunc );
 	}
 
-	ConVar( const std::string& name, float defaultValue, const std::string& desc ):
+	ConVar( const char* name, float defaultValue, std::string_view desc ) :
 		ConVarBase( name, desc )
 	{
 		Init( defaultValue, aFunc );
 	}
 
-	ConVar( const std::string& name, float defaultValue, ConVarFlag_t flags, const std::string& desc ):
+	ConVar( const char* name, float defaultValue, ConVarFlag_t flags, std::string_view desc ) :
 		ConVarBase( name, flags, desc )
 	{
 		Init( defaultValue, aFunc );
 	}
 
-	ConVar( const std::string& name, float defaultValue, ConVarFlag_t flags, const std::string& desc, ConVarFunc callback ):
+	ConVar( const char* name, float defaultValue, ConVarFlag_t flags, std::string_view desc, ConVarFunc callback ) :
 		ConVarBase( name, flags, desc )
 	{
 		Init( defaultValue, callback );
 	}
 
 
-	ConVar( const std::string& name, const std::string& defaultValue, ConVarFunc callback ):
+	ConVar( const char* name, std::string_view defaultValue, ConVarFunc callback ) :
 		ConVarBase( name )
 	{
 		Init( defaultValue, callback );
 	}
 
-	ConVar( const std::string& name, float defaultValue, ConVarFunc callback ):
+	ConVar( const char* name, float defaultValue, ConVarFunc callback ):
 		ConVarBase( name )
 	{
 		Init( defaultValue, callback );
 	}
 
+	
+	void               Init( std::string_view defaultValue, ConVarFunc func );
+	void               Init( float defaultValue, ConVarFunc func );
 
-	void                Init( const std::string& defaultValue, ConVarFunc func );
-	void                Init( float defaultValue, ConVarFunc func );
+	std::string        GetPrintMessage() override;
 
-	std::string         GetPrintMessage(  ) override;
+	void               SetValue( std::string_view value );
+	void               SetValue( float value );
 
-	void                SetValue( const std::string& value );
-	void                SetValue( float value );
+	void               Reset();
 
-	void                Reset(  );
-
-	const std::string&  GetValue(  );
-	float               GetFloat(  );
-	int                 GetInt(  );
-	bool                GetBool(  );  // is aValueFloat equal to 1.f?
+	std::string_view   GetValue();
+	float              GetFloat();
+	int                GetInt();
+	bool               GetBool();  // is aValueFloat equal to 1.f?
 
 	// operators !!!!!!
 
@@ -288,23 +287,23 @@ class CORE_API ConVarRef : public ConVarBase
 {
 public:
 
-	ConVarRef( const std::string& name ): ConVarBase( name )
+	ConVarRef( const char* name ): ConVarBase( name )
 	{
 		Init(  );
 	}
 
-	void                Init(  );
+	void                Init();
 	void                SetReference( ConVar* ref );
-	bool                Valid(  );  // do we have a pointer to another cvar or not?
+	bool                Valid();  // do we have a pointer to another cvar or not?
 
 	std::string         GetPrintMessage(  ) override;
 
 	void                SetValue( const std::string& value );
 	void                SetValue( float value );
 
-	const std::string&  GetValue(  );
-	float               GetFloat(  );
-	bool                GetBool(  );  // is aValueFloat equal to 1.f?
+	const std::string&  GetValue();
+	float               GetFloat();
+	bool                GetBool();  // is aValueFloat equal to 1.f?
 
 	bool aValid = false;
 	ConVar* apRef = nullptr;
@@ -371,32 +370,32 @@ private:
 //	void CC_#name( std::vector< std::string > args )
 
 #define CONCMD( name ) \
-	void name( std::vector< std::string > args ); \
+	void       name( const std::vector< std::string >& args ); \
 	ConCommand name##_cmd( #name, name );              \
-	void name( std::vector< std::string > args )
+	void       name( const std::vector< std::string >& args )
 
 #define CONCMD_VA( name, ... ) \
-	void name( std::vector< std::string > args ); \
+	void name( const std::vector< std::string >& args ); \
 	ConCommand name##_cmd( #name, name, __VA_ARGS__ );              \
-	void name( std::vector< std::string > args )
+	void       name( const std::vector< std::string >& args )
 
 #define CONCMD_DROP( name, func ) \
-	void name( std::vector< std::string > args ); \
+	void       name( const std::vector< std::string >& args ); \
 	ConCommand name##_cmd( #name, name, func );              \
-	void name( std::vector< std::string > args )
+	void       name( const std::vector< std::string >& args )
 
 #define CONCMD_DROP_VA( name, func, ... ) \
-	void name( std::vector< std::string > args ); \
+	void       name( const std::vector< std::string >& args ); \
 	ConCommand name##_cmd( #name, name, __VA_ARGS__, func );              \
-	void name( std::vector< std::string > args )
+	void       name( const std::vector< std::string >& args )
 
 #define CON_COMMAND( name ) \
-	void name( std::vector< std::string > args ); \
+	void       name( const std::vector< std::string >& args ); \
 	ConCommand name##_cmd( #name, name );              \
-	void name( std::vector< std::string > args )
+	void       name( const std::vector< std::string >& args )
 
 #define CON_COMMAND_LAMBDA( name ) \
-	ConCommand* name = new ConCommand( #name, [ & ]( std::vector< std::string > sArgs )
+	ConCommand* name = new ConCommand( #name, [ & ]( const std::vector< std::string >& sArgs )
 
 
 // ----------------------------------------------------------------

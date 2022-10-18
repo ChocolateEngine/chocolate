@@ -165,15 +165,15 @@ std::string Quat2Str( const glm::quat& in )
 }
 
 
-double ToDouble( const std::string& value, double prev )
+double ToDouble( const char* value, double prev )
 {
-	if ( value.empty() )
+	if ( sizeof( value ) == 0 )
 		return prev;
 
 	char* end;
-	double result = strtod( value.c_str(), &end );
+	double result = strtod( value, &end );
 
-	return end == value.c_str() ? prev : result;
+	return end == value ? prev : result;
 }
 
 
