@@ -125,7 +125,7 @@ void VK_AllocateCommands()
 
 	VK_CheckResult( vkAllocateCommandBuffers( VK_GetDevice(), &primAlloc, gCommandBuffers.data() ), "Failed to allocate primary command buffers" );
 
-	// Allocate single time command buffer
+	// Allocate one time command buffer
 	VkCommandBufferAllocateInfo aCommandBufferAllocateInfo{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO };
 	aCommandBufferAllocateInfo.pNext              = nullptr;
 	aCommandBufferAllocateInfo.commandPool        = VK_GetSingleTimeCommandPool();
@@ -153,7 +153,7 @@ void VK_FreeCommands()
 }
 
 
-VkCommandBuffer VK_BeginSingleCommand()
+VkCommandBuffer VK_BeginOneTimeCommand()
 {
 	VkCommandBufferBeginInfo aCommandBufferBeginInfo{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
 	aCommandBufferBeginInfo.pNext = nullptr;
@@ -165,13 +165,13 @@ VkCommandBuffer VK_BeginSingleCommand()
 }
 
 
-void VK_EndSingleCommand()
+void VK_EndOneTimeCommand( VkCommandBuffer c )
 {
-	VK_CheckResult( vkEndCommandBuffer( gSingleCommandBuffer ), "Failed to end command buffer!" );
+	VK_CheckResult( vkEndCommandBuffer( c ), "Failed to end command buffer!" );
 
 	VkSubmitInfo submitInfo{ VK_STRUCTURE_TYPE_SUBMIT_INFO };
 	submitInfo.commandBufferCount = 1;
-	submitInfo.pCommandBuffers    = &gSingleCommandBuffer;
+	submitInfo.pCommandBuffers    = &c;
 
 	VK_WaitForGraphicsQueue();
 	gGraphicsMutex.lock();
@@ -187,11 +187,11 @@ void VK_EndSingleCommand()
 
 
 // legacy?
-void VK_SingleCommand( std::function< void( VkCommandBuffer ) > sFunc )
+void VK_OneTimeCommand( std::function< void( VkCommandBuffer ) > sFunc )
 {
-	VK_BeginSingleCommand();
-	sFunc( gSingleCommandBuffer );
-	VK_EndSingleCommand();
+	VkCommandBuffer c = VK_BeginOneTimeCommand();
+	sFunc( c );
+	VK_EndOneTimeCommand( c );
 }
 
 

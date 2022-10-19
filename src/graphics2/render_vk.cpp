@@ -31,7 +31,7 @@ static std::vector< std::vector< char > > gFontData;
 static std::vector< VkBuffer >            gBuffers;
 
 static ResourceList< BufferVK >           gBufferHandles;
-static ResourceList< TextureVK* >         gTextureHandles;
+ResourceList< TextureVK* >                gTextureHandles;
 // static ResourceManager< BufferVK >        gBufferHandles;
 
 
@@ -48,7 +48,7 @@ CONVAR_CMD( r_msaa, 0 )
 }
 
 
-CONVAR_CMD( r_msaa_samples, 0 )
+CONVAR_CMD( r_msaa_samples, 8 )
 {
 	if ( !r_msaa )
 		return;
@@ -212,6 +212,9 @@ VkFormat VK_ToVkFormat( GraphicsFmt colorFmt )
 
 		case GraphicsFmt::RG88_UINT:
 			return VK_FORMAT_R8G8_UINT;
+
+		case GraphicsFmt::RGBA8888_SRGB:
+			return VK_FORMAT_R8G8B8A8_SRGB;
 
 		// ------------------------------------------
 
@@ -554,7 +557,7 @@ void VK_DestroyBuffer( VkBuffer& srBuffer, VkDeviceMemory& srBufferMem )
 
 bool VK_CreateImGuiFonts()
 {
-	VkCommandBuffer c = VK_BeginSingleCommand();
+	VkCommandBuffer c = VK_BeginOneTimeCommand();
 
 	if ( !ImGui_ImplVulkan_CreateFontsTexture( c ) )
 	{
@@ -562,7 +565,7 @@ bool VK_CreateImGuiFonts()
 		return false;
 	}
 
-	VK_EndSingleCommand();
+	VK_EndOneTimeCommand( c );
 
 	ImGui_ImplVulkan_DestroyFontUploadObjects();
 
@@ -630,6 +633,8 @@ bool Render_Init( void* spWindow )
 
 	gpViewports             = new VkViewport[deviceProps.limits.maxViewports];
 	gMaxViewports           = deviceProps.limits.maxViewports;
+
+	VK_CreateMissingTexture();
 
 	Log_Msg( gLC_Render, "Loaded Vulkan Renderer\n" );
 
@@ -940,7 +945,7 @@ public:
 		copyRegion.dstOffset = 0;  // Optional
 		copyRegion.size      = sSize;
 
-		VK_SingleCommand( [ & ]( VkCommandBuffer c )
+		VK_OneTimeCommand( [ & ]( VkCommandBuffer c )
 		                  { vkCmdCopyBuffer( c, bufSrc->aBuffer, bufDst->aBuffer, 1, &copyRegion ); } );
 	}
 
@@ -1131,6 +1136,35 @@ public:
 		return VK_ToGraphicsFmt( VK_FORMAT_D32_SFLOAT );
 	}
 
+	void GetBackBufferTextures( Handle* spColor, Handle* spDepth, Handle* spResolve ) override
+	{
+#if 0
+		extern std::unordered_map< TextureVK*, Handle > gBackbufferHandles;
+
+		RenderTarget* backBuf = VK_GetBackBuffer();
+		if ( !backBuf )
+		{
+			Log_Error( gLC_Render, "No Backbuffer????\n" );
+			return;
+		}
+
+		if ( spColor && backBuf->aColors.size() )
+		{
+			*spColor = gBackbufferHandles[ backBuf->aColors[ 0 ] ];
+		}
+
+		if ( spDepth && backBuf->apDepth )
+		{
+			*spDepth = gBackbufferHandles[ backBuf->apDepth ];
+		}
+
+		if ( spResolve && backBuf->aResolve.size() && VK_UseMSAA() )
+		{
+			*spResolve = gBackbufferHandles[ backBuf->aResolve[ 0 ] ];
+		}
+#endif
+	}
+
 	Handle GetBackBufferColor() override
 	{
 		RenderTarget* backBuf = VK_GetBackBuffer();
@@ -1140,7 +1174,7 @@ public:
 			return InvalidHandle;
 		}
 
-		return VK_GetFrameBufferHandle( backBuf->aFrameBuffers[ 0 ] );
+		return VK_GetFramebufferHandle( backBuf->aFrameBuffers[ 0 ].aBuffer );
 	}
 
 	Handle GetBackBufferDepth() override
@@ -1152,7 +1186,7 @@ public:
 			return InvalidHandle;
 		}
 
-		return VK_GetFrameBufferHandle( backBuf->aFrameBuffers[ 1 ] );
+		return VK_GetFramebufferHandle( backBuf->aFrameBuffers[ 1 ].aBuffer );
 	}
 
 	// --------------------------------------------------------------------------------------------
@@ -1255,7 +1289,7 @@ public:
 		VkRenderPassBeginInfo renderPassBeginInfo{ VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO };
 		renderPassBeginInfo.pNext             = nullptr;
 		renderPassBeginInfo.renderPass        = VK_GetRenderPass( srBegin.aRenderPass );
-		renderPassBeginInfo.framebuffer       = VK_GetFrameBuffer( srBegin.aFrameBuffer );
+		renderPassBeginInfo.framebuffer       = VK_GetFramebuffer( srBegin.aFrameBuffer );
 		renderPassBeginInfo.renderArea.offset = { 0, 0 };
 		renderPassBeginInfo.renderArea.extent = VK_GetSwapExtent();
 

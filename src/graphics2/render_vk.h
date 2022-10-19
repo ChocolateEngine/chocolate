@@ -51,19 +51,20 @@ struct BufferVK
 struct TextureVK
 {
 	// Vulkan Info
-	VkImage           aImage;
-	VkImageView       aImageView;
-	VkDeviceMemory    aMemory;
-	VkImageViewType   aViewType;
-	VkImageUsageFlags aUsage = 0;
-	VkFormat          aFormat = VK_FORMAT_UNDEFINED;
+	VkImage           aImage     = VK_NULL_HANDLE;
+	VkImageView       aImageView = VK_NULL_HANDLE;
+	VkDeviceMemory    aMemory    = VK_NULL_HANDLE;
+	VkImageViewType   aViewType  = VK_IMAGE_VIEW_TYPE_2D;
+	VkImageUsageFlags aUsage     = 0;
+	VkFormat          aFormat    = VK_FORMAT_UNDEFINED;
 
 	// Texture Information
-	int               aIndex;  // texture sampler index (MOVE ELSEWHERE!!)
-	glm::ivec2        aSize;
+	int               aIndex     = 0;  // texture sampler index (MOVE ELSEWHERE!!)
+	glm::ivec2        aSize{};
 	u8                aMipLevels    = 0;
 	int               aFrames       = 0;
 	bool              aRenderTarget = false;
+	bool              aSwapChain    = false;  // swapchain managed texture (wtf)
 };
 
 
@@ -73,19 +74,45 @@ struct RenderPassInfoVK
 };
 
 
+struct CreateFramebufferVK
+{
+	VkRenderPass               aRenderPass = VK_NULL_HANDLE;
+	glm::uvec2                 aSize{};
+
+	std::vector< VkImageView > aAttachColors;
+	// std::vector< VkImageView > aAttachInput;
+	std::vector< VkImageView > aAttachResolve;
+	// std::vector< VkImageView > aAttachPreserve;
+	VkImageView                aAttachDepth = 0;
+};
+
+struct FramebufferVK
+{
+	VkFramebuffer   aBuffer;
+	EAttachmentType aType;
+};
+
+
 // struct RenderTarget
 // {
-// 	// std::vector< TextureVK* >    aImages;
-// 	// std::vector< VkFramebuffer > aFrameBuffers;
-// 
-// 	TextureVK* aImage          = nullptr;
-// 	VkFramebuffer aFrameBuffer = VK_NULL_HANDLE;
+// 	std::vector< TextureVK* >    aImages;
+// 	std::vector< VkFramebuffer > aFrameBuffers;
 // };
+
 
 struct RenderTarget
 {
-	std::vector< TextureVK* >    aImages;
-	std::vector< VkFramebuffer > aFrameBuffers;
+	std::vector< TextureVK* > aColors;
+	// std::vector< TextureVK* > aInput;
+	std::vector< TextureVK* > aResolve;
+	// std::vector< TextureVK* > aPreserve;
+	TextureVK*                apDepth = 0;
+
+	// std::vector< VkImageView >   aColors;
+	// std::vector< VkImageView >   aResolve;
+	// VkImageView                  apDepth = 0;
+
+	std::vector< FramebufferVK > aFrameBuffers;
 };
 
 
@@ -156,6 +183,7 @@ void                                  VK_DestroySwapchain();
 void                                  VK_RecreateSwapchain();
 
 u32                                   VK_GetSwapImageCount();
+// const std::vector< TextureVK* >&      VK_GetSwapImages();
 const std::vector< VkImage >&         VK_GetSwapImages();
 const std::vector< VkImageView >&     VK_GetSwapImageViews();
 const VkExtent2D&                     VK_GetSwapExtent();
@@ -226,9 +254,9 @@ void                                  VK_DestroySemaphores();
 void                                  VK_AllocateCommands();
 void                                  VK_FreeCommands();
 
-VkCommandBuffer                       VK_BeginSingleCommand();
-void                                  VK_EndSingleCommand();
-void                                  VK_SingleCommand( std::function< void( VkCommandBuffer ) > sFunc );
+VkCommandBuffer                       VK_BeginOneTimeCommand();
+void                                  VK_EndOneTimeCommand( VkCommandBuffer c );
+void                                  VK_OneTimeCommand( std::function< void( VkCommandBuffer ) > sFunc );
 
 void                                  VK_WaitForPresentQueue();
 void                                  VK_WaitForGraphicsQueue();
@@ -274,20 +302,22 @@ TextureVK*                            VK_GetTexture( Handle texture );
 
 Handle                                VK_CreateFramebuffer( VkRenderPass sRenderPass, u16 sWidth, u16 sHeight, const VkImageView* spAttachments, u32 sCount );
 Handle                                VK_CreateFramebuffer( const VkFramebufferCreateInfo& sCreateInfo );
+Handle                                VK_CreateFramebuffer( const CreateFramebuffer_t& srCreate );
 void                                  VK_DestroyFramebuffer( Handle shHandle );
 VkFramebuffer                         VK_GetFramebuffer( Handle shHandle );
+Handle                                VK_GetFramebufferHandle( VkFramebuffer sFrameBuffer );
 
 RenderTarget*                         VK_CreateRenderTarget( const std::vector< TextureVK* >& srImages, u16 sWidth, u16 sHeight, const std::vector< VkImageView >& srSwapImages = {} );
 void                                  VK_DestroyRenderTarget( RenderTarget* spTarget );
 void                                  VK_DestroyRenderTargets();
 
-Handle                                VK_GetFrameBufferHandle( VkFramebuffer sFrameBuffer );
-VkFramebuffer                         VK_GetFrameBuffer( Handle shFrameBuffer );
-
 RenderTarget*                         VK_GetBackBuffer();
+RenderTarget*                         VK_GetBackBufferHandles();
 
 void                                  VK_SetImageLayout( VkImage sImage, VkImageLayout sOldLayout, VkImageLayout sNewLayout, VkImageSubresourceRange& sSubresourceRange );
 void                                  VK_SetImageLayout( VkImage sImage, VkImageLayout sOldLayout, VkImageLayout sNewLayout, u32 sMipLevels );
+
+void                                  VK_CreateMissingTexture();
 
 // --------------------------------------------------------------------------------------
 // KTX Texture Support
