@@ -103,8 +103,13 @@ struct PhysTriangle_t
 	glm::vec3 aPos[ 3 ];
 };
 
+struct PhysIndexedTriangle_t
+{
+	u32 aPos[ 3 ];
+};
 
-struct PhysVertex
+
+struct PhysVertex_t
 {
 	glm::vec3 pos;
 	glm::vec3 norm;
@@ -113,10 +118,52 @@ struct PhysVertex
 };
 
 
-struct PhysMeshVertex
+struct PhysMeshVertex_t
 {
 	glm::vec3 pos;
 	glm::vec3 norm;
+};
+
+
+struct PhysDataConcave_t
+{
+	// std::vector< PhysMeshVertex > aVertices;
+	// std::vector< glm::vec3 >             aVertices{};
+	// std::vector< PhysIndexedTriangle_t > aTris{};
+
+	glm::vec3*             apVertices = nullptr;
+	u32                    aVertCount = 0;
+
+	PhysIndexedTriangle_t* aTris      = nullptr;
+	u32                    aTriCount  = 0;
+
+	~PhysDataConcave_t()
+	{
+		if ( apVertices )
+			free( apVertices );
+
+		if ( aTris )
+			free( aTris );
+	}
+};
+
+
+struct PhysDataConvex_t
+{
+	// std::vector< PhysMeshVertex > aVertices{};
+	// std::vector< glm::vec3 > aVertices{};
+	glm::vec3* apVertices = nullptr;
+	u32        aVertCount = 0;
+	// std::vector< uint32_t >  aIndices{};
+
+	// Tell the physics engine to optimize this convex collision mesh
+	bool                     aOptimizeConvex = true;
+
+	~PhysDataConvex_t()
+	{
+		if ( apVertices )
+			free( apVertices );
+	}
 };
 
 
@@ -125,23 +172,22 @@ struct PhysicsShapeInfo
 	PhysicsShapeInfo( PhysShapeType shapeType ):
 		aShapeType( shapeType )
 	{
-	}
-
-	// umm
-	PhysicsShapeInfo( const PhysicsShapeInfo& self ) :
-		aShapeType( self.aShapeType )
-	{
-		if ( aShapeType == PhysShapeType::Invalid )
+		if ( aShapeType == PhysShapeType::Convex )
 		{
-			return;
+			aConvexData.apVertices = nullptr;
+			aConvexData.aVertCount = 0;
 		}
-		else if ( aShapeType == PhysShapeType::Mesh || aShapeType == PhysShapeType::Convex )
+		else if ( aShapeType == PhysShapeType::Mesh )
 		{
-			aMeshData = self.aMeshData;
+			aConcaveData.apVertices = nullptr;
+			aConcaveData.aVertCount = 0;
+
+			aConcaveData.aTris      = nullptr;
+			aConcaveData.aTriCount  = 0;
 		}
 		else
 		{
-			aBounds = self.aBounds;
+			aBounds = {};
 		}
 	}
 
@@ -154,18 +200,11 @@ struct PhysicsShapeInfo
 
 	union
 	{
-		// use if ShapeType is Concave or Convex
-		struct
-		{
-			std::vector< PhysMeshVertex > aVertices;
-			std::vector< uint32_t >       aIndices;
-
-			// Tell the physics engine to optimize this convex collision mesh
-			bool                          aOptimizeConvex = true;
-		} aMeshData;
+		PhysDataConvex_t aConvexData;
+		PhysDataConcave_t aConcaveData;
 
 		// Otherwise, use this (maybe make a separate thing? idk)
-		glm::vec3           aBounds = {0, 0, 0};
+		glm::vec3           aBounds;
 	};
 };
 
@@ -394,10 +433,10 @@ typedef Handle ( *Phys_CreateTriangleBatch_t )(
 	const std::vector< PhysTriangle_t >& srTriangles );
 
 typedef Handle ( *Phys_CreateTriangleBatchInd_t )(
-	const std::vector< PhysVertex >& srVerts,
+	const std::vector< PhysVertex_t >& srVerts,
 	const std::vector< u32 >& srInd );
 
-typedef Handle ( *Phys_DrawGeometry_t )(
+typedef void ( *Phys_DrawGeometry_t )(
 	const glm::mat4& srModelMatrix,
 	// const JPH::AABox& inWorldSpaceBounds,
 	float            sLODScaleSq,
@@ -407,11 +446,22 @@ typedef Handle ( *Phys_DrawGeometry_t )(
 	bool             sCastShadow,
 	bool             sWireframe );
 
-typedef Handle ( *Phys_DrawText_t )(
+typedef void ( *Phys_DrawText_t )(
 	const glm::vec3&   srPos,
 	const std::string& srText,
 	const glm::vec3&   srColor,
 	float              sHeight );
+
+
+struct Phys_DebugFuncs_t
+{
+	Phys_DrawLine_t               apDrawLine          = nullptr;
+	Phys_DrawTriangle_t           apDrawTriangle      = nullptr;
+	Phys_CreateTriangleBatch_t    apCreateTriBatch    = nullptr;
+	Phys_CreateTriangleBatchInd_t apCreateTriBatchInd = nullptr;
+	Phys_DrawGeometry_t           apDrawGeometry      = nullptr;
+	Phys_DrawText_t               apDrawText          = nullptr;
+};
 
 
 class Ch_IPhysics : public BaseSystem
@@ -420,11 +470,13 @@ public:
 	virtual IPhysicsEnvironment* CreatePhysEnv()                                  = 0;
 	virtual void                 DestroyPhysEnv( IPhysicsEnvironment* pEnv )      = 0;
 
-	virtual void                 SetDebugDrawFuncs( Phys_DrawLine_t               sDrawLine,
-	                                                Phys_DrawTriangle_t           sDrawTriangle,
-	                                                Phys_CreateTriangleBatch_t    sCreateTriBatch,
-	                                                Phys_CreateTriangleBatchInd_t sCreateTriBatchInd,
-	                                                Phys_DrawGeometry_t           sDrawGeometry,
-	                                                Phys_DrawText_t               sDrawText ) = 0;
+	// virtual void                 SetDebugDrawFuncs( Phys_DrawLine_t               sDrawLine,
+	//                                                 Phys_DrawTriangle_t           sDrawTriangle,
+	//                                                 Phys_CreateTriangleBatch_t    sCreateTriBatch,
+	//                                                 Phys_CreateTriangleBatchInd_t sCreateTriBatchInd,
+	//                                                 Phys_DrawGeometry_t           sDrawGeometry,
+	//                                                 Phys_DrawText_t               sDrawText ) = 0;
+
+	virtual void                 SetDebugDrawFuncs( const Phys_DebugFuncs_t& srDebug ) = 0;
 };
 

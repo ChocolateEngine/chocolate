@@ -198,7 +198,7 @@ int PhysicsObject::ContactTest()
 
 PhysShapeType PhysicsObject::GetShapeType()
 {
-	return apShape->aPhysInfo.aShapeType;
+	return apShape->aType;
 }
 
 

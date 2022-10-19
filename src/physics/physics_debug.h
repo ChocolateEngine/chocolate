@@ -39,8 +39,6 @@ public:
 
 	void OnNewFrame();
 
-	void DrawLine( const glm::vec3 &from, const glm::vec3 &to, const glm::vec3 &color );
-
 	// overrides
 	virtual void    DrawLine(
 							const JPH::Float3 &inFrom,

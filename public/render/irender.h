@@ -272,7 +272,7 @@ enum EAttachmentType
 {
 	EAttachmentType_Color,
 	// EAttachmentType_Input,
-	// EAttachmentType_Resolve,
+	EAttachmentType_Resolve,
 	// EAttachmentType_Preserve,
 	EAttachmentType_Depth,
 };
@@ -307,6 +307,8 @@ enum : ERenderResetFlags
 
 struct TextureCreateInfo_t
 {
+	void*         apData = nullptr;
+	u32           aDataSize = 0;
 	glm::uvec2    aSize;
 	GraphicsFmt   aFormat;
 	bool          aUseMSAA;
@@ -372,7 +374,7 @@ struct FramebufferPass_t
 {
 	std::vector< Handle > aAttachColors;
 	// std::vector< Handle > aAttachInput;
-	// std::vector< Handle > aAttachResolve;
+	std::vector< Handle > aAttachResolve;
 	// std::vector< Handle > aAttachPreserve;
 	Handle                aAttachDepth = 0;
 };
@@ -382,7 +384,6 @@ struct CreateFramebuffer_t
 {
 	Handle           aRenderPass = InvalidHandle;
 	glm::uvec2       aSize{};
-	bool             aUseMSAA = false;
 	// const Handle*    aTextures = nullptr;
 	// u8               aTextureCount = 0;
 
@@ -634,6 +635,7 @@ class IRender : public BaseSystem
 	virtual GraphicsFmt GetSwapFormatColor()                                                                   = 0;
 	virtual GraphicsFmt GetSwapFormatDepth()                                                                   = 0;
 
+	virtual void        GetBackBufferTextures( Handle* spColor, Handle* spDepth, Handle* spResolve )           = 0;
 	virtual Handle      GetBackBufferColor()                                                                   = 0;
 	virtual Handle      GetBackBufferDepth()                                                                   = 0;
 

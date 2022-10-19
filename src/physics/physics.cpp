@@ -8,6 +8,8 @@ LOG_REGISTER_CHANNEL( Physics, LogColor::DarkGreen );
 
 extern ConVar phys_dbg;
 
+Phys_DebugFuncs_t gDebugFuncs;
+
 CONVAR( phys_fast, 0 );
 
 // aw shit, how can make these a cheat if that's only available in the game
@@ -366,13 +368,9 @@ public:
 	{
 	}
 
-	void SetDebugDrawFuncs( Phys_DrawLine_t               sDrawLine,
-	                        Phys_DrawTriangle_t           sDrawTriangle,
-	                        Phys_CreateTriangleBatch_t    sCreateTriBatch,
-	                        Phys_CreateTriangleBatchInd_t sCreateTriBatchInd,
-	                        Phys_DrawGeometry_t           sDrawGeometry,
-	                        Phys_DrawText_t               sDrawText ) override
+	void SetDebugDrawFuncs( const Phys_DebugFuncs_t& srDebug )override
 	{
+		gDebugFuncs = srDebug;
 	}
 
 	// -------------------------------------------------------------------
@@ -629,9 +627,9 @@ IPhysicsShape* PhysicsEnvironment::CreateShape( const PhysicsShapeInfo& physInfo
 		return nullptr;
 	}
 
-	PhysicsShape* shape = new PhysicsShape( physInfo );
+	PhysicsShape* shape    = new PhysicsShape( physInfo.aShapeType );
 	shape->apShapeSettings = shapeSettings;
-	shape->aShape = result.Get();
+	shape->aShape          = result.Get();
 
 	return shape;
 }
@@ -876,21 +874,25 @@ void GetModelInd( Model* spModel, std::vector< JPH::Float3 >& srVerts, std::vect
 
 JPH::ShapeSettings* PhysicsEnvironment::LoadModel( const PhysicsShapeInfo& physInfo )
 {
-#if 0
+#if 1
 	PROF_SCOPE();
 
-	Assert( physInfo.aMeshData.apModel != nullptr );
-
-	if ( physInfo.aMeshData.apModel == nullptr )
-		return nullptr;
+	// Assert( physInfo.aMeshData.apModel != nullptr );
 
 	switch ( physInfo.aShapeType )
 	{
 		case PhysShapeType::Convex:
 		{
+			if ( physInfo.aConvexData.apVertices == nullptr )
+				return nullptr;
+
 			// Create an array of vertices
-			std::vector< JPH::Vec3 > vertices;
-			GetModelVerts( physInfo.aMeshData.apModel, vertices );
+			std::vector< JPH::Vec3 > vertices( physInfo.aConvexData.aVertCount );
+
+			// same thing
+			memcpy( vertices.data(), physInfo.aConvexData.apVertices, physInfo.aConvexData.aVertCount * sizeof( glm::vec3 ) );
+
+			// GetModelVerts( physInfo.aMeshData.apModel, vertices );
 
 			if ( vertices.empty() )
 			{
@@ -906,16 +908,31 @@ JPH::ShapeSettings* PhysicsEnvironment::LoadModel( const PhysicsShapeInfo& physI
 		case PhysShapeType::Mesh:
 		{
 #if 1
-			std::vector< JPH::Float3 > verts;
-			std::vector< JPH::IndexedTriangle > ind;
-
-			GetModelInd( physInfo.aMeshData.apModel, verts, ind );
-
-			if ( ind.empty() )
-			{
-				Log_WarnF( gPhysicsChannel, "No vertices in model? - \"%s\"\n", graphics->GetModelPath( physInfo.aMeshData.apModel ).c_str() );
+			if ( physInfo.aConcaveData.aTris == nullptr || physInfo.aConcaveData.apVertices == nullptr )
 				return nullptr;
+
+			std::vector< JPH::Float3 >          verts( physInfo.aConcaveData.aVertCount );
+			std::vector< JPH::IndexedTriangle > ind( physInfo.aConcaveData.aTriCount );
+
+			// same thing
+			memcpy( verts.data(), physInfo.aConcaveData.apVertices, physInfo.aConcaveData.aVertCount * sizeof( glm::vec3 ) );
+
+			for ( u32 i = 0; i < physInfo.aConcaveData.aTriCount; i++ )
+			{
+				ind[ i ] = {
+					physInfo.aConcaveData.aTris[ i ].aPos[ 0 ],
+					physInfo.aConcaveData.aTris[ i ].aPos[ 1 ],
+					physInfo.aConcaveData.aTris[ i ].aPos[ 2 ]
+				};
 			}
+
+			// GetModelInd( physInfo.aMeshData.apModel, verts, ind );
+
+			// if ( ind.empty() )
+			// {
+			// 	Log_WarnF( gPhysicsChannel, "No vertices in model? - \"%s\"\n", graphics->GetModelPath( physInfo.aMeshData.apModel ).c_str() );
+			// 	return nullptr;
+			// }
 
 			return new JPH::MeshShapeSettings( verts, ind );
 #else

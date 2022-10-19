@@ -8,6 +8,8 @@
 
 LOG_CHANNEL( Physics );
 
+extern Phys_DebugFuncs_t gDebugFuncs;
+
 CONVAR( phys_dbg, 0 );
 
 // constexpr glm::vec3 vec3_default( 255, 255, 255 );
@@ -58,16 +60,12 @@ void PhysDebugDraw::OnNewFrame()
 }
 
 
-void PhysDebugDraw::DrawLine( const glm::vec3 &from, const glm::vec3 &to, const glm::vec3 &color )
-{
-}
-
-
 void PhysDebugDraw::DrawLine(
-	const JPH::Float3 &inFrom,
-	const JPH::Float3 &inTo,
+	const JPH::Float3& inFrom,
+	const JPH::Float3& inTo,
 	JPH::ColorArg inColor )
 {
+	gDebugFuncs.apDrawLine( fromJolt( inFrom ), fromJolt( inTo ), fromJolt( inColor ) );
 }
 
 
@@ -77,6 +75,7 @@ void PhysDebugDraw::DrawTriangle(
 	JPH::Vec3Arg inV3,
 	JPH::ColorArg inColor )
 {
+	gDebugFuncs.apDrawTriangle( fromJolt( inV1 ), fromJolt( inV2 ), fromJolt( inV3 ), fromJolt4( inColor ) );
 }
 
 
@@ -252,6 +251,5 @@ void PhysDebugDraw::DrawText3D(
 	JPH::ColorArg inColor,
 	float inHeight )
 {
-
 }
 

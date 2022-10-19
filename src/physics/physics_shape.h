@@ -7,10 +7,11 @@
 class PhysicsShape : public IPhysicsShape
 {
 public:
-	PhysicsShape( const PhysicsShapeInfo& shapeType );
+	PhysicsShape( PhysShapeType shapeType );
 	~PhysicsShape() override;
 
-	PhysicsShapeInfo        aPhysInfo;
+	// PhysicsShapeInfo        aPhysInfo;
+	PhysShapeType           aType;
 	JPH::Ref<JPH::Shape>    aShape;
 	JPH::ShapeSettings*     apShapeSettings = nullptr;  // useless?
 

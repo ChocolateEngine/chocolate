@@ -3,8 +3,8 @@
 
 
 
-PhysicsShape::PhysicsShape( const PhysicsShapeInfo& physInfo ):
-	aPhysInfo( physInfo )
+PhysicsShape::PhysicsShape( PhysShapeType shapeType ):
+  aType( shapeType )
 {
 }
 

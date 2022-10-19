@@ -75,6 +75,10 @@ inline glm::vec3 fromJolt( const JPH::ColorArg& from ) {
 	return glm::vec3( from.r, from.g, from.b );
 }
 
+inline glm::vec4 fromJolt4( const JPH::ColorArg& from ) {
+	return glm::vec4( from.r, from.g, from.b, from.a );
+}
+
 inline JPH::Quat toJolt( const glm::quat& from ) {
 	return JPH::Quat( from.x, from.y, from.z, from.w );
 }
