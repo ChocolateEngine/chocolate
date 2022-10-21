@@ -195,13 +195,29 @@ TextureVK* VK_NewTexture()
 
 TextureVK* VK_LoadTexture( const std::string& srPath )
 {
-	TextureVK* tex = KTX_LoadTexture( srPath );
+	TextureVK* tex = KTX_LoadTexture( srPath.c_str() );
 
 	if ( tex == nullptr )
 	{
 		Log_ErrorF( gLC_Render, "Failed to load texture: \"%s\"\n", srPath.c_str() );
 		return nullptr;
 	}
+
+#ifdef _DEBUG
+	// add a debug label onto it
+	if ( pfnSetDebugUtilsObjectName )
+	{
+		const VkDebugUtilsObjectNameInfoEXT imageNameInfo = {
+			VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,  // sType
+			NULL,                                                // pNext
+			VK_OBJECT_TYPE_IMAGE,                                // objectType
+			(uint64_t)tex->aImage,                               // objectHandle
+			srPath.c_str(),                                      // pObjectName
+		};
+
+		pfnSetDebugUtilsObjectName( VK_GetDevice(), &imageNameInfo );
+	}
+#endif
 
 	VK_UpdateImageSets();
 	return tex;
@@ -215,6 +231,7 @@ TextureVK* VK_CreateTexture( const TextureCreateInfo_t& srCreate )
 	tex->aSize     = srCreate.aSize;
 	tex->aFormat   = VK_ToVkFormat( srCreate.aFormat );
 	tex->aUsage    = VK_ToVkImageUsage( srCreate.aUsage );
+	tex->apName    = srCreate.apName;
 
 	VkImageCreateInfo createInfo{ VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO };
 	createInfo.imageType     = VK_IMAGE_TYPE_2D;
@@ -367,6 +384,22 @@ TextureVK* VK_CreateTexture( const TextureCreateInfo_t& srCreate )
 	viewInfo.subresourceRange.layerCount     = createInfo.arrayLayers;
 
 	VK_CheckResult( vkCreateImageView( VK_GetDevice(), &viewInfo, nullptr, &tex->aImageView ), "Failed to create Image View" );
+
+#ifdef _DEBUG
+	// add a debug label onto it
+	if ( pfnSetDebugUtilsObjectName )
+	{
+		const VkDebugUtilsObjectNameInfoEXT imageNameInfo = {
+			VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,      // sType
+			NULL,                                                    // pNext
+			VK_OBJECT_TYPE_IMAGE,                                    // objectType
+			(uint64_t)tex->aImage,                                   // objectHandle
+			tex->apName ? tex->apName : "MANUALLY CREATED TEXTURE",  // pObjectName
+		};
+
+		pfnSetDebugUtilsObjectName( VK_GetDevice(), &imageNameInfo );
+	}
+#endif
 
 	VK_UpdateImageSets();
 
@@ -993,6 +1026,7 @@ Handle VK_GetFramebufferHandle( VkFramebuffer sFrameBuffer )
 void VK_CreateMissingTexture()
 {
 	TextureCreateInfo_t create{};
+	create.apName    = "__missing_texture";
 	create.aSize.x   = gMissingTextureWidth;
 	create.aSize.y   = gMissingTextureHeight;
 	create.aFormat   = GraphicsFmt::RGBA8888_SRGB;

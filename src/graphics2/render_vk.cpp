@@ -17,29 +17,31 @@ LOG_REGISTER_CHANNEL2( Render, LogColor::Cyan );
 LOG_REGISTER_CHANNEL( Vulkan, LogColor::DarkYellow );
 LOG_REGISTER_CHANNEL( Validation, LogColor::DarkYellow );
 
-int                  gWidth  = 1280;
-int                  gHeight = 720;
 
-SDL_Window*          gpWindow = nullptr;
+int                                              gWidth   = 1280;
+int                                              gHeight  = 720;
 
-static VkCommandPool gSingleTime;
-static VkCommandPool gPrimary;
+SDL_Window*                                      gpWindow = nullptr;
+
+static VkCommandPool                             gSingleTime;
+static VkCommandPool                             gPrimary;
 
 // static std::unordered_map< ImageInfo*, VkDescriptorSet > gImGuiTextures;
-static std::vector< std::vector< char > > gFontData;
+static std::vector< std::vector< char > >        gFontData;
 
-static std::vector< VkBuffer >            gBuffers;
+static std::vector< VkBuffer >                   gBuffers;
 
-static ResourceList< BufferVK >           gBufferHandles;
-ResourceList< TextureVK* >                gTextureHandles;
+ResourceList< BufferVK >                         gBufferHandles;
+ResourceList< TextureVK* >                       gTextureHandles;
 // static ResourceManager< BufferVK >        gBufferHandles;
 
+static std::unordered_map< std::string, Handle > gTexturePaths;
 
 // Static Memory Pools for Vulkan Commands
-static VkViewport*                        gpViewports = nullptr;
-static u32                                gMaxViewports = 0;
+static VkViewport*                               gpViewports   = nullptr;
+static u32                                       gMaxViewports = 0;
 
-static Render_OnReset_t                   gpOnResetFunc = nullptr;
+static Render_OnReset_t                          gpOnResetFunc = nullptr;
 
 
 CONVAR_CMD( r_msaa, 0 )
@@ -542,6 +544,31 @@ void VK_CreateBuffer( VkBuffer& srBuffer, VkDeviceMemory& srBufferMem, u32 sBuff
 }
 
 
+void VK_CreateBuffer( const char* spName, VkBuffer& srBuffer, VkDeviceMemory& srBufferMem, u32 sBufferSize, VkBufferUsageFlags sUsage, VkMemoryPropertyFlags sMemBits )
+{
+	VK_CreateBuffer( srBuffer, srBufferMem, sBufferSize, sUsage, sMemBits );
+
+#ifdef _DEBUG
+	if ( spName == nullptr )
+		return;
+
+	// add a debug label onto it
+	if ( pfnSetDebugUtilsObjectName )
+	{
+		const VkDebugUtilsObjectNameInfoEXT nameInfo = {
+			VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,  // sType
+			NULL,                                                // pNext
+			VK_OBJECT_TYPE_BUFFER,                               // objectType
+			(uint64_t)srBuffer,                                  // objectHandle
+			spName,                                              // pObjectName
+		};
+
+		pfnSetDebugUtilsObjectName( VK_GetDevice(), &nameInfo );
+	}
+#endif
+}
+
+
 void VK_DestroyBuffer( VkBuffer& srBuffer, VkDeviceMemory& srBufferMem )
 {
 	if ( srBuffer )
@@ -866,10 +893,10 @@ public:
 	// Testing
 	// --------------------------------------------------------------------------------------------
 	
-	Handle CreateBuffer( u32 sSize, EBufferFlags sBufferFlags, EBufferMemory sBufferMem ) override
+	Handle CreateBuffer( const char* spName, u32 sSize, EBufferFlags sBufferFlags, EBufferMemory sBufferMem ) override
 	{
 		BufferVK* buffer = nullptr;
-		Handle   handle = gBufferHandles.Create( &buffer );
+		Handle    handle = gBufferHandles.Create( &buffer );
 
 		// BufferVK* buffer = new BufferVK;
 		// Handle   handle = gBufferHandles.Add( buffer );
@@ -878,7 +905,7 @@ public:
 		buffer->aMemory  = nullptr;
 		buffer->aSize    = sSize;
 
-		int flagBits = 0;
+		int flagBits     = 0;
 
 		if ( sBufferFlags & EBufferFlags_TransferSrc )
 			flagBits |= VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
@@ -906,9 +933,14 @@ public:
 		if ( sBufferMem & EBufferMemory_Host )
 			memBits |= VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
 
-		VK_CreateBuffer( buffer->aBuffer, buffer->aMemory, sSize, flagBits, memBits );
+		VK_CreateBuffer( spName, buffer->aBuffer, buffer->aMemory, sSize, flagBits, memBits );
 
 		return handle;
+	}
+	
+	Handle CreateBuffer( u32 sSize, EBufferFlags sBufferFlags, EBufferMemory sBufferMem ) override
+	{
+		return CreateBuffer( nullptr, sSize, sBufferFlags, sBufferMem );
 	}
 
 	virtual void MemWriteBuffer( Handle buffer, u32 sSize, void* spData ) override
@@ -970,7 +1002,18 @@ public:
 
 	Handle LoadTexture( const std::string& srTexturePath ) override
 	{
-		TextureVK* tex = VK_LoadTexture( srTexturePath );
+		auto it = gTexturePaths.find( srTexturePath );
+		if ( it != gTexturePaths.end() )
+			return it->second;
+
+		std::string fullPath = FileSys_FindFile( srTexturePath );
+		if ( fullPath.empty() )
+		{
+			Log_ErrorF( gLC_Render, "Failed to find Texture: \"%s\"\n", srTexturePath.c_str() );
+			return InvalidHandle;
+		}
+
+		TextureVK* tex = VK_LoadTexture( fullPath );
 		if ( tex == nullptr )
 			return InvalidHandle;
 
@@ -997,6 +1040,15 @@ public:
 
 		VK_DestroyTexture( tex );
 		gTextureHandles.Remove( sTexture );
+
+		for ( auto& [ path, handle ] : gTexturePaths )
+		{
+			if ( sTexture == handle )
+			{
+				gTexturePaths.erase( path );
+				break;
+			}
+		}
 	}
 
 	int GetTextureIndex( Handle shTexture ) override
@@ -1120,6 +1172,33 @@ public:
 	void DestroyPipelineLayout( Handle sPipeline ) override
 	{
 		VK_DestroyPipelineLayout( sPipeline );
+	}
+
+	Handle GetSamplerLayout() override
+	{
+		return VK_GetSamplerLayoutHandle();
+	}
+
+	void GetSamplerSets( Handle* spHandles ) override
+	{
+		const std::vector< Handle >& handles = VK_GetSamplerSetsHandles();
+		spHandles[ 0 ]                       = handles[ 0 ];
+		spHandles[ 1 ]                       = handles[ 1 ];
+	}
+
+	Handle CreateVariableDescLayout( const CreateVariableDescLayout_t& srCreate ) override
+	{
+		return VK_CreateVariableDescLayout( srCreate );
+	}
+	
+	bool AllocateVariableDescLayout( const AllocVariableDescLayout_t& srCreate, Handle* handles ) override
+	{
+		return VK_AllocateVariableDescLayout( srCreate, handles );
+	}
+
+	void UpdateVariableDescSet( const UpdateVariableDescSet_t& srUpdate ) override
+	{
+		VK_UpdateVariableDescSet( srUpdate );
 	}
 
 	// --------------------------------------------------------------------------------------------
@@ -1423,12 +1502,32 @@ public:
 		vkCmdPushConstants( c, layout, flags, sOffset, sSize, spValues );
 	}
 
+#if 0
+	// IDEA (from Godot)
+	void CmdPushConstants( Handle      sDrawList,
+	                       u32         sOffset,
+	                       u32         sSize,
+	                       void*       spValues )
+	{
+		DrawListVK* draw = VK_GetDrawList( sDrawList );
+
+		if ( draw == nullptr )
+		{
+			Log_Error( gLC_Render, "CmdPushConstants: Invalid DrawList\n" );
+			return;
+		}
+
+		vkCmdPushConstants( draw->aCmdBuf, draw->aState.aPipelineLayout, draw->aState.PushConstStages, sOffset, sSize, spValues );
+	}
+#endif
+
 	// will most likely change
 	void CmdBindDescriptorSets( Handle             cmd,
 	                            size_t             sCmdIndex,
 	                            EPipelineBindPoint sBindPoint,
 	                            Handle             shPipelineLayout,
-	                            EDescriptorLayout   sSets ) override
+	                            Handle*            spSets,
+	                            u32                sSetCount ) override
 	{
 		VkCommandBuffer c = VK_GetCommandBuffer( cmd );
 
@@ -1450,34 +1549,31 @@ public:
 			return;
 		}
 
-		u32 count = 0;
-
-		if ( sSets & EDescriptorLayout_Image )
-			count++;
-
-		if ( sSets & EDescriptorLayout_ImageStorage )
-			count++;
-
-		VkDescriptorSet* vkDescSets = (VkDescriptorSet*)CH_STACK_ALLOC( sizeof( VkDescriptorSet ) * count );
+		VkDescriptorSet* vkDescSets = CH_STACK_NEW( VkDescriptorSet, sSetCount );
 
 		if ( bindPoint == VK_PIPELINE_BIND_POINT_MAX_ENUM )
 		{
-			Log_ErrorF( gLC_Render, "CmdBindDescriptorSets: Failed to stack alloc VkDescriptorSets (%u sets, %zu bytes)\n", count, sizeof( VkDescriptorSet ) * count );
+			Log_ErrorF( gLC_Render, "CmdBindDescriptorSets: Failed to stack alloc VkDescriptorSets (%u sets, %zu bytes)\n", sSetCount, sizeof( VkDescriptorSet ) * sSetCount );
 			return;
 		}
 
-		count = 0;
-		if ( sSets & EDescriptorLayout_Image )
-			vkDescSets[ count++ ] = VK_GetImageSets()[ sCmdIndex ];
+		for ( u32 i = 0; i < sSetCount; i++ )
+		{
+			VkDescriptorSet set = VK_GetDescSet( spSets[ i ] );
+			if ( set == VK_NULL_HANDLE )
+			{
+				Log_ErrorF( gLC_Render, "CmdBindDescriptorSets: Failed to find VkDescriptorSet %u\n", i );
+				CH_STACK_FREE( vkDescSets );
+				return;
+			}
 
-		if ( sSets & EDescriptorLayout_ImageStorage )
-			vkDescSets[ count++ ] = VK_GetImageStorage()[ sCmdIndex ];
+			vkDescSets[ i ] = set;
+		}
 
-		vkCmdBindDescriptorSets( c, bindPoint, layout, 0, count, vkDescSets, 0, nullptr );
+		vkCmdBindDescriptorSets( c, bindPoint, layout, 0, sSetCount, vkDescSets, 0, nullptr );
 		CH_STACK_FREE( vkDescSets );
 	}
 
-	// void CmdBindVertexBuffers( Handle cmd, u32 sFirstBinding, const std::vector< Handle >& srBuffers, const std::vector< size_t >& srOffsets ) override
 	void CmdBindVertexBuffers( Handle cmd, u32 sFirstBinding, u32 sCount, const Handle* spBuffers, const size_t* spOffsets ) override
 	{
 		VkCommandBuffer c = VK_GetCommandBuffer( cmd );
@@ -1488,24 +1584,6 @@ public:
 			return;
 		}
 
-#if 0
-		std::vector< VkBuffer > buffers;
-
-		for ( auto& handle : srBuffers )
-		{
-			BufferVK* bufVK = gBufferHandles.Get( handle );
-
-			if ( !bufVK )
-			{
-				Log_Error( gLC_Render, "CmdBindVertexBuffers: Failed to find Buffer\n" );
-				return;
-			}
-
-			buffers.push_back( bufVK->aBuffer );
-		}
-
-		vkCmdBindVertexBuffers( c, sFirstBinding, srBuffers.size(), buffers.data(), srOffsets.data() );
-#else
 		VkBuffer* vkBuffers = (VkBuffer*)CH_STACK_ALLOC( sizeof( VkBuffer ) * sCount );
 
 		for ( u32 i = 0; i < sCount; i++ )
@@ -1516,7 +1594,6 @@ public:
 
 		vkCmdBindVertexBuffers( c, sFirstBinding, sCount, vkBuffers, spOffsets );
 		CH_STACK_FREE( vkBuffers );
-#endif
 	}
 
 	void CmdBindIndexBuffer( Handle cmd, Handle shBuffer, size_t offset, EIndexType indexType ) override

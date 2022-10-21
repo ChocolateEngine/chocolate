@@ -201,17 +201,6 @@ enum ECullMode
 };
 
 
-// kinda weird
-using EDescriptorLayout = u8;
-enum : EDescriptorLayout
-{
-	EDescriptorLayout_None,
-	EDescriptorLayout_Image         = ( 1 << 0 ),
-	EDescriptorLayout_ImageStorage  = ( 1 << 1 ),
-	EDescriptorLayout_UniformBuffer = ( 1 << 2 ),
-};
-
-
 enum EIndexType : char
 {
 	EIndexType_U16,
@@ -300,6 +289,23 @@ enum : ERenderResetFlags
 	ERenderResetFlags_MSAA = ( 1 << 0 ),  // MSAA was toggled, Recreate RenderPass and shaders
 };
 
+
+enum EDescriptorType : char
+{
+	EDescriptorType_Sampler,
+	EDescriptorType_CombinedImageSampler,
+	EDescriptorType_SampledImage,
+	EDescriptorType_StorageImage,
+	EDescriptorType_UniformTexelBuffer,
+	EDescriptorType_StorageTexelBuffer,
+	EDescriptorType_UniformBuffer,
+	EDescriptorType_StorageBuffer,
+	EDescriptorType_UniformBufferDynamic,
+	EDescriptorType_StorageBufferDynamic,
+	EDescriptorType_InputAttachment,
+	EDescriptorType_Max,
+};
+
 // -----------------------------------------------------------------------------
 // Structs
 // -----------------------------------------------------------------------------
@@ -307,7 +313,8 @@ enum : ERenderResetFlags
 
 struct TextureCreateInfo_t
 {
-	void*         apData = nullptr;
+	const char*   apName    = nullptr;  // Only Used for debugging
+	void*         apData    = nullptr;
 	u32           aDataSize = 0;
 	glm::uvec2    aSize;
 	GraphicsFmt   aFormat;
@@ -426,7 +433,7 @@ struct PushConstantRange_t
 
 struct PipelineLayoutCreate_t
 {
-	EDescriptorLayout                  aLayouts;
+	std::vector< Handle >              aLayouts;
 	std::vector< PushConstantRange_t > aPushConstants;
 };
 
@@ -497,6 +504,33 @@ struct RenderPassBegin_t
 	// NOTE: we should know internally whether to clear or not based on how the render pass was created
 	bool      aClear;
 	glm::vec4 aClearColor;
+};
+
+
+struct CreateVariableDescLayout_t
+{
+	EDescriptorType aType     = EDescriptorType_Max;
+	ShaderStage     aStages   = ShaderStage_None;
+	u32             aBinding  = 0;
+	u32             aCount    = 0;
+};
+
+
+struct AllocVariableDescLayout_t
+{
+	Handle aLayout   = InvalidHandle;
+	u32    aCount    = 0;
+	u32    aSetCount = 0;
+};
+
+
+struct UpdateVariableDescSet_t
+{
+	std::vector< Handle > aDescSets;
+	EDescriptorType       aType;
+
+	std::vector< Handle > aBuffers;
+	std::vector< Handle > aImages;
 };
 
 
@@ -585,97 +619,105 @@ class IRender : public BaseSystem
 	// General Purpose Functions
 	// --------------------------------------------------------------------------------------------
 
-	virtual bool        InitImGui( Handle shRenderPass )                                                       = 0;
-	virtual void        ShutdownImGui()                                                                        = 0;
+	virtual bool        InitImGui( Handle shRenderPass )                                                         = 0;
+	virtual void        ShutdownImGui()                                                                          = 0;
 
-	virtual SDL_Window* GetWindow()                                                                            = 0;
-	virtual void        GetSurfaceSize( int& srWidth, int& srHeight )                                          = 0;
+	virtual SDL_Window* GetWindow()                                                                              = 0;
+	virtual void        GetSurfaceSize( int& srWidth, int& srHeight )                                            = 0;
 
 	// --------------------------------------------------------------------------------------------
 	// Buffers
 	// --------------------------------------------------------------------------------------------
 
-	virtual Handle      CreateBuffer( u32 sSize, EBufferFlags sBufferFlags, EBufferMemory sBufferMem )         = 0;
-	virtual void        MemWriteBuffer( Handle buffer, u32 sSize, void* spData )                               = 0;
-	virtual void        MemCopyBuffer( Handle shSrc, Handle shDst, u32 sSize )                                 = 0;
-	virtual void        DestroyBuffer( Handle buffer )                                                         = 0;
+	virtual Handle      CreateBuffer( const char* spName, u32 sSize, EBufferFlags sBufferFlags, EBufferMemory sBufferMem ) = 0;
+	virtual Handle      CreateBuffer( u32 sSize, EBufferFlags sBufferFlags, EBufferMemory sBufferMem )           = 0;
+	virtual void        MemWriteBuffer( Handle buffer, u32 sSize, void* spData )                                 = 0;
+	virtual void        MemCopyBuffer( Handle shSrc, Handle shDst, u32 sSize )                                   = 0;
+	virtual void        DestroyBuffer( Handle buffer )                                                           = 0;
 
 	// --------------------------------------------------------------------------------------------
 	// Textures
 	// --------------------------------------------------------------------------------------------
 
-	virtual Handle      LoadTexture( const std::string& srTexturePath )                                        = 0;
-	virtual Handle      CreateTexture( const TextureCreateInfo_t& srTextureCreateInfo )                        = 0;
-	virtual void        FreeTexture( Handle shTexture )                                                        = 0;
-	virtual int         GetTextureIndex( Handle shTexture )                                                    = 0;
+	virtual Handle      LoadTexture( const std::string& srTexturePath )                                          = 0;
+	virtual Handle      CreateTexture( const TextureCreateInfo_t& srTextureCreateInfo )                          = 0;
+	virtual void        FreeTexture( Handle shTexture )                                                          = 0;
+	virtual int         GetTextureIndex( Handle shTexture )                                                      = 0;
 
 	// virtual Handle      CreateRenderTarget( const CreateRenderTarget_t& srCreate )                             = 0;
 	// virtual void        DestroyRenderTarget( Handle shTarget )                                                 = 0;
 
-	virtual Handle      CreateFramebuffer( const CreateFramebuffer_t& srCreate )                               = 0;
-	virtual void        DestroyFramebuffer( Handle shTarget )                                                  = 0;
+	virtual Handle      CreateFramebuffer( const CreateFramebuffer_t& srCreate )                                 = 0;
+	virtual void        DestroyFramebuffer( Handle shTarget )                                                    = 0;
 
 	// --------------------------------------------------------------------------------------------
 	// Shader System
 	// --------------------------------------------------------------------------------------------
 
-	virtual Handle      CreatePipelineLayout( PipelineLayoutCreate_t& srPipelineCreate )                       = 0;
-	virtual Handle      CreateGraphicsPipeline( GraphicsPipelineCreate_t& srGraphicsCreate )                   = 0;
+	virtual Handle      CreatePipelineLayout( PipelineLayoutCreate_t& srPipelineCreate )                         = 0;
+	virtual Handle      CreateGraphicsPipeline( GraphicsPipelineCreate_t& srGraphicsCreate )                     = 0;
 
-	virtual bool        RecreatePipelineLayout( Handle sHandle, PipelineLayoutCreate_t& srPipelineCreate )     = 0;
-	virtual bool        RecreateGraphicsPipeline( Handle sHandle, GraphicsPipelineCreate_t& srGraphicsCreate ) = 0;
+	virtual bool        RecreatePipelineLayout( Handle sHandle, PipelineLayoutCreate_t& srPipelineCreate )       = 0;
+	virtual bool        RecreateGraphicsPipeline( Handle sHandle, GraphicsPipelineCreate_t& srGraphicsCreate )   = 0;
 
-	virtual void        DestroyPipeline( Handle sPipeline )                                                    = 0;
-	virtual void        DestroyPipelineLayout( Handle sPipeline )                                              = 0;
+	virtual void        DestroyPipeline( Handle sPipeline )                                                      = 0;
+	virtual void        DestroyPipelineLayout( Handle sPipeline )                                                = 0;
+
+	// HACK
+	virtual Handle      GetSamplerLayout()                                                                       = 0;
+	virtual void        GetSamplerSets( Handle* spHandles )                                                      = 0;
+
+	virtual Handle      CreateVariableDescLayout( const CreateVariableDescLayout_t& srCreate )                   = 0;
+	virtual bool        AllocateVariableDescLayout( const AllocVariableDescLayout_t& srCreate, Handle* handles ) = 0;
+	virtual void        UpdateVariableDescSet( const UpdateVariableDescSet_t& srUpdate )                         = 0;
 
 	// --------------------------------------------------------------------------------------------
 	// Back Buffer Info
 	// --------------------------------------------------------------------------------------------
 
-	virtual GraphicsFmt GetSwapFormatColor()                                                                   = 0;
-	virtual GraphicsFmt GetSwapFormatDepth()                                                                   = 0;
+	virtual GraphicsFmt GetSwapFormatColor()                                                                     = 0;
+	virtual GraphicsFmt GetSwapFormatDepth()                                                                     = 0;
 
-	virtual void        GetBackBufferTextures( Handle* spColor, Handle* spDepth, Handle* spResolve )           = 0;
-	virtual Handle      GetBackBufferColor()                                                                   = 0;
-	virtual Handle      GetBackBufferDepth()                                                                   = 0;
+	virtual void        GetBackBufferTextures( Handle* spColor, Handle* spDepth, Handle* spResolve )             = 0;
+	virtual Handle      GetBackBufferColor()                                                                     = 0;
+	virtual Handle      GetBackBufferDepth()                                                                     = 0;
 
 	// --------------------------------------------------------------------------------------------
 	// Rendering
 	// --------------------------------------------------------------------------------------------
 
-	virtual void        SetResetCallback( Render_OnReset_t sFunc )                                             = 0;
+	virtual void        SetResetCallback( Render_OnReset_t sFunc )                                               = 0;
 
-	virtual void        Reset()                                                                                = 0;
-	virtual void        NewFrame()                                                                             = 0;
-	virtual void        Present()                                                                              = 0;
+	virtual void        Reset()                                                                                  = 0;
+	virtual void        NewFrame()                                                                               = 0;
+	virtual void        Present()                                                                                = 0;
 
-	virtual void        WaitForQueues()                                                                        = 0;
-	virtual void        ResetCommandPool()                                                                     = 0;
-
-	// blech
-	virtual void        GetCommandBufferHandles( std::vector< Handle >& srHandles )                            = 0;
-
-	virtual void        BeginCommandBuffer( Handle cmd )                                                       = 0;
-	virtual void        EndCommandBuffer( Handle cmd )                                                         = 0;
-
-	virtual Handle      CreateRenderPass( const RenderPassCreate_t& srCreate )                                 = 0;
-	virtual void        DestroyRenderPass( Handle shPass )                                                     = 0;
-	virtual void        BeginRenderPass( Handle cmd, const RenderPassBegin_t& srBegin )                        = 0;
-	virtual void        EndRenderPass( Handle cmd )                                                            = 0;
+	virtual void        WaitForQueues()                                                                          = 0;
+	virtual void        ResetCommandPool()                                                                       = 0;
 
 	// blech
-	virtual void        DrawImGui( ImDrawData* spDrawData, Handle cmd )                                        = 0;
+	virtual void        GetCommandBufferHandles( std::vector< Handle >& srHandles )                              = 0;
+
+	virtual void        BeginCommandBuffer( Handle cmd )                                                         = 0;
+	virtual void        EndCommandBuffer( Handle cmd )                                                           = 0;
+
+	virtual Handle      CreateRenderPass( const RenderPassCreate_t& srCreate )                                   = 0;
+	virtual void        DestroyRenderPass( Handle shPass )                                                       = 0;
+	virtual void        BeginRenderPass( Handle cmd, const RenderPassBegin_t& srBegin )                          = 0;
+	virtual void        EndRenderPass( Handle cmd )                                                              = 0;
+
+	// blech
+	virtual void        DrawImGui( ImDrawData* spDrawData, Handle cmd )                                          = 0;
 
 	// --------------------------------------------------------------------------------------------
 	// Vulkan Commands
 	// --------------------------------------------------------------------------------------------
 
-	virtual void        CmdSetViewport( Handle cmd, u32 sOffset, const Viewport_t* spViewports, u32 sCount )   = 0;
+	virtual void        CmdSetViewport( Handle cmd, u32 sOffset, const Viewport_t* spViewports, u32 sCount )     = 0;
 
-	virtual void        CmdSetScissor( Handle cmd, u32 sOffset, const Rect2D_t* spScissors, u32 sCount )       = 0;
+	virtual void        CmdSetScissor( Handle cmd, u32 sOffset, const Rect2D_t* spScissors, u32 sCount )         = 0;
 
-	virtual bool        CmdBindPipeline( Handle cmd,
-	                                     Handle shader ) = 0;
+	virtual bool        CmdBindPipeline( Handle cmd, Handle shader ) = 0;
 
 	virtual void        CmdPushConstants( Handle      cmd,
 	                                      Handle      shPipelineLayout,
@@ -684,18 +726,18 @@ class IRender : public BaseSystem
 	                                      u32         sSize,
 	                                      void*       spValues ) = 0;
 
-	// will most likely change
 	virtual void        CmdBindDescriptorSets( Handle             cmd,
 	                                           size_t             sCmdIndex,
 	                                           EPipelineBindPoint sBindPoint,
 	                                           Handle             shPipelineLayout,
-	                                           EDescriptorLayout  sSets ) = 0;
+	                                           Handle*            spSets,
+	                                           u32                sSetCount ) = 0;
 
 	virtual void        CmdBindVertexBuffers( Handle        cmd,
 	                                          u32           sFirstBinding,
 	                                          u32           sCount,
 	                                          const Handle* spBuffers,
-	                                          const size_t* spOffsets )                                        = 0;
+	                                          const size_t* spOffsets ) = 0;
 
 	virtual void        CmdBindIndexBuffer( Handle     cmd,
 	                                        Handle     shBuffer,

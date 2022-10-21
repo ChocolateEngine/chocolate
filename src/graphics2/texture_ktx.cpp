@@ -41,7 +41,7 @@ static bool LoadKTX2( ktxTexture2* spKTexture2, ktxVulkanDeviceInfo& vdi )
 }
 
 
-TextureVK* KTX_LoadTexture( const std::string srPath )
+TextureVK* KTX_LoadTexture( const char* spPath )
 {
 	ktxVulkanDeviceInfo vdi;
 
@@ -62,11 +62,11 @@ TextureVK* KTX_LoadTexture( const std::string srPath )
 
 	ktxTexture* kTexture = nullptr;
 
-	result = ktxTexture_CreateFromNamedFile( srPath.c_str(), KTX_TEXTURE_CREATE_NO_FLAGS, &kTexture );
+	result               = ktxTexture_CreateFromNamedFile( spPath, KTX_TEXTURE_CREATE_NO_FLAGS, &kTexture );
 
 	if ( result != KTX_SUCCESS )
 	{
-		Log_ErrorF( gLC_Render, "KTX Error %d: %s - Failed to open texture: %s\n", result, ktxErrorString( result ), srPath.c_str() );
+		Log_ErrorF( gLC_Render, "KTX Error %d: %s - Failed to open texture: %s\n", result, ktxErrorString( result ), spPath );
 		ktxVulkanDeviceInfo_Destruct( &vdi );
 		return nullptr;
 	}
@@ -76,7 +76,7 @@ TextureVK* KTX_LoadTexture( const std::string srPath )
 	// WHY does this happen so often, wtf
 	if ( vkFormat == VK_FORMAT_UNDEFINED )
 	{
-		Log_WarnF( gLC_Render, "KTX Warning: - No Vulkan Format Found in KTX File: %s\n", srPath.c_str() );
+		Log_WarnF( gLC_Render, "KTX Warning: - No Vulkan Format Found in KTX File: %s\n", spPath );
 	}
 
 	if ( kTexture->classId == class_id::ktxTexture2_c )
@@ -100,13 +100,13 @@ TextureVK* KTX_LoadTexture( const std::string srPath )
 
 	if ( result != KTX_SUCCESS )
 	{
-		Log_ErrorF( gLC_Render, "KTX Error %d: %s - Failed to upload texture: %s\n", result, ktxErrorString( result ), srPath.c_str() );
+		Log_ErrorF( gLC_Render, "KTX Error %d: %s - Failed to upload texture: %s\n", result, ktxErrorString( result ), spPath );
 		ktxTexture_Destroy( kTexture );
 		ktxVulkanDeviceInfo_Destruct( &vdi );
 		return nullptr;
 	}
 
-	Log_DevF( gLC_Render, 2, "Loaded Image: %s - dataSize: %d\n", srPath.c_str(), kTexture->dataSize );
+	Log_DevF( gLC_Render, 2, "Loaded Image: %s - dataSize: %d\n", spPath, kTexture->dataSize );
 
 	TextureVK* pTexture  = VK_NewTexture();
 

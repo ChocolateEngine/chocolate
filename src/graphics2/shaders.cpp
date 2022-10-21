@@ -75,11 +75,15 @@ bool VK_CreatePipelineLayoutInt( PipelineLayoutCreate_t& srPipelineCreate, bool 
 {
 	std::vector< VkDescriptorSetLayout > layouts;
 
-	if ( srPipelineCreate.aLayouts & EDescriptorLayout_Image )
-		layouts.push_back( VK_GetImageLayout() );
+	for ( const auto& handle : srPipelineCreate.aLayouts )
+	{
+		VkDescriptorSetLayout layout = VK_GetDescLayout( handle );
 
-	if ( srPipelineCreate.aLayouts & EDescriptorLayout_ImageStorage )
-		layouts.push_back( VK_GetImageStorageLayout() );
+		if ( layout == VK_NULL_HANDLE )
+			return false;
+
+		layouts.push_back( layout );
+	}
 
 	std::vector< VkPushConstantRange > pushConstantRanges;
 

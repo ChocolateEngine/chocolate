@@ -31,11 +31,16 @@ struct RenderPassCreate_t;
 
 
 #if _DEBUG
-extern PFN_vkDebugMarkerSetObjectTagEXT  pfnDebugMarkerSetObjectTag;
-extern PFN_vkDebugMarkerSetObjectNameEXT pfnDebugMarkerSetObjectName;
-extern PFN_vkCmdDebugMarkerBeginEXT      pfnCmdDebugMarkerBegin;
-extern PFN_vkCmdDebugMarkerEndEXT        pfnCmdDebugMarkerEnd;
-extern PFN_vkCmdDebugMarkerInsertEXT     pfnCmdDebugMarkerInsert;
+extern PFN_vkSetDebugUtilsObjectNameEXT    pfnSetDebugUtilsObjectName;
+extern PFN_vkSetDebugUtilsObjectTagEXT     pfnSetDebugUtilsObjectTag;
+
+extern PFN_vkQueueBeginDebugUtilsLabelEXT  pfnQueueBeginDebugUtilsLabel;
+extern PFN_vkQueueEndDebugUtilsLabelEXT    pfnQueueEndDebugUtilsLabel;
+extern PFN_vkQueueInsertDebugUtilsLabelEXT pfnQueueInsertDebugUtilsLabel;
+
+extern PFN_vkCmdBeginDebugUtilsLabelEXT    pfnCmdBeginDebugUtilsLabel;
+extern PFN_vkCmdEndDebugUtilsLabelEXT      pfnCmdEndDebugUtilsLabel;
+extern PFN_vkCmdInsertDebugUtilsLabelEXT   pfnCmdInsertDebugUtilsLabel;
 #endif
 
 
@@ -59,6 +64,7 @@ struct TextureVK
 	VkFormat          aFormat    = VK_FORMAT_UNDEFINED;
 
 	// Texture Information
+	const char*       apName     = nullptr;
 	int               aIndex     = 0;  // texture sampler index (MOVE ELSEWHERE!!)
 	glm::ivec2        aSize{};
 	u8                aMipLevels    = 0;
@@ -202,13 +208,30 @@ VkDescriptorPool                      VK_GetDescPool();
 // VkDescriptorSetLayout                 VK_GetDescImageSet();
 // VkDescriptorSetLayout                 VK_GetDescBufferSet();
 
+// blech
+Handle                                VK_GetSamplerLayoutHandle();
+const std::vector< Handle >&          VK_GetSamplerSetsHandles();
+
 VkDescriptorSetLayout                 VK_GetImageLayout();
+VkDescriptorSetLayout                 VK_GetUniformBufferLayout();
 VkDescriptorSetLayout                 VK_GetImageStorageLayout();
 
 const std::vector< VkDescriptorSet >& VK_GetImageSets();
 const std::vector< VkDescriptorSet >& VK_GetImageStorage();
 VkDescriptorSet                       VK_GetImageSet( size_t sIndex );
 void                                  VK_UpdateImageSets();
+
+Handle                                VK_CreateVariableDescLayout( const CreateVariableDescLayout_t& srCreate );
+bool                                  VK_AllocateVariableDescLayout( const AllocVariableDescLayout_t& srCreate, Handle* handles );
+void                                  VK_UpdateVariableDescSet( const UpdateVariableDescSet_t& srUpdate );
+
+VkDescriptorSetLayout                 VK_GetDescLayout( Handle sHandle );
+VkDescriptorSet                       VK_GetDescSet( Handle sHandle );
+
+void                                  VK_AddUniformBuffer( BufferVK* spTexture );
+void                                  VK_WriteUniformBuffer( BufferVK* spTexture );
+void                                  VK_RemoveUniformBuffer( BufferVK* spTexture );
+void                                  VK_UpdateUniformBuffers();
 
 void                                  VK_AddImageStorage( TextureVK* spTexture );
 void                                  VK_RemoveImageStorage( TextureVK* spTexture );
@@ -285,6 +308,7 @@ VkPipelineLayout                      VK_GetPipelineLayout( Handle handle );
 // --------------------------------------------------------------------------------------
 // Buffers
 
+void                                  VK_CreateBuffer( const char* spName, VkBuffer& srBuffer, VkDeviceMemory& srBufferMem, u32 sBufferSize, VkBufferUsageFlags sUsage, VkMemoryPropertyFlags sMemBits );
 void                                  VK_CreateBuffer( VkBuffer& srBuffer, VkDeviceMemory& srBufferMem, u32 sBufferSize, VkBufferUsageFlags sUsage, VkMemoryPropertyFlags sMemBits );
 void                                  VK_DestroyBuffer( VkBuffer& srBuffer, VkDeviceMemory& srBufferMem );
 
@@ -322,6 +346,6 @@ void                                  VK_CreateMissingTexture();
 // --------------------------------------------------------------------------------------
 // KTX Texture Support
 
-TextureVK*                            KTX_LoadTexture( const std::string srPath );
+TextureVK*                            KTX_LoadTexture( const char* spPath );
 
 

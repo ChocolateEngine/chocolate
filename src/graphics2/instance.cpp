@@ -16,7 +16,7 @@ constexpr bool        gEnableValidationLayers = false;
 constexpr char const* gpValidationLayers[]    = { 0 };
 bool                  g_vk_verbose            = false;
 #else
-constexpr bool        gEnableValidationLayers = true;
+constexpr bool        gEnableValidationLayers = false;
 constexpr char const* gpValidationLayers[]    = { "VK_LAYER_KHRONOS_validation" };
 CONVAR( g_vk_verbose, 0 );
 #endif
@@ -50,11 +50,16 @@ constexpr char const* gpOptionalDeviceExtensions[] = {
 
 
 #if _DEBUG
-PFN_vkDebugMarkerSetObjectTagEXT  pfnDebugMarkerSetObjectTag;
-PFN_vkDebugMarkerSetObjectNameEXT pfnDebugMarkerSetObjectName;
-PFN_vkCmdDebugMarkerBeginEXT      pfnCmdDebugMarkerBegin;
-PFN_vkCmdDebugMarkerEndEXT        pfnCmdDebugMarkerEnd;
-PFN_vkCmdDebugMarkerInsertEXT     pfnCmdDebugMarkerInsert;
+PFN_vkSetDebugUtilsObjectNameEXT    pfnSetDebugUtilsObjectName    = nullptr;
+PFN_vkSetDebugUtilsObjectTagEXT     pfnSetDebugUtilsObjectTag     = nullptr;
+
+PFN_vkQueueBeginDebugUtilsLabelEXT  pfnQueueBeginDebugUtilsLabel  = nullptr;
+PFN_vkQueueEndDebugUtilsLabelEXT    pfnQueueEndDebugUtilsLabel    = nullptr;
+PFN_vkQueueInsertDebugUtilsLabelEXT pfnQueueInsertDebugUtilsLabel = nullptr;
+
+PFN_vkCmdBeginDebugUtilsLabelEXT    pfnCmdBeginDebugUtilsLabel    = nullptr;
+PFN_vkCmdEndDebugUtilsLabelEXT      pfnCmdEndDebugUtilsLabel      = nullptr;
+PFN_vkCmdInsertDebugUtilsLabelEXT   pfnCmdInsertDebugUtilsLabel   = nullptr;
 #endif
 
 
@@ -226,6 +231,31 @@ bool VK_CheckDeviceExtensionSupport( VkPhysicalDevice sDevice )
 }
 
 
+std::vector< const char* > VK_GetSDL2Extensions()
+{
+	uint32_t extensionCount = 0;
+	if ( !SDL_Vulkan_GetInstanceExtensions( gpWindow, &extensionCount, NULL ) )
+		Log_Fatal( gLC_Render, "Unable to query the number of Vulkan instance extensions\n" );
+
+	// Use the amount of extensions queried before to retrieve the names of the extensions.
+	std::vector< const char* > extensions( extensionCount );
+
+	if ( !SDL_Vulkan_GetInstanceExtensions( gpWindow, &extensionCount, extensions.data() ) )
+		Log_Fatal( gLC_Render, "Unable to query the number of Vulkan instance extension names\n" );
+
+	// Display names
+	Log_DevF( gLC_Render, 1, "Found %d Vulkan extensions:\n", extensionCount );
+	for ( uint32_t i = 0; i < extensionCount; ++i )
+		Log_DevF( gLC_Render, 1, "\t%i : %s\n", i, extensions[ i ] );
+
+	Log_Dev( gLC_Render, 1, "\n" );
+
+	// Add debug display extension, we need this to relay debug messages
+	extensions.push_back( VK_EXT_DEBUG_UTILS_EXTENSION_NAME );
+	return extensions;
+}
+
+
 bool VK_CreateInstance()
 {
 	if ( gEnableValidationLayers && !VK_CheckValidationLayerSupport() )
@@ -253,8 +283,13 @@ bool VK_CreateInstance()
 		createInfo.pNext             = NULL;
 	}
 
-	createInfo.enabledExtensionCount   = (uint32_t)ARR_SIZE( gpExtensions );
-	createInfo.ppEnabledExtensionNames = gpExtensions;
+	std::vector< const char* > sdlExt  = VK_GetSDL2Extensions();
+
+	// createInfo.enabledExtensionCount   = static_cast< uint32_t >( ARR_SIZE( gpExtensions ) );
+	// createInfo.ppEnabledExtensionNames = gpExtensions;
+
+	createInfo.enabledExtensionCount   = static_cast< uint32_t >( sdlExt.size() );
+	createInfo.ppEnabledExtensionNames = sdlExt.data();
 
 	VK_CheckResult( vkCreateInstance( &createInfo, NULL, &gInstance ), "Failed to create instance!" );
 
@@ -545,11 +580,22 @@ void VK_CreateDevice()
 	vkGetDeviceQueue( gDevice, present, 0, &gPresentQueue );
 
 #if _DEBUG
-	pfnDebugMarkerSetObjectTag  = (PFN_vkDebugMarkerSetObjectTagEXT)vkGetInstanceProcAddr( VK_GetInstance(), "vkDebugMarkerSetObjectTagEXT" );
-	pfnDebugMarkerSetObjectName = (PFN_vkDebugMarkerSetObjectNameEXT)vkGetInstanceProcAddr( VK_GetInstance(), "vkDebugMarkerSetObjectNameEXT" );
-	pfnCmdDebugMarkerBegin      = (PFN_vkCmdDebugMarkerBeginEXT)vkGetInstanceProcAddr( VK_GetInstance(), "vkCmdDebugMarkerBeginEXT" );
-	pfnCmdDebugMarkerEnd        = (PFN_vkCmdDebugMarkerEndEXT)vkGetInstanceProcAddr( VK_GetInstance(), "vkCmdDebugMarkerEndEXT" );
-	pfnCmdDebugMarkerInsert     = (PFN_vkCmdDebugMarkerInsertEXT)vkGetInstanceProcAddr( VK_GetInstance(), "vkCmdDebugMarkerInsertEXT" );
+	pfnSetDebugUtilsObjectName    = (PFN_vkSetDebugUtilsObjectNameEXT)vkGetInstanceProcAddr( VK_GetInstance(), "vkSetDebugUtilsObjectNameEXT" );
+	pfnSetDebugUtilsObjectTag     = (PFN_vkSetDebugUtilsObjectTagEXT)vkGetInstanceProcAddr( VK_GetInstance(), "vkSetDebugUtilsObjectTagEXT" );
+
+	pfnQueueBeginDebugUtilsLabel  = (PFN_vkQueueBeginDebugUtilsLabelEXT)vkGetInstanceProcAddr( VK_GetInstance(), "vkQueueBeginDebugUtilsLabelEXT" );
+	pfnQueueEndDebugUtilsLabel    = (PFN_vkQueueEndDebugUtilsLabelEXT)vkGetInstanceProcAddr( VK_GetInstance(), "vkQueueEndDebugUtilsLabelEXT" );
+	pfnQueueInsertDebugUtilsLabel = (PFN_vkQueueInsertDebugUtilsLabelEXT)vkGetInstanceProcAddr( VK_GetInstance(), "vkQueueInsertDebugUtilsLabelEXT" );
+
+	pfnCmdBeginDebugUtilsLabel    = (PFN_vkCmdBeginDebugUtilsLabelEXT)vkGetInstanceProcAddr( VK_GetInstance(), "vkCmdBeginDebugUtilsLabelEXT" );
+	pfnCmdEndDebugUtilsLabel      = (PFN_vkCmdEndDebugUtilsLabelEXT)vkGetInstanceProcAddr( VK_GetInstance(), "vkCmdEndDebugUtilsLabelEXT" );
+	pfnCmdInsertDebugUtilsLabel   = (PFN_vkCmdInsertDebugUtilsLabelEXT)vkGetInstanceProcAddr( VK_GetInstance(), "vkCmdInsertDebugUtilsLabelEXT" );
+
+	if ( pfnSetDebugUtilsObjectName )
+		Log_Dev( gVulkanChannel, 1, "Loaded PFN_vkSetDebugUtilsObjectNameEXT\n" );
+
+	if ( pfnSetDebugUtilsObjectTag )
+		Log_Dev( gVulkanChannel, 1, "Loaded PFN_vkSetDebugUtilsObjectTagEXT\n" );
 #endif
 }
 
