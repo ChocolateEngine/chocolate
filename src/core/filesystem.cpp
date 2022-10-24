@@ -197,7 +197,7 @@ std::vector< char > FileSys_ReadFile( const std::string& srFilePath )
 	std::string fullPath = FileSys_FindFile( srFilePath );
     if ( fullPath == "" )
     {
-        Log_ErrorF( gFileSystemChannel, "Failed to find file: %s", srFilePath.c_str() );
+        Log_ErrorF( gFileSystemChannel, "Failed to find file: %s\n", srFilePath.c_str() );
         return {};
     }
 
@@ -205,7 +205,7 @@ std::vector< char > FileSys_ReadFile( const std::string& srFilePath )
     std::ifstream file( fullPath, std::ios::ate | std::ios::binary );
     if ( !file.is_open() )
     {
-        Log_ErrorF( gFileSystemChannel, "Failed to open file: %s", srFilePath.c_str() );
+        Log_ErrorF( gFileSystemChannel, "Failed to open file: %s\n", srFilePath.c_str() );
         return {};
     }
 

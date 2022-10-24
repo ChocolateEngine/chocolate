@@ -1006,7 +1006,18 @@ public:
 		if ( it != gTexturePaths.end() )
 			return it->second;
 
-		std::string fullPath = FileSys_FindFile( srTexturePath );
+		std::string fullPath;
+
+		// we only support ktx right now
+		if ( srTexturePath.ends_with( ".ktx" ) )
+		{
+			fullPath = FileSys_FindFile( srTexturePath );
+		}
+		else
+		{
+			fullPath = FileSys_FindFile( srTexturePath + ".ktx" );
+		}
+
 		if ( fullPath.empty() )
 		{
 			Log_ErrorF( gLC_Render, "Failed to find Texture: \"%s\"\n", srTexturePath.c_str() );

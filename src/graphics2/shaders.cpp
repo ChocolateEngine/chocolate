@@ -382,6 +382,22 @@ bool VK_CreateGraphicsPipelineInt( GraphicsPipelineCreate_t& srGraphicsCreate, b
 	// TODO: look into trying to make multiple pipelines at once
 	VK_CheckResult( vkCreateGraphicsPipelines( VK_GetDevice(), VK_NULL_HANDLE, 1, &pipelineInfo, NULL, &shader->aPipeline ), "Failed to create graphics pipeline!" );
 
+#ifdef _DEBUG
+	if ( srGraphicsCreate.apName && pfnSetDebugUtilsObjectName )
+	{
+		// add a debug label onto it
+		const VkDebugUtilsObjectNameInfoEXT objectInfo = {
+			VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,  // sType
+			NULL,                                                // pNext
+			VK_OBJECT_TYPE_PIPELINE,                             // objectType
+			(uint64_t)shader->aPipeline,                         // objectHandle
+			srGraphicsCreate.apName,                             // pObjectName
+		};
+
+		pfnSetDebugUtilsObjectName( VK_GetDevice(), &objectInfo );
+	}
+#endif
+
 	return true;
 }
 

@@ -1,7 +1,6 @@
 #include "gui.h"
 #include "util.h"
 
-#include "imgui/imgui_impl_vulkan.h"
 #include "imgui/imgui_impl_sdl.h"
 
 GuiSystem* gui = nullptr;
@@ -162,7 +161,7 @@ ImFont* GuiSystem::BuildFont( const char* spPath, float sSizePixels, const ImFon
 	gpDevice->EndSingleTimeCommands( c );
 	#endif
 
-	ImGui_ImplVulkan_DestroyFontUploadObjects(  );
+	// ImGui_ImplVulkan_DestroyFontUploadObjects(  );
 
 	return font;
 }

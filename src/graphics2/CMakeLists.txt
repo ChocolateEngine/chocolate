@@ -32,9 +32,6 @@ file(
 	${CH_THIRDPARTY}/speedykeyv/KeyValue.h
 )
 
-
-add_compile_definitions( "RENDER_DLL" )
-
 include( ${CH_ROOT}/scripts/vulkan.cmake )
 
 add_library( Graphics2 SHARED ${RENDER_VK_FILES} ${PUBLIC_FILES} )
@@ -55,8 +52,9 @@ target_link_libraries(
 	Graphics2 PRIVATE
 	Core
 	ImGui
-	${VK_LIB}
 )
+
+add_vk_to_target( Graphics2 )
 
 if ( VULKAN_DEBUG )
 	target_compile_definitions( Graphics2 PRIVATE

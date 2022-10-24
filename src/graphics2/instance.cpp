@@ -16,7 +16,7 @@ constexpr bool        gEnableValidationLayers = false;
 constexpr char const* gpValidationLayers[]    = { 0 };
 bool                  g_vk_verbose            = false;
 #else
-constexpr bool        gEnableValidationLayers = false;
+constexpr bool        gEnableValidationLayers = true;
 constexpr char const* gpValidationLayers[]    = { "VK_LAYER_KHRONOS_validation" };
 CONVAR( g_vk_verbose, 0 );
 #endif

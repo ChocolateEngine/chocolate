@@ -156,7 +156,7 @@ VkSampler VK_GetSampler()
 	if ( gSampler )
 		return gSampler;
 
-	VkFilter vkFilter = VK_FILTER_NEAREST;
+	VkFilter vkFilter = VK_FILTER_LINEAR;
 
 	VkSamplerCreateInfo samplerInfo{};
 	samplerInfo.sType        = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;

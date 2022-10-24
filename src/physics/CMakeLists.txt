@@ -2,9 +2,6 @@ message( "Current Project: Physics" )
 
 include( ${CH_ROOT}/scripts/joltphysics.cmake )
 
-# THIS REALLY SHOULD NOT BE HERE BUT GRAPHICS IS A MESS SO OH WELL !!!
-include( ${CH_ROOT}/scripts/vulkan.cmake )
-
 file(
 	GLOB_RECURSE SRC_FILES CONFIGURE_DEPENDS
 	*.cpp

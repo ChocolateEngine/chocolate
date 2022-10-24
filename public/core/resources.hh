@@ -475,7 +475,7 @@ public:
 		// Check the magic number.
 		if ( pBuf == nullptr || *(size_t*)pBuf != magic )
 		{
-			Log_WarnF( gResourceChannel, "*ResourceManager::Get( Handle ): Invalid handle: %d\n", sHandle );
+			Log_WarnF( gResourceChannel, "*ResourceManager::Get( Handle ): Invalid handle: %zd\n", sHandle );
 			return nullptr;
 		}
 
@@ -512,7 +512,7 @@ public:
 		// Check the magic number.
 		if ( pBuf == nullptr || *(size_t*)pBuf != magic )
 		{
-			Log_WarnF( gResourceChannel, "*ResourceManager::GetData( Handle ): Invalid handle: %d\n", sHandle );
+			Log_WarnF( gResourceChannel, "*ResourceManager::GetData( Handle ): Invalid handle: %zd\n", sHandle );
 			return false;
 		}
 
@@ -551,7 +551,7 @@ public:
 		// Check the magic number.
 		if ( pBuf == nullptr || *(size_t*)pBuf != magic )
 		{
-			Log_WarnF( gResourceChannel, "*ResourceManager::GetData( Handle ): Invalid handle: %d\n", sHandle );
+			Log_WarnF( gResourceChannel, "*ResourceManager::GetData( Handle ): Invalid handle: %zd\n", sHandle );
 			return false;
 		}
 

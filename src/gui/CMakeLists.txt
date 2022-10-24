@@ -17,8 +17,6 @@ file(
 	${CH_THIRDPARTY}/io/*.h
 )
 
-include( ${CH_ROOT}/scripts/vulkan.cmake )
-
 link_libraries(
 	Core
 	ImGui
@@ -32,14 +30,3 @@ set_target_properties(
 	GUI PROPERTIES
 	OUTPUT_NAME ch_gui
 )
-
-if ( VULKAN_DEBUG )
-	target_compile_definitions( GUI PRIVATE
-		-DVK_DEBUG=1
-	)
-else()
-	target_compile_definitions( GUI PRIVATE
-		-DVK_DEBUG=0
-	)
-endif()
-
