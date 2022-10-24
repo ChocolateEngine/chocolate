@@ -7,7 +7,7 @@
 #include "missingtexture.h"
 
 
-VkSampler                                          gSampler;
+VkSampler                                          gSamplers[ 2 ];
 
 std::vector< TextureVK* >                          gTextures;
 static std::vector< RenderTarget* >                gRenderTargets;
@@ -151,27 +151,37 @@ void VK_SetImageLayout( VkCommandBuffer c, VkImage sImage, VkImageLayout sOldLay
 
 
 // NOTE: may need to change this for texture filtering later, oh boy
-VkSampler VK_GetSampler()
+VkSampler VK_GetSampler( VkFilter sFilter )
 {
-	if ( gSampler )
-		return gSampler;
+	int index = 0;
 
-	VkFilter vkFilter = VK_FILTER_LINEAR;
+	switch ( sFilter )
+	{
+		default:
+		case VK_FILTER_NEAREST:
+			break;
 
-	VkSamplerCreateInfo samplerInfo{};
-	samplerInfo.sType        = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
-	samplerInfo.magFilter    = vkFilter;
-	samplerInfo.minFilter    = vkFilter;
-	samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-	samplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-	samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+		case VK_FILTER_LINEAR:
+			index = 1;
+			break;
+	}
 
-	const auto& deviceProps  = VK_GetPhysicalDeviceProperties();
+	if ( gSamplers[ index ] )
+		return gSamplers[ index ];
+
+	const auto&         deviceProps = VK_GetPhysicalDeviceProperties();
+
+	VkSamplerCreateInfo samplerInfo{ VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO };
+	samplerInfo.magFilter               = sFilter;
+	samplerInfo.minFilter               = sFilter;
+	samplerInfo.addressModeU            = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+	samplerInfo.addressModeV            = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+	samplerInfo.addressModeW            = VK_SAMPLER_ADDRESS_MODE_REPEAT;
 
 	samplerInfo.anisotropyEnable        = VK_TRUE;
 	samplerInfo.maxAnisotropy           = deviceProps.limits.maxSamplerAnisotropy;
 	samplerInfo.borderColor             = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
-	samplerInfo.unnormalizedCoordinates = VK_FALSE; 
+	samplerInfo.unnormalizedCoordinates = VK_FALSE;
 	samplerInfo.compareEnable           = VK_FALSE;
 	samplerInfo.compareOp               = VK_COMPARE_OP_ALWAYS;
 	samplerInfo.mipmapMode              = VK_SAMPLER_MIPMAP_MODE_LINEAR;
@@ -179,9 +189,9 @@ VkSampler VK_GetSampler()
 	samplerInfo.minLod                  = 0.0f;
 	samplerInfo.maxLod                  = 1000.0f;
 
-	VK_CheckResult( vkCreateSampler( VK_GetDevice(), &samplerInfo, NULL, &gSampler ), "Failed to create sampler!" );
+	VK_CheckResult( vkCreateSampler( VK_GetDevice(), &samplerInfo, NULL, &gSamplers[ index ] ), "Failed to create sampler!" );
 
-	return gSampler;
+	return gSamplers[ index ];
 }
 
 
@@ -193,7 +203,7 @@ TextureVK* VK_NewTexture()
 }
 
 
-TextureVK* VK_LoadTexture( const std::string& srPath )
+TextureVK* VK_LoadTexture( const std::string& srPath, const TextureCreateData_t& srCreateData )
 {
 	TextureVK* tex = KTX_LoadTexture( srPath.c_str() );
 
@@ -202,6 +212,8 @@ TextureVK* VK_LoadTexture( const std::string& srPath )
 		Log_ErrorF( gLC_Render, "Failed to load texture: \"%s\"\n", srPath.c_str() );
 		return nullptr;
 	}
+
+	tex->aFilter = VK_ToVkFilter( srCreateData.aFilter );
 
 #ifdef _DEBUG
 	// add a debug label onto it
@@ -224,14 +236,15 @@ TextureVK* VK_LoadTexture( const std::string& srPath )
 }
 
 
-TextureVK* VK_CreateTexture( const TextureCreateInfo_t& srCreate )
+TextureVK* VK_CreateTexture( const TextureCreateInfo_t& srCreate, const TextureCreateData_t& srCreateData )
 {
 	TextureVK* tex = gTextures.emplace_back( new TextureVK );
 	tex->aIndex    = gTextures.size() - 1;
 	tex->aSize     = srCreate.aSize;
 	tex->aFormat   = VK_ToVkFormat( srCreate.aFormat );
-	tex->aUsage    = VK_ToVkImageUsage( srCreate.aUsage );
+	tex->aUsage    = VK_ToVkImageUsage( srCreateData.aUsage );
 	tex->apName    = srCreate.apName;
+	tex->aFilter   = VK_ToVkFilter( srCreateData.aFilter );
 
 	VkImageCreateInfo createInfo{ VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO };
 	createInfo.imageType     = VK_IMAGE_TYPE_2D;
@@ -244,7 +257,7 @@ TextureVK* VK_CreateTexture( const TextureCreateInfo_t& srCreate )
 	createInfo.tiling        = VK_IMAGE_TILING_OPTIMAL;
 	createInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 	createInfo.usage         = tex->aUsage;
-	createInfo.samples       = srCreate.aUseMSAA ? VK_GetMSAASamples() : VK_SAMPLE_COUNT_1_BIT;
+	createInfo.samples       = srCreateData.aUseMSAA ? VK_GetMSAASamples() : VK_SAMPLE_COUNT_1_BIT;
 	createInfo.sharingMode   = VK_SHARING_MODE_EXCLUSIVE;
 
 	if ( srCreate.apData )
@@ -450,8 +463,11 @@ void VK_DestroyAllTextures()
 		delete tex;
 	}
 
-	if ( gSampler )
-		vkDestroySampler( VK_GetDevice(), gSampler, nullptr );
+	if ( gSamplers[ 0 ] )
+		vkDestroySampler( VK_GetDevice(), gSamplers[ 0 ], nullptr );
+
+	if ( gSamplers[ 1 ] )
+		vkDestroySampler( VK_GetDevice(), gSamplers[ 1 ], nullptr );
 
 	gTextures.clear();
 	// gImageMap.clear();
@@ -1030,13 +1046,16 @@ void VK_CreateMissingTexture()
 	create.aSize.x   = gMissingTextureWidth;
 	create.aSize.y   = gMissingTextureHeight;
 	create.aFormat   = GraphicsFmt::RGBA8888_SRGB;
-	create.aUseMSAA  = false;
 	create.aViewType = EImageView_2D;
-	create.aUsage    = VK_IMAGE_USAGE_SAMPLED_BIT;
 	create.apData    = ( void* )gpMissingTexture;
 	create.aDataSize = gMissingTextureWidth * gMissingTextureHeight * 4;
 
-	TextureVK* tex = VK_CreateTexture( create );
+	TextureCreateData_t data{};
+	data.aUseMSAA  = false;
+	data.aUsage    = EImageUsage_Sampled;
+	data.aFilter   = EImageFilter_Nearest;
+
+	TextureVK* tex = VK_CreateTexture( create, data );
 
 	if ( !tex )
 	{

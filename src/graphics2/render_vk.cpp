@@ -44,7 +44,7 @@ static u32                                       gMaxViewports = 0;
 static Render_OnReset_t                          gpOnResetFunc = nullptr;
 
 
-CONVAR_CMD( r_msaa, 0 )
+CONVAR_CMD( r_msaa, 1 )
 {
 	VK_Reset( ERenderResetFlags_MSAA );
 }
@@ -433,6 +433,20 @@ VkAttachmentLoadOp VK_ToVkLoadOp( EAttachmentLoadOp loadOp )
 }
 
 
+VkFilter VK_ToVkFilter( EImageFilter filter )
+{
+	switch ( filter )
+	{
+		default:
+		case EImageFilter_Linear:
+			return VK_FILTER_LINEAR;
+
+		case EImageFilter_Nearest:
+			return VK_FILTER_NEAREST;
+	}
+}
+
+
 // Copies memory to the GPU.
 void VK_memcpy( VkDeviceMemory sBufferMemory, VkDeviceSize sSize, const void* spData )
 {
@@ -761,7 +775,7 @@ ImTextureID Render_AddTextureToImGui( Handle texture )
 
 	VK_SetImageLayout( tex->aImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 1 );
 
-	auto desc = ImGui_ImplVulkan_AddTexture( VK_GetSampler(), tex->aImageView, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
+	auto desc = ImGui_ImplVulkan_AddTexture( VK_GetSampler( tex->aFilter ), tex->aImageView, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
 
 	if ( desc )
 	{
@@ -1000,7 +1014,7 @@ public:
 	// Materials and Textures
 	// --------------------------------------------------------------------------------------------
 
-	Handle LoadTexture( const std::string& srTexturePath ) override
+	Handle LoadTexture( const std::string& srTexturePath, const TextureCreateData_t& srCreateData ) override
 	{
 		auto it = gTexturePaths.find( srTexturePath );
 		if ( it != gTexturePaths.end() )
@@ -1024,16 +1038,18 @@ public:
 			return InvalidHandle;
 		}
 
-		TextureVK* tex = VK_LoadTexture( fullPath );
+		TextureVK* tex = VK_LoadTexture( fullPath, srCreateData );
 		if ( tex == nullptr )
 			return InvalidHandle;
 
-		return gTextureHandles.Add( tex );
+		Handle handle = gTextureHandles.Add( tex );
+		gTexturePaths[ srTexturePath ] = handle;
+		return handle;
 	}
 
-	Handle CreateTexture( const TextureCreateInfo_t& srTextureCreateInfo ) override
+	Handle CreateTexture( const TextureCreateInfo_t& srTextureCreateInfo, const TextureCreateData_t& srCreateData ) override
 	{
-		TextureVK* tex = VK_CreateTexture( srTextureCreateInfo );
+		TextureVK* tex = VK_CreateTexture( srTextureCreateInfo, srCreateData );
 		if ( tex == nullptr )
 			return InvalidHandle;
 

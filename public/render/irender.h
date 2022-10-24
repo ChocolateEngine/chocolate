@@ -159,6 +159,14 @@ enum : EImageUsage
 };
 
 
+enum EImageFilter : char
+{
+	EImageFilter_Nearest,
+	EImageFilter_Linear,
+	// EImageFilter_Cubic,
+};
+
+
 using EDynamicState = unsigned short;
 enum : EDynamicState
 {
@@ -313,15 +321,23 @@ enum EDescriptorType : char
 
 struct TextureCreateInfo_t
 {
-	const char*   apName    = nullptr;  // Only Used for debugging
-	void*         apData    = nullptr;
-	u32           aDataSize = 0;
-	glm::uvec2    aSize;
-	GraphicsFmt   aFormat;
-	bool          aUseMSAA;
-	EImageView    aViewType;
-	EImageUsage   aUsage;
+	const char* apName    = nullptr;  // Only Used for debugging
+	void*       apData    = nullptr;
+	u32         aDataSize = 0;
+	glm::uvec2  aSize;
+	GraphicsFmt aFormat;
+	EImageView  aViewType;
 };
+
+
+// used for both loading textures and creating textures
+struct TextureCreateData_t
+{
+	bool         aUseMSAA = false;
+	EImageUsage  aUsage   = EImageUsage_None;
+	EImageFilter aFilter  = EImageFilter_Linear;
+};
+
 
 
 struct Viewport_t
@@ -641,8 +657,8 @@ class IRender : public BaseSystem
 	// Textures
 	// --------------------------------------------------------------------------------------------
 
-	virtual Handle      LoadTexture( const std::string& srTexturePath )                                          = 0;
-	virtual Handle      CreateTexture( const TextureCreateInfo_t& srTextureCreateInfo )                          = 0;
+	virtual Handle      LoadTexture( const std::string& srTexturePath, const TextureCreateData_t& srCreateData ) = 0;
+	virtual Handle      CreateTexture( const TextureCreateInfo_t& srTextureCreateInfo, const TextureCreateData_t& srCreateData ) = 0;
 	virtual void        FreeTexture( Handle shTexture )                                                          = 0;
 	virtual int         GetTextureIndex( Handle shTexture )                                                      = 0;
 

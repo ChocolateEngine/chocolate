@@ -62,6 +62,7 @@ struct TextureVK
 	VkImageViewType   aViewType  = VK_IMAGE_VIEW_TYPE_2D;
 	VkImageUsageFlags aUsage     = 0;
 	VkFormat          aFormat    = VK_FORMAT_UNDEFINED;
+	VkFilter          aFilter    = VK_FILTER_NEAREST;
 
 	// Texture Information
 	const char*       apName     = nullptr;
@@ -137,6 +138,7 @@ VkShaderStageFlags                    VK_ToVkShaderStage( ShaderStage stage );
 VkPipelineBindPoint                   VK_ToPipelineBindPoint( EPipelineBindPoint bindPoint );
 VkImageUsageFlags                     VK_ToVkImageUsage( EImageUsage usage );
 VkAttachmentLoadOp                    VK_ToVkLoadOp( EAttachmentLoadOp loadOp );
+VkFilter                              VK_ToVkFilter( EImageFilter filter );
 
 void                                  VK_memcpy( VkDeviceMemory sBufferMemory, VkDeviceSize sSize, const void* spData );
 
@@ -315,11 +317,11 @@ void                                  VK_DestroyBuffer( VkBuffer& srBuffer, VkDe
 // --------------------------------------------------------------------------------------
 // Textures and Render Targets
 
-VkSampler                             VK_GetSampler();
+VkSampler                             VK_GetSampler( VkFilter sFilter );
 
 TextureVK*                            VK_NewTexture();
-TextureVK*                            VK_LoadTexture( const std::string& srPath );
-TextureVK*                            VK_CreateTexture( const TextureCreateInfo_t& srTextureCreateInfo );
+TextureVK*                            VK_LoadTexture( const std::string& srPath, const TextureCreateData_t& srCreateData );
+TextureVK*                            VK_CreateTexture( const TextureCreateInfo_t& srTextureCreateInfo, const TextureCreateData_t& srCreateData );
 void                                  VK_DestroyTexture( TextureVK* spTexture );
 void                                  VK_DestroyAllTextures();
 TextureVK*                            VK_GetTexture( Handle texture );
