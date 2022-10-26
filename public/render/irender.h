@@ -40,6 +40,8 @@ enum class GraphicsFmt
 	RGBA8888_SINT,
 	RGBA8888_UINT,
 
+	RGBA8888_UNORM,
+
 	// -------------------------
 	
 	BGRA8888_SRGB,
@@ -447,6 +449,12 @@ struct PushConstantRange_t
 };
 
 
+struct ColorBlendAttachment_t
+{
+	bool aBlendEnable = true;
+};
+
+
 struct PipelineLayoutCreate_t
 {
 	std::vector< Handle >              aLayouts;
@@ -461,6 +469,7 @@ struct GraphicsPipelineCreate_t
 	std::vector< ShaderModule_t >         aShaderModules;
 	std::vector< VertexInputBinding_t >   aVertexBindings;
 	std::vector< VertexInputAttribute_t > aVertexAttributes;
+	std::vector< ColorBlendAttachment_t > aColorBlendAttachments;
 
 	EPrimTopology                         aPrimTopology;
 	EDynamicState                         aDynamicState;
@@ -509,8 +518,17 @@ struct RenderPassSubpass_t
 // TODO: add subpass dependencies?
 struct RenderPassCreate_t
 {
-	std::vector< RenderPassAttachment_t > aAttachments;
+	std::vector< RenderPassAttachment_t > aAttachments;  // TODO: use FramebufferPass_t instead (separate argument to avoid copying to this struct)
 	std::vector< RenderPassSubpass_t >    aSubpasses;
+};
+
+
+struct RenderPassClear_t
+{
+	bool      aIsDepth = false;
+	glm::vec4 aColor{};
+	float     aDepth   = 1.f;
+	u32       aStencil = 0;
 };
 
 
@@ -519,9 +537,7 @@ struct RenderPassBegin_t
 	Handle    aRenderPass  = InvalidHandle;
 	Handle    aFrameBuffer = InvalidHandle;
 
-	// NOTE: we should know internally whether to clear or not based on how the render pass was created
-	bool      aClear;
-	glm::vec4 aClearColor;
+	std::vector< RenderPassClear_t > aClear;
 };
 
 

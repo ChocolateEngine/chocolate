@@ -11,7 +11,7 @@ struct KTXTexture_t
 };
 
 
-constexpr ktx_transcode_fmt_e gKtxFallbackFmt = KTX_TTF_BC3_RGBA;
+constexpr ktx_transcode_fmt_e gKtxFallbackFmt = KTX_TTF_BC7_RGBA;
 
 
 static bool LoadKTX2( ktxTexture2* spKTexture2, ktxVulkanDeviceInfo& vdi )
@@ -27,6 +27,8 @@ static bool LoadKTX2( ktxTexture2* spKTexture2, ktxVulkanDeviceInfo& vdi )
 			Log_ErrorF( gLC_Render, "Encoding of ktxTexture2 to Basis failed: %s", ktxErrorString( result ) );
 			return false;
 		}
+
+		return true;
 	}
 
 	result = ktxTexture2_TranscodeBasis( spKTexture2, gKtxFallbackFmt, 0 );

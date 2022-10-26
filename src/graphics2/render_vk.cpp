@@ -218,6 +218,9 @@ VkFormat VK_ToVkFormat( GraphicsFmt colorFmt )
 		case GraphicsFmt::RGBA8888_SRGB:
 			return VK_FORMAT_R8G8B8A8_SRGB;
 
+		case GraphicsFmt::RGBA8888_UNORM:
+			return VK_FORMAT_R8G8B8A8_UNORM;
+
 		// ------------------------------------------
 
 		case GraphicsFmt::BGRA8888_SRGB:
@@ -248,6 +251,9 @@ VkFormat VK_ToVkFormat( GraphicsFmt colorFmt )
 
 		case GraphicsFmt::RG1616_UINT:
 			return VK_FORMAT_R16G16_UINT;
+
+		case GraphicsFmt::RGBA16161616_SFLOAT:
+			return VK_FORMAT_R16G16B16A16_SFLOAT;
 
 		// ------------------------------------------
 
@@ -1399,14 +1405,34 @@ public:
 		renderPassBeginInfo.renderArea.offset = { 0, 0 };
 		renderPassBeginInfo.renderArea.extent = VK_GetSwapExtent();
 
-		if ( srBegin.aClear )
+		std::vector< VkClearValue > clearValues( srBegin.aClear.size() );
+		if ( srBegin.aClear.size() )
 		{
-			VkClearValue clearValues[ 2 ];
-			clearValues[ 0 ].color              = { srBegin.aClearColor.x, srBegin.aClearColor.y, srBegin.aClearColor.z, srBegin.aClearColor.w };
-			clearValues[ 1 ].depthStencil       = { 1.0f, 0 };
+			for ( size_t i = 0; i < srBegin.aClear.size(); i++ )
+			{
+				if ( srBegin.aClear[ i ].aIsDepth )
+				{
+					clearValues[ i ].depthStencil.depth   = srBegin.aClear[ i ].aDepth;
+					clearValues[ i ].depthStencil.stencil = srBegin.aClear[ i ].aStencil;
+				}
+				else
+				{
+					clearValues[ i ].color = {
+						srBegin.aClear[ i ].aColor.x,
+						srBegin.aClear[ i ].aColor.y,
+						srBegin.aClear[ i ].aColor.z,
+						srBegin.aClear[ i ].aColor.w
+					};
+				}
+				
+				// clearValues[ i ].color.float32[ 0 ] = srBegin.aClear[ i ].aColor.x;
+				// clearValues[ i ].color.float32[ 1 ] = srBegin.aClear[ i ].aColor.y;
+				// clearValues[ i ].color.float32[ 2 ] = srBegin.aClear[ i ].aColor.z;
+				// clearValues[ i ].color.float32[ 3 ] = srBegin.aClear[ i ].aColor.w;
+			}
 
-			renderPassBeginInfo.clearValueCount = ARR_SIZE( clearValues );
-			renderPassBeginInfo.pClearValues    = clearValues;
+			renderPassBeginInfo.clearValueCount = static_cast< u32 >( clearValues.size() );
+			renderPassBeginInfo.pClearValues    = clearValues.data();
 		}
 		else
 		{
