@@ -447,6 +447,22 @@ Handle VK_CreateVariableDescLayout( const CreateVariableDescLayout_t& srCreate )
 
 	VK_CheckResult( vkCreateDescriptorSetLayout( VK_GetDevice(), &layoutInfo, NULL, &layout ), "Failed to create image descriptor set layout!" );
 
+#ifdef _DEBUG
+	// add a debug label onto it
+	if ( pfnSetDebugUtilsObjectName && srCreate.apName )
+	{
+		const VkDebugUtilsObjectNameInfoEXT nameInfo = {
+			VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,  // sType
+			NULL,                                                // pNext
+			VK_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT,                // objectType
+			(uint64_t)layout,                                    // objectHandle
+			srCreate.apName,                                     // pObjectName
+		};
+
+		pfnSetDebugUtilsObjectName( VK_GetDevice(), &nameInfo );
+	}
+#endif
+
 	return gDescLayouts.Add( layout );
 }
 
@@ -482,7 +498,25 @@ bool VK_AllocateVariableDescLayout( const AllocVariableDescLayout_t& srCreate, H
 	VK_CheckResult( vkAllocateDescriptorSets( VK_GetDevice(), &a, descSets ), "Failed to allocate uniform buffer descriptor sets!" );
 
 	for ( u32 i = 0; i < srCreate.aSetCount; i++ )
+	{
 		handles[ i ] = gDescSets.Add( descSets[ i ] );
+
+#ifdef _DEBUG
+		// add a debug label onto it
+		if ( pfnSetDebugUtilsObjectName && srCreate.apName )
+		{
+			const VkDebugUtilsObjectNameInfoEXT nameInfo = {
+				VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,  // sType
+				NULL,                                                // pNext
+				VK_OBJECT_TYPE_DESCRIPTOR_SET,                       // objectType
+				(uint64_t)descSets[ i ],                             // objectHandle
+				srCreate.apName,                                     // pObjectName
+			};
+
+			pfnSetDebugUtilsObjectName( VK_GetDevice(), &nameInfo );
+		}
+#endif
+	}
 
 	delete[] descSets;
 	delete[] counts;
@@ -498,6 +532,8 @@ void VK_FreeVariableDescLayout( Handle sLayout )
 
 void VK_UpdateVariableDescSet( const UpdateVariableDescSet_t& srUpdate )
 {
+	VK_WaitForGraphicsQueue();
+
 	for ( uint32_t i = 0; i < srUpdate.aDescSets.size(); ++i )
 	{
 		if ( srUpdate.aBuffers.empty() )

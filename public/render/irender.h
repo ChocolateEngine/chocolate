@@ -360,32 +360,6 @@ struct Rect2D_t
 };
 
 
-struct ViewportCamera_t
-{
-	void ComputeProjection( float sWidth, float sHeight )
-	{
-		const float hAspect = (float)sWidth / (float)sHeight;
-		const float vAspect = (float)sHeight / (float)sWidth;
-
-		float V = 2.0f * atanf( tanf( glm::radians( aFOV ) / 2.0f ) * vAspect );
-
-		aProjMat = glm::perspective( V, hAspect, aNearZ, aFarZ );
-
-		aProjViewMat = aProjMat * aViewMat;
-	}
-
-	float aNearZ;
-	float aFarZ;
-	float aFOV;
-
-	glm::mat4 aViewMat;
-	glm::mat4 aProjMat;
-
-	// projection matrix * view matrix 
-	glm::mat4 aProjViewMat;
-};
-
-
 struct CreateRenderTarget_t
 {
 	glm::uvec2  aSize;
@@ -543,6 +517,7 @@ struct RenderPassBegin_t
 
 struct CreateVariableDescLayout_t
 {
+	const char*     apName    = nullptr;
 	EDescriptorType aType     = EDescriptorType_Max;
 	ShaderStage     aStages   = ShaderStage_None;
 	u32             aBinding  = 0;
@@ -552,9 +527,10 @@ struct CreateVariableDescLayout_t
 
 struct AllocVariableDescLayout_t
 {
-	Handle aLayout   = InvalidHandle;
-	u32    aCount    = 0;
-	u32    aSetCount = 0;
+	const char* apName    = nullptr;
+	Handle      aLayout   = InvalidHandle;
+	u32         aCount    = 0;
+	u32         aSetCount = 0;
 };
 
 

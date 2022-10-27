@@ -402,7 +402,7 @@ TextureVK* VK_CreateTexture( const TextureCreateInfo_t& srCreate, const TextureC
 	// add a debug label onto it
 	if ( pfnSetDebugUtilsObjectName )
 	{
-		const VkDebugUtilsObjectNameInfoEXT imageNameInfo = {
+		const VkDebugUtilsObjectNameInfoEXT nameInfo = {
 			VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,      // sType
 			NULL,                                                    // pNext
 			VK_OBJECT_TYPE_IMAGE,                                    // objectType
@@ -410,7 +410,7 @@ TextureVK* VK_CreateTexture( const TextureCreateInfo_t& srCreate, const TextureC
 			tex->apName ? tex->apName : "MANUALLY CREATED TEXTURE",  // pObjectName
 		};
 
-		pfnSetDebugUtilsObjectName( VK_GetDevice(), &imageNameInfo );
+		pfnSetDebugUtilsObjectName( VK_GetDevice(), &nameInfo );
 	}
 #endif
 

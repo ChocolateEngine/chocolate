@@ -18,7 +18,8 @@ bool                  g_vk_verbose            = false;
 #else
 constexpr bool        gEnableValidationLayers = true;
 constexpr char const* gpValidationLayers[]    = { "VK_LAYER_KHRONOS_validation" };
-CONVAR( g_vk_verbose, 0 );
+CONVAR( vk_verbose, 0 );
+CONVAR( vk_formatted, 1 );
 #endif
 
 
@@ -87,7 +88,7 @@ int gVkStripPerf = 32;
 
 // "Validation Error: "
 int gVkStripError = 18;
-
+// auto a = "Validation Error: [ VUID-vkFreeDescriptorSets-pDescriptorSets-00309 ] Object 0: handle = 0x7cd292000000004f, name = Light Point Set, type = VK_OBJECT_TYPE_DESCRIPTOR_SET; | MessageID = 0xbfce1114 | vkUpdateDescriptorSets() pDescriptorWrites[0] failed write update validation for VkDescriptorSet 0x7cd292000000004f[Light Point Set] with error: Cannot call vkUpdateDescriptorSets() to perform write update on VkDescriptorSet 0x7cd292000000004f[Light Point Set] allocated with VkDescriptorSetLayout 0x612f93000000004e[Light Point Layout] that is in use by a command buffer"
 
 VKAPI_ATTR VkBool32 VKAPI_CALL VK_DebugCallback( VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, VkDebugUtilsMessageTypeFlagsEXT messageType,
                                               const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData )
@@ -112,9 +113,59 @@ VKAPI_ATTR VkBool32 VKAPI_CALL VK_DebugCallback( VkDebugUtilsMessageSeverityFlag
 	else
 		vstring( formatted, "%s\n\n", pCallbackData->pMessage );
 
+	if ( vk_formatted )
+	{
+		std::string copy = formatted;
+		formatted.clear();
+
+		bool foundBar = false;
+
+		for ( int i = 0; i < copy.size(); i++ )
+		{
+			if ( copy[ i ] == '|' )
+			{
+				foundBar = true;
+
+				formatted += "\n  ";
+				i++;
+			}
+			else if ( copy[ i ] == ',' && !foundBar )
+			{
+				formatted += "\n  ";
+				i++;
+			}
+			else if ( copy[ i ] == ']' && !foundBar )
+			{
+				formatted += "]\n  ";
+				i++;
+			}
+			else
+			{
+				// if ( "vk" == copy.substr( i, i + 2 ) )
+				// {
+				// 	formatted += "\nvk";
+				// 	i++;
+				// 	continue;
+				// }
+
+				// if ( i + 25 < copy.size() && strncmp( "The Vulkan spec states: ", copy.substr( i, i + 25 ), 25 ) == 0 )
+				// if ( i + 25 < copy.size() && "The Vulkan spec states: " == copy.substr( i, i + 25 ) )
+				auto test = copy.substr( i, 24 );
+				if ( "The Vulkan spec states: " == test )
+				{
+					formatted += "\n\n  ";
+					formatted += copy.substr( i, copy.size() );
+					break;
+				}
+
+				formatted += copy[ i ];
+			}
+		}
+	}
+
 	if ( messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT )
 	{
-		if ( g_vk_verbose )
+		if ( vk_verbose )
 			Log_Dev( gVulkanChannel, 1, formatted.c_str() );
 	}
 
