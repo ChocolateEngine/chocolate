@@ -14,9 +14,6 @@ file(
 	${CH_PUBLIC}/core/*.h
 )
 
-# very cool
-include( ${CH_ROOT}/scripts/vulkan.cmake )
-
 link_libraries( Core ImGui )
 
 add_library( Input SHARED ${SRC_FILES} ${PUBLIC_FILES} )
