@@ -969,7 +969,7 @@ public:
 
 		if ( !bufVK )
 		{
-			Log_Error( gLC_Render, "MemWriteBuffer: Failed to find Buffer\n" );
+			Log_ErrorF( gLC_Render, "MemWriteBuffer: Failed to find Buffer (Handle: %zd)\n", buffer );
 			return;
 		}
 
