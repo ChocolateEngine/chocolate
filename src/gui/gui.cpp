@@ -73,6 +73,7 @@ void GuiSystem::StyleImGui()
 	// gBuiltInFont = BuildFont( "fonts/CascadiaMono.ttf" );
 	// gBuiltInFont = BuildFont( "fonts/MonoxRegular.ttf", 15.f );
 
+	return;
 
 	if ( Args_Find( "-no-vgui-style" ) )
 		return;
