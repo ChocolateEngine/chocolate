@@ -768,3 +768,7 @@ class IRender : public BaseSystem
 	                                    u32    sFirstInstance ) = 0;
 };
 
+
+#define IRENDER_NAME "Render"
+#define IRENDER_HASH typeid( IRender ).hash_code()
+

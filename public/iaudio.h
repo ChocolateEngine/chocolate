@@ -115,3 +115,6 @@ public:
 	// virtual Handle                  GetComponent( Handle stream, AudioComponentType type ) = 0;
 };
 
+
+#define IADUIO_NAME "Aduio"
+#define IADUIO_HASH typeid( BaseAudioSystem ).hash_code()

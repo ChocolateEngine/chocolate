@@ -37,9 +37,16 @@ CONVAR( snd_audio_stream_available, 2 );
 //IPLAudioFormat g_formatMono = {};
 //IPLAudioFormat g_formatStereo = {};
 
-extern "C" {
-	DLL_EXPORT void* cframework_get() {
-		return audio;
+static ModuleInterface_t gInterfaces[] = {
+	{ audio, IADUIO_NAME, IADUIO_HASH }
+};
+
+extern "C"
+{
+	DLL_EXPORT ModuleInterface_t* cframework_GetInterfaces( size_t& srCount )
+	{
+		srCount = 1;
+		return gInterfaces;
 	}
 }
 
@@ -75,7 +82,7 @@ std::mutex g_audioMutex;
 
 #endif
 
-void AudioSystem::Init(  )
+bool AudioSystem::Init()
 {
     /*
 	 *    Preallocate 128 MB of memory for audio processing.
@@ -107,8 +114,9 @@ void AudioSystem::Init(  )
 	aOutputDeviceID = SDL_OpenAudioDevice( NULL, 0, &wantedSpec, &aAudioSpec, SDL_AUDIO_ALLOW_ANY_CHANGE );
 	if ( aOutputDeviceID == 0 )
 	{
+		// NOTE: technically this isn't a fatal error, and should be moved elsewhere so you can pick the output audio device while running
 		Log_MsgF( gAduioChannel, "SDL_OpenAudioDevice failed: %s\n", SDL_GetError() );
-		return;
+		return false;
 	}
 
 	InitSteamAudio();
@@ -189,6 +197,8 @@ void AudioSystem::Init(  )
 	);
 	
 #endif
+
+	return true;
 }
 
 

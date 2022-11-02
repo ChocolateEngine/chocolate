@@ -21,7 +21,6 @@ include( scripts/core.cmake )
 # Chocolate Shared Objects
 add_subdirectory( ${CH_SRC}/core )
 add_subdirectory( ${CH_SRC}/imgui )
-add_subdirectory( ${CH_SRC}/engine )
 add_subdirectory( ${CH_SRC}/audio )
 add_subdirectory( ${CH_SRC}/graphics )
 add_subdirectory( ${CH_SRC}/graphics2 )

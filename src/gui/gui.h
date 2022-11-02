@@ -45,7 +45,7 @@ public:
 	void 		StartFrame() override;
 
 	void            InitConsole();
-	void            Init();
+	bool            Init() override;
 
 	/* Constructor.  */
 	explicit	GuiSystem(  );

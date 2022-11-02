@@ -44,3 +44,7 @@ public:
 	virtual Inputs *GetEvents() = 0;
 };
 
+
+#define IINPUTSYSTEM_NAME "InputSystem"
+#define IINPUTSYSTEM_HASH typeid( BaseInputSystem ).hash_code()
+

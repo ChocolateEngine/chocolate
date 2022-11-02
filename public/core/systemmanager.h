@@ -14,12 +14,6 @@ an interface for getting systems from the engine
 
 #include "core/platform.h"
 
-#ifdef _MSC_VER
-	// Disable this useless warning of vars in a class needing a DLL Interface when exported
-	#pragma warning(push)
-	#pragma warning(disable:4251)
-#endif
-
 //#define GET_SYSTEM( sType ) systems->Get< sType >( typeid( sType ) )
 #define GET_SYSTEM( sType ) systems->Get< sType >()
 
@@ -34,44 +28,34 @@ an interface for getting systems from the engine
 class BaseSystem;
 
 
-class CORE_API SystemManager
+struct ModuleInterface_t
 {
-	typedef std::vector< BaseSystem* > 	SystemList;
-public:
-
-	void Add( BaseSystem* sys )
-	{
-		aSystemList.push_back( sys );
-	}
-
-	template< typename T >
-	T* Get()
-	{
-		for ( const auto& sys: aSystemList )
-		{
-			if (T *result = dynamic_cast<T *>(sys))
-			{
-				return result;
-			}
-		}
-
-		return nullptr;
-	}
-	
-	const SystemList& GetSystemList()
-	{
-		return aSystemList;
-	}
-
-private:
-	SystemList aSystemList;
+	void*       apInterface;
+	const char* apName;
+	size_t      aHash;
 };
 
 
-CORE_API extern SystemManager* systems;
+struct AppModules_t
+{
+	void**      apSystem;
+	const char* apModuleName;
+	const char* apInterfaceName;
+	size_t      apInterfaceHash;
+};
 
 
-#ifdef _MSC_VER
-	#pragma warning(pop)
-#endif
+typedef ModuleInterface_t* ( *cframework_GetInterfacesF )( size_t& srCount );
+
+
+extern "C"
+{
+	CORE_API bool  Mod_InitSystems();
+	CORE_API void  Mod_Shutdown();
+
+	CORE_API bool  Mod_Load( const char* spPath );
+	CORE_API bool  Mod_AddSystems( AppModules_t* spModules, size_t sCount );
+
+	CORE_API void* Mod_GetInterface( const char* spName, size_t sHash );
+}
 

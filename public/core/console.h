@@ -370,9 +370,9 @@ private:
 //	void CC_#name( std::vector< std::string > args )
 
 #define CONCMD( name ) \
-	void       name( const std::vector< std::string >& args ); \
-	ConCommand name##_cmd( #name, name );              \
-	void       name( const std::vector< std::string >& args )
+	void       name##_func( const std::vector< std::string >& args ); \
+	ConCommand name##_cmd( #name, name##_func );              \
+	void       name##_func( const std::vector< std::string >& args )
 
 #define CONCMD_VA( name, ... ) \
 	void name( const std::vector< std::string >& args ); \

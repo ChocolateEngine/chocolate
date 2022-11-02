@@ -330,7 +330,7 @@ const u32 gMaxContactConstraints = 1024;
 class Physics : public Ch_IPhysics
 {
 public:
-	void Init() override
+	bool Init() override
 	{
 		// Install callbacks
 		JPH::Trace = TraceCallback;
@@ -351,6 +351,8 @@ public:
 		// you would implement the JobSystem interface yourself and let Jolt Physics run on top
 		// of your own job scheduler. JobSystemThreadPool is an example implementation.
 		apJobSystem = new JPH::JobSystemThreadPool( JPH::cMaxPhysicsJobs, JPH::cMaxPhysicsBarriers, JPH::thread::hardware_concurrency() - 1 );
+
+		return true;
 	}
 
 	~Physics()
@@ -404,9 +406,16 @@ public:
 Physics phys;
 
 
-extern "C" {
-	DLL_EXPORT void* cframework_get() {
-		return &phys;
+static ModuleInterface_t gInterfaces[] = {
+	{ &phys, IPHYSICS_NAME, IPHYSICS_HASH }
+};
+
+extern "C"
+{
+	DLL_EXPORT ModuleInterface_t* cframework_GetInterfaces( size_t& srCount )
+	{
+		srCount = 1;
+		return gInterfaces;
 	}
 }
 

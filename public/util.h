@@ -52,6 +52,20 @@
 	#define CH_MALLOC_SIZE( block )     ( malloc_usable_size( block ) )
 #endif
 
+// #define CH_STACK_NEW( type, count ) ( type* ) CH_STACK_ALLOC( sizeof( type ) * count )
+#define CH_STACK_NEW( type, count ) static_cast< type* >( CH_STACK_ALLOC( sizeof( type ) * count ) )
+
+template< typename To, typename From >
+inline To* assert_cast( From* in )
+{
+#ifdef _DEBUG
+	To* to = dynamic_cast< To >( in );
+	Assert( to != nullptr );
+	return to;
+#else
+	return static_cast< To >( in );
+#endif
+}
 
 // ==============================================================================
 // Short Types

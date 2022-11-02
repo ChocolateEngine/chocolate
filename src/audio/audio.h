@@ -214,7 +214,7 @@ public:
 	bool                            InitSteamAudio();
 	int                             ApplySpatialEffects( AudioStream* stream, float* data, size_t frameSize );
 
-	virtual void                 	Init(  ) override;
+	virtual bool                 	Init() override;
 	virtual void                 	Update( float frameTime ) override;
 
 	// --------------------------------------------------

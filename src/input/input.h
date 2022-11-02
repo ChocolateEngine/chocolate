@@ -34,23 +34,23 @@ protected:
 	std::vector< SDL_Event > aEvents;
 
 	/* Parse the key aliases that can be bound to.  */
-	void 		MakeAliases(  );
+	void 		MakeAliases();
 	/* Parses keybinds located in the config folder.  */
-	void 		ParseBindings(  );
+	void 		ParseBindings();
 	/* Binds the console command to the key.  */
 	void 		Bind( const std::string& srKey, const std::string& srCmd );
 	/* Initializes all console commands the system can respond to.  */
-	void 		InitConsoleCommands(  );
+	void 		InitConsoleCommands();
 	/*   */
-	void 		Init(  );
+	bool 		Init();
 	/*   */
 	void 		Update( float frameTime );
 	/* Update all key states on this frame  */
-	void 		UpdateKeyStates(  );
+	void 		UpdateKeyStates();
 	/* Update all key states on this frame  */
 	void 		UpdateKeyState( SDL_Scancode key );
 
-	void        ResetInputs(  );
+	void        ResetInputs();
 
 	glm::ivec2  aMouseDelta = {0, 0};
 	glm::ivec2  aMousePos = {0, 0};
@@ -60,11 +60,11 @@ public:
 	/* Parses SDL inputs and if there is a valid input, execute the console command.  */
 	void 		ParseInput(  );
 
-	const glm::ivec2& GetMouseDelta(  );
-	const glm::ivec2& GetMousePos(  );
+	const glm::ivec2& GetMouseDelta();
+	const glm::ivec2& GetMousePos();
 
 	/* Is the engine window in focus?.  */
-	bool        WindowHasFocus(  );
+	bool        WindowHasFocus();
 
 	/* Add a Key to the key update list.  */
 	void        RegisterKey( SDL_Scancode key );
@@ -82,6 +82,6 @@ public:
 	std::vector< SDL_Event > *GetEvents() { return &aEvents; }
 
 	/* Constructor.  */
-	explicit        InputSystem(  );
+	explicit        InputSystem();
 };
 

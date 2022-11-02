@@ -3,16 +3,20 @@
 
 #include "imgui/imgui_impl_sdl.h"
 
-GuiSystem* gui = nullptr;
+GuiSystem* gui = new GuiSystem;
 
 ImFont* gBuiltInFont = nullptr;
 
-extern "C" 
+static ModuleInterface_t gInterfaces[] = {
+	{ gui, IGUI_NAME, IGUI_HASH }
+};
+
+extern "C"
 {
-	DLL_EXPORT void *cframework_get()
+	DLL_EXPORT ModuleInterface_t* cframework_GetInterfaces( size_t& srCount )
 	{
-		gui = new GuiSystem;
-		return gui;
+		srCount = 1;
+		return gInterfaces;
 	}
 }
 
@@ -218,15 +222,16 @@ void GuiSystem::StartFrame()
 	ImGui::NewFrame();
 }
 
-void GuiSystem::Init()
+bool GuiSystem::Init()
 {
 	StyleImGui();
 	InitConsole();
+
+	return true;
 }
 
 GuiSystem::GuiSystem(  ) : BaseGuiSystem(  )
 {
-	systems->Add( this );
 	gui = this;
 }
 

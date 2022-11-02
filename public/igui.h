@@ -1,7 +1,5 @@
 #pragma once
 
-#include <SDL2/SDL.h>
-
 #include "system.h"
 
 struct ImFont;
@@ -16,10 +14,10 @@ public:
 	virtual ImFont* 	BuildFont( const char* spPath, float sSizePixels = 15.f, const ImFontConfig* spFontConfig = nullptr ) = 0;
 
 	/* Shows the console window.  */
-	virtual void		ShowConsole(  ) = 0;
+	virtual void		ShowConsole() = 0;
 	
 	/* Is the console shown.  */
-	virtual bool		IsConsoleShown(  ) = 0;
+	virtual bool		IsConsoleShown() = 0;
 	
 	/* Debug Text on the side of the screen  */
 	virtual void		DebugMessage( const char* format, ... ) = 0;
@@ -31,4 +29,8 @@ public:
 	 */	
 	virtual void 		StartFrame() = 0;
 };
+
+
+#define IGUI_NAME "GUI"
+#define IGUI_HASH typeid( BaseGuiSystem ).hash_code()
 

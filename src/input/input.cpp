@@ -20,9 +20,18 @@ LOG_REGISTER_CHANNEL( InputSystem, LogColor::Default );
 
 CONVAR( in_show_mouse_events, 0 );
 
-extern "C" {
-	DLL_EXPORT void* cframework_get() {
-		return input;
+BaseGuiSystem*           gui           = nullptr;
+
+static ModuleInterface_t gInterfaces[] = {
+	{ input, IINPUTSYSTEM_NAME, IINPUTSYSTEM_HASH }
+};
+
+extern "C"
+{
+	DLL_EXPORT ModuleInterface_t* cframework_GetInterfaces( size_t& srCount )
+	{
+		srCount = 1;
+		return gInterfaces;
 	}
 }
 
@@ -90,8 +99,6 @@ void InputSystem::Bind( const std::string& srKey, const std::string& srCmd )
 
 void InputSystem::ParseInput()
 {
-	static BaseGuiSystem* gui = GET_SYSTEM( BaseGuiSystem );
-
 	SDL_PumpEvents();
 
 	int mouseEventCount = 0;
@@ -164,9 +171,18 @@ void InputSystem::ParseInput()
 }
 
 
-void InputSystem::Init(  )
+bool InputSystem::Init()
 {
-	ResetInputs(  );
+	gui = ( BaseGuiSystem* )Mod_GetInterface( IGUI_NAME, IGUI_HASH );
+	
+	if ( gui == nullptr )
+	{
+		Log_Error( gInputSystemChannel, "Failed to load GUI Interface\n" );
+		return false;
+	}
+
+	ResetInputs();
+	return true;
 }
 
 void InputSystem::Update( float frameTime )

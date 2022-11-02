@@ -2,6 +2,7 @@
 #include "core/platform.h"
 #include "core/filesystem.h"
 #include "core/log.h"
+#include "core/systemmanager.h"
 #include "util.h"
 
 #include "render/irender.h"
@@ -837,7 +838,7 @@ public:
 	// BaseSystem Functions
 	// --------------------------------------------------------------------------------------------
 
-	void Init() override
+	bool Init() override
 	{
 		gWidth = Args_GetInt( "-w", gWidth ); 
 		gHeight = Args_GetInt( "-h", gHeight ); 
@@ -849,14 +850,17 @@ public:
 		gpWindow = SDL_CreateWindow( "Chocolate Engine - Compiled on " __DATE__, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
 		                             gWidth, gHeight, SDL_WINDOW_VULKAN | SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE );
 
-		Render_Init( gpWindow );
+		if ( !Render_Init( gpWindow ) )
+			return false;
 
 		if ( !ImGui_ImplSDL2_InitForVulkan( gpWindow ) )
 		{
 			Log_Error( gLC_Render, "Failed to init ImGui SDL2 for Vulkan\n" );
 			Render_Shutdown();
-			return;
+			return false;
 		}
+
+		return true;
 	}
 
 	void Shutdown()
@@ -1711,13 +1715,18 @@ public:
 	}
 };
 
+static RenderVK gRenderer;
+
+static ModuleInterface_t gInterfaces[] = {
+	{ &gRenderer, IRENDER_NAME, IRENDER_HASH }
+};
 
 extern "C"
 {
-	DLL_EXPORT void* cframework_get()
+	DLL_EXPORT ModuleInterface_t* cframework_GetInterfaces( size_t& srCount )
 	{
-		static RenderVK renderer;
-		return &renderer;
+		srCount = 1;
+		return gInterfaces;
 	}
 }
 

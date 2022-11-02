@@ -480,3 +480,6 @@ public:
 	virtual void                 SetDebugDrawFuncs( const Phys_DebugFuncs_t& srDebug ) = 0;
 };
 
+
+#define IPHYSICS_NAME "Physics"
+#define IPHYSICS_HASH typeid( Ch_IPhysics ).hash_code()
