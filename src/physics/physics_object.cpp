@@ -327,9 +327,9 @@ void PhysicsObject::CheckCollision( IPhysicsShape* spShape, float sMaxSeparation
 	settings.mBackFaceMode = JPH::EBackFaceMode::IgnoreBackFaces;
 	settings.mMaxSeparationDistance = sMaxSeparationDist;
 
-	sGetNarrowPhaseQuery( apEnv->apPhys, true ).CollideShape(
+	apEnv->apPhys->GetNarrowPhaseQuery().CollideShape(
 		shape->aShape,
-		JPH::Vec3::sReplicate(1.0f),
+		JPH::Vec3::sReplicate( 1.0f ),
 		query_transform,
 		settings,
 		physCollector,
