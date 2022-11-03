@@ -137,18 +137,27 @@ def post_jolt_extract():
 
     os.chdir("JoltPhysics/Build")
     
+    build_options = "-DUSE_AVX2=OFF -DTARGET_UNIT_TESTS=OFF -DTARGET_HELLO_WORLD=OFF -DTARGET_PERFORMANCE_TEST=OFF -DTARGET_SAMPLES=OFF -DTARGET_VIEWER=OFF"
+
     if SYS_OS == OS.Windows:
-        build_dir = "VS2022_CL"
-        os.system(f"cmake -S . -B {build_dir} -A x64")
+        build_dir = "build"
+        os.system(f"cmake -S . -B {build_dir} -A x64 {build_options}")
+
+        print("Building JoltPhysics - Release\n")
+        os.system(f"cmake --build {build_dir} --config Release")
+
+        print("Building JoltPhysics - Debug\n")
+        os.system(f"cmake --build {build_dir} --config Debug")
+
     else:
         build_dir = "build"
-        os.system(f"cmake -S . -B {build_dir} -DCMAKE_CXX_COMPILER=clang++")
+        print("Building JoltPhysics - Release\n")
+        os.system(f"cmake -S . -B {build_dir}/Release -DCMAKE_CXX_COMPILER=g++ -DCMAKE_POSITION_INDEPENDENT_CODE=ON {build_options}")
+        os.system(f"cmake --build {build_dir}/Release --config Release")
 
-    print("Building JoltPhysics - Release\n")
-    os.system(f"cmake --build {build_dir} --config Release")
-
-    print("Building JoltPhysics - Debug\n")
-    os.system(f"cmake --build {build_dir} --config Debug")
+        print("Building JoltPhysics - Debug\n")
+        os.system(f"cmake -S . -B {build_dir}/Debug -DCMAKE_CXX_COMPILER=g++ -DCMAKE_POSITION_INDEPENDENT_CODE=ON {build_options}")
+        os.system(f"cmake --build {build_dir}/Debug --config Debug")
 
     os.chdir("../..")
 
