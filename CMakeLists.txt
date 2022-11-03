@@ -4,7 +4,7 @@ cmake_minimum_required( VERSION 3.18 FATAL_ERROR )
 set_property( GLOBAL PROPERTY CH_ROOT           ${CMAKE_CURRENT_LIST_DIR} )
 set_property( GLOBAL PROPERTY CH_PUBLIC         ${CMAKE_CURRENT_LIST_DIR}/public )
 set_property( GLOBAL PROPERTY CH_THIRDPARTY     ${CMAKE_CURRENT_LIST_DIR}/thirdparty )
-set_property( GLOBAL PROPERTY CH_BUILD          ${CMAKE_CURRENT_LIST_DIR}/../build )
+set_property( GLOBAL PROPERTY CH_BUILD          ${CMAKE_CURRENT_LIST_DIR}/../output )
 
 set( CH_SRC ${CMAKE_CURRENT_LIST_DIR}/src )
 
