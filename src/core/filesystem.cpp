@@ -582,7 +582,7 @@ bool sys_scandir( const std::string& root, const std::string& path, std::vector<
     // so i manually add it myself to match the win32 one
     files.push_back( path + PATH_SEP + ".." );
 
-    for ( const auto& rFile : std::FileSys_directory_iterator( path ) )
+    for ( const auto& rFile : std::filesystem::directory_iterator( path ) )
         files.push_back( rFile.path().string() );
 
     return true;

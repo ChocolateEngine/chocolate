@@ -16,7 +16,7 @@ Module          sys_load_library( const char* path )
     auto pHandle = dlopen( path, RTLD_LAZY );
     if ( !pHandle )
     {
-        Log_Dev(  1, "Failed to load library: %s!\n", dlerror() );
+        Log_DevF(  1, "Failed to load library: %s!\n", dlerror() );
         return nullptr;
     }
     return ( Module )pHandle;
@@ -35,7 +35,7 @@ void*           sys_load_func( Module mod, const char* path )
     auto pFunc = dlsym( mod, path );
     if ( !pFunc )
     {
-        Log_Dev( 1, "Failed to load function: %s!\n", dlerror() );
+        Log_DevF( 1, "Failed to load function: %s!\n", dlerror() );
         return nullptr;
     }
     return pFunc;
@@ -65,12 +65,17 @@ void sys_wait_for_debugger()
 }
 
 
+void sys_shutdown()
+{
+}
+
+
 CONCMD_VA( sys_stack_info, "Print the current stack usage" )
 {
-	struct rlimit limit;
-	getrlimit( RLIMIT_STACK, &limit );
+	// struct rlimit limit;
+	// getrlimit( RLIMIT_STACK, &limit );
 
-	Log_DevF( 1, "Stack Limit: %ld bytes - Stack Max: %lu bytes\n", limit.rlim_cur, limit.rlim_max );
+	// Log_DevF( 1, "Stack Limit: %ld bytes - Stack Max: %lu bytes\n", limit.rlim_cur, limit.rlim_max );
 }
 
 
