@@ -417,8 +417,14 @@ static bool ConVarNameCheck( const char* name, const char* search, size_t size )
 	if ( con_search_behavior == 0.f )
 	{
 		// Must start with string
+#ifdef _WIN32
 		if ( strnicmp( name, search, size ) == 0 )
 			return true;
+#else
+		// TODO: make this case insensitive
+		if ( strncmp( name, search, size ) == 0 )
+			return true;
+#endif
 	}
 	else
 	{
@@ -1000,7 +1006,11 @@ bool Con_RunCommandArgs( const std::string& name, const std::vector< std::string
 			continue;
 		}
 
+#ifdef _WIN32
 		if ( strnicmp( cvar->aName, name.c_str(), cvarNameLen ) == 0 )
+#else
+		if ( strncmp( cvar->aName, name.c_str(), cvarNameLen ) == 0 )
+#endif
 		{
 			cvar = Con_CheckForConVarRef( cvar );
 			if ( !cvar )
