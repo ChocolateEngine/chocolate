@@ -345,10 +345,10 @@ constexpr u32 GetColorU32( LogChannel_t *channel, const Log& log )
     glm::vec4 colorVec = GetColorRGBA( GetColor( channel, log ) );
 
     u8 colorU8[4] = {
-        colorVec.x * 255,
-        colorVec.y * 255,
-        colorVec.z * 255,
-        colorVec.w * 255,
+        static_cast< u8 >( colorVec.x ) * 255,
+        static_cast< u8 >( colorVec.y ) * 255,
+        static_cast< u8 >( colorVec.z ) * 255,
+        static_cast< u8 >( colorVec.w )*  255,
     };
 
     // what

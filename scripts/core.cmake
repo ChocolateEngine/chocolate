@@ -7,7 +7,9 @@ get_property( CH_BUILD GLOBAL PROPERTY CH_BUILD )
 
 set( CMAKE_POSITION_INDEPENDENT_CODE ON )
 
+set( CXX_STANDARD 20 )  # could do 23
 set( CMAKE_CXX_STANDARD 20 )  # could do 23
+set( CMAKE_CXX_STANDARD_REQUIRED ON )
 
 set( CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CH_BUILD}/bin )
 set( CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CH_BUILD}/bin )
@@ -116,7 +118,7 @@ if( MSVC )
 	
 else()  # linux
 
-	set( CMAKE_CXX_COMPILER g++ )
+	set( CMAKE_CXX_COMPILER clang++ )
 	
 	include_directories(
 		"/usr/include/SDL2"
@@ -141,7 +143,8 @@ else()  # linux
 		-Wno-missing-field-initializers
 		-Wno-deprecated-enum-enum-conversion
 	)
-	SET ( CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,--no-undefined")
+	set( CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,--no-undefined")
+	set( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++20" )
 	
 endif()
 
