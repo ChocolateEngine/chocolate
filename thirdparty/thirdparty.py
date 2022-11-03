@@ -139,11 +139,10 @@ def post_jolt_extract():
     
     if SYS_OS == OS.Windows:
         build_dir = "VS2022_CL"
+        os.system(f"cmake -S . -B {build_dir} -A x64")
     else:
         build_dir = "build"
-
-    # initial setup
-    os.system(f"cmake -S . -B {build_dir} -A x64")
+        os.system(f"cmake -S . -B {build_dir} -DCMAKE_CXX_COMPILER=clang++")
 
     print("Building JoltPhysics - Release\n")
     os.system(f"cmake --build {build_dir} --config Release")
