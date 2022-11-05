@@ -247,7 +247,7 @@ void PhysDebugDraw::DrawGeometry(
 
 void PhysDebugDraw::DrawText3D(
 	JPH::Vec3Arg inPosition,
-	const std::string &inString,
+	const std::string_view &inString,
 	JPH::ColorArg inColor,
 	float inHeight )
 {

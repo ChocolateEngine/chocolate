@@ -301,16 +301,19 @@ std::vector< const char* > VK_GetSDL2Extensions()
 
 	Log_Dev( gLC_Render, 1, "\n" );
 
-	// Add debug display extension, we need this to relay debug messages
-	extensions.push_back( VK_EXT_DEBUG_UTILS_EXTENSION_NAME );
 	return extensions;
 }
 
 
 bool VK_CreateInstance()
 {
-	if ( gEnableValidationLayers && !VK_CheckValidationLayerSupport() )
-		Log_Fatal( "Validation layers requested, but not available!" );
+	bool hasValidation = gEnableValidationLayers;
+
+	if ( gEnableValidationLayers )
+		hasValidation = VK_CheckValidationLayerSupport();
+
+	if ( !hasValidation )
+		Log_Error( "Validation layers requested, but not available!\n" );
 
 	VkApplicationInfo appInfo{ VK_STRUCTURE_TYPE_APPLICATION_INFO };
 	appInfo.pApplicationName   = "ProtoViewer";
@@ -322,7 +325,7 @@ bool VK_CreateInstance()
 	VkInstanceCreateInfo createInfo{ VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO };
 	createInfo.pApplicationInfo = &appInfo;
 
-	if ( gEnableValidationLayers )
+	if ( hasValidation )
 	{
 		createInfo.enabledLayerCount   = (unsigned int)ARR_SIZE( gpValidationLayers );
 		createInfo.ppEnabledLayerNames = gpValidationLayers;
@@ -333,16 +336,6 @@ bool VK_CreateInstance()
 		createInfo.enabledLayerCount = 0;
 		createInfo.pNext             = NULL;
 	}
-
-	std::vector< const char* > sdlExt  = VK_GetSDL2Extensions();
-
-	// createInfo.enabledExtensionCount   = static_cast< uint32_t >( ARR_SIZE( gpExtensions ) );
-	// createInfo.ppEnabledExtensionNames = gpExtensions;
-
-	createInfo.enabledExtensionCount   = static_cast< uint32_t >( sdlExt.size() );
-	createInfo.ppEnabledExtensionNames = sdlExt.data();
-
-	VK_CheckResult( vkCreateInstance( &createInfo, NULL, &gInstance ), "Failed to create instance!" );
 
 	unsigned int extensionCount = 0;
 	vkEnumerateInstanceExtensionProperties( NULL, &extensionCount, NULL );
@@ -360,8 +353,19 @@ bool VK_CreateInstance()
 		Log_Msg( gLC_Render, "\n" );
 	}
 
-	if ( gEnableValidationLayers && VK_CreateValidationLayers() != VK_SUCCESS )
-		Log_Fatal( gLC_Render, "Failed to create validation layers!" );
+	std::vector< const char* > sdlExt = VK_GetSDL2Extensions();
+
+	// Add debug extension, we need this to relay debug messages
+	if ( hasValidation )
+		sdlExt.push_back( VK_EXT_DEBUG_UTILS_EXTENSION_NAME );
+
+	createInfo.enabledExtensionCount   = static_cast< uint32_t >( sdlExt.size() );
+	createInfo.ppEnabledExtensionNames = sdlExt.data();
+
+	VK_CheckResult( vkCreateInstance( &createInfo, NULL, &gInstance ), "Failed to create instance!" );
+
+	if ( hasValidation && VK_CreateValidationLayers() != VK_SUCCESS )
+		Log_Error( gLC_Render, "Failed to create validation layers!" );
 	
 	return true;
 }
@@ -611,6 +615,7 @@ void VK_CreateDevice()
 
 	VkPhysicalDeviceFeatures deviceFeatures{};
 	deviceFeatures.samplerAnisotropy = VK_TRUE;
+	deviceFeatures.sampleRateShading = VK_TRUE;
 
 	VkDeviceCreateInfo createInfo    = {
 		   .sType                   = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,

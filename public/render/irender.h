@@ -1,6 +1,7 @@
 #pragma once
 
 #include "system.h"
+#include "core/resources.hh"
 #include <stdio.h>
 
 #include <glm/vec3.hpp>
@@ -664,11 +665,9 @@ class IRender : public BaseSystem
 	// Shader System
 	// --------------------------------------------------------------------------------------------
 
-	virtual Handle      CreatePipelineLayout( PipelineLayoutCreate_t& srPipelineCreate )                         = 0;
-	virtual Handle      CreateGraphicsPipeline( GraphicsPipelineCreate_t& srGraphicsCreate )                     = 0;
-
-	virtual bool        RecreatePipelineLayout( Handle sHandle, PipelineLayoutCreate_t& srPipelineCreate )       = 0;
-	virtual bool        RecreateGraphicsPipeline( Handle sHandle, GraphicsPipelineCreate_t& srGraphicsCreate )   = 0;
+	virtual bool        CreatePipelineLayout( Handle& sHandle, PipelineLayoutCreate_t& srPipelineCreate )        = 0;
+	virtual bool        CreateGraphicsPipeline( Handle& sHandle, GraphicsPipelineCreate_t& srGraphicsCreate )    = 0;
+	// virtual bool        CreateComputePipeline( Handle& sHandle, ComputePipelineCreate_t& srGraphicsCreate )    = 0;
 
 	virtual void        DestroyPipeline( Handle sPipeline )                                                      = 0;
 	virtual void        DestroyPipelineLayout( Handle sPipeline )                                                = 0;
@@ -727,6 +726,8 @@ class IRender : public BaseSystem
 
 	virtual void        CmdSetScissor( Handle cmd, u32 sOffset, const Rect2D_t* spScissors, u32 sCount )         = 0;
 
+	virtual void        CmdSetDepthBias( Handle cmd, float sConstantFactor, float sClamp, float sSlopeFactor )   = 0;
+
 	virtual bool        CmdBindPipeline( Handle cmd, Handle shader ) = 0;
 
 	virtual void        CmdPushConstants( Handle      cmd,
@@ -770,5 +771,5 @@ class IRender : public BaseSystem
 
 
 #define IRENDER_NAME "Render"
-#define IRENDER_HASH typeid( IRender ).hash_code()
+#define IRENDER_HASH 2
 

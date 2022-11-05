@@ -9,8 +9,15 @@
 #endif
 
 // workaround to not include chocolate's core/core.h, which should be renamed to ch_core/core.h
-#include <JoltPhysics/Jolt/Core/Core.h>
-#include <JoltPhysics/Jolt/Core/Profiler.h>
+#include <Jolt/Core/Core.h>
+#include <Jolt/Core/Memory.h>
+#include <Jolt/Core/STLAllocator.h>
+#include <Jolt/Core/UnorderedMap.h>
+#include <Jolt/Core/IssueReporting.h>
+#include <Jolt/Core/HashCombine.h>
+#include <Jolt/Core/NonCopyable.h>
+#include <Jolt/Core/Factory.h>
+#include <Jolt/Core/Profiler.h>
 
 // The Jolt headers don't include Jolt.h. Always include Jolt.h before including any other Jolt header.
 // You can use Jolt.h in your precompiled header to speed up compilation.
@@ -215,7 +222,4 @@ extern JPH::BroadPhaseLayer BroadPhase_Stationary;
 extern JPH::BroadPhaseLayer BroadPhase_Moving;
 extern JPH::BroadPhaseLayer BroadPhase_NoCollide;
 
-
-// other
-extern JPH::ObjectToBroadPhaseLayer gObjectToBroadphase;
 

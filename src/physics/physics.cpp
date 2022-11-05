@@ -140,12 +140,12 @@ public:
 class BodyActivationListener : public JPH::BodyActivationListener
 {
 public:
-	virtual void OnBodyActivated( const JPH::BodyID &inBodyID, void* inBodyUserData ) override
+	virtual void OnBodyActivated( const JPH::BodyID &inBodyID, JPH::uint64 inBodyUserData ) override
 	{
 		// LogDev( gPhysicsChannel, 1, "A body got activated\n" );
 	}
 
-	virtual void OnBodyDeactivated( const JPH::BodyID &inBodyID, void* inBodyUserData ) override
+	virtual void OnBodyDeactivated( const JPH::BodyID &inBodyID, JPH::uint64 inBodyUserData ) override
 	{
 		// LogDev( gPhysicsChannel, 1, "A body went to sleep\n" );
 	}
@@ -154,152 +154,6 @@ public:
 
 BodyActivationListener    gBodyActivationListener;
 ContactListener           gContactListener;
-
-
-// Program entry point
-#if 0
-int main(int argc, char** argv)
-{
-	// Install callbacks
-	JPH::Trace = TraceCallback;
-
-	JPH_IF_ENABLE_ASSERTS( JPH::AssertFailed = AssertFailedCallback; );
-
-	// Register all Jolt physics types
-	JPH::RegisterTypes();
-
-	// We need a temp allocator for temporary allocations during the physics update. We're
-	// pre-allocating 10 MB to avoid having to do allocations during the physics update. 
-	// B.t.w. 10 MB is way too much for this example but it is a typical value you can use.
-	// If you don't want to pre-allocate you can also use TempAllocatorMalloc to fall back to
-	// malloc / free.
-	JPH::TempAllocatorImpl temp_allocator(10 * 1024 * 1024);
-
-	// We need a job system that will execute physics jobs on multiple threads. Typically
-	// you would implement the JobSystem interface yourself and let Jolt Physics run on top
-	// of your own job scheduler. JobSystemThreadPool is an example implementation.
-	JPH::JobSystemThreadPool job_system( JPH::cMaxPhysicsJobs, JPH::cMaxPhysicsBarriers, JPH::thread::hardware_concurrency() - 1 );
-
-	// This is the max amount of rigid bodies that you can add to the physics system. If you try to add more you'll get an error.
-	// Note: This value is low because this is a simple test. For a real project use something in the order of 65536.
-	const u32 cMaxBodies = 1024;
-
-	// This determines how many mutexes to allocate to protect rigid bodies from concurrent access. Set it to 0 for the default settings.
-	const u32 cNumBodyMutexes = 0;
-
-	// This is the max amount of body pairs that can be queued at any time (the broad phase will detect overlapping
-	// body pairs based on their bounding boxes and will insert them into a queue for the narrowphase). If you make this buffer
-	// too small the queue will fill up and the broad phase jobs will start to do narrow phase work. This is slightly less efficient.
-	// Note: This value is low because this is a simple test. For a real project use something in the order of 65536.
-	const u32 cMaxBodyPairs = 1024;
-
-	// This is the maximum size of the contact constraint buffer. If more contacts (collisions between bodies) are detected than this
-	// number then these contacts will be ignored and bodies will start interpenetrating / fall through the world.
-	// Note: This value is low because this is a simple test. For a real project use something in the order of 65536.
-	const u32 cMaxContactConstraints = 1024;
-
-	// Create mapping table from object layer to broadphase layer
-	JPH::ObjectToBroadPhaseLayer object_to_broadphase;
-	object_to_broadphase.resize( (size_t)ObjLayer_Count );
-	object_to_broadphase[ObjLayer_Stationary] = BroadPhase_Stationary;
-	object_to_broadphase[ObjLayer_Moving] = BroadPhase_Moving;
-
-	// Now we can create the actual physics system.
-	JPH::PhysicsSystem physics_system;
-	physics_system.Init(cMaxBodies, cNumBodyMutexes, cMaxBodyPairs, cMaxContactConstraints, object_to_broadphase, MyBroadPhaseCanCollide, MyObjectCanCollide);
-
-	// A body activation listener gets notified when bodies activate and go to sleep
-	// Note that this is called from a job so whatever you do here needs to be thread safe.
-	// Registering one is entirely optional.
-	MyBodyActivationListener body_activation_listener;
-	physics_system.SetBodyActivationListener(&body_activation_listener);
-
-	// A contact listener gets notified when bodies (are about to) collide, and when they separate again.
-	// Note that this is called from a job so whatever you do here needs to be thread safe.
-	// Registering one is entirely optional.
-	MyContactListener contact_listener;
-	physics_system.SetContactListener(&contact_listener);
-
-	// The main way to interact with the bodies in the physics system is through the body interface. There is a locking and a non-locking
-	// variant of this. We're going to use the locking version (even though we're not planning to access bodies from multiple threads)
-	JPH::BodyInterface &body_interface = physics_system.GetBodyInterface();
-
-	// Next we can create a rigid body to serve as the floor, we make a large box
-	// Create the settings for the collision volume (the shape). 
-	// Note that for simple shapes (like boxes) you can also directly construct a BoxShape.
-	JPH::BoxShapeSettings floor_shape_settings( JPH::Vec3(100.0f, 1.0f, 100.0f) );
-
-	// Create the shape
-	JPH::ShapeSettings::ShapeResult floor_shape_result = floor_shape_settings.Create();
-	JPH::ShapeRefC floor_shape = floor_shape_result.Get(); // We don't expect an error here, but you can check floor_shape_result for HasError() / GetError()
-
-													  // Create the settings for the body itself. Note that here you can also set other properties like the restitution / friction.
-	JPH::BodyCreationSettings floor_settings( floor_shape, JPH::Vec3(0.0f, -1.0f, 0.0f), JPH::Quat::sIdentity(), JPH::EMotionType::Static, ObjLayer_Stationary );
-
-	// Create the actual rigid body
-	JPH::Body *floor = body_interface.CreateBody(floor_settings); // Note that if we run out of bodies this can return nullptr
-
-															 // Add it to the world
-	body_interface.AddBody( floor->GetID(), JPH::EActivation::DontActivate );
-
-	// Now create a dynamic body to bounce on the floor
-	// Note that this uses the shorthand version of creating and adding a body to the world
-	JPH::BodyCreationSettings sphere_settings( new JPH::SphereShape(0.5f), JPH::Vec3(0.0f, 2.0f, 0.0f), JPH::Quat::sIdentity(), JPH::EMotionType::Dynamic, ObjLayer_Moving );
-	JPH::BodyID sphere_id = body_interface.CreateAndAddBody(sphere_settings, JPH::EActivation::Activate);
-
-	// Now you can interact with the dynamic body, in this case we're going to give it a velocity.
-	// (note that if we had used CreateBody then we could have set the velocity straight on the body before adding it to the physics system)
-	body_interface.SetLinearVelocity(sphere_id, JPH::Vec3(0.0f, -5.0f, 0.0f));
-
-	// We simulate the physics world in discrete time steps. 60 Hz is a good rate to update the physics system.
-	const float cDeltaTime = 1.0f / 60.0f;
-
-	// Optional step: Before starting the physics simulation you can optimize the broad phase. This improves collision detection performance (it's pointless here because we only have 2 bodies).
-	// You should definitely not call this every frame or when e.g. streaming in a new level section as it is an expensive operation.
-	// Instead insert all new objects in batches instead of 1 at a time to keep the broad phase efficient.
-	physics_system.OptimizeBroadPhase();
-
-	// Now we're ready to simulate the body, keep simulating until it goes to sleep
-	JPH::uint step = 0;
-	while (body_interface.IsActive(sphere_id))
-	{
-		// Next step
-		++step;
-
-		// Output current position and velocity of the sphere
-		JPH::Vec3 position = body_interface.GetCenterOfMassPosition(sphere_id);
-		JPH::Vec3 velocity = body_interface.GetLinearVelocity(sphere_id);
-
-		LogDev( gPhysicsChannel, 1,
-			"Step %d: Position = ( %d, %d, %d ), Velocity = ( %d, %d, %d )\n",
-			step,
-			position.GetX(), position.GetY(), position.GetZ(),
-			velocity.GetX(), velocity.GetY(), velocity.GetZ()
-		);
-
-		// If you take larger steps than 1 / 60th of a second you need to do multiple collision steps in order to keep the simulation stable. Do 1 collision step per 1 / 60th of a second (round up).
-		const int cCollisionSteps = 1;
-
-		// If you want more accurate step results you can do multiple sub steps within a collision step. Usually you would set this to 1.
-		const int cIntegrationSubSteps = 1;
-
-		// Step the world
-		physics_system.Update(cDeltaTime, cCollisionSteps, cIntegrationSubSteps, &temp_allocator, &job_system);
-	}
-
-	// Remove the sphere from the physics system. Note that the sphere itself keeps all of its state and can be re-added at any time.
-	body_interface.RemoveBody(sphere_id);
-
-	// Destroy the sphere. After this the sphere ID is no longer valid.
-	body_interface.DestroyBody(sphere_id);
-
-	// Remove and destroy the floor
-	body_interface.RemoveBody(floor->GetID());
-	body_interface.DestroyBody(floor->GetID());
-
-	return 0;
-}
-#endif
 
 
 // ====================================================================================
@@ -336,6 +190,12 @@ public:
 		JPH::Trace = TraceCallback;
 
 		JPH_IF_ENABLE_ASSERTS( JPH::AssertFailed = AssertFailedCallback; );
+
+		// Register allocation hook
+		JPH::RegisterDefaultAllocator();
+
+		// Create factory
+		JPH::Factory::sInstance = new JPH::Factory;
 
 		// Register all Jolt physics types
 		JPH::RegisterTypes();
@@ -379,7 +239,9 @@ public:
 
 	IPhysicsEnvironment* CreatePhysEnv() override
 	{
-		return aPhysEnvs.emplace_back( new PhysicsEnvironment );
+		PhysicsEnvironment* env = new PhysicsEnvironment;
+		aPhysEnvs.push_back( env );
+		return env;
 	}
 
 	void DestroyPhysEnv( IPhysicsEnvironment* pEnv ) override
@@ -492,12 +354,51 @@ PhysicsEnvironment::~PhysicsEnvironment()
 }
 
 
-// Create mapping table from object layer to broadphase layer
-JPH::ObjectToBroadPhaseLayer gObjectToBroadphase = {
-	BroadPhase_Stationary,
-	BroadPhase_Moving,
-	BroadPhase_NoCollide,
+class ObjectToBroadphase : public JPH::BroadPhaseLayerInterface
+{
+public:
+	/// Return the number of broadphase layers there are
+	JPH::uint GetNumBroadPhaseLayers() const override
+	{
+		return 3;
+	}
+
+	/// Convert an object layer to the corresponding broadphase layer
+	JPH::BroadPhaseLayer GetBroadPhaseLayer( JPH::ObjectLayer inLayer ) const override
+	{
+		switch( inLayer )
+		{
+			default:
+			case ObjLayer_Stationary:
+				return BroadPhase_Stationary;
+
+			case ObjLayer_Moving:
+				return BroadPhase_Moving;
+
+			case ObjLayer_NoCollide:
+				return BroadPhase_NoCollide;
+		}
+	}
+
+#if 1 // defined(JPH_EXTERNAL_PROFILE) || defined(JPH_PROFILE_ENABLED)
+	/// Get the user readable name of a broadphase layer (debugging purposes)
+	virtual const char* GetBroadPhaseLayerName( JPH::BroadPhaseLayer inLayer ) const // override
+	{
+		if ( inLayer == BroadPhase_Stationary )
+			return "Stationary";
+
+		if ( inLayer == BroadPhase_Moving )
+			return "Moving";
+
+		if ( inLayer == BroadPhase_NoCollide )
+			return "NoCollide";
+	}
+#endif // JPH_EXTERNAL_PROFILE || JPH_PROFILE_ENABLED
 };
+
+
+// Create mapping table from object layer to broadphase layer
+ObjectToBroadphase gObjectToBroadphase;
 
 
 void PhysicsEnvironment::Init()
@@ -530,8 +431,6 @@ CONVAR( phys_dbg_wireframe, 1 );
 
 void PhysicsEnvironment::Simulate( float sDT )
 {
-	PROF_SCOPE();
-	
 	// um
 	// We simulate the physics world in discrete time steps. 60 Hz is a good rate to update the physics system.
 	const float cDeltaTime = 1.0f / 60.0f;
@@ -566,8 +465,6 @@ void PhysicsEnvironment::Simulate( float sDT )
 
 IPhysicsShape* PhysicsEnvironment::CreateShape( const PhysicsShapeInfo& physInfo )
 {
-	PROF_SCOPE();
-
 	// The ShapeSettings object is only required for building the shape, all information is copied into the Shape class
 	JPH::ShapeSettings* shapeSettings = nullptr;
 
@@ -662,8 +559,6 @@ void PhysicsEnvironment::DestroyShape( IPhysicsShape *spShape )
 
 IPhysicsObject* PhysicsEnvironment::CreateObject( IPhysicsShape* spShape, const PhysicsObjectInfo& physInfo )
 {
-	PROF_SCOPE();
-
 	Assert( spShape );
 
 	if ( !spShape )
@@ -884,8 +779,6 @@ void GetModelInd( Model* spModel, std::vector< JPH::Float3 >& srVerts, std::vect
 JPH::ShapeSettings* PhysicsEnvironment::LoadModel( const PhysicsShapeInfo& physInfo )
 {
 #if 1
-	PROF_SCOPE();
-
 	// Assert( physInfo.aMeshData.apModel != nullptr );
 
 	switch ( physInfo.aShapeType )
@@ -896,7 +789,7 @@ JPH::ShapeSettings* PhysicsEnvironment::LoadModel( const PhysicsShapeInfo& physI
 				return nullptr;
 
 			// Create an array of vertices
-			std::vector< JPH::Vec3 > vertices( physInfo.aConvexData.aVertCount );
+			JPH::Array< JPH::Vec3 > vertices( physInfo.aConvexData.aVertCount );
 
 			// same thing
 			memcpy( vertices.data(), physInfo.aConvexData.apVertices, physInfo.aConvexData.aVertCount * sizeof( glm::vec3 ) );
@@ -920,8 +813,8 @@ JPH::ShapeSettings* PhysicsEnvironment::LoadModel( const PhysicsShapeInfo& physI
 			if ( physInfo.aConcaveData.aTris == nullptr || physInfo.aConcaveData.apVertices == nullptr )
 				return nullptr;
 
-			std::vector< JPH::Float3 >          verts( physInfo.aConcaveData.aVertCount );
-			std::vector< JPH::IndexedTriangle > ind( physInfo.aConcaveData.aTriCount );
+			JPH::Array< JPH::Float3 >          verts( physInfo.aConcaveData.aVertCount );
+			JPH::Array< JPH::IndexedTriangle > ind( physInfo.aConcaveData.aTriCount );
 
 			// same thing
 			memcpy( verts.data(), physInfo.aConcaveData.apVertices, physInfo.aConcaveData.aVertCount * sizeof( glm::vec3 ) );

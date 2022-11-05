@@ -2,6 +2,9 @@
 
 #include <SDL2/SDL.h>
 
+#include <vector>
+#include <string>
+
 #include "system.h"
 #include "igui.h"
 

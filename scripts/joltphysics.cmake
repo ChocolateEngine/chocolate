@@ -7,7 +7,7 @@ add_compile_definitions(
 	"JOLT_PHYSICS=1"
 )
 
-include_directories( ${JOLTPHYSICS_DIR}/Jolt )
+include_directories( ${JOLTPHYSICS_DIR} ${JOLTPHYSICS_DIR}/Jolt )
 link_directories( ${JOLTPHYSICS_DIR}/Build/build/${CMAKE_BUILD_TYPE} )
 link_libraries( Jolt )
 

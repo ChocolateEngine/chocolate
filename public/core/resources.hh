@@ -12,6 +12,7 @@
 
 #include "platform.h"
 #include "mempool.h"
+#include "log.h"
 
 static LOG_REGISTER_CHANNEL( Resource, LogColor::DarkYellow );
 

@@ -78,8 +78,7 @@ bool Mod_Load( const char* spPath )
 	gModuleHandles[ spPath ] = handle;
 
 	ModuleInterface_t* ( *getInterfacesF )( size_t & srCount ) = nullptr;
-	*(void**)( &getInterfacesF )                               = sys_load_func( handle, "cframework_GetInterfaces" );
-	if ( !getInterfacesF )
+	if ( !( *(void**)( &getInterfacesF ) = sys_load_func( handle, "cframework_GetInterfaces" ) ) )
 	{
 		Log_ErrorF( gLC_Module, "Unable to load \"cframework_GetInterfaces\" function from library: %s - %s\n", pathExt.c_str(), sys_get_error() );
 		return false;

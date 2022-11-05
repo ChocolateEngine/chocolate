@@ -482,4 +482,4 @@ public:
 
 
 #define IPHYSICS_NAME "Physics"
-#define IPHYSICS_HASH typeid( Ch_IPhysics ).hash_code()
+#define IPHYSICS_HASH 1

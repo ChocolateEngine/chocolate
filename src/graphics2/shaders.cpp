@@ -71,7 +71,7 @@ void VK_DestroyShaderModule( VkShaderModule shaderModule )
 }
 
 
-bool VK_CreatePipelineLayoutInt( PipelineLayoutCreate_t& srPipelineCreate, bool sRecreate, Handle& srHandle )
+bool VK_CreatePipelineLayout( Handle& srHandle, PipelineLayoutCreate_t& srPipelineCreate )
 {
 	std::vector< VkDescriptorSetLayout > layouts;
 
@@ -107,7 +107,7 @@ bool VK_CreatePipelineLayoutInt( PipelineLayoutCreate_t& srPipelineCreate, bool 
 	VkPipelineLayout pipelineLayout;
 	VK_CheckResult( vkCreatePipelineLayout( VK_GetDevice(), &pipelineCreateInfo, NULL, &pipelineLayout ), "Failed to create pipeline layout" );
 
-	if ( sRecreate )
+	if ( srHandle != InvalidHandle )
 		return gPipelineLayouts.Update( srHandle, pipelineLayout );
 
 	srHandle = gPipelineLayouts.Add( pipelineLayout );
@@ -149,7 +149,7 @@ Handle VK_CreateComputePipeline( ComputePipelineCreate_t& srPipelineCreate )
 #endif
 
 
-bool VK_CreateGraphicsPipelineInt( GraphicsPipelineCreate_t& srGraphicsCreate, bool sRecreate, Handle& srHandle )
+bool VK_CreateGraphicsPipeline( Handle& srHandle, GraphicsPipelineCreate_t& srGraphicsCreate )
 {
 	VkPipelineLayout* layout = gPipelineLayouts.Get( srGraphicsCreate.aPipelineLayout );
 	if ( layout == nullptr )
@@ -272,7 +272,7 @@ bool VK_CreateGraphicsPipelineInt( GraphicsPipelineCreate_t& srGraphicsCreate, b
 
 	//	Performs anti-aliasing
 	VkPipelineMultisampleStateCreateInfo multisampling{ VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO };
-	multisampling.sampleShadingEnable   = VK_FALSE;
+	multisampling.sampleShadingEnable   = VK_TRUE;
 	multisampling.rasterizationSamples  = renderPassInfo->aUsesMSAA ? VK_GetMSAASamples() : VK_SAMPLE_COUNT_1_BIT;
 	multisampling.minSampleShading      = 1.0f;      // Optional
 	multisampling.pSampleMask           = NULL;      // Optional
@@ -367,12 +367,12 @@ bool VK_CreateGraphicsPipelineInt( GraphicsPipelineCreate_t& srGraphicsCreate, b
 
 	ShaderVK* shader                 = nullptr;
 
-	if ( sRecreate )
+	if ( srHandle != InvalidHandle )
 	{
 		shader = gShaders.Get( srHandle );
 		if ( !shader )
 		{
-			Log_Error( gLC_Render, "VK_CreateGraphicsPipelineInt(): Shader not found for recreation!\n" );
+			Log_Error( gLC_Render, "VK_CreateGraphicsPipeline(): Shader not found for recreation!\n" );
 			return false;
 		}
 	}
@@ -403,34 +403,6 @@ bool VK_CreateGraphicsPipelineInt( GraphicsPipelineCreate_t& srGraphicsCreate, b
 #endif
 
 	return true;
-}
-
-
-Handle VK_CreateGraphicsPipeline( GraphicsPipelineCreate_t& srGraphicsCreate )
-{
-	Handle shader = InvalidHandle;
-	VK_CreateGraphicsPipelineInt( srGraphicsCreate, false, shader );
-	return shader;
-}
-
-
-Handle VK_CreatePipelineLayout( PipelineLayoutCreate_t& srPipelineCreate )
-{
-	Handle shader = InvalidHandle;
-	VK_CreatePipelineLayoutInt( srPipelineCreate, false, shader );
-	return shader;
-}
-
-
-bool VK_RecreatePipelineLayout( Handle sHandle, PipelineLayoutCreate_t& srPipelineCreate )
-{
-	return VK_CreatePipelineLayoutInt( srPipelineCreate, true, sHandle );
-}
-
-
-bool VK_RecreateGraphicsPipeline( Handle sHandle, GraphicsPipelineCreate_t& srGraphicsCreate )
-{
-	return VK_CreateGraphicsPipelineInt( srGraphicsCreate, true, sHandle );
 }
 
 

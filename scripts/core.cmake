@@ -118,7 +118,7 @@ if( MSVC )
 	
 else()  # linux
 
-	set( CMAKE_CXX_COMPILER clang++ )
+	set( CMAKE_CXX_COMPILER g++ )
 	
 	include_directories(
 		"/usr/include/SDL2"
@@ -143,10 +143,10 @@ else()  # linux
 		-Wno-missing-field-initializers
 		-Wno-deprecated-enum-enum-conversion
 	)
-	set( CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,--no-undefined")
+
+	set( CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,--no-undefined") 
 	set( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++20" )
 	
 endif()
 
 include( ${CH_ROOT}/scripts/tracy.cmake )
-

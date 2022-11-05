@@ -651,7 +651,8 @@ void AudioSystem::SetEffects( Handle handle, AudioEffects effects )
 
 	if ( effects | AudioEffect_World )
 	{
-		AudioEffectWorld* worldEffect = (AudioEffectWorld*)stream->aEffects.emplace_back( new AudioEffectWorld );
+		AudioEffectWorld* worldEffect = new AudioEffectWorld;
+		stream->aEffects.push_back( worldEffect );
 	}
 
 	stream->effects = effects;

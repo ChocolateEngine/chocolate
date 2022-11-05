@@ -73,7 +73,7 @@ public:
 	
 	virtual void    DrawText3D(
 							JPH::Vec3Arg inPosition,
-							const std::string &inString,
+							const std::string_view &inString,  // why tf do they pass it by ref
 							JPH::ColorArg inColor,
 							float inHeight ) override;
 

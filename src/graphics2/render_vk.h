@@ -295,11 +295,8 @@ void                                  VK_Present();
 VkShaderModule                        VK_CreateShaderModule( u32* spByteCode, u32 sSize );
 void                                  VK_DestroyShaderModule( VkShaderModule shaderModule );
 
-Handle                                VK_CreatePipelineLayout( PipelineLayoutCreate_t& srPipelineCreate );
-Handle                                VK_CreateGraphicsPipeline( GraphicsPipelineCreate_t& srGraphicsCreate );
-
-bool                                  VK_RecreatePipelineLayout( Handle sHandle, PipelineLayoutCreate_t& srPipelineCreate );
-bool                                  VK_RecreateGraphicsPipeline( Handle sHandle, GraphicsPipelineCreate_t& srGraphicsCreate );
+bool                                  VK_CreatePipelineLayout( Handle& sHandle, PipelineLayoutCreate_t& srPipelineCreate );
+bool                                  VK_CreateGraphicsPipeline( Handle& sHandle, GraphicsPipelineCreate_t& srGraphicsCreate );
 
 void                                  VK_DestroyPipeline( Handle sPipeline );
 void                                  VK_DestroyPipelineLayout( Handle sPipeline );

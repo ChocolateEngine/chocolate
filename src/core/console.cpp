@@ -1,8 +1,11 @@
 #include "core/filesystem.h"
 #include "core/console.h"
 #include "core/profiler.h"
+#include "core/platform.h"
+#include "core/log.h"
 #include "util.h"
 
+#include <cstring>
 #include <stdarg.h>
 #include <iostream>
 #include <fstream>
@@ -399,7 +402,7 @@ char* strcasestr( const char* s, const char* find )
 			}
 			while ( (char)tolower( (unsigned char)sc ) != c );
 		}
-		while ( strnicmp( s, find, len ) != 0 );
+		while ( _strnicmp( s, find, len ) != 0 );
 		s--;
 	}
 	return ( (char*)s );
@@ -418,11 +421,10 @@ static bool ConVarNameCheck( const char* name, const char* search, size_t size )
 	{
 		// Must start with string
 #ifdef _WIN32
-		if ( strnicmp( name, search, size ) == 0 )
+		if ( _strnicmp( name, search, size ) == 0 )
 			return true;
 #else
-		// TODO: make this case insensitive
-		if ( strncmp( name, search, size ) == 0 )
+		if ( strncasecmp( name, search, size ) == 0 )
 			return true;
 #endif
 	}
@@ -970,7 +972,7 @@ void Con_Update()
 }
 
 
-void Con_RunCommand( const std::string& command )
+void Con_RunCommand( std::string_view command )
 {
 	PROF_SCOPE();
 
@@ -1007,9 +1009,9 @@ bool Con_RunCommandArgs( const std::string& name, const std::vector< std::string
 		}
 
 #ifdef _WIN32
-		if ( strnicmp( cvar->aName, name.c_str(), cvarNameLen ) == 0 )
+		if ( _strnicmp( cvar->aName, name.c_str(), cvarNameLen ) == 0 )
 #else
-		if ( strncmp( cvar->aName, name.c_str(), cvarNameLen ) == 0 )
+		if ( strncasecmp( cvar->aName, name.c_str(), cvarNameLen ) == 0 )
 #endif
 		{
 			cvar = Con_CheckForConVarRef( cvar );
@@ -1064,14 +1066,14 @@ bool Con_RunCommandArgs( const std::string& name, const std::vector< std::string
 }
 
 
-void Con_ParseCommandLine( const std::string &command, std::string& name, std::vector< std::string >& args )
+void Con_ParseCommandLine( std::string_view command, std::string& name, std::vector< std::string >& args )
 {
 	size_t i = 0;
 	Con_ParseCommandLineEx( command, name, args, i );
 }
 
 
-void Con_ParseCommandLineEx( const std::string& command, std::string& name, std::vector< std::string >& args, size_t& i )
+void Con_ParseCommandLineEx( std::string_view command, std::string& name, std::vector< std::string >& args, size_t& i )
 {
 	PROF_SCOPE();
 

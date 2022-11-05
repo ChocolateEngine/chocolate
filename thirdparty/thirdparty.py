@@ -361,10 +361,10 @@ FILE_LIST = {
             post_ktx_extract,       # function to run post extraction (optional)
         ],
         [
-            "https://github.com/jrouwe/JoltPhysics/archive/refs/tags/v1.1.0.zip",
+            "https://github.com/jrouwe/JoltPhysics/archive/6406ceec5ec790a7bdda16d258d618d1ca95d7ae.zip",
             "zip",                  # file extension it's stored as
             "JoltPhysics",          # folder to check for if it exists already
-            "JoltPhysics-1.1.0",    # folder it extracts as to rename to the folder above (optional)
+            "JoltPhysics-6406ceec5ec790a7bdda16d258d618d1ca95d7ae",    # folder it extracts as to rename to the folder above (optional)
             ".",                    # extract into this folder (optional)
             post_jolt_extract,
         ],

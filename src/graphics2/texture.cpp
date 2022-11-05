@@ -410,6 +410,7 @@ TextureVK* VK_CreateTexture( const TextureCreateInfo_t& srCreate, const TextureC
 			tex->apName ? tex->apName : "MANUALLY CREATED TEXTURE",  // pObjectName
 		};
 
+		// TODO: add image view name here
 		pfnSetDebugUtilsObjectName( VK_GetDevice(), &nameInfo );
 	}
 #endif

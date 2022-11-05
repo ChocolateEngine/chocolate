@@ -137,7 +137,7 @@ void HandleAssert( const char* file, u32 line, const char* cond, const char* tit
             continue;
 
         // Assert is disabled, ignore it
-        if ( strncmp( file, _assert.file, 512 ) == 0 )
+        if ( strcmp( file, _assert.file ) == 0 )
             return;
     }
 
@@ -159,7 +159,7 @@ void HandleAssert( const char* file, u32 line, const char* cond, const char* msg
             continue;
 
         // Assert is disabled, ignore it
-        if ( strncmp( file, _assert.file, 512 ) == 0 )
+        if ( strcmp( file, _assert.file ) == 0 )
             return;
     }
 

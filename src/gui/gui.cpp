@@ -1,5 +1,7 @@
 #include "gui.h"
 #include "util.h"
+#include "core/systemmanager.h"
+#include "core/commandline.h"
 
 #include "imgui/imgui_impl_sdl.h"
 

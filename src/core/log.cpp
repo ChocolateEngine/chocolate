@@ -175,7 +175,7 @@ LogChannel Log_RegisterChannel( const char *sName, LogColor sColor )
         return i;
     }
 
-    GetLogChannels().push_back( { true, sName, sColor } );
+    GetLogChannels().emplace_back( true, sName, sColor );
 	return (LogChannel)GetLogChannels().size() - 1;
 }
 
@@ -339,16 +339,16 @@ constexpr glm::vec4 GetColorRGBA( LogChannel_t *channel, const Log& log )
 }
 
     
-constexpr u32 GetColorU32( LogChannel_t *channel, const Log& log )
+u32 GetColorU32( LogChannel_t *channel, const Log& log )
 {
     // i don't like this
     glm::vec4 colorVec = GetColorRGBA( GetColor( channel, log ) );
 
     u8 colorU8[4] = {
-        static_cast< u8 >( colorVec.x ) * 255,
-        static_cast< u8 >( colorVec.y ) * 255,
-        static_cast< u8 >( colorVec.z ) * 255,
-        static_cast< u8 >( colorVec.w )*  255,
+        static_cast< u8 >( colorVec.x * 255 ),
+        static_cast< u8 >( colorVec.y * 255 ),
+        static_cast< u8 >( colorVec.z * 255 ),
+        static_cast< u8 >( colorVec.w * 255 ),
     };
 
     // what
@@ -781,7 +781,7 @@ void Log_Ex( LogChannel sChannel, LogType sLevel, const char* spBuf )
 
 	gLogMutex.lock();
 
-	gLogHistory.push_back( { sChannel, sLevel, spBuf } );
+	gLogHistory.emplace_back( sChannel, sLevel, spBuf );
 	Log& log = gLogHistory[ gLogHistory.size() - 1 ];
 
 	Log_AddLogInternal( log );
@@ -802,7 +802,7 @@ void Log_ExV( LogChannel sChannel, LogType sLevel, const char* spFmt, va_list ar
 
 	gLogMutex.lock();
 
-	gLogHistory.push_back( { sChannel, sLevel, "" } );
+	gLogHistory.emplace_back( sChannel, sLevel, "" );
 	Log&    log = gLogHistory[ gLogHistory.size() - 1 ];
 
 	va_list copy;

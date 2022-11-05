@@ -1,6 +1,8 @@
 #include "core/filesystem.h"
 #include "core/console.h"
 #include "core/profiler.h"
+#include "core/platform.h"
+#include "core/log.h"
 #include "util.h"
 
 #include <array>

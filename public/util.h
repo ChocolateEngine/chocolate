@@ -8,6 +8,7 @@
 
 #include "core/platform.h"
 
+#include <cstdarg>
 #include <vector>
 #include <string>
 #include <algorithm>

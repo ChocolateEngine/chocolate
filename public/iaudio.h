@@ -117,4 +117,4 @@ public:
 
 
 #define IADUIO_NAME "Aduio"
-#define IADUIO_HASH typeid( BaseAudioSystem ).hash_code()
+#define IADUIO_HASH 1

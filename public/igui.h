@@ -32,5 +32,5 @@ public:
 
 
 #define IGUI_NAME "GUI"
-#define IGUI_HASH typeid( BaseGuiSystem ).hash_code()
+#define IGUI_HASH 1
 

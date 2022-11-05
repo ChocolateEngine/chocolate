@@ -22,11 +22,10 @@ if( MSVC )
 	endif()
 	
 else()
-  # idfk
 	include_directories( "${KTX_DIR}/include" )
 	set( KTX_LIB_DIR ${KTX_DIR}/build )
 	link_directories( ${KTX_DIR}/build )
-	link_libraries( ktx ktx_read )
+	link_libraries( ${KTX_LIB_DIR}/libktx.so ${KTX_LIB_DIR}/libktx_read.so )
 	
 	configure_file( "${KTX_LIB_DIR}/libktx.so" "${CH_BUILD}/libktx.so" COPYONLY )
 	configure_file( "${KTX_LIB_DIR}/libktx_read.so" "${CH_BUILD}/libktx_read.so" COPYONLY )

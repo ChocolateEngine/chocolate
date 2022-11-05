@@ -46,5 +46,5 @@ public:
 
 
 #define IINPUTSYSTEM_NAME "InputSystem"
-#define IINPUTSYSTEM_HASH typeid( BaseInputSystem ).hash_code()
+#define IINPUTSYSTEM_HASH 1
 

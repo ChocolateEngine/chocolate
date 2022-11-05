@@ -17,8 +17,8 @@ Custom Assert Handler and Error Dialog
 #endif
 
 
-void CORE_API HandleAssert( const char* file, u32 line, const char* cond, const char* title, const char* msg );
-void CORE_API HandleAssert( const char* file, u32 line, const char* cond, const char* msg );
+void CORE_API HandleAssert( const char* file, unsigned int line, const char* cond, const char* title, const char* msg );
+void CORE_API HandleAssert( const char* file, unsigned int line, const char* cond, const char* msg );
 
 
 #if !USE_ASSERTS

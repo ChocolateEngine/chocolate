@@ -235,14 +235,14 @@ public:
 	operator const char*()                              { return aValue.c_str(); }
 
 	bool    operator==( const bool& other )             { return other == GetBool(); }
-	float   operator==( const float& other )            { return other == aValueFloat; }
-	double  operator==( const double& other )           { return other == aValueFloat; }
+	bool    operator==( const float& other )            { return other == aValueFloat; }
+	bool    operator==( const double& other )           { return other == aValueFloat; }
 	bool    operator==( const std::string& other )      { return other == aValue; }
 	bool    operator==( const char* other )             { return other == aValue; }
 
 	bool    operator!=( const bool& other )             { return other != GetBool(); }
-	float   operator!=( const float& other )            { return other != aValueFloat; }
-	double  operator!=( const double& other )           { return other != aValueFloat; }
+	bool    operator!=( const float& other )            { return other != aValueFloat; }
+	bool    operator!=( const double& other )           { return other != aValueFloat; }
 	bool    operator!=( const std::string& other )      { return other != aValue; }
 	bool    operator!=( const char* other )             { return other != aValue; }
 
@@ -403,9 +403,9 @@ private:
 
 
 // Register all the ConCommands and ConVars created from static initialization
-CORE_API void                                Con_RegisterConVars(  );
+CORE_API void                                Con_RegisterConVars();
 
-CORE_API const std::vector< std::string >&   Con_GetCommandHistory(  );
+CORE_API const std::vector< std::string >&   Con_GetCommandHistory();
 
 // Checks if the current ConVar is a reference, if so, then return what it's pointing to
 // return nullptr if it doesn't point to anything, and return the normal cvar if it's not a ConVarRef
@@ -413,10 +413,10 @@ CORE_API ConVarBase*                         Con_CheckForConVarRef( ConVarBase* 
 
 /* Set and get current user text input.  */
 CORE_API void                                Con_SetTextBuffer( const std::string& str, bool recalculateList = true );
-CORE_API const std::string&                  Con_GetTextBuffer(  );
+CORE_API const std::string&                  Con_GetTextBuffer();
 
 CORE_API void                                Con_CalculateAutoCompleteList( const std::string& textBuffer );
-CORE_API const std::vector< std::string >&   Con_GetAutoCompleteList(  );
+CORE_API const std::vector< std::string >&   Con_GetAutoCompleteList();
 
 CORE_API ConVar*                             Con_GetConVar( std::string_view name );
 CORE_API ConVarBase*                         Con_GetConVarBase( std::string_view name );
@@ -424,24 +424,24 @@ CORE_API ConVarBase*                         Con_GetConVarBase( std::string_view
 CORE_API const std::string&                  Con_GetConVarValue( std::string_view name );
 CORE_API float                               Con_GetConVarFloat( std::string_view name );
 
-CORE_API void                                Con_PrintAllConVars(  );
+CORE_API void                                Con_PrintAllConVars();
 
 // Add a command to the queue
 CORE_API void                                Con_QueueCommand( const std::string& srCmd );
 CORE_API void                                Con_QueueCommandSilent( const std::string& srCmd, bool sAddToHistory = true );
 
-// Go through and run every command inputed into the console last frame
+// Go through and run every command in the queue
 CORE_API void                                Con_Update();
 
 // Find and run a command instantly
-CORE_API void                                Con_RunCommand( const std::string& command );
-CORE_API void                                Con_RunCommandF( const char* command, ... );
+CORE_API void                                Con_RunCommand( std::string_view command );
+// CORE_API void                                Con_RunCommandF( const char* command, ... );
 
 // Find and run a parsed command instantly
 CORE_API bool                                Con_RunCommandArgs( const std::string &name, const std::vector< std::string > &args );
 
-CORE_API void                                Con_ParseCommandLine( const std::string& command, std::string &name, std::vector< std::string > &args );
-CORE_API void                                Con_ParseCommandLineEx( const std::string& command, std::string &name, std::vector< std::string > &args, size_t& i );
+CORE_API void                                Con_ParseCommandLine( std::string_view command, std::string& name, std::vector< std::string >& args );
+CORE_API void                                Con_ParseCommandLineEx( std::string_view command, std::string& name, std::vector< std::string >& args, size_t& i );
 
 CORE_API ConVarFlag_t                        Con_CreateCvarFlag( const char* name );
 CORE_API const char*                         Con_GetCvarFlagName( ConVarFlag_t flag );

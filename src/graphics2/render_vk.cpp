@@ -1179,26 +1179,14 @@ public:
 	// Shader System
 	// --------------------------------------------------------------------------------------------
 
-	Handle CreatePipelineLayout( PipelineLayoutCreate_t& srPipelineCreate ) override
+	bool CreatePipelineLayout( Handle& sHandle, PipelineLayoutCreate_t& srPipelineCreate ) override
 	{
-		return VK_CreatePipelineLayout( srPipelineCreate );
+		return VK_CreatePipelineLayout( sHandle, srPipelineCreate );
 	}
 
-	Handle CreateGraphicsPipeline( GraphicsPipelineCreate_t& srGraphicsCreate ) override
+	bool CreateGraphicsPipeline( Handle& sHandle, GraphicsPipelineCreate_t& srGraphicsCreate ) override
 	{
-		// TODO: add a bool to the struct here so we know if we need to rebuild it or not if the swapchain resizes
-		// ...or just do it in game code somehow?
-		return VK_CreateGraphicsPipeline( srGraphicsCreate );
-	}
-
-	bool RecreatePipelineLayout( Handle sHandle, PipelineLayoutCreate_t& srPipelineCreate ) override
-	{
-		return VK_RecreatePipelineLayout( sHandle, srPipelineCreate );
-	}
-
-	bool RecreateGraphicsPipeline( Handle sHandle, GraphicsPipelineCreate_t& srGraphicsCreate ) override
-	{
-		return VK_RecreateGraphicsPipeline( sHandle, srGraphicsCreate );
+		return VK_CreateGraphicsPipeline( sHandle, srGraphicsCreate );
 	}
 
 	void DestroyPipeline( Handle sPipeline ) override
@@ -1520,6 +1508,19 @@ public:
 		}
 
 		vkCmdSetScissor( c, sOffset, vkScissors.size(), vkScissors.data() );
+	}
+
+	void CmdSetDepthBias( Handle cmd, float sConstantFactor, float sClamp, float sSlopeFactor ) override
+	{
+		VkCommandBuffer c = VK_GetCommandBuffer( cmd );
+
+		if ( c == nullptr )
+		{
+			Log_Error( gLC_Render, "CmdSetDepthBias: Invalid Command Buffer\n" );
+			return;
+		}
+
+		return vkCmdSetDepthBias( c, sConstantFactor, sClamp, sSlopeFactor );
 	}
 
 	bool CmdBindPipeline( Handle cmd, Handle shader ) override

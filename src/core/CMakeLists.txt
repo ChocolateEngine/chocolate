@@ -15,9 +15,9 @@ list( APPEND PUBLIC_FILES
 	${CH_PUBLIC}/util.h
 )
 
-add_compile_definitions( "CORE_DLL" "TRACY_EXPORTS" )
+add_compile_definitions( "CORE_DLL" )
 
-add_library( Core SHARED ${SRC_FILES} ${PUBLIC_FILES} ${TRACY_FILES} )
+add_library( Core SHARED ${SRC_FILES} ${PUBLIC_FILES} )
 
 if( MSVC )
 	target_link_libraries( Core Shlwapi )
@@ -25,7 +25,6 @@ endif()
 
 set_target_properties(
 	Core PROPERTIES
-	LINKER_LANGUAGE CXX
 	OUTPUT_NAME core
 )
 

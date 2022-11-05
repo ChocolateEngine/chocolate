@@ -1,4 +1,5 @@
 #include "core/console.h"
+#include "core/log.h"
 #include "util.h"
 
 #include <stdarg.h>
