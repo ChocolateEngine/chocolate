@@ -392,6 +392,8 @@ public:
 
 		if ( inLayer == BroadPhase_NoCollide )
 			return "NoCollide";
+
+		return "Unknown";
 	}
 #endif // JPH_EXTERNAL_PROFILE || JPH_PROFILE_ENABLED
 };
