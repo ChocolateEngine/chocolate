@@ -22,6 +22,8 @@ extern ResourceList< TextureVK* >                  gTextureHandles;
 static std::unordered_map< VkFramebuffer, Handle > gFramebufferHandles;
 std::unordered_map< TextureVK*, Handle >           gBackbufferHandles;
 
+extern bool                                        gNeedTextureUpdate;
+
 // std::unordered_map< ImageInfo*, TextureVK* > gImageMap;
 
 
@@ -197,20 +199,19 @@ VkSampler VK_GetSampler( VkFilter sFilter )
 
 TextureVK* VK_NewTexture()
 {
-	TextureVK* tex = gTextures.emplace_back( new TextureVK );
-	tex->aIndex    = gTextures.size() - 1;
+	TextureVK* tex = new TextureVK;
+	tex->aIndex    = gTextures.size();
+	gTextures.push_back( tex );
 	return tex;
 }
 
 
-TextureVK* VK_LoadTexture( const std::string& srPath, const TextureCreateData_t& srCreateData )
+bool VK_LoadTexture( TextureVK* tex, const std::string& srPath, const TextureCreateData_t& srCreateData )
 {
-	TextureVK* tex = KTX_LoadTexture( srPath.c_str() );
-
-	if ( tex == nullptr )
+	if ( !KTX_LoadTexture( tex, srPath.c_str() ) )
 	{
 		Log_ErrorF( gLC_Render, "Failed to load texture: \"%s\"\n", srPath.c_str() );
-		return nullptr;
+		return false;
 	}
 
 	tex->aFilter = VK_ToVkFilter( srCreateData.aFilter );
@@ -231,8 +232,8 @@ TextureVK* VK_LoadTexture( const std::string& srPath, const TextureCreateData_t&
 	}
 #endif
 
-	VK_UpdateImageSets();
-	return tex;
+	gNeedTextureUpdate = true;
+	return true;
 }
 
 
@@ -415,7 +416,7 @@ TextureVK* VK_CreateTexture( const TextureCreateInfo_t& srCreate, const TextureC
 	}
 #endif
 
-	VK_UpdateImageSets();
+	gNeedTextureUpdate = true;
 
 	return tex;
 }
@@ -1064,7 +1065,7 @@ void VK_CreateMissingTexture()
 		return;
 	}
 
-	VK_UpdateImageSets();
+	gNeedTextureUpdate = true;
 
 	// don't add to handles, this will represent InvalidHandle, and should be texture 0
 }

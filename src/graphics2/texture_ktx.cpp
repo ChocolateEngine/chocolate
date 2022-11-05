@@ -43,7 +43,7 @@ static bool LoadKTX2( ktxTexture2* spKTexture2, ktxVulkanDeviceInfo& vdi )
 }
 
 
-TextureVK* KTX_LoadTexture( const char* spPath )
+bool KTX_LoadTexture( TextureVK* spTexture, const char* spPath )
 {
 	ktxVulkanDeviceInfo vdi;
 
@@ -59,7 +59,7 @@ TextureVK* KTX_LoadTexture( const char* spPath )
 	if ( result != KTX_SUCCESS )
 	{
 		Log_ErrorF( gLC_Render, "KTX Error %d: %s - Failed to Construct KTX Vulkan Device\n", result, ktxErrorString( result ) );
-		return nullptr;
+		return false;
 	}
 
 	ktxTexture* kTexture = nullptr;
@@ -70,7 +70,7 @@ TextureVK* KTX_LoadTexture( const char* spPath )
 	{
 		Log_ErrorF( gLC_Render, "KTX Error %d: %s - Failed to open texture: %s\n", result, ktxErrorString( result ), spPath );
 		ktxVulkanDeviceInfo_Destruct( &vdi );
-		return nullptr;
+		return false;
 	}
 
 	VkFormat vkFormat = ktxTexture_GetVkFormat( kTexture );
@@ -86,7 +86,7 @@ TextureVK* KTX_LoadTexture( const char* spPath )
 		if ( !LoadKTX2( (ktxTexture2*)kTexture, vdi ) )
 		{
 			ktxVulkanDeviceInfo_Destruct( &vdi );
-			return nullptr;
+			return false;
 		}
 	}
 
@@ -105,39 +105,37 @@ TextureVK* KTX_LoadTexture( const char* spPath )
 		Log_ErrorF( gLC_Render, "KTX Error %d: %s - Failed to upload texture: %s\n", result, ktxErrorString( result ), spPath );
 		ktxTexture_Destroy( kTexture );
 		ktxVulkanDeviceInfo_Destruct( &vdi );
-		return nullptr;
+		return false;
 	}
 
 	Log_DevF( gLC_Render, 2, "Loaded Image: %s - dataSize: %d\n", spPath, kTexture->dataSize );
 
-	TextureVK* pTexture  = VK_NewTexture();
-
-	pTexture->aSize.x    = kTexture->baseWidth;
-	pTexture->aSize.y    = kTexture->baseHeight;
-	pTexture->aMipLevels = kTexture->numLevels;
-	pTexture->aImage     = kVkTexture.image;
-	pTexture->aMemory    = kVkTexture.deviceMemory;
-	pTexture->aFormat    = kVkTexture.imageFormat;
-	pTexture->aViewType  = kVkTexture.viewType;
-	pTexture->aFrames    = kVkTexture.layerCount;
-	pTexture->aUsage     = VK_IMAGE_USAGE_SAMPLED_BIT;
+	spTexture->aSize.x    = kTexture->baseWidth;
+	spTexture->aSize.y    = kTexture->baseHeight;
+	spTexture->aMipLevels = kTexture->numLevels;
+	spTexture->aImage     = kVkTexture.image;
+	spTexture->aMemory    = kVkTexture.deviceMemory;
+	spTexture->aFormat    = kVkTexture.imageFormat;
+	spTexture->aViewType  = kVkTexture.viewType;
+	spTexture->aFrames    = kVkTexture.layerCount;
+	spTexture->aUsage     = VK_IMAGE_USAGE_SAMPLED_BIT;
 
 	// Create Image View
 	VkImageViewCreateInfo viewInfo{ VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO };
-	viewInfo.image                           = pTexture->aImage;
-	viewInfo.viewType                        = pTexture->aViewType;
-	viewInfo.format                          = pTexture->aFormat;
+	viewInfo.image                           = spTexture->aImage;
+	viewInfo.viewType                        = spTexture->aViewType;
+	viewInfo.format                          = spTexture->aFormat;
 	viewInfo.subresourceRange.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT;
 	viewInfo.subresourceRange.baseMipLevel   = 0;
-	viewInfo.subresourceRange.levelCount     = pTexture->aMipLevels;
+	viewInfo.subresourceRange.levelCount     = spTexture->aMipLevels;
 	viewInfo.subresourceRange.baseArrayLayer = 0;
-	viewInfo.subresourceRange.layerCount     = pTexture->aFrames;
+	viewInfo.subresourceRange.layerCount     = spTexture->aFrames;
 
-	VK_CheckResult( vkCreateImageView( VK_GetDevice(), &viewInfo, nullptr, &pTexture->aImageView ), "Failed to create Image View" );
+	VK_CheckResult( vkCreateImageView( VK_GetDevice(), &viewInfo, nullptr, &spTexture->aImageView ), "Failed to create Image View" );
 
 	ktxTexture_Destroy( kTexture );
 	ktxVulkanDeviceInfo_Destruct( &vdi );
 
-	return pTexture;
+	return true;
 }
 

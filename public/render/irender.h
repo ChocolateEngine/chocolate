@@ -650,10 +650,12 @@ class IRender : public BaseSystem
 	// Textures
 	// --------------------------------------------------------------------------------------------
 
-	virtual Handle      LoadTexture( const std::string& srTexturePath, const TextureCreateData_t& srCreateData ) = 0;
+	virtual Handle      LoadTexture( Handle& srHandle, const std::string& srTexturePath, const TextureCreateData_t& srCreateData ) = 0;
+	// virtual Handle      LoadTexture( const std::string& srTexturePath, const TextureCreateData_t& srCreateData, Handle* spHandle = nullptr ) = 0;
 	virtual Handle      CreateTexture( const TextureCreateInfo_t& srTextureCreateInfo, const TextureCreateData_t& srCreateData ) = 0;
 	virtual void        FreeTexture( Handle shTexture )                                                          = 0;
 	virtual int         GetTextureIndex( Handle shTexture )                                                      = 0;
+	virtual void        ReloadTextures()                                                                         = 0;
 
 	// virtual Handle      CreateRenderTarget( const CreateRenderTarget_t& srCreate )                             = 0;
 	// virtual void        DestroyRenderTarget( Handle shTarget )                                                 = 0;
@@ -699,6 +701,7 @@ class IRender : public BaseSystem
 
 	virtual void        Reset()                                                                                  = 0;
 	virtual void        NewFrame()                                                                               = 0;
+	virtual void        PreRenderPass()                                                                          = 0;
 	virtual void        Present()                                                                                = 0;
 
 	virtual void        WaitForQueues()                                                                          = 0;
@@ -771,5 +774,5 @@ class IRender : public BaseSystem
 
 
 #define IRENDER_NAME "Render"
-#define IRENDER_HASH 2
+#define IRENDER_HASH 3
 

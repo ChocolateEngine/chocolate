@@ -317,7 +317,7 @@ void                                  VK_DestroyBuffer( VkBuffer& srBuffer, VkDe
 VkSampler                             VK_GetSampler( VkFilter sFilter );
 
 TextureVK*                            VK_NewTexture();
-TextureVK*                            VK_LoadTexture( const std::string& srPath, const TextureCreateData_t& srCreateData );
+bool                                  VK_LoadTexture( TextureVK* spTexture, const std::string& srPath, const TextureCreateData_t& srCreateData );
 TextureVK*                            VK_CreateTexture( const TextureCreateInfo_t& srTextureCreateInfo, const TextureCreateData_t& srCreateData );
 void                                  VK_DestroyTexture( TextureVK* spTexture );
 void                                  VK_DestroyAllTextures();
@@ -345,6 +345,6 @@ void                                  VK_CreateMissingTexture();
 // --------------------------------------------------------------------------------------
 // KTX Texture Support
 
-TextureVK*                            KTX_LoadTexture( const char* spPath );
+bool                                  KTX_LoadTexture( TextureVK* spTexture, const char* spPath );
 
 

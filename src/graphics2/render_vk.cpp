@@ -18,31 +18,34 @@ LOG_REGISTER_CHANNEL2( Render, LogColor::Cyan );
 LOG_REGISTER_CHANNEL( Vulkan, LogColor::DarkYellow );
 LOG_REGISTER_CHANNEL( Validation, LogColor::DarkYellow );
 
+int                                                      gWidth   = 1280;
+int                                                      gHeight  = 720;
 
-int                                              gWidth   = 1280;
-int                                              gHeight  = 720;
+SDL_Window*                                              gpWindow = nullptr;
 
-SDL_Window*                                      gpWindow = nullptr;
-
-static VkCommandPool                             gSingleTime;
-static VkCommandPool                             gPrimary;
+static VkCommandPool                                     gSingleTime;
+static VkCommandPool                                     gPrimary;
 
 // static std::unordered_map< ImageInfo*, VkDescriptorSet > gImGuiTextures;
-static std::vector< std::vector< char > >        gFontData;
+static std::vector< std::vector< char > >                gFontData;
 
-static std::vector< VkBuffer >                   gBuffers;
+static std::vector< VkBuffer >                           gBuffers;
 
-ResourceList< BufferVK >                         gBufferHandles;
-ResourceList< TextureVK* >                       gTextureHandles;
+ResourceList< BufferVK >                                 gBufferHandles;
+ResourceList< TextureVK* >                               gTextureHandles;
 // static ResourceManager< BufferVK >        gBufferHandles;
 
-static std::unordered_map< std::string, Handle > gTexturePaths;
+static std::unordered_map< std::string, Handle >         gTexturePaths;
+static std::unordered_map< Handle, TextureCreateData_t > gTextureInfo;
 
 // Static Memory Pools for Vulkan Commands
-static VkViewport*                               gpViewports   = nullptr;
-static u32                                       gMaxViewports = 0;
+static VkViewport*                                       gpViewports        = nullptr;
+static u32                                               gMaxViewports      = 0;
 
-static Render_OnReset_t                          gpOnResetFunc = nullptr;
+static Render_OnReset_t                                  gpOnResetFunc      = nullptr;
+
+bool                                                     gNeedTextureUpdate = false;
+extern std::vector< TextureVK* >                         gTextures;
 
 
 CONVAR_CMD( r_msaa, 1 )
@@ -1024,11 +1027,17 @@ public:
 	// Materials and Textures
 	// --------------------------------------------------------------------------------------------
 
-	Handle LoadTexture( const std::string& srTexturePath, const TextureCreateData_t& srCreateData ) override
+	Handle LoadTexture( Handle& srHandle, const std::string& srTexturePath, const TextureCreateData_t& srCreateData ) override
 	{
-		auto it = gTexturePaths.find( srTexturePath );
-		if ( it != gTexturePaths.end() )
-			return it->second;
+		if ( srHandle == InvalidHandle )
+		{
+			auto it = gTexturePaths.find( srTexturePath );
+			if ( it != gTexturePaths.end() && it->second != InvalidHandle )
+			{
+				srHandle = it->second;
+				return srHandle;
+			}
+		}
 
 		std::string fullPath;
 
@@ -1044,17 +1053,61 @@ public:
 
 		if ( fullPath.empty() )
 		{
+			// add it to the paths anyway, if you do a texture reload, then maybe the texture will have been added
+			gTexturePaths[ srTexturePath ] = InvalidHandle;
 			Log_ErrorF( gLC_Render, "Failed to find Texture: \"%s\"\n", srTexturePath.c_str() );
 			return InvalidHandle;
 		}
 
-		TextureVK* tex = VK_LoadTexture( fullPath, srCreateData );
-		if ( tex == nullptr )
-			return InvalidHandle;
+		if ( srHandle )
+		{
+			// free old texture data
+			TextureVK* tex = nullptr;
+			if ( !gTextureHandles.Get( srHandle, &tex ) )
+			{
+				Log_Error( gLC_Render, "Failed to find old texture\n" );
+				return InvalidHandle;
+			}
 
-		Handle handle = gTextureHandles.Add( tex );
-		gTexturePaths[ srTexturePath ] = handle;
-		return handle;
+			if ( tex->aImageView )
+				vkDestroyImageView( VK_GetDevice(), tex->aImageView, nullptr );
+
+			if ( tex->aMemory )
+			{
+				if ( tex->aImage )
+					vkDestroyImage( VK_GetDevice(), tex->aImage, nullptr );
+
+				vkFreeMemory( VK_GetDevice(), tex->aMemory, nullptr );
+			}
+
+			if ( !VK_LoadTexture( tex, fullPath, srCreateData ) )
+			{
+				VK_DestroyTexture( tex );
+				return InvalidHandle;
+			}
+
+			// write new texture data
+			if ( !gTextureHandles.Update( srHandle, tex ) )
+			{
+				Log_ErrorF( gLC_Render, "Failed to Update Texture Handle: \"%s\"\n", srTexturePath.c_str() );
+				return InvalidHandle;
+			}
+		}
+		else
+		{
+			TextureVK* tex = VK_NewTexture();
+			if ( !VK_LoadTexture( tex, fullPath, srCreateData ) )
+			{
+				VK_DestroyTexture( tex );
+				return InvalidHandle;
+			}
+
+			srHandle                       = gTextureHandles.Add( tex );
+			gTexturePaths[ srTexturePath ] = srHandle;
+			gTextureInfo[ srHandle ]       = srCreateData;
+		}
+
+		return srHandle;
 	}
 
 	Handle CreateTexture( const TextureCreateInfo_t& srTextureCreateInfo, const TextureCreateData_t& srCreateData ) override
@@ -1063,7 +1116,9 @@ public:
 		if ( tex == nullptr )
 			return InvalidHandle;
 
-		return gTextureHandles.Add( tex );
+		Handle handle = gTextureHandles.Add( tex );
+		gTextureInfo[ handle ] = srCreateData;
+		return handle;
 	}
 
 	void FreeTexture( Handle sTexture ) override
@@ -1077,6 +1132,7 @@ public:
 
 		VK_DestroyTexture( tex );
 		gTextureHandles.Remove( sTexture );
+		gTextureInfo.erase( sTexture );
 
 		for ( auto& [ path, handle ] : gTexturePaths )
 		{
@@ -1103,17 +1159,16 @@ public:
 		return tex->aIndex;
 	}
 
-#if 0
-	Handle CreateRenderTarget( const CreateRenderTarget_t& srCreate ) override
+	void ReloadTextures() override
 	{
-		// VK_CreateRenderTarget();
-		return InvalidHandle;
-	}
+		VK_WaitForGraphicsQueue();
+		VK_WaitForPresentQueue();
 
-	void DestroyRenderTarget( Handle shTarget ) override
-	{
+		for ( auto& [ path, handle ] : gTexturePaths )
+		{
+			LoadTexture( handle, path, gTextureInfo[ handle ] );
+		}
 	}
-#endif
 
 	Handle CreateFramebuffer( const CreateFramebuffer_t& srCreate ) override
 	{
@@ -1312,6 +1367,14 @@ public:
 		VK_Reset();
 	}
 
+	void PreRenderPass() override
+	{
+		if ( gNeedTextureUpdate )
+			VK_UpdateImageSets();
+
+		gNeedTextureUpdate = false;
+	}
+
 	void Present() override
 	{
 		VK_Present();
@@ -1395,7 +1458,7 @@ public:
 		renderPassBeginInfo.renderPass        = VK_GetRenderPass( srBegin.aRenderPass );
 		renderPassBeginInfo.framebuffer       = VK_GetFramebuffer( srBegin.aFrameBuffer );
 		renderPassBeginInfo.renderArea.offset = { 0, 0 };
-		renderPassBeginInfo.renderArea.extent = VK_GetSwapExtent();
+		renderPassBeginInfo.renderArea.extent = VK_GetSwapExtent();  // TODO: ADD renderArea THIS TO RenderPassBegin_t
 
 		std::vector< VkClearValue > clearValues( srBegin.aClear.size() );
 		if ( srBegin.aClear.size() )
@@ -1416,11 +1479,6 @@ public:
 						srBegin.aClear[ i ].aColor.w
 					};
 				}
-				
-				// clearValues[ i ].color.float32[ 0 ] = srBegin.aClear[ i ].aColor.x;
-				// clearValues[ i ].color.float32[ 1 ] = srBegin.aClear[ i ].aColor.y;
-				// clearValues[ i ].color.float32[ 2 ] = srBegin.aClear[ i ].aColor.z;
-				// clearValues[ i ].color.float32[ 3 ] = srBegin.aClear[ i ].aColor.w;
 			}
 
 			renderPassBeginInfo.clearValueCount = static_cast< u32 >( clearValues.size() );
@@ -1728,6 +1786,18 @@ extern "C"
 	{
 		srCount = 1;
 		return gInterfaces;
+	}
+}
+
+
+CONCMD( r_reload_textures )
+{
+	VK_WaitForGraphicsQueue();
+	VK_WaitForPresentQueue();
+
+	for ( auto& [ path, handle ] : gTexturePaths )
+	{
+		gRenderer.LoadTexture( handle, path, gTextureInfo[ handle ] );
 	}
 }
 
