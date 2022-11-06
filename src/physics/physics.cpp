@@ -9,6 +9,7 @@ LOG_REGISTER_CHANNEL( Physics, LogColor::DarkGreen );
 extern ConVar phys_dbg;
 
 Phys_DebugFuncs_t gDebugFuncs;
+PhysDebugDraw*    gpDebugDraw = nullptr;
 
 CONVAR( phys_fast, 0 );
 
@@ -233,6 +234,16 @@ public:
 	void SetDebugDrawFuncs( const Phys_DebugFuncs_t& srDebug )override
 	{
 		gDebugFuncs = srDebug;
+
+		if ( !gpDebugDraw )
+		{
+			gpDebugDraw = new PhysDebugDraw;
+		}
+
+		if ( !gpDebugDraw->aValid )
+		{
+			gpDebugDraw->Init();
+		}
 	}
 
 	// -------------------------------------------------------------------
@@ -418,8 +429,6 @@ void PhysicsEnvironment::Init()
 	// Note that this is called from a job so whatever you do here needs to be thread safe.
 	// Registering one is entirely optional.
 	apPhys->SetContactListener( &gContactListener );
-
-	apDebugDraw = new PhysDebugDraw;
 }
 
 
@@ -439,7 +448,7 @@ void PhysicsEnvironment::Simulate( float sDT )
 
 	apPhys->Update( sDT, phys_collisionsteps, phys_substeps, phys.apAllocator, phys.apJobSystem );
 
-	if ( !phys_dbg || !apDebugDraw->aValid )
+	if ( !phys_dbg || !gpDebugDraw || !gpDebugDraw->aValid )
 		return;
 
 	for ( auto physObj : aPhysObjs )
@@ -448,7 +457,7 @@ void PhysicsEnvironment::Simulate( float sDT )
 			continue;
 
 		physObj->apShape->aShape->Draw(
-			apDebugDraw,
+			gpDebugDraw,
 			JPH::Mat44::sRotationTranslation( physObj->GetRotationJolt(), physObj->GetPositionJolt() ),
 			// physObj->GetWorldTransformJolt(),
 			{1, 1, 1},
@@ -530,7 +539,7 @@ IPhysicsShape* PhysicsEnvironment::CreateShape( const PhysicsShapeInfo& physInfo
 		{
 			Log_ErrorF( gPhysicsChannel, "Failed to create \"%s\" Physics Shape\n", PhysShapeType2Str( physInfo.aShapeType ) );
 		}
-		// TODO: use HasError() and GetError() on the result
+
 		delete shapeSettings;
 		return nullptr;
 	}
@@ -823,6 +832,11 @@ JPH::ShapeSettings* PhysicsEnvironment::LoadModel( const PhysicsShapeInfo& physI
 
 			for ( u32 i = 0; i < physInfo.aConcaveData.aTriCount; i++ )
 			{
+				if ( physInfo.aConcaveData.aTris[ i ].aPos[ 0 ] > physInfo.aConcaveData.aVertCount )
+				{
+					Log_Error( "AAA\n" );
+				}
+
 				ind[ i ] = {
 					physInfo.aConcaveData.aTris[ i ].aPos[ 0 ],
 					physInfo.aConcaveData.aTris[ i ].aPos[ 1 ],

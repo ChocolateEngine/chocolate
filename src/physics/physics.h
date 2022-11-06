@@ -70,6 +70,10 @@ inline glm::vec3 fromJolt( const JPH::Vec3& from ) {
 	return glm::vec3( from.GetX(), from.GetY(), from.GetZ() );
 }
 
+inline glm::vec4 fromJolt( const JPH::Vec4& from ) {
+	return glm::vec4( from.GetX(), from.GetY(), from.GetZ(), from.GetW() );
+}
+
 inline glm::vec3 fromJolt( const JPH::Float3& from ) {
 	return glm::vec3( from[0], from[1], from[2] );
 }
@@ -186,8 +190,6 @@ public:
 
 public:
 	JPH::ShapeSettings*             LoadModel( const PhysicsShapeInfo& physInfo );
-
-	PhysDebugDraw*                  apDebugDraw;
 
 	JPH::PhysicsSystem*             apPhys;
 };

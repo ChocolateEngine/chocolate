@@ -111,10 +111,10 @@ struct PhysIndexedTriangle_t
 
 struct PhysVertex_t
 {
-	glm::vec3 pos;
-	glm::vec3 norm;
-	glm::vec2 uv;
-	glm::vec4 color;
+	glm::vec3 aPos;
+	glm::vec3 aNorm;
+	glm::vec2 aUV;
+	glm::vec4 aColor;
 };
 
 

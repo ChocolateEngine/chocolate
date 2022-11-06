@@ -37,6 +37,7 @@ public:
 
 	// int aDebugMode = DBG_NoDebug;
 
+	void Init();
 	void OnNewFrame();
 
 	// overrides

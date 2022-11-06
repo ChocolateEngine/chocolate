@@ -19,6 +19,9 @@ static ResourceList< ShaderVK >         gShaders;
 static ResourceList< VkPipelineLayout > gPipelineLayouts;
 
 
+CONVAR( r_sampled_textures, 1 );
+
+
 void VK_BindDescSets()
 {
 }
@@ -272,7 +275,7 @@ bool VK_CreateGraphicsPipeline( Handle& srHandle, GraphicsPipelineCreate_t& srGr
 
 	//	Performs anti-aliasing
 	VkPipelineMultisampleStateCreateInfo multisampling{ VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO };
-	multisampling.sampleShadingEnable   = VK_TRUE;
+	multisampling.sampleShadingEnable   = r_sampled_textures;
 	multisampling.rasterizationSamples  = renderPassInfo->aUsesMSAA ? VK_GetMSAASamples() : VK_SAMPLE_COUNT_1_BIT;
 	multisampling.minSampleShading      = 1.0f;      // Optional
 	multisampling.pSampleMask           = NULL;      // Optional

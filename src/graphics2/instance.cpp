@@ -14,7 +14,8 @@
 #ifdef NDEBUG
 constexpr bool        gEnableValidationLayers = false;
 constexpr char const* gpValidationLayers[]    = { 0 };
-bool                  g_vk_verbose            = false;
+bool                  vk_verbose              = false;
+bool                  vk_formatted            = false;
 #else
 constexpr bool        gEnableValidationLayers = true;
 constexpr char const* gpValidationLayers[]    = { "VK_LAYER_KHRONOS_validation" };

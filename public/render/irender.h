@@ -441,10 +441,10 @@ struct GraphicsPipelineCreate_t
 {
 	const char*                           apName = nullptr;
 
-	std::vector< ShaderModule_t >         aShaderModules;
-	std::vector< VertexInputBinding_t >   aVertexBindings;
-	std::vector< VertexInputAttribute_t > aVertexAttributes;
-	std::vector< ColorBlendAttachment_t > aColorBlendAttachments;
+	std::vector< ShaderModule_t >         aShaderModules{};
+	std::vector< VertexInputBinding_t >   aVertexBindings{};
+	std::vector< VertexInputAttribute_t > aVertexAttributes{};
+	std::vector< ColorBlendAttachment_t > aColorBlendAttachments{};
 
 	EPrimTopology                         aPrimTopology;
 	EDynamicState                         aDynamicState;
