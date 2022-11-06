@@ -47,7 +47,7 @@
 	#define CH_MALLOC_SIZE( block )     ( _msize( block ) )
 #else
 	#define CH_STACK_ALLOC( size )      alloca( CH_ALIGN_VALUE( size, 16 ) )
-	#define CH_STACK_FREE( data )       free( data )
+	#define CH_STACK_FREE( data )       
 
 	// obtain size of block of memory allocated from heap
 	#define CH_MALLOC_SIZE( block )     ( malloc_usable_size( block ) )
