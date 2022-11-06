@@ -178,9 +178,9 @@ inline glm::vec3 Util_GetMatrixScale( const glm::mat4& mat )
 {
 	glm::vec3 scale{};
 
-	scale.x = sqrt( mat[ 0 ][ 0 ] * mat[ 0 ][ 0 ] + mat[ 0 ][ 1 ] * mat[ 0 ][ 1 ] + mat[ 0 ][ 2 ] * mat[ 0 ][ 2 ] );
-	scale.y = sqrt( mat[ 1 ][ 0 ] * mat[ 1 ][ 0 ] + mat[ 1 ][ 1 ] * mat[ 1 ][ 1 ] + mat[ 1 ][ 2 ] * mat[ 1 ][ 2 ] );
-	scale.z = sqrt( mat[ 2 ][ 0 ] * mat[ 2 ][ 0 ] + mat[ 2 ][ 1 ] * mat[ 2 ][ 1 ] + mat[ 2 ][ 2 ] * mat[ 2 ][ 2 ] );
+	scale.x = glm::sqrt( glm::dot( mat[ 0 ], mat[ 0 ] ) );
+	scale.y = glm::sqrt( glm::dot( mat[ 1 ], mat[ 1 ] ) );
+	scale.z = glm::sqrt( glm::dot( mat[ 2 ], mat[ 2 ] ) );
 
 	return scale;
 }
