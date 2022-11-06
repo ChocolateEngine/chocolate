@@ -561,7 +561,7 @@ void Json_Free( JsonObject_t* spRoot )
 
 		objStack.pop_back();
 
-		if ( objStack.size() && objStack[objStack.size() - 1]->aObjects.size() )
+		if ( objStack.size() && objStack[ objStack.size() - 1 ]->aType == EJsonType_Object && objStack[ objStack.size() - 1 ]->aObjects.size() )
 		{
 			objStack[objStack.size() - 1]->aObjects.clear();
 		}
