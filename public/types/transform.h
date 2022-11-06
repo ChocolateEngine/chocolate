@@ -178,11 +178,11 @@ inline glm::vec3 Util_GetMatrixScale( const glm::mat4& mat )
 {
 	glm::vec3 scale{};
 
-	scale.x = glm::sqrt( glm::dot( mat[ 0 ], mat[ 0 ] ) );
-	scale.y = glm::sqrt( glm::dot( mat[ 1 ], mat[ 1 ] ) );
-	scale.z = glm::sqrt( glm::dot( mat[ 2 ], mat[ 2 ] ) );
+	scale.x = glm::dot( mat[ 0 ], mat[ 0 ] );
+	scale.y = glm::dot( mat[ 1 ], mat[ 1 ] );
+	scale.z = glm::dot( mat[ 2 ], mat[ 2 ] );
 
-	return scale;
+	return glm::sqrt( scale );
 }
 
 inline void Util_GetMatrixDirection( const glm::mat4& mat, glm::vec3* forward, glm::vec3* right = nullptr, glm::vec3* up = nullptr )
