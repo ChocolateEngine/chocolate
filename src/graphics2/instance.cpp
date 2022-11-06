@@ -462,6 +462,9 @@ VkPresentModeKHR VK_ChooseSwapPresentMode()
 
 	for ( const auto& availablePresentMode : gSwapPresentModes )
 	{
+		if ( availablePresentMode == VK_PRESENT_MODE_IMMEDIATE_KHR )
+			return availablePresentMode;
+
 		if ( availablePresentMode == VK_PRESENT_MODE_MAILBOX_KHR )
 			return availablePresentMode;
 	}
