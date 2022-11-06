@@ -99,7 +99,7 @@ bool KTX_LoadTexture( TextureVK* spTexture, const char* spPath )
 		return false;
 	}
 
-	ktxTexture* kTexture = nullptr;^
+	ktxTexture* kTexture = nullptr;
 
 	result               = ktxTexture_CreateFromNamedFile( spPath, KTX_TEXTURE_CREATE_NO_FLAGS, &kTexture );
 
