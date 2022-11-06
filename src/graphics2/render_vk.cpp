@@ -850,8 +850,13 @@ public:
 		if ( SDL_Init( SDL_INIT_VIDEO | SDL_INIT_EVENTS | SDL_INIT_AUDIO ) != 0 )
 			Log_Fatal( "Unable to initialize SDL2!" );
 
+		int flags = SDL_WINDOW_VULKAN | SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE;
+
+		if ( Args_Find( "-max" ) )
+			flags |= SDL_WINDOW_MAXIMIZED;
+
 		gpWindow = SDL_CreateWindow( "Chocolate Engine - Compiled on " __DATE__, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
-		                             gWidth, gHeight, SDL_WINDOW_VULKAN | SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE );
+		                             gWidth, gHeight, flags );
 
 		if ( !Render_Init( gpWindow ) )
 			return false;

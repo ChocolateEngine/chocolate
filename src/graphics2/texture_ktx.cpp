@@ -11,6 +11,41 @@ struct KTXTexture_t
 };
 
 
+static ktxVulkanFunctions gKtxFuncs = {
+	vkGetInstanceProcAddr,
+	vkGetDeviceProcAddr,
+
+	// vkAllocateCommandBuffers,
+	// vkAllocateMemory,
+	// vkBeginCommandBuffer,
+	// vkBindBufferMemory,
+	// vkBindImageMemory,
+	// vkCmdBlitImage,
+	// vkCmdCopyBufferToImage,
+	// vkCmdPipelineBarrier,
+	// vkCreateImage,
+	// vkDestroyImage,
+	// vkCreateBuffer,
+	// vkDestroyBuffer,
+	// vkCreateFence,
+	// vkDestroyFence,
+	// vkEndCommandBuffer,
+	// vkFreeCommandBuffers,
+	// vkFreeMemory,
+	// vkGetBufferMemoryRequirements,
+	// vkGetImageMemoryRequirements,
+	// vkGetImageSubresourceLayout,
+	// vkGetPhysicalDeviceImageFormatProperties,
+	// vkGetPhysicalDeviceFormatProperties,
+	// vkGetPhysicalDeviceMemoryProperties,
+	// vkMapMemory,
+	// vkQueueSubmit,
+	// vkQueueWaitIdle,
+	// vkUnmapMemory,
+	// vkWaitForFences,
+};
+
+
 constexpr ktx_transcode_fmt_e gKtxFallbackFmt = KTX_TTF_BC7_RGBA;
 
 
@@ -48,13 +83,15 @@ bool KTX_LoadTexture( TextureVK* spTexture, const char* spPath )
 	ktxVulkanDeviceInfo vdi;
 
 	// TODO: can i just create this once?
-	KTX_error_code      result = ktxVulkanDeviceInfo_Construct(
-			&vdi,
-			VK_GetPhysicalDevice(),
-			VK_GetDevice(),
-			VK_GetGraphicsQueue(),
-			VK_GetPrimaryCommandPool(),
-			nullptr );
+	KTX_error_code      result = ktxVulkanDeviceInfo_ConstructEx(
+		   &vdi,
+		   VK_GetInstance(),
+		   VK_GetPhysicalDevice(),
+		   VK_GetDevice(),
+		   VK_GetGraphicsQueue(),
+		   VK_GetPrimaryCommandPool(),
+		   nullptr,
+		   &gKtxFuncs );
 
 	if ( result != KTX_SUCCESS )
 	{
@@ -62,7 +99,7 @@ bool KTX_LoadTexture( TextureVK* spTexture, const char* spPath )
 		return false;
 	}
 
-	ktxTexture* kTexture = nullptr;
+	ktxTexture* kTexture = nullptr;^
 
 	result               = ktxTexture_CreateFromNamedFile( spPath, KTX_TEXTURE_CREATE_NO_FLAGS, &kTexture );
 

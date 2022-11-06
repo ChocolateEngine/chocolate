@@ -116,14 +116,30 @@ def post_ktx_extract():
 
     os.chdir("build")
 
-    # initial setup
-    os.system("cmake ..")
+    # TODO: this should disable AVX2 for the astc encoder, not ktx itself,
+    # but whatever is going on in the ktx cmake script causes this to be ignored
+    # we have a friend who has a pc without AVX2 lol
+    build_options = "-DISA_AVX2=OFF"
 
-    print("Building KTX - Release\n")
-    os.system("cmake --build . --config Release")
+    # TODO: this --config thing doesn't actually work on linux,
+    # use build/Release and build/Debug folders instead?
+    if SYS_OS == OS.Windows:
+        os.system(f"cmake {build_options} ..")
 
-    print("Building KTX - Debug\n")
-    os.system("cmake --build . --config Debug")
+        print("Building KTX - Release\n")
+        os.system("cmake --build . --config Release")
+
+        print("Building KTX - Debug\n")
+        os.system("cmake --build . --config Debug")
+        
+    else:
+        os.system(f"cmake {build_options} -DCMAKE_BUILD_TYPE=Release ..")
+
+        print("Building KTX - Release\n")
+        os.system("cmake --build . --config Release")
+
+        # print("Building KTX - Debug\n")
+        # os.system("cmake --build . --config Debug")
 
     os.chdir("../..")
 
@@ -353,14 +369,6 @@ FILE_LIST = {
             None,                   # function to run post extraction (optional)
         ],
         [
-            "https://codeload.github.com/KhronosGroup/KTX-Software/zip/refs/tags/v4.0.0",
-            "zip",                  # file extension it's stored as
-            "KTX-Software",         # folder to check for if it exists already
-            "KTX-Software-4.0.0",   # folder it extracts as to rename to the folder above (optional)
-            ".",                    # extract into this folder (optional)
-            post_ktx_extract,       # function to run post extraction (optional)
-        ],
-        [
             "https://github.com/jrouwe/JoltPhysics/archive/6406ceec5ec790a7bdda16d258d618d1ca95d7ae.zip",
             "zip",                  # file extension it's stored as
             "JoltPhysics",          # folder to check for if it exists already
@@ -511,6 +519,10 @@ def handle_item(url: str, file_ext: str, folder: str, extract_folder: str = "", 
 
 
 def main():
+    # Compile git submodules
+    # TODO: check if the user actually cloned them or not
+    post_ktx_extract()
+    
     # Do your platform first
     for item in FILE_LIST[SYS_OS]:
         handle_item(*item)
