@@ -360,6 +360,11 @@ private:
 	ConVar name( #name, value, cvarfunc_##name ); \
 	void cvarfunc_##name( const std::string& prevString, float prevFloat, const std::vector< std::string >& args )
 
+#define CONVAR_CMD_EX( name, ... ) \
+	void cvarfunc_##name( const std::string& prevString, float prevFloat, const std::vector< std::string >& args ); \
+	ConVar name( #name, __VA_ARGS__, cvarfunc_##name ); \
+	void cvarfunc_##name( const std::string& prevString, float prevFloat, const std::vector< std::string >& args )
+
 #define CONVARREF( name ) \
 	ConVarRef name( #name )
 

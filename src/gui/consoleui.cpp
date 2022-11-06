@@ -7,18 +7,16 @@
 #include "imgui/imgui_impl_sdl.h"
 
 
-static LogChannel gConsoleChannel    = Log_GetChannel( "Console" );
-static LogChannel gValidationChannel = Log_GetChannel( "Validation" );
-
 CONVAR( con_spam_test, 0 );
 
 CONVAR( conui_max_history, -1 );  // idk
 CONVAR( conui_color_test, 0 );
 
 void ReBuildConsoleOutput();
+void UpdateConsoleOutput();
 
-// 3 is all colors (slowest), 2 is errors, warnings and validation layers, 1 is errors and warnings, only, 0 is no colors (fastest)
-CONVAR_CMD( conui_colors, 3 )
+
+CONVAR_CMD_EX( conui_colors, 2, CVARF_NONE, "2 is all colors, 1 is errors and warnings, only, 0 is no colors" )
 {
 	ReBuildConsoleOutput();
 }
@@ -218,19 +216,22 @@ bool CheckAddLastCommand( ImGuiInputTextCallbackData* data )
 
 bool CheckEnterPress( char* buf )
 {
-	bool isPressed = ImGui::IsKeyPressed( ImGui::GetKeyIndex(ImGuiKey_Enter), false );
-	isPressed |= ImGui::IsKeyPressed( ImGui::GetKeyIndex(ImGuiKey_KeyPadEnter), false );
+	bool isPressed = ImGui::IsKeyPressed( ImGui::GetKeyIndex( ImGuiKey_Enter ), false );
+	isPressed |= ImGui::IsKeyPressed( ImGui::GetKeyIndex( ImGuiKey_KeyPadEnter ), false );
 
 	if ( isPressed )
 	{
 		Con_QueueCommand( buf );
 		snprintf( buf, 256, "" );
 		Con_SetTextBuffer( buf );
-		ImGui::SetKeyboardFocusHere(  );
+		ImGui::SetKeyboardFocusHere();
 
 		gCmdUserInput = "";
 		gCmdHistoryIndex = -1;
 		gCmdDropDownIndex = -1;
+
+		// TODO: add this to the actual in-game console history before returning somehow
+		// if you loaded a map, you won't see the command in the game console until the map finished loading
 	}
 
 	return isPressed;
@@ -243,8 +244,8 @@ int ConsoleInputCallback( ImGuiInputTextCallbackData* data )
 
 	if ( gCmdHistoryIndex != -1 )
 	{
-		bool keyPressed = ImGui::IsKeyPressed( ImGui::GetKeyIndex(ImGuiKey_Tab) );
-		keyPressed |= ImGui::IsKeyPressed( ImGui::GetKeyIndex(ImGuiKey_RightArrow) );
+		bool keyPressed = ImGui::IsKeyPressed( ImGui::GetKeyIndex( ImGuiKey_Tab ) );
+		keyPressed |= ImGui::IsKeyPressed( ImGui::GetKeyIndex( ImGuiKey_RightArrow ) );
 
 		if ( keyPressed )
 			data->BufDirty = CheckAddDropDownCommand( data );
@@ -382,21 +383,19 @@ void DrawLogChannelButtons()
 
 LogColor GetConsoleTextColor( const Log& log )
 {
-	LogColor color = LogColor::Default;
-
 	if ( conui_colors == 0.f )
-		return color;
+		return LogColor::Default;
 
 	if ( log.aType == LogType::Warning )
-		color = LOG_COLOR_WARNING;
+		return LOG_COLOR_WARNING;
 
 	else if ( log.aType == LogType::Error || log.aType == LogType::Fatal )
-		color = LOG_COLOR_ERROR;
+		return LOG_COLOR_ERROR;
 
-	else if ( (conui_colors == 2.f && log.aChannel == gValidationChannel) || conui_colors >= 3.f )
-		color = Log_GetChannelColor( log.aChannel );
+	else if ( conui_colors >= 2.f )
+		return Log_GetChannelColor( log.aChannel );
 
-	return color;
+	return LogColor::Default;
 }
 
 
@@ -415,12 +414,12 @@ void ReBuildConsoleOutput()
 {
 	gConHistory.clear();
 
-	ConLogBuffer* buffer = &gConHistory.emplace_back();
+	ConLogBuffer*             buffer = &gConHistory.emplace_back();
 	const std::vector< Log >& logs   = Log_GetLogHistory();
 
 	for ( const auto& log: logs )
 	{
-		if ( !Log_ChannelIsShown( log.aChannel ) )
+		if ( !Log_IsVisible( log ) )
 			continue;
 
 		LogColor color = GetConsoleTextColor( log );
@@ -464,6 +463,9 @@ void UpdateConsoleOutput()
 		const Log&    log       = logs[ gConHistoryIndex ];
 		LogColor      nextColor = GetConsoleTextColor( log );
 
+		if ( !Log_IsVisible( log ) )
+			continue;
+
 		if ( buffer->aColor != nextColor )
 		{
 			buffer = &gConHistory.emplace_back( nextColor, log.aFormatted );
@@ -493,7 +495,6 @@ void DrawConsoleOutput()
 
 	ImGui::PushStyleColor( ImGuiCol_ChildBg, bgColor );
 
-
 	auto contentRegion = ImGui::GetContentRegionAvail();
 	
 	// ImGui::BeginChildFrame
@@ -504,7 +505,9 @@ void DrawConsoleOutput()
 
 	UpdateConsoleOutput();
 
-	ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, ImVec2(0,0) );
+	ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, ImVec2( 0, 0 ) );
+
+	// ImGuiWindow* window = ImGui::GetCurrentWindow();
 	
 	for ( size_t i = 0; i < gConHistory.size(); i++ )
 	{
@@ -512,7 +515,11 @@ void DrawConsoleOutput()
 
 		// show buffer, clear it, then set the new color
 		ImGui::PushStyleColor( ImGuiCol_Text, ToImCol( buffer.aColor ) );
+		ImGui::PushTextWrapPos( 0.0f );
+
 		ImGui::TextUnformatted( buffer.aBuffer.c_str() );
+
+		ImGui::PopTextWrapPos();
 		ImGui::PopStyleColor();
 	}
 
