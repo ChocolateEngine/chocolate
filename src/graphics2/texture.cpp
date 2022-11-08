@@ -7,13 +7,15 @@
 #include "missingtexture.h"
 
 
-VkSampler                                          gSamplers[ 2 ];
+// VkSampler                                          gSamplers[ 2 ];
+VkSampler                                          gSamplers[ 2 ][ 5 ];  // [texture filter][sampler address]
 
 std::vector< TextureVK* >                          gTextures;
 static std::vector< RenderTarget* >                gRenderTargets;
 static RenderTarget*                               gpBackBuffer = nullptr;
 
 static ResourceList< VkFramebuffer >               gFramebuffers;
+static std::unordered_map< Handle, glm::uvec2 >    gFramebufferSize;
 
 extern ResourceList< TextureVK* >                  gTextureHandles;
 // extern std::vector< Handle >                       gSwapImageHandles;
@@ -152,10 +154,10 @@ void VK_SetImageLayout( VkCommandBuffer c, VkImage sImage, VkImageLayout sOldLay
 }
 
 
-// NOTE: may need to change this for texture filtering later, oh boy
-VkSampler VK_GetSampler( VkFilter sFilter )
+VkSampler VK_GetSampler( VkFilter sFilter, VkSamplerAddressMode addressMode )
 {
 	int index = 0;
+	int addressIndex = 0;
 
 	switch ( sFilter )
 	{
@@ -168,17 +170,40 @@ VkSampler VK_GetSampler( VkFilter sFilter )
 			break;
 	}
 
-	if ( gSamplers[ index ] )
-		return gSamplers[ index ];
+	switch ( addressMode )
+	{
+		default:
+		case VK_SAMPLER_ADDRESS_MODE_REPEAT:
+			break;
+
+		case VK_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT:
+			addressIndex = 1;
+			break;
+
+		case VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE:
+			addressIndex = 2;
+			break;
+
+		case VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER:
+			addressIndex = 3;
+			break;
+
+		case VK_SAMPLER_ADDRESS_MODE_MIRROR_CLAMP_TO_EDGE:
+			addressIndex = 4;
+			break;
+	}
+
+	if ( gSamplers[ index ][ addressIndex ] )
+		return gSamplers[ index ][ addressIndex ];
 
 	const auto&         deviceProps = VK_GetPhysicalDeviceProperties();
 
 	VkSamplerCreateInfo samplerInfo{ VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO };
 	samplerInfo.magFilter               = sFilter;
 	samplerInfo.minFilter               = sFilter;
-	samplerInfo.addressModeU            = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-	samplerInfo.addressModeV            = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-	samplerInfo.addressModeW            = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+	samplerInfo.addressModeU            = addressMode;
+	samplerInfo.addressModeV            = addressMode;
+	samplerInfo.addressModeW            = addressMode;
 
 	samplerInfo.anisotropyEnable        = VK_TRUE;
 	samplerInfo.maxAnisotropy           = deviceProps.limits.maxSamplerAnisotropy;
@@ -191,9 +216,9 @@ VkSampler VK_GetSampler( VkFilter sFilter )
 	samplerInfo.minLod                  = 0.0f;
 	samplerInfo.maxLod                  = 1000.0f;
 
-	VK_CheckResult( vkCreateSampler( VK_GetDevice(), &samplerInfo, NULL, &gSamplers[ index ] ), "Failed to create sampler!" );
+	VK_CheckResult( vkCreateSampler( VK_GetDevice(), &samplerInfo, NULL, &gSamplers[ index ][ addressIndex ] ), "Failed to create sampler!" );
 
-	return gSamplers[ index ];
+	return gSamplers[ index ][ addressIndex ];
 }
 
 
@@ -214,7 +239,8 @@ bool VK_LoadTexture( TextureVK* tex, const std::string& srPath, const TextureCre
 		return false;
 	}
 
-	tex->aFilter = VK_ToVkFilter( srCreateData.aFilter );
+	tex->aFilter         = VK_ToVkFilter( srCreateData.aFilter );
+	tex->aSamplerAddress = VK_ToVkSamplerAddress( srCreateData.aSamplerAddress );
 
 #ifdef _DEBUG
 	// add a debug label onto it
@@ -239,13 +265,14 @@ bool VK_LoadTexture( TextureVK* tex, const std::string& srPath, const TextureCre
 
 TextureVK* VK_CreateTexture( const TextureCreateInfo_t& srCreate, const TextureCreateData_t& srCreateData )
 {
-	TextureVK* tex = gTextures.emplace_back( new TextureVK );
-	tex->aIndex    = gTextures.size() - 1;
-	tex->aSize     = srCreate.aSize;
-	tex->aFormat   = VK_ToVkFormat( srCreate.aFormat );
-	tex->aUsage    = VK_ToVkImageUsage( srCreateData.aUsage );
-	tex->apName    = srCreate.apName;
-	tex->aFilter   = VK_ToVkFilter( srCreateData.aFilter );
+	TextureVK* tex       = gTextures.emplace_back( new TextureVK );
+	tex->aIndex          = gTextures.size() - 1;
+	tex->aSize           = srCreate.aSize;
+	tex->aFormat         = VK_ToVkFormat( srCreate.aFormat );
+	tex->aUsage          = VK_ToVkImageUsage( srCreateData.aUsage );
+	tex->apName          = srCreate.apName;
+	tex->aFilter         = VK_ToVkFilter( srCreateData.aFilter );
+	tex->aSamplerAddress = VK_ToVkSamplerAddress( srCreateData.aSamplerAddress );
 
 	VkImageCreateInfo createInfo{ VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO };
 	createInfo.imageType     = VK_IMAGE_TYPE_2D;
@@ -465,11 +492,14 @@ void VK_DestroyAllTextures()
 		delete tex;
 	}
 
-	if ( gSamplers[ 0 ] )
-		vkDestroySampler( VK_GetDevice(), gSamplers[ 0 ], nullptr );
-
-	if ( gSamplers[ 1 ] )
-		vkDestroySampler( VK_GetDevice(), gSamplers[ 1 ], nullptr );
+	for ( int i = 0; i < 2; i++ )
+	{
+		for ( int address = 0; address < 5; address++ )
+		{
+			if ( gSamplers[ i ][ address ] )
+				vkDestroySampler( VK_GetDevice(), gSamplers[ i ][ address ], nullptr );
+		}
+	}
 
 	gTextures.clear();
 	// gImageMap.clear();
@@ -574,6 +604,12 @@ Handle VK_CreateFramebuffer( const CreateFramebuffer_t& srCreate )
 	}
 
 	Handle handle = VK_CreateFramebuffer( renderPass, srCreate.aSize.x, srCreate.aSize.y, attachments, count );
+
+	if ( handle != InvalidHandle )
+	{
+		gFramebufferSize[ handle ] = srCreate.aSize;
+	}
+
 	CH_STACK_FREE( attachments );
 	return handle;
 }
@@ -612,6 +648,12 @@ Handle VK_CreateFramebufferVK( const CreateFramebufferVK& srCreate )
 	}
 
 	Handle handle = VK_CreateFramebuffer( srCreate.aRenderPass, srCreate.aSize.x, srCreate.aSize.y, attachments, count );
+
+	if ( handle != InvalidHandle )
+	{
+		gFramebufferSize[ handle ] = srCreate.aSize;
+	}
+
 	CH_STACK_FREE( attachments );
 	return handle;
 }
@@ -628,6 +670,7 @@ void VK_DestroyFramebuffer( Handle shHandle )
 
 	vkDestroyFramebuffer( VK_GetDevice(), buffer, nullptr );
 	gFramebuffers.Remove( shHandle );
+	gFramebufferSize.erase( shHandle );
 }
 
 
@@ -641,6 +684,18 @@ VkFramebuffer VK_GetFramebuffer( Handle shHandle )
 	}
 
 	return buffer;
+}
+
+glm::uvec2 VK_GetFramebufferSize( Handle shHandle )
+{
+	auto it = gFramebufferSize.find( shHandle );
+	if ( it == gFramebufferSize.end() )
+	{
+		Log_Error( gLC_Render, "Failed to Get Framebuffer Size\n" );
+		return {};
+	}
+
+	return it->second;
 }
 
 

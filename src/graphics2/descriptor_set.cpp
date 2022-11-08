@@ -228,7 +228,7 @@ void VK_UpdateImageSets()
 			VkDescriptorImageInfo img{};
 			img.imageLayout        = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 			img.imageView          = gTextures[ j ]->aImageView;
-			img.sampler            = VK_GetSampler( gTextures[ j ]->aFilter );
+			img.sampler            = VK_GetSampler( gTextures[ j ]->aFilter, gTextures[ j ]->aSamplerAddress );
 
 			gTextures[ j ]->aIndex = index++;
 			infos.push_back( img );
@@ -266,7 +266,7 @@ void VK_UpdateImageStorage()
 			VkDescriptorImageInfo img{};
 			img.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
 			img.imageView   = gImageStorageTextures[ j ]->aImageView;
-			img.sampler     = VK_GetSampler( gImageStorageTextures[ j ]->aFilter );
+			img.sampler     = VK_GetSampler( gImageStorageTextures[ j ]->aFilter, gImageStorageTextures[ j ]->aSamplerAddress );
 			infos.push_back( img );
 		}
 
@@ -570,7 +570,7 @@ void VK_UpdateVariableDescSet( const UpdateVariableDescSet_t& srUpdate )
 
 			images[ j ].imageLayout = VK_IMAGE_LAYOUT_GENERAL;
 			images[ j ].imageView   = tex->aImageView;
-			images[ j ].sampler     = VK_GetSampler( tex->aFilter );
+			images[ j ].sampler     = VK_GetSampler( tex->aFilter, tex->aSamplerAddress );
 		}
 
 		VkWriteDescriptorSet w{ VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET };

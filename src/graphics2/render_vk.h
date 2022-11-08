@@ -56,22 +56,23 @@ struct BufferVK
 struct TextureVK
 {
 	// Vulkan Info
-	VkImage           aImage     = VK_NULL_HANDLE;
-	VkImageView       aImageView = VK_NULL_HANDLE;
-	VkDeviceMemory    aMemory    = VK_NULL_HANDLE;
-	VkImageViewType   aViewType  = VK_IMAGE_VIEW_TYPE_2D;
-	VkImageUsageFlags aUsage     = 0;
-	VkFormat          aFormat    = VK_FORMAT_UNDEFINED;
-	VkFilter          aFilter    = VK_FILTER_NEAREST;
+	VkImage              aImage          = VK_NULL_HANDLE;
+	VkImageView          aImageView      = VK_NULL_HANDLE;
+	VkDeviceMemory       aMemory         = VK_NULL_HANDLE;
+	VkImageViewType      aViewType       = VK_IMAGE_VIEW_TYPE_2D;
+	VkImageUsageFlags    aUsage          = 0;
+	VkFormat             aFormat         = VK_FORMAT_UNDEFINED;
+	VkFilter             aFilter         = VK_FILTER_NEAREST;
+	VkSamplerAddressMode aSamplerAddress = VK_SAMPLER_ADDRESS_MODE_REPEAT;
 
 	// Texture Information
-	const char*       apName     = nullptr;
-	int               aIndex     = 0;  // texture sampler index (MOVE ELSEWHERE!!)
-	glm::ivec2        aSize{};
-	u8                aMipLevels    = 0;
-	int               aFrames       = 0;
-	bool              aRenderTarget = false;
-	bool              aSwapChain    = false;  // swapchain managed texture (wtf)
+	const char*          apName          = nullptr;
+	int                  aIndex          = 0;  // texture sampler index (MOVE ELSEWHERE!!)
+	glm::ivec2           aSize{};
+	u8                   aMipLevels    = 0;
+	int                  aFrames       = 0;
+	bool                 aRenderTarget = false;
+	bool                 aSwapChain    = false;  // swapchain managed texture (wtf)
 };
 
 
@@ -139,6 +140,7 @@ VkPipelineBindPoint                   VK_ToPipelineBindPoint( EPipelineBindPoint
 VkImageUsageFlags                     VK_ToVkImageUsage( EImageUsage usage );
 VkAttachmentLoadOp                    VK_ToVkLoadOp( EAttachmentLoadOp loadOp );
 VkFilter                              VK_ToVkFilter( EImageFilter filter );
+VkSamplerAddressMode                  VK_ToVkSamplerAddress( ESamplerAddressMode mode );
 
 void                                  VK_memcpy( VkDeviceMemory sBufferMemory, VkDeviceSize sSize, const void* spData );
 
@@ -314,7 +316,7 @@ void                                  VK_DestroyBuffer( VkBuffer& srBuffer, VkDe
 // --------------------------------------------------------------------------------------
 // Textures and Render Targets
 
-VkSampler                             VK_GetSampler( VkFilter sFilter );
+VkSampler                             VK_GetSampler( VkFilter sFilter, VkSamplerAddressMode addressMode );
 
 TextureVK*                            VK_NewTexture();
 bool                                  VK_LoadTexture( TextureVK* spTexture, const std::string& srPath, const TextureCreateData_t& srCreateData );
@@ -328,6 +330,7 @@ Handle                                VK_CreateFramebuffer( const VkFramebufferC
 Handle                                VK_CreateFramebuffer( const CreateFramebuffer_t& srCreate );
 void                                  VK_DestroyFramebuffer( Handle shHandle );
 VkFramebuffer                         VK_GetFramebuffer( Handle shHandle );
+glm::uvec2                            VK_GetFramebufferSize( Handle shHandle );
 Handle                                VK_GetFramebufferHandle( VkFramebuffer sFrameBuffer );
 
 RenderTarget*                         VK_CreateRenderTarget( const std::vector< TextureVK* >& srImages, u16 sWidth, u16 sHeight, const std::vector< VkImageView >& srSwapImages = {} );

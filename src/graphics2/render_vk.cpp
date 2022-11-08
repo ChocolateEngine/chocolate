@@ -457,6 +457,29 @@ VkFilter VK_ToVkFilter( EImageFilter filter )
 }
 
 
+VkSamplerAddressMode VK_ToVkSamplerAddress( ESamplerAddressMode mode )
+{
+	switch ( mode )
+	{
+		default:
+		case ESamplerAddressMode_Repeat:
+			return VK_SAMPLER_ADDRESS_MODE_REPEAT;
+
+		case ESamplerAddressMode_MirroredRepeast:
+			return VK_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT;
+
+		case ESamplerAddressMode_ClampToEdge:
+			return VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+
+		case ESamplerAddressMode_ClampToBorder:
+			return VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
+
+		case ESamplerAddressMode_MirrorClampToEdge:
+			return VK_SAMPLER_ADDRESS_MODE_MIRROR_CLAMP_TO_EDGE;
+	}
+}
+
+
 // Copies memory to the GPU.
 void VK_memcpy( VkDeviceMemory sBufferMemory, VkDeviceSize sSize, const void* spData )
 {
@@ -1177,6 +1200,10 @@ public:
 
 	Handle CreateFramebuffer( const CreateFramebuffer_t& srCreate ) override
 	{
+		Handle handle = VK_CreateFramebuffer( srCreate );
+		return handle;
+
+#if 0
 		VkRenderPass renderPass = VK_GetRenderPass( srCreate.aRenderPass );
 		if ( renderPass == nullptr )
 		{
@@ -1223,8 +1250,15 @@ public:
 		}
 
 		Handle handle = VK_CreateFramebuffer( renderPass, srCreate.aSize.x, srCreate.aSize.y, attachments, count );
+
+		if ( handle != InvalidHandle )
+		{
+			gFramebufferSize[ handle ] = srCreate.aSize;
+		}
+
 		CH_STACK_FREE( attachments );
 		return handle;
+#endif
 	}
 
 	void DestroyFramebuffer( Handle shTarget ) override
@@ -1462,8 +1496,11 @@ public:
 		renderPassBeginInfo.pNext             = nullptr;
 		renderPassBeginInfo.renderPass        = VK_GetRenderPass( srBegin.aRenderPass );
 		renderPassBeginInfo.framebuffer       = VK_GetFramebuffer( srBegin.aFrameBuffer );
-		renderPassBeginInfo.renderArea.offset = { 0, 0 };
-		renderPassBeginInfo.renderArea.extent = VK_GetSwapExtent();  // TODO: ADD renderArea THIS TO RenderPassBegin_t
+		renderPassBeginInfo.renderArea.offset = { 0, 0 };  // TODO: ADD renderArea offset TO RenderPassBegin_t
+
+		glm::uvec2 size = VK_GetFramebufferSize( srBegin.aFrameBuffer );
+
+		renderPassBeginInfo.renderArea.extent = { size.x, size.y };
 
 		std::vector< VkClearValue > clearValues( srBegin.aClear.size() );
 		if ( srBegin.aClear.size() )

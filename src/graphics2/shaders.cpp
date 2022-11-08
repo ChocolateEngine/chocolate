@@ -249,7 +249,7 @@ bool VK_CreateGraphicsPipeline( Handle& srHandle, GraphicsPipelineCreate_t& srGr
 	rasterizer.lineWidth               = 1.0f;
 	rasterizer.polygonMode             = VK_POLYGON_MODE_FILL;
 	rasterizer.frontFace               = VK_FRONT_FACE_COUNTER_CLOCKWISE;
-	rasterizer.depthBiasEnable         = VK_FALSE;
+	rasterizer.depthBiasEnable         = srGraphicsCreate.aDepthBiasEnable;
 	rasterizer.depthBiasConstantFactor = 0.0f;  // Optional
 	rasterizer.depthBiasClamp          = 0.0f;  // Optional
 	rasterizer.depthBiasSlopeFactor    = 0.0f;  // Optional

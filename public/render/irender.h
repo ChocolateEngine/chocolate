@@ -317,6 +317,17 @@ enum EDescriptorType : char
 	EDescriptorType_Max,
 };
 
+
+enum ESamplerAddressMode : char
+{
+	ESamplerAddressMode_Repeat,
+	ESamplerAddressMode_MirroredRepeast,
+	ESamplerAddressMode_ClampToEdge,
+	ESamplerAddressMode_ClampToBorder,
+	ESamplerAddressMode_MirrorClampToEdge,
+};
+
+
 // -----------------------------------------------------------------------------
 // Structs
 // -----------------------------------------------------------------------------
@@ -336,11 +347,11 @@ struct TextureCreateInfo_t
 // used for both loading textures and creating textures
 struct TextureCreateData_t
 {
-	bool         aUseMSAA = false;
-	EImageUsage  aUsage   = EImageUsage_None;
-	EImageFilter aFilter  = EImageFilter_Linear;
+	bool                aUseMSAA        = false;
+	ESamplerAddressMode aSamplerAddress = ESamplerAddressMode_Repeat;
+	EImageUsage         aUsage          = EImageUsage_None;
+	EImageFilter        aFilter         = EImageFilter_Linear;
 };
-
 
 
 struct Viewport_t
@@ -449,6 +460,8 @@ struct GraphicsPipelineCreate_t
 	EPrimTopology                         aPrimTopology;
 	EDynamicState                         aDynamicState;
 	ECullMode                             aCullMode;
+
+	bool                                  aDepthBiasEnable = false;
 
 	Handle                                aPipelineLayout;
 	Handle                                aRenderPass;
