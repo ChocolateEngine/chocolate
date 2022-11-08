@@ -6,6 +6,8 @@ file(
 	GLOB_RECURSE SRC_FILES CONFIGURE_DEPENDS
 	*.cpp
 	*.h
+	${CH_PUBLIC}/*.cpp
+	${CH_PUBLIC}/*.h
 )
 
 link_libraries( Core )

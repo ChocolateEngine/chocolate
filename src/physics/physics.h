@@ -112,7 +112,7 @@ inline JPH::Quat toJoltRot( const glm::vec3& from )
 inline glm::vec3 fromJoltRot( const JPH::Quat& from )
 {
 	glm::quat q( from.GetW(), from.GetX(), from.GetY(), from.GetZ() );
-	return glm::degrees( ToEulerAngles(q) );
+	return glm::degrees( Util_ToEulerAngles(q) );
 }
 
 
