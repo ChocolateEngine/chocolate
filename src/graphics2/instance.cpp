@@ -620,6 +620,8 @@ void VK_CreateDevice()
 	VkPhysicalDeviceFeatures deviceFeatures{};
 	deviceFeatures.samplerAnisotropy = VK_TRUE;
 	deviceFeatures.sampleRateShading = VK_TRUE;
+	deviceFeatures.depthBiasClamp = VK_TRUE;
+	deviceFeatures.depthClamp = VK_TRUE;
 
 	VkDeviceCreateInfo createInfo    = {
 		   .sType                   = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,

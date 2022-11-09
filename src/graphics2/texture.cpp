@@ -28,6 +28,18 @@ extern bool                                        gNeedTextureUpdate;
 
 // std::unordered_map< ImageInfo*, TextureVK* > gImageMap;
 
+void VK_RecreateTextureSamplers();
+
+CONVAR_CMD( r_minmiplod, 0 )
+{
+	VK_RecreateTextureSamplers();
+}
+
+CONVAR_CMD( r_maxmiplod, 1000 )
+{
+	VK_RecreateTextureSamplers();
+}
+
 
 void VK_SetImageLayout( VkCommandBuffer c, VkImage sImage, VkImageLayout sOldLayout, VkImageLayout sNewLayout, VkImageSubresourceRange& sSubresourceRange )
 {
@@ -154,6 +166,33 @@ void VK_SetImageLayout( VkCommandBuffer c, VkImage sImage, VkImageLayout sOldLay
 }
 
 
+void VK_CreateTextureSamplers()
+{
+	for ( int i = 0; i < 2; i++ )
+	{
+		for ( int address = 0; address < 5; address++ )
+		{
+			VK_GetSampler( ( VkFilter )i, ( VkSamplerAddressMode )address );
+		}
+	}
+}
+
+
+void VK_DestroyTextureSamplers()
+{
+	for ( int i = 0; i < 2; i++ )
+	{
+		for ( int address = 0; address < 5; address++ )
+		{
+			if ( gSamplers[ i ][ address ] )
+				vkDestroySampler( VK_GetDevice(), gSamplers[ i ][ address ], nullptr );
+
+			gSamplers[ i ][ address ] = VK_NULL_HANDLE;
+		}
+	}
+}
+
+
 VkSampler VK_GetSampler( VkFilter sFilter, VkSamplerAddressMode addressMode )
 {
 	int index = 0;
@@ -212,13 +251,25 @@ VkSampler VK_GetSampler( VkFilter sFilter, VkSamplerAddressMode addressMode )
 	samplerInfo.compareEnable           = VK_FALSE;
 	samplerInfo.compareOp               = VK_COMPARE_OP_ALWAYS;
 	samplerInfo.mipmapMode              = VK_SAMPLER_MIPMAP_MODE_LINEAR;
-	samplerInfo.mipLodBias              = 0.0f;
-	samplerInfo.minLod                  = 0.0f;
-	samplerInfo.maxLod                  = 1000.0f;
+	samplerInfo.mipLodBias              = 0.f;
+	samplerInfo.maxLod                  = std::max( 0.f, r_maxmiplod.GetFloat() );
+	samplerInfo.minLod                  = std::min( std::max( 0.f, r_minmiplod.GetFloat() ), samplerInfo.maxLod );
 
 	VK_CheckResult( vkCreateSampler( VK_GetDevice(), &samplerInfo, NULL, &gSamplers[ index ][ addressIndex ] ), "Failed to create sampler!" );
 
 	return gSamplers[ index ][ addressIndex ];
+}
+
+
+void VK_RecreateTextureSamplers()
+{
+	VK_WaitForGraphicsQueue();
+	VK_WaitForPresentQueue();
+
+	VK_DestroyTextureSamplers();
+	VK_CreateTextureSamplers();
+
+	gNeedTextureUpdate = true;
 }
 
 
@@ -492,14 +543,7 @@ void VK_DestroyAllTextures()
 		delete tex;
 	}
 
-	for ( int i = 0; i < 2; i++ )
-	{
-		for ( int address = 0; address < 5; address++ )
-		{
-			if ( gSamplers[ i ][ address ] )
-				vkDestroySampler( VK_GetDevice(), gSamplers[ i ][ address ], nullptr );
-		}
-	}
+	VK_DestroyTextureSamplers();
 
 	gTextures.clear();
 	// gImageMap.clear();
@@ -876,7 +920,7 @@ RenderTarget* CreateBackBuffer()
 	depth.pNext                 = nullptr;
 	depth.flags                 = 0;
 	depth.imageType             = VK_IMAGE_TYPE_2D;
-	depth.format                = VK_FORMAT_D32_SFLOAT;
+	depth.format                = VK_GetDepthFormat();
 	depth.extent.width          = VK_GetSwapExtent().width;
 	depth.extent.height         = VK_GetSwapExtent().height;
 	depth.extent.depth          = 1;

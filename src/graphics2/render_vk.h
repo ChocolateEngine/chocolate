@@ -139,6 +139,7 @@ VkShaderStageFlags                    VK_ToVkShaderStage( ShaderStage stage );
 VkPipelineBindPoint                   VK_ToPipelineBindPoint( EPipelineBindPoint bindPoint );
 VkImageUsageFlags                     VK_ToVkImageUsage( EImageUsage usage );
 VkAttachmentLoadOp                    VK_ToVkLoadOp( EAttachmentLoadOp loadOp );
+VkAttachmentStoreOp                   VK_ToVkStoreOp( EAttachmentStoreOp storeOp );
 VkFilter                              VK_ToVkFilter( EImageFilter filter );
 VkSamplerAddressMode                  VK_ToVkSamplerAddress( ESamplerAddressMode mode );
 
@@ -201,6 +202,7 @@ VkSurfaceFormatKHR                    VK_GetSwapSurfaceFormat();
 VkFormat                              VK_GetSwapFormat();
 VkColorSpaceKHR                       VK_GetSwapColorSpace();
 VkSwapchainKHR                        VK_GetSwapchain();
+VkFormat                              VK_GetDepthFormat();
 
 // --------------------------------------------------------------------------------------
 // Descriptor Pool
@@ -316,6 +318,8 @@ void                                  VK_DestroyBuffer( VkBuffer& srBuffer, VkDe
 // --------------------------------------------------------------------------------------
 // Textures and Render Targets
 
+void                                  VK_CreateTextureSamplers();
+void                                  VK_DestroyTextureSamplers();
 VkSampler                             VK_GetSampler( VkFilter sFilter, VkSamplerAddressMode addressMode );
 
 TextureVK*                            VK_NewTexture();

@@ -244,7 +244,7 @@ bool VK_CreateGraphicsPipeline( Handle& srHandle, GraphicsPipelineCreate_t& srGr
 
 	// create rasterizer
 	VkPipelineRasterizationStateCreateInfo rasterizer{ VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO };
-	rasterizer.depthClampEnable        = VK_FALSE;
+	rasterizer.depthClampEnable        = VK_TRUE;
 	rasterizer.rasterizerDiscardEnable = VK_FALSE;
 	rasterizer.lineWidth               = 1.0f;
 	rasterizer.polygonMode             = VK_POLYGON_MODE_FILL;
@@ -273,7 +273,7 @@ bool VK_CreateGraphicsPipeline( Handle& srHandle, GraphicsPipelineCreate_t& srGr
 	// get renderpass info to see if it uses msaa or not
 	RenderPassInfoVK*                    renderPassInfo = VK_GetRenderPassInfo( renderPass );
 
-	//	Performs anti-aliasing
+	// Performs anti-aliasing
 	VkPipelineMultisampleStateCreateInfo multisampling{ VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO };
 	multisampling.sampleShadingEnable   = r_sampled_textures;
 	multisampling.rasterizationSamples  = renderPassInfo->aUsesMSAA ? VK_GetMSAASamples() : VK_SAMPLE_COUNT_1_BIT;
@@ -286,20 +286,31 @@ bool VK_CreateGraphicsPipeline( Handle& srHandle, GraphicsPipelineCreate_t& srGr
 
 	for ( size_t i = 0; i < srGraphicsCreate.aColorBlendAttachments.size(); i++ )
 	{
-		colorBlendAttachments[ i ].colorWriteMask      = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+		// colorBlendAttachments[ i ].colorWriteMask      = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+		colorBlendAttachments[ i ].colorWriteMask      = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT;
 		colorBlendAttachments[ i ].blendEnable         = srGraphicsCreate.aColorBlendAttachments[ i ].aBlendEnable;
+		// colorBlendAttachments[ i ].srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
 		colorBlendAttachments[ i ].srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
 		colorBlendAttachments[ i ].dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
 		colorBlendAttachments[ i ].colorBlendOp        = VK_BLEND_OP_ADD;
-		colorBlendAttachments[ i ].srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
-		colorBlendAttachments[ i ].dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
-		colorBlendAttachments[ i ].alphaBlendOp        = VK_BLEND_OP_ADD;
+		colorBlendAttachments[ i ].srcAlphaBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
+		colorBlendAttachments[ i ].dstAlphaBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+		colorBlendAttachments[ i ].alphaBlendOp        = VK_BLEND_OP_SUBTRACT;
+
+		// colorBlendAttachments[ i ].srcColorBlendFactor = VK_BLEND_FACTOR_ZERO;
+		// colorBlendAttachments[ i ].dstColorBlendFactor = VK_BLEND_FACTOR_SRC_COLOR;
+		// colorBlendAttachments[ i ].colorBlendOp        = VK_BLEND_OP_ADD;
+		// 
+		// colorBlendAttachments[ i ].srcAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
+		// colorBlendAttachments[ i ].dstAlphaBlendFactor = VK_BLEND_FACTOR_SRC_COLOR;
+		// colorBlendAttachments[ i ].alphaBlendOp        = VK_BLEND_OP_ADD;
 	}
 
 	VkPipelineDepthStencilStateCreateInfo depthStencil{ VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO };
 	depthStencil.depthTestEnable       = VK_TRUE;
 	depthStencil.depthWriteEnable      = VK_TRUE;
-	depthStencil.depthCompareOp        = VK_COMPARE_OP_LESS;
+	// depthStencil.depthCompareOp        = VK_COMPARE_OP_LESS;
+	depthStencil.depthCompareOp        = VK_COMPARE_OP_LESS_OR_EQUAL;
 	depthStencil.depthBoundsTestEnable = VK_FALSE;
 	depthStencil.minDepthBounds        = 0.0f;  // Optional
 	depthStencil.maxDepthBounds        = 1.0f;  // Optional

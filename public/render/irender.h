@@ -118,6 +118,7 @@ enum class GraphicsFmt
 
 	D16_UNORM,
 	D32_SFLOAT,
+	D32_SFLOAT_S8_UINT,
 };
 
 
@@ -290,6 +291,13 @@ enum EAttachmentLoadOp
 	EAttachmentLoadOp_Load,
 	EAttachmentLoadOp_Clear,
 	EAttachmentLoadOp_DontCare
+};
+
+
+enum EAttachmentStoreOp
+{
+	EAttachmentStoreOp_Store,
+	EAttachmentStoreOp_DontCare,
 };
 
 
@@ -468,32 +476,16 @@ struct GraphicsPipelineCreate_t
 };
 
 
-// potential idea for the future for adding a software renderer
-using GraphicsSupportFlags = u32;
-enum : GraphicsSupportFlags
-{
-	GraphicsSupport_None = 0,
-	// GraphicsSupport_Shaders = (1 << 0),
-	// GraphicsSupport_Buffers = (1 << 1),
-	// GraphicsSupport_Textures = (1 << 2),
-	// GraphicsSupport_RenderTargets = (1 << 3),
-	// GraphicsSupport_Viewports = (1 << 4),
-	// GraphicsSupport_ViewportsCamera = (1 << 5),
-	// GraphicsSupport_RenderGraph = (1 << 6),
-	// GraphicsSupport_All = 0xFFFFFFFF,
-};
-
-
-// use this function to check:
-// bool ret = graphics->Supports( GraphicsSupport_Something | GraphicsSupport_Something2 );
-
-
 struct RenderPassAttachment_t
 {
-	GraphicsFmt       aFormat;
-	bool              aUseMSAA;
-	EAttachmentType   aType;
-	EAttachmentLoadOp aLoadOp;
+	GraphicsFmt        aFormat;
+	bool               aUseMSAA;
+	EAttachmentType    aType;
+
+	EAttachmentLoadOp  aLoadOp         = EAttachmentLoadOp_Load;
+	EAttachmentStoreOp aStoreOp        = EAttachmentStoreOp_Store;
+	EAttachmentLoadOp  aStencilLoadOp  = EAttachmentLoadOp_DontCare;
+	EAttachmentStoreOp aStencilStoreOp = EAttachmentStoreOp_DontCare;
 };
 
 
@@ -668,6 +660,7 @@ class IRender : public BaseSystem
 	virtual Handle      CreateTexture( const TextureCreateInfo_t& srTextureCreateInfo, const TextureCreateData_t& srCreateData ) = 0;
 	virtual void        FreeTexture( Handle shTexture )                                                          = 0;
 	virtual int         GetTextureIndex( Handle shTexture )                                                      = 0;
+	virtual GraphicsFmt GetTextureFormat( Handle shTexture )                                                     = 0;
 	virtual void        ReloadTextures()                                                                         = 0;
 
 	// virtual Handle      CreateRenderTarget( const CreateRenderTarget_t& srCreate )                             = 0;
@@ -787,5 +780,5 @@ class IRender : public BaseSystem
 
 
 #define IRENDER_NAME "Render"
-#define IRENDER_HASH 3
+#define IRENDER_HASH 4
 

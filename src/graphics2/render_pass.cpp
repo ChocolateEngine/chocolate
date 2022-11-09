@@ -28,6 +28,7 @@ VkFormat VK_GetColorFormat()
 VkFormat VK_GetDepthFormat()
 {
 	return VK_FORMAT_D32_SFLOAT;
+	// return VK_FORMAT_D32_SFLOAT_S8_UINT;
 }
 
 
@@ -188,6 +189,10 @@ Handle VK_CreateRenderPass( const RenderPassCreate_t& srPass )
 		attachments[ i ].format              = VK_ToVkFormat( attach.aFormat );
 		attachments[ i ].samples             = attach.aUseMSAA ? VK_GetMSAASamples() : VK_SAMPLE_COUNT_1_BIT;
 		attachments[ i ].loadOp              = VK_ToVkLoadOp( attach.aLoadOp );
+		attachments[ i ].storeOp             = VK_ToVkStoreOp( attach.aStoreOp );
+		attachments[ i ].stencilLoadOp       = VK_ToVkLoadOp( attach.aStencilLoadOp );
+		attachments[ i ].stencilStoreOp      = VK_ToVkStoreOp( attach.aStencilStoreOp );
+
 		attachments[ i ].storeOp             = VK_ATTACHMENT_STORE_OP_STORE;
 		attachments[ i ].stencilLoadOp       = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
 		attachments[ i ].stencilStoreOp      = VK_ATTACHMENT_STORE_OP_DONT_CARE;

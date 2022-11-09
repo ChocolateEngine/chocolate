@@ -54,7 +54,7 @@ static bool LoadKTX2( ktxTexture2* spKTexture2, ktxVulkanDeviceInfo& vdi )
 	// ktxTexture2_CreateFromNamedFile
 	KTX_error_code result = KTX_SUCCESS;
 
-	if ( !ktxTexture2_NeedsTranscoding( spKTexture2 ) && !spKTexture2->isCompressed )
+	if ( !spKTexture2->isCompressed )
 	{
 		result = ktxTexture2_CompressBasis( spKTexture2, 0 );
 		if ( KTX_SUCCESS != result )
@@ -62,16 +62,17 @@ static bool LoadKTX2( ktxTexture2* spKTexture2, ktxVulkanDeviceInfo& vdi )
 			Log_ErrorF( gLC_Render, "Encoding of ktxTexture2 to Basis failed: %s", ktxErrorString( result ) );
 			return false;
 		}
-
-		return true;
 	}
 
-	result = ktxTexture2_TranscodeBasis( spKTexture2, gKtxFallbackFmt, 0 );
-
-	if ( KTX_SUCCESS != result )
+	if ( ktxTexture2_NeedsTranscoding( spKTexture2 ) )
 	{
-		Log_ErrorF( gLC_Render, "Transcoding of ktxTexture2 to %s failed: %s\n", ktxTranscodeFormatString( gKtxFallbackFmt ), ktxErrorString( result ) );
-		return false;
+		result = ktxTexture2_TranscodeBasis( spKTexture2, gKtxFallbackFmt, 0 );
+
+		if ( KTX_SUCCESS != result )
+		{
+			Log_ErrorF( gLC_Render, "Transcoding of ktxTexture2 to %s failed: %s\n", ktxTranscodeFormatString( gKtxFallbackFmt ), ktxErrorString( result ) );
+			return false;
+		}
 	}
 
 	return true;

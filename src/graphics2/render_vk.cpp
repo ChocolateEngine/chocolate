@@ -169,6 +169,17 @@ GraphicsFmt VK_ToGraphicsFmt( VkFormat colorFmt )
 
 		// ------------------------------------------
 
+		case VK_FORMAT_BC1_RGB_SRGB_BLOCK:
+			return GraphicsFmt::BC1_RGB_SRGB_BLOCK;
+
+		case VK_FORMAT_BC3_SRGB_BLOCK:
+			return GraphicsFmt::BC3_SRGB_BLOCK;
+
+		case VK_FORMAT_BC7_SRGB_BLOCK:
+			return GraphicsFmt::BC7_SRGB_BLOCK;
+
+		// ------------------------------------------
+
 		case VK_FORMAT_B8G8R8A8_SRGB:
 			return GraphicsFmt::BGRA8888_SRGB;
 
@@ -185,6 +196,9 @@ GraphicsFmt VK_ToGraphicsFmt( VkFormat colorFmt )
 
 		case VK_FORMAT_D32_SFLOAT:
 			return GraphicsFmt::D32_SFLOAT;
+
+		case VK_FORMAT_D32_SFLOAT_S8_UINT:
+			return GraphicsFmt::D32_SFLOAT_S8_UINT;
 	}
 }
 
@@ -355,6 +369,9 @@ VkFormat VK_ToVkFormat( GraphicsFmt colorFmt )
 
 		case GraphicsFmt::D32_SFLOAT:
 			return VK_FORMAT_D32_SFLOAT;
+
+		case GraphicsFmt::D32_SFLOAT_S8_UINT:
+			return VK_FORMAT_D32_SFLOAT_S8_UINT;
 	}
 }
 
@@ -432,13 +449,29 @@ VkAttachmentLoadOp VK_ToVkLoadOp( EAttachmentLoadOp loadOp )
 			return VK_ATTACHMENT_LOAD_OP_MAX_ENUM;
 
 		case EAttachmentLoadOp_Load:
-			return VkAttachmentLoadOp::VK_ATTACHMENT_LOAD_OP_LOAD;
+			return VK_ATTACHMENT_LOAD_OP_LOAD;
 
 		case EAttachmentLoadOp_Clear:
-			return VkAttachmentLoadOp::VK_ATTACHMENT_LOAD_OP_CLEAR;
+			return VK_ATTACHMENT_LOAD_OP_CLEAR;
 
 		case EAttachmentLoadOp_DontCare:
-			return VkAttachmentLoadOp::VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+			return VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+	}
+}
+
+
+VkAttachmentStoreOp VK_ToVkStoreOp( EAttachmentStoreOp storeOp )
+{
+	switch ( storeOp )
+	{
+		default:
+			return VK_ATTACHMENT_STORE_OP_MAX_ENUM;
+
+		case EAttachmentStoreOp_Store:
+			return VK_ATTACHMENT_STORE_OP_STORE;
+
+		case EAttachmentStoreOp_DontCare:
+			return VK_ATTACHMENT_STORE_OP_DONT_CARE;
 	}
 }
 
@@ -708,6 +741,7 @@ bool Render_Init( void* spWindow )
 	gpViewports             = new VkViewport[deviceProps.limits.maxViewports];
 	gMaxViewports           = deviceProps.limits.maxViewports;
 
+	VK_CreateTextureSamplers();
 	VK_CreateMissingTexture();
 
 	Log_Msg( gLC_Render, "Loaded Vulkan Renderer\n" );
@@ -1185,6 +1219,21 @@ public:
 		}
 
 		return tex->aIndex;
+	}
+
+	GraphicsFmt GetTextureFormat( Handle shTexture ) override
+	{
+		if ( shTexture == InvalidHandle )
+			return GraphicsFmt::INVALID;
+
+		TextureVK* tex = nullptr;
+		if ( !gTextureHandles.Get( shTexture, &tex ) )
+		{
+			Log_Error( gLC_Render, "GetTextureFormat: Failed to find texture\n" );
+			return GraphicsFmt::INVALID;
+		}
+
+		return VK_ToGraphicsFmt( tex->aFormat );
 	}
 
 	void ReloadTextures() override
