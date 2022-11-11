@@ -19,7 +19,8 @@ static ResourceList< ShaderVK >         gShaders;
 static ResourceList< VkPipelineLayout > gPipelineLayouts;
 
 
-CONVAR( r_sampled_textures, 1 );
+CONVAR( r_sampled_textures, 0 );
+CONVAR( r_line_thickness, 2 );
 
 
 void VK_BindDescSets()
@@ -171,32 +172,34 @@ bool VK_CreateGraphicsPipeline( Handle& srHandle, GraphicsPipelineCreate_t& srGr
 	std::vector< VkPipelineShaderStageCreateInfo > shaderStages;
 	VK_GetShaderStageCreateInfo( srGraphicsCreate.aShaderModules, shaderStages );
 
-	std::vector< VkVertexInputBindingDescription > bindingDescriptions;
-	std::vector< VkVertexInputAttributeDescription > attributeDescriptions;
+	ChVector< VkVertexInputBindingDescription >   bindingDescriptions( srGraphicsCreate.aVertexBindings.size() );
+	ChVector< VkVertexInputAttributeDescription > attributeDescriptions( srGraphicsCreate.aVertexAttributes.size() );
 
-	for ( const auto& binding : srGraphicsCreate.aVertexBindings )
+	for ( size_t i = 0; i < srGraphicsCreate.aVertexBindings.size(); i++ )
 	{
-		bindingDescriptions.emplace_back(
-			binding.aBinding,
-			binding.aStride,
-			binding.aIsInstanced ? VK_VERTEX_INPUT_RATE_INSTANCE : VK_VERTEX_INPUT_RATE_VERTEX
-		);
+		auto& vkBinding   = bindingDescriptions[ i ];
+		auto& binding     = srGraphicsCreate.aVertexBindings[ i ];
+
+		vkBinding.binding   = binding.aBinding;
+		vkBinding.stride    = binding.aStride;
+		vkBinding.inputRate = binding.aIsInstanced ? VK_VERTEX_INPUT_RATE_INSTANCE : VK_VERTEX_INPUT_RATE_VERTEX;
 	}
 
-	for ( const auto& attrib : srGraphicsCreate.aVertexAttributes )
+	for ( size_t i = 0; i < srGraphicsCreate.aVertexAttributes.size(); i++ )
 	{
-		attributeDescriptions.emplace_back(
-			attrib.aLocation,
-			attrib.aBinding,
-			VK_ToVkFormat( attrib.aFormat ),
-			attrib.aOfset
-		);
+		auto& vkAtrib = attributeDescriptions[ i ];
+		auto& attrib     = srGraphicsCreate.aVertexAttributes[ i ];
+
+		vkAtrib.location = attrib.aLocation;
+		vkAtrib.binding  = attrib.aBinding;
+		vkAtrib.format   = VK_ToVkFormat( attrib.aFormat );
+		vkAtrib.offset   = attrib.aOfset;
 	}
 
 	VkPipelineVertexInputStateCreateInfo vertexInput{ VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO };
-	vertexInput.vertexBindingDescriptionCount   = static_cast< u32 >( bindingDescriptions.size() );
+	vertexInput.vertexBindingDescriptionCount   = bindingDescriptions.size();
 	vertexInput.pVertexBindingDescriptions      = bindingDescriptions.data();
-	vertexInput.vertexAttributeDescriptionCount = static_cast< u32 >( attributeDescriptions.size() );
+	vertexInput.vertexAttributeDescriptionCount = attributeDescriptions.size();
 	vertexInput.pVertexAttributeDescriptions    = attributeDescriptions.data();
 
 	VkPipelineInputAssemblyStateCreateInfo inputAssembly{ VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO };
@@ -246,7 +249,7 @@ bool VK_CreateGraphicsPipeline( Handle& srHandle, GraphicsPipelineCreate_t& srGr
 	VkPipelineRasterizationStateCreateInfo rasterizer{ VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO };
 	rasterizer.depthClampEnable        = VK_TRUE;
 	rasterizer.rasterizerDiscardEnable = VK_FALSE;
-	rasterizer.lineWidth               = 1.0f;
+	rasterizer.lineWidth               = r_line_thickness;
 	rasterizer.polygonMode             = VK_POLYGON_MODE_FILL;
 	rasterizer.frontFace               = VK_FRONT_FACE_COUNTER_CLOCKWISE;
 	rasterizer.depthBiasEnable         = srGraphicsCreate.aDepthBiasEnable;

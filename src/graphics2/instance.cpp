@@ -185,7 +185,7 @@ VKAPI_ATTR VkBool32 VKAPI_CALL VK_DebugCallback( VkDebugUtilsMessageSeverityFlag
 
 bool VK_CheckValidationLayerSupport()
 {
-	bool         layerFound;
+	bool         layerFound = false;
 	unsigned int layerCount;
 	vkEnumerateInstanceLayerProperties( &layerCount, NULL );
 
@@ -194,6 +194,9 @@ bool VK_CheckValidationLayerSupport()
 
 	for ( auto layerName : gpValidationLayers )
 	{
+		if ( layerName == nullptr )
+			return false;
+
 		layerFound = false;
 
 		for ( const auto& layerProperties : availableLayers )
@@ -308,13 +311,15 @@ std::vector< const char* > VK_GetSDL2Extensions()
 
 bool VK_CreateInstance()
 {
-	bool hasValidation = gEnableValidationLayers;
+	bool hasValidation = gEnableValidationLayers && Args_Find( "-vk-valid" );
 
-	if ( gEnableValidationLayers )
+	if ( hasValidation )
+	{
 		hasValidation = VK_CheckValidationLayerSupport();
 
-	if ( !hasValidation )
-		Log_Error( "Validation layers requested, but not available!\n" );
+		if ( !hasValidation )
+			Log_Error( "Validation layers requested, but not available!\n" );
+	}
 
 	VkApplicationInfo appInfo{ VK_STRUCTURE_TYPE_APPLICATION_INFO };
 	appInfo.pApplicationName   = "ProtoViewer";

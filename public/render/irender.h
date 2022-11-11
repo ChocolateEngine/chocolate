@@ -655,19 +655,18 @@ class IRender : public BaseSystem
 	// Textures
 	// --------------------------------------------------------------------------------------------
 
-	virtual Handle      LoadTexture( Handle& srHandle, const std::string& srTexturePath, const TextureCreateData_t& srCreateData ) = 0;
 	// virtual Handle      LoadTexture( const std::string& srTexturePath, const TextureCreateData_t& srCreateData, Handle* spHandle = nullptr ) = 0;
-	virtual Handle      CreateTexture( const TextureCreateInfo_t& srTextureCreateInfo, const TextureCreateData_t& srCreateData ) = 0;
-	virtual void        FreeTexture( Handle shTexture )                                                          = 0;
-	virtual int         GetTextureIndex( Handle shTexture )                                                      = 0;
-	virtual GraphicsFmt GetTextureFormat( Handle shTexture )                                                     = 0;
-	virtual void        ReloadTextures()                                                                         = 0;
+	virtual Handle      LoadTexture( Handle& srHandle, const std::string& srTexturePath, const TextureCreateData_t& srCreateData ) = 0;
+	virtual Handle      CreateTexture( const TextureCreateInfo_t& srTextureCreateInfo, const TextureCreateData_t& srCreateData )   = 0;
+	virtual void        FreeTexture( Handle shTexture )                                                                            = 0;
+	virtual int         GetTextureIndex( Handle shTexture )                                                                        = 0;
+	virtual GraphicsFmt GetTextureFormat( Handle shTexture )                                                                       = 0;
+	virtual glm::uvec2  GetTextureSize( Handle shTexture )                                                                         = 0;
+	virtual void        ReloadTextures()                                                                                           = 0;
 
-	// virtual Handle      CreateRenderTarget( const CreateRenderTarget_t& srCreate )                             = 0;
-	// virtual void        DestroyRenderTarget( Handle shTarget )                                                 = 0;
-
-	virtual Handle      CreateFramebuffer( const CreateFramebuffer_t& srCreate )                                 = 0;
-	virtual void        DestroyFramebuffer( Handle shTarget )                                                    = 0;
+	virtual Handle      CreateFramebuffer( const CreateFramebuffer_t& srCreate )                                                   = 0;
+	virtual void        DestroyFramebuffer( Handle shFramebuffer )                                                                 = 0;
+	virtual glm::uvec2  GetFramebufferSize( Handle shFramebuffer )                                                                 = 0;
 
 	// --------------------------------------------------------------------------------------------
 	// Shader System
@@ -780,5 +779,5 @@ class IRender : public BaseSystem
 
 
 #define IRENDER_NAME "Render"
-#define IRENDER_HASH 4
+#define IRENDER_HASH 5
 

@@ -1076,7 +1076,7 @@ public:
 
 		if ( !bufVK )
 		{
-			Log_Error( gLC_Render, "MemCopy: Failed to find Buffer\n" );
+			Log_Error( gLC_Render, "DestroyBuffer: Failed to find Buffer\n" );
 			return;
 		}
 
@@ -1235,6 +1235,21 @@ public:
 
 		return VK_ToGraphicsFmt( tex->aFormat );
 	}
+	
+	glm::uvec2 GetTextureSize( Handle shTexture ) override
+	{
+		if ( shTexture == InvalidHandle )
+			return {};
+
+		TextureVK* tex = nullptr;
+		if ( !gTextureHandles.Get( shTexture, &tex ) )
+		{
+			Log_Error( gLC_Render, "GetTextureSize: Failed to find texture\n" );
+			return {};
+		}
+
+		return tex->aSize;
+	}
 
 	void ReloadTextures() override
 	{
@@ -1249,65 +1264,7 @@ public:
 
 	Handle CreateFramebuffer( const CreateFramebuffer_t& srCreate ) override
 	{
-		Handle handle = VK_CreateFramebuffer( srCreate );
-		return handle;
-
-#if 0
-		VkRenderPass renderPass = VK_GetRenderPass( srCreate.aRenderPass );
-		if ( renderPass == nullptr )
-		{
-			Log_Error( gLC_Render, "Failed to create Framebuffer: RenderPass not found!\n" );
-			return InvalidHandle;
-		}
-
-		size_t count = srCreate.aPass.aAttachColors.size();
-
-		if ( srCreate.aPass.aAttachDepth )
-			count++;
-
-		VkImageView* attachments = (VkImageView*)CH_STACK_ALLOC( sizeof( VkImageView ) * count );
-
-		if ( attachments == nullptr )
-		{
-			Log_ErrorF( gLC_Render, "STACK OVERFLOW: Failed to allocate stack for Framebuffer attachments (%zu bytes)\n", sizeof( VkImageView ) * count );
-			return InvalidHandle;
-		}
-
-		count = 0;
-		for ( size_t i = 0; i < srCreate.aPass.aAttachColors.size(); i++ )
-		{
-			TextureVK* tex = nullptr;
-			if ( !gTextureHandles.Get( srCreate.aPass.aAttachColors[ i ], &tex ) )
-			{
-				Log_ErrorF( gLC_Render, "Failed to find texture %u while creating Framebuffer\n", i );
-				return InvalidHandle;
-			}
-			
-			attachments[ count++ ] = tex->aImageView;
-		}
-
-		if ( srCreate.aPass.aAttachDepth != InvalidHandle )
-		{
-			TextureVK* tex = nullptr;
-			if ( !gTextureHandles.Get( srCreate.aPass.aAttachDepth, &tex ) )
-			{
-				Log_Error( gLC_Render, "Failed to find depth texture while creating Framebuffer\n" );
-				return InvalidHandle;
-			}
-			
-			attachments[ count++ ] = tex->aImageView;
-		}
-
-		Handle handle = VK_CreateFramebuffer( renderPass, srCreate.aSize.x, srCreate.aSize.y, attachments, count );
-
-		if ( handle != InvalidHandle )
-		{
-			gFramebufferSize[ handle ] = srCreate.aSize;
-		}
-
-		CH_STACK_FREE( attachments );
-		return handle;
-#endif
+		return VK_CreateFramebuffer( srCreate );
 	}
 
 	void DestroyFramebuffer( Handle shTarget ) override
@@ -1316,6 +1273,14 @@ public:
 			return;
 
 		VK_DestroyFramebuffer( shTarget );
+	}
+
+	glm::uvec2 GetFramebufferSize( Handle shFramebuffer ) override
+	{
+		if ( shFramebuffer == InvalidHandle )
+			return {};
+
+		return VK_GetFramebufferSize( shFramebuffer );
 	}
 
 	// --------------------------------------------------------------------------------------------
@@ -1646,10 +1611,10 @@ public:
 			return;
 		}
 
-		std::vector< VkRect2D > vkScissors;
+		ChVector< VkRect2D > vkScissors( sCount );
 		for ( u32 i = 0; i < sCount; i++ )
 		{
-			VkRect2D& rect     = vkScissors.emplace_back();
+			VkRect2D& rect     = vkScissors[ i ];
 			rect.offset.x      = spScissors[ i ].aOffset.x;
 			rect.offset.y      = spScissors[ i ].aOffset.y;
 			rect.extent.width  = spScissors[ i ].aExtent.x;
@@ -1796,6 +1761,14 @@ public:
 		for ( u32 i = 0; i < sCount; i++ )
 		{
 			BufferVK* bufVK = gBufferHandles.Get( spBuffers[ i ] );
+
+			if ( !bufVK )
+			{
+				Log_Error( gLC_Render, "CmdBindVertexBuffers: Failed to find Buffer\n" );
+				CH_STACK_FREE( vkBuffers );
+				return;
+			}
+
 			vkBuffers[ i ]  = bufVK->aBuffer;
 		}
 
@@ -1881,6 +1854,7 @@ extern "C"
 }
 
 
+#if 0
 CONCMD( r_reload_textures )
 {
 	VK_WaitForGraphicsQueue();
@@ -1891,4 +1865,5 @@ CONCMD( r_reload_textures )
 		gRenderer.LoadTexture( handle, path, gTextureInfo[ handle ] );
 	}
 }
+#endif
 

@@ -68,7 +68,7 @@ struct TextureVK
 	// Texture Information
 	const char*          apName          = nullptr;
 	int                  aIndex          = 0;  // texture sampler index (MOVE ELSEWHERE!!)
-	glm::ivec2           aSize{};
+	glm::uvec2           aSize{};
 	u8                   aMipLevels    = 0;
 	int                  aFrames       = 0;
 	bool                 aRenderTarget = false;

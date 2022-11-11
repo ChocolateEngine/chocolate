@@ -21,6 +21,7 @@ glm::vec3        Util_ToEulerAngles( const glm::quat& q );
 
 void             Util_GetDirectionVectors( const glm::vec3& srAngles, glm::vec3* spForward, glm::vec3* spRight = nullptr, glm::vec3* spUp = nullptr );
 
+glm::vec3        Util_GetMatrixPosition( const glm::mat4& mat );
 glm::vec3        Util_GetMatrixScale( const glm::mat4& mat );
 void             Util_GetMatrixDirection( const glm::mat4& mat, glm::vec3* forward, glm::vec3* right = nullptr, glm::vec3* up = nullptr );
 void             Util_GetViewMatrixZDirection( const glm::mat4& mat, glm::vec3& forward, glm::vec3& right, glm::vec3& up );

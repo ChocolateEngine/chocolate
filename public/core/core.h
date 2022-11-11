@@ -13,4 +13,5 @@
 #include "resources.hh"
 #include "threadpool.h"
 #include "asserts.h"
+#include "vector.hpp"
 

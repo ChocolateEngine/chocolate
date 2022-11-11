@@ -72,6 +72,12 @@ void Util_GetDirectionVectors( const glm::vec3& srAngles, glm::vec3* spForward, 
 }
 
 
+glm::vec3 Util_GetMatrixPosition( const glm::mat4& mat )
+{
+	return glm::vec3( mat[ 3 ][ 0 ], mat[ 3 ][ 1 ], mat[ 3 ][ 2 ] );
+}
+
+
 glm::vec3 Util_GetMatrixScale( const glm::mat4& mat )
 {
 	glm::vec3 scale{};
