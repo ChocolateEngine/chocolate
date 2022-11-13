@@ -99,7 +99,7 @@ void* sys_load_func( Module mod, const char* name )
 	return GetProcAddress( (HMODULE)mod, name );
 }
 
-const char* sys_get_error(  )
+const char* sys_get_error()
 {
 	DWORD errorID = GetLastError();
 
@@ -133,7 +133,7 @@ const char* sys_get_error(  )
 
 void sys_print_last_error( const char* userErrorMessage )
 {
-	fprintf( stderr, "Error: %s\n%s\n", userErrorMessage, sys_get_error(  ) );
+	fprintf( stderr, "Error: %s\n%s\n", userErrorMessage, sys_get_error() );
 }
 
 
@@ -146,16 +146,16 @@ static NTSTATUS(__stdcall *ZwSetTimerResolution)(IN ULONG RequestedResolution, I
 void sys_sleep( float ms )
 {
 	static bool once = true;
-	if (once)
+	if ( once )
 	{
 		ULONG actualResolution;
-		ZwSetTimerResolution(1, true, &actualResolution);
+		ZwSetTimerResolution( 1, true, &actualResolution );
 		once = false;
 	}
 
 	LARGE_INTEGER interval{};
-	interval.QuadPart = -1 * (int)(ms * 10000.0f);
-	NtDelayExecution(false, &interval);
+	interval.QuadPart = -1 * (int)( ms * 10000.0f );
+	NtDelayExecution( false, &interval );
 }
 
 

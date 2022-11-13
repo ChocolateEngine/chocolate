@@ -12,7 +12,9 @@
 
 #include "platform.h"
 #include "mempool.h"
+#include "vector.hpp"
 #include "log.h"
+#include "asserts.h"
 
 static LOG_REGISTER_CHANNEL( Resource, LogColor::DarkYellow );
 
@@ -23,247 +25,31 @@ using Handle = size_t;
 
 constexpr Handle InvalidHandle = 0;
 
-// TODO: REMOVE ME - OLDER VERSION OF ResourceList
-template < typename T >
-class ResourceManager
-{
-    MemPool aPool;
-    size_t  aSize;
-public:
-    /*
-     *    Construct a resource manager.
-     */
-    ResourceManager() : aPool(), aSize()
-    {
-
-    }
-    /*
-     *    Destruct the resource manager.
-     */
-    ~ResourceManager()
-    {
-        
-    }
-
-    /*
-     *    Allocate memory.
-     *
-     *    @param size_t    The size of the memory to be allocated.
-     */
-    void   Allocate( size_t sSize )
-    {
-        aPool.Resize( sSize * sizeof( T ) + sSize * sizeof( Handle ) );
-    }
-    /*
-     *    Allocate a resource.
-     *
-     *    @return Handle    The handle to the resource.
-     */
-    Handle Add( T *pData )
-    {
-        /*
-         *    Generate a handle magic number.
-         */
-        size_t magic = ( rand() % 0xFFFFFFFE ) + 1;
-
-        /*
-         *    Allocate a chunk of memory.
-         */
-        s8 *pBuf = ( s8* )aPool.Alloc( sizeof( magic ) + sizeof( T ) );
-        if( pBuf == nullptr )
-            return 0;
-        
-        /*
-         *   Write the magic number to the chunk
-         *   followed by the data.
-         */
-        std::memcpy( pBuf, &magic, sizeof( magic ) );
-        std::memcpy( pBuf + sizeof( magic ), pData, sizeof( T ) );
-
-        size_t index = ( ( size_t )pBuf - ( size_t )aPool.GetStart() ) / ( sizeof( T ) + sizeof( magic ) );
-
-#if RESOURCE_DEBUG
-        Log_DevF( gResourceChannel, 3, "ResourceManager::Add( T* ): Allocated resource at index %u\n", index );
-#endif
-
-        aSize++;
-
-        return index | magic << 32;
-	}
-#if 1
-	/*
-     *    Create a new resource.
-     *
-     *    @return Handle    The handle to the resource.
-     */
-	Handle Create( T* pData )
-	{
-		/*
-         *    Generate a handle magic number.
-         */
-		size_t magic = ( rand() % 0xFFFFFFFE ) + 1;
-
-		/*
-         *    Allocate a chunk of memory.
-         */
-		s8*    pBuf  = (s8*)aPool.Alloc( sizeof( magic ) + sizeof( T ) );
-		if ( pBuf == nullptr )
-			return 0;
-
-		/*
-         *   Write the magic number to the chunk
-         *   followed by the data.
-         */
-		std::memcpy( pBuf, &magic, sizeof( magic ) );
-		// std::memcpy( pBuf + sizeof( magic ), pData, sizeof( T ) );
-
-        *pData       = *pBuf;
-
-		size_t index = ( (size_t)pBuf - (size_t)aPool.GetStart() ) / ( sizeof( T ) + sizeof( magic ) );
-
-#if RESOURCE_DEBUG
-		Log_DevF( gResourceChannel, 3, "ResourceManager::Add( T* ): Allocated resource at index %u\n", index );
-#endif
-
-		aSize++;
-
-		return index | magic << 32;
-	}
-#endif
-    /*
-     *    Remove a resource.
-     *
-     *    @param Handle    The handle to the resource.
-     */
-    void   Remove( Handle sHandle )
-    {
-        /*
-         *    Get the index of the resource.
-         */
-        size_t index = GET_HANDLE_INDEX( sHandle ) * ( sizeof( T ) + sizeof( Handle ) );
-
-        /*
-         *    Get the magic number.
-         */
-        size_t magic = GET_HANDLE_MAGIC( sHandle );
-
-        /*
-         *    Get the chunk of memory.
-         */
-        s8 *pBuf = ( s8* )aPool.GetStart() + index;
-
-        /*
-         *    Check the magic number.
-         */
-        if( std::memcmp( pBuf, &magic, sizeof( magic ) ) != 0 )
-            return;
-
-        /*
-         *    Free the chunk of memory.
-         */
-        aPool.Free( pBuf );
-
-        aSize--;
-
-#if RESOURCE_DEV
-        Log_DevF( gResourceChannel, 3, "ResourceManager::Remove( Handle ): Removed resource at index %u\n", index );
-#endif
-    }
-    /*
-     *    Get a resource.
-     *
-     *    @param Handle    The handle to the resource.
-     *
-     *    @return T *      The resource, nullptr if the handle
-     *                     is invalid/ points to a different type.
-     */
-    T     *Get( Handle sHandle )
-    {
-        /*
-         *    Get the magic number from the handle.
-         */
-        size_t magic = GET_HANDLE_MAGIC( sHandle );
-
-        /*
-         *    Get the index from the handle.
-         */
-        size_t index = GET_HANDLE_INDEX( sHandle ) * ( sizeof( T ) + sizeof( Handle ) );
-
-        /*
-         *    Get the chunk of memory.
-         */
-        s8 *pBuf = aPool.GetStart() + index;
-
-        /*
-         *    Check the magic number.
-         */
-        if( *( size_t* )pBuf != magic ) {
-            Log_WarnF( gResourceChannel, "*ResourceManager::Get( Handle ): Invalid handle: %d\n", sHandle );
-            return nullptr;
-        }
-
-#if RESOURCE_DEV
-        Log_DevF( gResourceChannel, 4, "*ResourceManager::Get( Handle ): Retrieved resource at index %u\n", index );
-#endif
-
-        /*
-         *    Return the data.
-         */
-        return ( T* )( pBuf + sizeof( magic ) );
-    }
-    /*
-    *    Get a resource by index.
-    *
-    *    @param size_t    The index of the resource.
-    *
-    *    @return T *      The resource, nullptr if the handle
-    *                     is invalid/ points to a different type.
-    */	
-	T     *GetByIndex( size_t sIndex )
-    {
-		if ( sIndex >= aSize )
-			return nullptr;
-
-		/*
-		 *    Get the chunk of memory.
-		 */
-		s8 *pBuf = aPool.GetStart() + sIndex * ( sizeof( T ) + sizeof( Handle ) );
-
-		/*
-        *   Return the data.
-		*/
-		// return ( T* )( pBuf + sizeof( magic ) );
-		return ( T* )( pBuf + sizeof( size_t ) );
-	}
-    /*
-    * 
-    *    Get the number of resources.
-    * 
-    *    @return size_t    The number of resources.
-	*/
-    size_t size() const
-    {
-		return aSize;
-    }
-};
-
-
-
 
 template< typename T >
 class ResourceList
 {
-	MemPool aPool;
-	size_t  aSize;
+	mempool_t*         apPool;
+	size_t             aSize;
+	size_t             aStepSize;
+	ChVector< Handle > aHandles;
 
 public:
 	/*
      *    Construct a resource manager.
      */
 	ResourceList() :
-		aPool(), aSize()
+	    aSize(), aStepSize()
 	{
+		apPool = mempool_new( ( sizeof( T ) + sizeof( unsigned int ) ) * 8 );
 	}
+
+	ResourceList( size_t sSize, size_t sStepSize ) :
+		aSize( sSize ), aStepSize( sStepSize )
+	{
+		apPool = mempool_new( ( sizeof( T ) + sizeof( unsigned int ) ) * sSize );
+	}
+
 	/*
      *    Destruct the resource manager.
      */
@@ -271,14 +57,72 @@ public:
 	{
 	}
 
-	/*
-     *    Allocate memory.
-     *
-     *    @param size_t    The size of the memory to be allocated.
-     */
-	void Allocate( size_t sSize )
+	// TEMP DEBUGGING
+	bool ValidateMemPool()
 	{
-		aPool.Resize( sSize * sizeof( T ) + sSize * sizeof( Handle ) );
+		memchunk_t* pChunk = apPool->apFirst;
+		for ( pChunk = apPool->apFirst; pChunk != 0; pChunk = pChunk->apNext )
+		{
+			if ( *(unsigned int*)pChunk->apData != 69420 )
+			{
+				Log_Warn( "mempool broken ???\n" );
+				return false;
+			}
+		}
+
+		return true;
+	}
+
+	/*
+	 * @brief      Allocate a Chunk of Memory
+	 * @tparam T   Resource Type
+	 * @return s8* The Buffer of Memory Allocated 
+	 */
+	s8*        Allocate( unsigned int sMagic )
+	{
+		s8*        pBuf = nullptr;
+		memerror_t err  = MEMERR_NONE;
+
+		// Allocate a chunk of memory.
+		err = mempool_alloc( apPool, sizeof( unsigned int ) + sizeof( T ), &pBuf );
+
+		if ( err == MEMERR_NO_MEMORY )
+		{
+			err = mempool_realloc( apPool, apPool->aSize + ( ( sizeof( T ) + sizeof( unsigned int ) ) * 1 ) );
+
+			if ( err != MEMERR_NONE )
+			{
+				Log_ErrorF( "MemPool Error while Creating a Resource: %s\n", mempool_error2str( err ) );
+				return nullptr;
+			}
+
+			err = mempool_alloc( apPool, sizeof( unsigned int ) + sizeof( T ), &pBuf );
+			if ( err != MEMERR_NONE )
+			{
+				Log_ErrorF( "Failed to Allocate Resource: %s\n", mempool_error2str( err ) );
+				return nullptr;
+			}
+        }
+		else if ( err != MEMERR_NONE )
+		{
+			return nullptr;
+		}
+
+        // Write the magic number to the chunk
+		std::memcpy( pBuf, &sMagic, sizeof( sMagic ) );
+
+		return pBuf;
+	}
+
+	/*
+     *    Expands the memory pool used internally if the size is greater than the current size
+     */
+	void EnsureSize( size_t sSize )
+	{
+		size_t size = sSize * ( sizeof( T ) + sizeof( unsigned int ) );
+
+		if ( size > apPool->aSize )
+			mempool_realloc( apPool, size );
 	}
 
 	/*
@@ -289,19 +133,19 @@ public:
 	Handle Add( const T& pData )
 	{
 		// Generate a handle magic number.
-		size_t magic = ( rand() % 0xFFFFFFFE ) + 1;
+		unsigned int magic = ( rand() % 0xFFFFFFFE ) + 1;
 
 		// Allocate a chunk of memory.
-		s8*    pBuf  = (s8*)aPool.Alloc( sizeof( magic ) + sizeof( T ) );
+		s8*          pBuf  = Allocate( magic );
+
 		if ( pBuf == nullptr )
 			return InvalidHandle;
 
-        // Write the magic number to the chunk
+        // Write the data to the chunk
         // followed by the data.
-		std::memcpy( pBuf, &magic, sizeof( magic ) );
-		std::memcpy( pBuf + sizeof( magic ), &pData, sizeof( T ) );
+        std::memcpy( pBuf + sizeof( unsigned int ), &pData, sizeof( T ) );
 
-		size_t index = ( (size_t)pBuf - (size_t)aPool.GetStart() ) / ( sizeof( T ) + sizeof( magic ) );
+		unsigned int index = ( (size_t)pBuf - (size_t)apPool->apBuf ) / ( sizeof( T ) + sizeof( magic ) );
 
 #if RESOURCE_DEBUG
 		Log_DevF( gResourceChannel, 3, "ResourceManager::Add( T* ): Allocated resource at index %u\n", index );
@@ -309,7 +153,129 @@ public:
 
 		aSize++;
 
-		return index | magic << 32;
+		Handle& handle = aHandles.emplace_back();
+		handle         = index | (int64_t)magic << 32;
+		return handle;
+	}
+
+	/*
+     *    Create a new resource.
+     *
+     *    @param  pData     Output structure
+     *    @return Handle    The handle to the resource.
+     */
+	Handle Create( T* pData )
+	{
+		// Generate a handle magic number.
+		unsigned int magic = ( rand() % 0xFFFFFFFE ) + 1;
+
+		// Allocate a chunk of memory.
+		s8*          pBuf  = Allocate( magic );
+
+		if ( pBuf == nullptr )
+			return InvalidHandle;
+
+        // Re-assign the output pointer to a pointer to the data
+		*pData       = *(T*)( pBuf + sizeof( unsigned int ) );
+
+		unsigned int index = ( (size_t)pBuf - (size_t)apPool->apBuf ) / ( sizeof( T ) + sizeof( magic ) );
+
+#if RESOURCE_DEBUG
+		Log_DevF( gResourceChannel, 3, "ResourceManager::Add( T* ): Allocated resource at index %u\n", index );
+#endif
+
+		aSize++;
+
+		Handle& handle = aHandles.emplace_back();
+		handle         = index | (int64_t)magic << 32;
+		return handle;
+	}
+
+	/*
+     *    Create a new resource.
+     *
+     *    @param  pData     Output structure for a pointer
+     *    @return Handle    The handle to the resource.
+     */
+	Handle Create( T** pData )
+	{
+		// Generate a handle magic number.
+		unsigned int magic = ( rand() % 0xFFFFFFFE ) + 1;
+
+		// Allocate a chunk of memory.
+		s8*          pBuf  = Allocate( magic );
+
+		if ( pBuf == nullptr )
+			return InvalidHandle;
+
+		// Re-assign the output pointer to a pointer to the data
+		*pData = (T*)( pBuf + sizeof( unsigned int ) );
+
+		unsigned int index = ( (size_t)pBuf - (size_t)apPool->apBuf ) / ( sizeof( T ) + sizeof( magic ) );
+
+#if RESOURCE_DEBUG
+		Log_DevF( gResourceChannel, 3, "ResourceManager::Add( T* ): Allocated resource at index %u\n", index );
+#endif
+
+		aSize++;
+
+		Handle& handle = aHandles.emplace_back();
+		handle         = index | (int64_t)magic << 32;
+		return handle;
+	}
+
+	/*
+	 *    Gets Magic Number and Index from handle, returns true/false if succeeded
+	 */
+	bool GetMagicAndIndex( Handle sHandle, unsigned int& srMagic, unsigned int& srIndex )
+	{
+		// Check if handle is valid
+		if ( sHandle == InvalidHandle )
+			return false;
+
+		// Get the magic number from the handle.
+		srMagic = GET_HANDLE_MAGIC( sHandle );
+
+		// Get the index from the handle.
+		srIndex = GET_HANDLE_INDEX( sHandle ) * ( sizeof( T ) + sizeof( unsigned int ) );
+
+		if ( srIndex > mempool_capacity( apPool ) )
+		{
+			Log_WarnF( gResourceChannel, "*ResourceManager::GetData( Handle ): Invalid index: %zd\n", srIndex );
+			return false;
+		}
+
+		return true;
+	}
+
+	/*
+	 *    Gets Data from handle, returns true/false if succeeded
+	 */
+	s8* GetHandleData( Handle sHandle )
+	{
+		// Check if handle is valid
+		unsigned int magic, index;
+		if ( !GetMagicAndIndex( sHandle, magic, index ) )
+			return nullptr;
+
+		// Get the chunk of memory.
+		s8* spBuf = apPool->apBuf + index;
+
+		// Check if the buffer is nullptr
+		if ( spBuf == nullptr )
+		{
+			Log_WarnF( gResourceChannel, "ResourceList::GetHandleData(): Invalid index - Buffer is nullptr: %zd\n", index );
+			return nullptr;
+		}
+
+		// Verify the magic numbers at the start of the buffer match
+		if ( *(unsigned int*)spBuf != magic )
+		{
+			Log_Warn( gResourceChannel, "ResourceList::GetHandleData(): Invalid magic number\n" );
+			return nullptr;
+        }
+
+		return spBuf;
 	}
 
 	/*
@@ -322,97 +288,15 @@ public:
      */
 	bool Update( Handle sHandle, const T& pData )
 	{
-		// Check if handle is valid
-		if ( sHandle == InvalidHandle )
+		// Get handle data and check if the handle is valid
+		s8* pBuf = nullptr;
+		if ( !( pBuf = GetHandleData( sHandle ) ) )
 			return false;
-
-		// Get the magic number from the handle.
-		size_t magic = GET_HANDLE_MAGIC( sHandle );
-
-		// Get the index from the handle.
-		size_t index = GET_HANDLE_INDEX( sHandle ) * ( sizeof( T ) + sizeof( Handle ) );
-
-		// Get the chunk of memory.
-		s8*    pBuf  = aPool.GetStart() + index;
-
-		// Check the magic number.
-		if ( pBuf == nullptr || *(size_t*)pBuf != magic )
-		{
-			Log_WarnF( gResourceChannel, "*ResourceManager::Get( Handle ): Invalid handle: %d\n", sHandle );
-			return false;
-		}
 
 		// Write the new data to memory
-		std::memcpy( pBuf + sizeof( magic ), &pData, sizeof( T ) );
+		std::memcpy( pBuf + sizeof( unsigned int ), &pData, sizeof( T ) );
+
 		return true;
-	}
-
-	/*
-     *    Create a new resource.
-     *
-     *    @param  pData     Output structure
-     *    @return Handle    The handle to the resource.
-     */
-	Handle Create( T* pData )
-	{
-		// Generate a handle magic number.
-		size_t magic = ( rand() % 0xFFFFFFFE ) + 1;
-
-		// Allocate a chunk of memory.
-		s8*    pBuf  = (s8*)aPool.Alloc( sizeof( magic ) + sizeof( T ) );
-		if ( pBuf == nullptr )
-			return InvalidHandle;
-
-        // Write the magic number to the chunk
-        // followed by the data.
-		std::memcpy( pBuf, &magic, sizeof( magic ) );
-		// std::memcpy( pBuf + sizeof( magic ), pData, sizeof( T ) );
-
-		*pData       = *(T*)( pBuf + sizeof( magic ) );
-
-		size_t index = ( (size_t)pBuf - (size_t)aPool.GetStart() ) / ( sizeof( T ) + sizeof( magic ) );
-
-  #if RESOURCE_DEBUG
-		Log_DevF( gResourceChannel, 3, "ResourceManager::Add( T* ): Allocated resource at index %u\n", index );
-  #endif
-
-		aSize++;
-
-		return index | magic << 32;
-	}
-
-	/*
-     *    Create a new resource.
-     *
-     *    @param  pData     Output structure for a pointer
-     *    @return Handle    The handle to the resource.
-     */
-	Handle Create( T** pData )
-	{
-		// Generate a handle magic number.
-		size_t magic = ( rand() % 0xFFFFFFFE ) + 1;
-
-		// Allocate a chunk of memory.
-		s8*    pBuf  = (s8*)aPool.Alloc( sizeof( magic ) + sizeof( T ) );
-		if ( pBuf == nullptr )
-			return InvalidHandle;
-
-        // Write the magic number to the chunk
-        // followed by the data.
-		std::memcpy( pBuf, &magic, sizeof( magic ) );
-		// std::memcpy( pBuf + sizeof( magic ), pData, sizeof( T ) );
-
-		*pData       = (T*)( pBuf + sizeof( magic ) );
-
-		size_t index = ( (size_t)pBuf - (size_t)aPool.GetStart() ) / ( sizeof( T ) + sizeof( magic ) );
-
-  #if RESOURCE_DEBUG
-		Log_DevF( gResourceChannel, 3, "ResourceManager::Add( T* ): Allocated resource at index %u\n", index );
-  #endif
-
-		aSize++;
-
-		return index | magic << 32;
 	}
 
 	/*
@@ -422,25 +306,37 @@ public:
      */
 	void Remove( Handle sHandle )
 	{
+		// Get handle data and check if the handle is valid
+		s8* pBuf = nullptr;
+		// if ( !GetHandleData( sHandle, &pBuf ) )
+		// 	return;
+		
 		// Check if handle is valid
-		if ( sHandle == InvalidHandle )
+		unsigned int magic, index;
+		if ( !GetMagicAndIndex( sHandle, magic, index ) )
 			return;
-
-		// Get the index of the resource.
-		size_t index = GET_HANDLE_INDEX( sHandle ) * ( sizeof( T ) + sizeof( Handle ) );
-
-		// Get the magic number.
-		size_t magic = GET_HANDLE_MAGIC( sHandle );
 
 		// Get the chunk of memory.
-		s8*    pBuf  = (s8*)aPool.GetStart() + index;
+		pBuf = apPool->apBuf + index;
 
-		// Check the magic number.
-		if ( std::memcmp( pBuf, &magic, sizeof( magic ) ) != 0 )
+		// Check if the buffer is nullptr
+		if ( pBuf == nullptr )
+		{
+			Log_WarnF( gResourceChannel, "ResourceList::GetHandleData(): Invalid index - Buffer is nullptr: %zd\n", index );
 			return;
+		}
+
+		// Verify the magic numbers at the start of the buffer match
+		if ( *(unsigned int*)pBuf != magic )
+		{
+			Log_Warn( gResourceChannel, "ResourceList::GetHandleData(): Invalid magic number\n" );
+			return;
+		}
 
 		// Free the chunk of memory.
-		aPool.Free( pBuf );
+		mempool_free( apPool, pBuf );
+
+		aHandles.erase( sHandle );
 
 		aSize--;
 
@@ -460,28 +356,13 @@ public:
 
 	T* Get( Handle sHandle )
 	{
-		// Check if handle is valid
-		if ( sHandle == InvalidHandle )
+		// Get handle data and check if the handle is valid
+		s8* pBuf = nullptr;
+		if ( !( pBuf = GetHandleData( sHandle ) ) )
 			return nullptr;
-
-		// Get the magic number from the handle.
-		size_t magic = GET_HANDLE_MAGIC( sHandle );
-
-		// Get the index from the handle.
-		size_t index = GET_HANDLE_INDEX( sHandle ) * ( sizeof( T ) + sizeof( Handle ) );
-
-		// Get the chunk of memory.
-		s8*    pBuf  = aPool.GetStart() + index;
-
-		// Check the magic number.
-		if ( pBuf == nullptr || *(size_t*)pBuf != magic )
-		{
-			Log_WarnF( gResourceChannel, "*ResourceManager::Get( Handle ): Invalid handle: %zd\n", sHandle );
-			return nullptr;
-		}
 
         // Return the data
-		return (T*)( pBuf + sizeof( magic ) );
+		return (T*)( pBuf + sizeof( unsigned int ) );
 	}
 
 	/*
@@ -497,28 +378,13 @@ public:
 
 	bool Get( Handle sHandle, T* pData )
 	{
-		// Check if handle is valid
-		if ( sHandle == InvalidHandle )
+		// Get handle data and check if the handle is valid
+		s8* pBuf = nullptr;
+		if ( !( pBuf = GetHandleData( sHandle ) ) )
 			return false;
-
-		// Get the magic number from the handle.
-		size_t magic = GET_HANDLE_MAGIC( sHandle );
-
-		// Get the index from the handle.
-		size_t index = GET_HANDLE_INDEX( sHandle ) * ( sizeof( T ) + sizeof( Handle ) );
-
-		// Get the chunk of memory.
-		s8*    pBuf  = aPool.GetStart() + index;
-
-		// Check the magic number.
-		if ( pBuf == nullptr || *(size_t*)pBuf != magic )
-		{
-			Log_WarnF( gResourceChannel, "*ResourceManager::GetData( Handle ): Invalid handle: %zd\n", sHandle );
-			return false;
-		}
 
 		// Set the data on the output parameter
-		*pData = *(T*)( pBuf + sizeof( magic ) );
+		*pData = *(T*)( pBuf + sizeof( unsigned int ) );
 
 		return true;
 	}
@@ -536,51 +402,15 @@ public:
 
 	bool Get( Handle sHandle, T** pData )
 	{
-		// Check if handle is valid
-		if ( sHandle == InvalidHandle )
+		// Get handle data and check if the handle is valid
+		s8* pBuf = nullptr;
+		if ( !( pBuf = GetHandleData( sHandle ) ) )
 			return false;
-
-		// Get the magic number from the handle.
-		size_t magic = GET_HANDLE_MAGIC( sHandle );
-
-		// Get the index from the handle.
-		size_t index = GET_HANDLE_INDEX( sHandle ) * ( sizeof( T ) + sizeof( Handle ) );
-
-		// Get the chunk of memory.
-		s8*    pBuf  = aPool.GetStart() + index;
-
-		// Check the magic number.
-		if ( pBuf == nullptr || *(size_t*)pBuf != magic )
-		{
-			Log_WarnF( gResourceChannel, "*ResourceManager::GetData( Handle ): Invalid handle: %zd\n", sHandle );
-			return false;
-		}
 
 		// Set the data on the output parameter
-		*pData = (T*)( pBuf + sizeof( magic ) );
+		*pData = (T*)( pBuf + sizeof( unsigned int ) );
 
 		return true;
-	}
-
-	/*
-    *    Get a resource by index.
-    *
-    *    @param size_t    The index of the resource.
-    *
-    *    @return T *      The resource, nullptr if the handle
-    *                     is invalid/ points to a different type.
-    */
-	T* GetByIndex( size_t sIndex )
-	{
-		if ( sIndex >= aSize )
-			return nullptr;
-
-		// Get the chunk of memory.
-		s8* pBuf = aPool.GetStart() + sIndex * ( sizeof( T ) + sizeof( Handle ) );
-
-		// Return the data.
-		// return ( T* )( pBuf + sizeof( magic ) );
-		return (T*)( pBuf + sizeof( size_t ) );
 	}
 
 	/*
@@ -599,10 +429,10 @@ public:
 			return false;
 
 		// Get the chunk of memory.
-		s8* pBuf = aPool.GetStart() + sIndex * ( sizeof( T ) + sizeof( Handle ) );
+		s8* pBuf = apPool->apBuf + sIndex * ( sizeof( T ) + sizeof( unsigned int ) );
 
 		// Set the data on the output parameter
-		*pData   = *(T*)( pBuf + sizeof( size_t ) );
+		*pData = *(T*)( pBuf + sizeof( unsigned int ) );
 
 		return true;
 	}
@@ -623,10 +453,10 @@ public:
 			return false;
 
 		// Get the chunk of memory.
-		s8* pBuf = aPool.GetStart() + sIndex * ( sizeof( T ) + sizeof( Handle ) );
+		s8* pBuf = apPool->apBuf + sIndex * ( sizeof( T ) + sizeof( unsigned int ) );
 
 		// Set the data on the output parameter
-		*pData   = (T*)( pBuf + sizeof( size_t ) );
+		*pData = (T*)( pBuf + sizeof( unsigned int ) );
 
 		return true;
 	}
@@ -644,11 +474,11 @@ public:
 			return InvalidHandle;
 
 		// Get the chunk of memory.
-		s8* pBuf = aPool.GetStart() + sIndex * ( sizeof( T ) + sizeof( Handle ) );
+		s8* pBuf      = apPool->apBuf + sIndex * ( sizeof( T ) + sizeof( unsigned int ) );
 
-        size_t magic = *(size_t*)pBuf;
+        unsigned int magic = *(unsigned int*)pBuf;
 
-		return sIndex | magic << 32;
+		return sIndex | (int64_t)magic << 32;
 	}
 
 	/*
@@ -661,20 +491,8 @@ public:
 
 	bool Contains( Handle sHandle )
 	{
-		// Get the magic number from the handle.
-		size_t magic = GET_HANDLE_MAGIC( sHandle );
-
-		// Get the index from the handle.
-		size_t index = GET_HANDLE_INDEX( sHandle ) * ( sizeof( T ) + sizeof( Handle ) );
-
-		// Get the chunk of memory.
-		s8*    pBuf  = aPool.GetStart() + index;
-
-		// Check the magic number.
-		if ( pBuf == nullptr || *(size_t*)pBuf != magic )
-			return false;
-
-		return true;
+		// Get handle data and check if the handle is valid
+		return GetHandleData( sHandle );
 	}
 
 	/*
@@ -694,8 +512,9 @@ public:
 	*/
 	void clear()
 	{
-		aPool.Clear();
-		aSize = 0;
+		aHandles.clear();
+		apPool->aSize = 0;
+		aSize         = 0;
 	}
 };
 

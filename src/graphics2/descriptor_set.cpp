@@ -497,6 +497,7 @@ bool VK_AllocateVariableDescLayout( const AllocVariableDescLayout_t& srCreate, H
 
 	VK_CheckResult( vkAllocateDescriptorSets( VK_GetDevice(), &a, descSets ), "Failed to allocate uniform buffer descriptor sets!" );
 
+	gDescSets.EnsureSize( srCreate.aSetCount );
 	for ( u32 i = 0; i < srCreate.aSetCount; i++ )
 	{
 		handles[ i ] = gDescSets.Add( descSets[ i ] );

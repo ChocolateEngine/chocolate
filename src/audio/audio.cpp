@@ -84,16 +84,6 @@ std::mutex g_audioMutex;
 
 bool AudioSystem::Init()
 {
-    /*
-	 *    Preallocate 128 MB of memory for audio processing.
-	 */
-	// aStreamPool.Resize( 128000000 );
-	// aStreamPool.Resize( 64000 );
-	aStreamPool.Resize( 64 );
-	aStreamPool.SetStepSize( 1000000 );
-
-	aStreams.Allocate( MAX_STREAMS * 2 );
-
 	SDL_AudioSpec wantedSpec;
 
 	wantedSpec.callback = NULL;
@@ -357,7 +347,7 @@ Handle AudioSystem::LoadSound( std::string soundPath )
 		}
 		else
 		{
-			Handle h = aStreams.Add( &stream );
+			Handle h = aStreams.Add( stream );
 			return h;
 		}
 	}
@@ -457,7 +447,7 @@ bool AudioSystem::PreloadSound( Handle streamHandle )
 
 	while ( true )
 	{
-		std::vector<float> rawAudio;
+		ChVector<float> rawAudio;
 
 		long read = stream->codec->Read( stream, FRAME_SIZE, rawAudio );
 
@@ -716,7 +706,7 @@ bool AudioSystem::ReadAudio( AudioStream *stream )
 	int read = SDL_AudioStreamAvailable( stream->audioStream );
 	if ( read < FRAME_SIZE * snd_audio_stream_available.GetFloat() )
 	{
-		std::vector<float> rawAudio;
+		ChVector< float > rawAudio;
 
 		read = stream->codec->Read( stream, FRAME_SIZE, rawAudio );
 
@@ -800,7 +790,8 @@ bool AudioSystem::ApplyEffects( AudioStream *stream )
 	// return true;
 
 	// this is in bytes, not samples!
-	std::vector<float> outAudio;
+	ChVector< float > outAudio;
+	// outAudio.resize( FRAME_SIZE );
 	outAudio.resize( FRAME_SIZE );
 	//outAudio = rawAudio;
 

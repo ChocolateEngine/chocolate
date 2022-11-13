@@ -653,7 +653,7 @@ void VK_DestroyBuffer( VkBuffer& srBuffer, VkDeviceMemory& srBufferMem )
 {
 	if ( srBuffer )
 	{
-		vec_remove( gBuffers, srBuffer );
+		vec_remove_if( gBuffers, srBuffer );
 		vkDestroyBuffer( VK_GetDevice(), srBuffer, nullptr );
 	}
 

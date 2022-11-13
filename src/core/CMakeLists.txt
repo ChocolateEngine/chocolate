@@ -9,6 +9,7 @@ file(
 file(
 	GLOB_RECURSE PUBLIC_FILES CONFIGURE_DEPENDS
 	${CH_PUBLIC}/core/*.h
+	${CH_PUBLIC}/core/*.hpp
 )
 
 list( APPEND PUBLIC_FILES

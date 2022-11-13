@@ -131,7 +131,7 @@ long CodecVorbis::ReadPacket( AudioStream *stream, std::vector<float> &data )
 }*/
 
 
-long CodecVorbis::Read( AudioStream *stream, size_t size, std::vector<float> &data )
+long CodecVorbis::Read( AudioStream* stream, size_t size, ChVector< float >& data )
 {
     CodecVorbisData *vorbisData = (CodecVorbisData*)stream->data;
     OggVorbis_File *oggFile = vorbisData->oggFile;
@@ -163,13 +163,14 @@ long CodecVorbis::Read( AudioStream *stream, size_t size, std::vector<float> &da
             return result;  // error in the stream.
 
         // for (int i = 0; i < count; ++i)
-        for (int i = 0; i < result; ++i)
+		data.resize( data.size() + result );
+        for ( int i = 0, j = 0; i < result; ++i )
         {
             for(int ch = 0; ch < stream->channels; ch++)
             {
                 //data[totalFramesRead] = buffer[ch][i];
-                data.push_back(buffer[ch][i]);
-                totalFramesRead++;
+                // data.push_back( buffer[ch][i] );
+				data[ totalFramesRead++ ] = buffer[ ch ][ i ];
 
                 if (remain != 0)
                     remain--;

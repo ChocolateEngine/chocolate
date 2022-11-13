@@ -82,11 +82,45 @@ struct ChVector
 		aSize = sSize;
 	}
 
+	// Pre-allocates memory while maintaining stored size
+	void     reserve( uint32_t sSize )
+	{
+		if ( apData )
+		{
+			if ( sSize > 0 && sSize > aCapacity )
+			{
+				void* newData = realloc( apData, sSize * sizeof( T ) );
+				if ( newData == nullptr )
+					Log_FatalF( "Failed to Resize ChVector: %zd bytes\n", sSize );
+
+				apData = static_cast< T* >( newData );
+
+				aCapacity = sSize;
+			}
+			else if ( sSize == 0 )
+			{
+				free( apData );
+				apData = nullptr;
+			}
+		}
+		else if ( sSize > 0 )
+		{
+			apData = static_cast< T* >( malloc( sSize * sizeof( T ) ) );
+
+			if ( apData == nullptr )
+				Log_FatalF( "Failed to Allocate ChVector: %zd bytes\n", sSize );
+
+			aCapacity = sSize;
+		}
+	}
+
+	// Reset size, does not free any memory, use free_data() if you want that
 	void clear()
 	{
 		aSize = 0;
 	}
 
+	// Free all allocated memory
 	void free_data()
 	{
 		if ( apData )
@@ -134,10 +168,9 @@ struct ChVector
 	{
 		resize( aSize + 1, false );
 		memcpy( &apData[ aSize - 1 ], &srData, sizeof( T ) );
-
-		// Assert( _heapchk() == _HEAPOK );
 	}
 
+	// Remove an item by index
 	void remove( uint32_t sIndex )
 	{
 		if ( sIndex > aSize )
@@ -152,6 +185,30 @@ struct ChVector
 
 		// resize( aSize - 1 );
 		aSize--;
+	}
+
+	// Find the index of an item in the vector
+	uint32_t index( const T& sItem, uint32_t fallback = UINT32_MAX )
+	{
+		auto it = std::find( begin(), end(), sItem );
+		if ( it != end() )
+			return it - begin();
+
+		return fallback;
+	}
+
+	// Search for an item and remove it from the vector
+	void erase( const T& sItem )
+	{
+		uint32_t index = this->index( sItem );
+
+		if ( index == UINT32_MAX )
+		{
+			Log_Error( "Failed to find item in ChVector!\n" );
+			return;
+		}
+
+		remove( index );
 	}
 
 	// Index into the buffer
