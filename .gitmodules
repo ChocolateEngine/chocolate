@@ -7,3 +7,6 @@
 [submodule "thirdparty/KTX-Software"]
 	path = thirdparty/KTX-Software
 	url = https://github.com/KhronosGroup/KTX-Software.git
+[submodule "thirdparty/fast_obj"]
+	path = thirdparty/fast_obj
+	url = https://github.com/thisistherk/fast_obj.git
