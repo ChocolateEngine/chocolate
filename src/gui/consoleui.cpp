@@ -7,7 +7,7 @@
 #include "imgui/imgui_impl_sdl.h"
 
 
-CONVAR( con_spam_test, 0 );
+CONVAR( conui_spam_test, 0 );
 
 CONVAR( conui_max_history, -1 );  // idk
 CONVAR( conui_color_test, 0 );
@@ -224,7 +224,7 @@ bool CheckEnterPress( char* buf )
 		Con_QueueCommand( buf );
 		snprintf( buf, 256, "" );
 		Con_SetTextBuffer( buf );
-		ImGui::SetKeyboardFocusHere();
+		ImGui::SetKeyboardFocusHere( -1 );
 
 		gCmdUserInput = "";
 		gCmdHistoryIndex = -1;
@@ -260,9 +260,12 @@ int ConsoleInputCallback( ImGuiInputTextCallbackData* data )
 		data->BufDirty = CheckAddLastCommand( data );
 	}
 
+	bool enterPressed = false;
+
 	if ( !data->BufDirty )
 	{
-		data->BufDirty = CheckEnterPress( data->Buf );
+		enterPressed   = CheckEnterPress( data->Buf );
+		data->BufDirty = enterPressed;
 	}
 
 	if ( data->BufDirty )
@@ -270,7 +273,7 @@ int ConsoleInputCallback( ImGuiInputTextCallbackData* data )
 		data->BufTextLen = Con_GetTextBuffer().length();
 	}
 
-	return 0;
+	return enterPressed;
 }
 
 
@@ -409,6 +412,9 @@ struct ConLogBuffer
 static std::vector< ConLogBuffer > gConHistory;
 static size_t gConHistoryIndex = 0;
 
+// can and will be over this limit
+constexpr size_t CON_MAX_BUFFER_SIZE = 512;
+
 
 void ReBuildConsoleOutput()
 {
@@ -424,7 +430,7 @@ void ReBuildConsoleOutput()
 
 		LogColor color = GetConsoleTextColor( log );
 
-		if ( color != buffer->aColor && buffer->aBuffer.size() )
+		if ( color != buffer->aColor && buffer->aBuffer.size() || buffer->aBuffer.size() > CON_MAX_BUFFER_SIZE )
 			buffer = &gConHistory.emplace_back( color, log.aFormatted );
 
 		else if ( buffer->aBuffer.empty() )
@@ -459,14 +465,14 @@ void UpdateConsoleOutput()
 
 	for ( ; gConHistoryIndex < logs.size(); gConHistoryIndex++ )
 	{
-		ConLogBuffer* buffer = &gConHistory.at( gConHistory.size() - 1 );
+		ConLogBuffer* buffer    = &gConHistory.at( gConHistory.size() - 1 );
 		const Log&    log       = logs[ gConHistoryIndex ];
 		LogColor      nextColor = GetConsoleTextColor( log );
 
 		if ( !Log_IsVisible( log ) )
 			continue;
 
-		if ( buffer->aColor != nextColor )
+		if ( buffer->aColor != nextColor || buffer->aBuffer.size() > CON_MAX_BUFFER_SIZE )
 		{
 			buffer = &gConHistory.emplace_back( nextColor, log.aFormatted );
 		}
@@ -540,7 +546,7 @@ void DrawConsoleOutput()
 
 void GuiSystem::DrawConsole( bool wasConsoleOpen )
 {
-	if ( con_spam_test.GetBool() )
+	if ( conui_spam_test.GetBool() )
 		Log_Msg( "TEST\n" );
 
 	if ( !ImGui::Begin( "Developer Console", 0, ImGuiWindowFlags_NoScrollbar ) )
@@ -554,17 +560,85 @@ void GuiSystem::DrawConsole( bool wasConsoleOpen )
 	DrawColorTest();
 	DrawFilterBox();
 
-	if ( !wasConsoleOpen )
-		ImGui::SetKeyboardFocusHere(0);
-
+	ImGui::PushAllowKeyboardFocus( false );
 	DrawConsoleOutput();
+	ImGui::PopAllowKeyboardFocus();
 
 	snprintf( buf, 256, Con_GetTextBuffer().c_str() );
-	ImGui::SetNextItemWidth( -1.f );  // force it to fill the window
+
+	ImGuiStyle& style = ImGui::GetStyle();
+
+	ImVec2 what = ImGui::GetItemRectSize();
+
+	ImVec2 sendBtnSize = ImGui::CalcTextSize( "Send" );
+	float  inputTextWidth = -ImGui::GetFrameHeightWithSpacing() - sendBtnSize.y - ( style.FramePadding.y * 2 );
+
+	// ImGui::SetNextItemWidth( -1.f );  // force it to fill the window
+
+	// small hack to offset this
+	ImGui::SetCursorPosY( ImGui::GetCursorPosY() + 1 );
+
+	ImGui::SetNextItemWidth( inputTextWidth );  // force it to fill the window
+
+	static ImVec2 prevWindowSize   = ImGui::GetWindowSize();
+	ImVec2        newWindowSize    = ImGui::GetWindowSize();
+
+	static bool   inResize         = false;
+
+	bool          setKeyboardFocus = !wasConsoleOpen || ImGui::IsItemClicked();
+
+	if ( ImGui::IsItemClicked() )
+	{
+		setKeyboardFocus = true;
+	}
+
+	if ( ImGui::IsMouseDragging( ImGuiMouseButton_Left ) )
+	{
+		// window resizing
+		if ( prevWindowSize.x != newWindowSize.x || prevWindowSize.y != newWindowSize.y )
+			inResize = true;
+
+		setKeyboardFocus = !inResize;
+	}
+	else
+	{
+		if ( inResize )
+			setKeyboardFocus = true;
+
+		inResize = false;
+	}
+
+	prevWindowSize = newWindowSize;
+
+	if ( setKeyboardFocus )
+	{
+		ImGui::SetKeyboardFocusHere();
+	}
+
 	ImGui::InputText( "##send", buf, 256, ImGuiInputTextFlags_CallbackAlways, &ConsoleInputCallback );
 
-	if ( !wasConsoleOpen )
-		ImGui::SetKeyboardFocusHere(0);
+	ImGui::SameLine();
+
+	ImGui::PushAllowKeyboardFocus( false );
+
+	if ( ImGui::Button( "Send" ) )
+	// if ( false )
+	{
+		Con_QueueCommand( buf );
+		snprintf( buf, 256, "" );
+		Con_SetTextBuffer( buf );
+		ImGui::SetKeyboardFocusHere();
+
+		gCmdUserInput     = "";
+		gCmdHistoryIndex  = -1;
+		gCmdDropDownIndex = -1;
+	}
+
+	ImGui::PopAllowKeyboardFocus();
+
+	// ImVec2 windowSize = ImGui::GetWindowSize();
+	// windowSize.y += 2;
+	// ImGui::SetWindowSize( windowSize );
 
 	ImVec2 dropDownPos( ImGui::GetWindowPos().x, ImGui::GetWindowSize().y + ImGui::GetWindowPos().y );
 	
