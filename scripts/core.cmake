@@ -15,6 +15,13 @@ set( CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CH_BUILD}/bin )
 set( CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CH_BUILD}/bin )
 set( CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CH_ROOT}/obj )
 
+# https://stackoverflow.com/questions/20638963/cmake-behaviour-custom-configuration-types-with-visual-studio-need-multiple-cma
+# if( CMAKE_CONFIGURATION_TYPES )
+#   set( CMAKE_CONFIGURATION_TYPES Release Debug )
+#   set( CMAKE_CONFIGURATION_TYPES "${CMAKE_CONFIGURATION_TYPES}" CACHE STRING
+#       "Reset the configurations to what we need" FORCE )
+# endif()
+
 # set output directories for all builds (Debug, Release, etc.)
 foreach( OUTPUTCONFIG ${CMAKE_CONFIGURATION_TYPES} )
     string( TOUPPER ${OUTPUTCONFIG} OUTPUTCONFIG )
@@ -39,6 +46,7 @@ add_compile_definitions(
 	# GLM_FORCE_DEPTH_ZERO_TO_ONE  # what does even this do internally
 	# glm is SHIT and can't do this with AVX2, ugh
 	GLM_FORCE_XYZW_ONLY=GLM_ENABLE
+	GLM_FORCE_SWIZZLE
 	
 	#GLM_CONFIG_SIMD  # defined in GLM_FORCE_AVX2
 
@@ -112,6 +120,36 @@ if( MSVC )
 		"/wd4305"  # truncation from 'double' to 'float'
 	)
 	
+	set( COMPILE_OPTIONS_DEBUG
+		"/Od"  # no optimizations
+		"/ZI"  # edit and continue
+		# "/fsanitize=address" # use address sanitizing in Debug (incompatible with /INCREMENTAL)
+	)
+	
+	set( COMPILE_OPTIONS_RELEASE
+		""
+	)
+	
+	add_compile_options(
+		"$<$<CONFIG:Debug>:${COMPILE_OPTIONS_DEBUG}>"
+		"$<$<CONFIG:Release>:${COMPILE_OPTIONS_RELEASE}>"
+		"$<$<CONFIG:RelWithDebInfo>:${COMPILE_OPTIONS_RELEASE}>"
+	)
+	
+	set( LINK_OPTIONS_DEBUG
+		""
+	)
+	
+	set( LINK_OPTIONS_RELEASE
+		""
+	)
+	
+	add_link_options(
+		"$<$<CONFIG:Debug>:${LINK_OPTIONS_DEBUG}>"
+		"$<$<CONFIG:Release>:${LINK_OPTIONS_RELEASE}>"
+		"$<$<CONFIG:RelWithDebInfo>:${LINK_OPTIONS_RELEASE}>"
+	)
+	
 	add_link_options(
 		"/INCREMENTAL"
 	)
@@ -128,7 +166,7 @@ else()  # linux
 	link_libraries( dl pthread X11 Xxf86vm Xrandr Xi )
 	
 	if ( CMAKE_BUILD_TYPE STREQUAL Debug )
-		add_compile_options( -g )
+		add_compile_options( -g -fsanitize=address )
 	else()
 		add_compile_options( -O2 )
 	endif()
@@ -144,7 +182,7 @@ else()  # linux
 		-Wno-deprecated-enum-enum-conversion
 	)
 
-	set( CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,--no-undefined") 
+	set( CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,--no-undefined" ) 
 	set( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++20" )
 	
 endif()
