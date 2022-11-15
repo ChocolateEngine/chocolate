@@ -27,14 +27,13 @@ constexpr Handle InvalidHandle = 0;
 
 
 template< typename T >
-class ResourceList
+struct ResourceList
 {
 	mempool_t*         apPool;
 	size_t             aSize;
 	size_t             aStepSize;
 	ChVector< Handle > aHandles;
 
-public:
 	/*
      *    Construct a resource manager.
      */
