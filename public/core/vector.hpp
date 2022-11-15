@@ -57,7 +57,7 @@ struct ChVector
 				if ( sZero && sSize > aCapacity )
 				{
 					// Zero out the new data 
-					memset( &apData[ sSize - 1 ], 0, ( sSize - aCapacity ) * sizeof( T ) );
+					memset( &apData[ aCapacity ], 0, ( sSize - aCapacity ) * sizeof( T ) );
 				}
 
 				aCapacity = sSize;
