@@ -10,6 +10,7 @@ functionality where a STL vector may cause segfaults.
 #include <stdlib.h>
 
 #include "log.h"
+#include "asserts.h"
 
 
 template< typename T >
@@ -28,11 +29,11 @@ struct ChVector
 	// Returns the size of the buffer.
 	uint32_t size() const { return aSize; }
 
-	// Returns the amount of the buffer currently allocated
-	uint32_t capacity() const { return aCapacity; }
-
 	// Returns the size of the buffer in bytes
 	uint32_t size_bytes() const { return aSize * sizeof( T ); }
+
+	// Returns the amount of the buffer currently allocated
+	uint32_t capacity() const { return aCapacity; }
 
 	// Returns if the buffer is empty or not.
 	bool     empty() const { return aSize == 0; }
@@ -55,6 +56,7 @@ struct ChVector
 
 				if ( sZero && sSize > aCapacity )
 				{
+					// Zero out the new data 
 					memset( &apData[ sSize - 1 ], 0, ( sSize - aCapacity ) * sizeof( T ) );
 				}
 
@@ -68,6 +70,7 @@ struct ChVector
 		}
 		else if ( sSize > 0 )
 		{
+			// NOTE: this is actually useless, you can use realloc with nullptr
 			if ( sZero )
 				apData = static_cast< T* >( calloc( sSize, sizeof( T ) ) );
 			else
@@ -167,7 +170,21 @@ struct ChVector
 	void push_back( const T& srData )
 	{
 		resize( aSize + 1, false );
-		memcpy( &apData[ aSize - 1 ], &srData, sizeof( T ) );
+		top() = srData;
+
+		// dst, src, size
+		// memcpy( &apData[ aSize - 1 ], &srData, sizeof( T ) );
+		// std::copy( &apData[ aSize - 1 ], &srData, sizeof( T ) );
+		// std::copy( other.begin(), other.end(), apData );
+	}
+
+	void push_back( T&& srData )
+	{
+		resize( aSize + 1, false );
+
+		// dst, src, size
+		// memcpy( &apData[ aSize - 1 ], &srData, sizeof( T ) );
+		top() = std::move( srData );
 	}
 
 	// Remove an item by index
@@ -245,6 +262,61 @@ struct ChVector
 	~ChVector()
 	{
 		free_data();
+	}
+
+	// --------------------------------------------------
+	// necessary stuff for objects
+
+	// copying
+	void assign( const ChVector& other )
+	{
+		reserve( other.aSize );
+		std::move( other.begin(), other.end(), apData );
+	}
+
+	// moving
+	void assign( ChVector&& other )
+	{
+		// swap the values of this one with that one
+		std::swap( aSize, other.aSize );
+		std::swap( aCapacity, other.aCapacity );
+		std::swap( apData, other.apData );
+	}
+
+	ChVector& operator=( const ChVector& other )
+	{
+		if ( valid() )
+		{
+			aSize = other.aSize;
+			consolidate();
+		}
+
+		assign( other );
+		return *this;
+	}
+
+	ChVector& operator=( ChVector&& other )
+	{
+		if ( valid() )
+		{
+			aSize = other.aSize;
+			consolidate();
+		}
+
+		assign( std::move( other ) );
+		return *this;
+	}
+
+	// copying
+	ChVector( const ChVector& other )
+	{
+		assign( other );
+	}
+
+	// moving
+	ChVector( ChVector&& other )
+	{
+		assign( std::move( other ) );
 	}
 };
 
