@@ -14,7 +14,7 @@ LogChannel                                     gGeneralChannel     = INVALID_LOG
 static std::string                             gDefaultChannelName = "[General]";
 static std::mutex                              gLogMutex;
 
-// apparently you could of added stuff to this before dynamic initialization got to this, and then you lose some log channels as a result
+// apparently you could of added stuff to this before static initialization got to this, and then you lose some log channels as a result
 std::vector< LogChannel_t >& GetLogChannels()
 {
 	static std::vector< LogChannel_t > gChannels;
@@ -175,7 +175,7 @@ LogChannel Log_RegisterChannel( const char *sName, LogColor sColor )
         return i;
     }
 
-    GetLogChannels().emplace_back( true, sName, sColor );
+    GetLogChannels().emplace_back( sName, true, sColor );
 	return (LogChannel)GetLogChannels().size() - 1;
 }
 
@@ -228,14 +228,14 @@ void FormatLog( LogChannel_t *channel, Log &log )
     {
         default:
         case LogType::Normal:
-            vstring( log.aFormatted, "[%s] %s", channel->aName.c_str(), log.aMessage.c_str() );
+            vstring( log.aFormatted, "[%s] %s", channel->aName.data(), log.aMessage.c_str() );
             break;
 
         case LogType::Dev:
         case LogType::Dev2:
         case LogType::Dev3:
         case LogType::Dev4:
-            vstring( log.aFormatted, "[%s] [DEV %u] %s", channel->aName.c_str(), log.aType, log.aMessage.c_str() );
+			vstring( log.aFormatted, "[%s] [DEV %u] %s", channel->aName.data(), log.aType, log.aMessage.c_str() );
             break;
 
         case LogType::Input:
@@ -247,15 +247,15 @@ void FormatLog( LogChannel_t *channel, Log &log )
             break;
 
         case LogType::Warning:
-            vstring( log.aFormatted, "[%s] [WARNING] %s", channel->aName.c_str(), log.aMessage.c_str() );
+			vstring( log.aFormatted, "[%s] [WARNING] %s", channel->aName.data(), log.aMessage.c_str() );
             break;
 
         case LogType::Error:
-            vstring( log.aFormatted, "[%s] [ERROR] %s", channel->aName.c_str(), log.aMessage.c_str() );
+			vstring( log.aFormatted, "[%s] [ERROR] %s", channel->aName.data(), log.aMessage.c_str() );
             break;
 
         case LogType::Fatal:
-            vstring( log.aFormatted, "[%s] [FATAL] %s", channel->aName.c_str(), log.aMessage.c_str() );
+			vstring( log.aFormatted, "[%s] [FATAL] %s", channel->aName.data(), log.aMessage.c_str() );
             break;
     }
 }
@@ -534,7 +534,7 @@ void Log_AddLogInternal( Log& log )
 				Log_SetColor( LogColor::Default );
 
                 std::string messageBoxTitle;
-                vstring( messageBoxTitle, "[%s] Fatal Error", channel->aName.c_str() );
+				vstring( messageBoxTitle, "[%s] Fatal Error", channel->aName.data() );
 
                 if ( log.aMessage.ends_with("\n") )
                     SDL_ShowSimpleMessageBox( SDL_MESSAGEBOX_ERROR, messageBoxTitle.c_str(), log.aMessage.substr(0, log.aMessage.size()-1 ).c_str(), NULL );
@@ -542,6 +542,7 @@ void Log_AddLogInternal( Log& log )
                     SDL_ShowSimpleMessageBox( SDL_MESSAGEBOX_ERROR, messageBoxTitle.c_str(), log.aMessage.c_str(), NULL );
 
                 throw std::runtime_error( log.aFormatted.c_str() );
+				exit( -1 );
                 break;
         }
     }
@@ -563,7 +564,7 @@ void log_channel_dropdown(
 		if ( args.size() && !channel.aName.starts_with( args[0] ) )
 			continue;
 
-		results.push_back( channel.aName );
+		results.push_back( channel.aName.data() );
 	}
 }
 
@@ -599,10 +600,48 @@ CONCMD_DROP( log_channel_show, log_channel_dropdown )
 
 CONCMD( log_channel_dump )
 {
-    Log_Msg( "Log Channels: \n" );
-	for ( const auto& channel : GetLogChannels() )
-    {
-		Log_MsgF( "\t%s - Visibility: %s, Color: %d\n", channel.aName.c_str(), channel.aShown ? "Shown" : "Hidden", channel.aColor );
+    // Calculate max name length
+	size_t maxNameLength = 0;
+	size_t maxLength = 0;
+	constexpr size_t logNameLen = 13;
+
+    for ( const auto& channel : GetLogChannels() )
+	{
+		maxNameLength = std::max( logNameLen, std::max( maxNameLength, channel.aName.size() ) );
+		maxLength = std::max( maxLength, maxNameLength + 23 );
+	}
+
+    Log_MsgF( "Channel Name%*s  | Shown  | Color\n", maxNameLength > logNameLen ? maxNameLength - logNameLen : logNameLen, "" );
+
+    // Build separator bar
+    // Example Output: ---------------|--------|------------
+    char* separator = new char[ maxLength + 1 ] {'\0'};
+
+    for ( size_t i = 0; i < maxLength; i++ )
+	{
+		if ( i == maxNameLength + 1 || maxLength - 13 == i )
+		{
+			separator[ i ] = '|';
+			continue;
+		}
+		
+	    separator[ i ] = '-';
+	}
+
+	Log_MsgF( "%s\n", separator );
+
+    delete[] separator;
+
+    // Display Log Channels
+    for ( const auto& channel : GetLogChannels() )
+	{
+		Log_MsgF(
+		  "%s%*s | %s | %s\n",
+		  channel.aName.data(),
+		  maxNameLength - channel.aName.size(),
+		  "",
+		  channel.aShown ? "Shown " : "Hidden",
+		  Log_ColorToStr( channel.aColor ) );
     }
 }
 
@@ -635,19 +674,19 @@ const char* Log_ColorToStr( LogColor color )
             return "White";
 
         case LogColor::DarkBlue:
-            return "DarkBlue";
+            return "Dark Blue";
         case LogColor::DarkGreen:
-            return "DarkGreen";
+            return "Dark Green";
         case LogColor::DarkCyan:
-            return "DarkCyan";
+            return "Dark Cyan";
         case LogColor::DarkRed:
-            return "DarkRed";
+            return "Dark Red";
         case LogColor::DarkMagenta:
-            return "DarkMagenta";
+            return "Dark Magenta";
         case LogColor::DarkYellow:
-            return "DarkYellow";
+            return "Dark Yellow";
         case LogColor::DarkGray:
-            return "DarkGray";
+            return "Dark Gray";
 
         case LogColor::Blue:
             return "Blue";
@@ -696,7 +735,7 @@ LogColor Log_GetChannelColor( LogChannel handle )
 }
 
 
-const std::string& Log_GetChannelName( LogChannel handle )
+std::string_view Log_GetChannelName( LogChannel handle )
 {
 	LogChannel_t* channel = Log_GetChannelData( handle );
     if ( !channel )

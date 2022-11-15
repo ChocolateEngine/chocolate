@@ -50,9 +50,9 @@ enum class LogType: unsigned char
 
 struct LogChannel_t
 {
-	bool        aShown;
-	std::string aName;
-	LogColor    aColor;
+	std::string_view aName;
+	bool             aShown;
+	LogColor         aColor;
 };
 
 using LogChannel = unsigned char;
@@ -86,7 +86,7 @@ const char                  CORE_API *Log_ColorToStr( LogColor color );
 CORE_API LogChannel                   Log_RegisterChannel( const char* sName, LogColor sColor = LogColor::Default );
 LogChannel                  CORE_API  Log_GetChannel( const char *sName );
 LogColor                    CORE_API  Log_GetChannelColor( LogChannel handle );
-const std::string           CORE_API &Log_GetChannelName( LogChannel handle );
+std::string_view            CORE_API  Log_GetChannelName( LogChannel handle );
 bool                        CORE_API  Log_ChannelIsShown( LogChannel handle );
 unsigned char               CORE_API  Log_GetChannelCount();
 
