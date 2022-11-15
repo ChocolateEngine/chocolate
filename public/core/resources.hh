@@ -117,9 +117,9 @@ public:
 	/*
      *    Expands the memory pool used internally if the size is greater than the current size
      */
-	void EnsureSize( size_t sSize )
+	void EnsureSize( s64 sSize )
 	{
-		size_t size = sSize * ( sizeof( T ) + sizeof( unsigned int ) );
+		s64 size = sSize * ( sizeof( T ) + sizeof( unsigned int ) );
 
 		if ( size > apPool->aSize )
 			mempool_realloc( apPool, size );
@@ -241,7 +241,7 @@ public:
 
 		if ( srIndex > mempool_capacity( apPool ) )
 		{
-			Log_WarnF( gResourceChannel, "*ResourceManager::GetData( Handle ): Invalid index: %zd\n", srIndex );
+			Log_WarnF( gResourceChannel, "GetMagicAndIndex(): Index larger than mempool capacity: %zd > %zd\n", srIndex, mempool_capacity( apPool ) );
 			return false;
 		}
 
@@ -264,14 +264,14 @@ public:
 		// Check if the buffer is nullptr
 		if ( spBuf == nullptr )
 		{
-			Log_WarnF( gResourceChannel, "ResourceList::GetHandleData(): Invalid index - Buffer is nullptr: %zd\n", index );
+			Log_WarnF( gResourceChannel, "GetHandleData(): Invalid index - Buffer is nullptr: %zd\n", index );
 			return nullptr;
 		}
 
 		// Verify the magic numbers at the start of the buffer match
 		if ( *(unsigned int*)spBuf != magic )
 		{
-			Log_Warn( gResourceChannel, "ResourceList::GetHandleData(): Invalid magic number\n" );
+			Log_Warn( gResourceChannel, "GetHandleData(): Invalid magic number\n" );
 			return nullptr;
         }
 
@@ -322,14 +322,14 @@ public:
 		// Check if the buffer is nullptr
 		if ( pBuf == nullptr )
 		{
-			Log_WarnF( gResourceChannel, "ResourceList::GetHandleData(): Invalid index - Buffer is nullptr: %zd\n", index );
+			Log_WarnF( gResourceChannel, "GetHandleData(): Invalid index - Buffer is nullptr: %zd\n", index );
 			return;
 		}
 
 		// Verify the magic numbers at the start of the buffer match
 		if ( *(unsigned int*)pBuf != magic )
 		{
-			Log_Warn( gResourceChannel, "ResourceList::GetHandleData(): Invalid magic number\n" );
+			Log_Warn( gResourceChannel, "GetHandleData(): Invalid magic number\n" );
 			return;
 		}
 
