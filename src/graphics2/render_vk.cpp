@@ -1523,7 +1523,7 @@ public:
 			{
 				if ( srBegin.aClear[ i ].aIsDepth )
 				{
-					clearValues[ i ].depthStencil.depth   = srBegin.aClear[ i ].aDepth;
+					clearValues[ i ].depthStencil.depth   = srBegin.aClear[ i ].aColor.w;
 					clearValues[ i ].depthStencil.stencil = srBegin.aClear[ i ].aStencil;
 				}
 				else
@@ -1635,6 +1635,19 @@ public:
 		}
 
 		return vkCmdSetDepthBias( c, sConstantFactor, sClamp, sSlopeFactor );
+	}
+
+	void CmdSetLineWidth( Handle cmd, float sLineWidth ) override
+	{
+		VkCommandBuffer c = VK_GetCommandBuffer( cmd );
+
+		if ( c == nullptr )
+		{
+			Log_Error( gLC_Render, "CmdSetDepthBias: Invalid Command Buffer\n" );
+			return;
+		}
+
+		return vkCmdSetLineWidth( c, sLineWidth );
 	}
 
 	bool CmdBindPipeline( Handle cmd, Handle shader ) override

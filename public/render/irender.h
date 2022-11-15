@@ -507,7 +507,6 @@ struct RenderPassClear_t
 {
 	bool      aIsDepth = false;
 	glm::vec4 aColor{};
-	float     aDepth   = 1.f;
 	u32       aStencil = 0;
 };
 
@@ -736,6 +735,8 @@ class IRender : public BaseSystem
 
 	virtual void        CmdSetDepthBias( Handle cmd, float sConstantFactor, float sClamp, float sSlopeFactor )   = 0;
 
+	virtual void        CmdSetLineWidth( Handle cmd, float sLineWidth )                                          = 0;
+
 	virtual bool        CmdBindPipeline( Handle cmd, Handle shader ) = 0;
 
 	virtual void        CmdPushConstants( Handle      cmd,
@@ -779,5 +780,5 @@ class IRender : public BaseSystem
 
 
 #define IRENDER_NAME "Render"
-#define IRENDER_HASH 5
+#define IRENDER_HASH 6
 

@@ -20,7 +20,6 @@ static ResourceList< VkPipelineLayout > gPipelineLayouts;
 
 
 CONVAR( r_sampled_textures, 0 );
-CONVAR( r_line_thickness, 2 );
 
 
 void VK_BindDescSets()
@@ -249,7 +248,7 @@ bool VK_CreateGraphicsPipeline( Handle& srHandle, GraphicsPipelineCreate_t& srGr
 	VkPipelineRasterizationStateCreateInfo rasterizer{ VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO };
 	rasterizer.depthClampEnable        = VK_TRUE;
 	rasterizer.rasterizerDiscardEnable = VK_FALSE;
-	rasterizer.lineWidth               = r_line_thickness;
+	rasterizer.lineWidth               = 1.f;
 	rasterizer.polygonMode             = VK_POLYGON_MODE_FILL;
 	rasterizer.frontFace               = VK_FRONT_FACE_COUNTER_CLOCKWISE;
 	rasterizer.depthBiasEnable         = srGraphicsCreate.aDepthBiasEnable;
@@ -331,7 +330,7 @@ bool VK_CreateGraphicsPipeline( Handle& srHandle, GraphicsPipelineCreate_t& srGr
 	colorBlending.blendConstants[ 2 ] = 0.0f;  // Optional
 	colorBlending.blendConstants[ 3 ] = 0.0f;  // Optional
 
-	std::vector< VkDynamicState > dynamicStates;
+	ChVector< VkDynamicState > dynamicStates;
 
 	if ( srGraphicsCreate.aDynamicState & EDynamicState_Viewport )
 		dynamicStates.push_back( VK_DYNAMIC_STATE_VIEWPORT );
@@ -361,7 +360,7 @@ bool VK_CreateGraphicsPipeline( Handle& srHandle, GraphicsPipelineCreate_t& srGr
 		dynamicStates.push_back( VK_DYNAMIC_STATE_STENCIL_REFERENCE );
 
 	VkPipelineDynamicStateCreateInfo dynamicState{ VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO };
-	dynamicState.dynamicStateCount              = (u32)dynamicStates.size();
+	dynamicState.dynamicStateCount              = dynamicStates.size();
 	dynamicState.pDynamicStates                 = dynamicStates.data();
 
 	//	Combine all the objects above into one parameter for graphics pipeline creation
