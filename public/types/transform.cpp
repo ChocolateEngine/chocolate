@@ -139,6 +139,24 @@ void Util_ToMatrix( glm::mat4& srMatrix, const glm::vec3& srPos, const glm::vec3
 }
 
 
+void Util_ToMatrix( glm::mat4& srMatrix, glm::vec3* spPos, glm::vec3* spAng, glm::vec3* spScale )
+{
+	if ( spPos )
+		srMatrix = glm::translate( *spPos );
+	else
+		srMatrix = glm::identity< glm::mat4 >();
+
+	if ( spScale )
+		srMatrix = glm::scale( srMatrix, *spScale );
+
+	if ( spAng )
+		srMatrix *= glm::eulerAngleYZX(
+		  glm::radians( spAng->x ),
+		  glm::radians( spAng->y ),
+		  glm::radians( spAng->z ) );
+}
+
+
 void Util_ToViewMatrixY( glm::mat4& srViewMatrix, const glm::vec3& srAng )
 {
 #if 0
