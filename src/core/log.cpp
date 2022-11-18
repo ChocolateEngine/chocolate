@@ -4,6 +4,7 @@
 
 #include <iostream>
 #include <mutex>
+#include <regex>
 
 #include <SDL.h>
 
@@ -55,7 +56,6 @@ static void StripTrailingLines( const char* pText, size_t& len )
 }
 
 
-
 /* Windows Specific Functions for console text colors.  */
 #ifdef _WIN32
 #include <Windows.h>
@@ -77,7 +77,7 @@ constexpr int Win32GetColor( LogColor color )
 			return FOREGROUND_GREEN | FOREGROUND_BLUE;
 		case LogColor::DarkRed:
 			return FOREGROUND_RED;
-		case LogColor::DarkMagenta:
+		case LogColor::DarkPurple:
 			return FOREGROUND_RED | FOREGROUND_BLUE;
 		case LogColor::DarkYellow:
 			return FOREGROUND_RED | FOREGROUND_GREEN;
@@ -92,7 +92,7 @@ constexpr int Win32GetColor( LogColor color )
 			return FOREGROUND_INTENSITY | FOREGROUND_GREEN | FOREGROUND_BLUE;
 		case LogColor::Red:
 			return FOREGROUND_INTENSITY | FOREGROUND_RED;
-		case LogColor::Magenta:
+		case LogColor::Purple:
 			return FOREGROUND_INTENSITY | FOREGROUND_RED | FOREGROUND_BLUE;
 		case LogColor::Yellow:
 			return FOREGROUND_INTENSITY | FOREGROUND_RED | FOREGROUND_GREEN;
@@ -104,6 +104,7 @@ constexpr int Win32GetColor( LogColor color )
 			return 7;
 	}
 }
+
 
 void Win32SetColor( LogColor color )
 {
@@ -126,35 +127,171 @@ void Win32SetColor( LogColor color )
 
 #endif
 
-// TODO: setup the rest of the colors here
-constexpr const char* UnixGetColor( LogColor color )
+
+const char* Log_ColorToStr( LogColor color )
+{
+    switch ( color )
+    {
+        case LogColor::Black:
+            return "Black";
+        case LogColor::White:
+            return "White";
+
+        case LogColor::DarkBlue:
+            return "Dark Blue";
+        case LogColor::DarkGreen:
+            return "Dark Green";
+        case LogColor::DarkCyan:
+            return "Dark Cyan";
+        case LogColor::DarkRed:
+            return "Dark Red";
+		case LogColor::DarkPurple:
+            return "Dark Purple";
+        case LogColor::DarkYellow:
+            return "Dark Yellow";
+        case LogColor::DarkGray:
+            return "Dark Gray";
+
+        case LogColor::Blue:
+            return "Blue";
+        case LogColor::Green:
+            return "Green";
+        case LogColor::Cyan:
+            return "Cyan";
+        case LogColor::Red:
+            return "Red";
+		case LogColor::Purple:
+            return "Purple";
+        case LogColor::Yellow:
+            return "Yellow";
+        case LogColor::Gray:
+            return "Gray";
+
+        case LogColor::Default:
+        default:
+            return "Default";
+    }
+}
+
+
+const char* Log_ColorToUnix( LogColor color )
 {
 	switch ( color )
 	{
-		case LogColor::Red:
-			return "\033[0;31m";
-		case LogColor::DarkGreen:
-			return "\033[0;32m";
-		case LogColor::Green:
-			return "\033[1;32m";
-		case LogColor::Yellow:
-			return "\033[0;33m";
-		case LogColor::Blue:
-			return "\033[0;34m";
-		case LogColor::Cyan:
-			return "\033[0;36m";
-		case LogColor::Magenta:
-			return "\033[1;35m";
-
 		case LogColor::Default:
 		default:
-			return "\033[0m";
+			return UNIX_CLR_DEFAULT;
+
+		case LogColor::Black:
+			return UNIX_CLR_BLACK;
+		case LogColor::White:
+			return UNIX_CLR_WHITE;
+
+		case LogColor::DarkBlue:
+			return UNIX_CLR_DARK_BLUE;
+		case LogColor::DarkGreen:
+			return UNIX_CLR_DARK_GREEN;
+		case LogColor::DarkCyan:
+			return UNIX_CLR_DARK_CYAN;
+		case LogColor::DarkRed:
+			return UNIX_CLR_DARK_RED;
+		case LogColor::DarkPurple:
+			return UNIX_CLR_DARK_PURPLE;
+		case LogColor::DarkYellow:
+			return UNIX_CLR_DARK_YELLOW;
+		case LogColor::DarkGray:
+			return UNIX_CLR_DARK_GRAY;
+
+		case LogColor::Blue:
+			return UNIX_CLR_BLUE;
+		case LogColor::Green:
+			return UNIX_CLR_GREEN;
+		case LogColor::Cyan:
+			return UNIX_CLR_CYAN;
+		case LogColor::Red:
+			return UNIX_CLR_RED;
+		case LogColor::Purple:
+			return UNIX_CLR_PURPLE;
+		case LogColor::Yellow:
+			return UNIX_CLR_YELLOW;
+		case LogColor::Gray:
+			return UNIX_CLR_GRAY;
 	}
 }
 
+
+// check the specifc color int
+LogColor Log_UnixCodeToColor( bool sIsLight, int sColor )
+{
+	if ( sColor == 0 )
+		return LogColor::Default;
+
+	switch ( sColor )
+	{
+		default:
+			return LogColor::Default;
+
+		// case 30:
+		// 	return sIsLight ? LogColor::Default : LogColor::Black;
+
+		case 37:
+			return sIsLight ? LogColor::White : LogColor::Default;
+
+		case 34:
+			return sIsLight ? LogColor::Blue : LogColor::DarkBlue;
+
+		case 32:
+			return sIsLight ? LogColor::Green : LogColor::DarkGreen;
+
+		case 36:
+			return sIsLight ? LogColor::Cyan : LogColor::DarkCyan;
+
+		case 31:
+			return sIsLight ? LogColor::Red : LogColor::DarkRed;
+
+		case 35:
+			return sIsLight ? LogColor::Purple : LogColor::DarkPurple;
+
+		case 33:
+			return sIsLight ? LogColor::Yellow : LogColor::DarkYellow;
+
+		case 30:
+			return sIsLight ? LogColor::Gray : LogColor::DarkGray;
+	}
+}
+
+
+LogColor Log_UnixToColor( const char* spColor, size_t sLen )
+{
+	if ( sLen == 4 )
+	{
+		// \033[0m
+		return LogColor::Default;
+	}
+
+	if ( sLen != 7 )
+	{
+		PrintF( " *** Log_UnixToColor: Unknown Color Type: \"%s\"\n", spColor );
+		return LogColor::Default;
+	}
+
+	bool isLight       = spColor[ 2 ] == '1';
+	char colorStr[ 3 ] = { spColor[ 4 ], spColor[ 5 ], '\0' };
+
+	long color         = 0;
+	if ( !ToLong3( colorStr, color ) )
+	{
+		PrintF( " *** Failed get color code from string: %s (%s)\n", spColor, colorStr );
+		return LogColor::Default;
+	}
+
+	return Log_UnixCodeToColor( isLight, color );
+}
+
+
 void UnixSetColor( LogColor color )
 {
-	fputs( UnixGetColor( color ), stdout );
+	fputs( Log_ColorToUnix( color ), stdout );
 }
 
 
@@ -220,43 +357,36 @@ LogChannel_t* Log_GetChannelByName( const char* sChannel )
 
 
 // Format for system console output
-void FormatLog( LogChannel_t *channel, Log &log )
+static std::string FormatLog( LogChannel_t* channel, LogType sType, const char* spMessage )
 {
     PROF_SCOPE();
 
-    switch ( log.aType )
+    switch ( sType )
     {
         default:
         case LogType::Normal:
-            vstring( log.aFormatted, "[%s] %s", channel->aName.data(), log.aMessage.c_str() );
-            break;
+			return vstring( "[%s] %s", channel->aName.data(), spMessage );
 
         case LogType::Dev:
         case LogType::Dev2:
         case LogType::Dev3:
         case LogType::Dev4:
-			vstring( log.aFormatted, "[%s] [DEV %u] %s", channel->aName.data(), log.aType, log.aMessage.c_str() );
-            break;
+			return vstring( "[%s] [DEV %u] %s", channel->aName.data(), sType, spMessage );
 
         case LogType::Input:
-            vstring( log.aFormatted, "] %s\n", log.aMessage.c_str() );
-            break;
+			return vstring( "] %s\n", spMessage );
 
         case LogType::Raw:
-            vstring( log.aFormatted, "%s", log.aMessage.c_str() );
-            break;
+			return vstring( "%s", spMessage );
 
         case LogType::Warning:
-			vstring( log.aFormatted, "[%s] [WARNING] %s", channel->aName.data(), log.aMessage.c_str() );
-            break;
+			return vstring( "[%s] [WARNING] %s", channel->aName.data(), spMessage );
 
         case LogType::Error:
-			vstring( log.aFormatted, "[%s] [ERROR] %s", channel->aName.data(), log.aMessage.c_str() );
-            break;
+			return vstring( "[%s] [ERROR] %s", channel->aName.data(), spMessage );
 
         case LogType::Fatal:
-			vstring( log.aFormatted, "[%s] [FATAL] %s", channel->aName.data(), log.aMessage.c_str() );
-            break;
+			return vstring( "[%s] [FATAL] %s", channel->aName.data(), spMessage );
     }
 }
 
@@ -304,7 +434,7 @@ constexpr glm::vec4 GetColorRGBA( LogColor col )
             return {0, 0.35, 0.75, 1};
         case LogColor::DarkRed:
             return {0.7, 0, 0.25, 1};
-        case LogColor::DarkMagenta:
+		case LogColor::DarkPurple:
             return {0.45, 0, 0.7, 1};
         case LogColor::DarkYellow:
             return {0.6, 0.6, 0, 1};
@@ -319,7 +449,7 @@ constexpr glm::vec4 GetColorRGBA( LogColor col )
             return {0, 0.85, 1, 1};
         case LogColor::Red:
             return {0.9, 0, 0.4, 1};
-        case LogColor::Magenta:
+		case LogColor::Purple:
             return {0.6, 0, 0.9, 1};
         case LogColor::Yellow:
             return {1, 1, 0, 1};
@@ -468,6 +598,109 @@ const std::string& Log_GetHistoryStr( int maxSize )
 }
 
 
+void Log_SplitStringColors( LogColor sMainColor, std::string_view sBuffer, ChVector< LogColorBuf_t >& srColorList )
+{
+	// on win32, we need to split up the string by colors
+	char* buf  = const_cast< char* >( sBuffer.data() );
+
+	char* find = strstr( buf, "\033[" );
+
+	// no color codes found
+	if ( find == nullptr )
+	{
+		LogColorBuf_t& colorBuf = srColorList.emplace_back();
+		colorBuf.aColor         = sMainColor;
+		colorBuf.aLen           = sBuffer.size();
+		colorBuf.apStr          = sBuffer.data();
+		return;
+	}
+
+	// no color code at start of string
+	if ( find != buf )
+	{
+		LogColorBuf_t& colorBuf = srColorList.emplace_back();
+		colorBuf.aColor         = sMainColor;
+		colorBuf.aLen           = find - buf;
+		colorBuf.apStr          = buf;
+	}
+
+	char* last = buf;
+	
+	while ( find )
+	{
+		char* endColor = strstr( find, "m" );
+
+		if ( !endColor )
+		{
+			Log_Error( "Invalid Unix Color Code!\n" );
+			break;
+		}
+
+		endColor++;
+
+		size_t colorLength         = endColor - find;
+
+		last                       = endColor;
+		char*          nextFind    = strstr( endColor, "\033[" );
+
+		// no characters in between these colors
+		if ( nextFind && nextFind - endColor == 0 )
+		{
+			find = nextFind;
+			continue;
+		}
+
+		LogColorBuf_t& colorBuf    = srColorList.emplace_back();
+		colorBuf.aColor            = Log_UnixToColor( find, colorLength );
+		colorBuf.apStr             = endColor;
+
+		if ( nextFind == nullptr )
+		{
+			colorBuf.aLen = sBuffer.size() - (last - buf);
+		}
+		else
+		{
+			// colorBuf.aLen = find - last;
+			colorBuf.aLen = nextFind - endColor;
+			last          = endColor;
+		}
+
+		find = nextFind;
+	}
+}
+
+
+// print to system console
+void Log_SysPrint( LogColor sMainColor, const std::string& srBuffer, FILE* spStream )
+{
+#ifdef _WIN32
+	// on win32, we need to split up the string by colors
+	ChVector< LogColorBuf_t > colorList;
+	Log_SplitStringColors( sMainColor, srBuffer, colorList );
+
+	for ( LogColorBuf_t& colorBuffer : colorList )
+	{
+		Log_SetColor( colorBuffer.aColor );
+		fprintf( spStream, "%*.*s", colorBuffer.aLen, colorBuffer.aLen, colorBuffer.apStr );
+	}
+
+	Log_SetColor( LogColor::Default );
+	fflush( spStream );
+#else
+	Log_SetColor( sMainColor );
+	fputs( srBuffer.c_str(), spStream );
+	Log_SetColor( LogColor::Default );
+	fflush( spStream );
+#endif
+}
+
+
+CONCMD( log_test_colors )
+{
+	Log_Msg( UNIX_CLR_DARK_GREEN "TEST " UNIX_CLR_CYAN "TEST CYAN " UNIX_CLR_DARK_PURPLE UNIX_CLR_DARK_BLUE "TEST DARK BLUE \n" );
+}
+
+
 void Log_AddLogInternal( Log& log )
 {
     PROF_SCOPE();
@@ -479,7 +712,7 @@ void Log_AddLogInternal( Log& log )
         return;
     }
 
-    FormatLog( channel, log );
+    log.aFormatted = FormatLog( channel, log.aType, log.aMessage.c_str() );
 
     if ( channel->aShown )
 	{
@@ -494,10 +727,7 @@ void Log_AddLogInternal( Log& log )
             case LogType::Normal:
             case LogType::Input:
             case LogType::Raw:
-                Log_SetColor( channel->aColor );
-                fputs( log.aFormatted.c_str(), stdout );
-                fflush( stdout );
-				Log_SetColor( LogColor::Default );
+				Log_SysPrint( channel->aColor, log.aFormatted, stdout );
                 break;
 
             case LogType::Dev:
@@ -507,31 +737,19 @@ void Log_AddLogInternal( Log& log )
 				if ( !Log_DevLevelVisible( log ) )
                     break;
 
-                Log_SetColor( channel->aColor );
-                fputs( log.aFormatted.c_str(), stdout );
-                fflush( stdout );
-				Log_SetColor( LogColor::Default );
+				Log_SysPrint( channel->aColor, log.aFormatted, stdout );
                 break;
 
             case LogType::Warning:
-				Log_SetColor( LOG_COLOR_WARNING );
-                fputs( log.aFormatted.c_str(), stdout );
-                fflush( stdout );
-				Log_SetColor( LogColor::Default );
+				Log_SysPrint( LOG_COLOR_WARNING, log.aFormatted, stdout );
                 break;
 
             case LogType::Error:
-				Log_SetColor( LOG_COLOR_ERROR );
-				fputs( log.aFormatted.c_str(), stderr );
-				fflush( stderr );
-				Log_SetColor( LogColor::Default );
+				Log_SysPrint( LOG_COLOR_ERROR, log.aFormatted, stderr );
                 break;
 
             case LogType::Fatal:
-				Log_SetColor( LOG_COLOR_ERROR );
-                fputs( log.aFormatted.c_str(), stderr );
-                fflush( stderr );
-				Log_SetColor( LogColor::Default );
+				Log_SysPrint( LOG_COLOR_ERROR, log.aFormatted, stderr );
 
                 std::string messageBoxTitle;
 				vstring( messageBoxTitle, "[%s] Fatal Error", channel->aName.data() );
@@ -598,6 +816,7 @@ CONCMD_DROP( log_channel_show, log_channel_dropdown )
     Log_BuildHistoryString( -1 );
 }
 
+
 CONCMD( log_channel_dump )
 {
     // Calculate max name length
@@ -636,12 +855,25 @@ CONCMD( log_channel_dump )
     for ( const auto& channel : GetLogChannels() )
 	{
 		Log_MsgF(
-		  "%s%*s | %s | %s\n",
+		  "%s%s%*s | %s | %s\n",
+		  Log_ColorToUnix( channel.aColor ),
 		  channel.aName.data(),
 		  maxNameLength - channel.aName.size(),
 		  "",
 		  channel.aShown ? "Shown " : "Hidden",
 		  Log_ColorToStr( channel.aColor ) );
+    }
+}
+
+
+CONCMD( log_color_dump )
+{
+	Log_Msg( "Color Dump\n" );
+	Log_Msg( "------------\n" );
+
+	for ( char i = 0; i < (char)LogColor::Count; i++ )
+	{
+		Log_MsgF( "%s%s\n", Log_ColorToUnix( (LogColor)i ), Log_ColorToStr( (LogColor)i ) );
     }
 }
 
@@ -658,55 +890,10 @@ void Log_SetColor( LogColor color )
 #endif
 }
 
+
 LogColor Log_GetColor()
 {
     return gCurrentColor;
-}
-
-
-const char* Log_ColorToStr( LogColor color )
-{
-    switch ( color )
-    {
-        case LogColor::Black:
-            return "Black";
-        case LogColor::White:
-            return "White";
-
-        case LogColor::DarkBlue:
-            return "Dark Blue";
-        case LogColor::DarkGreen:
-            return "Dark Green";
-        case LogColor::DarkCyan:
-            return "Dark Cyan";
-        case LogColor::DarkRed:
-            return "Dark Red";
-        case LogColor::DarkMagenta:
-            return "Dark Magenta";
-        case LogColor::DarkYellow:
-            return "Dark Yellow";
-        case LogColor::DarkGray:
-            return "Dark Gray";
-
-        case LogColor::Blue:
-            return "Blue";
-        case LogColor::Green:
-            return "Green";
-        case LogColor::Cyan:
-            return "Cyan";
-        case LogColor::Red:
-            return "Red";
-        case LogColor::Magenta:
-            return "Magenta";
-        case LogColor::Yellow:
-            return "Yellow";
-        case LogColor::Gray:
-            return "Gray";
-
-        case LogColor::Default:
-        default:
-            return "Default";
-    }
 }
 
 

@@ -214,6 +214,18 @@ bool ToLong2( const std::string &value, long &out )
 }
 
 
+bool ToLong3( const char* spValue, long &srOut )
+{
+	if ( spValue == nullptr )
+		return false;
+
+	char *end;
+	srOut = strtol( spValue, &end, 10 );
+
+	return end != spValue;
+}
+
+
 // very cool: https://stackoverflow.com/a/46424921/12778316
 std::string ToString( float value )
 {

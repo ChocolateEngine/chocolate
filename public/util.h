@@ -203,6 +203,8 @@ long            CORE_API ToLong( const std::string& value, int prev );
 bool            CORE_API ToDouble2( const std::string &value, double &out );
 bool            CORE_API ToLong2( const std::string &value, long &out );
 
+bool            CORE_API ToLong3( const char* spValue, long &srOut );
+
 std::string     CORE_API ToString( float value );
 
 
@@ -230,20 +232,30 @@ glm::vec4                   CORE_API KV_GetVec4( const std::string& value, const
 // Ref Counter Class
 
 
-class RefCounted
+struct RefCounted
 {
-public:
-	virtual            ~RefCounted() = default;
+	virtual ~RefCounted() = default;
 
-	inline RefCounted&  operator=( const RefCounted &srRef )        { return *this; }
-	
-	u32                 GetRefCount() const                         { return aRefCount; }
+	inline RefCounted& operator=( const RefCounted& srRef )
+	{
+		return *this;
+	}
+
+	u32 GetRefCount() const
+	{
+		return aRefCount;
+	}
 
 	// Add or release a reference to this object
-	inline void         AddRef() const                              { ++aRefCount; }
-	inline void         Release() const                             { if (--aRefCount == 0) delete this; }
+	inline void AddRef() const
+	{
+		aRefCount++;
+	}
 
-private:
+	inline void Release() const
+	{
+		if ( --aRefCount == 0 ) delete this;
+	}
 
 	mutable std::atomic< u32 > aRefCount = 0;  // Current reference count
 };
