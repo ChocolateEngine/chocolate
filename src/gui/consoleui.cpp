@@ -49,7 +49,7 @@ constexpr ImVec4 ToImCol( LogColor col )
 			return {0, 0.35, 0.75, 1};
 		case LogColor::DarkRed:
 			return {0.7, 0, 0.25, 1};
-		case LogColor::DarkMagenta:
+		case LogColor::DarkPurple:
 			return {0.45, 0, 0.7, 1};
 		case LogColor::DarkYellow:
 			return {0.6, 0.6, 0, 1};
@@ -64,7 +64,7 @@ constexpr ImVec4 ToImCol( LogColor col )
 			return {0, 0.85, 1, 1};
 		case LogColor::Red:
 			return {0.9, 0, 0.4, 1};
-		case LogColor::Magenta:
+		case LogColor::Purple:
 			return {0.6, 0, 0.9, 1};
 		case LogColor::Yellow:
 			return {1, 1, 0, 1};
@@ -74,6 +74,52 @@ constexpr ImVec4 ToImCol( LogColor col )
 		case LogColor::Default:
 		default:
 			return ImGui::GetStyleColorVec4( ImGuiCol_Text );
+	}
+}
+
+
+constexpr const char* ToImHex( LogColor col )
+{
+	switch ( col )
+	{
+		case LogColor::Black:
+			return "\0334C4C4CFFm";
+		case LogColor::White:
+			return "\033FFFFFFFFm";
+
+		case LogColor::DarkBlue:
+			return "\033004CCCFF";
+		case LogColor::DarkGreen:
+			return "\033409140FFm";
+		case LogColor::DarkCyan:
+			return "\0330059BFFFm";
+		case LogColor::DarkRed:
+			return "\033B30040FFm";
+		case LogColor::DarkPurple:
+			return "\0334300B3FFm";
+		case LogColor::DarkYellow:
+			return "\033999900FFm";
+		case LogColor::DarkGray:
+			return "\033737373FFm";
+
+		case LogColor::Blue:
+			return "\0330066FFFFm";
+		case LogColor::Green:
+			return "\03366E666FFm";
+		case LogColor::Cyan:
+			return "\03300D9FFFFm";
+		case LogColor::Red:
+			return "\033E60066FFm";
+		case LogColor::Purple:
+			return "\0339900E6FFm";
+		case LogColor::Yellow:
+			return "\033FFFF00FFm";
+		case LogColor::Gray:
+			return "\033B3B3B3FFm";
+
+		case LogColor::Default:
+		default:
+			return "\033FFFFFFFFm";
 	}
 }
 
@@ -416,6 +462,62 @@ static size_t gConHistoryIndex = 0;
 constexpr size_t CON_MAX_BUFFER_SIZE = 512;
 
 
+static void AddToConsoleOutputOld( ConLogBuffer* spBuffer, const Log& srLog )
+{
+	ChVector< LogColorBuf_t > colorBuffers;
+	Log_SplitStringColors( GetConsoleTextColor( srLog ), srLog.aFormatted, colorBuffers );
+
+	for ( LogColorBuf_t& colorBuf : colorBuffers )
+	{
+		std::string buf( colorBuf.apStr, colorBuf.aLen );
+
+		if ( colorBuf.aColor != spBuffer->aColor && spBuffer->aBuffer.size() || spBuffer->aBuffer.size() > CON_MAX_BUFFER_SIZE )
+		{
+			spBuffer = &gConHistory.emplace_back( colorBuf.aColor, buf );
+		}
+		else if ( spBuffer->aBuffer.empty() )
+		{
+			spBuffer->aColor = colorBuf.aColor;
+			spBuffer->aBuffer += buf;
+		}
+		else
+		{
+			spBuffer->aBuffer += buf;
+		}
+	}
+}
+
+
+static void AddToConsoleOutput( ConLogBuffer* spBuffer, const Log& srLog )
+{
+	ChVector< LogColorBuf_t > colorBuffers;
+	LogColor mainColor = GetConsoleTextColor( srLog );
+	Log_SplitStringColors( mainColor, srLog.aFormatted, colorBuffers );
+
+	for ( LogColorBuf_t& colorBuf : colorBuffers )
+	{
+		std::string buf( colorBuf.apStr, colorBuf.aLen );
+
+		// if ( colorBuf.aColor != spBuffer->aColor && spBuffer->aBuffer.size() || spBuffer->aBuffer.size() > CON_MAX_BUFFER_SIZE )
+		if ( mainColor != spBuffer->aColor && spBuffer->aBuffer.size() || spBuffer->aBuffer.size() > CON_MAX_BUFFER_SIZE )
+		{
+			spBuffer = &gConHistory.emplace_back( mainColor );
+			// spBuffer->aBuffer += ToImHex( colorBuf.aColor );
+		}
+
+		if ( spBuffer->aBuffer.empty() )
+		{
+			spBuffer->aColor = mainColor;
+			spBuffer->aBuffer += buf;
+		}
+		else
+		{
+			spBuffer->aBuffer += buf;
+		}
+	}
+}
+
+
 void ReBuildConsoleOutput()
 {
 	gConHistory.clear();
@@ -428,19 +530,7 @@ void ReBuildConsoleOutput()
 		if ( !Log_IsVisible( log ) )
 			continue;
 
-		LogColor color = GetConsoleTextColor( log );
-
-		if ( color != buffer->aColor && buffer->aBuffer.size() || buffer->aBuffer.size() > CON_MAX_BUFFER_SIZE )
-			buffer = &gConHistory.emplace_back( color, log.aFormatted );
-
-		else if ( buffer->aBuffer.empty() )
-		{
-			buffer->aColor = color;
-			buffer->aBuffer += log.aFormatted;
-		}
-
-		else
-			buffer->aBuffer += log.aFormatted;
+		AddToConsoleOutput( &gConHistory.back(), log );
 	}
 
 	gConHistoryIndex = logs.size();
@@ -465,26 +555,12 @@ void UpdateConsoleOutput()
 
 	for ( ; gConHistoryIndex < logs.size(); gConHistoryIndex++ )
 	{
-		ConLogBuffer* buffer    = &gConHistory.at( gConHistory.size() - 1 );
-		const Log&    log       = logs[ gConHistoryIndex ];
-		LogColor      nextColor = GetConsoleTextColor( log );
+		const Log& log = logs[ gConHistoryIndex ];
 
 		if ( !Log_IsVisible( log ) )
 			continue;
 
-		if ( buffer->aColor != nextColor || buffer->aBuffer.size() > CON_MAX_BUFFER_SIZE )
-		{
-			buffer = &gConHistory.emplace_back( nextColor, log.aFormatted );
-		}
-		else if ( buffer->aBuffer.empty() )
-		{
-			buffer->aColor = nextColor;
-			buffer->aBuffer += log.aFormatted;
-		}
-		else
-		{
-			buffer->aBuffer += log.aFormatted;
-		}
+		AddToConsoleOutput( &gConHistory.back(), log );
 	}
 }
 
@@ -514,6 +590,8 @@ void DrawConsoleOutput()
 	ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, ImVec2( 0, 0 ) );
 
 	// ImGuiWindow* window = ImGui::GetCurrentWindow();
+
+	ImVec2 cursorPos = ImGui::GetCursorPos();
 	
 	for ( size_t i = 0; i < gConHistory.size(); i++ )
 	{
@@ -521,11 +599,28 @@ void DrawConsoleOutput()
 
 		// show buffer, clear it, then set the new color
 		ImGui::PushStyleColor( ImGuiCol_Text, ToImCol( buffer.aColor ) );
-		ImGui::PushTextWrapPos( 0.0f );
+
+		bool needWrap   = false;
+		bool hasNewLine = false;
+
+		// horrible
+		if ( buffer.aBuffer.size() )
+		{
+			needWrap   = buffer.aBuffer[ buffer.aBuffer.size() - 1 ] == '\n';
+			hasNewLine = buffer.aBuffer[ buffer.aBuffer.size() - 1 ] == '\n';
+		}
+
+		if ( needWrap )
+			ImGui::PushTextWrapPos( 0.0f );
 
 		ImGui::TextUnformatted( buffer.aBuffer.c_str() );
+		// ImGui::PushID( i );
+		// ImGui::TextSelectable( "##test", buffer.aBuffer.c_str() );
+		// ImGui::PopID();
 
-		ImGui::PopTextWrapPos();
+		if ( needWrap )
+			ImGui::PopTextWrapPos();
+
 		ImGui::PopStyleColor();
 	}
 
@@ -585,28 +680,36 @@ void GuiSystem::DrawConsole( bool wasConsoleOpen )
 
 	static bool   inResize         = false;
 
-	bool          setKeyboardFocus = !wasConsoleOpen || ImGui::IsItemClicked();
+	bool          setKeyboardFocus = !wasConsoleOpen;
 
-	if ( ImGui::IsItemClicked() )
-	{
-		setKeyboardFocus = true;
-	}
+	ImVec2 windowMaxPos = ImGui::GetWindowPos();
+	windowMaxPos.x += ImGui::GetWindowSize().x;
+	windowMaxPos.y += ImGui::GetWindowSize().y;
 
-	if ( ImGui::IsMouseDragging( ImGuiMouseButton_Left ) )
-	{
-		// window resizing
-		if ( prevWindowSize.x != newWindowSize.x || prevWindowSize.y != newWindowSize.y )
-			inResize = true;
+	bool overWindow = ImGui::IsMouseHoveringRect( ImGui::GetWindowPos(), windowMaxPos );
 
-		setKeyboardFocus = !inResize;
-	}
-	else
+	// quite hacky setup for text focus
+	// if ( overWindow || inResize )
 	{
-		if ( inResize )
+		if ( ImGui::IsItemClicked() )
+		{
 			setKeyboardFocus = true;
+		}
 
-		inResize = false;
+		// window resizing
+		// else if ( ImGui::IsMouseDragging( ImGuiMouseButton_Left ) )
+		// {
+		// 	inResize         = prevWindowSize.x != newWindowSize.x || prevWindowSize.y != newWindowSize.y;
+		// 	setKeyboardFocus = !inResize;
+		// }
 	}
+	// else
+	// {
+	// 	if ( inResize )
+	// 		setKeyboardFocus = true;
+	// 
+	// 	inResize = false;
+	// }
 
 	prevWindowSize = newWindowSize;
 
@@ -616,23 +719,24 @@ void GuiSystem::DrawConsole( bool wasConsoleOpen )
 	}
 
 	ImGui::InputText( "##send", buf, 256, ImGuiInputTextFlags_CallbackAlways, &ConsoleInputCallback );
+	ImGui::SetItemDefaultFocus();
 
 	ImGui::SameLine();
 
 	ImGui::PushAllowKeyboardFocus( false );
 
-	if ( ImGui::Button( "Send" ) )
-	// if ( false )
-	{
-		Con_QueueCommand( buf );
-		snprintf( buf, 256, "" );
-		Con_SetTextBuffer( buf );
-		ImGui::SetKeyboardFocusHere();
-
-		gCmdUserInput     = "";
-		gCmdHistoryIndex  = -1;
-		gCmdDropDownIndex = -1;
-	}
+	// if ( ImGui::Button( "Send" ) )
+	// // if ( false )
+	// {
+	// 	Con_QueueCommand( buf );
+	// 	snprintf( buf, 256, "" );
+	// 	Con_SetTextBuffer( buf );
+	// 	ImGui::SetKeyboardFocusHere();
+	// 
+	// 	gCmdUserInput     = "";
+	// 	gCmdHistoryIndex  = -1;
+	// 	gCmdDropDownIndex = -1;
+	// }
 
 	ImGui::PopAllowKeyboardFocus();
 
