@@ -38,7 +38,7 @@ struct ResourceList
      *    Construct a resource manager.
      */
 	ResourceList() :
-	    aSize(), aStepSize()
+	    aSize(), aStepSize( 8 )
 	{
 		apPool = mempool_new( ( sizeof( T ) + sizeof( unsigned int ) ) * 8 );
 	}
@@ -77,7 +77,7 @@ struct ResourceList
 	 * @tparam T   Resource Type
 	 * @return s8* The Buffer of Memory Allocated 
 	 */
-	s8*        Allocate( unsigned int sMagic )
+	s8* Allocate( unsigned int sMagic )
 	{
 		s8*        pBuf = nullptr;
 		memerror_t err  = MEMERR_NONE;
@@ -87,7 +87,7 @@ struct ResourceList
 
 		if ( err == MEMERR_NO_MEMORY )
 		{
-			err = mempool_realloc( apPool, apPool->aSize + ( ( sizeof( T ) + sizeof( unsigned int ) ) * 1 ) );
+			err = mempool_realloc( apPool, apPool->aSize + ( ( sizeof( T ) + sizeof( unsigned int ) ) * aStepSize ) );
 
 			if ( err != MEMERR_NONE )
 			{
@@ -163,13 +163,13 @@ struct ResourceList
      *    @param  pData     Output structure
      *    @return Handle    The handle to the resource.
      */
-	Handle Create( T* pData )
+	Handle Create( T* pData, bool sZero = true )
 	{
 		// Generate a handle magic number.
 		unsigned int magic = ( rand() % 0xFFFFFFFE ) + 1;
 
 		// Allocate a chunk of memory.
-		s8*          pBuf  = Allocate( magic );
+		s8*          pBuf  = Allocate( magic, sZero );
 
 		if ( pBuf == nullptr )
 			return InvalidHandle;
@@ -178,6 +178,12 @@ struct ResourceList
 		*pData       = *(T*)( pBuf + sizeof( unsigned int ) );
 
 		unsigned int index = ( (size_t)pBuf - (size_t)apPool->apBuf ) / ( sizeof( T ) + sizeof( magic ) );
+
+		// Set the remaining memory to zero if wanted
+		if ( sZero )
+		{
+			memset( pBuf + sizeof( unsigned int ), 0, sizeof( T ) );
+		}
 
 #if RESOURCE_DEBUG
 		Log_DevF( gResourceChannel, 3, "ResourceManager::Add( T* ): Allocated resource at index %u\n", index );
@@ -196,7 +202,7 @@ struct ResourceList
      *    @param  pData     Output structure for a pointer
      *    @return Handle    The handle to the resource.
      */
-	Handle Create( T** pData )
+	Handle Create( T** pData, bool sZero = true )
 	{
 		// Generate a handle magic number.
 		unsigned int magic = ( rand() % 0xFFFFFFFE ) + 1;
@@ -215,6 +221,12 @@ struct ResourceList
 #if RESOURCE_DEBUG
 		Log_DevF( gResourceChannel, 3, "ResourceManager::Add( T* ): Allocated resource at index %u\n", index );
 #endif
+
+		// Set the remaining memory to zero if wanted
+		if ( sZero )
+		{
+			memset( pBuf + sizeof( unsigned int ), 0, sizeof( T ) );
+		}
 
 		aSize++;
 
