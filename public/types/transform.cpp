@@ -1,10 +1,8 @@
 #include "transform.h"
 
 
-constexpr float g_rot_z = glm::radians( -90.f );
-
 // do base rotation to get Z up
-static glm::mat4 gViewMatrixZ = glm::rotate( g_rot_z, vec_forward );
+static glm::mat4 gViewMatrixZ = glm::rotate( glm::radians( -90.f ), vec_forward );
 
 #define VIEWMAT_ANG( axis ) glm::vec3( srViewMatrix[ 0 ][ axis ], srViewMatrix[ 1 ][ axis ], srViewMatrix[ 2 ][ axis ] )
 
@@ -69,6 +67,73 @@ void Util_GetDirectionVectors( const glm::vec3& srAngles, glm::vec3* spForward, 
 		spUp->y = ( cr * sp * sy + -sr * cy );
 		spUp->z = cr * cp;
 	}
+}
+
+
+// from vkquake
+glm::vec3 Util_VectorToAngles( const glm::vec3& forward )
+{
+	glm::vec3 angles;
+
+	if ( forward.x == 0.f && forward.y == 0.f )
+	{
+		// either vertically up or down
+		angles[ PITCH ] = ( forward.z > 0 ) ? -90 : 90;
+		angles[ YAW ]   = 0;
+		angles[ ROLL ]  = 0;
+	}
+	else
+	{
+		angles[ PITCH ] = -atan2( forward.z, sqrt( glm::dot( forward, forward ) ) );
+		angles[ YAW ]   = atan2( forward.y, forward.x );
+		angles[ ROLL ]  = 0;
+
+		angles          = glm::degrees( angles );
+	}
+
+	return angles;
+}
+
+
+glm::vec3 Util_VectorToAngles( const glm::vec3& forward, const glm::vec3& up )
+{
+	glm::vec3 angles;
+
+	if ( forward.x == 0 && forward.y == 0 )
+	{
+		// either vertically up or down
+		if ( forward[ 2 ] > 0 )
+		{
+			angles[ PITCH ] = -90;
+			angles[ YAW ]   = glm::degrees( ::atan2( -up[ 1 ], -up[ 0 ] ) );
+		}
+		else
+		{
+			angles[ PITCH ] = 90;
+			angles[ YAW ]   = glm::degrees( atan2( up[ 1 ], up[ 0 ] ) );
+		}
+		angles[ ROLL ] = 0;
+	}
+	else
+	{
+		angles[ PITCH ] = -atan2( forward.z, sqrt( glm::dot( forward, forward ) ) );
+		angles[ YAW ]   = atan2( forward.y, forward.x );
+
+		float     cp = cos( angles[ PITCH ] ), sp = sin( angles[ PITCH ] );
+		float     cy = cos( angles[ YAW ] ), sy = sin( angles[ YAW ] );
+		glm::vec3 tleft, tup;
+		tleft.x        = -sy;
+		tleft.y        = cy;
+		tleft.z        = 0;
+		tup.x          = sp * cy;
+		tup.y          = sp * sy;
+		tup.z          = cp;
+		angles[ ROLL ] = -atan2( glm::dot( up, tleft ), glm::dot( up, tup ) );
+
+		angles         = glm::degrees( angles );
+	}
+
+	return angles;
 }
 
 
@@ -170,10 +235,10 @@ void Util_ToViewMatrixY( glm::mat4& srViewMatrix, const glm::vec3& srAng )
 	srViewMatrix = glm::rotate( glm::radians( srAng[ YAW ] ), vec_right );
 
 	/* X Rotation - PITCH (Mouse Y) */
-	srViewMatrix = glm::rotate( srViewMatrix, glm::radians( srAng[ PITCH ] ), VIEWMAT_ANG( 0 ) );
+	srViewMatrix = glm::rotate( srViewMatrix, glm::radians( srAng[ PITCH ] ), VIEWMAT_ANG( PITCH ) );
 
 	/* Z Rotation - ROLL */
-	srViewMatrix = glm::rotate( srViewMatrix, glm::radians( srAng[ ROLL ] ), VIEWMAT_ANG( 2 ) );
+	srViewMatrix = glm::rotate( srViewMatrix, glm::radians( srAng[ ROLL ] ), VIEWMAT_ANG( ROLL ) );
 #endif
 }
 
@@ -190,13 +255,13 @@ void Util_ToViewMatrixZ( glm::mat4& srViewMatrix, const glm::vec3& srAng )
 	srViewMatrix = gViewMatrixZ;
 
 	/* Y Rotation - YAW (Mouse X for Y up) */
-	srViewMatrix = glm::rotate( srViewMatrix, glm::radians( srAng[ YAW ] ), VIEWMAT_ANG( 1 ) );
+	srViewMatrix = glm::rotate( srViewMatrix, glm::radians( srAng[ YAW ] ), VIEWMAT_ANG( YAW ) );
 
 	/* X Rotation - PITCH (Mouse Y) */
-	srViewMatrix = glm::rotate( srViewMatrix, glm::radians( srAng[ PITCH ] ), VIEWMAT_ANG( 0 ) );
+	srViewMatrix = glm::rotate( srViewMatrix, glm::radians( srAng[ PITCH ] ), VIEWMAT_ANG( PITCH ) );
 
 	/* Z Rotation - ROLL */
-	srViewMatrix = glm::rotate( srViewMatrix, glm::radians( srAng[ ROLL ] ), VIEWMAT_ANG( 2 ) );
+	srViewMatrix = glm::rotate( srViewMatrix, glm::radians( srAng[ ROLL ] ), VIEWMAT_ANG( ROLL ) );
 }
 
 
