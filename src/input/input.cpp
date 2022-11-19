@@ -128,7 +128,7 @@ void InputSystem::ParseInput()
 
 			case SDL_KEYDOWN:
 			{
-				if ( aEvent.key.keysym.sym == SDLK_BACKQUOTE )
+				if ( aEvent.key.keysym.sym == SDLK_BACKQUOTE || aEvent.key.keysym.sym == SDLK_ESCAPE )
 					gui->ShowConsole();
 
 				break;
