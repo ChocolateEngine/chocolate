@@ -107,27 +107,44 @@ if( MSVC )
 	set( MSVC_VERSION 1939 )
 
 	add_compile_options(
-		"/W3"               # Warning Level 3
+		# "/Wall"             # Show ALL Warnings
+		"/W4"               # Warning Level 4
 		"/MP"               # multi-threaded compilation
 		"/permissive-"      # make MSVC very compliant
 		"/Zc:__cplusplus"   # set the __cplusplus macro to be the correct version
-		"/fp:fast"          # fast floating point model
+		# "/fp:fast"          # fast floating point model
 		"/GF"               # string pooling: allows compiler to create a single copy of identical strings in the program image and in memory during execution
 		
 		# disable stupid warnings
-		"/wd4244"  # conversion from 'X' to 'X', possible loss of data
-		"/wd4267"  # conversion from 'X' to 'X', possible loss of data (yes there's 2 idk why)
+		"/wd4244"  # conversion from 'X' to 'Y', possible loss of data
+		"/wd4267"  # conversion from 'X' to 'Y', possible loss of data (yes there's 2 idk why)
 		"/wd4305"  # truncation from 'double' to 'float'
+		"/wd4464"  # relative include path contains ".."
+		"/wd4668"  # 'X' is not defined as a preprocessor macro, replacing '0' for '#if/#elif' (floods with win32 stuff)
+		"/wd4514"  # 'X' unreferenced inline function has been removed
+		"/wd4505"  # 'X' unreferenced function with internal linkage has been removed
+		"/wd4100"  # 'X' unreferenced formal paramter
+		"/wd4201"  # nonstandard extension used: nameless struct/union (used in glm)
+		"/wd5045"  # Compiler will insert Spectre mitigation for memory load if /Qspectre switch specified
+		
+		# probably temporary
+		"/wd4365"  # signed/unsigned mismatch
+		"/wd4061"  # enumerator 'X' in switch of enum 'Y' is not explicitly handled by a case label
+		
+		# padding stuff
+		"/wd4324"  # 'X' structure was padded due to alignment specifier
+		"/wd4820"  # 'X' bytes padding added after data member 'Y'
 	)
 	
 	set( COMPILE_OPTIONS_DEBUG
-		"/Od"  # no optimizations
-		"/ZI"  # edit and continue
-		# "/fsanitize=address" # use address sanitizing in Debug (incompatible with /INCREMENTAL)
+		"/Od"        # no optimizations
+		"/ZI"        # edit and continue
+		"/fp:except" # raise floating point exceptions
+		#"/fsanitize=address" # use address sanitizing in Debug (incompatible with /INCREMENTAL)
 	)
 	
 	set( COMPILE_OPTIONS_RELEASE
-		""
+		"/fp:fast"
 	)
 	
 	add_compile_options(
