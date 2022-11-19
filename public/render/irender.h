@@ -470,6 +470,7 @@ struct GraphicsPipelineCreate_t
 	ECullMode                             aCullMode;
 
 	bool                                  aDepthBiasEnable = false;
+	bool                                  aLineMode        = false;
 
 	Handle                                aPipelineLayout;
 	Handle                                aRenderPass;
@@ -780,5 +781,5 @@ class IRender : public BaseSystem
 
 
 #define IRENDER_NAME "Render"
-#define IRENDER_HASH 6
+#define IRENDER_HASH 7
 

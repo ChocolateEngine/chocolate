@@ -628,6 +628,7 @@ void VK_CreateDevice()
 	deviceFeatures.depthBiasClamp    = VK_TRUE;
 	deviceFeatures.depthClamp        = VK_TRUE;
 	deviceFeatures.wideLines         = VK_TRUE;
+	deviceFeatures.fillModeNonSolid  = VK_TRUE;
 
 	VkDeviceCreateInfo createInfo    = {
 		   .sType                   = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
