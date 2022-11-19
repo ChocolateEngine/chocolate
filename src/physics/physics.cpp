@@ -162,7 +162,7 @@ ContactListener           gContactListener;
 
 // This is the max amount of rigid bodies that you can add to the physics system. If you try to add more you'll get an error.
 // Note: This value is low because this is a simple test. For a real project use something in the order of 65536.
-const u32 gMaxBodies = 1024;
+const u32                 gMaxBodies             = 65536;
 
 // This determines how many mutexes to allocate to protect rigid bodies from concurrent access. Set it to 0 for the default settings.
 const u32 gNumBodyMutexes = 0;
@@ -171,12 +171,12 @@ const u32 gNumBodyMutexes = 0;
 // body pairs based on their bounding boxes and will insert them into a queue for the narrowphase). If you make this buffer
 // too small the queue will fill up and the broad phase jobs will start to do narrow phase work. This is slightly less efficient.
 // Note: This value is low because this is a simple test. For a real project use something in the order of 65536.
-const u32 gMaxBodyPairs = 1024;
+const u32                 gMaxBodyPairs          = 65536;
 
 // This is the maximum size of the contact constraint buffer. If more contacts (collisions between bodies) are detected than this
 // number then these contacts will be ignored and bodies will start interpenetrating / fall through the world.
 // Note: This value is low because this is a simple test. For a real project use something in the order of 65536.
-const u32 gMaxContactConstraints = 1024;
+const u32                 gMaxContactConstraints = 65536;
 
 
 // can jolt physics even do multiple physics environments actually?
@@ -206,7 +206,8 @@ public:
 		// B.t.w. 10 MB is way too much for this example but it is a typical value you can use.
 		// If you don't want to pre-allocate you can also use TempAllocatorMalloc to fall back to
 		// malloc / free.
-		apAllocator = new JPH::TempAllocatorImpl( 10 * 1024 * 1024 );
+		// apAllocator = new JPH::TempAllocatorImpl( 10 * 1024 * 1024 );
+		apAllocator = new JPH::TempAllocatorImpl( 70 * 1024 * 1024 );
 
 		// We need a job system that will execute physics jobs on multiple threads. Typically
 		// you would implement the JobSystem interface yourself and let Jolt Physics run on top
@@ -444,7 +445,7 @@ void PhysicsEnvironment::Simulate( float sDT )
 {
 	// um
 	// We simulate the physics world in discrete time steps. 60 Hz is a good rate to update the physics system.
-	const float cDeltaTime = 1.0f / 60.0f;
+	// const float cDeltaTime = 1.0f / 60.0f;
 
 	apPhys->Update( sDT, phys_collisionsteps, phys_substeps, phys.apAllocator, phys.apJobSystem );
 
