@@ -151,7 +151,7 @@ std::string FileSys_FindFile( const std::string& file )
 
     for ( auto searchPath : gSearchPaths )
     {
-        std::string fullPath = searchPath + "/" + file;
+		std::string fullPath = FileSys_CleanPath( searchPath + PATH_SEP + file );
 
         // does item exist?
         if ( exists( fullPath ) )
@@ -380,6 +380,9 @@ std::string FileSys_CleanPath( const std::string &path )
 #endif
     }
 
+    // TODO: have this use strchr instead to check for '/', '\\', '.',
+    // and just check the next character for if it's ".."
+#if 1
     for ( int i = 0; i < n; i++ )
     {
         std::string dir = "";
@@ -410,6 +413,7 @@ std::string FileSys_CleanPath( const std::string &path )
     {
         out += (i+1 == len) ? v[i] : v[i] + PATH_SEP;
     }
+#endif
 
     // vector is empty
     if ( out == "" )
