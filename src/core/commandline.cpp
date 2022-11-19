@@ -1,4 +1,5 @@
 #include "core/commandline.h"
+
 #include "core/console.h"
 #include "core/filesystem.h"
 #include "core/log.h"
@@ -6,12 +7,15 @@
 
 #include <stdarg.h>
 
-extern void                Assert_Init();
-std::vector< std::string > gArgs;
+extern void              Assert_Init();
+
+static std::string_view* gArgV = nullptr;
+static int               gArgC = 0;
+
 
 extern "C"
 {
-	void DLL_EXPORT core_init( int argc, char *argv[], const char* workingDir )
+	void DLL_EXPORT core_init( int argc, char* argv[], const char* workingDir )
 	{
 		sys_init();
 
@@ -38,12 +42,13 @@ void DLL_EXPORT core_post_load()
 	if ( FileSys_Exists( "cfg/autoexec.cfg" ) )
 		Con_QueueCommandSilent( "exec autoexec", false );
 
-	std::string execCfg;
-	int arg = 0;
+	std::string      exec = "exec ";
+	std::string_view execCfg;
+	int              arg = 0;
 
 	while ( Args_GetValueNext( arg, "-exec", execCfg ) )
 	{
-		Con_QueueCommandSilent( "exec " + execCfg, false );
+		Con_QueueCommandSilent( exec + execCfg.data(), false );
 	}
 }
 
@@ -51,40 +56,36 @@ void DLL_EXPORT core_post_load()
 // ================================================================================
 
 
-void Args_Init( int argc, char *argv[] )
+void Args_Init( int argc, char* argv[] )
 {
-	gArgs.resize( argc );
+	gArgV = new std::string_view[ argc ];
+	gArgC = argc;
+
 	for ( int i = 0; i < argc; i++ )
-		gArgs[ i ] = argv[ i ];
+		gArgV[ i ] = argv[ i ];
 }
 
 
-constexpr const std::vector< std::string >& Args_GetArgs()
+int Args_GetCount()
 {
-	return gArgs;
+	return gArgC;
 }
 
 
-size_t Args_GetCount()
+int Args_GetIndex( std::string_view search )
 {
-	return gArgs.size();
-}
-
-
-int Args_GetIndex( const std::string& search )
-{
-	for ( int i = 0; i < gArgs.size(); i++ )
-		if ( gArgs[i] == search )
+	for ( int i = 0; i < gArgC; i++ )
+		if ( gArgV[ i ] == search )
 			return i;
 
 	return -1;
 }
 
 
-bool Args_Find( const std::string& search )
+bool Args_Find( std::string_view search )
 {
-	for ( auto& arg: gArgs )
-		if ( search == arg )
+	for ( int i = 0; i < gArgC; i++ )
+		if ( gArgV[ i ] == search )
 			return true;
 
 	return false;
@@ -94,42 +95,46 @@ bool Args_Find( const std::string& search )
 // ------------------------------------------------------------------------------------
 
 
-const std::string& Args_GetString( const std::string& search, const std::string& fallback )
+std::string_view Args_GetString( std::string_view search, std::string_view fallback )
 {
 	int i = Args_GetIndex( search );
 
-	if ( i == -1 || i + 1 > gArgs.size() )
+	if ( i == -1 || i + 1 > gArgC )
 		return fallback;
 
-	return gArgs[i + 1];
+	return gArgV[ i + 1 ];
 }
 
 
-int Args_GetInt( const std::string& search, int fallback )
+int Args_GetInt( std::string_view search, int fallback )
 {
 	int i = Args_GetIndex( search );
 
-	if ( i == -1 || i + 1 > gArgs.size() )
+	if ( i == -1 || i + 1 > gArgC )
 		return fallback;
 
-	return ToLong( gArgs[i + 1].c_str(), fallback );
+	long out;
+	if ( ToLong3( gArgV[ i + 1 ].data(), out ) )
+		return out;
+
+	return fallback;
 }
 
 
-float Args_GetFloat( const std::string& search, float fallback )
+float Args_GetFloat( std::string_view search, float fallback )
 {
 	return Args_GetDouble( search, (double)fallback );
 }
 
 
-double Args_GetDouble( const std::string& search, double fallback )
+double Args_GetDouble( std::string_view search, double fallback )
 {
 	int i = Args_GetIndex( search );
 
-	if ( i == -1 || i + 1 > gArgs.size() )
+	if ( i == -1 || i + 1 > gArgC )
 		return fallback;
 
-	return ToDouble( gArgs[ i + 1 ].c_str(), fallback );
+	return ToDouble( gArgV[ i + 1 ].data(), fallback );
 }
 
 
@@ -138,16 +143,16 @@ double Args_GetDouble( const std::string& search, double fallback )
 
 // function to be able to find all values like this
 // returns true if it finds a value, false if it fails to
-bool Args_GetValueNext( int& i, const std::string& search, std::string& ret )
+bool Args_GetValueNext( int& i, std::string_view search, std::string_view& ret )
 {
-	for ( ; i < gArgs.size(); i++ )
+	for ( ; i < gArgC; i++ )
 	{
-		if ( gArgs[i] == search )
+		if ( gArgV[ i ] == search )
 		{
-			if ( i == -1 || i + 1 > gArgs.size() )
+			if ( i == -1 || i + 1 > gArgC )
 				return false;
 
-			ret = gArgs[i + 1];
+			ret = gArgV[ i + 1 ];
 			return true;
 		}
 	}
