@@ -415,8 +415,6 @@ CONVAR( con_search_behavior, 0, "0 - must start with this string, 1 - must conta
 
 static bool ConVarNameCheck( const char* name, const char* search, size_t size )
 {
-	bool hasMatch = false;
-
 	if ( con_search_behavior == 0.f )
 	{
 		// Must start with string
@@ -693,6 +691,9 @@ void Con_QueueCommand( const std::string &srCmd )
 
 void Con_QueueCommandSilent( const std::string &srCmd, bool sAddToHistory )
 {
+	if ( srCmd.empty() )
+		return;
+
 	Con_CheckInstantCommands( srCmd );
 
 	gQueue.push_back( srCmd );
@@ -956,8 +957,6 @@ void Con_Update()
 		Con_RegisterConVars();
 		init = true;
 	}
-
-	std::string command;
 
 	for ( const auto& command: gQueue )
 	{

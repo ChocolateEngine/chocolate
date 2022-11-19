@@ -87,12 +87,6 @@ static bool Json_ValidQuotelessKey( char c )
 }
 
 
-static EJsonError Json_ParseObject()
-{
-	return EJsonError_None;
-}
-
-
 static EJsonError Json_ParseQuote( const char*& str, char endChar, char*& output )
 {
 	str++;
@@ -286,7 +280,6 @@ EJsonError Json_Parse( JsonObject_t* spRoot, const char* spStr )
 	// JsonObject_t* objStack = spRoot;
 	// JsonObject_t* cur = nullptr;
 
-	bool foundRoot = false;
 	char c;
 	for (; *spStr;)
 	{

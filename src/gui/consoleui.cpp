@@ -521,8 +521,8 @@ static void AddToConsoleOutput( ConLogBuffer* spBuffer, const Log& srLog )
 void ReBuildConsoleOutput()
 {
 	gConHistory.clear();
+	gConHistory.resize( 1 );
 
-	ConLogBuffer*             buffer = &gConHistory.emplace_back();
 	const std::vector< Log >& logs   = Log_GetLogHistory();
 
 	for ( const auto& log: logs )

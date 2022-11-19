@@ -64,7 +64,7 @@ BOOL win32_get_version( OSVERSIONINFOEX* os )
 		os->dwMinorVersion = osw->dwMinorVersion;
 		os->dwPlatformId = osw->dwPlatformId;
 		os->dwOSVersionInfoSize = sizeof (*os);
-		DWORD sz = sizeof (os->szCSDVersion);
+		// DWORD sz = sizeof (os->szCSDVersion);
 		WCHAR * src = osw->szCSDVersion;
 		unsigned char * dtc = (unsigned char *)os->szCSDVersion;
 		while (*src)
@@ -123,7 +123,7 @@ const char* sys_get_error()
 
 	static char message[512];
 	memset( message, 512, 0 );
-	snprintf( message, 512, "Win32 API Error %d: %s", errorID, strErrorMessage );
+	snprintf( message, 512, "Win32 API Error %ud: %s", errorID, strErrorMessage );
 
 	// Free the Win32 string buffer.
 	LocalFree( strErrorMessage );
@@ -298,6 +298,23 @@ void sys_init()
 	{
 		sys_print_last_error( "Failed to create theme context" );
 	}
+
+#if 0 //def _DEBUG
+	// Get the current state of the flag
+	// and store it in a temporary variable
+	int tmpFlag = _CrtSetDbgFlag( _CRTDBG_REPORT_FLAG );
+
+	// Turn On (OR) - Keep freed memory blocks in the
+	// heap's linked list and mark them as freed
+	tmpFlag |= _CRTDBG_DELAY_FREE_MEM_DF;
+
+	// Turn Off (AND) - prevent _CrtCheckMemory from
+	// being called at every allocation request
+	tmpFlag &= ~_CRTDBG_CHECK_ALWAYS_DF;
+
+	// Set the new state for the flag
+	_CrtSetDbgFlag( tmpFlag );
+#endif
 }
 
 

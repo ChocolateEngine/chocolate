@@ -996,7 +996,7 @@ int AudioSystem::ApplySpatialEffects( AudioStream* stream, float* data, size_t f
 	// WHY IS THIS STILL BROKEN, I AM GOING TO LOSE MY MIND
 	iplBinauralEffectApply( apBinauralEffect, &effectParams, &tempInBuffer, &tempOutBuffer );
 
-	for ( uint32_t i = 0, j = 0; i < FRAME_SIZE / 2; i++ )
+	for ( uint32_t i = 0; i < FRAME_SIZE / 2; i++ )
 	{
 		for ( uint32_t ch = 0; ch < 2; ch++ )
 		{

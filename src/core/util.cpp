@@ -168,7 +168,7 @@ std::string Quat2Str( const glm::quat& in )
 
 double ToDouble( const char* value, double prev )
 {
-	if ( sizeof( value ) == 0 )
+	if ( value == nullptr )
 		return prev;
 
 	char* end;
@@ -252,7 +252,7 @@ std::vector< std::string > KV_GetVec( const std::string& value )
 	std::string curVal;
 	bool inQuote = false;
 
-	for ( int i = 1; i < value.size(); i++ )
+	for ( size_t i = 1; i < value.size(); i++ )
 	{
 		char ch = value[i];
 
@@ -340,7 +340,7 @@ glm::vec2 KV_GetVec2( const std::string& value, const glm::vec2& fallback )
 		return fallback;
 
 	glm::vec3 vec{};
-	int i = 0;
+	size_t i = 0;
 	while ( i < strVec.size() )
 	{
 		double val = 0;
@@ -373,7 +373,7 @@ glm::vec3 KV_GetVec3( const std::string& value, const glm::vec3& fallback )
 		return fallback;
 
 	glm::vec3 vec{};
-	int i = 0;
+	size_t    i = 0;
 	while ( i < strVec.size() )
 	{
 		double val = 0;
@@ -406,7 +406,7 @@ glm::vec4 KV_GetVec4( const std::string& value, const glm::vec4& fallback )
 		return fallback;
 
 	glm::vec4 vec{};
-	int i = 0;
+	size_t    i = 0;
 	while ( i < strVec.size() )
 	{
 		double val = 0;

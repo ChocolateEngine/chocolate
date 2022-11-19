@@ -164,7 +164,7 @@ long CodecVorbis::Read( AudioStream* stream, size_t size, ChVector< float >& dat
 
         // for (int i = 0; i < count; ++i)
 		data.resize( data.size() + result );
-        for ( int i = 0, j = 0; i < result; ++i )
+        for ( int i = 0; i < result; ++i )
         {
             for(int ch = 0; ch < stream->channels; ch++)
             {

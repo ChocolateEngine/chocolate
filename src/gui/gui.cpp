@@ -74,8 +74,6 @@ void GuiSystem::DrawGui()
 
 void GuiSystem::StyleImGui()
 {
-	auto& io = ImGui::GetIO();
-
 	// gBuiltInFont = BuildFont( "fonts/CascadiaMono.ttf" );
 	// gBuiltInFont = BuildFont( "fonts/MonoxRegular.ttf", 15.f );
 

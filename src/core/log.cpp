@@ -35,27 +35,6 @@ static std::vector< LogChannelShownCallbackF > gCallbacksChannelShown;
 constexpr glm::vec4                            gVecTo255( 255, 255, 255, 255 );
 
 
-static void StripTrailingLines( const char* pText, size_t& len )
-{
-    while ( len > 1 )
-    {
-        switch ( pText[len - 1] )
-        {
-        case ' ':
-        case 9:
-        case '\r':
-        case '\n':
-        case 11:
-        case '\f':
-            --len;
-            break;
-        default:
-            return;
-        }
-    }
-}
-
-
 /* Windows Specific Functions for console text colors.  */
 #ifdef _WIN32
 #include <Windows.h>
@@ -100,8 +79,9 @@ constexpr int Win32GetColor( LogColor color )
 			return FOREGROUND_INTENSITY;
 
 		case LogColor::Default:
+		case LogColor::Count:
 		default:
-			return 7;
+			return FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE;
 	}
 }
 
@@ -168,6 +148,7 @@ const char* Log_ColorToStr( LogColor color )
             return "Gray";
 
         case LogColor::Default:
+		case LogColor::Count:
         default:
             return "Default";
     }
@@ -179,6 +160,7 @@ const char* Log_ColorToUnix( LogColor color )
 	switch ( color )
 	{
 		case LogColor::Default:
+		case LogColor::Count:
 		default:
 			return UNIX_CLR_DEFAULT;
 
@@ -303,7 +285,7 @@ void Log_Init()
 
 LogChannel Log_RegisterChannel( const char *sName, LogColor sColor )
 {
-	for ( int i = 0; i < GetLogChannels().size(); i++ )
+	for ( size_t i = 0; i < GetLogChannels().size(); i++ )
     {
 		LogChannel_t* channel = &GetLogChannels()[ i ];
         if ( channel->aName != sName )
@@ -313,7 +295,7 @@ LogChannel Log_RegisterChannel( const char *sName, LogColor sColor )
     }
 
     GetLogChannels().emplace_back( sName, true, sColor );
-	return (LogChannel)GetLogChannels().size() - 1;
+	return (LogChannel)GetLogChannels().size() - 1U;
 }
 
 
@@ -457,6 +439,7 @@ constexpr glm::vec4 GetColorRGBA( LogColor col )
             return {0.7, 0.7, 0.7, 1};
 
         case LogColor::Default:
+        case LogColor::Count:
         default:
             return {1, 1, 1, 1};
     }
