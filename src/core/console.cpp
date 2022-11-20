@@ -554,7 +554,7 @@ void reset_cvar_dropdown(
 
 
 // use if you need to quit the engine right now
-CONCMD_DROP_VA( reset_cvar, reset_cvar_dropdown, 0, "reset a convar back to it's default value" )
+CONCMD_DROP_VA( cvar_reset, reset_cvar_dropdown, 0, "reset a convar back to it's default value" )
 {
 	if ( args.empty() )
 	{
@@ -570,8 +570,51 @@ CONCMD_DROP_VA( reset_cvar, reset_cvar_dropdown, 0, "reset a convar back to it's
 	}
 	else
 	{
-		Log_WarnF( gConsoleChannel, "Convar not found: %s\n", args[0].c_str() );
+		Log_WarnF( gConsoleChannel, "Convar not found: %s\n", args[ 0 ].c_str() );
 	}
+}
+
+// use if you need to quit the engine right now
+CONCMD_DROP_VA( cvar_toggle, reset_cvar_dropdown, 0, "toggle a convar between two values" )
+{
+	if ( args.empty() )
+	{
+		Log_Msg( gConsoleChannel, "No ConVar specified to reset!\n" );
+		return;
+	}
+
+	const char* value0 = nullptr;
+	const char* value1 = nullptr;
+
+	if ( args.size() >= 3 )
+	{
+		value0 = args[ 1 ].c_str();
+		value1 = args[ 2 ].c_str();
+	}
+	else if ( args.size() == 2 )
+	{
+		value0 = args[ 1 ].c_str();
+		value1 = "0";  // Default Other Type to toggle between
+	}
+	else
+	{
+		// Default Types to toggle between
+		value0 = "0";
+		value1 = "1";
+	}
+
+	ConVar* cvar = Con_GetConVar( args[0] );
+
+	if ( !cvar )
+	{
+		Log_WarnF( gConsoleChannel, "Convar not found: %s\n", args[ 0 ].c_str() );
+		return;
+	}
+	
+	if ( cvar->GetValue() == value1 )
+		cvar->SetValue( value0 );
+	else
+		cvar->SetValue( value1 );
 }
 
 
