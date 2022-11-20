@@ -73,6 +73,15 @@ struct ResourceList
 	}
 
 	/*
+	 * @brief      Consolidate the memory pool (PROBABLY BROKEN DUE TO HANDLES STORING AN INDEX INTO THE BUFFER !!!)
+	 * @tparam T   Resource Type
+	 */
+	void Consolidate()
+	{
+		mempool_consolidate( apPool );
+	}
+
+	/*
 	 * @brief      Allocate a Chunk of Memory
 	 * @tparam T   Resource Type
 	 * @return s8* The Buffer of Memory Allocated 
