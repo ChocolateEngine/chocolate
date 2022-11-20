@@ -16,7 +16,7 @@ void ReBuildConsoleOutput();
 void UpdateConsoleOutput();
 
 
-CONVAR_CMD_EX( conui_colors, 2, CVARF_NONE, "2 is all colors, 1 is errors and warnings, only, 0 is no colors" )
+CONVAR_CMD_EX( conui_colors, 2, CVARF_ARCHIVE, "2 is all colors, 1 is errors and warnings, only, 0 is no colors" )
 {
 	ReBuildConsoleOutput();
 }
@@ -171,7 +171,25 @@ bool CheckAddDropDownCommand( ImGuiInputTextCallbackData* data )
 		else if ( keyPressed )
 		{
 			// An arrow key or tab is pressed, so fill the buffer with the selected item from the auto complete list
-			snprintf( data->Buf, data->BufSize, gCmdAutoComplete[ gCmdDropDownIndex ].c_str() );
+
+			// Testing: if a ConVar, add a space after it
+			// otherwise, leave it as is
+			// For ConCommand dropdowns, if we add a space, we need to press backspace and space in order to show the dropdown, kinda weird
+			// but for convars, i basically never press space, and just start typing
+
+			ConVarBase* cvarBase = Con_GetConVarBase( gCmdAutoComplete[ gCmdDropDownIndex ].c_str() );
+			if ( cvarBase )
+			{
+				if ( typeid( *cvarBase ) == typeid( ConVar ) )
+					snprintf( data->Buf, data->BufSize, ( gCmdAutoComplete[ gCmdDropDownIndex ] + " " ).c_str() );
+				else
+					snprintf( data->Buf, data->BufSize, gCmdAutoComplete[ gCmdDropDownIndex ].c_str() );
+			}
+			else
+			{
+				snprintf( data->Buf, data->BufSize, gCmdAutoComplete[ gCmdDropDownIndex ].c_str() );
+			}
+
 			bufDirty = true;
 		}
 		else if ( inDropDown )
