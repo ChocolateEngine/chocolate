@@ -25,8 +25,6 @@ struct ConVarFlagData_t
 int                                            gCmdIndex = -1;
 std::vector< std::string >                     gQueue;
 std::vector< std::string >                     gCommandHistory;
-std::string                                    gTextBuffer;
-std::vector< std::string >                     gAutoCompleteList;
 std::vector< ConCommand* >                     gInstantConVars;
 std::vector< ConVarFlagData_t >                gConVarFlags;
 
@@ -380,36 +378,6 @@ CONCMD_VA( echo, "Print a string to the console" )
 }
 
 
-#ifdef _WIN32
-// Find the first occurrence of find in s while ignoring case
-char* strcasestr( const char* s, const char* find )
-{
-	char   c, sc;
-
-	if ( ( c = *find++ ) != 0 )
-	{
-		// convert to lower case character
-		c   = tolower( (unsigned char)c );
-		size_t len = strlen( find );
-		do
-		{
-			// compare lower case character
-			do
-			{
-				if ( ( sc = *s++ ) == 0 )
-					return nullptr;
-
-			}
-			while ( (char)tolower( (unsigned char)sc ) != c );
-		}
-		while ( _strnicmp( s, find, len ) != 0 );
-		s--;
-	}
-	return ( (char*)s );
-}
-#endif
-
-
 CONVAR( con_search_behavior, 0, "0 - must start with this string, 1 - must contain this string" );
 
 
@@ -607,11 +575,18 @@ CONCMD_DROP_VA( reset_cvar, reset_cvar_dropdown, 0, "reset a convar back to it's
 }
 
 
+// same as in source engine lol
+CONCMD( host_writeconfig )
+{
+}
+
+
 CONCMD_VA( con_cvar_stack_size, "Print the stack usage of all convars" )
 {
 	size_t      size    = 0;
 	ConVarBase* current = ConVarBase::spConVarBases;
 
+	Log_DevF( gConsoleChannel, 1, "sizeof( ConvarBase ): %zu\n", sizeof( ConVarBase ) );
 	Log_DevF( gConsoleChannel, 1, "sizeof( Convar ):     %zu\n", sizeof( ConVar ) );
 	Log_DevF( gConsoleChannel, 1, "sizeof( ConCommand ): %zu\n", sizeof( ConCommand ) );
 	Log_DevF( gConsoleChannel, 1, "sizeof( ConVarRef ):  %zu\n", sizeof( ConVarRef ) );
@@ -635,6 +610,7 @@ CONCMD_VA( con_cvar_stack_size, "Print the stack usage of all convars" )
 
 	Log_DevF( gConsoleChannel, 1, "Convar Stack Size: %zu bytes\n", size );
 }
+
 
 // use if you need to quit the engine right now
 CONCMD_VA( _abort, CVARF_INSTANT, "funny" )
@@ -748,21 +724,6 @@ const std::vector< std::string >& Con_GetCommandHistory(  )
 }
 
 
-// this is stupid
-void Con_SetTextBuffer( const std::string& str, bool recalculateList )
-{
-	gTextBuffer = str;
-
-	if ( recalculateList )
-		Con_CalculateAutoCompleteList( gTextBuffer );
-}
-
-const std::string& Con_GetTextBuffer(  )
-{
-	return gTextBuffer;
-}
-
-
 ConVar* Con_GetConVar( std::string_view name )
 {
 	PROF_SCOPE();
@@ -871,18 +832,16 @@ ConVarBase* Con_CheckForConVarRef( ConVarBase* cvar )
 }
 
 
-void Con_CalculateAutoCompleteList( const std::string& textBuffer )
+void Con_BuildAutoCompleteList( const std::string& srSearch, std::vector< std::string >& srResults )
 {
 	PROF_SCOPE();
 
-	gAutoCompleteList.clear();
-
-	if ( textBuffer.empty() )
+	if ( srSearch.empty() )
 		return;
 
 	std::string commandName;
 	std::vector< std::string > args;
-	Con_ParseCommandLine( textBuffer, commandName, args );
+	Con_ParseCommandLine( srSearch, commandName, args );
 
 	str_lower( commandName );
 
@@ -899,11 +858,20 @@ void Con_CalculateAutoCompleteList( const std::string& textBuffer )
 			cvar = cvar->apNext;
 			continue;
 		}
+
+		size_t cvarNameLen = strlen( cvar->aName );
 		
 		// if ( args.empty() )
-		if ( strlen( cvar->aName ) >= textBuffer.length() )
+		if ( cvarNameLen >= srSearch.size() && commandName.size() >= srSearch.size() )
 		{
-			gAutoCompleteList.push_back( cvar->aName );
+			srResults.push_back( cvar->aName );
+			cvar = cvar->apNext;
+			continue;
+		}
+
+		// make sure this actually matches
+		if ( cvarNameLen != commandName.size() || !ConVarNameCheck( cvar->aName, commandName.c_str(), cvarNameLen ) )
+		{
 			cvar = cvar->apNext;
 			continue;
 		}
@@ -920,27 +888,16 @@ void Con_CalculateAutoCompleteList( const std::string& textBuffer )
 
 				for ( auto dropArg: dropDownArgs )
 				{
-					gAutoCompleteList.push_back( vstring( "%s %s", cvar->aName, dropArg.c_str() ) );
+					srResults.push_back( vstring( "%s %s", cvar->aName, dropArg.c_str() ) );
 				}
+
+				break;
 			}
-			else
-			{
-				gAutoCompleteList.push_back( cvar->aName );
-			}
-		}
-		else
-		{
-			gAutoCompleteList.push_back( cvar->aName );
 		}
 
+		srResults.push_back( cvar->aName );
 		break;
 	}
-}
-
-
-const std::vector< std::string >& Con_GetAutoCompleteList( )
-{
-	return gAutoCompleteList;
 }
 
 
@@ -1125,7 +1082,7 @@ void Con_ParseCommandLineEx( std::string_view command, std::string& name, std::v
 		{
 			char q = ch;
 
-			for ( ; i < command.size(); i++ )
+			for ( i++; i < command.size(); i++ )
 			{
 				if ( command[i] == q )
 					break;

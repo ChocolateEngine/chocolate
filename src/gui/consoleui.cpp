@@ -22,11 +22,12 @@ CONVAR_CMD_EX( conui_colors, 2, CVARF_NONE, "2 is all colors, 1 is errors and wa
 }
 
 
-static int         gCmdDropDownIndex = -1;
-static int         gCmdHistoryIndex = -1;
+static int                        gCmdDropDownIndex = -1;
+static int                        gCmdHistoryIndex  = -1;
 
-static std::string gCmdUserInput = "";
-static int         gCmdUserCursor = 0;
+static std::string                gCmdUserInput     = "";
+static std::vector< std::string > gCmdAutoComplete;
+static int                        gCmdUserCursor = 0;
 
 
 // NOTE: all these colors are just kinda randomly picked,
@@ -133,13 +134,11 @@ bool CheckAddDropDownCommand( ImGuiInputTextCallbackData* data )
 	bool downPressed = ImGui::IsKeyPressed( ImGui::GetKeyIndex(ImGuiKey_DownArrow) );
 	downPressed |= ImGui::IsKeyPressed( ImGui::GetKeyIndex(ImGuiKey_Tab) );
 
-	const auto& autoComplete = Con_GetAutoCompleteList();
-
 	// wrap around if over max size
 	if ( upPressed && --gCmdDropDownIndex == -2 )
-		gCmdDropDownIndex = autoComplete.size() - 1;
+		gCmdDropDownIndex = gCmdAutoComplete.size() - 1;
 
-	if ( downPressed && ++gCmdDropDownIndex == autoComplete.size() )
+	if ( downPressed && ++gCmdDropDownIndex == gCmdAutoComplete.size() )
 		gCmdDropDownIndex = -1;
 
 	bool keyPressed = upPressed || downPressed;
@@ -165,41 +164,40 @@ bool CheckAddDropDownCommand( ImGuiInputTextCallbackData* data )
 			// No items selected in auto complete list
 			// Set back to original text and recalculate the auto complete list
 			snprintf( data->Buf, data->BufSize, gCmdUserInput.c_str() );
-			Con_CalculateAutoCompleteList( data->Buf );
+			gCmdAutoComplete.clear();
+			Con_BuildAutoCompleteList( data->Buf, gCmdAutoComplete );
 			bufDirty = true;
 		}
 		else if ( keyPressed )
 		{
 			// An arrow key or tab is pressed, so fill the buffer with the selected item from the auto complete list
-			//snprintf( data->Buf, data->BufSize, Con_GetAutoCompleteList()[commandIndex].c_str() );
-			snprintf( data->Buf, data->BufSize, (Con_GetAutoCompleteList()[gCmdDropDownIndex] + " ").c_str() );
+			snprintf( data->Buf, data->BufSize, gCmdAutoComplete[ gCmdDropDownIndex ].c_str() );
 			bufDirty = true;
 		}
 		else if ( inDropDown )
 		{
 			// An item in auto complete list is selected, but the user typed something in
 			// So set back to original text recalculate the auto complete list
-			gCmdUserCursor = data->CursorPos;
+			gCmdUserCursor    = data->CursorPos;
 			gCmdDropDownIndex = 0;
-			gCmdUserInput = data->Buf;
-			Con_CalculateAutoCompleteList( data->Buf );
+			gCmdAutoComplete.clear();
+			Con_BuildAutoCompleteList( data->Buf, gCmdAutoComplete );
 			bufDirty = true;
 		}
 	}
 
 	if ( bufDirty )
 	{
-		Con_SetTextBuffer( data->Buf, false );
-		data->BufTextLen = Con_GetTextBuffer().length();
+		data->BufTextLen = strlen( data->Buf );
 
 		if ( inDropDown )
-			data->CursorPos = Con_GetTextBuffer().length();
+			data->CursorPos = data->BufTextLen;
 		else if ( !textBufChanged )
 			data->CursorPos = gCmdUserCursor;
 		else
 			gCmdUserCursor = data->CursorPos;
 
-		prevTextBuffer = Con_GetTextBuffer();
+		prevTextBuffer = data->Buf;
 	}
 	else if ( !inDropDown && gCmdUserCursor != data->CursorPos )
 	{
@@ -246,14 +244,14 @@ bool CheckAddLastCommand( ImGuiInputTextCallbackData* data )
 
 	if ( upPressed || downPressed )
 	{
-		snprintf( data->Buf, 256, (gCmdHistoryIndex == -1) ? gCmdUserInput.c_str() : history[gCmdHistoryIndex].c_str() );
-		Con_SetTextBuffer( data->Buf );
+		snprintf( data->Buf, 256, ( gCmdHistoryIndex == -1 ) ? gCmdUserInput.c_str() : history[ gCmdHistoryIndex ].c_str() );
+		gCmdUserInput = data->Buf;
 		prevTextBuffer = data->Buf;
 
 		if ( gCmdHistoryIndex == -1 )
 			data->CursorPos = gCmdUserCursor;
 		else
-			data->CursorPos = Con_GetTextBuffer().length();
+			data->CursorPos = gCmdUserInput.length();
 	}
 
 	return ( upPressed || downPressed );
@@ -269,7 +267,6 @@ bool CheckEnterPress( char* buf )
 	{
 		Con_QueueCommand( buf );
 		snprintf( buf, 256, "" );
-		Con_SetTextBuffer( buf );
 		ImGui::SetKeyboardFocusHere( -1 );
 
 		gCmdUserInput = "";
@@ -301,7 +298,7 @@ int ConsoleInputCallback( ImGuiInputTextCallbackData* data )
 		data->BufDirty = CheckAddDropDownCommand( data );
 	}
 
-	if ( Con_GetAutoCompleteList().empty() || gCmdHistoryIndex != -1 )
+	if ( gCmdAutoComplete.empty() || gCmdHistoryIndex != -1 )
 	{
 		data->BufDirty = CheckAddLastCommand( data );
 	}
@@ -316,7 +313,7 @@ int ConsoleInputCallback( ImGuiInputTextCallbackData* data )
 
 	if ( data->BufDirty )
 	{
-		data->BufTextLen = Con_GetTextBuffer().length();
+		data->BufTextLen = strlen( data->Buf );
 	}
 
 	return enterPressed;
@@ -436,15 +433,15 @@ void DrawInputDropDownBox( const std::vector< std::string >& cvarAutoComplete, I
 				if ( ImGui::Selectable( item.c_str(), gCmdDropDownIndex == i ) )
 				{
 					// should we keep the value in here too?
-					Con_SetTextBuffer( cvarAutoComplete[i] );
+					gCmdUserInput = cvarAutoComplete[ i ];
 					//break;
 				}
 			}
 
-			ImGui::EndListBox(  );
+			ImGui::EndListBox();
 		}
 
-		ImGui::End(  );
+		ImGui::End();
 	}
 
 	ImGui::PopStyleVar();
@@ -687,7 +684,7 @@ void GuiSystem::DrawConsole( bool wasConsoleOpen )
 	DrawConsoleOutput();
 	ImGui::PopAllowKeyboardFocus();
 
-	snprintf( buf, 256, Con_GetTextBuffer().c_str() );
+	snprintf( buf, 256, gCmdUserInput.c_str() );
 
 	ImGuiStyle& style = ImGui::GetStyle();
 
@@ -781,11 +778,9 @@ void GuiSystem::DrawConsole( bool wasConsoleOpen )
 
 	ImGui::End();
 
-	const std::vector< std::string >& cvarAutoComplete = Con_GetAutoCompleteList();
-
-	if ( !cvarAutoComplete.empty() )
+	if ( !gCmdAutoComplete.empty() )
 	{
-		DrawInputDropDownBox( cvarAutoComplete, dropDownPos );
+		DrawInputDropDownBox( gCmdAutoComplete, dropDownPos );
 	}
 }
 

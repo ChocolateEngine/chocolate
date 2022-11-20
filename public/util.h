@@ -176,6 +176,11 @@ void           CORE_API str_lower( std::string &string );
 std::string    CORE_API str_upper2( const std::string &in );
 std::string    CORE_API str_lower2( const std::string &in );
 
+#ifdef _WIN32
+// Find the first occurrence of find in s while ignoring case
+char          CORE_API *strcasestr( const char* s, const char* find );
+#endif
+
 // don't need to worry about any resizing with these, but is a little slower
 void           CORE_API vstring( std::string& output, const char* format, ... );
 void           CORE_API vstring( std::string& output, const char* format, va_list args );

@@ -416,12 +416,8 @@ CORE_API const std::vector< std::string >&   Con_GetCommandHistory();
 // return nullptr if it doesn't point to anything, and return the normal cvar if it's not a ConVarRef
 CORE_API ConVarBase*                         Con_CheckForConVarRef( ConVarBase* cvar );
 
-/* Set and get current user text input.  */
-CORE_API void                                Con_SetTextBuffer( const std::string& str, bool recalculateList = true );
-CORE_API const std::string&                  Con_GetTextBuffer();
-
-CORE_API void                                Con_CalculateAutoCompleteList( const std::string& textBuffer );
-CORE_API const std::vector< std::string >&   Con_GetAutoCompleteList();
+// Build an auto complete list
+CORE_API void                                Con_BuildAutoCompleteList( const std::string& srSearch, std::vector< std::string >& srResults );
 
 CORE_API ConVar*                             Con_GetConVar( std::string_view name );
 CORE_API ConVarBase*                         Con_GetConVarBase( std::string_view name );

@@ -58,6 +58,34 @@ std::string str_lower2( const std::string &in )
 }
 
 
+#ifdef _WIN32
+// Find the first occurrence of find in s while ignoring case
+char* strcasestr( const char* s, const char* find )
+{
+	char c, sc;
+
+	if ( ( c = *find++ ) != 0 )
+	{
+		// convert to lower case character
+		c          = tolower( (unsigned char)c );
+		size_t len = strlen( find );
+		do
+		{
+			// compare lower case character
+			do
+			{
+				if ( ( sc = *s++ ) == 0 )
+					return nullptr;
+
+			} while ( (char)tolower( (unsigned char)sc ) != c );
+		} while ( _strnicmp( s, find, len ) != 0 );
+		s--;
+	}
+	return ( (char*)s );
+}
+#endif
+
+
 // very cool
 // https://stackoverflow.com/questions/55424746/is-there-an-analogous-function-to-vsnprintf-that-works-with-stdstring
 void vstring( std::string& result, const char* format, ... )
