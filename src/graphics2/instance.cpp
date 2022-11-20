@@ -298,12 +298,15 @@ std::vector< const char* > VK_GetSDL2Extensions()
 	if ( !SDL_Vulkan_GetInstanceExtensions( gpWindow, &extensionCount, extensions.data() ) )
 		Log_Fatal( gLC_Render, "Unable to query the number of Vulkan instance extension names\n" );
 
-	// Display names
-	Log_DevF( gLC_Render, 1, "Found %d Vulkan extensions:\n", extensionCount );
-	for ( uint32_t i = 0; i < extensionCount; ++i )
-		Log_DevF( gLC_Render, 1, "\t%i : %s\n", i, extensions[ i ] );
+	LogGroup group = Log_GroupBeginEx( gLC_Render, LogType::Dev );
 
-	Log_Dev( gLC_Render, 1, "\n" );
+	// Display names
+	Log_GroupF( group, "Found %d Vulkan extensions:\n", extensionCount );
+	for ( uint32_t i = 0; i < extensionCount; ++i )
+		Log_GroupF( group, "\t%i : %s\n", i, extensions[ i ] );
+
+	Log_Group( group, "\n" );
+	Log_GroupEnd( group );
 
 	return extensions;
 }
