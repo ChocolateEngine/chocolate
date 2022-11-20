@@ -120,8 +120,9 @@ std::string vstring( const char* format, ... )
 	if (len < 0)
 	{
 		va_end(args_copy);
-		va_end(args);
-		throw std::runtime_error("vsnprintf error");
+		va_end( args );
+		Log_Error( "vstring va_args: vsnprintf failed\n" );
+		return "";
 	}
 
 	if ( len > 0 )
@@ -151,7 +152,8 @@ std::string vstring( const char* format, va_list args )
 		return s;
 	}
 
-	throw std::runtime_error( "vsnprintf error" );
+	Log_Error( "vstring va_list: vsnprintf failed\n" );
+	return "";
 }
 
 
