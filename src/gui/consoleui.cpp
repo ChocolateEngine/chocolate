@@ -387,6 +387,34 @@ void DrawInputDropDownBox( const std::vector< std::string >& cvarAutoComplete, I
 
 	ImGui::PushStyleVar( ImGuiStyleVar_WindowPadding, ImVec2(0,0) );
 
+	// calculate max dropdown string length
+	size_t maxLength = 0;
+	std::string maxLengthItem;
+	for ( size_t i = 0; i < cvarAutoComplete.size(); i++ )
+	{
+		std::string item = cvarAutoComplete[ i ];
+
+		const std::string& value = Con_GetConVarValue( item );
+
+		if ( value.size() )
+			item += " " + value;
+
+		if ( item.size() > maxLength )
+		{
+			maxLength     = item.size();
+			maxLengthItem = item;
+		}
+	}
+
+	ImVec2      textSize     = ImGui::CalcTextSize( maxLengthItem.c_str(), &maxLengthItem.back() );
+	float       itemWidth    = ImGui::GetWindowContentRegionMin().x * 2;
+	float       defaultWidth = ImGui::CalcItemWidth();
+	ImGuiStyle& imguiStyle   = ImGui::GetStyle();
+	
+	ImGui::SetNextItemWidth( glm::max( textSize.x, defaultWidth ) + itemWidth + imguiStyle.ScrollbarSize );
+
+	// ImGui::SetNextWindowSize( textSize );
+
 	if ( ImGui::Begin( "##CvarsBox", NULL,
 		ImGuiWindowFlags_AlwaysAutoResize |
 		ImGuiWindowFlags_NoBackground |
@@ -399,7 +427,7 @@ void DrawInputDropDownBox( const std::vector< std::string >& cvarAutoComplete, I
 	{
 		if ( ImGui::BeginListBox( "##CvarListBox" ) )
 		{
-			for ( int i = 0; i < cvarAutoComplete.size(); i++ )
+			for ( size_t i = 0; i < cvarAutoComplete.size(); i++ )
 			{
 				std::string item = cvarAutoComplete[i];
 
