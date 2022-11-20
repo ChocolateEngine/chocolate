@@ -81,6 +81,7 @@ struct LogChannel_t
 };
 
 using LogChannel = unsigned char;
+using LogGroup   = unsigned int;
 
 
 struct Log
@@ -147,6 +148,20 @@ void                     CORE_API  Log_AddChannelShownCallback( LogChannelShownC
 
 void CORE_API                      PrintF( const char* str, ... );
 void CORE_API                      Print( const char* str );
+
+// ----------------------------------------------------------------
+// Log Group Functions
+
+// Returns a Handle to the current log group
+LogGroup CORE_API                  Log_GroupBeginEx( LogChannel channel, LogType sType );
+LogGroup CORE_API                  Log_GroupBegin( LogChannel channel );
+LogGroup CORE_API                  Log_GroupBegin();
+
+void CORE_API                      Log_GroupEnd( LogGroup sGroup );
+
+void CORE_API                      Log_Group( LogGroup sGroup, const char* spBuf );
+void CORE_API                      Log_GroupF( LogGroup sGroup, const char* spFmt, ... );
+void CORE_API                      Log_GroupV( LogGroup sGroup, const char* spFmt, va_list args );
 
 // ----------------------------------------------------------------
 // Extended Logging Functions

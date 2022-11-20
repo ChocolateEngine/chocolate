@@ -5,13 +5,15 @@
 #include <iostream>
 #include <mutex>
 #include <regex>
+#include <stack>
 
 #include <SDL.h>
 
 CONVAR( developer, 1 );
 
 LogColor                                       gCurrentColor       = LogColor::Default;
-LogChannel                                     gGeneralChannel     = INVALID_LOG_CHANNEL;
+LogChannel                                     gLC_General         = INVALID_LOG_CHANNEL;
+LogChannel                                     gLC_Logging         = INVALID_LOG_CHANNEL;
 static std::string                             gDefaultChannelName = "[General]";
 static std::mutex                              gLogMutex;
 
@@ -24,6 +26,8 @@ std::vector< LogChannel_t >& GetLogChannels()
 
 // static std::vector< LogChannel_t >             gChannels;
 static std::vector< Log >                      gLogHistory;
+
+static std::unordered_map< LogGroup, Log >     gLogGroups;
 
 // filtered text output for game console
 static std::string                             gLogHistoryStr;
@@ -279,7 +283,8 @@ void UnixSetColor( LogColor color )
 
 void Log_Init()
 {
-	gGeneralChannel = Log_RegisterChannel( "General", LogColor::Default );
+	gLC_General = Log_RegisterChannel( "General", LogColor::Default );
+	gLC_Logging = Log_RegisterChannel( "Logging", LogColor::Default );
 }
 
 
@@ -338,62 +343,99 @@ LogChannel_t* Log_GetChannelByName( const char* sChannel )
 }
 
 
+constexpr LogColor GetColor( LogChannel_t* channel, LogType sType )
+{
+	switch ( sType )
+	{
+		default:
+		case LogType::Normal:
+		case LogType::Dev:
+		case LogType::Dev2:
+		case LogType::Dev3:
+		case LogType::Dev4:
+		case LogType::Input:
+		case LogType::Raw:
+			return channel->aColor;
+
+		case LogType::Warning:
+			return LOG_COLOR_WARNING;
+
+		case LogType::Error:
+		case LogType::Fatal:
+			return LOG_COLOR_ERROR;
+	}
+}
+
+
 // Format for system console output
 static std::string FormatLog( LogChannel_t* channel, LogType sType, const char* spMessage )
 {
     PROF_SCOPE();
 
-    switch ( sType )
-    {
-        default:
-        case LogType::Normal:
-			return vstring( "[%s] %s", channel->aName.data(), spMessage );
+	// Special Exception for "Raw" LogType
+	if ( sType == LogType::Raw )
+		return spMessage;
 
-        case LogType::Dev:
-        case LogType::Dev2:
-        case LogType::Dev3:
-        case LogType::Dev4:
-			return vstring( "[%s] [DEV %u] %s", channel->aName.data(), sType, spMessage );
+	// Split by New Line characters
+	std::string output;
 
-        case LogType::Input:
-			return vstring( "] %s\n", spMessage );
+	size_t      len  = strlen( spMessage );
 
-        case LogType::Raw:
-			return vstring( "%s", spMessage );
+	const char* last = spMessage;
+	const char* find = strchr( spMessage, '\n' );
 
-        case LogType::Warning:
-			return vstring( "[%s] [WARNING] %s", channel->aName.data(), spMessage );
+	while ( last )
+	{
+		size_t dist = 0;
+		if ( find )
+			dist = ( find - last ) + 1;
+		else
+			dist = len - ( last - spMessage );
 
-        case LogType::Error:
-			return vstring( "[%s] [ERROR] %s", channel->aName.data(), spMessage );
+		if ( dist == 0 )
+			break;
 
-        case LogType::Fatal:
-			return vstring( "[%s] [FATAL] %s", channel->aName.data(), spMessage );
-    }
-}
+		const char* color = Log_ColorToUnix( GetColor( channel, sType ) );
 
+		switch ( sType )
+		{
+			default:
+			case LogType::Normal:
+				output += vstring( "%s[%s] %*.*s", color, channel->aName.data(), dist, dist, last );
+				break;
 
-constexpr LogColor GetColor( LogChannel_t *channel, const Log& log )
-{
-    switch ( log.aType )
-    {
-        default:
-        case LogType::Normal:
-        case LogType::Dev:
-        case LogType::Dev2:
-        case LogType::Dev3:
-        case LogType::Dev4:
-        case LogType::Input:
-        case LogType::Raw:
-            return channel->aColor;
+			case LogType::Dev:
+			case LogType::Dev2:
+			case LogType::Dev3:
+			case LogType::Dev4:
+				output += vstring( "%s[%s] [DEV %u] %*.*s", color, channel->aName.data(), sType, dist, dist, last );
+				break;
 
-        case LogType::Warning:
-            return LOG_COLOR_WARNING;
+			case LogType::Input:
+				output += vstring( "%s] %*.*s\n", color, dist, dist, last );
+				break;
 
-        case LogType::Error:
-        case LogType::Fatal:
-            return LOG_COLOR_ERROR;
-    }
+			case LogType::Warning:
+				output += vstring( "%s[%s] [WARNING] %*.*s", color, channel->aName.data(), dist, dist, last );
+				break;
+
+			case LogType::Error:
+				output += vstring( "%s[%s] [ERROR] %*.*s", color, channel->aName.data(), dist, dist, last );
+				break;
+
+			case LogType::Fatal:
+				output += vstring( "%s[%s] [FATAL] %*.*s", color, channel->aName.data(), dist, dist, last );
+				break;
+		}
+
+		if ( !find )
+			break;
+
+		last = ++find;
+		find = strchr( last, '\n' );
+	}
+
+	return output;
 }
 
 
@@ -448,14 +490,14 @@ constexpr glm::vec4 GetColorRGBA( LogColor col )
 
 constexpr glm::vec4 GetColorRGBA( LogChannel_t *channel, const Log& log )
 {
-    return GetColorRGBA( GetColor( channel, log ) );
+    return GetColorRGBA( GetColor( channel, log.aType ) );
 }
 
     
 u32 GetColorU32( LogChannel_t *channel, const Log& log )
 {
     // i don't like this
-    glm::vec4 colorVec = GetColorRGBA( GetColor( channel, log ) );
+	glm::vec4 colorVec   = GetColorRGBA( GetColor( channel, log.aType ) );
 
     u8 colorU8[4] = {
         static_cast< u8 >( colorVec.x * 255 ),
@@ -537,7 +579,8 @@ void Log_BuildHistoryString( int maxSize )
 		for ( auto& log : gLogHistory )
 			Log_AddToHistoryString( log );
 
-		goto BuildHistoryStringEnd;
+		Log_RunCallbacksChannelShown();
+		return;
 	}
 
 	// go from latest to oldest
@@ -564,7 +607,6 @@ void Log_BuildHistoryString( int maxSize )
 			break;
 	}
 
-BuildHistoryStringEnd:
 	Log_RunCallbacksChannelShown();
 }
 
@@ -667,6 +709,15 @@ void Log_SysPrint( LogColor sMainColor, const std::string& srBuffer, FILE* spStr
 		fprintf( spStream, "%*.*s", colorBuffer.aLen, colorBuffer.aLen, colorBuffer.apStr );
 	}
 
+#if 0
+	if ( IsDebuggerPresent() )
+	{
+		// doesn't work?
+		// http://unixwiz.net/techtips/outputdebugstring.html
+		OutputDebugStringA( srBuffer.c_str() );
+	}
+#endif
+
 	Log_SetColor( LogColor::Default );
 	fflush( spStream );
 #else
@@ -699,11 +750,6 @@ void Log_AddLogInternal( Log& log )
 
     if ( channel->aShown )
 	{
-#ifdef _WIN32
-        // doesn't work?
-        // http://unixwiz.net/techtips/outputdebugstring.html
-		// OutputDebugStringA( log.aFormatted.c_str() );
-#endif
         switch ( log.aType )
         {
             default:
@@ -813,7 +859,9 @@ CONCMD( log_channel_dump )
 		maxLength = std::max( maxLength, maxNameLength + 23 );
 	}
 
-    Log_MsgF( "Channel Name%*s  | Shown  | Color\n", maxNameLength > logNameLen ? maxNameLength - logNameLen : logNameLen, "" );
+	LogGroup group = Log_GroupBegin( gLC_Logging );
+
+    Log_GroupF( group, "Channel Name%*s  | Shown  | Color\n", maxNameLength > logNameLen ? maxNameLength - logNameLen : logNameLen, "" );
 
     // Build separator bar
     // Example Output: ---------------|--------|------------
@@ -830,14 +878,15 @@ CONCMD( log_channel_dump )
 	    separator[ i ] = '-';
 	}
 
-	Log_MsgF( "%s\n", separator );
+	Log_GroupF( group, "%s\n", separator );
 
     delete[] separator;
 
     // Display Log Channels
     for ( const auto& channel : GetLogChannels() )
 	{
-		Log_MsgF(
+		Log_GroupF(
+		  group,
 		  "%s%s%*s | %s | %s\n",
 		  Log_ColorToUnix( channel.aColor ),
 		  channel.aName.data(),
@@ -846,6 +895,8 @@ CONCMD( log_channel_dump )
 		  channel.aShown ? "Shown " : "Hidden",
 		  Log_ColorToStr( channel.aColor ) );
     }
+
+	Log_GroupEnd( group );
 }
 
 
@@ -970,6 +1021,96 @@ void PrintF( const char* format, ... )
 void Print( const char* buffer )
 {
 	fputs( buffer, stdout );
+}
+
+
+// ----------------------------------------------------------------
+// Log Group Functions
+
+
+LogGroup Log_GroupBeginEx( LogChannel channel, LogType sType )
+{
+	// Generate a magic number to serve as the handle
+	unsigned int magic = ( rand() % 0xFFFFFFFE ) + 1;
+
+	Log&         log   = gLogGroups[ magic ];
+	log.aChannel       = channel;
+	log.aType          = sType;
+
+	return magic;
+}
+
+
+LogGroup Log_GroupBegin( LogChannel channel )
+{
+	return Log_GroupBeginEx( channel, LogType::Normal );
+}
+
+
+LogGroup Log_GroupBegin()
+{
+	return Log_GroupBeginEx( gLC_General, LogType::Normal );
+}
+
+
+void Log_GroupEnd( LogGroup sGroup )
+{
+	auto it = gLogGroups.find( sGroup );
+	if ( it == gLogGroups.end() )
+	{
+		Log_Error( "Log_GroupEnd: Failed to Find Log Group!\n" );
+		return;
+	}
+
+	gLogMutex.lock();
+
+	// Submit the built log
+	gLogHistory.push_back( it->second );
+	Log_AddLogInternal( gLogHistory.back() );
+	gLogGroups.erase( it );
+
+	gLogMutex.unlock();
+}
+
+
+void Log_Group( LogGroup sGroup, const char* spBuf )
+{
+	PROF_SCOPE();
+
+	auto it = gLogGroups.find( sGroup );
+	if ( it == gLogGroups.end() )
+	{
+		Log_Error( "Log_GroupEx: Failed to Find Log Group!\n" );
+		return;
+	}
+
+	Log& log = it->second;
+	
+	log.aMessage += spBuf;
+}
+
+
+void Log_GroupF( LogGroup sGroup, const char* spFmt, ... )
+{
+	va_list args;
+	va_start( args, spFmt );
+	Log_GroupV( sGroup, spFmt, args );
+	va_end( args );
+}
+
+
+void Log_GroupV( LogGroup sGroup, const char* spFmt, va_list args )
+{
+	PROF_SCOPE();
+
+	auto it = gLogGroups.find( sGroup );
+	if ( it == gLogGroups.end() )
+	{
+		Log_Error( "Log_GroupExV: Failed to Find Log Group!\n" );
+		return;
+	}
+
+	it->second.aMessage += vstring( spFmt, args );
 }
 
 
@@ -1107,45 +1248,45 @@ void CORE_API Log_DevF( LogChannel channel, u8 sLvl, const char* spFmt, ... )
 // Lowest severity.
 void CORE_API Log_Msg( const char* spBuf )
 {
-	Log_Ex( gGeneralChannel, LogType::Normal, spBuf );
+	Log_Ex( gLC_General, LogType::Normal, spBuf );
 }
 
 void CORE_API Log_MsgF( const char* spFmt, ... )
 {
-	LOG_SYS_MSG_VA( spFmt, gGeneralChannel, LogType::Normal );
+	LOG_SYS_MSG_VA( spFmt, gLC_General, LogType::Normal );
 }
 
 // Medium severity.
 void CORE_API Log_Warn( const char* spBuf )
 {
-	Log_Ex( gGeneralChannel, LogType::Warning, spBuf );
+	Log_Ex( gLC_General, LogType::Warning, spBuf );
 }
 
 void CORE_API Log_WarnF( const char* spFmt, ... )
 {
-	LOG_SYS_MSG_VA( spFmt, gGeneralChannel, LogType::Warning );
+	LOG_SYS_MSG_VA( spFmt, gLC_General, LogType::Warning );
 }
 
 // High severity.
 void CORE_API Log_Error( const char* spBuf )
 {
-	Log_Ex( gGeneralChannel, LogType::Error, spBuf );
+	Log_Ex( gLC_General, LogType::Error, spBuf );
 }
 
 void CORE_API Log_ErrorF( const char* spFmt, ... )
 {
-	LOG_SYS_MSG_VA( spFmt, gGeneralChannel, LogType::Error );
+	LOG_SYS_MSG_VA( spFmt, gLC_General, LogType::Error );
 }
 
 // Extreme severity.
 void CORE_API Log_Fatal( const char* spBuf )
 {
-	Log_Ex( gGeneralChannel, LogType::Error, spBuf );
+	Log_Ex( gLC_General, LogType::Error, spBuf );
 }
 
 void CORE_API Log_FatalF( const char* spFmt, ... )
 {
-	LOG_SYS_MSG_VA( spFmt, gGeneralChannel, LogType::Fatal );
+	LOG_SYS_MSG_VA( spFmt, gLC_General, LogType::Fatal );
 }
 
 // Dev only.
@@ -1154,7 +1295,7 @@ void CORE_API Log_Dev( u8 sLvl, const char* spBuf )
 	if ( sLvl < 1 || sLvl > 4 )
 		sLvl = 4;
 
-	Log_Ex( gGeneralChannel, (LogType)sLvl, spBuf );
+	Log_Ex( gLC_General, (LogType)sLvl, spBuf );
 }
 
 void CORE_API Log_DevF( u8 sLvl, const char* spFmt, ... )
@@ -1162,5 +1303,5 @@ void CORE_API Log_DevF( u8 sLvl, const char* spFmt, ... )
 	if ( sLvl < 1 || sLvl > 4 )
 		sLvl = 4;
 
-	LOG_SYS_MSG_VA( spFmt, gGeneralChannel, (LogType)sLvl );
+	LOG_SYS_MSG_VA( spFmt, gLC_General, (LogType)sLvl );
 }
