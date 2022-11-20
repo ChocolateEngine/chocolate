@@ -28,6 +28,10 @@ std::vector< std::string >                     gCommandHistory;
 std::vector< ConCommand* >                     gInstantConVars;
 std::vector< ConVarFlagData_t >                gConVarFlags;
 
+std::vector< FArchive* >                       gArchiveCallbacks;
+
+constexpr const char*                          CON_ARCHIVE_FILE = "cfg/config.cfg";
+
 // std::unordered_map< ConVarBase*, std::string > gConVarLowercaseNames;
 
 
@@ -45,20 +49,20 @@ ConVarBase* ConVarBase::spConVarBases = nullptr;
 
 
 ConVarBase::ConVarBase( const char* name, ConVarFlag_t flags ) :
-	aName( name ), aDesc(), aFlags( flags )
+	aName( name ), aDesc( nullptr ), aFlags( flags )
 {
 	apNext = spConVarBases;
 	spConVarBases = this;
 }
 
-ConVarBase::ConVarBase( const char* name, std::string_view desc ) :
+ConVarBase::ConVarBase( const char* name, const char* desc ) :
 	aName( name ), aDesc( desc ), aFlags()
 {
 	apNext = spConVarBases;
 	spConVarBases = this;
 }
 
-ConVarBase::ConVarBase( const char* name, ConVarFlag_t flags, std::string_view desc ) :
+ConVarBase::ConVarBase( const char* name, ConVarFlag_t flags, const char* desc ) :
 	aName( name ), aDesc( desc ), aFlags( flags )
 {
 	apNext = spConVarBases;
@@ -72,7 +76,7 @@ const char* ConVarBase::GetName()
 
 const char* ConVarBase::GetDesc()
 {
-	return aDesc.data();
+	return aDesc;
 }
 
 ConVarFlag_t ConVarBase::GetFlags()
@@ -97,12 +101,10 @@ void ConCommand::Init( ConCommandFunc func, ConCommandDropdownFunc dropDownFunc 
 
 std::string ConCommand::GetPrintMessage(  )
 {
-	std::string msg = aName;
+	if ( !aDesc )
+		return vstring( UNIX_CLR_DEFAULT "%s\n", aName );
 
-	if ( aDesc.empty() )
-		return msg + "\n";
-
-	return msg + "\n\t" + aDesc.data() + "\n";
+	return vstring( UNIX_CLR_DEFAULT "%s\n\t" UNIX_CLR_CYAN "%s" UNIX_CLR_DEFAULT "\n", aName, aDesc );
 }
 
 // ================================================================================
@@ -129,12 +131,15 @@ void ConVar::Init( float defaultValue, ConVarFunc callback )
 
 std::string ConVar::GetPrintMessage()
 {
-	std::string msg = vstring( "%s = %s (%s default)\n", aName, GetValue().data(), aDefaultValue.c_str() );
+	std::string msg = vstring( "%s%s %s", UNIX_CLR_DEFAULT, aName, GetValue().data() );
 
-	if ( aDesc.size() )
-		return msg + "\t" + aDesc.data() + "\n\n";
+	if ( GetValue() != aDefaultValue )
+		msg += vstring( " " UNIX_CLR_YELLOW "(%s default)", aDefaultValue.c_str() );
 
-	return msg;
+	if ( aDesc )
+		return msg + "\n\t" UNIX_CLR_CYAN + aDesc + UNIX_CLR_DEFAULT "\n\n";
+
+	return msg + "\n";
 }
 
 
@@ -619,8 +624,12 @@ CONCMD_DROP_VA( cvar_toggle, reset_cvar_dropdown, 0, "toggle a convar between tw
 
 
 // same as in source engine lol
-CONCMD( host_writeconfig )
+CONCMD_VA( host_writeconfig, "Write a config (can optionally specify a path) containing all ConVars marked with archive, and extra data provided by callback functions" )
 {
+	if ( args.size() )
+		Con_Archive( args[ 0 ].c_str() );
+	else
+		Con_Archive();
 }
 
 
@@ -1182,5 +1191,59 @@ ConVarFlag_t Con_GetCvarFlag( const char* name )
 	}
 
 	return CVARF_NONE;
+}
+
+
+// Add a callback function to add data to the config.cfg file
+void Con_AddArchiveCallback( FArchive* sFunc )
+{
+	gArchiveCallbacks.push_back( sFunc );
+}
+
+
+void Con_Archive( const char* spFile )
+{
+	std::string output =
+	  "// -----------------------------------------------------\n"
+	  "// Auto Generated File by Chocolate Engine\n\n";
+
+	// Write all ConVars marked with CVARF_ARCHIVE to this file
+	ConVarBase* command = ConVarBase::spConVarBases;
+	while ( command )
+	{
+		if ( typeid( *command ) != typeid( ConVar ) )
+		{
+			command = command->apNext;
+			continue;
+		}
+
+		ConVar* cvar = static_cast< ConVar* >( command );
+
+		if ( cvar->aFlags & CVARF_ARCHIVE )
+			output += vstring( "%s %s\n", cvar->aName, cvar->GetValue().data() );
+
+		command = command->apNext;
+	}
+
+	// Run all callback functons on this
+	for ( auto& callback : gArchiveCallbacks )
+	{
+		output += "\n// -----------------------------------------------------\n";
+		callback( output );
+	}
+
+	// Write the data
+	FILE* fp = fopen( spFile ? spFile : CON_ARCHIVE_FILE, "wb" );
+
+	if ( fp == nullptr )
+	{
+		Log_ErrorF( gConsoleChannel, "Failed to open file handle: \"%s\"\n", spFile ? spFile : CON_ARCHIVE_FILE );
+		return;
+	}
+
+	fwrite( output.c_str(), sizeof( char ), output.size(), fp );
+	fclose( fp );
+
+	Log_DevF( gConsoleChannel, 1, "Wrote Config to File: \"%s\"\n", spFile ? spFile : CON_ARCHIVE_FILE );
 }
 

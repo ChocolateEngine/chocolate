@@ -27,6 +27,7 @@ extern "C"
 
 	void DLL_EXPORT core_exit()
 	{
+		Con_Archive();
 		sys_shutdown();
 	}
 }

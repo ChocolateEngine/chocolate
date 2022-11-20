@@ -19,7 +19,7 @@ static ResourceList< ShaderVK >         gShaders;
 static ResourceList< VkPipelineLayout > gPipelineLayouts;
 
 
-CONVAR( r_sampled_textures, 0 );
+CONVAR( r_sampled_textures, 0, CVARF_ARCHIVE );
 
 
 void VK_BindDescSets()

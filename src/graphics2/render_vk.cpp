@@ -48,13 +48,13 @@ bool                                                     gNeedTextureUpdate = fa
 extern std::vector< TextureVK* >                         gTextures;
 
 
-CONVAR_CMD( r_msaa, 1 )
+CONVAR_CMD_EX( r_msaa, 1, CVARF_ARCHIVE, "Enable/Disable MSAA Globally" )
 {
 	VK_Reset( ERenderResetFlags_MSAA );
 }
 
 
-CONVAR_CMD( r_msaa_samples, 8 )
+CONVAR_CMD_EX( r_msaa_samples, 8, CVARF_ARCHIVE, "Set the Default Amount of MSAA Samples Globally" )
 {
 	if ( !r_msaa )
 		return;

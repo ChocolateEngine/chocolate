@@ -28,6 +28,8 @@ typedef std::function< void(
 	std::vector< std::string >& results      // results to populate the dropdown list with
 ) > ConCommandDropdownFunc;
 
+using FArchive = void( std::string& srOutput );
+
 // ConCommand console dropdown list function
 
 using ConVarFlag_t = size_t;
@@ -41,8 +43,8 @@ class CORE_API ConVarBase
 {
 public:
 	ConVarBase( const char* name, ConVarFlag_t flags = 0 );
-	ConVarBase( const char* name, std::string_view desc );
-	ConVarBase( const char* name, ConVarFlag_t flags, std::string_view desc );
+	ConVarBase( const char* name, const char* desc );
+	ConVarBase( const char* name, ConVarFlag_t flags, const char* desc );
 
 	virtual std::string		GetPrintMessage() = 0;
 
@@ -60,7 +62,7 @@ public:
 	ConVarBase*             apNext = nullptr;
 
 	const char*             aName;
-	std::string_view        aDesc;
+	const char*             aDesc;
 	ConVarFlag_t            aFlags;
 
 private:
@@ -154,19 +156,19 @@ public:
 		Init( defaultValue, aFunc );
 	}
 
-	ConVar( const char* name, std::string_view defaultValue, std::string_view desc ) :
+	ConVar( const char* name, std::string_view defaultValue, const char* desc ) :
 		ConVarBase( name, desc )
 	{
 		Init( defaultValue, aFunc );
 	}
 
-	ConVar( const char* name, std::string_view defaultValue, ConVarFlag_t flags, std::string_view desc ) :
+	ConVar( const char* name, std::string_view defaultValue, ConVarFlag_t flags, const char* desc ) :
 		ConVarBase( name, flags, desc )
 	{
 		Init( defaultValue, aFunc );
 	}
 
-	ConVar( const char* name, std::string_view defaultValue, ConVarFlag_t flags, std::string_view desc, ConVarFunc callback ) :
+	ConVar( const char* name, std::string_view defaultValue, ConVarFlag_t flags, const char* desc, ConVarFunc callback ) :
 		ConVarBase( name, flags, desc )
 	{
 		Init( defaultValue, callback );
@@ -179,19 +181,19 @@ public:
 		Init( defaultValue, aFunc );
 	}
 
-	ConVar( const char* name, float defaultValue, std::string_view desc ) :
+	ConVar( const char* name, float defaultValue, const char* desc ) :
 		ConVarBase( name, desc )
 	{
 		Init( defaultValue, aFunc );
 	}
 
-	ConVar( const char* name, float defaultValue, ConVarFlag_t flags, std::string_view desc ) :
+	ConVar( const char* name, float defaultValue, ConVarFlag_t flags, const char* desc ) :
 		ConVarBase( name, flags, desc )
 	{
 		Init( defaultValue, aFunc );
 	}
 
-	ConVar( const char* name, float defaultValue, ConVarFlag_t flags, std::string_view desc, ConVarFunc callback ) :
+	ConVar( const char* name, float defaultValue, ConVarFlag_t flags, const char* desc, ConVarFunc callback ) :
 		ConVarBase( name, flags, desc )
 	{
 		Init( defaultValue, callback );
@@ -447,6 +449,12 @@ CORE_API void                                Con_ParseCommandLineEx( std::string
 CORE_API ConVarFlag_t                        Con_CreateCvarFlag( const char* name );
 CORE_API const char*                         Con_GetCvarFlagName( ConVarFlag_t flag );
 CORE_API ConVarFlag_t                        Con_GetCvarFlag( const char* name );
+
+// Add a callback function to add data to the config.cfg file
+CORE_API void                                Con_AddArchiveCallback( FArchive* spFunc );
+
+// Write a config of all stuff we want saved
+CORE_API void                                Con_Archive( const char* spFile = nullptr );
 
 
 #define NEW_CVAR_FLAG( name ) ConVarFlag_t name = Con_CreateCvarFlag( #name )
