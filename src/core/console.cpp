@@ -256,133 +256,6 @@ bool ConVarRef::GetBool(  )
 // ================================================================================
 
 
-// built in ConCommands
-
-void exec_dropdown(
-	const std::vector< std::string >& args,  // arguments currently typed in by the user
-	std::vector< std::string >& results )      // results to populate the dropdown list with
-{
-	for ( const auto& file : FileSys_ScanDir( "cfg", ReadDir_AllPaths | ReadDir_Recursive ) )
-	{
-		if ( file.ends_with( ".." ) )
-			continue;
-
-		std::string execName = FileSys_GetFileName( file );
-
-
-		if ( args.size() && !execName.starts_with( args[0] ) )
-			continue;
-
-		results.push_back( execName );
-	}
-}
-
-
-CONCMD_DROP_VA( exec, exec_dropdown, 0, "Execute a script full of console commands" )
-{
-	if ( args.size() == 0 )
-	{
-		Log_Msg( gConsoleChannel, "No Path Specified for exec!\n" );
-		return;
-	}
-
-	std::string path = "cfg/" + args[0];
-
-	if ( !FileSys_IsFile( path ) )
-	{
-		if ( !path.ends_with( ".cfg" ) )
-			path += ".cfg";
-	}
-
-	if ( !FileSys_IsFile( path ) )
-	{
-		Log_WarnF( gConsoleChannel, "File does not exist: \"%s\"\n", path.c_str() );
-		return;
-	}
-
-	std::ifstream fileStream = std::ifstream(path, std::ios::in | std::ios::binary | std::ios::ate);
-
-	int fileLen = fileStream.tellg();
-	fileStream.seekg(0, fileStream.beg);
-
-	char* buf = new char[fileLen];
-	fileStream.read(buf, fileLen);
-	fileStream.close();
-
-	int ch = 0;
-	bool inComment = false;
-	std::string line;
-
-	// parse it
-	while ( ch < fileLen )
-	{
-#ifdef _WIN32
-		if ( buf[ch] == '\r' )
-		{
-			ch++;
-			continue;
-		}
-		else
-#endif
-		if ( buf[ch] == '\n' || buf[ch] == ';' )
-		{
-			if ( line != "" )
-			{
-				if ( line == "exec " + args[0] )
-					Log_Warn( gConsoleChannel, "cfg file trying to exec itself and cause infinite recursion\n" );
-				else
-					Con_RunCommand( line );
-
-				line = "";
-			}
-
-			inComment = false;
-		}
-		// check for a comment
-		else if ( buf[ch] == '/' && ch + 1 < fileLen && buf[ch + 1] == '/' )
-		{
-			inComment = true;
-			ch++;
-		}
-		else if ( !inComment )
-		{
-			line += buf[ch];
-		}
-
-		ch++;
-	}
-
-	if ( line != "" )
-		Con_RunCommand( line );
-
-	delete[] buf;
-}
-
-
-CONCMD_VA( echo, "Print a string to the console" )
-{
-	// std::string msg = "";
-	auto p = args.begin();
-	std::string msg = *p++;
-
-	if (p == args.end() - 1)
-		msg += " ";
-
-	// for (auto p = args.begin(); p != args.end(); p)
-	for (; p != args.end(); ++p)
-	{
-		msg += *p;
-
-		if (p == args.end() - 1)
-			msg += " ";
-	}
-
-	msg += "\n";
-
-	Log_Msg( gConsoleChannel, msg.c_str() );
-}
-
-
 CONVAR( con_search_behavior, 0, "0 - must start with this string, 1 - must contain this string" );
 
 
@@ -407,267 +280,6 @@ static bool ConVarNameCheck( const char* name, const char* search, size_t size )
 	}
 
 	return false;
-}
-
-
-void help_dropdown(
-	const std::vector< std::string >& args,  // arguments currently typed in by the user
-	std::vector< std::string >& results )      // results to populate the dropdown list with
-{
-	std::string name = args.empty() ? "" : str_lower2(args[0]);
-
-	ConVarBase* cvar = ConVarBase::spConVarBases;
-	while ( cvar )
-	{
-		cvar = Con_CheckForConVarRef( cvar );
-		if ( !cvar )
-			break;  // wtf
-
-		if ( !ConVarNameCheck( cvar->aName, name.c_str(), name.size() ) )
-		{
-			cvar = cvar->apNext;
-			continue;
-		}
-
-		results.push_back( cvar->GetName() );
-		cvar = cvar->apNext;
-	}
-}
-
-
-CONCMD_DROP_VA( help, help_dropdown, 0, "If no args specified, Print all Registered ConVars, otherwise, print information about this convar" )
-{
-	if ( args.empty() )
-	{
-		Con_PrintAllConVars();
-		return;
-	}
-
-	ConVarBase* cvar = Con_GetConVarBase( args[0] );
-
-	if ( cvar )
-	{
-		Log_Msg( gConsoleChannel, cvar->GetPrintMessage().c_str() );
-	}
-	else
-	{
-		Log_WarnF( gConsoleChannel, "Convar not found: %s\n", args[0].c_str() );
-	}
-}
-
-
-void FindStr( bool andSearch, ConVarBase* cvar, const std::vector< std::string >& args, std::vector< std::string >& results )
-{
-	for ( auto arg : args )
-	{
-		if ( strstr( cvar->GetName(), arg.c_str() ) )
-		{
-			results.push_back( "\t" + cvar->GetPrintMessage() );
-
-			if ( !andSearch )
-				return;
-		}
-	}
-}
-
-
-void CmdFind( bool andSearch, const std::vector< std::string >& args )
-{
-	std::vector< std::string > resultsCvar;
-	std::vector< std::string > resultsCCmd;
-
-	ConVarBase* cvar = ConVarBase::spConVarBases;
-	while ( cvar )
-	{
-		// ugly but probably faster than doing an extra dynamic cast to check if not a cvarref
-		// or doing the string search on a cvarref
-		if ( IS_TYPE( *cvar, ConVar ) )
-		{
-			FindStr( andSearch, cvar, args, resultsCvar );
-		}
-		else if ( IS_TYPE( *cvar, ConCommand ) )
-		{
-			FindStr( andSearch, cvar, args, resultsCCmd );
-		}
-
-		cvar = cvar->apNext;
-	}
-
-	Log_MsgF( gConsoleChannel, "Search Results: %zu\n", resultsCvar.size() + resultsCCmd.size() );
-
-	Log_MsgF( gConsoleChannel, "\nConVars: %zu\n--------------------------------------\n", resultsCvar.size() );
-	for ( const auto& msg : resultsCvar )
-		Log_Msg( gConsoleChannel, msg.c_str() );
-
-	Log_MsgF( gConsoleChannel, "\nConCommands: %zu\n--------------------------------------\n", resultsCCmd.size() );
-	for ( const auto& msg : resultsCCmd )
-		Log_Msg( gConsoleChannel, msg.c_str() );
-
-	Log_Msg( gConsoleChannel, "--------------------------------------\n" );
-}
-
-
-// IDEA: later when you add in ConVar flags and descriptions, make a findex cmd that you can choose specific parts to search
-// like only desc, or only name, or both, and probably the rest of the args for flag searching
-// and if search string is empty but flags isn't, just list all for those flags
-CONCMD_VA( find, "Search if cvar name contains any of the search arguments" )
-{
-	if ( args.empty() )
-	{
-		Log_MsgF( gConsoleChannel, "%s\n", find_cmd.GetDesc() );
-		return;
-	}
-
-	CmdFind( false, args );
-}
-
-CONCMD_VA( findand, "Search if cvar name contains all of the search arguments" )
-{
-	if ( args.empty() )
-	{
-		Log_MsgF( gConsoleChannel, "%s\n", findand_cmd.GetDesc() );
-		return;
-	}
-
-	CmdFind( true, args );
-}
-
-
-void reset_cvar_dropdown(
-	const std::vector< std::string >& args,  // arguments currently typed in by the user
-	std::vector< std::string >& results )      // results to populate the dropdown list with
-{
-	std::string name = args.empty() ? "" : str_lower2(args[0]);
-
-	ConVarBase* cvar = ConVarBase::spConVarBases;
-	while ( cvar )
-	{
-		cvar = Con_CheckForConVarRef( cvar );
-		if ( !cvar )
-			break;  // wtf
-
-		if ( IS_NOT_TYPE( *cvar, ConVar ) || !ConVarNameCheck( cvar->aName, name.c_str(), name.size() ) )
-		{
-			cvar = cvar->apNext;
-			continue;
-		}
-
-		results.push_back( cvar->GetName() );
-		cvar = cvar->apNext;
-	}
-}
-
-
-// use if you need to quit the engine right now
-CONCMD_DROP_VA( cvar_reset, reset_cvar_dropdown, 0, "reset a convar back to it's default value" )
-{
-	if ( args.empty() )
-	{
-		Log_Msg( gConsoleChannel, "No ConVar specified to reset!\n" );
-		return;
-	}
-
-	ConVar* cvar = Con_GetConVar( args[0] );
-
-	if ( cvar )
-	{
-		cvar->Reset();
-	}
-	else
-	{
-		Log_WarnF( gConsoleChannel, "Convar not found: %s\n", args[ 0 ].c_str() );
-	}
-}
-
-// use if you need to quit the engine right now
-CONCMD_DROP_VA( cvar_toggle, reset_cvar_dropdown, 0, "toggle a convar between two values" )
-{
-	if ( args.empty() )
-	{
-		Log_Msg( gConsoleChannel, "No ConVar specified to reset!\n" );
-		return;
-	}
-
-	const char* value0 = nullptr;
-	const char* value1 = nullptr;
-
-	if ( args.size() >= 3 )
-	{
-		value0 = args[ 1 ].c_str();
-		value1 = args[ 2 ].c_str();
-	}
-	else if ( args.size() == 2 )
-	{
-		value0 = args[ 1 ].c_str();
-		value1 = "0";  // Default Other Type to toggle between
-	}
-	else
-	{
-		// Default Types to toggle between
-		value0 = "0";
-		value1 = "1";
-	}
-
-	ConVar* cvar = Con_GetConVar( args[0] );
-
-	if ( !cvar )
-	{
-		Log_WarnF( gConsoleChannel, "Convar not found: %s\n", args[ 0 ].c_str() );
-		return;
-	}
-	
-	if ( cvar->GetValue() == value1 )
-		cvar->SetValue( value0 );
-	else
-		cvar->SetValue( value1 );
-}
-
-
-// same as in source engine lol
-CONCMD_VA( host_writeconfig, "Write a config (can optionally specify a path) containing all ConVars marked with archive, and extra data provided by callback functions" )
-{
-	if ( args.size() )
-		Con_Archive( args[ 0 ].c_str() );
-	else
-		Con_Archive();
-}
-
-
-CONCMD_VA( con_cvar_stack_size, "Print the stack usage of all convars" )
-{
-	size_t      size    = 0;
-	ConVarBase* current = ConVarBase::spConVarBases;
-
-	Log_DevF( gConsoleChannel, 1, "sizeof( ConvarBase ): %zu\n", sizeof( ConVarBase ) );
-	Log_DevF( gConsoleChannel, 1, "sizeof( Convar ):     %zu\n", sizeof( ConVar ) );
-	Log_DevF( gConsoleChannel, 1, "sizeof( ConCommand ): %zu\n", sizeof( ConCommand ) );
-	Log_DevF( gConsoleChannel, 1, "sizeof( ConVarRef ):  %zu\n", sizeof( ConVarRef ) );
-
-	while ( current )
-	{
-		if ( typeid( *current ) == typeid( ConVar ) )
-			size += sizeof( ConVar );
-
-		else if ( typeid( *current ) == typeid( ConCommand ) )
-			size += sizeof( ConCommand );
-
-		else if ( typeid( *current ) == typeid( ConVarRef ) )
-			size += sizeof( ConVarRef );
-
-		else
-			size += sizeof( *current );
-
-		current = current->apNext;
-	}
-
-	Log_DevF( gConsoleChannel, 1, "Convar Stack Size: %zu bytes\n", size );
-}
-
-
-// use if you need to quit the engine right now
-CONCMD_VA( _abort, CVARF_INSTANT, "funny" )
-{
-	abort();
 }
 
 
@@ -1245,5 +857,395 @@ void Con_Archive( const char* spFile )
 	fclose( fp );
 
 	Log_DevF( gConsoleChannel, 1, "Wrote Config to File: \"%s\"\n", spFile ? spFile : CON_ARCHIVE_FILE );
+}
+
+
+// ================================================================================
+// Console ConCommands
+
+
+void exec_dropdown(
+	const std::vector< std::string >& args,  // arguments currently typed in by the user
+	std::vector< std::string >& results )      // results to populate the dropdown list with
+{
+	for ( const auto& file : FileSys_ScanDir( "cfg", ReadDir_AllPaths | ReadDir_Recursive ) )
+	{
+		if ( file.ends_with( ".." ) )
+			continue;
+
+		std::string execName = FileSys_GetFileName( file );
+
+
+		if ( args.size() && !execName.starts_with( args[0] ) )
+			continue;
+
+		results.push_back( execName );
+	}
+}
+
+
+CONCMD_DROP_VA( exec, exec_dropdown, 0, "Execute a script full of console commands" )
+{
+	if ( args.size() == 0 )
+	{
+		Log_Msg( gConsoleChannel, "No Path Specified for exec!\n" );
+		return;
+	}
+
+	std::string path = "cfg/" + args[0];
+
+	if ( !FileSys_IsFile( path ) )
+	{
+		if ( !path.ends_with( ".cfg" ) )
+			path += ".cfg";
+	}
+
+	if ( !FileSys_IsFile( path ) )
+	{
+		Log_WarnF( gConsoleChannel, "File does not exist: \"%s\"\n", path.c_str() );
+		return;
+	}
+
+	std::ifstream fileStream = std::ifstream(path, std::ios::in | std::ios::binary | std::ios::ate);
+
+	int fileLen = fileStream.tellg();
+	fileStream.seekg(0, fileStream.beg);
+
+	char* buf = new char[fileLen];
+	fileStream.read(buf, fileLen);
+	fileStream.close();
+
+	int ch = 0;
+	bool inComment = false;
+	std::string line;
+
+	// parse it
+	while ( ch < fileLen )
+	{
+#ifdef _WIN32
+		if ( buf[ch] == '\r' )
+		{
+			ch++;
+			continue;
+		}
+		else
+#endif
+		if ( buf[ch] == '\n' || buf[ch] == ';' )
+		{
+			if ( line != "" )
+			{
+				if ( line == "exec " + args[0] )
+					Log_Warn( gConsoleChannel, "cfg file trying to exec itself and cause infinite recursion\n" );
+				else
+					Con_RunCommand( line );
+
+				line = "";
+			}
+
+			inComment = false;
+		}
+		// check for a comment
+		else if ( buf[ch] == '/' && ch + 1 < fileLen && buf[ch + 1] == '/' )
+		{
+			inComment = true;
+			ch++;
+		}
+		else if ( !inComment )
+		{
+			line += buf[ch];
+		}
+
+		ch++;
+	}
+
+	if ( line != "" )
+		Con_RunCommand( line );
+
+	delete[] buf;
+}
+
+
+CONCMD_VA( echo, "Print a string to the console" )
+{
+	// std::string msg = "";
+	auto p = args.begin();
+	std::string msg = *p++;
+
+	if (p == args.end() - 1)
+		msg += " ";
+
+	// for (auto p = args.begin(); p != args.end(); p)
+	for (; p != args.end(); ++p)
+	{
+		msg += *p;
+
+		if (p == args.end() - 1)
+			msg += " ";
+	}
+
+	msg += "\n";
+
+	Log_Msg( gConsoleChannel, msg.c_str() );
+}
+
+
+void help_dropdown(
+	const std::vector< std::string >& args,  // arguments currently typed in by the user
+	std::vector< std::string >& results )      // results to populate the dropdown list with
+{
+	std::string name = args.empty() ? "" : str_lower2(args[0]);
+
+	ConVarBase* cvar = ConVarBase::spConVarBases;
+	while ( cvar )
+	{
+		cvar = Con_CheckForConVarRef( cvar );
+		if ( !cvar )
+			break;  // wtf
+
+		if ( !ConVarNameCheck( cvar->aName, name.c_str(), name.size() ) )
+		{
+			cvar = cvar->apNext;
+			continue;
+		}
+
+		results.push_back( cvar->GetName() );
+		cvar = cvar->apNext;
+	}
+}
+
+
+CONCMD_DROP_VA( help, help_dropdown, 0, "If no args specified, Print all Registered ConVars, otherwise, print information about this convar" )
+{
+	if ( args.empty() )
+	{
+		Con_PrintAllConVars();
+		return;
+	}
+
+	ConVarBase* cvar = Con_GetConVarBase( args[0] );
+
+	if ( cvar )
+	{
+		Log_Msg( gConsoleChannel, cvar->GetPrintMessage().c_str() );
+	}
+	else
+	{
+		Log_WarnF( gConsoleChannel, "Convar not found: %s\n", args[0].c_str() );
+	}
+}
+
+
+void FindStr( bool andSearch, ConVarBase* cvar, const std::vector< std::string >& args, std::vector< std::string >& results )
+{
+	for ( auto arg : args )
+	{
+		if ( strstr( cvar->GetName(), arg.c_str() ) )
+		{
+			results.push_back( "\t" + cvar->GetPrintMessage() );
+
+			if ( !andSearch )
+				return;
+		}
+	}
+}
+
+
+void CmdFind( bool andSearch, const std::vector< std::string >& args )
+{
+	std::vector< std::string > resultsCvar;
+	std::vector< std::string > resultsCCmd;
+
+	ConVarBase* cvar = ConVarBase::spConVarBases;
+	while ( cvar )
+	{
+		// ugly but probably faster than doing an extra dynamic cast to check if not a cvarref
+		// or doing the string search on a cvarref
+		if ( IS_TYPE( *cvar, ConVar ) )
+		{
+			FindStr( andSearch, cvar, args, resultsCvar );
+		}
+		else if ( IS_TYPE( *cvar, ConCommand ) )
+		{
+			FindStr( andSearch, cvar, args, resultsCCmd );
+		}
+
+		cvar = cvar->apNext;
+	}
+
+	Log_MsgF( gConsoleChannel, "Search Results: %zu\n", resultsCvar.size() + resultsCCmd.size() );
+
+	Log_MsgF( gConsoleChannel, "\nConVars: %zu\n--------------------------------------\n", resultsCvar.size() );
+	for ( const auto& msg : resultsCvar )
+		Log_Msg( gConsoleChannel, msg.c_str() );
+
+	Log_MsgF( gConsoleChannel, "\nConCommands: %zu\n--------------------------------------\n", resultsCCmd.size() );
+	for ( const auto& msg : resultsCCmd )
+		Log_Msg( gConsoleChannel, msg.c_str() );
+
+	Log_Msg( gConsoleChannel, "--------------------------------------\n" );
+}
+
+
+// IDEA: later when you add in ConVar flags and descriptions, make a findex cmd that you can choose specific parts to search
+// like only desc, or only name, or both, and probably the rest of the args for flag searching
+// and if search string is empty but flags isn't, just list all for those flags
+CONCMD_VA( find, "Search if cvar name contains any of the search arguments" )
+{
+	if ( args.empty() )
+	{
+		Log_MsgF( gConsoleChannel, "%s\n", find_cmd.GetDesc() );
+		return;
+	}
+
+	CmdFind( false, args );
+}
+
+
+CONCMD_VA( findand, "Search if cvar name contains all of the search arguments" )
+{
+	if ( args.empty() )
+	{
+		Log_MsgF( gConsoleChannel, "%s\n", findand_cmd.GetDesc() );
+		return;
+	}
+
+	CmdFind( true, args );
+}
+
+
+void reset_cvar_dropdown(
+	const std::vector< std::string >& args,  // arguments currently typed in by the user
+	std::vector< std::string >& results )      // results to populate the dropdown list with
+{
+	std::string name = args.empty() ? "" : str_lower2(args[0]);
+
+	ConVarBase* cvar = ConVarBase::spConVarBases;
+	while ( cvar )
+	{
+		cvar = Con_CheckForConVarRef( cvar );
+		if ( !cvar )
+			break;  // wtf
+
+		if ( IS_NOT_TYPE( *cvar, ConVar ) || !ConVarNameCheck( cvar->aName, name.c_str(), name.size() ) )
+		{
+			cvar = cvar->apNext;
+			continue;
+		}
+
+		results.push_back( cvar->GetName() );
+		cvar = cvar->apNext;
+	}
+}
+
+
+CONCMD_DROP_VA( cvar_reset, reset_cvar_dropdown, 0, "reset a convar back to it's default value" )
+{
+	if ( args.empty() )
+	{
+		Log_Msg( gConsoleChannel, "No ConVar specified to reset!\n" );
+		return;
+	}
+
+	ConVar* cvar = Con_GetConVar( args[0] );
+
+	if ( cvar )
+	{
+		cvar->Reset();
+	}
+	else
+	{
+		Log_WarnF( gConsoleChannel, "Convar not found: %s\n", args[ 0 ].c_str() );
+	}
+}
+
+
+CONCMD_DROP_VA( cvar_toggle, reset_cvar_dropdown, 0, "toggle a convar between two values" )
+{
+	if ( args.empty() )
+	{
+		Log_Msg( gConsoleChannel, "No ConVar specified to reset!\n" );
+		return;
+	}
+
+	const char* value0 = nullptr;
+	const char* value1 = nullptr;
+
+	if ( args.size() >= 3 )
+	{
+		value0 = args[ 1 ].c_str();
+		value1 = args[ 2 ].c_str();
+	}
+	else if ( args.size() == 2 )
+	{
+		value0 = args[ 1 ].c_str();
+		value1 = "0";  // Default Other Type to toggle between
+	}
+	else
+	{
+		// Default Types to toggle between
+		value0 = "0";
+		value1 = "1";
+	}
+
+	ConVar* cvar = Con_GetConVar( args[0] );
+
+	if ( !cvar )
+	{
+		Log_WarnF( gConsoleChannel, "Convar not found: %s\n", args[ 0 ].c_str() );
+		return;
+	}
+	
+	if ( cvar->GetValue() == value1 )
+		cvar->SetValue( value0 );
+	else
+		cvar->SetValue( value1 );
+}
+
+
+// same as in source engine lol
+CONCMD_VA( host_writeconfig, "Write a config (can optionally specify a path) containing all ConVars marked with archive, and extra data provided by callback functions" )
+{
+	if ( args.size() )
+		Con_Archive( args[ 0 ].c_str() );
+	else
+		Con_Archive();
+}
+
+
+CONCMD_VA( con_cvar_stack_size, "Print the stack usage of all convars" )
+{
+	size_t      size    = 0;
+	ConVarBase* current = ConVarBase::spConVarBases;
+
+	Log_DevF( gConsoleChannel, 1, "sizeof( ConvarBase ): %zu\n", sizeof( ConVarBase ) );
+	Log_DevF( gConsoleChannel, 1, "sizeof( Convar ):     %zu\n", sizeof( ConVar ) );
+	Log_DevF( gConsoleChannel, 1, "sizeof( ConCommand ): %zu\n", sizeof( ConCommand ) );
+	Log_DevF( gConsoleChannel, 1, "sizeof( ConVarRef ):  %zu\n", sizeof( ConVarRef ) );
+
+	while ( current )
+	{
+		if ( typeid( *current ) == typeid( ConVar ) )
+			size += sizeof( ConVar );
+
+		else if ( typeid( *current ) == typeid( ConCommand ) )
+			size += sizeof( ConCommand );
+
+		else if ( typeid( *current ) == typeid( ConVarRef ) )
+			size += sizeof( ConVarRef );
+
+		else
+			size += sizeof( *current );
+
+		current = current->apNext;
+	}
+
+	Log_DevF( gConsoleChannel, 1, "Convar Stack Size: %zu bytes\n", size );
+}
+
+
+// use if you need to quit the engine right now
+CONCMD_VA( _abort, CVARF_INSTANT, "funny" )
+{
+	abort();
 }
 

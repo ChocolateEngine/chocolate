@@ -121,7 +121,7 @@ const char               CORE_API *Log_ColorToStr( LogColor color );
 
 // Split a string by unix colors into a vector of LogColorBuf_t
 // does no new memory allocations, only stores color, a starting char pointer, and a length
-void                     CORE_API  Log_SplitStringColors( LogColor sMainColor, std::string_view sBuffer, ChVector< LogColorBuf_t >& srColorList );
+void                     CORE_API  Log_SplitStringColors( LogColor sMainColor, std::string_view sBuffer, ChVector< LogColorBuf_t >& srColorList, bool sNoColors = false );
 
 const char               CORE_API *Log_ColorToUnix( LogColor color );
 LogColor                 CORE_API  Log_UnixCodeToColor( bool sIsLight, int sColor );
@@ -136,7 +136,7 @@ bool                     CORE_API  Log_ChannelIsShown( LogChannel handle );
 unsigned char            CORE_API  Log_GetChannelCount();
 
 // Log Information
-const std::string        CORE_API &Log_GetHistoryStr( int maxSize );
+void                     CORE_API  Log_BuildHistoryString( std::string& srOutput, int sMaxSize = -1 );
 const std::vector< Log > CORE_API &Log_GetLogHistory();
 const Log                CORE_API *Log_GetLastLog();
 bool                     CORE_API  Log_IsVisible( const Log& log );

@@ -30,7 +30,6 @@ static std::vector< Log >                      gLogHistory;
 static std::unordered_map< LogGroup, Log >     gLogGroups;
 
 // filtered text output for game console
-static std::string                             gLogHistoryStr;
 static std::string                             gFilterEx;  // super basic exclude filter
 static std::string                             gFilterIn;  // super basic include filter
 
@@ -439,6 +438,162 @@ static std::string FormatLog( LogChannel_t* channel, LogType sType, const char* 
 }
 
 
+// If no colors are found, srOutput is empty
+// NOTE: this could probably be done better
+static void Log_StripColors( std::string_view sBuffer, std::string& srOutput )
+{
+	char* buf  = const_cast< char* >( sBuffer.data() );
+
+	char* find = strstr( buf, "\033[" );
+
+	// no color codes found
+	if ( find == nullptr )
+		return;
+
+	// no color code at start of string
+	if ( find != buf )
+	{
+		srOutput.append( buf, find - buf );
+	}
+
+	char* last = buf;
+
+	while ( find )
+	{
+		char* endColor = strstr( find, "m" );
+
+		if ( !endColor )
+		{
+			Log_Error( "Invalid Unix Color Code!\n" );
+			break;
+		}
+
+		endColor++;
+
+		size_t colorLength = endColor - find;
+
+		last               = endColor;
+		char* nextFind     = strstr( endColor, "\033[" );
+
+		// no characters in between these colors
+		if ( nextFind && nextFind - endColor == 0 )
+		{
+			find = nextFind;
+			continue;
+		}
+
+		if ( nextFind == nullptr )
+		{
+			srOutput.append( endColor, sBuffer.size() - ( last - buf ) );
+		}
+		else
+		{
+			// colorBuf.aLen = find - last;
+			srOutput.append( endColor, nextFind - endColor );
+			last = endColor;
+		}
+
+		find = nextFind;
+	}
+}
+
+
+// Formats the log as normal, but strips all color codes from it
+static std::string FormatLogNoColors( const Log& srLog )
+{
+	PROF_SCOPE();
+
+	// Split by New Line characters
+	std::string   output;
+
+	LogChannel_t* channel = Log_GetChannelData( srLog.aChannel );
+	if ( !channel )
+	{
+		PrintF( "\n *** LogSystem: Channel Not Found for message: \"%s\"\n", srLog.aMessage.c_str() );
+		return output;
+	}
+
+	std::string stripped;
+	Log_StripColors( srLog.aMessage, stripped );
+
+	size_t      len  = 0;
+	const char* last = nullptr;
+	const char* find = nullptr;
+	const char* buf = nullptr;
+
+	if ( stripped.empty() )
+	{
+		// No color codes found
+		len = srLog.aMessage.size();
+		buf = srLog.aMessage.data();
+	}
+	else
+	{
+		// Color Codes found
+		len = stripped.size();
+		buf = stripped.data();
+	}
+
+	last = buf;
+	find = strchr( buf, '\n' );
+
+	while ( last )
+	{
+		size_t dist = 0;
+		if ( find )
+			dist = ( find - last ) + 1;
+		else
+			dist = len - ( last - buf );
+
+		if ( dist == 0 )
+			break;
+
+		switch ( srLog.aType )
+		{
+			default:
+			case LogType::Normal:
+				output += vstring( "[%s] %*.*s", channel->aName.data(), dist, dist, last );
+				break;
+
+			case LogType::Dev:
+			case LogType::Dev2:
+			case LogType::Dev3:
+			case LogType::Dev4:
+				output += vstring( "[%s] [DEV %u] %*.*s", channel->aName.data(), srLog.aType, dist, dist, last );
+				break;
+
+			case LogType::Input:
+				output += vstring( "] %*.*s\n", dist, dist, last );
+				break;
+
+			case LogType::Raw:
+				output += vstring( "%*.*s\n", dist, dist, last );
+				break;
+
+			case LogType::Warning:
+				output += vstring( "[%s] [WARNING] %*.*s", channel->aName.data(), dist, dist, last );
+				break;
+
+			case LogType::Error:
+				output += vstring( "[%s] [ERROR] %*.*s", channel->aName.data(), dist, dist, last );
+				break;
+
+			case LogType::Fatal:
+				output += vstring( "[%s] [FATAL] %*.*s", channel->aName.data(), dist, dist, last );
+				break;
+		}
+
+		if ( !find )
+			break;
+
+		last = ++find;
+		find = strchr( last, '\n' );
+	}
+
+	return output;
+}
+
+
 // copied from graphics/gui/consoleui.cpp
 constexpr glm::vec4 GetColorRGBA( LogColor col )
 {
@@ -553,33 +708,37 @@ void Log_AddChannelShownCallback( LogChannelShownCallbackF callback )
 }
 
 
-inline void Log_AddToHistoryString( const Log& log )
-{
-	if ( !Log_DevLevelVisible( log ) )
-		return;
-
-	LogChannel_t* channel = Log_GetChannelData( log.aChannel );
-	if ( !channel || !channel->aShown )
-		return;
-
-	gLogHistoryStr += log.aFormatted;
-}
-
-
 // TODO: make this async and probably store elsewhere
-void Log_BuildHistoryString( int maxSize )
+void Log_BuildHistoryString( std::string& srOutput, int sMaxSize )
 {
 	PROF_SCOPE();
 
-	gLogHistoryStr = "";
+	gLogMutex.lock();
 
 	// No limit
-	if ( maxSize == -1 )
+	if ( sMaxSize == -1 )
 	{
-		for ( auto& log : gLogHistory )
-			Log_AddToHistoryString( log );
+		// // Preallocate String for all logs
+		// size_t stringLen = 0;
+		// for ( auto& log : gLogHistory )
+		// {
+		// 	if ( Log_IsVisible( log ) )
+		// 		stringLen += log.aFormatted.size();
+		// }
+		// 
+		// srOutput.reserve( stringLen );
 
-		Log_RunCallbacksChannelShown();
+		// Add formatted logs to the strings
+		for ( auto& log : gLogHistory )
+		{
+			if ( !Log_IsVisible( log ) )
+				continue;
+
+			srOutput += FormatLogNoColors( log );
+		}
+
+		gLogMutex.unlock();
+
 		return;
 	}
 
@@ -588,42 +747,26 @@ void Log_BuildHistoryString( int maxSize )
 	{
 		auto& log = gLogHistory[ i ];
 
-		if ( !Log_DevLevelVisible( log ) )
+		if ( !Log_IsVisible( log ) )
 			continue;
 
-		LogChannel_t* channel = Log_GetChannelData( log.aChannel );
-		if ( !channel || !channel->aShown )
-			continue;
-
-		int strLen     = glm::min( maxSize, (int)log.aFormatted.length() );
-		int strStart   = log.aFormatted.length() - strLen;
+		int strLen   = glm::min( sMaxSize, (int)log.aFormatted.length() );
+		int strStart = log.aFormatted.length() - strLen;
 
 		// if the length wanted is less then the string length, then start at an offset
-		gLogHistoryStr = log.aFormatted.substr( strStart, strLen ) + gLogHistoryStr;
+		srOutput     = log.aFormatted.substr( strStart, strLen ) + srOutput;
 
-		maxSize -= strLen;
+		sMaxSize -= strLen;
 
-		if ( maxSize == 0 )
+		if ( sMaxSize == 0 )
 			break;
 	}
 
-	Log_RunCallbacksChannelShown();
+	gLogMutex.unlock();
 }
 
 
-const std::string& Log_GetHistoryStr( int maxSize )
-{
-	// lazy
-	if ( maxSize != -1 )
-	{
-		Log_BuildHistoryString( maxSize );
-	}
-
-	return gLogHistoryStr;
-}
-
-
-void Log_SplitStringColors( LogColor sMainColor, std::string_view sBuffer, ChVector< LogColorBuf_t >& srColorList )
+void Log_SplitStringColors( LogColor sMainColor, std::string_view sBuffer, ChVector< LogColorBuf_t >& srColorList, bool sNoColors )
 {
 	// on win32, we need to split up the string by colors
 	char* buf  = const_cast< char* >( sBuffer.data() );
@@ -676,8 +819,10 @@ void Log_SplitStringColors( LogColor sMainColor, std::string_view sBuffer, ChVec
 		}
 
 		LogColorBuf_t& colorBuf    = srColorList.emplace_back();
-		colorBuf.aColor            = Log_UnixToColor( find, colorLength );
 		colorBuf.apStr             = endColor;
+
+		if ( !sNoColors )
+			colorBuf.aColor = Log_UnixToColor( find, colorLength );
 
 		if ( nextFind == nullptr )
 		{
@@ -788,127 +933,13 @@ void Log_AddLogInternal( Log& log )
                 else
                     SDL_ShowSimpleMessageBox( SDL_MESSAGEBOX_ERROR, messageBoxTitle.c_str(), log.aMessage.c_str(), NULL );
 
-                throw std::runtime_error( log.aFormatted.c_str() );
+                sys_debug_break();
 				exit( -1 );
                 break;
         }
     }
 
     Log_Tracy( channel, log );
-    Log_AddToHistoryString( log );
-}
-
-
-// =====================================================================================
-// Log ConCommands
-
-void log_channel_dropdown(
-	const std::vector< std::string >& args,  // arguments currently typed in by the user
-	std::vector< std::string >& results )      // results to populate the dropdown list with
-{
-	for ( const auto& channel : GetLogChannels() )
-	{
-		if ( args.size() && !channel.aName.starts_with( args[0] ) )
-			continue;
-
-		results.push_back( channel.aName.data() );
-	}
-}
-
-
-CONCMD_DROP( log_channel_hide, log_channel_dropdown )
-{
-    if ( args.size() == 0 )
-        return;
-
-    LogChannel_t* channel = Log_GetChannelByName( args[0].c_str() );
-    if ( !channel )
-        return;
-
-    channel->aShown = false;
-
-    Log_BuildHistoryString( -1 );
-}
-
-
-CONCMD_DROP( log_channel_show, log_channel_dropdown )
-{
-    if ( args.size() == 0 )
-        return;
-
-    LogChannel_t* channel = Log_GetChannelByName( args[ 0 ].c_str() );
-    if ( !channel )
-        return;
-
-    channel->aShown = true;
-
-    Log_BuildHistoryString( -1 );
-}
-
-
-CONCMD( log_channel_dump )
-{
-    // Calculate max name length
-	size_t maxNameLength = 0;
-	size_t maxLength = 0;
-	constexpr size_t logNameLen = 13;
-
-    for ( const auto& channel : GetLogChannels() )
-	{
-		maxNameLength = std::max( logNameLen, std::max( maxNameLength, channel.aName.size() ) );
-		maxLength = std::max( maxLength, maxNameLength + 23 );
-	}
-
-	LogGroup group = Log_GroupBegin( gLC_Logging );
-
-    Log_GroupF( group, "Channel Name%*s  | Shown  | Color\n", maxNameLength > logNameLen ? maxNameLength - logNameLen : logNameLen, "" );
-
-    // Build separator bar
-    // Example Output: ---------------|--------|------------
-    char* separator = new char[ maxLength + 1 ] {'\0'};
-
-    for ( size_t i = 0; i < maxLength; i++ )
-	{
-		if ( i == maxNameLength + 1 || maxLength - 13 == i )
-		{
-			separator[ i ] = '|';
-			continue;
-		}
-		
-	    separator[ i ] = '-';
-	}
-
-	Log_GroupF( group, "%s\n", separator );
-
-    delete[] separator;
-
-    // Display Log Channels
-    for ( const auto& channel : GetLogChannels() )
-	{
-		Log_GroupF(
-		  group,
-		  "%s%s%*s | %s | %s\n",
-		  Log_ColorToUnix( channel.aColor ),
-		  channel.aName.data(),
-		  maxNameLength - channel.aName.size(),
-		  "",
-		  channel.aShown ? "Shown " : "Hidden",
-		  Log_ColorToStr( channel.aColor ) );
-    }
-
-	Log_GroupEnd( group );
-}
-
-
-CONCMD( log_color_dump )
-{
-	Log_Msg( "Color Dump\n" );
-	Log_Msg( "------------\n" );
-
-	for ( char i = 0; i < (char)LogColor::Count; i++ )
-	{
-		Log_MsgF( "%s%s\n", Log_ColorToUnix( (LogColor)i ), Log_ColorToStr( (LogColor)i ) );
-    }
 }
 
 
@@ -981,10 +1012,7 @@ const std::vector< Log >& Log_GetLogHistory()
 bool Log_ChannelIsShown( LogChannel handle )
 {
 	LogChannel_t* channel = Log_GetChannelData( handle );
-    if ( !channel )
-        return false;
-
-    return channel->aShown;
+	return channel && channel->aShown;
 }
 
 
@@ -1110,7 +1138,7 @@ void Log_GroupV( LogGroup sGroup, const char* spFmt, va_list args )
 		return;
 	}
 
-	it->second.aMessage += vstring( spFmt, args );
+	it->second.aMessage += vstringV( spFmt, args );
 }
 
 
@@ -1305,3 +1333,183 @@ void CORE_API Log_DevF( u8 sLvl, const char* spFmt, ... )
 
 	LOG_SYS_MSG_VA( spFmt, gLC_General, (LogType)sLvl );
 }
+
+
+// =====================================================================================
+// Log ConCommands
+
+
+void log_channel_dropdown(
+	const std::vector< std::string >& args,  // arguments currently typed in by the user
+	std::vector< std::string >& results )      // results to populate the dropdown list with
+{
+	for ( const auto& channel : GetLogChannels() )
+	{
+		if ( args.size() && !channel.aName.starts_with( args[0] ) )
+			continue;
+
+		results.push_back( channel.aName.data() );
+	}
+}
+
+
+CONCMD_DROP( log_channel_hide, log_channel_dropdown )
+{
+    if ( args.size() == 0 )
+        return;
+
+    LogChannel_t* channel = Log_GetChannelByName( args[0].c_str() );
+    if ( !channel )
+        return;
+
+    channel->aShown = false;
+
+	Log_RunCallbacksChannelShown();
+}
+
+
+CONCMD_DROP( log_channel_show, log_channel_dropdown )
+{
+    if ( args.size() == 0 )
+        return;
+
+    LogChannel_t* channel = Log_GetChannelByName( args[ 0 ].c_str() );
+    if ( !channel )
+        return;
+
+    channel->aShown = true;
+
+	Log_RunCallbacksChannelShown();
+}
+
+
+CONCMD( log_channel_dump )
+{
+    // Calculate max name length
+	size_t maxNameLength = 0;
+	size_t maxLength = 0;
+	constexpr size_t logNameLen = 13;
+
+    for ( const auto& channel : GetLogChannels() )
+	{
+		maxNameLength = std::max( logNameLen, std::max( maxNameLength, channel.aName.size() ) );
+		maxLength = std::max( maxLength, maxNameLength + 23 );
+	}
+
+	LogGroup group = Log_GroupBegin( gLC_Logging );
+
+    Log_GroupF( group, "Channel Name%*s  | Shown  | Color\n", maxNameLength > logNameLen ? maxNameLength - logNameLen : logNameLen, "" );
+
+    // Build separator bar
+    // Example Output: ---------------|--------|------------
+    char* separator = new char[ maxLength + 1 ] {'\0'};
+
+    for ( size_t i = 0; i < maxLength; i++ )
+	{
+		if ( i == maxNameLength + 1 || maxLength - 13 == i )
+		{
+			separator[ i ] = '|';
+			continue;
+		}
+		
+	    separator[ i ] = '-';
+	}
+
+	Log_GroupF( group, "%s\n", separator );
+
+    delete[] separator;
+
+    // Display Log Channels
+    for ( const auto& channel : GetLogChannels() )
+	{
+		Log_GroupF(
+		  group,
+		  "%s%s%*s | %s | %s\n",
+		  Log_ColorToUnix( channel.aColor ),
+		  channel.aName.data(),
+		  maxNameLength - channel.aName.size(),
+		  "",
+		  channel.aShown ? "Shown " : "Hidden",
+		  Log_ColorToStr( channel.aColor ) );
+    }
+
+	Log_GroupEnd( group );
+}
+
+
+CONCMD( log_color_dump )
+{
+	Log_Msg( "Color Dump\n" );
+	Log_Msg( "------------\n" );
+
+	for ( char i = 0; i < (char)LogColor::Count; i++ )
+	{
+		Log_MsgF( "%s%s\n", Log_ColorToUnix( (LogColor)i ), Log_ColorToStr( (LogColor)i ) );
+    }
+}
+
+
+CONCMD_VA( clear, "Clear Logging System History" )
+{
+	gLogMutex.lock();
+	
+	gLogHistory.clear();
+	gLogHistory.shrink_to_fit();
+
+	gLogMutex.unlock();
+}
+
+#define LOG_DUMP_FILENAME "log_dump"
+
+// Get current date/time, format is YYYY-MM-DD_HH-mm-ss
+size_t Util_CurrentDateTime( char* spBuf, int sSize )
+{
+	time_t    now = time( 0 );
+	struct tm tstruct;
+	tstruct = *localtime( &now );
+
+	return strftime( spBuf, sSize, "%Y-%m-%d_%H-%M-%S", &tstruct );
+}
+
+
+CONCMD_VA( log_dump, "Dump Logging History to file" )
+{
+	std::string outputPath;
+
+	char        time[ 80 ];
+	size_t      len = Util_CurrentDateTime( time, 80 );
+
+	// If no manual output path specified/allowed, use the default filename
+	if ( args.size() )
+	{
+		vstring( outputPath, "%s_%s.txt", args[ 0 ].c_str(), time );
+	}
+	else
+	{
+		vstring( outputPath, LOG_DUMP_FILENAME "_%s.txt", time );
+	}
+
+	if ( FileSys_IsDir( outputPath, true ) )
+	{
+		Log_ErrorF( gLC_Logging, "Output file for log_dump already exists as a directory: \"%s\"\n", outputPath.c_str() );
+		return;
+	}
+
+	std::string output;
+	Log_BuildHistoryString( output, -1 );
+
+	// Write the data
+	FILE* fp = fopen( outputPath.c_str(), "wb" );
+
+	if ( fp == nullptr )
+	{
+		Log_ErrorF( gLC_Logging, "Failed to open file handle: \"%s\"\n", outputPath.c_str() );
+		return;
+	}
+
+	fwrite( output.c_str(), sizeof( char ), output.size(), fp );
+	fclose( fp );
+
+	Log_DevF( gLC_Logging, 1, "Wrote Log History to File: \"%s\"\n", outputPath.c_str() );
+}
+
