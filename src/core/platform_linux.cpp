@@ -65,6 +65,13 @@ void sys_wait_for_debugger()
 }
 
 
+void sys_debug_break()
+{
+	printf( "\n *** NEED TO CHECK IF A DEBUGGER IS PRESENT TO NOT LOCK UP THE PROGRAM, IF NONE PRESENT, THEN DONT WAIT FOR ONE !!!\n\n" );
+    raise( SIGSTOP );
+}
+
+
 void sys_shutdown()
 {
 }

@@ -240,12 +240,19 @@ int sys_allow_console_input()
 
 void sys_wait_for_debugger()
 {
-	Log_Msg( "WAITING FOR DEBUGGER\n" );
+	Log_Dev( 1, "WAITING FOR DEBUGGER\n" );
 
 	while( !::IsDebuggerPresent() )
 		::Sleep( 100 ); // to avoid 100% CPU load
 
 	DebugBreak();
+}
+
+
+void sys_debug_break()
+{
+	if ( IsDebuggerPresent() )
+		DebugBreak();
 }
 
 

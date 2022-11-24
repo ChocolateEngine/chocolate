@@ -41,4 +41,5 @@ int             CORE_API    sys_allow_console_input();
 
 // wait for a debugger to attach
 void            CORE_API    sys_wait_for_debugger();
+void            CORE_API    sys_debug_break();
 
