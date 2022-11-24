@@ -114,7 +114,7 @@ void vstring( std::string& result, const char* format, ... )
 	va_end( args );
 }
 
-void vstring( std::string& s, const char* format, va_list args )
+void vstringV( std::string& s, const char* format, va_list args )
 {
 	va_list copy;
 	va_copy( copy, args );
@@ -165,7 +165,7 @@ std::string vstring( const char* format, ... )
 	return result;
 }
 
-std::string vstring( const char* format, va_list args )
+std::string vstringV( const char* format, va_list args )
 {
 	va_list copy;
 	va_copy( copy, args );

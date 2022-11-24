@@ -183,16 +183,16 @@ char          CORE_API *strcasestr( const char* s, const char* find );
 
 // don't need to worry about any resizing with these, but is a little slower
 void           CORE_API vstring( std::string& output, const char* format, ... );
-void           CORE_API vstring( std::string& output, const char* format, va_list args );
+void           CORE_API vstringV( std::string& output, const char* format, va_list args );
 
 std::string    CORE_API vstring( const char* format, ... );
-std::string    CORE_API vstring( const char* format, va_list args );
+std::string    CORE_API vstringV( const char* format, va_list args );
 
 
 #define VSTRING( out, format ) \
 	va_list args; \
 	va_start( args, format ); \
-	vstring( out, format, args ); \
+	vstringV( out, format, args ); \
 	va_end( args )
 
 
