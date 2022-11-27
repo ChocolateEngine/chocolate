@@ -106,7 +106,7 @@ void InputSystem::ParseInput()
 	// get total event count first
 	int eventCount = SDL_PeepEvents( nullptr, 0, SDL_PEEKEVENT, SDL_FIRSTEVENT, SDL_LASTEVENT );
 
-	// resize event vector with events found (probably bad to do every frame?)
+	// resize event vector with events found
 	aEvents.resize( eventCount );
 
 	// fill event vector with events found
@@ -123,14 +123,6 @@ void InputSystem::ParseInput()
 			{
 				// lazy way to tell engine to quit
 				Con_RunCommand( "quit" );
-				break;
-			}
-
-			case SDL_KEYDOWN:
-			{
-				if ( aEvent.key.keysym.sym == SDLK_BACKQUOTE || aEvent.key.keysym.sym == SDLK_ESCAPE )
-					gui->ShowConsole();
-
 				break;
 			}
 
