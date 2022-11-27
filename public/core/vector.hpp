@@ -249,12 +249,12 @@ struct ChVector
 	}
 
 	ChVector() :
-		apData( nullptr ), aSize( 0 )
+		apData( nullptr ), aSize( 0 ), aCapacity( 0 )
 	{
 	}
 
 	ChVector( uint32_t sSize ) :
-		apData( nullptr ), aSize( 0 )
+		apData( nullptr ), aSize( 0 ), aCapacity( 0 )
 	{
 		resize( sSize );
 	}
@@ -270,7 +270,7 @@ struct ChVector
 	// copying
 	void assign( const ChVector& other )
 	{
-		reserve( other.aSize );
+		resize( other.aSize );
 		std::move( other.begin(), other.end(), apData );
 	}
 
