@@ -19,17 +19,14 @@ CONVAR_CMD( assert_show_box, !gNoAssertBox )
 
 void Assert_Init()
 {
-    if ( Args_Find( "-no-asserts" ) )
-    {
-        gNoAsserts = true;
-        assert_show.SetValue( 0 );
-    }
+	gNoAsserts   = Args_Register( false, "Disable Asserts", "-no-asserts" );
+	gNoAssertBox = Args_Register( false, "Disable The Assert Window", "-no-assert-window" );
 
-    if ( Args_Find( "-no-assert-box" ) )
-    {
-        gNoAssertBox = true;
-        assert_show_box.SetValue( 0 );
-    }
+    if ( gNoAsserts )
+        assert_show.SetValue( 0 );
+
+    if ( gNoAssertBox )
+		assert_show_box.SetValue( 0 );
 }
 
 
