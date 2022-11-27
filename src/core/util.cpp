@@ -244,9 +244,21 @@ bool ToLong2( const std::string &value, long &out )
 }
 
 
+bool ToDouble3( const char* spValue, double& srOut )
+{
+	if ( !spValue )
+		return false;
+
+	char* end;
+	srOut = strtod( spValue, &end );
+
+	return end != spValue;
+}
+
+
 bool ToLong3( const char* spValue, long &srOut )
 {
-	if ( spValue == nullptr )
+	if ( !spValue )
 		return false;
 
 	char *end;
