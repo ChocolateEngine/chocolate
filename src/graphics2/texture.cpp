@@ -878,8 +878,7 @@ TextureVK* CreateBackBufferColor()
 	allocInfo.memoryTypeIndex = VK_GetMemoryType( memReqs.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT );
 
 	VK_CheckResult( vkAllocateMemory( VK_GetDevice(), &allocInfo, nullptr, &colorTex->aMemory ), "Failed to allocate color image memory!" );
-
-	vkBindImageMemory( VK_GetDevice(), colorTex->aImage, colorTex->aMemory, 0 );
+	VK_CheckResult( vkBindImageMemory( VK_GetDevice(), colorTex->aImage, colorTex->aMemory, 0 ), "Failed to bind back buffer color image memory" );
 
 	VkImageViewCreateInfo colorView;
 	colorView.sType                           = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
@@ -945,8 +944,7 @@ RenderTarget* CreateBackBuffer()
 	allocInfo.memoryTypeIndex = VK_GetMemoryType( memReqs.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT );
 
 	VK_CheckResult( vkAllocateMemory( VK_GetDevice(), &allocInfo, nullptr, &depthTex->aMemory ), "Failed to allocate depth image memory!" );
-
-	vkBindImageMemory( VK_GetDevice(), depthTex->aImage, depthTex->aMemory, 0 );
+	VK_CheckResult( vkBindImageMemory( VK_GetDevice(), depthTex->aImage, depthTex->aMemory, 0 ), "Failed to bind back buffer depth image memory" );
 
 	VkImageViewCreateInfo depthView;
 	depthView.sType                           = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
