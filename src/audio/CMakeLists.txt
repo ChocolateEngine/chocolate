@@ -101,3 +101,14 @@ else()
 	configure_file( "${STEAMAUDIO_DIR}/lib/linux-x64/libphonon.so" "${CH_BUILD}/libphonon.so" COPYONLY )
 endif()
 
+source_group(
+	TREE ${CMAKE_CURRENT_LIST_DIR}
+	PREFIX "Source Files"
+	FILES ${SRC_FILES}
+)
+
+source_group(
+	TREE ${CH_PUBLIC}
+	PREFIX "Public"
+	FILES ${PUBLIC_FILES}
+)

@@ -28,6 +28,24 @@ add_subdirectory( ${CH_SRC}/gui )
 add_subdirectory( ${CH_SRC}/input )
 add_subdirectory( ${CH_SRC}/physics )
 
+# Public Files
+# message( "Setting Up Source Groups for Public Folder" )
+# file(GLOB_RECURSE ALL_PUBLIC_FILES CONFIGURE_DEPENDS "${CH_PUBLIC}/*")
+# source_group(
+# 	TREE ${CH_PUBLIC}
+# 	PREFIX "Public"
+# 	FILES ${ALL_PUBLIC_FILES}
+# )
+
+# Thirdparty Files
+# message( "Setting Up Source Groups for Thirdparty Folder" )
+# file(GLOB_RECURSE THIRDPARTY_FILES CONFIGURE_DEPENDS "${CH_THIRDPARTY}/*")
+# source_group(
+# 	TREE ${CH_PUBLIC}
+# 	PREFIX "Thirdparty"
+# 	FILES ${CH_THIRDPARTY}
+# )
+
 # copy SDL2 over on windows
 
 if( MSVC )

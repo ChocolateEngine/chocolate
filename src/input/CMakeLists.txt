@@ -24,3 +24,15 @@ set_target_properties(
 	Input PROPERTIES
 	OUTPUT_NAME input
 )
+
+source_group(
+	TREE ${CMAKE_CURRENT_LIST_DIR}
+	PREFIX "Source Files"
+	FILES ${SRC_FILES}
+)
+
+source_group(
+	TREE ${CH_PUBLIC}
+	PREFIX "Public"
+	FILES ${PUBLIC_FILES}
+)

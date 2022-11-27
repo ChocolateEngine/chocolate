@@ -31,3 +31,15 @@ set_target_properties(
 
 target_precompile_headers( Core PUBLIC "${CH_PUBLIC}/core/core.h" )
 
+source_group(
+	TREE ${CMAKE_CURRENT_LIST_DIR}
+	PREFIX "Source Files"
+	FILES ${SRC_FILES}
+)
+
+source_group(
+	TREE ${CH_PUBLIC}
+	PREFIX "Public"
+	FILES ${PUBLIC_FILES}
+)
+

@@ -14,7 +14,6 @@ file(
 	${CH_PUBLIC}/core/*.h
 	${CH_PUBLIC}/graphics/*.h
 	${CH_PUBLIC}/graphics2/*.h
-	${CH_THIRDPARTY}/io/*.h
 )
 
 link_libraries(
@@ -29,4 +28,16 @@ add_dependencies( Graphics2 "Core" "ImGui" )
 set_target_properties(
 	GUI PROPERTIES
 	OUTPUT_NAME ch_gui
+)
+
+source_group(
+	TREE ${CMAKE_CURRENT_LIST_DIR}
+	PREFIX "Source Files"
+	FILES ${SRC_FILES}
+)
+
+source_group(
+	TREE ${CH_PUBLIC}
+	PREFIX "Public"
+	FILES ${PUBLIC_FILES}
 )
