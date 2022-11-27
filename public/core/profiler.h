@@ -1,7 +1,5 @@
 #pragma once
 
-#include <Tracy.hpp>
-
 // Macros for tracy because the constexpr ones dont want to work
 
 #ifndef TRACY_ENABLE
@@ -13,6 +11,8 @@
 #define PROF_SCOPE()
 
 #else
+
+#include <Tracy.hpp>
 
 #define PROF_SCOPE_BASE( varname, active ) static tracy::SourceLocationData TracyConcat(__tracy_source_location,__LINE__) { nullptr, __FUNCTION__,  __FILE__, (uint32_t)__LINE__, 0 }; tracy::ScopedZone varname( &TracyConcat(__tracy_source_location,__LINE__), active );
 #define PROF_SCOPE_NAMED_BASE( varname, name, active ) static constexpr tracy::SourceLocationData TracyConcat(__tracy_source_location,__LINE__) { name, __FUNCTION__,  __FILE__, (uint32_t)__LINE__, 0 }; tracy::ScopedZone varname( &TracyConcat(__tracy_source_location,__LINE__), active );
