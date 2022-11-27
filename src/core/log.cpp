@@ -1453,6 +1453,8 @@ CONCMD_VA( clear, "Clear Logging System History" )
 	gLogHistory.clear();
 	gLogHistory.shrink_to_fit();
 
+	Log_RunCallbacksChannelShown();
+
 	gLogMutex.unlock();
 }
 
