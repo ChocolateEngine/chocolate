@@ -13,11 +13,17 @@
 
 #ifdef NDEBUG
 constexpr bool        gEnableValidationLayers = false;
+bool                  gListExts               = false;
+
 constexpr char const* gpValidationLayers[]    = { 0 };
 bool                  vk_verbose              = false;
 bool                  vk_formatted            = false;
+
 #else
-constexpr bool        gEnableValidationLayers = true;
+
+bool                  gEnableValidationLayers = Args_Register( false, "Enable Vulkan Validation Layers Extensions", "-vk-valid" );
+bool                  gListExts               = Args_Register( false, "List All Vulkan Extensions, marking what ones are loaded", "-list-exts" );
+
 constexpr char const* gpValidationLayers[]    = { "VK_LAYER_KHRONOS_validation" };
 CONVAR( vk_verbose, 0 );
 CONVAR( vk_formatted, 1 );
@@ -253,7 +259,7 @@ bool VK_CheckDeviceExtensionSupport( VkPhysicalDevice sDevice )
 
 	std::set< std::string > requiredExtensions( gpDeviceExtensions, gpDeviceExtensions + ARR_SIZE( gpDeviceExtensions ) );
 
-	if ( Args_Find( "-list-exts" ) )
+	if ( gListExts )
 	{
 		Log_MsgF( gLC_Render, "Device Extensions: %zd\n", availableExtensions.size() );
 
@@ -314,7 +320,7 @@ std::vector< const char* > VK_GetSDL2Extensions()
 
 bool VK_CreateInstance()
 {
-	bool hasValidation = gEnableValidationLayers && Args_Find( "-vk-valid" );
+	bool hasValidation = gEnableValidationLayers;
 
 	if ( hasValidation )
 	{
@@ -352,7 +358,7 @@ bool VK_CreateInstance()
 	std::vector< VkExtensionProperties > extProps( extensionCount );
 	vkEnumerateInstanceExtensionProperties( NULL, &extensionCount, extProps.data() );
 
-	if ( Args_Find( "-list-exts" ) )
+	if ( gListExts )
 	{
 		Log_MsgF( gLC_Render, "%d Vulkan extensions available:\n", extensionCount );
 	
