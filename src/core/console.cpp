@@ -579,16 +579,22 @@ void Con_Update()
 		init = true;
 	}
 
-	for ( const auto& command: gQueue )
+	// commands could queue new commands to be run next update, so don't try to run those now
+	size_t queueSize = gQueue.size();
+	for ( size_t i = 0; i < queueSize; i++ )
 	{
-		if ( command == "" )
+		if ( gQueue[ 0 ] == "" )
 			continue;
 
-		Con_RunCommand( command );
+		Con_RunCommand( gQueue[ 0 ] );
+		vec_remove_index( gQueue, 0 );
 	}
 
-	// clear the queue
-	gQueue.clear();
+	// clear the queue, but make sure to not remove any new commands added to the queue from commands just ran
+	// for ( size_t i = 0; i < queueSize; i++ )
+	// {
+	// 	vec_remove_index( gQueue, 0 );
+	// }
 }
 
 
