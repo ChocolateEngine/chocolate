@@ -11,7 +11,7 @@
 #include <fstream>
 #include <mutex>
 
-static LOG_REGISTER_CHANNEL( Console, LogColor::Gray );
+LOG_REGISTER_CHANNEL( Console, LogColor::Gray );
 
 
 struct ConVarFlagData_t
@@ -129,17 +129,43 @@ void ConVar::Init( float defaultValue, ConVarFunc callback )
 	SetValue( aDefaultValue );
 }
 
+// 1 as a size_t
+// 1Ui64
+constexpr size_t one = 1;
+
 std::string ConVar::GetPrintMessage()
 {
+	// TODO: make a shared util function for some of this, smh
 	std::string msg = vstring( "%s%s %s", UNIX_CLR_DEFAULT, aName, GetValue().data() );
 
 	if ( GetValue() != aDefaultValue )
 		msg += vstring( " " UNIX_CLR_YELLOW "(%s default)", aDefaultValue.c_str() );
 
+	if ( aFlags )
+	{
+		msg += "\n\t" UNIX_CLR_DARK_GREEN;
+		// TODO: this could be better probably
+		// 3:30 am and very lazy programming here
+		for ( size_t i = 0, j = 0; i < gConVarFlags.size(); i++ )
+		{
+			if ( ( one << i ) > aFlags )
+				break;
+
+			if ( !( aFlags & ( one << i ) ) )
+				continue;
+
+			if ( j != 0 )
+				msg += " | ";
+
+			msg += Con_GetCvarFlagName( ( one << i ) );
+			j++;
+		}
+	}
+
 	if ( aDesc )
 		return msg + "\n\t" UNIX_CLR_CYAN + aDesc + UNIX_CLR_DEFAULT "\n\n";
 
-	return msg + "\n";
+	return msg + UNIX_CLR_DEFAULT "\n";
 }
 
 
@@ -467,7 +493,7 @@ void Con_PrintAllConVars(  )
 	for ( const auto& msg : ConVarMsgs )
 		Log_Msg( gConsoleChannel, msg.c_str() );
 
-	Log_Msg( gConsoleChannel, "\nConCommands:\n--------------------------------------\n" );
+	Log_Msg( gConsoleChannel, "--------------------------------------\nConCommands:\n--------------------------------------\n" );
 	for ( const auto& msg : ConCommandMsgs )
 		Log_Msg( gConsoleChannel, msg.c_str() );
 
@@ -1025,6 +1051,9 @@ CONCMD_DROP_VA( help, help_dropdown, 0, "If no args specified, Print all Registe
 	if ( args.empty() )
 	{
 		Con_PrintAllConVars();
+		Args_PrintRegistered();
+
+		Log_Msg( gConsoleChannel, "--------------------------------------\n" );
 		return;
 	}
 
@@ -1036,6 +1065,20 @@ CONCMD_DROP_VA( help, help_dropdown, 0, "If no args specified, Print all Registe
 	}
 	else
 	{
+		for ( u32 i = 0; i < Args_GetRegisteredCount(); i++ )
+		{
+			const Arg_t* arg = Args_GetRegisteredData( i );
+
+			for ( u32 n = 0; n < arg->aNames.size(); n++ )
+			{
+				if ( arg->aNames[ n ] == args[ 0 ] )
+				{
+					Log_Msg( gConsoleChannel, Args_GetRegisteredPrint( arg ).c_str() );
+					return;
+				}
+			}
+		}
+
 		Log_WarnF( gConsoleChannel, "Convar not found: %s\n", args[0].c_str() );
 	}
 }
@@ -1047,10 +1090,31 @@ void FindStr( bool andSearch, ConVarBase* cvar, const std::vector< std::string >
 	{
 		if ( strstr( cvar->GetName(), arg.c_str() ) )
 		{
-			results.push_back( "\t" + cvar->GetPrintMessage() );
+			results.push_back( cvar->GetPrintMessage() );
 
 			if ( !andSearch )
 				return;
+		}
+	}
+}
+
+
+static void FindStrArg( bool andSearch, const Arg_t* spArg, const std::vector< std::string >& args, std::vector< std::string >& results )
+{
+	if ( !spArg )
+		return;
+
+	for ( auto arg : args )
+	{
+		for ( u32 n = 0; n < spArg->aNames.size(); n++ )
+		{
+			if ( strstr( spArg->aNames[ n ], arg.c_str() ) )
+			{
+				results.push_back( Args_GetRegisteredPrint( spArg ) );
+
+				if ( !andSearch )
+					return;
+			}
 		}
 	}
 }
@@ -1060,6 +1124,7 @@ void CmdFind( bool andSearch, const std::vector< std::string >& args )
 {
 	std::vector< std::string > resultsCvar;
 	std::vector< std::string > resultsCCmd;
+	std::vector< std::string > resultsArgs;
 
 	ConVarBase* cvar = ConVarBase::spConVarBases;
 	while ( cvar )
@@ -1078,14 +1143,34 @@ void CmdFind( bool andSearch, const std::vector< std::string >& args )
 		cvar = cvar->apNext;
 	}
 
+	for ( u32 i = 0; i < Args_GetRegisteredCount(); i++ )
+	{
+		FindStrArg( andSearch, Args_GetRegisteredData( i ), args, resultsArgs );
+	}
+
 	Log_MsgF( gConsoleChannel, "Search Results: %zu\n", resultsCvar.size() + resultsCCmd.size() );
 
-	Log_MsgF( gConsoleChannel, "\nConVars: %zu\n--------------------------------------\n", resultsCvar.size() );
+	Log_MsgF( gConsoleChannel,
+		"\nConVars: %zu"
+		"\n--------------------------------------\n", resultsCvar.size() );
+
 	for ( const auto& msg : resultsCvar )
 		Log_Msg( gConsoleChannel, msg.c_str() );
 
-	Log_MsgF( gConsoleChannel, "\nConCommands: %zu\n--------------------------------------\n", resultsCCmd.size() );
+	Log_MsgF( gConsoleChannel,
+		"--------------------------------------\n"
+		"\nConCommands: %zu"
+		"\n--------------------------------------\n", resultsCCmd.size() );
+
 	for ( const auto& msg : resultsCCmd )
+		Log_Msg( gConsoleChannel, msg.c_str() );
+
+	Log_MsgF( gConsoleChannel,
+		"--------------------------------------\n"
+		"\nArguments: %zu"
+		"\n--------------------------------------\n", resultsArgs.size() );
+
+	for ( const auto& msg : resultsArgs )
 		Log_Msg( gConsoleChannel, msg.c_str() );
 
 	Log_Msg( gConsoleChannel, "--------------------------------------\n" );
