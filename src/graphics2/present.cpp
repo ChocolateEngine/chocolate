@@ -53,6 +53,28 @@ u32 VK_GetCommandIndex()
 }
 
 
+void VK_CheckFenceStatus()
+{
+	// VK_WaitForPresentQueue();
+
+	VkResult result = VK_SUCCESS;
+
+	result          = vkGetFenceStatus( VK_GetDevice(), gFences[ 0 ] );
+	Assert( result != VK_ERROR_DEVICE_LOST );
+
+	if ( result == VK_ERROR_DEVICE_LOST )
+		Log_Fatal( "fence 0 status device lost\n" );
+
+	result = vkGetFenceStatus( VK_GetDevice(), gFences[ 1 ] );
+	Assert( result != VK_ERROR_DEVICE_LOST );
+
+	if ( result == VK_ERROR_DEVICE_LOST )
+		Log_Fatal( "fence 1 status device lost\n" );
+
+	VK_CheckResult( vkDeviceWaitIdle( VK_GetDevice() ), "Failed waiting for device on fence status" );
+}
+
+
 void VK_CreateFences()
 {
 	gFences.resize( MAX_FRAMES_IN_FLIGHT );
@@ -176,7 +198,7 @@ void VK_EndOneTimeCommand( VkCommandBuffer c )
 	VK_WaitForGraphicsQueue();
 	gGraphicsMutex.lock();
 
-	vkQueueSubmit( VK_GetGraphicsQueue(), 1, &submitInfo, VK_NULL_HANDLE );
+	VK_CheckResult( vkQueueSubmit( VK_GetGraphicsQueue(), 1, &submitInfo, VK_NULL_HANDLE ), "Failed to Submit OneTimeCommand" );
 	gInGraphicsQueue = true;
 
 	VK_WaitForGraphicsQueue();
@@ -198,7 +220,10 @@ void VK_OneTimeCommand( std::function< void( VkCommandBuffer ) > sFunc )
 void VK_WaitForPresentQueue()
 {
 	if ( gInPresentQueue )
+	{
+		VK_CheckResult( vkDeviceWaitIdle( VK_GetDevice() ), "Failed waiting for device before present queue" );
 		VK_CheckResult( vkQueueWaitIdle( VK_GetPresentQueue() ), "Failed waiting for present queue" );
+	}
 
 	gInPresentQueue = false;
 }
@@ -270,7 +295,7 @@ void VK_RecordCommands()
 
 void VK_Present()
 {
-	vkWaitForFences( VK_GetDevice(), 1, &gFences[ gFrameIndex ], VK_TRUE, UINT64_MAX );
+	VK_CheckResult( vkWaitForFences( VK_GetDevice(), 1, &gFences[ gFrameIndex ], VK_TRUE, UINT64_MAX ), "Failed waiting for fences" );
 
 	u32      imageIndex;
 	VkResult res = vkAcquireNextImageKHR( VK_GetDevice(), VK_GetSwapchain(), UINT64_MAX, gImageAvailableSemaphores[ gFrameIndex ], VK_NULL_HANDLE, &imageIndex );
@@ -290,7 +315,7 @@ void VK_Present()
 
 	if ( gInFlightFences[ imageIndex ] != VK_NULL_HANDLE )
 	{
-		vkWaitForFences( VK_GetDevice(), 1, &gInFlightFences[ imageIndex ], VK_TRUE, UINT64_MAX );
+		VK_CheckResult( vkWaitForFences( VK_GetDevice(), 1, &gInFlightFences[ imageIndex ], VK_TRUE, UINT64_MAX ), "Failed waiting for in-flight fences" );
 	}
 
 	gInFlightFences[ imageIndex ] = gFences[ gFrameIndex ];
@@ -308,7 +333,7 @@ void VK_Present()
 	submitInfo.signalSemaphoreCount = ARR_SIZE( signalSemaphores );
 	submitInfo.pSignalSemaphores    = signalSemaphores;
 
-	vkResetFences( VK_GetDevice(), 1, &gFences[ gFrameIndex ] );
+	VK_CheckResult( vkResetFences( VK_GetDevice(), 1, &gFences[ gFrameIndex ] ), "Failed to Reset Fences" );
 
 	VK_CheckResult( vkQueueSubmit( VK_GetGraphicsQueue(), 1, &submitInfo, gFences[ gFrameIndex ] ), "Failed to submit draw command buffer!" );
 
@@ -328,7 +353,7 @@ void VK_Present()
 	if ( res == VK_ERROR_OUT_OF_DATE_KHR || res == VK_SUBOPTIMAL_KHR )
 	{
 		printf( "VK_Reset - vkQueuePresentKHR\n" );
-		vkDeviceWaitIdle( VK_GetDevice() );
+		VK_CheckResult( vkDeviceWaitIdle( VK_GetDevice() ), "Failed to wait for device to be idle" );
 		VK_Reset();
 	}
 	else if ( res != VK_SUCCESS && res != VK_SUBOPTIMAL_KHR )
@@ -340,6 +365,11 @@ void VK_Present()
 
 	gInPresentQueue = true;
 
-	gFrameIndex = ( gFrameIndex + 1 ) % MAX_FRAMES_IN_FLIGHT;
+	gFrameIndex     = ( gFrameIndex + 1 ) % MAX_FRAMES_IN_FLIGHT;
+
+	// TEMP
+	// VK_CheckFenceStatus();
+	// VK_WaitForPresentQueue();
 }
+
 

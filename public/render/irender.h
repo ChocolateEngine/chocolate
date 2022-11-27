@@ -304,8 +304,9 @@ enum EAttachmentStoreOp
 using ERenderResetFlags = int;
 enum : ERenderResetFlags
 {
-	ERenderResetFlags_None = 0,
-	ERenderResetFlags_MSAA = ( 1 << 0 ),  // MSAA was toggled, Recreate RenderPass and shaders
+	ERenderResetFlags_None   = 0,
+	ERenderResetFlags_Resize = ( 1 << 0 ),  // A Window Resize Occurred
+	ERenderResetFlags_MSAA   = ( 1 << 1 ),  // MSAA was toggled, Recreate RenderPass and shaders
 };
 
 
@@ -635,21 +636,28 @@ class IRender : public BaseSystem
 	// General Purpose Functions
 	// --------------------------------------------------------------------------------------------
 
-	virtual bool        InitImGui( Handle shRenderPass )                                                         = 0;
-	virtual void        ShutdownImGui()                                                                          = 0;
+	virtual bool        InitImGui( Handle shRenderPass )                                                                           = 0;
+	virtual void        ShutdownImGui()                                                                                            = 0;
 
-	virtual SDL_Window* GetWindow()                                                                              = 0;
-	virtual void        GetSurfaceSize( int& srWidth, int& srHeight )                                            = 0;
+	virtual SDL_Window* GetWindow()                                                                                                = 0;
+	virtual void        GetSurfaceSize( int& srWidth, int& srHeight )                                                              = 0;
 
 	// --------------------------------------------------------------------------------------------
 	// Buffers
 	// --------------------------------------------------------------------------------------------
 
-	virtual Handle      CreateBuffer( const char* spName, u32 sSize, EBufferFlags sBufferFlags, EBufferMemory sBufferMem ) = 0;
-	virtual Handle      CreateBuffer( u32 sSize, EBufferFlags sBufferFlags, EBufferMemory sBufferMem )           = 0;
-	virtual void        MemWriteBuffer( Handle buffer, u32 sSize, void* spData )                                 = 0;
-	virtual void        MemCopyBuffer( Handle shSrc, Handle shDst, u32 sSize )                                   = 0;
-	virtual void        DestroyBuffer( Handle buffer )                                                           = 0;
+	virtual Handle      CreateBuffer( const char* spName, u32 sSize, EBufferFlags sBufferFlags, EBufferMemory sBufferMem )         = 0;
+	virtual Handle      CreateBuffer( u32 sSize, EBufferFlags sBufferFlags, EBufferMemory sBufferMem )                             = 0;
+	virtual void        DestroyBuffer( Handle buffer )                                                                             = 0;
+
+	// Returns the Amount Read/Written
+	virtual u32         BufferWrite( Handle buffer, u32 sSize, void* spData )                                                      = 0;
+
+	// Read data from a buffer
+	virtual u32         BufferRead( Handle buffer, u32 sSize, void* spData )                                                       = 0;
+
+	// Copy one buffer to another buffer, useful for copying between host and device memory
+	virtual u32         BufferCopy( Handle shSrc, Handle shDst, u32 sSize )                                                        = 0;
 
 	// --------------------------------------------------------------------------------------------
 	// Textures
@@ -781,5 +789,5 @@ class IRender : public BaseSystem
 
 
 #define IRENDER_NAME "Render"
-#define IRENDER_HASH 7
+#define IRENDER_VER 8
 

@@ -293,6 +293,8 @@ void                                  VK_WaitForGraphicsQueue();
 void                                  VK_RecordCommands();
 void                                  VK_Present();
 
+void                                  VK_CheckFenceStatus();
+
 // --------------------------------------------------------------------------------------
 // Shader System
 

@@ -19,7 +19,13 @@ static ResourceList< ShaderVK >         gShaders;
 static ResourceList< VkPipelineLayout > gPipelineLayouts;
 
 
-CONVAR( r_sampled_textures, 0, CVARF_ARCHIVE );
+CONVAR_CMD_EX( r_sampled_textures, 0, CVARF_ARCHIVE, "Enable/Disable MSAA on Textures, this is VERY EXPENSIVE!" )
+{
+	// if ( !VK_UseMSAA() )
+	//	return;
+
+	// VK_Reset( ERenderResetFlags_MSAA );
+}
 
 
 void VK_BindDescSets()

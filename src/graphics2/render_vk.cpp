@@ -18,8 +18,9 @@ LOG_REGISTER_CHANNEL2( Render, LogColor::Cyan );
 LOG_REGISTER_CHANNEL( Vulkan, LogColor::DarkYellow );
 LOG_REGISTER_CHANNEL( Validation, LogColor::DarkYellow );
 
-int                                                      gWidth   = 1280;
-int                                                      gHeight  = 720;
+int                                                      gWidth     = Args_RegisterF( 1280, "Width of the main window", 2, "-width", "-w" );
+int                                                      gHeight    = Args_RegisterF( 720, "Height of the main window", 2, "-height", "-h" );
+static bool                                              gMaxWindow = Args_Register( "Maximize the main window", "-max" );
 
 SDL_Window*                                              gpWindow = nullptr;
 
@@ -523,6 +524,16 @@ void VK_memcpy( VkDeviceMemory sBufferMemory, VkDeviceSize sSize, const void* sp
 }
 
 
+// Copies memory from the GPU to the host
+void VK_memread( VkDeviceMemory sBufferMemory, VkDeviceSize sSize, void* spData )
+{
+	void* pData;
+	VK_CheckResult( vkMapMemory( VK_GetDevice(), sBufferMemory, 0, sSize, 0, &pData ), "Vulkan: Failed to map memory" );
+	memcpy( spData, pData, (size_t)sSize );
+	vkUnmapMemory( VK_GetDevice(), sBufferMemory );
+}
+
+
 bool VK_UseMSAA()
 {
 	return r_msaa;
@@ -900,16 +911,13 @@ public:
 
 	bool Init() override
 	{
-		gWidth = Args_GetInt( "-w", gWidth ); 
-		gHeight = Args_GetInt( "-h", gHeight ); 
-
 		// this really should not be here of all things
 		if ( SDL_Init( SDL_INIT_VIDEO | SDL_INIT_EVENTS | SDL_INIT_AUDIO ) != 0 )
 			Log_Fatal( "Unable to initialize SDL2!" );
 
 		int flags = SDL_WINDOW_VULKAN | SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE;
 
-		if ( Args_Find( "-max" ) )
+		if ( gMaxWindow )
 			flags |= SDL_WINDOW_MAXIMIZED;
 
 		gpWindow = SDL_CreateWindow( "Chocolate Engine - Compiled on " __DATE__, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
@@ -1032,44 +1040,6 @@ public:
 		return CreateBuffer( nullptr, sSize, sBufferFlags, sBufferMem );
 	}
 
-	virtual void MemWriteBuffer( Handle buffer, u32 sSize, void* spData ) override
-	{
-		BufferVK* bufVK = gBufferHandles.Get( buffer );
-
-		if ( !bufVK )
-		{
-			Log_ErrorF( gLC_Render, "MemWriteBuffer: Failed to find Buffer (Handle: %zd)\n", buffer );
-			return;
-		}
-
-		VK_memcpy( bufVK->aMemory, sSize, spData );
-	}
-
-	virtual void MemCopyBuffer( Handle shSrc, Handle shDst, u32 sSize ) override
-	{
-		BufferVK* bufSrc = gBufferHandles.Get( shSrc );
-		if ( !bufSrc )
-		{
-			Log_Error( gLC_Render, "MemCopyBuffer: Failed to find Source Buffer\n" );
-			return;
-		}
-
-		BufferVK* bufDst = gBufferHandles.Get( shDst );
-		if ( !bufDst )
-		{
-			Log_Error( gLC_Render, "MemCopyBuffer: Failed to find Dest Buffer\n" );
-			return;
-		}
-		
-		VkBufferCopy copyRegion{};
-		copyRegion.srcOffset = 0;  // Optional
-		copyRegion.dstOffset = 0;  // Optional
-		copyRegion.size      = sSize;
-
-		VK_OneTimeCommand( [ & ]( VkCommandBuffer c )
-		                  { vkCmdCopyBuffer( c, bufSrc->aBuffer, bufDst->aBuffer, 1, &copyRegion ); } );
-	}
-
 	void DestroyBuffer( Handle buffer ) override
 	{
 		BufferVK* bufVK = gBufferHandles.Get( buffer );
@@ -1083,6 +1053,87 @@ public:
 		VK_DestroyBuffer( bufVK->aBuffer, bufVK->aMemory );
 
 		gBufferHandles.Remove( buffer );
+	}
+
+	virtual u32 BufferWrite( Handle buffer, u32 sSize, void* spData ) override
+	{
+		BufferVK* bufVK = gBufferHandles.Get( buffer );
+
+		if ( !bufVK )
+		{
+			Log_ErrorF( gLC_Render, "BufferWrite: Failed to find Buffer (Handle: %zd)\n", buffer );
+			return 0;
+		}
+
+		if ( sSize > bufVK->aSize )
+		{
+			Log_WarnF( gLC_Render, "BufferWrite: Trying to write more data than buffer size can store (data size: %zd > buffer size: %zd)\n", sSize, bufVK->aSize );
+			VK_memcpy( bufVK->aMemory, sSize, spData );
+			return sSize;
+		}
+
+		VK_memcpy( bufVK->aMemory, bufVK->aSize, spData );
+		return bufVK->aSize;
+	}
+
+	virtual u32 BufferRead( Handle buffer, u32 sSize, void* spData ) override
+	{
+		BufferVK* bufVK = gBufferHandles.Get( buffer );
+
+		if ( !bufVK )
+		{
+			Log_ErrorF( gLC_Render, "BufferRead: Failed to find Buffer (Handle: %zd)\n", buffer );
+			return 0;
+		}
+
+		if ( sSize > bufVK->aSize )
+		{
+			Log_WarnF( gLC_Render, "BufferRead: Trying to write more data than buffer size can store (data size: %zd > buffer size: %zd)\n", sSize, bufVK->aSize );
+			VK_memread( bufVK->aMemory, sSize, spData );
+			return sSize;
+		}
+
+		VK_memread( bufVK->aMemory, bufVK->aSize, spData );
+		return bufVK->aSize;
+	}
+
+	virtual u32 BufferCopy( Handle shSrc, Handle shDst, u32 sSize ) override
+	{
+		BufferVK* bufSrc = gBufferHandles.Get( shSrc );
+		if ( !bufSrc )
+		{
+			Log_Error( gLC_Render, "BufferCopy: Failed to find Source Buffer\n" );
+			return 0;
+		}
+
+		BufferVK* bufDst = gBufferHandles.Get( shDst );
+		if ( !bufDst )
+		{
+			Log_Error( gLC_Render, "BufferCopy: Failed to find Dest Buffer\n" );
+			return 0;
+		}
+
+		u32 size = sSize;
+
+		if ( size > bufSrc->aSize )
+		{
+			size = bufSrc->aSize;
+		}
+
+		if ( size > bufDst->aSize )
+		{
+			size = bufDst->aSize;
+		}
+		
+		VkBufferCopy copyRegion{};
+		copyRegion.srcOffset = 0;  // Optional
+		copyRegion.dstOffset = 0;  // Optional
+		copyRegion.size      = size;
+
+		VK_OneTimeCommand( [ & ]( VkCommandBuffer c )
+		                  { vkCmdCopyBuffer( c, bufSrc->aBuffer, bufDst->aBuffer, 1, &copyRegion ); } );
+
+		return size;
 	}
 
 	// --------------------------------------------------------------------------------------------
@@ -1426,6 +1477,9 @@ public:
 			VK_UpdateImageSets();
 
 		gNeedTextureUpdate = false;
+
+		// verify fence status
+		VK_CheckFenceStatus();
 	}
 
 	void Present() override
@@ -1560,6 +1614,8 @@ public:
 		}
 
 		vkCmdEndRenderPass( c );
+
+		VK_CheckFenceStatus();
 	}
 
 	void DrawImGui( ImDrawData* spDrawData, Handle cmd ) override
@@ -1757,6 +1813,8 @@ public:
 
 		vkCmdBindDescriptorSets( c, bindPoint, layout, 0, sSetCount, vkDescSets, 0, nullptr );
 		CH_STACK_FREE( vkDescSets );
+
+		VK_CheckFenceStatus();
 	}
 
 	void CmdBindVertexBuffers( Handle cmd, u32 sFirstBinding, u32 sCount, const Handle* spBuffers, const size_t* spOffsets ) override
@@ -1854,7 +1912,7 @@ public:
 static RenderVK gRenderer;
 
 static ModuleInterface_t gInterfaces[] = {
-	{ &gRenderer, IRENDER_NAME, IRENDER_HASH }
+	{ &gRenderer, IRENDER_NAME, IRENDER_VER }
 };
 
 extern "C"

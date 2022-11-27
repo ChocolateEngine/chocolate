@@ -73,7 +73,7 @@ endif()
 source_group(
 	TREE ${CMAKE_CURRENT_LIST_DIR}
 	PREFIX "Source Files"
-	FILES ${SRC_FILES}
+	FILES ${RENDER_VK_FILES}
 )
 
 source_group(
