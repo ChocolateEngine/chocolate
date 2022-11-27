@@ -841,12 +841,12 @@ void Log_SplitStringColors( LogColor sMainColor, std::string_view sBuffer, ChVec
 
 
 // print to system console
-void Log_SysPrint( LogColor sMainColor, const std::string& srBuffer, FILE* spStream )
+void Log_SysPrint( LogColor sMainColor, const Log& srLog, FILE* spStream )
 {
 #ifdef _WIN32
 	// on win32, we need to split up the string by colors
 	ChVector< LogColorBuf_t > colorList;
-	Log_SplitStringColors( sMainColor, srBuffer, colorList );
+	Log_SplitStringColors( sMainColor, srLog.aFormatted, colorList );
 
 	for ( LogColorBuf_t& colorBuffer : colorList )
 	{
@@ -854,20 +854,17 @@ void Log_SysPrint( LogColor sMainColor, const std::string& srBuffer, FILE* spStr
 		fprintf( spStream, "%*.*s", colorBuffer.aLen, colorBuffer.aLen, colorBuffer.apStr );
 	}
 
-#if 0
 	if ( IsDebuggerPresent() )
 	{
-		// doesn't work?
-		// http://unixwiz.net/techtips/outputdebugstring.html
-		OutputDebugStringA( srBuffer.c_str() );
+		std::string debugString = FormatLogNoColors( srLog );
+		OutputDebugStringA( debugString.c_str() );
 	}
-#endif
 
 	Log_SetColor( LogColor::Default );
 	fflush( spStream );
 #else
 	Log_SetColor( sMainColor );
-	fputs( srBuffer.c_str(), spStream );
+	fputs( srLog.aFormatted.c_str(), spStream );
 	Log_SetColor( LogColor::Default );
 	fflush( spStream );
 #endif
@@ -901,7 +898,7 @@ void Log_AddLogInternal( Log& log )
             case LogType::Normal:
             case LogType::Input:
             case LogType::Raw:
-				Log_SysPrint( channel->aColor, log.aFormatted, stdout );
+				Log_SysPrint( channel->aColor, log, stdout );
                 break;
 
             case LogType::Dev:
@@ -911,19 +908,19 @@ void Log_AddLogInternal( Log& log )
 				if ( !Log_DevLevelVisible( log ) )
                     break;
 
-				Log_SysPrint( channel->aColor, log.aFormatted, stdout );
+				Log_SysPrint( channel->aColor, log, stdout );
                 break;
 
             case LogType::Warning:
-				Log_SysPrint( LOG_COLOR_WARNING, log.aFormatted, stdout );
+				Log_SysPrint( LOG_COLOR_WARNING, log, stdout );
                 break;
 
             case LogType::Error:
-				Log_SysPrint( LOG_COLOR_ERROR, log.aFormatted, stderr );
+				Log_SysPrint( LOG_COLOR_ERROR, log, stderr );
                 break;
 
             case LogType::Fatal:
-				Log_SysPrint( LOG_COLOR_ERROR, log.aFormatted, stderr );
+				Log_SysPrint( LOG_COLOR_ERROR, log, stderr );
 
                 std::string messageBoxTitle;
 				vstring( messageBoxTitle, "[%s] Fatal Error", channel->aName.data() );
