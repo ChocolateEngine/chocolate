@@ -187,10 +187,10 @@ bool VK_CheckValidationLayerSupport()
 {
 	bool         layerFound = false;
 	unsigned int layerCount;
-	vkEnumerateInstanceLayerProperties( &layerCount, NULL );
+	VK_CheckResult( vkEnumerateInstanceLayerProperties( &layerCount, NULL ), "Failed to enumerate instance layer properties" );
 
 	std::vector< VkLayerProperties > availableLayers( layerCount );
-	vkEnumerateInstanceLayerProperties( &layerCount, availableLayers.data() );
+	VK_CheckResult( vkEnumerateInstanceLayerProperties( &layerCount, availableLayers.data() ), "Failed to enumerate instance layer properties" );
 
 	for ( auto layerName : gpValidationLayers )
 	{
@@ -373,8 +373,18 @@ bool VK_CreateInstance()
 
 	VK_CheckResult( vkCreateInstance( &createInfo, NULL, &gInstance ), "Failed to create instance!" );
 
-	if ( hasValidation && VK_CreateValidationLayers() != VK_SUCCESS )
-		Log_Error( gLC_Render, "Failed to create validation layers!" );
+	if ( hasValidation )
+	{
+		VkResult result = VK_CreateValidationLayers();
+		if ( result == VK_SUCCESS )
+		{
+			Log_Dev( gLC_Render, 1, "Successfully Created Validation Layers\n" );
+		}
+		else
+		{
+			Log_ErrorF( gLC_Render, "Failed to Create Validation Layers: %s\n", VKString( result ) );
+		}
+	}
 	
 	return true;
 }
@@ -415,6 +425,9 @@ void VK_FindQueueFamilies( VkPhysicalDevice sDevice, u32* spGraphics, u32* spPre
 	std::vector< VkQueueFamilyProperties > queueFamilies( queueFamilyCount );
 	vkGetPhysicalDeviceQueueFamilyProperties( sDevice, &queueFamilyCount, queueFamilies.data() );  // Logic to find queue family indices to populate struct with
 
+	// *spPresent  = UINT32_MAX;
+	// *spGraphics = UINT32_MAX;
+
 	u32 i = 0;
 	for ( const auto& queueFamily : queueFamilies )
 	{
@@ -430,7 +443,7 @@ void VK_FindQueueFamilies( VkPhysicalDevice sDevice, u32* spGraphics, u32* spPre
 			*spGraphics = i;
 		}
 
-		// if ( indices.Complete() )
+		// if ( *spGraphics != UINT32_MAX && *spPresent != UINT32_MAX )
 		// 	break;
 		return;
 
@@ -573,13 +586,14 @@ void VK_SetupPhysicalDevice()
 	gPhysicalDevice      = VK_NULL_HANDLE;
 	uint32_t deviceCount = 0;
 
-	vkEnumeratePhysicalDevices( gInstance, &deviceCount, NULL );
+	VK_CheckResult( vkEnumeratePhysicalDevices( gInstance, &deviceCount, NULL ), "Failed to Enumerate Physical Devices" );
 	if ( deviceCount == 0 )
 	{
 		Log_Fatal( gLC_Render, "Failed to find GPUs with Vulkan support!" );
 	}
+
 	std::vector< VkPhysicalDevice > devices( deviceCount );
-	vkEnumeratePhysicalDevices( gInstance, &deviceCount, devices.data() );
+	VK_CheckResult( vkEnumeratePhysicalDevices( gInstance, &deviceCount, devices.data() ), "Failed to Enumerate Physical Devices" );
 
 	for ( const auto& device : devices )
 	{
