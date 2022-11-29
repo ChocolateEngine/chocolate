@@ -5,6 +5,10 @@
 
 #include "imgui/imgui_impl_sdl.h"
 
+#if CH_USE_MIMALLOC
+  #include "mimalloc-new-delete.h"
+#endif
+
 GuiSystem* gui = new GuiSystem;
 
 ImFont* gBuiltInFont = nullptr;

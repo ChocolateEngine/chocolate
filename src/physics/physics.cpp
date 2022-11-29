@@ -2,6 +2,10 @@
 #include "physics_object.h"
 #include "physics_debug.h"
 
+#if CH_USE_MIMALLOC
+  #include "mimalloc-new-delete.h"
+#endif
+
 
 LOG_REGISTER_CHANNEL( Physics, LogColor::DarkGreen );
 
@@ -443,6 +447,8 @@ CONVAR( phys_dbg_wireframe, 1 );
 
 void PhysicsEnvironment::Simulate( float sDT )
 {
+	PROF_SCOPE();
+
 	// um
 	// We simulate the physics world in discrete time steps. 60 Hz is a good rate to update the physics system.
 	// const float cDeltaTime = 1.0f / 60.0f;

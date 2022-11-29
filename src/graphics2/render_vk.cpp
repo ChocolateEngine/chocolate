@@ -5,14 +5,37 @@
 #include "core/systemmanager.h"
 #include "util.h"
 
-#include "render/irender.h"
-#include "render_vk.h"
-
  #include "imgui_impl_sdl.h"
  #include "imgui_impl_vulkan.h"
 
 #include <unordered_map>
 #include <filesystem>
+
+#if CH_USE_MIMALLOC
+  #include "mimalloc-new-delete.h"
+#endif
+
+LOG_REGISTER_CHANNEL2( VMA, LogColor::Cyan );
+
+#define VMA_IMPLEMENTATION
+
+#ifdef _WIN32
+  #define WIN32_LEAN_AND_MEAN 1
+#endif
+
+// turn on for extra debugging
+#if 0
+  #define VMA_DEBUG_MARGIN                                  16
+  #define VMA_DEBUG_DETECT_CORRUPTION                       1
+  #define VMA_DEBUG_DONT_EXCEED_MAX_MEMORY_ALLOCATION_COUNT 1
+  #define VMA_HEAVY_ASSERT                                  Assert
+
+  #define VMA_DEBUG_LOG( format, ... )                      Log_DevF( gLC_VMA, 2, format "\n", __VA_ARGS__ )
+#endif
+
+#define VMA_ASSERT Assert
+
+#include "render_vk.h"
 
 LOG_REGISTER_CHANNEL2( Render, LogColor::Cyan );
 LOG_REGISTER_CHANNEL( Vulkan, LogColor::DarkYellow );
@@ -30,7 +53,7 @@ static VkCommandPool                                     gPrimary;
 // static std::unordered_map< ImageInfo*, VkDescriptorSet > gImGuiTextures;
 static std::vector< std::vector< char > >                gFontData;
 
-static std::vector< VkBuffer >                           gBuffers;
+// static std::vector< VkBuffer >                           gBuffers;
 
 ResourceList< BufferVK >                                 gBufferHandles;
 ResourceList< TextureVK* >                               gTextureHandles;
@@ -47,6 +70,13 @@ static Render_OnReset_t                                  gpOnResetFunc      = nu
 
 bool                                                     gNeedTextureUpdate = false;
 extern std::vector< TextureVK* >                         gTextures;
+
+VmaAllocator                                             gVmaAllocator;
+
+// tracy contexts
+#if TRACY_ENABLE
+static std::unordered_map< VkCommandBuffer, TracyVkCtx > gTracyCtx;
+#endif
 
 
 CONVAR_CMD_EX( r_msaa, 1, CVARF_ARCHIVE, "Enable/Disable MSAA Globally" )
@@ -140,6 +170,35 @@ const char* VKString( VkResult sResult )
 }
 
 
+void VK_CheckCorruption()
+{
+	VkResult result = vmaCheckCorruption( gVmaAllocator, 0 );
+
+	if ( result != VK_SUCCESS )
+		Log_FatalF( gLC_Render, "Vulkan Error: Corruption Detected: %s\n", VKString( result ) );
+}
+
+
+void VK_DumpCheckpoints()
+{
+#if NV_CHECKPOINTS
+	if ( !pfnGetQueueCheckpointDataNV )
+		return;
+
+	u32 checkpointCount = 0;
+	pfnGetQueueCheckpointDataNV( VK_GetGraphicsQueue(), &checkpointCount, 0 );
+
+	ChVector< VkCheckpointDataNV > checkpoints( checkpointCount );  // { VK_STRUCTURE_TYPE_CHECKPOINT_DATA_NV }
+	pfnGetQueueCheckpointDataNV( VK_GetGraphicsQueue(), &checkpointCount, checkpoints.data() );
+
+	for ( auto& cp : checkpoints )
+	{
+		Log_DevF( gLC_Render, 1, "NV CHECKPOINT: stage %08x name %s\n", cp.stage, cp.pCheckpointMarker ? static_cast< const char* >( cp.pCheckpointMarker ) : "??" );
+	}
+#endif
+}
+
+
 void VK_CheckResult( VkResult sResult, char const* spMsg )
 {
 	if ( sResult == VK_SUCCESS )
@@ -158,6 +217,7 @@ void VK_CheckResult( VkResult sResult )
 }
 
 
+// Non-Fatal Version
 void VK_CheckResultE( VkResult sResult, char const* spMsg )
 {
 	if ( sResult == VK_SUCCESS )
@@ -533,22 +593,24 @@ VkSamplerAddressMode VK_ToVkSamplerAddress( ESamplerAddressMode mode )
 
 
 // Copies memory to the GPU.
-void VK_memcpy( VkDeviceMemory sBufferMemory, VkDeviceSize sSize, const void* spData )
+void VK_memcpy( VmaAllocation sAllocation, VkDeviceSize sSize, const void* spData )
 {
-	void* pData;
-	VK_CheckResult( vkMapMemory( VK_GetDevice(), sBufferMemory, 0, sSize, 0, &pData ), "Vulkan: Failed to map memory" );
+	// TODO: add an option that doesn't need the size here
+	void* pData = nullptr;
+	VK_CheckResult( vmaMapMemory( gVmaAllocator, sAllocation, &pData ), "Failed to map memory" );
 	memcpy( pData, spData, (size_t)sSize );
-	vkUnmapMemory( VK_GetDevice(), sBufferMemory );
+	vmaUnmapMemory( gVmaAllocator, sAllocation );
 }
 
 
 // Copies memory from the GPU to the host
-void VK_memread( VkDeviceMemory sBufferMemory, VkDeviceSize sSize, void* spData )
+void VK_memread( VmaAllocation sAllocation, VkDeviceSize sSize, void* spData )
 {
-	void* pData;
-	VK_CheckResult( vkMapMemory( VK_GetDevice(), sBufferMemory, 0, sSize, 0, &pData ), "Vulkan: Failed to map memory" );
+	// TODO: add an option that doesn't need the size here
+	void* pData = nullptr;
+	VK_CheckResult( vmaMapMemory( gVmaAllocator, sAllocation, &pData ), "Failed to map memory" );
 	memcpy( spData, pData, (size_t)sSize );
-	vkUnmapMemory( VK_GetDevice(), sBufferMemory );
+	vmaUnmapMemory( gVmaAllocator, sAllocation );
 }
 
 
@@ -626,48 +688,51 @@ VkCommandPool& VK_GetPrimaryCommandPool()
 }
 
 
-void VK_CreateBuffer( VkBuffer& srBuffer, VkDeviceMemory& srBufferMem, u32 sBufferSize, VkBufferUsageFlags sUsage, VkMemoryPropertyFlags sMemBits )
+#if VMA_STATS_STRING_ENABLED
+void VK_PrintVMAStats()
+{
+	char* statsString = nullptr;
+	vmaBuildStatsString( gVmaAllocator, &statsString, true );
+
+	// lol
+	Log_Msg( gLC_VMA, statsString );
+	Log_Msg( gLC_VMA, "\n" );
+
+	vmaFreeStatsString( gVmaAllocator, statsString );
+}
+
+
+CONCMD( r_vma_print_stats )
+{
+	VK_PrintVMAStats();
+}
+#endif
+
+
+void VK_CreateBuffer( BufferVK* spBuffer, VkBufferUsageFlags sUsage, VkMemoryPropertyFlags sMemBits )
 {
 	PROF_SCOPE();
 
 	// create a vertex buffer
-	VkBufferCreateInfo aBufferInfo{ VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
-	aBufferInfo.size        = sBufferSize;
-	aBufferInfo.usage       = sUsage;
-	aBufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+	VkBufferCreateInfo bufferInfo{ VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
+	bufferInfo.size                   = spBuffer->aSize;
+	bufferInfo.usage                  = sUsage;
+	bufferInfo.sharingMode            = VK_SHARING_MODE_EXCLUSIVE;
 
-	if ( _HEAPOK != _heapchk() )
-	{
-		printf( "A}{Sdk0iawjd\n" );
-	}
+	VmaAllocationCreateInfo allocInfo = {};
+	allocInfo.usage                   = VMA_MEMORY_USAGE_AUTO;
+	allocInfo.memoryTypeBits          = sMemBits;
 
-	VK_CheckResult( vkCreateBuffer( VK_GetDevice(), &aBufferInfo, nullptr, &srBuffer ), "Failed to create buffer" );
+	if ( sMemBits & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT || sMemBits & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT )
+		allocInfo.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
 
-	// allocate memory for the vertex buffer
-	VkMemoryRequirements aMemReqs;
-	vkGetBufferMemoryRequirements( VK_GetDevice(), srBuffer, &aMemReqs );
-
-	VkMemoryAllocateInfo aMemAllocInfo{ VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO };
-	aMemAllocInfo.allocationSize  = aMemReqs.size;
-	aMemAllocInfo.memoryTypeIndex = VK_GetMemoryType( aMemReqs.memoryTypeBits, sMemBits );
-
-	if ( _HEAPOK != _heapchk() )
-	{
-		printf( "A}{Sdk0iawjd\n" );
-	}
-
-	VK_CheckResult( vkAllocateMemory( VK_GetDevice(), &aMemAllocInfo, nullptr, &srBufferMem ), "Failed to allocate buffer memory" );
-
-	// bind the vertex buffer to the device memory
-	VK_CheckResult( vkBindBufferMemory( VK_GetDevice(), srBuffer, srBufferMem, 0 ), "Failed to bind buffer" );
-
-	gBuffers.push_back( srBuffer );
+	VK_CheckResult( vmaCreateBuffer( gVmaAllocator, &bufferInfo, &allocInfo, &spBuffer->aBuffer, &spBuffer->aAllocation, nullptr ), "Failed to create buffer" );
 }
 
 
-void VK_CreateBuffer( const char* spName, VkBuffer& srBuffer, VkDeviceMemory& srBufferMem, u32 sBufferSize, VkBufferUsageFlags sUsage, VkMemoryPropertyFlags sMemBits )
+void VK_CreateBuffer( const char* spName, BufferVK* spBuffer, VkBufferUsageFlags sUsage, VkMemoryPropertyFlags sMemBits )
 {
-	VK_CreateBuffer( srBuffer, srBufferMem, sBufferSize, sUsage, sMemBits );
+	VK_CreateBuffer( spBuffer, sUsage, sMemBits );
 
 #ifdef _DEBUG
 	if ( spName == nullptr )
@@ -680,7 +745,7 @@ void VK_CreateBuffer( const char* spName, VkBuffer& srBuffer, VkDeviceMemory& sr
 			VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,  // sType
 			NULL,                                                // pNext
 			VK_OBJECT_TYPE_BUFFER,                               // objectType
-			(uint64_t)srBuffer,                                  // objectHandle
+			(uint64_t)spBuffer->aBuffer,                         // objectHandle
 			spName,                                              // pObjectName
 		};
 
@@ -690,18 +755,22 @@ void VK_CreateBuffer( const char* spName, VkBuffer& srBuffer, VkDeviceMemory& sr
 }
 
 
-void VK_DestroyBuffer( VkBuffer& srBuffer, VkDeviceMemory& srBufferMem )
+void VK_DestroyBuffer( BufferVK* spBuffer )
 {
 	PROF_SCOPE();
 
-	if ( srBuffer )
+	if ( !spBuffer )
+		return;
+
+	if ( spBuffer->aBuffer )
 	{
-		vec_remove_if( gBuffers, srBuffer );
-		vkDestroyBuffer( VK_GetDevice(), srBuffer, nullptr );
+		// vec_remove_if( gBuffers, srBuffer );
+		vmaDestroyBuffer( gVmaAllocator, spBuffer->aBuffer, spBuffer->aAllocation );
+		// vkDestroyBuffer( VK_GetDevice(), srBuffer, nullptr );
 	}
 
-	if ( srBufferMem )
-		vkFreeMemory( VK_GetDevice(), srBufferMem, nullptr );
+	// if ( srBufferMem )
+	// 	vkFreeMemory( VK_GetDevice(), srBufferMem, nullptr );
 }
 
 
@@ -769,6 +838,15 @@ bool Render_Init( void* spWindow )
 	VK_SetupPhysicalDevice();
 	VK_CreateDevice();
 
+	// Init Vulkan Memory Allocator
+	VmaAllocatorCreateInfo createInfo{};
+	createInfo.physicalDevice   = VK_GetPhysicalDevice();
+	createInfo.device           = VK_GetDevice();
+	createInfo.instance         = VK_GetInstance();
+	createInfo.vulkanApiVersion = VK_HEADER_VERSION_COMPLETE;
+
+	vmaCreateAllocator( &createInfo, &gVmaAllocator );
+
 	VK_CreateCommandPool( VK_GetSingleTimeCommandPool() );
 	VK_CreateCommandPool( VK_GetPrimaryCommandPool() );
 
@@ -797,6 +875,8 @@ void Render_Shutdown()
 {
 	if ( gpViewports )
 		delete gpViewports;
+
+	vmaDestroyAllocator( gVmaAllocator );
 
 	ImGui_ImplVulkan_Shutdown();
 
@@ -838,12 +918,6 @@ void VK_Reset( ERenderResetFlags sFlags )
 
 	if ( gpOnResetFunc )
 		gpOnResetFunc( sFlags );
-}
-
-
-void Render_NewFrame()
-{
-	ImGui_ImplVulkan_NewFrame();
 }
 
 
@@ -927,6 +1001,17 @@ bool Render_BuildFonts()
 	bool ret = VK_CreateImGuiFonts();
 	gFontData.clear();
 	return ret;
+}
+
+
+void VK_SetCheckpoint( VkCommandBuffer c, const char* spName )
+{
+#if NV_CHECKPOINTS
+	if ( pfnCmdSetCheckpointNV )
+	{
+		pfnCmdSetCheckpointNV( c, spName );
+	}
+#endif
 }
 
 
@@ -1029,9 +1114,6 @@ public:
 		BufferVK* buffer = nullptr;
 		Handle    handle = gBufferHandles.Create( &buffer );
 
-		// BufferVK* buffer = new BufferVK;
-		// Handle   handle = gBufferHandles.Add( buffer );
-
 		buffer->aBuffer  = nullptr;
 		buffer->aMemory  = nullptr;
 		buffer->aSize    = sSize;
@@ -1064,7 +1146,7 @@ public:
 		if ( sBufferMem & EBufferMemory_Host )
 			memBits |= VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
 
-		VK_CreateBuffer( spName, buffer->aBuffer, buffer->aMemory, sSize, flagBits, memBits );
+		VK_CreateBuffer( spName, buffer, flagBits, memBits );
 
 		return handle;
 	}
@@ -1086,7 +1168,7 @@ public:
 			return;
 		}
 
-		VK_DestroyBuffer( bufVK->aBuffer, bufVK->aMemory );
+		VK_DestroyBuffer( bufVK );
 
 		gBufferHandles.Remove( buffer );
 	}
@@ -1106,11 +1188,11 @@ public:
 		if ( sSize > bufVK->aSize )
 		{
 			Log_WarnF( gLC_Render, "BufferWrite: Trying to write more data than buffer size can store (data size: %zd > buffer size: %zd)\n", sSize, bufVK->aSize );
-			VK_memcpy( bufVK->aMemory, sSize, spData );
+			VK_memcpy( bufVK->aAllocation, sSize, spData );
 			return sSize;
 		}
 
-		VK_memcpy( bufVK->aMemory, bufVK->aSize, spData );
+		VK_memcpy( bufVK->aAllocation, bufVK->aSize, spData );
 		return bufVK->aSize;
 	}
 
@@ -1129,11 +1211,11 @@ public:
 		if ( sSize > bufVK->aSize )
 		{
 			Log_WarnF( gLC_Render, "BufferRead: Trying to write more data than buffer size can store (data size: %zd > buffer size: %zd)\n", sSize, bufVK->aSize );
-			VK_memread( bufVK->aMemory, sSize, spData );
+			VK_memread( bufVK->aAllocation, sSize, spData );
 			return sSize;
 		}
 
-		VK_memread( bufVK->aMemory, bufVK->aSize, spData );
+		VK_memread( bufVK->aAllocation, bufVK->aSize, spData );
 		return bufVK->aSize;
 	}
 
@@ -1312,6 +1394,11 @@ public:
 			Log_Error( gLC_Render, "GetTextureIndex: Failed to find texture\n" );
 			return 0;
 		}
+
+		if ( gNeedTextureUpdate )
+			VK_UpdateImageSets();
+
+		gNeedTextureUpdate = false;
 
 		return tex->aIndex;
 	}
@@ -1509,7 +1596,7 @@ public:
 
 	void NewFrame() override
 	{
-		Render_NewFrame();
+		ImGui_ImplVulkan_NewFrame();
 	}
 
 	void Reset() override
@@ -1525,9 +1612,6 @@ public:
 			VK_UpdateImageSets();
 
 		gNeedTextureUpdate = false;
-
-		// verify fence status
-		VK_CheckFenceStatus();
 	}
 
 	void Present() override
@@ -1585,6 +1669,8 @@ public:
 		begin.pInheritanceInfo = nullptr;
 
 		VK_CheckResult( vkBeginCommandBuffer( c, &begin ), "Failed to begin command buffer" );
+
+		// gTracyCtx[ c ] = TracyVkContext( VK_GetPhysicalDevice(), VK_GetDevice(), VK_GetGraphicsQueue(), c );
 	}
 
 	void EndCommandBuffer( Handle cmd ) override
@@ -1592,10 +1678,17 @@ public:
 		PROF_SCOPE();
 
 		VkCommandBuffer c = VK_GetCommandBuffer( cmd );
+
 		VK_CheckResult( vkEndCommandBuffer( c ), "Failed to end command buffer" );
+
+		// auto it = gTracyCtx.find( c );
+		// if ( it == gTracyCtx.end() )
+		// 	return;
+		// 
+		// TracyVkDestroy( it->second );
+		// gTracyCtx.erase( it );
 	}
 
-	
 	Handle CreateRenderPass( const RenderPassCreate_t& srCreate ) override
 	{
 		return VK_CreateRenderPass( srCreate );
@@ -1674,8 +1767,6 @@ public:
 		}
 
 		vkCmdEndRenderPass( c );
-
-		VK_CheckFenceStatus();
 	}
 
 	void DrawImGui( ImDrawData* spDrawData, Handle cmd ) override
@@ -1758,7 +1849,7 @@ public:
 			return;
 		}
 
-		return vkCmdSetDepthBias( c, sConstantFactor, sClamp, sSlopeFactor );
+		vkCmdSetDepthBias( c, sConstantFactor, sClamp, sSlopeFactor );
 	}
 
 	void CmdSetLineWidth( Handle cmd, float sLineWidth ) override
@@ -1773,7 +1864,7 @@ public:
 			return;
 		}
 
-		return vkCmdSetLineWidth( c, sLineWidth );
+		vkCmdSetLineWidth( c, sLineWidth );
 	}
 
 	bool CmdBindPipeline( Handle cmd, Handle shader ) override
@@ -1889,8 +1980,6 @@ public:
 
 		vkCmdBindDescriptorSets( c, bindPoint, layout, 0, sSetCount, vkDescSets, 0, nullptr );
 		CH_STACK_FREE( vkDescSets );
-
-		VK_CheckFenceStatus();
 	}
 
 	void CmdBindVertexBuffers( Handle cmd, u32 sFirstBinding, u32 sCount, const Handle* spBuffers, const size_t* spOffsets ) override

@@ -14,6 +14,10 @@ input.h
 #include <fstream>
 #include <iostream>
 
+#if CH_USE_MIMALLOC
+  #include "mimalloc-new-delete.h"
+#endif
+
 InputSystem *input = new InputSystem;
 
 LOG_REGISTER_CHANNEL( InputSystem, LogColor::Default );

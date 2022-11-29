@@ -47,13 +47,12 @@ include_directories(
 	${CH_THIRDPARTY}
 )
 
-link_libraries( SDL2 )
-
 add_compile_definitions(
 	# GLM_FORCE_DEPTH_ZERO_TO_ONE  # what does even this do internally
 	# glm is SHIT and can't do this with AVX2, ugh
 	GLM_FORCE_XYZW_ONLY=GLM_ENABLE
 	GLM_FORCE_SWIZZLE
+	GLM_DEPTH_ZERO_TO_ONE
 	
 	#GLM_CONFIG_SIMD  # defined in GLM_FORCE_AVX2
 
@@ -67,7 +66,6 @@ add_compile_definitions(
 set( COMPILE_DEF_DEBUG "DEBUG=1" )
 set( COMPILE_DEF_RELEASE "NDEBUG=1" )
 
-# NOTE: won't work for everything, really dumb
 add_compile_definitions(
 	"$<$<CONFIG:Debug>:${COMPILE_DEF_DEBUG}>"
 	"$<$<CONFIG:Release>:${COMPILE_DEF_RELEASE}>"
@@ -75,8 +73,21 @@ add_compile_definitions(
 )
 
 
+set( MIMALLOC_DIR "${CH_THIRDPARTY}/mimalloc" )
+
+include_directories( ${MIMALLOC_DIR}/include )
+
 # Compiler/Platform specifc options
 if( MSVC )
+
+	set( MIMALLOC_BUILD "${MIMALLOC_DIR}/out/msvc-x64" )
+
+	link_libraries(
+		"$<$<CONFIG:Debug>:${MIMALLOC_BUILD}/Debug/mimalloc-override.lib>"
+		"$<$<CONFIG:Release>:${MIMALLOC_BUILD}/Release/mimalloc-override.lib>"
+		"$<$<CONFIG:RelWithDebInfo>:${MIMALLOC_BUILD}/Release/mimalloc-override.lib>"
+		${MIMALLOC_DIR}/bin/mimalloc-redirect.lib
+	)
 
 	# TODO: figure out vcpkg
 	link_directories(
@@ -93,23 +104,15 @@ if( MSVC )
 		_CRT_SECURE_NO_WARNINGS
 		_ALLOW_RUNTIME_LIBRARY_MISMATCH _ALLOW_ITERATOR_DEBUG_LEVEL_MISMATCH _ALLOW_MSC_VER_MISMATCH
 		_AMD64_ __x86_64 __amd64
+		CH_USE_MIMALLOC=1
 	)
-	
-	# Remove default warning level from CMAKE_CXX_FLAGS
-	string ( REGEX REPLACE "/W[0-4]" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}" )
-
-	# TODO: fix this for normal visual studio builds
-	if( CMAKE_BUILD_TYPE STREQUAL Debug )
-		add_compile_options( "/Od" )  # no optimizations
-		add_compile_options( "/ZI" )  # edit and continue (TODO: DO THIS RIGHT PLEASE)
-		string ( REGEX REPLACE "/Zi" "/ZI" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}" )  # Use Edit and Continue on Debug
-	elseif( CMAKE_BUILD_TYPE STREQUAL Release )
-		add_compile_options( "/O2" )  # level 2 optimizations (max in msvc)
-	endif()
 	
 	# Use these runtime libraries for both so it doesn't crash smh my head
 	# actually this is useless right now because of core.dll, god dammit
-	set_property( GLOBAL PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreadedDLL" )
+	# set_property( GLOBAL PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreadedDLL" )
+	
+	set( CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL" )
+	set_property( GLOBAL PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL" )
 
 	set( MSVC_VERSION 1939 )
 
@@ -180,6 +183,14 @@ if( MSVC )
 	
 else()  # linux
 
+	# set( MIMALLOC_BUILD "${MIMALLOC_DIR}/build" )
+	# 
+	# link_libraries(
+	# 	"$<$<CONFIG:Debug>:${MIMALLOC_BUILD}/Debug/mimalloc-override.lib>"
+	# 	"$<$<CONFIG:Release>:${MIMALLOC_BUILD}/Release/mimalloc-override.lib>"
+	# 	"$<$<CONFIG:RelWithDebInfo>:${MIMALLOC_BUILD}/Release/mimalloc-override.lib>"
+	# )
+
 	set( CMAKE_CXX_COMPILER g++ )
 	
 	include_directories(
@@ -210,5 +221,7 @@ else()  # linux
 	set( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++20" )
 	
 endif()
+
+link_libraries( SDL2 )
 
 include( ${CH_ROOT}/scripts/tracy.cmake )

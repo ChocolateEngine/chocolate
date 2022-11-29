@@ -224,10 +224,7 @@ void VK_WaitForPresentQueue()
 	PROF_SCOPE();
 
 	if ( gInPresentQueue )
-	{
-		VK_CheckResult( vkDeviceWaitIdle( VK_GetDevice() ), "Failed waiting for device before present queue" );
 		VK_CheckResult( vkQueueWaitIdle( VK_GetPresentQueue() ), "Failed waiting for present queue" );
-	}
 
 	gInPresentQueue = false;
 }
@@ -374,10 +371,6 @@ void VK_Present()
 	gInPresentQueue = true;
 
 	gFrameIndex     = ( gFrameIndex + 1 ) % MAX_FRAMES_IN_FLIGHT;
-
-	// TEMP
-	// VK_CheckFenceStatus();
-	// VK_WaitForPresentQueue();
 }
 
 

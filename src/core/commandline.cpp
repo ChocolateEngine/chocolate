@@ -7,6 +7,10 @@
 
 #include <stdarg.h>
 
+#if CH_USE_MIMALLOC
+  #include "mimalloc-new-delete.h"
+#endif
+
 
 // static std::vector< Arg_t > gArgList;
 static ChVector< Arg_t > gArgList;

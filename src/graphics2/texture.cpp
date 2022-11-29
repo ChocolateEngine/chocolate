@@ -18,6 +18,7 @@ static ResourceList< VkFramebuffer >               gFramebuffers;
 static std::unordered_map< Handle, glm::uvec2 >    gFramebufferSize;
 
 extern ResourceList< TextureVK* >                  gTextureHandles;
+extern ResourceList< BufferVK >                    gBufferHandles;
 // extern std::vector< Handle >                       gSwapImageHandles;
 
 // kind of a hack
@@ -276,7 +277,7 @@ void VK_RecreateTextureSamplers()
 TextureVK* VK_NewTexture()
 {
 	TextureVK* tex = new TextureVK;
-	tex->aIndex    = gTextures.size();
+	tex->aIndex    = -1;
 	gTextures.push_back( tex );
 	return tex;
 }
@@ -308,8 +309,9 @@ bool VK_LoadTexture( TextureVK* tex, const std::string& srPath, const TextureCre
 		VK_CheckResultE( pfnSetDebugUtilsObjectName( VK_GetDevice(), &imageNameInfo ), "Failed to set VkImage Debug Name" );
 	}
 #endif
-
+	VK_CalcTextureIndices();
 	gNeedTextureUpdate = true;
+
 	return true;
 }
 
@@ -342,21 +344,10 @@ TextureVK* VK_CreateTexture( const TextureCreateInfo_t& srCreate, const TextureC
 	if ( srCreate.apData )
 		createInfo.usage |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
 
-	VK_CheckResult( vkCreateImage( VK_GetDevice(), &createInfo, NULL, &tex->aImage ), "Failed to create image" );
+	// VK_CheckResult( vkCreateImage( VK_GetDevice(), &createInfo, NULL, &tex->aImage ), "Failed to create image" );
 
 	// Allocate and Bind Image Memory
-	{
-		VkMemoryRequirements memRequirements;
-		vkGetImageMemoryRequirements( VK_GetDevice(), tex->aImage, &memRequirements );
-
-		VkMemoryAllocateInfo allocInfo{ VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO };
-		allocInfo.allocationSize  = memRequirements.size;
-		allocInfo.memoryTypeIndex = VK_GetMemoryType( memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT );
-
-		VK_CheckResult( vkAllocateMemory( VK_GetDevice(), &allocInfo, NULL, &tex->aMemory ), "Failed to allocate image memory" );
-
-		VK_CheckResult( vkBindImageMemory( VK_GetDevice(), tex->aImage, tex->aMemory, 0 ), "Failed to bind image memory" );
-	}
+	VK_CreateImage( createInfo, tex );
 
 	// if ( createInfo.usage & VK_IMAGE_USAGE_SAMPLED_BIT )
 	// 	VK_SetImageLayout( tex->aImage, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, createInfo.mipLevels );
@@ -378,13 +369,13 @@ TextureVK* VK_CreateTexture( const TextureCreateInfo_t& srCreate, const TextureC
 		}
 		else
 		{
-			VkBuffer       stagingBuffer;
-			VkDeviceMemory stagingMemory;
+			BufferVK stagingBuffer{
+				.aSize = srCreate.aDataSize
+			};
 
-			VK_CreateBuffer( stagingBuffer, stagingMemory, srCreate.aDataSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-							 VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT );
+			VK_CreateBuffer( &stagingBuffer, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT );
 
-			VK_memcpy( stagingMemory, srCreate.aDataSize, srCreate.apData );
+			VK_memcpy( stagingBuffer.aAllocation, srCreate.aDataSize, srCreate.apData );
 
 			// Copy Buffer to Image
 			VkBufferImageCopy region{};
@@ -406,7 +397,7 @@ TextureVK* VK_CreateTexture( const TextureCreateInfo_t& srCreate, const TextureC
 			VK_SetImageLayout( c, tex->aImage, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, createInfo.mipLevels );
 
 			// Write the image data to the gpu image
-			vkCmdCopyBufferToImage( c, stagingBuffer, tex->aImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region );
+			vkCmdCopyBufferToImage( c, stagingBuffer.aBuffer, tex->aImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region );
 
 			// if we need to set it back to shader read only, then do that
 			if ( setToShaderReadOnly )
@@ -415,7 +406,7 @@ TextureVK* VK_CreateTexture( const TextureCreateInfo_t& srCreate, const TextureC
 			VK_EndOneTimeCommand( c );
 
 			// Destroy Buffer
-			VK_DestroyBuffer( stagingBuffer, stagingMemory );
+			VK_DestroyBuffer( &stagingBuffer );
 		}
 	}
 	else
@@ -493,6 +484,8 @@ TextureVK* VK_CreateTexture( const TextureCreateInfo_t& srCreate, const TextureC
 		VK_CheckResultE( pfnSetDebugUtilsObjectName( VK_GetDevice(), &nameInfo ), "Failed to set VkImage Debug Name" );
 	}
 #endif
+
+	VK_CalcTextureIndices();
 
 	gNeedTextureUpdate = true;
 
@@ -867,18 +860,20 @@ TextureVK* CreateBackBufferColor()
 	color.pQueueFamilyIndices   = nullptr;
 	color.initialLayout         = VK_IMAGE_LAYOUT_UNDEFINED;
 
-	VK_CheckResult( vkCreateImage( VK_GetDevice(), &color, nullptr, &colorTex->aImage ), "Failed to create color image!" );
+	// VK_CheckResult( vkCreateImage( VK_GetDevice(), &color, nullptr, &colorTex->aImage ), "Failed to create color image!" );
 
-	VkMemoryRequirements memReqs;
-	vkGetImageMemoryRequirements( VK_GetDevice(), colorTex->aImage, &memReqs );
+	VK_CreateImage( color, colorTex );
 
-	VkMemoryAllocateInfo allocInfo{ VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO };
-	allocInfo.pNext           = nullptr;
-	allocInfo.allocationSize  = memReqs.size;
-	allocInfo.memoryTypeIndex = VK_GetMemoryType( memReqs.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT );
-
-	VK_CheckResult( vkAllocateMemory( VK_GetDevice(), &allocInfo, nullptr, &colorTex->aMemory ), "Failed to allocate color image memory!" );
-	VK_CheckResult( vkBindImageMemory( VK_GetDevice(), colorTex->aImage, colorTex->aMemory, 0 ), "Failed to bind back buffer color image memory" );
+	// VkMemoryRequirements memReqs;
+	// vkGetImageMemoryRequirements( VK_GetDevice(), colorTex->aImage, &memReqs );
+	// 
+	// VkMemoryAllocateInfo allocInfo{ VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO };
+	// allocInfo.pNext           = nullptr;
+	// allocInfo.allocationSize  = memReqs.size;
+	// allocInfo.memoryTypeIndex = VK_GetMemoryType( memReqs.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT );
+	// 
+	// VK_CheckResult( vkAllocateMemory( VK_GetDevice(), &allocInfo, nullptr, &colorTex->aMemory ), "Failed to allocate color image memory!" );
+	// VK_CheckResult( vkBindImageMemory( VK_GetDevice(), colorTex->aImage, colorTex->aMemory, 0 ), "Failed to bind back buffer color image memory" );
 
 	VkImageViewCreateInfo colorView;
 	colorView.sType                           = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
@@ -933,18 +928,20 @@ RenderTarget* CreateBackBuffer()
 	depth.pQueueFamilyIndices   = nullptr;
 	depth.initialLayout         = VK_IMAGE_LAYOUT_UNDEFINED;
 
-	VK_CheckResult( vkCreateImage( VK_GetDevice(), &depth, nullptr, &depthTex->aImage ), "Failed to create depth image!" );
+	// VK_CheckResult( vkCreateImage( VK_GetDevice(), &depth, nullptr, &depthTex->aImage ), "Failed to create depth image!" );
 
-	VkMemoryRequirements memReqs;
-	vkGetImageMemoryRequirements( VK_GetDevice(), depthTex->aImage, &memReqs );
+	VK_CreateImage( depth, depthTex );
 
-	VkMemoryAllocateInfo allocInfo{ VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO };
-	allocInfo.pNext           = nullptr;
-	allocInfo.allocationSize  = memReqs.size;
-	allocInfo.memoryTypeIndex = VK_GetMemoryType( memReqs.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT );
-
-	VK_CheckResult( vkAllocateMemory( VK_GetDevice(), &allocInfo, nullptr, &depthTex->aMemory ), "Failed to allocate depth image memory!" );
-	VK_CheckResult( vkBindImageMemory( VK_GetDevice(), depthTex->aImage, depthTex->aMemory, 0 ), "Failed to bind back buffer depth image memory" );
+	// VkMemoryRequirements memReqs;
+	// vkGetImageMemoryRequirements( VK_GetDevice(), depthTex->aImage, &memReqs );
+	// 
+	// VkMemoryAllocateInfo allocInfo{ VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO };
+	// allocInfo.pNext           = nullptr;
+	// allocInfo.allocationSize  = memReqs.size;
+	// allocInfo.memoryTypeIndex = VK_GetMemoryType( memReqs.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT );
+	// 
+	// VK_CheckResult( vkAllocateMemory( VK_GetDevice(), &allocInfo, nullptr, &depthTex->aMemory ), "Failed to allocate depth image memory!" );
+	// VK_CheckResult( vkBindImageMemory( VK_GetDevice(), depthTex->aImage, depthTex->aMemory, 0 ), "Failed to bind back buffer depth image memory" );
 
 	VkImageViewCreateInfo depthView;
 	depthView.sType                           = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
@@ -1135,6 +1132,19 @@ Handle VK_GetFramebufferHandle( VkFramebuffer sFrameBuffer )
 
 	Log_Error( gLC_Render, "Framebuffer Handle not found!\n" );
 	return InvalidHandle;
+}
+
+
+void VK_CreateImage( VkImageCreateInfo& srCreateInfo, TextureVK* spTexture )
+{
+	VmaAllocationCreateInfo allocInfo = {};
+	allocInfo.usage                   = VMA_MEMORY_USAGE_AUTO;
+	allocInfo.memoryTypeBits          = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+
+	// vmaCreateImage
+	VK_CheckResult(
+		vmaCreateImage( gVmaAllocator, &srCreateInfo, &allocInfo, &spTexture->aImage, &spTexture->aAllocation, nullptr ),
+		"Failed to create VkImage" );
 }
 
 

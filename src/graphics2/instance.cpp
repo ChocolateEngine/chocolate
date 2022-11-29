@@ -46,6 +46,9 @@ constexpr char const* gpDeviceExtensions[] = {
 	"VK_EXT_descriptor_indexing",
 #if _DEBUG
 	// VK_EXT_DEVICE_MEMORY_REPORT_EXTENSION_NAME,
+#if NV_CHECKPOINTS
+	VK_NV_DEVICE_DIAGNOSTIC_CHECKPOINTS_EXTENSION_NAME,
+#endif
 #endif
 };
 
@@ -71,6 +74,11 @@ PFN_vkQueueInsertDebugUtilsLabelEXT pfnQueueInsertDebugUtilsLabel = nullptr;
 PFN_vkCmdBeginDebugUtilsLabelEXT    pfnCmdBeginDebugUtilsLabel    = nullptr;
 PFN_vkCmdEndDebugUtilsLabelEXT      pfnCmdEndDebugUtilsLabel      = nullptr;
 PFN_vkCmdInsertDebugUtilsLabelEXT   pfnCmdInsertDebugUtilsLabel   = nullptr;
+
+#if NV_CHECKPOINTS
+PFN_vkCmdSetCheckpointNV       pfnCmdSetCheckpointNV       = nullptr;
+PFN_vkGetQueueCheckpointDataNV pfnGetQueueCheckpointDataNV = nullptr;
+#endif
 #endif
 
 
@@ -691,6 +699,11 @@ void VK_CreateDevice()
 
 	if ( pfnSetDebugUtilsObjectTag )
 		Log_Dev( gVulkanChannel, 1, "Loaded PFN_vkSetDebugUtilsObjectTagEXT\n" );
+	
+#if NV_CHECKPOINTS
+	pfnCmdSetCheckpointNV       = (PFN_vkCmdSetCheckpointNV)vkGetInstanceProcAddr( VK_GetInstance(), "vkCmdSetCheckpointNV" );
+	pfnGetQueueCheckpointDataNV = (PFN_vkGetQueueCheckpointDataNV)vkGetInstanceProcAddr( VK_GetInstance(), "vkGetQueueCheckpointDataNV" );
+#endif
 #endif
 }
 

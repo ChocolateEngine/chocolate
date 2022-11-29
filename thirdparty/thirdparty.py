@@ -60,6 +60,68 @@ VS_MSBUILD = ""
 VS_MSVC = "v143"
 
 
+ERROR_LIST = []
+CUR_PROJECT = "PROJECT"
+ROOT_DIR = os.path.dirname(os.path.realpath(__file__))
+DIR_STACK = []
+
+
+def set_project(name: str):
+    global CUR_PROJECT
+    CUR_PROJECT = name
+    print(f"\n"
+          f"---------------------------------------------------------\n"
+          f" Current Project: {name}\n"
+          f"---------------------------------------------------------\n")
+
+
+def push_dir(path: str):
+    abs_dir = os.path.abspath(path)
+    DIR_STACK.append(abs_dir)
+    os.chdir(abs_dir)
+
+
+def pop_dir():
+    if len(DIR_STACK) == 0:
+        print("ERROR: DIRECTORY STACK IS EMPTY!")
+        return
+
+    abs_dir = DIR_STACK.pop()
+    os.chdir(abs_dir)
+
+
+def reset_dir():
+    os.chdir(ROOT_DIR)
+
+
+# System Command Failed!
+def syscmd_err(ret: int, string: str):
+    global CUR_PROJECT
+    error = f"{CUR_PROJECT}: {string}: return code {ret}\n"
+    ERROR_LIST.append(error)
+    sys.stderr.write(error)
+
+
+def syscmd(cmd: str, string: str) -> bool:
+    ret = os.system(cmd)
+    if ret == 0:
+        return True
+
+    # System Command Failed!
+    syscmd_err(ret, string)
+    return False
+
+
+def syscall(cmd: list, string: str) -> bool:
+    ret = subprocess.call(cmd)
+    if ret == 0:
+        return True
+
+    # System Command Failed!
+    syscmd_err(ret, string)
+    return False
+
+
 def setup_vs_env():
     #cmd = "vswhere.exe -latest -requires Microsoft.Component.MSBuild -find MSBuild\**\Bin\MSBuild.exe"
     cmd = "vswhere.exe -latest"
@@ -85,10 +147,6 @@ def setup_vs_env():
     # VS_MSBUILD=C:\Program Files\Microsoft Visual Studio\2022\Community\Msbuild\Current\Bin\amd64\msbuild.exe
     VS_MSBUILD = VS_PATH + "\\Msbuild\\Current\\Bin\\amd64\\msbuild.exe"
 
-    # C:\Program Files\Microsoft Visual Studio\2022\Community\Msbuild\Current\Bin\amd64\msbuild.exe
-
-    return ""
-
 
 def parse_args() -> argparse.Namespace:
     args = argparse.ArgumentParser()
@@ -100,21 +158,13 @@ def parse_args() -> argparse.Namespace:
 # =================================================================================================
 
 
-def post_ktx_extract():
+def build_ktx():
     if ARGS.no_build:
         return
 
+    set_project("KTX")
+
     os.chdir("KTX-Software")
-
-    #print("Building KTX\n")
-
-    if not os.path.isdir("build"):
-        os.mkdir("build")
-    #else:
-    #    print("Build Dir exists, skipping")
-    #    #return
-
-    os.chdir("build")
 
     # TODO: this should disable AVX2 for the astc encoder, not ktx itself,
     # but whatever is going on in the ktx cmake script causes this to be ignored
@@ -124,24 +174,28 @@ def post_ktx_extract():
     # TODO: this --config thing doesn't actually work on linux,
     # use build/Release and build/Debug folders instead?
     if SYS_OS == OS.Windows:
-        os.system(f"cmake {build_options} ..")
+        if not syscmd(f"cmake -S . -B build {build_options}", "Failed to run cmake"):
+            return
 
         print("Building KTX - Release\n")
-        os.system("cmake --build . --config Release")
+        if not syscmd("cmake --build build --config Release", "Failed to build in Release"):
+            return
 
         print("Building KTX - Debug\n")
-        os.system("cmake --build . --config Debug")
+        if not syscmd("cmake --build build --config Debug", "Failed to build in Debug"):
+            return
         
     else:
-        os.system(f"cmake {build_options} -DCMAKE_BUILD_TYPE=Release ..")
+        if not syscmd(f"cmake -S . -B build {build_options} -DCMAKE_BUILD_TYPE=Release", "Failed to run cmake"):
+            return
 
         print("Building KTX - Release\n")
-        os.system("cmake --build . --config Release")
+        if not syscmd("cmake --build build --config Release", "Failed to build in Release"):
+            return
 
         # print("Building KTX - Debug\n")
-        # os.system("cmake --build . --config Debug")
-
-    os.chdir("../..")
+        # if not syscmd("cmake --build build --config Debug", "Failed to build in Debug"):
+        #     return
 
 
 # =================================================================================================
@@ -151,31 +205,104 @@ def post_jolt_extract():
     if ARGS.no_build:
         return
 
+    set_project("JoltPhysics")
+
     os.chdir("JoltPhysics/Build")
     
     build_options = "-DUSE_AVX2=OFF -DTARGET_UNIT_TESTS=OFF -DTARGET_HELLO_WORLD=OFF -DTARGET_PERFORMANCE_TEST=OFF -DTARGET_SAMPLES=OFF -DTARGET_VIEWER=OFF"
 
     if SYS_OS == OS.Windows:
         build_dir = "build"
-        os.system(f"cmake -S . -B {build_dir} -A x64 {build_options}")
+        if not syscmd(f"cmake -S . -B {build_dir} -A x64 {build_options}", "Failed to run cmake"):
+            return
 
         print("Building JoltPhysics - Release\n")
-        os.system(f"cmake --build {build_dir} --config Release")
+        if not syscmd(f"cmake --build {build_dir} --config Release", "Failed to build in Release"):
+            return
 
         print("Building JoltPhysics - Debug\n")
-        os.system(f"cmake --build {build_dir} --config Debug")
+        if not syscmd(f"cmake --build {build_dir} --config Debug", "Failed to build in Debug"):
+            return
 
     else:
         build_dir = "build"
         print("Building JoltPhysics - Release\n")
-        os.system(f"cmake -S . -B {build_dir}/Release -DCMAKE_CXX_COMPILER=g++ -DCMAKE_POSITION_INDEPENDENT_CODE=ON {build_options}")
-        os.system(f"cmake --build {build_dir}/Release --config Release")
+        if not syscmd(f"cmake -S . -B {build_dir}/Release -DCMAKE_CXX_COMPILER=g++ -DCMAKE_POSITION_INDEPENDENT_CODE=ON {build_options}",
+               "Failed to run cmake for Release build"):
+            return
+
+        if not syscmd(f"cmake --build {build_dir}/Release --config Release", "Failed to build in Release"):
+            return
 
         print("Building JoltPhysics - Debug\n")
-        os.system(f"cmake -S . -B {build_dir}/Debug -DCMAKE_CXX_COMPILER=g++ -DCMAKE_POSITION_INDEPENDENT_CODE=ON {build_options}")
-        os.system(f"cmake --build {build_dir}/Debug --config Debug")
+        if not syscmd(f"cmake -S . -B {build_dir}/Debug -DCMAKE_CXX_COMPILER=g++ -DCMAKE_POSITION_INDEPENDENT_CODE=ON {build_options}",
+               "Failed to run cmake for Debug build"):
+            return
 
-    os.chdir("../..")
+        if not syscmd(f"cmake --build {build_dir}/Debug --config Debug", "Failed to build in Debug"):
+            return
+
+
+# =================================================================================================
+
+
+def build_vma():
+    if ARGS.no_build:
+        return
+
+    set_project("VulkanMemoryAllocator")
+    os.chdir("VulkanMemoryAllocator")
+
+    if not syscmd(f"cmake -S . -B build", "Failed to run cmake"):
+        return
+
+    print("Building VulkanMemoryAllocator - Release\n")
+    if not syscmd(f"cmake --build build --config Release", "Failed to build in Release"):
+        return
+
+    # is this windows only?
+    print("Building VulkanMemoryAllocator - RelWithDebInfo\n")
+    if not syscmd(f"cmake --build build --config RelWithDebInfo", "Failed to build in RelWithDebInfo"):
+        return
+
+    print("Building VulkanMemoryAllocator - Debug\n")
+    if not syscmd(f"cmake --build build --config Debug", "Failed to build in Debug"):
+        return
+
+
+# =================================================================================================
+
+
+def build_mimalloc():
+    if ARGS.no_build:
+        return
+
+    set_project("mimalloc")
+    os.chdir("mimalloc")
+
+    if SYS_OS == OS.Windows:
+        os.chdir("ide/vs2022")
+
+        for proj in {"mimalloc.vcxproj", "mimalloc-override.vcxproj"}:
+            for cfg in {"Debug", "Release"}:
+                # cmd = f"\"{VS_MSBUILD}\" \"{proj}\" -property:Configuration={cfg} -property:Platform=x64"
+                cmd = [VS_MSBUILD, proj, f"-property:Configuration={cfg}", "-property:Platform=x64"]
+                if not syscall(cmd, f"Failed to compile {proj} in {cfg}"):
+                    return
+
+        pass
+
+    else:
+        if not syscmd(f"cmake -S . -B build", "Failed to run cmake"):
+            return
+
+        print("Building mimalloc - Release\n")
+        if not syscmd(f"cmake --build build --config Release", "Failed to build in Release"):
+            return
+
+        print("Building mimalloc - Debug\n")
+        if not syscmd(f"cmake --build build --config Debug", "Failed to build in Debug"):
+            return
 
 
 # =================================================================================================
@@ -185,17 +312,23 @@ def post_openal_extract():
     if ARGS.no_build:
         return
 
+    # NOT USED YET !!!
+    return
+
+    set_project("OpenAL")
+
     os.chdir("openal-soft/build")
 
-    os.system("cmake ..")
+    if not syscmd("cmake ..", "Failed to run cmake"):
+        return
 
     print("Building OpenAL-Soft - Release\n")
-    os.system("cmake --build . --config Release")
+    if not syscmd("cmake --build . --config Release", "Failed to build in Release"):
+        return
 
     print("Building OpenAL-Soft - Debug\n")
-    os.system("cmake --build . --config Debug")
-
-    os.chdir("../..")
+    if not syscmd("cmake --build . --config Debug", "Failed to build in Debug"):
+        return
 
 
 # =================================================================================================
@@ -315,6 +448,8 @@ def post_vorbis_extract(path: str, copy_path: str, msbuild_projects):
 
 
 def post_libogg_extract():
+    set_project("libogg")
+
     post_vorbis_extract(
         "libogg",
         "",
@@ -322,6 +457,8 @@ def post_libogg_extract():
 
 
 def post_libvorbis_extract():
+    set_project("libvorbis")
+
     # BLECH, WTF
     post_vorbis_extract(
         "libvorbis",
@@ -377,10 +514,11 @@ FILE_LIST = {
             post_jolt_extract,
         ],
         [
-            "https://github.com/wolfpld/tracy/archive/refs/tags/v0.9.zip",
-            "zip",                  # file extension it's stored as
-            "Tracy",                # folder to check for if it exists already
-            "tracy-0.9",            # folder it extracts as to rename to the folder above (optional)
+            # https://github.com/wolfpld/tracy/archive/refs/tags/v0.7.8.zip
+            "https://github.com/wolfpld/tracy/archive/f1fea0331aa7222df5b0a8b0ffdf6610547fb336.zip",
+            "zip",                   # file extension it's stored as
+            "Tracy",              # folder to check for if it exists already
+            "tracy-f1fea0331aa7222df5b0a8b0ffdf6610547fb336",         # folder it extracts as to rename to the folder above (optional)
             ".",                    # extract into this folder (optional)
             None,
         ],
@@ -434,21 +572,23 @@ FILE_LIST = {
             "7z",
             "glm",
         ],
-        # [
-        #     # Tracy Profiler
-        #     "https://github.com/wolfpld/tracy/archive/refs/tags/v0.9.zip",
-        #     "7z",                   # file extension it's stored as
-        #     "Tracy-0.9",            # folder to check for if it exists already
-        #     "Tracy-0.9",            # folder it extracts as to rename to the folder above (optional)
-        #     ".",                    # extract into this folder (optional)
-        #     None,
-        # ],
     ],
 
     # Linux Only
     OS.Linux: [
     ],
 }
+
+
+# =================================================================================================
+
+
+# just a list of functions to run, simple
+SUBMODULE_LIST = [
+    build_mimalloc,
+    build_vma,
+    build_ktx,
+]
 
 
 # =================================================================================================
@@ -525,21 +665,42 @@ def handle_item(url: str, file_ext: str, folder: str, extract_folder: str = "", 
         print(f"Running Post Build Func: \"{print_name}\"")
         func()
 
+    reset_dir()
+
 
 def main():
-    # Compile git submodules
-    # TODO: check if the user actually cloned them or not
-    post_ktx_extract()
-    
-    # Do your platform first
+    # Do your platform first (need to be first on windows for vswhere.exe)
     for item in FILE_LIST[SYS_OS]:
         handle_item(*item)
 
-    # Do all platforms next
+    print("\n---------------------------------------------------------\n")
+
+    # compile git submodules next
+    for func in SUBMODULE_LIST:
+        func()
+        reset_dir()
+
+    print("\n---------------------------------------------------------\n")
+
+    # Do all platforms last
     for item in FILE_LIST[OS.Any]:
         handle_item(*item)
 
-    print("Finished")
+    # check for any errors and print them
+    errors_str = "Error" if len(ERROR_LIST) == 1 else "Errors"
+    if len(ERROR_LIST) > 0:
+        print("\n---------------------------------------------------------")
+        sys.stderr.write(f"\n{len(ERROR_LIST)} {errors_str}:\n")
+        for error in ERROR_LIST:
+            sys.stderr.write(error)
+
+    print(f"\n"
+          f"---------------------------------------------------------\n"
+          f" Finished - {len(ERROR_LIST)} {errors_str}\n"
+          f"---------------------------------------------------------\n")
+
+    if len(ERROR_LIST) > 1:
+        exit(-1)
 
 
 if __name__ == "__main__":

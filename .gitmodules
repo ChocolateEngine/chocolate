@@ -10,3 +10,9 @@
 [submodule "thirdparty/fast_obj"]
 	path = thirdparty/fast_obj
 	url = https://github.com/thisistherk/fast_obj.git
+[submodule "thirdparty/VulkanMemoryAllocator"]
+	path = thirdparty/VulkanMemoryAllocator
+	url = https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator.git
+[submodule "thirdparty/mimalloc"]
+	path = thirdparty/mimalloc
+	url = https://github.com/microsoft/mimalloc.git

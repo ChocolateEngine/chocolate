@@ -864,6 +864,10 @@ CODE
 #include <TargetConditionals.h>
 #endif
 
+  #if CH_USE_MIMALLOC
+	#include "mimalloc-new-delete.h"
+  #endif
+
 // Visual Studio warnings
 #ifdef _MSC_VER
 #pragma warning (disable: 4127)             // condition expression is constant

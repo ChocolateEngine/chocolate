@@ -1,7 +1,17 @@
 #pragma once
 
 #include "render/irender.h"
+
+#if NDEBUG
+  #define VMA_STATS_STRING_ENABLED 0
+#endif
+
+#include "vk_mem_alloc.h"
 #include <vulkan/vulkan.h>
+
+#if TRACY_ENABLE
+  #include <TracyVulkan.hpp>
+#endif
 
 
 LOG_CHANNEL2( Render );
@@ -29,6 +39,8 @@ struct GraphicsPipelineCreate_t;
 struct TextureCreateInfo_t;
 struct RenderPassCreate_t;
 
+extern VmaAllocator gVmaAllocator;
+
 
 #if _DEBUG
 extern PFN_vkSetDebugUtilsObjectNameEXT    pfnSetDebugUtilsObjectName;
@@ -41,6 +53,12 @@ extern PFN_vkQueueInsertDebugUtilsLabelEXT pfnQueueInsertDebugUtilsLabel;
 extern PFN_vkCmdBeginDebugUtilsLabelEXT    pfnCmdBeginDebugUtilsLabel;
 extern PFN_vkCmdEndDebugUtilsLabelEXT      pfnCmdEndDebugUtilsLabel;
 extern PFN_vkCmdInsertDebugUtilsLabelEXT   pfnCmdInsertDebugUtilsLabel;
+
+#define NV_CHECKPOINTS 0
+#if NV_CHECKPOINTS
+extern PFN_vkCmdSetCheckpointNV       pfnCmdSetCheckpointNV;
+extern PFN_vkGetQueueCheckpointDataNV pfnGetQueueCheckpointDataNV;
+#endif
 #endif
 
 
@@ -48,6 +66,7 @@ struct BufferVK
 {
 	VkBuffer       aBuffer;
 	VkDeviceMemory aMemory;
+	VmaAllocation  aAllocation;
 	size_t         aSize;
 };
 
@@ -64,6 +83,9 @@ struct TextureVK
 	VkFormat             aFormat         = VK_FORMAT_UNDEFINED;
 	VkFilter             aFilter         = VK_FILTER_NEAREST;
 	VkSamplerAddressMode aSamplerAddress = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+
+	// VMA
+	VmaAllocation        aAllocation{};
 
 	// Texture Information
 	const char*          apName          = nullptr;
@@ -147,7 +169,8 @@ VkAttachmentStoreOp                   VK_ToVkStoreOp( EAttachmentStoreOp storeOp
 VkFilter                              VK_ToVkFilter( EImageFilter filter );
 VkSamplerAddressMode                  VK_ToVkSamplerAddress( ESamplerAddressMode mode );
 
-void                                  VK_memcpy( VkDeviceMemory sBufferMemory, VkDeviceSize sSize, const void* spData );
+void                                  VK_memcpy( VmaAllocation sAllocation, VkDeviceSize sSize, const void* spData );
+void                                  VK_memread( VmaAllocation sAllocation, VkDeviceSize sSize, void* spData );
 
 void                                  VK_Reset( ERenderResetFlags sFlags = ERenderResetFlags_None );
 
@@ -230,6 +253,7 @@ const std::vector< VkDescriptorSet >& VK_GetImageSets();
 const std::vector< VkDescriptorSet >& VK_GetImageStorage();
 VkDescriptorSet                       VK_GetImageSet( size_t sIndex );
 void                                  VK_UpdateImageSets();
+void                                  VK_CalcTextureIndices();
 
 Handle                                VK_CreateVariableDescLayout( const CreateVariableDescLayout_t& srCreate );
 bool                                  VK_AllocateVariableDescLayout( const AllocVariableDescLayout_t& srCreate, Handle* handles );
@@ -317,9 +341,9 @@ VkPipelineLayout                      VK_GetPipelineLayout( Handle handle );
 // --------------------------------------------------------------------------------------
 // Buffers
 
-void                                  VK_CreateBuffer( const char* spName, VkBuffer& srBuffer, VkDeviceMemory& srBufferMem, u32 sBufferSize, VkBufferUsageFlags sUsage, VkMemoryPropertyFlags sMemBits );
-void                                  VK_CreateBuffer( VkBuffer& srBuffer, VkDeviceMemory& srBufferMem, u32 sBufferSize, VkBufferUsageFlags sUsage, VkMemoryPropertyFlags sMemBits );
-void                                  VK_DestroyBuffer( VkBuffer& srBuffer, VkDeviceMemory& srBufferMem );
+void                                  VK_CreateBuffer( const char* spName, BufferVK* spBuffer, VkBufferUsageFlags sUsage, VkMemoryPropertyFlags sMemBits );
+void                                  VK_CreateBuffer( BufferVK* spBuffer, VkBufferUsageFlags sUsage, VkMemoryPropertyFlags sMemBits );
+void                                  VK_DestroyBuffer( BufferVK* spBuffer );
 
 // --------------------------------------------------------------------------------------
 // Textures and Render Targets
@@ -354,6 +378,9 @@ void                                  VK_SetImageLayout( VkImage sImage, VkImage
 void                                  VK_SetImageLayout( VkImage sImage, VkImageLayout sOldLayout, VkImageLayout sNewLayout, u32 sMipLevels );
 
 void                                  VK_CreateMissingTexture();
+
+// void                                  VK_AllocateAndBindTexture( TextureVK* spTexture );
+void                                  VK_CreateImage( VkImageCreateInfo& srCreateInfo, TextureVK* spTexture );
 
 // --------------------------------------------------------------------------------------
 // KTX Texture Support
