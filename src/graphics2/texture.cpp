@@ -305,7 +305,7 @@ bool VK_LoadTexture( TextureVK* tex, const std::string& srPath, const TextureCre
 			srPath.c_str(),                                      // pObjectName
 		};
 
-		pfnSetDebugUtilsObjectName( VK_GetDevice(), &imageNameInfo );
+		VK_CheckResultE( pfnSetDebugUtilsObjectName( VK_GetDevice(), &imageNameInfo ), "Failed to set VkImage Debug Name" );
 	}
 #endif
 
@@ -490,7 +490,7 @@ TextureVK* VK_CreateTexture( const TextureCreateInfo_t& srCreate, const TextureC
 		};
 
 		// TODO: add image view name here
-		pfnSetDebugUtilsObjectName( VK_GetDevice(), &nameInfo );
+		VK_CheckResultE( pfnSetDebugUtilsObjectName( VK_GetDevice(), &nameInfo ), "Failed to set VkImage Debug Name" );
 	}
 #endif
 

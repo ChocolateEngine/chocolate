@@ -1,7 +1,7 @@
 #pragma once
 
 #include "render/irender.h"
-#include <vulkan/vulkan.hpp>
+#include <vulkan/vulkan.h>
 
 
 LOG_CHANNEL2( Render );
@@ -131,6 +131,10 @@ const char*                           VKString( VkResult sResult );
 
 void                                  VK_CheckResult( VkResult sResult, char const* spMsg );
 void                                  VK_CheckResult( VkResult sResult );
+
+// Non Fatal Version of it, is just an error
+void                                  VK_CheckResultE( VkResult sResult, char const* spMsg );
+void                                  VK_CheckResultE( VkResult sResult );
 
 // General Conversion Functions
 GraphicsFmt                           VK_ToGraphicsFmt( VkFormat colorFmt );

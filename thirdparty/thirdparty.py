@@ -377,11 +377,10 @@ FILE_LIST = {
             post_jolt_extract,
         ],
         [
-            # https://github.com/wolfpld/tracy/archive/refs/tags/v0.7.8.zip
-            "https://github.com/wolfpld/tracy/archive/f1fea0331aa7222df5b0a8b0ffdf6610547fb336.zip",
-            "zip",                   # file extension it's stored as
-            "Tracy",              # folder to check for if it exists already
-            "tracy-f1fea0331aa7222df5b0a8b0ffdf6610547fb336",         # folder it extracts as to rename to the folder above (optional)
+            "https://github.com/wolfpld/tracy/archive/refs/tags/v0.9.zip",
+            "zip",                  # file extension it's stored as
+            "Tracy",                # folder to check for if it exists already
+            "tracy-0.9",            # folder it extracts as to rename to the folder above (optional)
             ".",                    # extract into this folder (optional)
             None,
         ],
@@ -435,6 +434,15 @@ FILE_LIST = {
             "7z",
             "glm",
         ],
+        # [
+        #     # Tracy Profiler
+        #     "https://github.com/wolfpld/tracy/archive/refs/tags/v0.9.zip",
+        #     "7z",                   # file extension it's stored as
+        #     "Tracy-0.9",            # folder to check for if it exists already
+        #     "Tracy-0.9",            # folder it extracts as to rename to the folder above (optional)
+        #     ".",                    # extract into this folder (optional)
+        #     None,
+        # ],
     ],
 
     # Linux Only

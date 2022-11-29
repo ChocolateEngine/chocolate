@@ -29,6 +29,8 @@ void GuiSystem::Update( float sDT )
 
 void GuiSystem::DrawGui()
 {
+	PROF_SCOPE();
+
 	static bool wasConsoleOpen = false;
 	static Uint32 prevtick = 0;
 	static Uint32 curtick = 0;

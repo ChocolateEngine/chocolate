@@ -648,23 +648,29 @@ constexpr glm::vec4 GetColorRGBA( LogChannel_t *channel, const Log& log )
     return GetColorRGBA( GetColor( channel, log.aType ) );
 }
 
+
+u32 GetColorU32( LogColor sColor )
+{
+	// i don't like this
+	glm::vec4 colorVec     = GetColorRGBA( sColor );
+
+	u8        colorU8[ 4 ] = {
+			   static_cast< u8 >( colorVec.x * 255 ),
+			   static_cast< u8 >( colorVec.y * 255 ),
+			   static_cast< u8 >( colorVec.z * 255 ),
+			   static_cast< u8 >( colorVec.w * 255 ),
+	};
+
+	// what
+	u32 color = *( (u32*)colorU8 );
+
+	return color;
+}
+
     
 u32 GetColorU32( LogChannel_t *channel, const Log& log )
 {
-    // i don't like this
-	glm::vec4 colorVec   = GetColorRGBA( GetColor( channel, log.aType ) );
-
-    u8 colorU8[4] = {
-        static_cast< u8 >( colorVec.x * 255 ),
-        static_cast< u8 >( colorVec.y * 255 ),
-        static_cast< u8 >( colorVec.z * 255 ),
-        static_cast< u8 >( colorVec.w * 255 ),
-    };
-
-    // what
-    u32 color = *( (u32 *)colorU8 );
-
-    return color;
+	return GetColorU32( GetColor( channel, log.aType ) );
 }
 
 
@@ -680,15 +686,46 @@ inline bool Log_DevLevelVisible( const Log& log )
 }
 
 
-inline void Log_Tracy( LogChannel_t* channel, const Log& log )
+static void StripTrailingLines( const char* pText, size_t& len )
+{
+	while ( len > 1 )
+	{
+		switch ( pText[ len - 1 ] )
+		{
+			case ' ':
+			case 9:
+			case '\r':
+			case '\n':
+			case 11:
+			case '\f':
+				--len;
+				break;
+			default:
+				return;
+		}
+	}
+}
+
+
+inline bool Log_TracyEnabled()
+{
+#ifdef TRACY_ENABLE
+	return tracy::ProfilerAvailable();
+#else
+	return false;
+#endif
+}
+
+
+inline void Log_Tracy( LogColor sMainColor, std::string_view sMsg )
 {
 #ifdef TRACY_ENABLE
 	if ( !tracy::ProfilerAvailable() )
 		return;
 
-	size_t len = log.aFormatted.size();
-	StripTrailingLines( log.aFormatted.c_str(), len );
-	TracyMessageC( log.aFormatted.c_str(), len, GetColorU32( channel, log ) );
+	size_t len = sMsg.size();
+	StripTrailingLines( sMsg.data(), len );
+	TracyMessageC( sMsg.data(), len, GetColorU32( sMainColor ) );
 #endif
 }
 
@@ -840,7 +877,7 @@ void Log_SplitStringColors( LogColor sMainColor, std::string_view sBuffer, ChVec
 }
 
 
-// print to system console
+// print to system console and tracy
 void Log_SysPrint( LogColor sMainColor, const Log& srLog, FILE* spStream )
 {
 #ifdef _WIN32
@@ -854,19 +891,30 @@ void Log_SysPrint( LogColor sMainColor, const Log& srLog, FILE* spStream )
 		fprintf( spStream, "%*.*s", colorBuffer.aLen, colorBuffer.aLen, colorBuffer.apStr );
 	}
 
-	if ( IsDebuggerPresent() )
-	{
-		std::string debugString = FormatLogNoColors( srLog );
-		OutputDebugStringA( debugString.c_str() );
-	}
-
 	Log_SetColor( LogColor::Default );
 	fflush( spStream );
+
+  #if !TRACY_ENABLE
+	if ( !IsDebuggerPresent() )
+		return;
+  #endif
+
+	std::string debugString = FormatLogNoColors( srLog );
+	OutputDebugStringA( debugString.c_str() );
+
+	if ( Log_TracyEnabled() )
+		Log_Tracy( sMainColor, debugString );
 #else
 	Log_SetColor( sMainColor );
 	fputs( srLog.aFormatted.c_str(), spStream );
 	Log_SetColor( LogColor::Default );
 	fflush( spStream );
+
+	if ( Log_TracyEnabled() )
+	{
+		std::string debugString = FormatLogNoColors( srLog );
+		Log_Tracy( sMainColor, debugString );
+	}
 #endif
 }
 
@@ -935,8 +983,6 @@ void Log_AddLogInternal( Log& log )
                 break;
         }
     }
-
-    Log_Tracy( channel, log );
 }
 
 
@@ -1306,7 +1352,7 @@ void CORE_API Log_ErrorF( const char* spFmt, ... )
 // Extreme severity.
 void CORE_API Log_Fatal( const char* spBuf )
 {
-	Log_Ex( gLC_General, LogType::Error, spBuf );
+	Log_Ex( gLC_General, LogType::Fatal, spBuf );
 }
 
 void CORE_API Log_FatalF( const char* spFmt, ... )

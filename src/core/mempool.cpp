@@ -48,6 +48,9 @@ mempool_t* mempool_new( s64 sSize )
 		return 0;
 	}
 
+	// Zero out the new data
+	memset( pMempool->apBuf, 0, sizeof( sSize ) );
+
 	pMempool->apCur = pMempool->apBuf;
 	pMempool->apEnd = pMempool->apBuf + sSize;
 	return pMempool;
@@ -137,21 +140,6 @@ memerror_t mempool_realloc( mempool_t* spPool, s64 sSize )
 		return MEMERR_INVALID_SIZE;
 	}
 
-	if ( spPool->apBuf == 0 )
-	{
-		spPool->apBuf = static_cast< s8* >( calloc( 0, sSize ) );
-
-		if ( spPool->apBuf == 0 )
-		{
-			Log_Error( "Could not allocate memory for memory pool buffer.\n" );
-			return MEMERR_NO_MEMORY;
-		}
-
-		spPool->apCur = spPool->apBuf;
-		spPool->apEnd = spPool->apBuf + sSize;
-		return MEMERR_NONE;
-	}
-
 	s8* pBuf = static_cast< s8* >( realloc( spPool->apBuf, sSize ) );
 
 	if ( pBuf == 0 )
@@ -164,6 +152,9 @@ memerror_t mempool_realloc( mempool_t* spPool, s64 sSize )
 	spPool->apBuf = pBuf;
 	spPool->apEnd = spPool->apBuf + sSize;
 	spPool->aSize = sSize;
+
+	// Zero out the new data
+	memset( spPool->apCur, 0, sSize - spPool->aSize );
 
 	// Update Pointers to data in all Chunks
 	size_t i      = 0;
@@ -218,6 +209,10 @@ memerror_t mempool_alloc( mempool_t* spPool, s64 sSize, s8** spBuf )
 			}
 			pChunk->aUsed  = true;
 			pChunk->aSize  = sSize;
+
+			// Zero out the memory
+			memset( pChunk->apData, 0, sizeof( pChunk->aSize ) );
+
 			*spBuf         = pChunk->apData;
 			return MEMERR_NONE;
 		}

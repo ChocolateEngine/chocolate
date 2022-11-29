@@ -95,6 +95,8 @@ static EJsonError Json_ParseQuote( const char*& str, char endChar, char*& output
 	if ( output == nullptr )
 		return EJsonError_OutOfMemory;
 
+	memset( output, 0, STRING_MALLOC_SIZE );
+
 	// const char* base = str;
 	int i = 0;
 	for ( int j = 1 ; *str != endChar; i++, str++ )
@@ -105,13 +107,16 @@ static EJsonError Json_ParseQuote( const char*& str, char endChar, char*& output
 
 		if ( i == STRING_MALLOC_SIZE )
 		{
-			auto* tmp = (char*)realloc( output, STRING_MALLOC_SIZE * ++j );
+			auto* tmp = (char*)realloc( output, STRING_MALLOC_SIZE * ( j + 1 ) );
 			if ( tmp == nullptr )
 			{
 				free( output );
 				return EJsonError_OutOfMemory;
 			}
 
+			memset( tmp, 0, ( STRING_MALLOC_SIZE * ( j + 1 ) ) - ( STRING_MALLOC_SIZE * j ) );
+
+			j++;
 			output = tmp;
 		}
 
@@ -158,10 +163,12 @@ static EJsonError Json_ParseString( const char*& str, char*& output, int* len = 
 			return EJsonError_InvalidQuotelessKeyCharacter;
 	}
 
-	output = (char*)malloc( i+1 );
+	output = (char*)malloc( i + 1 );
 
 	if ( output == nullptr )
 		return EJsonError_OutOfMemory;
+
+	memset( output, 0, i + 1 );
 
 	// output = const_cast< char* >( base );
 	strncpy( output, base, i );
@@ -181,10 +188,12 @@ static EJsonError Json_ParseStringNoCheck( const char*& str, char*& output, int*
 	int i = 0;
 	for ( ; !Json_IsWhitespace( *str ) && *str != ':' && *str != ',' && *str != ']' && *str != '}'; i++, str++ );
 
-	output = (char*)malloc( i+1 );
+	output = (char*)malloc( i + 1 );
 
 	if ( output == nullptr )
 		return EJsonError_OutOfMemory;
+
+	memset( output, 0, i + 1 );
 
 	// output = const_cast< char* >( base );
 	strncpy( output, base, i );
@@ -216,10 +225,12 @@ static EJsonError Json_ParseNumber( const char*& str, JsonObject_t& srObj )
 			str++;
 	}
 
-	char* output = (char*)malloc( i+1 );
+	char* output = (char*)malloc( i + 1 );
 
 	if ( output == nullptr )
 		return EJsonError_OutOfMemory;
+
+	memset( output, 0, i + 1 );
 
 	// output = const_cast< char* >( base );
 	strncpy( output, base, i );
@@ -557,6 +568,11 @@ void Json_Free( JsonObject_t* spRoot )
 		if ( objStack.size() && objStack[ objStack.size() - 1 ]->aType == EJsonType_Object && objStack[ objStack.size() - 1 ]->aObjects.size() )
 		{
 			objStack[objStack.size() - 1]->aObjects.clear();
+		}
+
+		if ( _HEAPOK != _heapchk() )
+		{
+			printf( "A}{Sdk0iawjd\n" );
 		}
 	}
 }

@@ -99,23 +99,36 @@ void InputSystem::Bind( const std::string& srKey, const std::string& srCmd )
 
 void InputSystem::ParseInput()
 {
-	SDL_PumpEvents();
+	PROF_SCOPE();
+
+	{
+		PROF_SCOPE_NAMED( "SDL_PumpEvents" );
+		SDL_PumpEvents();
+	}
 
 	int mouseEventCount = 0;
+	int eventCount      = 0;
 
-	// get total event count first
-	int eventCount = SDL_PeepEvents( nullptr, 0, SDL_PEEKEVENT, SDL_FIRSTEVENT, SDL_LASTEVENT );
+	{
+		PROF_SCOPE_NAMED( "SDL_PeepEvents" );
+		// get total event count first
+		eventCount = SDL_PeepEvents( nullptr, 0, SDL_PEEKEVENT, SDL_FIRSTEVENT, SDL_LASTEVENT );
 
-	// resize event vector with events found
-	aEvents.resize( eventCount );
+		// resize event vector with events found
+		aEvents.resize( eventCount );
 
-	// fill event vector with events found
-	SDL_PeepEvents( aEvents.data(), eventCount, SDL_GETEVENT, SDL_FIRSTEVENT, SDL_LASTEVENT );
+		// fill event vector with events found
+		SDL_PeepEvents( aEvents.data(), eventCount, SDL_GETEVENT, SDL_FIRSTEVENT, SDL_LASTEVENT );
+	}
 
 	for ( int i = 0; i < eventCount; i++ )
 	{
 		SDL_Event& aEvent = aEvents[i];
-		ImGui_ImplSDL2_ProcessEvent( &aEvent );
+
+		{
+			PROF_SCOPE_NAMED( "ImGui_ImplSDL2_ProcessEvent" );
+			ImGui_ImplSDL2_ProcessEvent( &aEvent );
+		}
 
 		switch (aEvent.type)
 		{
@@ -179,6 +192,8 @@ bool InputSystem::Init()
 
 void InputSystem::Update( float frameTime )
 {
+	PROF_SCOPE_NAMED( "Input System Update" );
+
 	ResetInputs(  );
 	ParseInput(  );
 	UpdateKeyStates(  );
@@ -187,6 +202,8 @@ void InputSystem::Update( float frameTime )
 
 void InputSystem::ResetInputs(  )
 {
+	PROF_SCOPE();
+
 	aMouseDelta = {0, 0};
 
 	aKeyboardState = SDL_GetKeyboardState( NULL );
@@ -209,14 +226,18 @@ bool InputSystem::WindowHasFocus(  )
 
 void InputSystem::UpdateKeyStates(  )
 {
+	PROF_SCOPE();
+
 	for ( auto const& [key, val] : aKeyStates )
 		UpdateKeyState( key );
 }
 
 void InputSystem::UpdateKeyState( SDL_Scancode key )
 {
-	bool pressed = aKeyboardState[key];
-	KeyState& state = aKeyStates[key];
+	PROF_SCOPE();
+
+	bool      pressed = aKeyboardState[ key ];
+	KeyState& state   = aKeyStates[ key ];
 
 	if ( state & KeyState_Pressed )
 	{
@@ -245,48 +266,18 @@ void InputSystem::UpdateKeyState( SDL_Scancode key )
 		state |= KeyState_Released | KeyState_JustReleased;
 		state &= ~(KeyState_Pressed | KeyState_JustPressed);
 	}
-
-// old method
-#if 0
-	switch ( state )
-	{
-		case KeyState::Released:
-			if ( pressed )
-				state = KeyState::JustPressed;
-			break;
-
-		case KeyState::JustReleased:
-			if ( pressed )
-				state = KeyState::JustPressed;
-			else
-				state = KeyState::Released;
-			break;
-
-		case KeyState::JustPressed:
-			if ( pressed )
-				state = KeyState::Pressed;
-			else
-				state = KeyState::JustReleased;
-			break;
-
-		case KeyState::Pressed:
-			if ( !pressed )
-				state = KeyState::JustReleased;
-			break;
-	}
-#endif
 }
 
 void InputSystem::RegisterKey( SDL_Scancode key )
 {
-	KeyStates::const_iterator state = aKeyStates.find( key );
+	auto state = aKeyStates.find( key );
 
 	// Already registered
 	if ( state != aKeyStates.end() )
 		return;
 
 	// aKeyStates[key] = aKeyboardState[key] ? KeyState::JustPressed : KeyState::Released;
-	aKeyStates[key] = KeyState_Invalid;
+	aKeyStates[ key ] = KeyState_Invalid;
 
 	UpdateKeyState( key );
 }

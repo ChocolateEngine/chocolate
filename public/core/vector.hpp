@@ -11,6 +11,7 @@ functionality where a STL vector may cause segfaults.
 
 #include "log.h"
 #include "asserts.h"
+#include "profiler.h"
 
 
 template< typename T >
@@ -42,78 +43,64 @@ struct ChVector
 	T&       top() const { return apData[ aSize - 1 ]; }
 
 	// Resizes the buffer
-	void     resize( uint32_t sSize, bool sZero = false )
+	void     resize( uint32_t sSize, bool sZero = true )
 	{
-		if ( apData )
+		if ( sSize > 0 && sSize > aCapacity )
 		{
-			if ( sSize > 0 && sSize > aCapacity )
+			void* newData = realloc( apData, sSize * sizeof( T ) );
+			if ( newData == nullptr )
+				Log_FatalF( "Failed to Resize ChVector: %zd bytes\n", sSize );
+
+			// if ( newData != apData )
 			{
-				void* newData = realloc( apData, sSize * sizeof( T ) );
-				if ( newData == nullptr )
-					Log_FatalF( "Failed to Resize ChVector: %zd bytes\n", sSize );
-
-				apData = static_cast< T* >( newData );
-
-				if ( sZero && sSize > aCapacity )
-				{
-					// Zero out the new data 
-					memset( &apData[ aCapacity ], 0, ( sSize - aCapacity ) * sizeof( T ) );
-				}
-
-				aCapacity = sSize;
+				TracyFree( apData );
+				TracyAlloc( newData, sSize );
 			}
-			else if ( sSize == 0 )
+
+			apData = static_cast< T* >( newData );
+
+			// if ( sZero && sSize > aCapacity )
+			if ( sSize > aCapacity )
 			{
-				free( apData );
-				apData = nullptr;
+				// Zero out the new data 
+				memset( &apData[ aCapacity ], 0, ( sSize - aCapacity ) * sizeof( T ) );
 			}
-		}
-		else if ( sSize > 0 )
-		{
-			// NOTE: this is actually useless, you can use realloc with nullptr
-			if ( sZero )
-				apData = static_cast< T* >( calloc( sSize, sizeof( T ) ) );
-			else
-				apData = static_cast< T* >( malloc( sSize * sizeof( T ) ) );
-
-			if ( apData == nullptr )
-				Log_FatalF( "Failed to Allocate ChVector: %zd bytes\n", sSize );
 
 			aCapacity = sSize;
+		}
+		else if ( sSize == 0 )
+		{
+			free_data();
 		}
 
 		aSize = sSize;
 	}
 
 	// Pre-allocates memory while maintaining stored size
-	void     reserve( uint32_t sSize )
+	void reserve( uint32_t sSize )
 	{
-		if ( apData )
+		if ( sSize > 0 && sSize > aCapacity )
 		{
-			if ( sSize > 0 && sSize > aCapacity )
+			void* newData = realloc( apData, sSize * sizeof( T ) );
+			if ( newData == nullptr )
+				Log_FatalF( "Failed to Resize ChVector: %zd bytes\n", sSize );
+
+			// if ( newData != apData )
 			{
-				void* newData = realloc( apData, sSize * sizeof( T ) );
-				if ( newData == nullptr )
-					Log_FatalF( "Failed to Resize ChVector: %zd bytes\n", sSize );
-
-				apData = static_cast< T* >( newData );
-
-				aCapacity = sSize;
+				TracyFree( apData );
+				TracyAlloc( newData, sSize );
 			}
-			else if ( sSize == 0 )
-			{
-				free( apData );
-				apData = nullptr;
-			}
-		}
-		else if ( sSize > 0 )
-		{
-			apData = static_cast< T* >( malloc( sSize * sizeof( T ) ) );
 
-			if ( apData == nullptr )
-				Log_FatalF( "Failed to Allocate ChVector: %zd bytes\n", sSize );
+			apData = static_cast< T* >( newData );
+
+			// Zero out the new data
+			memset( &apData[ aCapacity ], 0, ( sSize - aCapacity ) * sizeof( T ) );
 
 			aCapacity = sSize;
+		}
+		else if ( sSize == 0 )
+		{
+			free_data();
 		}
 	}
 
@@ -129,6 +116,7 @@ struct ChVector
 		if ( apData )
 		{
 			free( apData );
+			TracyFree( apData );
 			apData = nullptr;
 		}
 
@@ -144,8 +132,7 @@ struct ChVector
 
 		if ( aSize == 0 )
 		{
-			free( apData );
-			apData = nullptr;
+			free_data();
 		}
 		else
 		{
@@ -169,18 +156,13 @@ struct ChVector
 	// Add one element to the buffer
 	void push_back( const T& srData )
 	{
-		resize( aSize + 1, false );
+		resize( aSize + 1, true );
 		top() = srData;
-
-		// dst, src, size
-		// memcpy( &apData[ aSize - 1 ], &srData, sizeof( T ) );
-		// std::copy( &apData[ aSize - 1 ], &srData, sizeof( T ) );
-		// std::copy( other.begin(), other.end(), apData );
 	}
 
 	void push_back( T&& srData )
 	{
-		resize( aSize + 1, false );
+		resize( aSize + 1, true );
 
 		// dst, src, size
 		// memcpy( &apData[ aSize - 1 ], &srData, sizeof( T ) );
@@ -200,7 +182,6 @@ struct ChVector
 			memcpy( &apData[ sIndex ], &apData[ sIndex + 1 ], sSize * sizeof( T ) );
 		}
 
-		// resize( aSize - 1 );
 		aSize--;
 	}
 

@@ -35,6 +35,8 @@ void VK_BindDescSets()
 
 bool VK_BindShader( VkCommandBuffer c, Handle handle )
 {
+	PROF_SCOPE();
+
 	ShaderVK* shader = gShaders.Get( handle );
 	if ( !shader )
 	{
@@ -252,7 +254,7 @@ bool VK_CreateGraphicsPipeline( Handle& srHandle, GraphicsPipelineCreate_t& srGr
 
 	// create rasterizer
 	VkPipelineRasterizationStateCreateInfo rasterizer{ VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO };
-	rasterizer.depthClampEnable        = VK_TRUE;
+	rasterizer.depthClampEnable        = VK_FALSE;
 	rasterizer.rasterizerDiscardEnable = VK_FALSE;
 	rasterizer.lineWidth               = 1.f;
 	rasterizer.polygonMode             = srGraphicsCreate.aLineMode ? VK_POLYGON_MODE_LINE : VK_POLYGON_MODE_FILL;
@@ -420,7 +422,7 @@ bool VK_CreateGraphicsPipeline( Handle& srHandle, GraphicsPipelineCreate_t& srGr
 			srGraphicsCreate.apName,                             // pObjectName
 		};
 
-		pfnSetDebugUtilsObjectName( VK_GetDevice(), &objectInfo );
+		VK_CheckResultE( pfnSetDebugUtilsObjectName( VK_GetDevice(), &objectInfo ), "Failed to set Graphics Pipeline Debug Name" );
 	}
 #endif
 

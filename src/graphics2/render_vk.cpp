@@ -158,6 +158,24 @@ void VK_CheckResult( VkResult sResult )
 }
 
 
+void VK_CheckResultE( VkResult sResult, char const* spMsg )
+{
+	if ( sResult == VK_SUCCESS )
+		return;
+
+	Log_ErrorF( gLC_Render, "Vulkan Error: %s: %s", spMsg, VKString( sResult ) );
+}
+
+
+void VK_CheckResultE( VkResult sResult )
+{
+	if ( sResult == VK_SUCCESS )
+		return;
+
+	Log_ErrorF( gLC_Render, "Vulkan Error: %s", VKString( sResult ) );
+}
+
+
 GraphicsFmt VK_ToGraphicsFmt( VkFormat colorFmt )
 {
 	switch ( colorFmt )
@@ -610,11 +628,18 @@ VkCommandPool& VK_GetPrimaryCommandPool()
 
 void VK_CreateBuffer( VkBuffer& srBuffer, VkDeviceMemory& srBufferMem, u32 sBufferSize, VkBufferUsageFlags sUsage, VkMemoryPropertyFlags sMemBits )
 {
+	PROF_SCOPE();
+
 	// create a vertex buffer
 	VkBufferCreateInfo aBufferInfo{ VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
 	aBufferInfo.size        = sBufferSize;
 	aBufferInfo.usage       = sUsage;
 	aBufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+	if ( _HEAPOK != _heapchk() )
+	{
+		printf( "A}{Sdk0iawjd\n" );
+	}
 
 	VK_CheckResult( vkCreateBuffer( VK_GetDevice(), &aBufferInfo, nullptr, &srBuffer ), "Failed to create buffer" );
 
@@ -625,6 +650,11 @@ void VK_CreateBuffer( VkBuffer& srBuffer, VkDeviceMemory& srBufferMem, u32 sBuff
 	VkMemoryAllocateInfo aMemAllocInfo{ VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO };
 	aMemAllocInfo.allocationSize  = aMemReqs.size;
 	aMemAllocInfo.memoryTypeIndex = VK_GetMemoryType( aMemReqs.memoryTypeBits, sMemBits );
+
+	if ( _HEAPOK != _heapchk() )
+	{
+		printf( "A}{Sdk0iawjd\n" );
+	}
 
 	VK_CheckResult( vkAllocateMemory( VK_GetDevice(), &aMemAllocInfo, nullptr, &srBufferMem ), "Failed to allocate buffer memory" );
 
@@ -654,7 +684,7 @@ void VK_CreateBuffer( const char* spName, VkBuffer& srBuffer, VkDeviceMemory& sr
 			spName,                                              // pObjectName
 		};
 
-		pfnSetDebugUtilsObjectName( VK_GetDevice(), &nameInfo );
+		VK_CheckResultE( pfnSetDebugUtilsObjectName( VK_GetDevice(), &nameInfo ), "Failed to set VkBuffer Debug Name" );
 	}
 #endif
 }
@@ -662,6 +692,8 @@ void VK_CreateBuffer( const char* spName, VkBuffer& srBuffer, VkDeviceMemory& sr
 
 void VK_DestroyBuffer( VkBuffer& srBuffer, VkDeviceMemory& srBufferMem )
 {
+	PROF_SCOPE();
+
 	if ( srBuffer )
 	{
 		vec_remove_if( gBuffers, srBuffer );
@@ -992,6 +1024,8 @@ public:
 	
 	Handle CreateBuffer( const char* spName, u32 sSize, EBufferFlags sBufferFlags, EBufferMemory sBufferMem ) override
 	{
+		PROF_SCOPE();
+
 		BufferVK* buffer = nullptr;
 		Handle    handle = gBufferHandles.Create( &buffer );
 
@@ -1042,6 +1076,8 @@ public:
 
 	void DestroyBuffer( Handle buffer ) override
 	{
+		PROF_SCOPE();
+
 		BufferVK* bufVK = gBufferHandles.Get( buffer );
 
 		if ( !bufVK )
@@ -1057,6 +1093,8 @@ public:
 
 	virtual u32 BufferWrite( Handle buffer, u32 sSize, void* spData ) override
 	{
+		PROF_SCOPE();
+
 		BufferVK* bufVK = gBufferHandles.Get( buffer );
 
 		if ( !bufVK )
@@ -1078,6 +1116,8 @@ public:
 
 	virtual u32 BufferRead( Handle buffer, u32 sSize, void* spData ) override
 	{
+		PROF_SCOPE();
+
 		BufferVK* bufVK = gBufferHandles.Get( buffer );
 
 		if ( !bufVK )
@@ -1099,6 +1139,8 @@ public:
 
 	virtual u32 BufferCopy( Handle shSrc, Handle shDst, u32 sSize ) override
 	{
+		PROF_SCOPE();
+
 		BufferVK* bufSrc = gBufferHandles.Get( shSrc );
 		if ( !bufSrc )
 		{
@@ -1259,6 +1301,8 @@ public:
 
 	int GetTextureIndex( Handle shTexture ) override
 	{
+		PROF_SCOPE();
+
 		if ( shTexture == InvalidHandle )
 			return 0;
 
@@ -1274,6 +1318,8 @@ public:
 
 	GraphicsFmt GetTextureFormat( Handle shTexture ) override
 	{
+		PROF_SCOPE();
+
 		if ( shTexture == InvalidHandle )
 			return GraphicsFmt::INVALID;
 
@@ -1473,6 +1519,8 @@ public:
 
 	void PreRenderPass() override
 	{
+		PROF_SCOPE();
+
 		if ( gNeedTextureUpdate )
 			VK_UpdateImageSets();
 
@@ -1489,12 +1537,16 @@ public:
 
 	void WaitForQueues() override
 	{
+		PROF_SCOPE();
+
 		VK_WaitForGraphicsQueue();
 		VK_WaitForPresentQueue();
 	}
 
 	void ResetCommandPool() override
 	{
+		PROF_SCOPE();
+
 		VK_ResetCommandPool( VK_GetPrimaryCommandPool() );
 	}
 
@@ -1522,6 +1574,8 @@ public:
 
 	void BeginCommandBuffer( Handle cmd ) override
 	{
+		PROF_SCOPE();
+
 		VkCommandBuffer c = VK_GetCommandBuffer( cmd );
 
 		// TODO: expose this
@@ -1535,6 +1589,8 @@ public:
 
 	void EndCommandBuffer( Handle cmd ) override
 	{
+		PROF_SCOPE();
+
 		VkCommandBuffer c = VK_GetCommandBuffer( cmd );
 		VK_CheckResult( vkEndCommandBuffer( c ), "Failed to end command buffer" );
 	}
@@ -1552,6 +1608,8 @@ public:
 
 	void BeginRenderPass( Handle cmd, const RenderPassBegin_t& srBegin ) override
 	{
+		PROF_SCOPE();
+
 		VkCommandBuffer c = VK_GetCommandBuffer( cmd );
 
 		if ( c == nullptr )
@@ -1605,6 +1663,8 @@ public:
 
 	void EndRenderPass( Handle cmd ) override
 	{
+		PROF_SCOPE();
+
 		VkCommandBuffer c = VK_GetCommandBuffer( cmd );
 
 		if ( c == nullptr )
@@ -1620,6 +1680,8 @@ public:
 
 	void DrawImGui( ImDrawData* spDrawData, Handle cmd ) override
 	{
+		PROF_SCOPE();
+
 		VkCommandBuffer c = VK_GetCommandBuffer( cmd );
 		ImGui_ImplVulkan_RenderDrawData( spDrawData, c );
 	}
@@ -1630,6 +1692,8 @@ public:
 
 	void CmdSetViewport( Handle cmd, u32 sOffset, const Viewport_t* spViewports, u32 sCount ) override
 	{
+		PROF_SCOPE();
+
 		if ( sCount > gMaxViewports )
 		{
 			Log_ErrorF( gLC_Render, "CmdSetViewport: Trying to set more than max viewports (Max: %u - Count: %u)", gMaxViewports, sCount );
@@ -1659,6 +1723,8 @@ public:
 
 	void CmdSetScissor( Handle cmd, u32 sOffset, const Rect2D_t* spScissors, u32 sCount ) override
 	{
+		PROF_SCOPE();
+
 		VkCommandBuffer c = VK_GetCommandBuffer( cmd );
 
 		if ( c == nullptr )
@@ -1682,6 +1748,8 @@ public:
 
 	void CmdSetDepthBias( Handle cmd, float sConstantFactor, float sClamp, float sSlopeFactor ) override
 	{
+		PROF_SCOPE();
+
 		VkCommandBuffer c = VK_GetCommandBuffer( cmd );
 
 		if ( c == nullptr )
@@ -1695,6 +1763,8 @@ public:
 
 	void CmdSetLineWidth( Handle cmd, float sLineWidth ) override
 	{
+		PROF_SCOPE();
+
 		VkCommandBuffer c = VK_GetCommandBuffer( cmd );
 
 		if ( c == nullptr )
@@ -1708,6 +1778,8 @@ public:
 
 	bool CmdBindPipeline( Handle cmd, Handle shader ) override
 	{
+		PROF_SCOPE();
+
 		VkCommandBuffer c = VK_GetCommandBuffer( cmd );
 
 		if ( c == nullptr )
@@ -1726,6 +1798,8 @@ public:
 	                       u32         sSize,
 	                       void*       spValues ) override
 	{
+		PROF_SCOPE();
+
 		VkCommandBuffer c = VK_GetCommandBuffer( cmd );
 
 		if ( c == nullptr )
@@ -1770,6 +1844,8 @@ public:
 	                            Handle*            spSets,
 	                            u32                sSetCount ) override
 	{
+		PROF_SCOPE();
+
 		VkCommandBuffer c = VK_GetCommandBuffer( cmd );
 
 		if ( c == nullptr )
@@ -1819,6 +1895,8 @@ public:
 
 	void CmdBindVertexBuffers( Handle cmd, u32 sFirstBinding, u32 sCount, const Handle* spBuffers, const size_t* spOffsets ) override
 	{
+		PROF_SCOPE();
+
 		VkCommandBuffer c = VK_GetCommandBuffer( cmd );
 
 		if ( c == nullptr )
@@ -1849,6 +1927,8 @@ public:
 
 	void CmdBindIndexBuffer( Handle cmd, Handle shBuffer, size_t offset, EIndexType indexType ) override
 	{
+		PROF_SCOPE();
+
 		VkCommandBuffer c = VK_GetCommandBuffer( cmd );
 
 		if ( c == nullptr )
@@ -1884,6 +1964,8 @@ public:
 	
 	void CmdDraw( Handle cmd, u32 sVertCount, u32 sInstanceCount, u32 sFirstVert, u32 sFirstInstance ) override
 	{
+		PROF_SCOPE();
+
 		VkCommandBuffer c = VK_GetCommandBuffer( cmd );
 
 		if ( c == nullptr )
@@ -1897,6 +1979,8 @@ public:
 
 	void CmdDrawIndexed( Handle cmd, u32 sIndexCount, u32 sInstanceCount, u32 sFirstIndex, int sVertOffset, u32 sFirstInstance ) override
 	{
+		PROF_SCOPE();
+
 		VkCommandBuffer c = VK_GetCommandBuffer( cmd );
 
 		if ( c == nullptr )

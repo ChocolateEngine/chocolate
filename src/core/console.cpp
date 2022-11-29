@@ -609,9 +609,6 @@ void Con_Update()
 	size_t queueSize = gQueue.size();
 	for ( size_t i = 0; i < queueSize; i++ )
 	{
-		if ( gQueue[ 0 ] == "" )
-			continue;
-
 		Con_RunCommand( gQueue[ 0 ] );
 		vec_remove_index( gQueue, 0 );
 	}

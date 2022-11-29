@@ -13,5 +13,6 @@
 #include "resources.hh"
 #include "threadpool.h"
 #include "asserts.h"
+#include "profiler.h"
 #include "vector.hpp"
 

@@ -43,7 +43,10 @@ constexpr char const* gpExtensions[] = {
 
 constexpr char const* gpDeviceExtensions[] = {
 	VK_KHR_SWAPCHAIN_EXTENSION_NAME,
-	"VK_EXT_descriptor_indexing"
+	"VK_EXT_descriptor_indexing",
+#if _DEBUG
+	VK_EXT_DEVICE_MEMORY_REPORT_EXTENSION_NAME,
+#endif
 };
 
 
@@ -360,7 +363,7 @@ bool VK_CreateInstance()
 
 	if ( gListExts )
 	{
-		Log_MsgF( gLC_Render, "%d Vulkan extensions available:\n", extensionCount );
+		Log_MsgF( gLC_Render, "%d Instance extensions :\n", extensionCount );
 	
 		for ( const auto& ext : extProps )
 			Log_MsgF( gLC_Render, "    %s\n", ext.extensionName );

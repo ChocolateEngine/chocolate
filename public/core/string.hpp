@@ -32,7 +32,7 @@ struct ChStringBase
 	T&       top() const { return apData[ aSize - 1 ]; }
 
 	// Resizes the buffer
-	void     resize( uint32_t sSize, bool sZero = false )
+	void     resize( uint32_t sSize, bool sZero = true )
 	{
 		if ( apData )
 		{
@@ -44,7 +44,7 @@ struct ChStringBase
 
 				apData = static_cast< T* >( newData );
 
-				if ( sZero && sSize > aSize )
+				if ( sSize > aSize )
 				{
 					memset( &apData[ sSize ], 0, aSize - sSize * sizeof( T ) );
 				}

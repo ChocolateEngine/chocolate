@@ -459,7 +459,7 @@ Handle VK_CreateVariableDescLayout( const CreateVariableDescLayout_t& srCreate )
 			srCreate.apName,                                     // pObjectName
 		};
 
-		pfnSetDebugUtilsObjectName( VK_GetDevice(), &nameInfo );
+		VK_CheckResultE( pfnSetDebugUtilsObjectName( VK_GetDevice(), &nameInfo ), "Failed to Set Descriptor Set Layout Debug Name" );
 	}
 #endif
 
@@ -514,7 +514,7 @@ bool VK_AllocateVariableDescLayout( const AllocVariableDescLayout_t& srCreate, H
 				srCreate.apName,                                     // pObjectName
 			};
 
-			pfnSetDebugUtilsObjectName( VK_GetDevice(), &nameInfo );
+			VK_CheckResultE( pfnSetDebugUtilsObjectName( VK_GetDevice(), &nameInfo ), "Failed to Set Descriptor Set Debug Name" );
 		}
 #endif
 	}

@@ -139,6 +139,8 @@ bool AudioSystem::Init()
 	{
 		while ( true )
 		{
+			PROF_SCOPE_NAMED( "Audio Update Thread" )
+
 			if ( aPaused || aStreamsPlaying.size() == 0 )
 			{
 				SDL_Delay( 5 );

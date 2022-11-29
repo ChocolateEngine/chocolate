@@ -395,6 +395,8 @@ void DrawFilterBox()
 
 void DrawInputDropDownBox( const std::vector< std::string >& cvarAutoComplete, ImVec2& dropDownPos )
 {
+	PROF_SCOPE();
+
 	//ImGui::BeginPopup( "cvars_modal", ImGuiWindowFlags_Popup );
 	//ImGui::BeginPopupModal( "cvars_modal" );
 
@@ -610,6 +612,8 @@ void UpdateConsoleOutput()
 
 void DrawConsoleOutput()
 {
+	PROF_SCOPE();
+
 	// um
 	ImVec4* colors = ImGui::GetStyle().Colors;
 	ImVec4 bgColor = colors[ImGuiCol_FrameBg];
@@ -684,6 +688,8 @@ void DrawConsoleOutput()
 
 void GuiSystem::DrawConsole( bool wasConsoleOpen )
 {
+	PROF_SCOPE();
+
 	if ( conui_spam_test.GetBool() )
 		Log_Msg( "TEST\n" );
 

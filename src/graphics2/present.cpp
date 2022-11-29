@@ -189,6 +189,8 @@ VkCommandBuffer VK_BeginOneTimeCommand()
 
 void VK_EndOneTimeCommand( VkCommandBuffer c )
 {
+	PROF_SCOPE();
+
 	VK_CheckResult( vkEndCommandBuffer( c ), "Failed to end command buffer!" );
 
 	VkSubmitInfo submitInfo{ VK_STRUCTURE_TYPE_SUBMIT_INFO };
@@ -219,6 +221,8 @@ void VK_OneTimeCommand( std::function< void( VkCommandBuffer ) > sFunc )
 
 void VK_WaitForPresentQueue()
 {
+	PROF_SCOPE();
+
 	if ( gInPresentQueue )
 	{
 		VK_CheckResult( vkDeviceWaitIdle( VK_GetDevice() ), "Failed waiting for device before present queue" );
@@ -231,6 +235,8 @@ void VK_WaitForPresentQueue()
 
 void VK_WaitForGraphicsQueue()
 {
+	PROF_SCOPE();
+
 	if ( gInGraphicsQueue )
 		VK_CheckResult( vkQueueWaitIdle( VK_GetGraphicsQueue() ), "Failed waiting for graphics queue" );
 
@@ -295,6 +301,8 @@ void VK_RecordCommands()
 
 void VK_Present()
 {
+	PROF_SCOPE();
+
 	VK_CheckResult( vkWaitForFences( VK_GetDevice(), 1, &gFences[ gFrameIndex ], VK_TRUE, UINT64_MAX ), "Failed waiting for fences" );
 
 	u32      imageIndex;
