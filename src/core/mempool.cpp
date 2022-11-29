@@ -49,7 +49,7 @@ mempool_t* mempool_new( s64 sSize )
 	}
 
 	// Zero out the new data
-	memset( pMempool->apBuf, 0, sizeof( sSize ) );
+	memset( pMempool->apBuf, 0, sSize );
 
 	pMempool->apCur = pMempool->apBuf;
 	pMempool->apEnd = pMempool->apBuf + sSize;
@@ -211,7 +211,7 @@ memerror_t mempool_alloc( mempool_t* spPool, s64 sSize, s8** spBuf )
 			pChunk->aSize  = sSize;
 
 			// Zero out the memory
-			memset( pChunk->apData, 0, sizeof( pChunk->aSize ) );
+			memset( pChunk->apData, 0, pChunk->aSize );
 
 			*spBuf         = pChunk->apData;
 			return MEMERR_NONE;
