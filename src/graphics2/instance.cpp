@@ -45,7 +45,7 @@ constexpr char const* gpDeviceExtensions[] = {
 	VK_KHR_SWAPCHAIN_EXTENSION_NAME,
 	"VK_EXT_descriptor_indexing",
 #if _DEBUG
-	VK_EXT_DEVICE_MEMORY_REPORT_EXTENSION_NAME,
+	// VK_EXT_DEVICE_MEMORY_REPORT_EXTENSION_NAME,
 #endif
 };
 
