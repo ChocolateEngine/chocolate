@@ -569,11 +569,6 @@ void Json_Free( JsonObject_t* spRoot )
 		{
 			objStack[objStack.size() - 1]->aObjects.clear();
 		}
-
-		if ( _HEAPOK != _heapchk() )
-		{
-			printf( "A}{Sdk0iawjd\n" );
-		}
 	}
 }
 
