@@ -198,6 +198,22 @@ void VK_AllocSets()
 }
 
 
+void VK_CalcTextureIndices()
+{
+	size_t index = 0;
+	for ( uint32_t j = 0; j < gTextures.size(); j++ )
+	{
+		// must be a sampled image
+		if ( !( gTextures[ j ]->aUsage & VK_IMAGE_USAGE_SAMPLED_BIT ) )
+			continue;
+
+		gTextures[ j ]->aIndex = index++;
+	}
+
+	Log_DevF( gLC_Render, 1, "Texture Index Count: %d\n", index );
+}
+
+
 void VK_UpdateImageSets()
 {
 	if ( !gTextures.size() )
@@ -217,10 +233,6 @@ void VK_UpdateImageSets()
 
 		for ( uint32_t j = 0; j < gTextures.size(); j++ )
 		{
-			// skip render targets (for now at least)
-			// if ( gTextures[ j ]->aRenderTarget )
-			// 	continue;
-
 			// must be a sampled image
 			if ( !(gTextures[ j ]->aUsage & VK_IMAGE_USAGE_SAMPLED_BIT) )
 				continue;
@@ -249,6 +261,8 @@ void VK_UpdateImageSets()
 
 		vkUpdateDescriptorSets( VK_GetDevice(), 1, &w, 0, nullptr );
 	}
+
+	Log_Dev( gLC_Render, 1, "Updated Image Sets\n" );
 }
 
 
