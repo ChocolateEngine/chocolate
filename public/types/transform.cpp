@@ -204,7 +204,7 @@ void Util_ToMatrix( glm::mat4& srMatrix, const glm::vec3& srPos, const glm::vec3
 }
 
 
-void Util_ToMatrix( glm::mat4& srMatrix, glm::vec3* spPos, glm::vec3* spAng, glm::vec3* spScale )
+void Util_ToMatrix( glm::mat4& srMatrix, const glm::vec3* spPos, const glm::vec3* spAng, const glm::vec3* spScale )
 {
 	if ( spPos )
 		srMatrix = glm::translate( *spPos );

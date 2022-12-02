@@ -30,7 +30,7 @@ void             Util_GetViewMatrixZDirection( const glm::mat4& mat, glm::vec3& 
 
 void             Util_ToMatrix( glm::mat4& srMatrix, const glm::vec3& srPos, const glm::vec3& srAng );
 void             Util_ToMatrix( glm::mat4& srMatrix, const glm::vec3& srPos, const glm::vec3& srAng, const glm::vec3& srScale );
-void             Util_ToMatrix( glm::mat4& srMatrix, glm::vec3* spPos = nullptr, glm::vec3* spAng = nullptr, glm::vec3* spScale = nullptr );
+void             Util_ToMatrix( glm::mat4& srMatrix, const glm::vec3* spPos = nullptr, const glm::vec3* spAng = nullptr, const glm::vec3* spScale = nullptr );
 
 void             Util_ToViewMatrixY( glm::mat4& srViewMatrix, const glm::vec3& srAng );
 void             Util_ToViewMatrixY( glm::mat4& srViewMatrix, const glm::vec3& srPos, const glm::vec3& srAng );
@@ -39,7 +39,7 @@ void             Util_ToViewMatrixZ( glm::mat4& srViewMatrix, const glm::vec3& s
 void             Util_ToViewMatrixZ( glm::mat4& srViewMatrix, const glm::vec3& srPos, const glm::vec3& srAng );
 
 
-inline glm::mat4 Util_ToMatrix( glm::vec3* spPos = nullptr, glm::vec3* spAng = nullptr, glm::vec3* spScale = nullptr )
+inline glm::mat4 Util_ToMatrix( const glm::vec3* spPos = nullptr, const glm::vec3* spAng = nullptr, const glm::vec3* spScale = nullptr )
 {
 	glm::mat4 matrix;
 	Util_ToMatrix( matrix, spPos, spAng, spScale );
