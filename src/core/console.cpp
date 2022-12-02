@@ -501,10 +501,14 @@ void Con_PrintAllConVars(  )
 }
 
 
+bool Con_IsConVarRef( ConVarBase* cvar )
+{
+	return typeid( *cvar ) == typeid( ConVarRef );
+}
+
+
 ConVarBase* Con_CheckForConVarRef( ConVarBase* cvar )
 {
-	PROF_SCOPE();
-
 	if ( typeid(*cvar) == typeid(ConVarRef) )
 	{
 		ConVarRef* cvarRef = static_cast<ConVarRef*>(cvar);
@@ -538,9 +542,11 @@ void Con_BuildAutoCompleteList( const std::string& srSearch, std::vector< std::s
 	ConVarBase* cvar = ConVarBase::spConVarBases;
 	while ( cvar )
 	{
-		cvar = Con_CheckForConVarRef( cvar );
-		if ( !cvar )
+		if ( Con_IsConVarRef( cvar ) )
+		{
+			cvar = cvar->apNext;
 			continue;
+		}
 
 		// this SHOULD be fine, if the convar doesn't exist in here, something is very wrong
 		if ( !ConVarNameCheck( cvar->aName, commandName.c_str(), commandName.size() ) )
