@@ -854,19 +854,34 @@ void Con_Archive( const char* spFile )
 		callback( output );
 	}
 
+	std::string filename;
+	if ( spFile )
+	{
+		filename = spFile;
+		if ( FileSys_GetFileExt( filename ) != "cfg" )
+		{
+			filename += ".cfg";
+		}
+		filename.insert( 0, "cfg/" );
+	}
+	else
+	{
+		filename = CON_ARCHIVE_FILE;
+	}
+
 	// Write the data
-	FILE* fp = fopen( spFile ? spFile : CON_ARCHIVE_FILE, "wb" );
+	FILE* fp = fopen( filename.c_str(), "wb" );
 
 	if ( fp == nullptr )
 	{
-		Log_ErrorF( gConsoleChannel, "Failed to open file handle: \"%s\"\n", spFile ? spFile : CON_ARCHIVE_FILE );
+		Log_ErrorF( gConsoleChannel, "Failed to open file handle: \"%s\"\n", filename.c_str() );
 		return;
 	}
 
 	fwrite( output.c_str(), sizeof( char ), output.size(), fp );
 	fclose( fp );
 
-	Log_DevF( gConsoleChannel, 1, "Wrote Config to File: \"%s\"\n", spFile ? spFile : CON_ARCHIVE_FILE );
+	Log_DevF( gConsoleChannel, 1, "Wrote Config to File: \"%s\"\n", filename.c_str() );
 }
 
 
