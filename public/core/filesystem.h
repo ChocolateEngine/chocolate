@@ -69,10 +69,10 @@ CORE_API std::vector< char > FileSys_ReadFile( const std::string& file );
 // File Information
 
 // Is path an absolute path?
-CORE_API bool                FileSys_IsAbsolute( const std::string& path );
+CORE_API bool                FileSys_IsAbsolute( const char* spPath );
 
 // Is path a relative path?
-CORE_API bool                FileSys_IsRelative( const std::string& path );
+CORE_API bool                FileSys_IsRelative( const char* spPath );
 
 // Is path a directory? Set noPaths to true to not use search paths for these three functions
 CORE_API bool                FileSys_IsDir( const std::string& path, bool noPaths = false );
@@ -92,23 +92,23 @@ CORE_API int                 FileSys_Stat( const char* path, struct stat* info )
 // ================================================================================
 // Path Utils
 
-// Return the parent path of this path - No Trailing Slash */
-CORE_API std::string FileSys_GetDirName( const std::string& path );
+// Return the parent path of this path - No Trailing Slash
+CORE_API std::string FileSys_GetDirName( std::string_view path );
 
-// Return the parent path of this path - Has Trailing Slash */
-CORE_API std::string FileSys_GetBaseName( const std::string& path );
+// Return the parent path of this path - Has Trailing Slash
+CORE_API std::string FileSys_GetBaseName( std::string_view path );
 
-// Return the filename in this path  */
-CORE_API std::string FileSys_GetFileName( const std::string& path );
+// Return the filename in this path
+CORE_API std::string FileSys_GetFileName( std::string_view path );
 
-// Return the file extension */
-CORE_API std::string FileSys_GetFileExt( const std::string& path );
+// Return the file extension, will return an empty string if none found
+CORE_API std::string FileSys_GetFileExt( std::string_view spPath, bool sStripPath = true );
 
-// Return the file name without the extension */
-CORE_API std::string FileSys_GetFileNameNoExt( const std::string& path );
+// Return the file name without the extension 
+CORE_API std::string FileSys_GetFileNameNoExt( std::string_view path );
 
-// Cleans up the path, removes useless ".." and "."  */
-CORE_API std::string FileSys_CleanPath( const std::string& path );
+// Cleans up the path, removes useless ".." and "." 
+CORE_API std::string FileSys_CleanPath( std::string_view path );
 
 // ================================================================================
 // Directory Reading

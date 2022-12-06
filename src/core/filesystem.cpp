@@ -143,7 +143,7 @@ std::string FileSys_FindFile( const std::string& file )
 
     // if it's an absolute path already,
     // don't bother to look in the search paths for it, and make sure it exists
-	if ( FileSys_IsAbsolute( file ) )
+	if ( FileSys_IsAbsolute( file.data() ) )
         return exists( file ) ? file : "";
 
     if ( file == "" )
@@ -171,7 +171,7 @@ std::string FileSys_FindDir( const std::string &dir )
 
     // if it's an absolute path already,
     // don't bother to look in the search paths for it, and make sure it exists
-	if ( FileSys_IsAbsolute( dir ) )
+	if ( FileSys_IsAbsolute( dir.data() ) )
         return is_dir( dir ) ? dir : "";
 
     for ( auto searchPath : gSearchPaths )
@@ -223,26 +223,34 @@ std::vector< char > FileSys_ReadFile( const std::string& srFilePath )
 }
 
 
-bool FileSys_IsAbsolute( const std::string &path )
+bool FileSys_IsAbsolute( const char* spPath )
 {
+	if ( !spPath )
+		return false;
 #ifdef _WIN32
-    return !PathIsRelative( path.c_str() );
+	return !PathIsRelative( spPath );
 #elif __unix__
-    return path.starts_with( "/" );
+	if ( strlen( spPath ) == 0 )
+		return false;
+	return spPath[ 0 ] == '/';
 #else
-    return std::FileSys_path( path ).is_absolute();
+    return std::filesystem::path( path ).is_absolute();
 #endif
 }
 
 
-bool FileSys_IsRelative( const std::string &path )
+bool FileSys_IsRelative( const char* spPath )
 {
+	if ( !spPath )
+		return true;
 #ifdef _WIN32
-    return PathIsRelative( path.c_str() );
+	return PathIsRelative( spPath );
 #elif __unix__
-    return !path.starts_with( "/" );
+	if ( strlen( spPath ) == 0 )
+		return true;
+	return spPath[ 0 ] != '/';
 #else
-    return std::FileSys_path( path ).is_relative();
+	return std::filesystem::path( path ).is_relative();
 #endif
 }
 
@@ -253,7 +261,7 @@ bool FileSys_IsDir( const std::string &path, bool noPaths )
 
     struct stat s;
 
-    if ( noPaths || FileSys_IsAbsolute( path ) )
+    if ( noPaths || FileSys_IsAbsolute( path.data() ) )
     {
         if ( stat( path.c_str(), &s ) == 0 )
             return (s.st_mode & S_IFDIR);
@@ -274,7 +282,7 @@ bool FileSys_IsFile( const std::string &path, bool noPaths )
 
     struct stat s;
 
-    if ( noPaths || FileSys_IsAbsolute( path ) )
+    if ( noPaths || FileSys_IsAbsolute( path.data() ) )
     {
         if ( stat( path.c_str(), &s ) == 0 )
             return (s.st_mode & S_IFREG);
@@ -293,7 +301,7 @@ bool FileSys_Exists( const std::string &path, bool noPaths )
 {
     PROF_SCOPE();
 
-    if ( noPaths || FileSys_IsAbsolute( path ) )
+    if ( noPaths || FileSys_IsAbsolute( path.data() ) )
         return (access( path.c_str(), 0 ) != -1);
     else
 		return ( access( FileSys_FindFile( path ).c_str(), 0 ) != -1 );
@@ -305,73 +313,102 @@ int FileSys_Access( const char* path, int mode )
     return access( path, mode );
 }
 
+
 int FileSys_Stat( const char* path, struct stat* info )
 {
     return stat( path, info );
 }
 
 
-std::string FileSys_GetDirName( const std::string &path )
+std::string FileSys_GetDirName( std::string_view sPath )
 {
-    size_t i = path.length();
-    for (; i > 0; i-- )
+	if ( sPath.size() == 0 )
+		return "";
+
+	size_t i = sPath.size() - 1;
+	for ( ; i > 0; i-- )
     {
-        if ( path[i] == '/' || path[i] == '\\' )
+		if ( sPath[ i ] == '/' || sPath[ i ] == '\\' )
             break;
     }
 
-    return path.substr(0, i);
+    std::string output( sPath.data(), i );
+    return output;
 }
 
 
-std::string FileSys_GetBaseName( const std::string &path )
+std::string FileSys_GetBaseName( std::string_view sPath )
 {
-	return FileSys_GetDirName( path ) + PATH_SEP;
+	return FileSys_GetDirName( sPath ) + PATH_SEP;
 }
 
 
-std::string FileSys_GetFileName( const std::string &path )
+std::string FileSys_GetFileName( std::string_view sPath )
 {
-    size_t i = path.length();
+	if ( sPath.size() == 0 )
+		return "";
+
+	size_t i = sPath.size() - 1;
     for ( ; i > 0; i-- )
     {
-        if ( path[i] == '/' || path[i] == '\\' )
+		if ( sPath[ i ] == '/' || sPath[ i ] == '\\' )
             break;
     }
 
-    return path.substr( std::min(i+1, path.length()), path.length() );
+    // No File Extension Found
+    if ( i == sPath.size() )
+		return "";
+
+    size_t      startIndex = i + 1;
+	std::string output( &sPath[ startIndex ], sPath.size() - startIndex );
+	return output;
 }
 
 
-std::string FileSys_GetFileExt( const std::string &path )
+std::string FileSys_GetFileExt( std::string_view sPath, bool sStripPath )
 {
-    const char *dot = strrchr( path.c_str(), '.' );
-    if ( !dot || dot == path )
-        return "";
+    if ( sStripPath )
+	{
+		std::string fileName = FileSys_GetFileName( sPath );
+		if ( fileName.empty() )
+			return "";
 
-    return dot + 1;
+		const char* dot = strrchr( fileName.data(), '.' );
+
+		if ( !dot || dot == fileName.data() )
+			return "";
+
+		return dot + 1;
+	}
+
+	const char* dot = strrchr( sPath.data(), '.' );
+
+	if ( !dot || dot == sPath.data() )
+		return "";
+
+	return dot + 1;
 }
 
 
-std::string FileSys_GetFileNameNoExt( const std::string &path )
+std::string FileSys_GetFileNameNoExt( std::string_view sPath )
 {
-	std::string name = FileSys_GetFileName( path );
+	std::string name = FileSys_GetFileName( sPath );
     return name.substr( 0, name.rfind(".") );
 }
 
 
-std::string FileSys_CleanPath( const std::string &path )
+std::string FileSys_CleanPath( std::string_view sPath )
 {
     PROF_SCOPE();
 
     std::vector< std::string > v;
 
-    int n = path.length();
+    int n = sPath.size();
     std::string out;
 
     std::string root;
 
-    if ( FileSys_IsAbsolute( path ) )
+    if ( FileSys_IsAbsolute( sPath.data() ) )
     {
 #ifdef _WIN32
 
@@ -388,9 +425,9 @@ std::string FileSys_CleanPath( const std::string &path )
         std::string dir = "";
         // forming the current directory.
 
-        while ( i < n && (path[i] != '/' && path[i] != '\\') )
+        while ( i < n && ( sPath[ i ] != '/' && sPath[ i ] != '\\' ) )
         {
-            dir += path[i];
+			dir += sPath[ i ];
             i++;
         }
 
@@ -603,7 +640,7 @@ std::vector< std::string > FileSys_ScanDir( const std::string &path, ReadDirFlag
 
     std::vector< std::string > files;
 
-    if ( !FileSys_IsAbsolute( path ) )
+    if ( !FileSys_IsAbsolute( path.data() ) )
     {
         for ( auto searchPath : gSearchPaths )
         {
