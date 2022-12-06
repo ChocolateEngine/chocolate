@@ -51,15 +51,11 @@ public:
 	const char*             GetName();
 	const char*             GetDesc();
 	ConVarFlag_t            GetFlags();
-	ConVarBase*             GetNext();
 
 	friend class ConCommand;
 	friend class ConVar;
 	friend class ConVarRef;
 	friend class Console;
-
-	static ConVarBase*      spConVarBases;
-	ConVarBase*             apNext = nullptr;
 
 	const char*             aName;
 	const char*             aDesc;
@@ -69,6 +65,9 @@ private:
 	// NO COPYING!!
 	ConVarBase( const ConVarBase& );
 };
+
+
+// CORE_API ConVarBase* gpConVarBases;
 
 
 class CORE_API ConCommand : public ConVarBase
@@ -416,10 +415,16 @@ CORE_API const std::vector< std::string >&   Con_GetCommandHistory();
 
 // Checks if the current ConVar is a reference, if so, then return what it's pointing to
 // return nullptr if it doesn't point to anything, and return the normal cvar if it's not a ConVarRef
-CORE_API ConVarBase*                         Con_CheckForConVarRef( ConVarBase* cvar );
+// CORE_API ConVarBase*                         Con_CheckForConVarRef( ConVarBase* cvar );
 
 // Build an auto complete list
 CORE_API void                                Con_BuildAutoCompleteList( const std::string& srSearch, std::vector< std::string >& srResults );
+
+// Get all ConVars
+// CORE_API const ChVector< ConVarBase* >&      Con_GetConVars();
+
+CORE_API uint32_t                            Con_GetConVarCount();
+CORE_API ConVarBase*                         Con_GetConVar( uint32_t sIndex );
 
 CORE_API ConVar*                             Con_GetConVar( std::string_view name );
 CORE_API ConVarBase*                         Con_GetConVarBase( std::string_view name );

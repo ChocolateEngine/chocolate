@@ -45,28 +45,30 @@ DLL_EXPORT NEW_CVAR_FLAG( CVARF_INSTANT );
 
 
 // convars to register after static initalization
-ConVarBase* ConVarBase::spConVarBases = nullptr;
+// this is a function to ensure this variable gets initialized first
+static ChVector< ConVarBase* >& Con_GetConVars()
+{
+	static ChVector< ConVarBase* > convars;
+	return convars;
+}
 
 
 ConVarBase::ConVarBase( const char* name, ConVarFlag_t flags ) :
 	aName( name ), aDesc( nullptr ), aFlags( flags )
 {
-	apNext = spConVarBases;
-	spConVarBases = this;
+	Con_GetConVars().push_back( this );
 }
 
 ConVarBase::ConVarBase( const char* name, const char* desc ) :
 	aName( name ), aDesc( desc ), aFlags()
 {
-	apNext = spConVarBases;
-	spConVarBases = this;
+	Con_GetConVars().push_back( this );
 }
 
 ConVarBase::ConVarBase( const char* name, ConVarFlag_t flags, const char* desc ) :
 	aName( name ), aDesc( desc ), aFlags( flags )
 {
-	apNext = spConVarBases;
-	spConVarBases = this;
+	Con_GetConVars().push_back( this );
 }
 
 const char* ConVarBase::GetName()
@@ -82,11 +84,6 @@ const char* ConVarBase::GetDesc()
 ConVarFlag_t ConVarBase::GetFlags()
 {
 	return aFlags;
-}
-
-ConVarBase* ConVarBase::GetNext()
-{
-	return apNext;
 }
 
 
@@ -370,7 +367,7 @@ void Con_QueueCommandSilent( const std::string &srCmd, bool sAddToHistory )
 
 
 // TODO: rethink this function
-void Con_RegisterConVars(  )
+void Con_RegisterConVars()
 {
 	PROF_SCOPE();
 
@@ -383,8 +380,7 @@ void Con_RegisterConVars(  )
 
 	gInstantConVars.clear();
 
-	ConVarBase* current = ConVarBase::spConVarBases;
-	while ( current )
+	for ( ConVarBase* current : Con_GetConVars() )
 	{
 		if ( typeid(*current) == typeid(ConVarRef) )
 		{
@@ -396,8 +392,6 @@ void Con_RegisterConVars(  )
 
 		if ( current->GetFlags() & CVARF_INSTANT && typeid(*current) == typeid(ConCommand) )
 			gInstantConVars.push_back( static_cast<ConCommand*>(current) );
-
-		current = current->apNext;
 	}
 
 	// Now link all cvar references
@@ -408,26 +402,36 @@ void Con_RegisterConVars(  )
 }
 
 
-const std::vector< std::string >& Con_GetCommandHistory(  )
+const std::vector< std::string >& Con_GetCommandHistory()
 {
 	return gCommandHistory;
 }
 
 
+uint32_t Con_GetConVarCount()
+{
+	return Con_GetConVars().size();
+}
+
+
+ConVarBase* Con_GetConVar( uint32_t sIndex )
+{
+	if ( sIndex >= Con_GetConVars().size() )
+		return nullptr;
+
+	return Con_GetConVars()[ sIndex ];
+}
+
+
 ConVar* Con_GetConVar( std::string_view name )
 {
-	PROF_SCOPE();
-
-	ConVarBase* cvar = ConVarBase::spConVarBases;
-	while ( cvar )
+	for ( ConVarBase* cvar : Con_GetConVars() )
 	{
-		if ( typeid(*cvar) == typeid(ConVar) )
-		{
-			if ( cvar->GetName() == name )
-				return static_cast<ConVar*>(cvar);
-		}
+		if ( typeid( *cvar ) != typeid( ConVar ) )
+			continue;
 
-		cvar = cvar->apNext;
+		if ( cvar->GetName() == name )
+			return static_cast< ConVar* >( cvar );
 	}
 
 	return nullptr;
@@ -436,15 +440,10 @@ ConVar* Con_GetConVar( std::string_view name )
 
 ConVarBase* Con_GetConVarBase( std::string_view name )
 {
-	PROF_SCOPE();
-
-	ConVarBase* cvar = ConVarBase::spConVarBases;
-	while ( cvar )
+	for ( ConVarBase* cvar : Con_GetConVars() )
 	{
 		if ( cvar->GetName() == name )
 			return cvar;
-
-		cvar = cvar->apNext;
 	}
 
 	return nullptr;
@@ -472,58 +471,57 @@ float Con_GetConVarFloat( std::string_view name )
 }
 
 
-void Con_PrintAllConVars(  )
+void Con_PrintAllConVars()
 {
 	std::vector< std::string > ConVarMsgs;
 	std::vector< std::string > ConCommandMsgs;
 
-	ConVarBase* cvar = ConVarBase::spConVarBases;
-	while ( cvar )
+	for ( ConVarBase* cvar : Con_GetConVars() )
 	{
 		if ( typeid(*cvar) == typeid(ConVar)  )
 			ConVarMsgs.push_back( cvar->GetPrintMessage() );
 
 		else if ( typeid(*cvar) == typeid(ConCommand) )
 			ConCommandMsgs.push_back( cvar->GetPrintMessage() );
-
-		cvar = cvar->apNext;
 	}
 
-	Log_Msg( gConsoleChannel, "\nConVars:\n--------------------------------------\n" );
+	LogGroup group = Log_GroupBegin( gConsoleChannel );
+	Log_Group( group, "\nConVars:\n--------------------------------------\n" );
 	for ( const auto& msg : ConVarMsgs )
-		Log_Msg( gConsoleChannel, msg.c_str() );
+		Log_Group( group, msg.c_str() );
 
-	Log_Msg( gConsoleChannel, "--------------------------------------\nConCommands:\n--------------------------------------\n" );
+	Log_Group( group, "--------------------------------------\nConCommands:\n--------------------------------------\n" );
 	for ( const auto& msg : ConCommandMsgs )
-		Log_Msg( gConsoleChannel, msg.c_str() );
+		Log_Group( group, msg.c_str() );
 
-	Log_Msg( gConsoleChannel, "--------------------------------------\n" );
+	Log_Group( group, "--------------------------------------\n" );
+	Log_GroupEnd( group );
 }
 
 
-bool Con_IsConVarRef( ConVarBase* cvar )
+inline bool Con_IsConVarRef( ConVarBase* cvar )
 {
 	return typeid( *cvar ) == typeid( ConVarRef );
 }
 
 
-ConVarBase* Con_CheckForConVarRef( ConVarBase* cvar )
-{
-	if ( typeid(*cvar) == typeid(ConVarRef) )
-	{
-		ConVarRef* cvarRef = static_cast<ConVarRef*>(cvar);
-
-		if ( cvarRef->apRef == nullptr )
-		{
-			Log_WarnF( gConsoleChannel, "Found unlinked cvar ref: %s\n", cvarRef->GetName() );
-			return nullptr;
-		}
-
-		return cvarRef->apRef;
-	}
-
-	return cvar;
-}
+// ConVarBase* Con_CheckForConVarRef( ConVarBase* cvar )
+// {
+// 	if ( typeid(*cvar) == typeid(ConVarRef) )
+// 	{
+// 		ConVarRef* cvarRef = static_cast<ConVarRef*>(cvar);
+// 
+// 		if ( cvarRef->apRef == nullptr )
+// 		{
+// 			Log_WarnF( gConsoleChannel, "Found unlinked cvar ref: %s\n", cvarRef->GetName() );
+// 			return nullptr;
+// 		}
+// 
+// 		return cvarRef->apRef;
+// 	}
+// 
+// 	return cvar;
+// }
 
 
 void Con_BuildAutoCompleteList( const std::string& srSearch, std::vector< std::string >& srResults )
@@ -539,21 +537,14 @@ void Con_BuildAutoCompleteList( const std::string& srSearch, std::vector< std::s
 
 	str_lower( commandName );
 
-	ConVarBase* cvar = ConVarBase::spConVarBases;
-	while ( cvar )
+	for ( ConVarBase* cvar : Con_GetConVars() )
 	{
 		if ( Con_IsConVarRef( cvar ) )
-		{
-			cvar = cvar->apNext;
 			continue;
-		}
 
 		// this SHOULD be fine, if the convar doesn't exist in here, something is very wrong
 		if ( !ConVarNameCheck( cvar->aName, commandName.c_str(), commandName.size() ) )
-		{
-			cvar = cvar->apNext;
 			continue;
-		}
 
 		size_t cvarNameLen = strlen( cvar->aName );
 		
@@ -561,16 +552,12 @@ void Con_BuildAutoCompleteList( const std::string& srSearch, std::vector< std::s
 		if ( cvarNameLen >= srSearch.size() && commandName.size() >= srSearch.size() )
 		{
 			srResults.push_back( cvar->aName );
-			cvar = cvar->apNext;
 			continue;
 		}
 
 		// make sure this actually matches
 		if ( cvarNameLen != commandName.size() || !ConVarNameCheck( cvar->aName, commandName.c_str(), cvarNameLen ) )
-		{
-			cvar = cvar->apNext;
 			continue;
-		}
 
 		// is this a concommand with a drop down function?
 		if ( typeid(*cvar) == typeid(ConCommand) )
@@ -653,64 +640,58 @@ bool Con_RunCommandArgs( const std::string& name, const std::vector< std::string
 
 	bool commandCalled = false;
 
-	ConVarBase* cvar = ConVarBase::spConVarBases;
-	while ( cvar )
+	for ( ConVarBase* cvar : Con_GetConVars() )
 	{
 		size_t cvarNameLen = strlen( cvar->aName );
+
 		if ( name.size() != cvarNameLen )
-		{
-			cvar = cvar->apNext;
 			continue;
-		}
 
 #ifdef _WIN32
-		if ( _strnicmp( cvar->aName, name.c_str(), cvarNameLen ) == 0 )
+		if ( _strnicmp( cvar->aName, name.c_str(), cvarNameLen ) != 0 )
+			continue;
 #else
-		if ( strncasecmp( cvar->aName, name.c_str(), cvarNameLen ) == 0 )
+		if ( strncasecmp( cvar->aName, name.c_str(), cvarNameLen ) != 0 )
+			continue;
 #endif
+		if ( Con_IsConVarRef( cvar ) )
+			continue;
+
+		if ( typeid(*cvar) == typeid(ConVar) )
 		{
-			cvar = Con_CheckForConVarRef( cvar );
-			if ( !cvar )
-				continue;
+			ConVar* convar = static_cast<ConVar*>(cvar);
 
-			if ( typeid(*cvar) == typeid(ConVar) )
+			commandCalled = true;
+
+			if ( !args.empty() )
 			{
-				ConVar* convar = static_cast<ConVar*>(cvar);
-
-				commandCalled = true;
-
-				if ( !args.empty() )
+				if ( convar->aFunc )
 				{
-					if ( convar->aFunc )
-					{
-						std::string prevString = convar->aValue;
-						float       prevFloat  = convar->aValueFloat;
+					std::string prevString = convar->aValue;
+					float       prevFloat  = convar->aValueFloat;
 
-						convar->SetValue( args[ 0 ] );
+					convar->SetValue( args[ 0 ] );
 
-						convar->aFunc( prevString, prevFloat, args );
-					}
-					else
-					{
-						convar->SetValue( args[ 0 ] );
-					}
+					convar->aFunc( prevString, prevFloat, args );
 				}
 				else
 				{
-					Log_Msg( gConsoleChannel, convar->GetPrintMessage().c_str() );
+					convar->SetValue( args[ 0 ] );
 				}
 			}
-			else if ( typeid(*cvar) == typeid(ConCommand) )
+			else
 			{
-				ConCommand* cmd = static_cast<ConCommand*>(cvar);
-				commandCalled = true;
-				cmd->aFunc( args );
+				Log_Msg( gConsoleChannel, convar->GetPrintMessage().c_str() );
 			}
-
-			break;
+		}
+		else if ( typeid(*cvar) == typeid(ConCommand) )
+		{
+			ConCommand* cmd = static_cast<ConCommand*>(cvar);
+			commandCalled = true;
+			cmd->aFunc( args );
 		}
 
-		cvar = cvar->apNext;
+		break;
 	}
 
 	// command wasn't used?
@@ -855,21 +836,15 @@ void Con_Archive( const char* spFile )
 	  "// Auto Generated File by Chocolate Engine\n\n";
 
 	// Write all ConVars marked with CVARF_ARCHIVE to this file
-	ConVarBase* command = ConVarBase::spConVarBases;
-	while ( command )
+	for ( ConVarBase* command : Con_GetConVars() )
 	{
 		if ( typeid( *command ) != typeid( ConVar ) )
-		{
-			command = command->apNext;
 			continue;
-		}
 
 		ConVar* cvar = static_cast< ConVar* >( command );
 
 		if ( cvar->aFlags & CVARF_ARCHIVE )
 			output += vstring( "%s %s\n", cvar->aName, cvar->GetValue().data() );
-
-		command = command->apNext;
 	}
 
 	// Run all callback functons on this
@@ -1030,21 +1005,15 @@ void help_dropdown(
 {
 	std::string name = args.empty() ? "" : str_lower2(args[0]);
 
-	ConVarBase* cvar = ConVarBase::spConVarBases;
-	while ( cvar )
+	for ( ConVarBase* cvar : Con_GetConVars() )
 	{
-		cvar = Con_CheckForConVarRef( cvar );
-		if ( !cvar )
-			break;  // wtf
+		if ( Con_IsConVarRef( cvar ) )
+			continue;
 
 		if ( !ConVarNameCheck( cvar->aName, name.c_str(), name.size() ) )
-		{
-			cvar = cvar->apNext;
 			continue;
-		}
 
 		results.push_back( cvar->GetName() );
-		cvar = cvar->apNext;
 	}
 }
 
@@ -1129,11 +1098,8 @@ void CmdFind( bool andSearch, const std::vector< std::string >& args )
 	std::vector< std::string > resultsCCmd;
 	std::vector< std::string > resultsArgs;
 
-	ConVarBase* cvar = ConVarBase::spConVarBases;
-	while ( cvar )
+	for ( ConVarBase* cvar : Con_GetConVars() )
 	{
-		// ugly but probably faster than doing an extra dynamic cast to check if not a cvarref
-		// or doing the string search on a cvarref
 		if ( IS_TYPE( *cvar, ConVar ) )
 		{
 			FindStr( andSearch, cvar, args, resultsCvar );
@@ -1142,8 +1108,6 @@ void CmdFind( bool andSearch, const std::vector< std::string >& args )
 		{
 			FindStr( andSearch, cvar, args, resultsCCmd );
 		}
-
-		cvar = cvar->apNext;
 	}
 
 	for ( u32 i = 0; i < Args_GetRegisteredCount(); i++ )
@@ -1213,21 +1177,15 @@ void reset_cvar_dropdown(
 {
 	std::string name = args.empty() ? "" : str_lower2(args[0]);
 
-	ConVarBase* cvar = ConVarBase::spConVarBases;
-	while ( cvar )
+	for ( ConVarBase* cvar : Con_GetConVars() )
 	{
-		cvar = Con_CheckForConVarRef( cvar );
-		if ( !cvar )
-			break;  // wtf
+		if ( Con_IsConVarRef( cvar ) )
+			continue;
 
 		if ( IS_NOT_TYPE( *cvar, ConVar ) || !ConVarNameCheck( cvar->aName, name.c_str(), name.size() ) )
-		{
-			cvar = cvar->apNext;
 			continue;
-		}
 
 		results.push_back( cvar->GetName() );
-		cvar = cvar->apNext;
 	}
 }
 
@@ -1309,14 +1267,13 @@ CONCMD_VA( host_writeconfig, "Write a config (can optionally specify a path) con
 CONCMD_VA( con_cvar_stack_size, "Print the stack usage of all convars" )
 {
 	size_t      size    = 0;
-	ConVarBase* current = ConVarBase::spConVarBases;
 
 	Log_DevF( gConsoleChannel, 1, "sizeof( ConvarBase ): %zu\n", sizeof( ConVarBase ) );
 	Log_DevF( gConsoleChannel, 1, "sizeof( Convar ):     %zu\n", sizeof( ConVar ) );
 	Log_DevF( gConsoleChannel, 1, "sizeof( ConCommand ): %zu\n", sizeof( ConCommand ) );
 	Log_DevF( gConsoleChannel, 1, "sizeof( ConVarRef ):  %zu\n", sizeof( ConVarRef ) );
 
-	while ( current )
+	for ( ConVarBase* current : Con_GetConVars() )
 	{
 		if ( typeid( *current ) == typeid( ConVar ) )
 			size += sizeof( ConVar );
@@ -1329,8 +1286,6 @@ CONCMD_VA( con_cvar_stack_size, "Print the stack usage of all convars" )
 
 		else
 			size += sizeof( *current );
-
-		current = current->apNext;
 	}
 
 	Log_DevF( gConsoleChannel, 1, "Convar Stack Size: %zu bytes\n", size );

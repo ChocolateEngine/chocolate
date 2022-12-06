@@ -843,10 +843,9 @@ void Log_SplitStringColors( LogColor sMainColor, std::string_view sBuffer, ChVec
 
 		endColor++;
 
-		size_t colorLength         = endColor - find;
-
-		last                       = endColor;
-		char*          nextFind    = strstr( endColor, "\033[" );
+		size_t colorLength = endColor - find;
+		last               = endColor;
+		char* nextFind     = strstr( endColor, "\033[" );
 
 		// no characters in between these colors
 		if ( nextFind && nextFind - endColor == 0 )
@@ -855,8 +854,8 @@ void Log_SplitStringColors( LogColor sMainColor, std::string_view sBuffer, ChVec
 			continue;
 		}
 
-		LogColorBuf_t& colorBuf    = srColorList.emplace_back();
-		colorBuf.apStr             = endColor;
+		LogColorBuf_t& colorBuf = srColorList.emplace_back();
+		colorBuf.apStr          = endColor;
 
 		if ( !sNoColors )
 			colorBuf.aColor = Log_UnixToColor( find, colorLength );
