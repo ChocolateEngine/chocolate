@@ -36,9 +36,16 @@
 
 LOG_REGISTER_CHANNEL( FileSystem, LogColor::DarkGray );
 
-std::string                gWorkingDir;
-std::string                gExePath;
-std::vector< std::string > gSearchPaths;
+static std::string                gWorkingDir;
+static std::string                gExePath;
+static std::vector< std::string > gSearchPaths;
+static std::vector< std::string > gBinPaths;
+
+
+CONCMD( fs_print_paths )
+{
+	FileSys_PrintSearchPaths();
+}
 
 
 int FileSys_Init( const char* workingDir )
@@ -50,7 +57,7 @@ int FileSys_Init( const char* workingDir )
 	chdir( workingDir );
 
     // set default search paths
-	FileSys_DefaultSearchPaths();
+	// FileSys_DefaultSearchPaths();
 
     return 0;
 }
@@ -73,39 +80,127 @@ const std::string& FileSys_GetExePath()
 }
 
 
-const std::vector< std::string >& FileSys_GetSearchPaths(  )
+const std::vector< std::string >& FileSys_GetSearchPaths()
 {
 	return gSearchPaths;
 }
+
 
 void FileSys_ClearSearchPaths()
 {
 	gSearchPaths.clear();
 }
 
+
+void FileSys_ClearBinPaths()
+{
+	gBinPaths.clear();
+}
+
+
 void FileSys_DefaultSearchPaths()
 {
+	gBinPaths.clear();
     gSearchPaths.clear();
-    FileSys_AddSearchPath( gExePath + "/bin" );
+    FileSys_AddSearchPath( gExePath + "/bin", true );
     FileSys_AddSearchPath( gExePath + "/" + gWorkingDir );
     FileSys_AddSearchPath( gExePath );
     FileSys_AddSearchPath( gExePath + "/core" );  // always add core as a search path, at least for now
 }
 
 
-void FileSys_AddSearchPath( const std::string& path )
+void FileSys_PrintSearchPaths()
 {
-	gSearchPaths.push_back( FileSys_CleanPath( path ) );
+	LogGroup group = Log_GroupBegin( gFileSystemChannel );
+
+    Log_Group( group, "Binary Paths:\n" );
+    for ( const auto& path : gBinPaths )
+        Log_GroupF( group, "    %s\n", path.data() );
+
+	Log_Group( group, "\nSearch Paths:\n" );
+    for ( const auto& path : gSearchPaths )
+        Log_GroupF( group, "    %s\n", path.data() );
+
+    Log_GroupEnd( group );
 }
 
-void FileSys_RemoveSearchPath( const std::string& path )
+
+std::string FileSys_BuildSearchPath( std::string_view sPath )
 {
-	vec_remove( gSearchPaths, path );
+	std::string output;
+
+	size_t      len  = sPath.size();
+
+	const char* last = sPath.data();
+	const char* find = strchr( sPath.data(), '$' );
+
+	while ( last )
+	{
+        // at a macro
+		if ( find == last )
+		{
+			find = strchr( last + 1, '$' );
+		}
+
+		size_t dist = 0;
+		if ( find )
+			dist = ( find - last ) + 1;
+		else
+			dist = len - ( last - sPath.data() );
+
+		if ( dist == 0 )
+			break;
+
+        if ( dist == 11 && strncmp( last, "$root_path$", dist ) == 0 )
+		{
+			output += gExePath;
+		}
+        else if ( dist == 10 && strncmp( last, "$app_path$", dist ) == 0 )
+		{
+			output += gExePath + PATH_SEP_STR + gWorkingDir;
+		}
+		else
+		{
+			output.append( last, dist );
+		}
+
+		if ( !find )
+			break;
+
+		last = ++find;
+		find = strchr( last, '$' );
+	}
+
+    return FileSys_CleanPath( output );
 }
+
+
+void FileSys_AddSearchPath( const std::string& path, bool sBinPath )
+{
+	std::string fullPath = FileSys_BuildSearchPath( path );
+
+	if ( sBinPath )
+		gBinPaths.push_back( fullPath );
+	else    
+        gSearchPaths.push_back( fullPath );
+}
+
+
+void FileSys_RemoveSearchPath( const std::string& path, bool sBinPath )
+{
+	std::string fullPath = FileSys_BuildSearchPath( path );
+
+	if ( sBinPath )
+		vec_remove_if( gBinPaths, path );
+	else
+	    vec_remove_if( gSearchPaths, path );
+}
+
 
 void FileSys_InsertSearchPath( size_t index, const std::string& path )
 {
-	gSearchPaths.insert( gSearchPaths.begin() + index, FileSys_CleanPath( path ) );
+	std::string fullPath = FileSys_BuildSearchPath( path );
+	gSearchPaths.insert( gSearchPaths.begin() + index, fullPath );
 }
 
 
@@ -137,7 +232,7 @@ std::string FileSys_FindFileF( const char* spFmt, ... )
 }
 
 
-std::string FileSys_FindFile( const std::string& file )
+std::string FileSys_FindFile( const std::string& file, bool sBinFile )
 {
     PROF_SCOPE();
 
@@ -149,15 +244,31 @@ std::string FileSys_FindFile( const std::string& file )
     if ( file == "" )
         return file;
 
-    for ( auto searchPath : gSearchPaths )
-    {
-		std::string fullPath = FileSys_CleanPath( searchPath + PATH_SEP + file );
+    if ( !sBinFile )
+	{
+		for ( auto searchPath : gSearchPaths )
+		{
+			std::string fullPath = FileSys_CleanPath( searchPath + PATH_SEP + file );
 
-        // does item exist?
-        if ( exists( fullPath ) )
+			// does item exist?
+			if ( exists( fullPath ) )
+			{
+				return fullPath;
+			}
+		}
+    }
+	else
+	{
+        for ( auto searchPath : gBinPaths )
         {
-            return fullPath;
-        }
+		    std::string fullPath = FileSys_CleanPath( searchPath + PATH_SEP + file );
+
+            // does item exist?
+            if ( exists( fullPath ) )
+            {
+                return fullPath;
+            }
+	    }
     }
 
     // file not found

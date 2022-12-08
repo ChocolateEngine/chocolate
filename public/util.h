@@ -291,17 +291,6 @@ private:
 // Assorted Functions
 
 
-/*
- *    Time in seconds since the chocolate epoch.
- *    Same as the seconds from the unix epoch from the first commit.
- * 
- *    @return s64
- *        The number of seconds since the chocolate epoch. 
- *        time since 2/15/2021 14:11:26 from the current time.
- */
-static s64 GetBuildNumber() {
-	return 014012500416;
-}
 
 
 

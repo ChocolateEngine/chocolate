@@ -42,6 +42,8 @@ add_library( Graphics2 SHARED ${RENDER_VK_FILES} ${PUBLIC_FILES} ${THIRDPARTY_FI
 
 add_dependencies( Graphics2 "Core" "ImGui" )
 
+target_precompile_headers( Graphics2 PRIVATE "${CH_PUBLIC}/core/core.h" )
+
 set_target_properties(
 	Graphics2 PROPERTIES
 	OUTPUT_NAME ch_graphics

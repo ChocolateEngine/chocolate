@@ -588,3 +588,41 @@ const char* Json_ErrorToStr( EJsonError sErr )
 	}
 }
 
+
+const char* Json_TypeToStr( EJsonType sType )
+{
+	switch ( sType )
+	{
+		default:
+			return "None";
+
+		case EJsonType_Invalid:
+			return "Invalid";
+
+		case EJsonType_Object:
+			return "Object";
+
+		case EJsonType_String:
+			return "String";
+
+		case EJsonType_Int:
+			return "Int";
+
+		case EJsonType_Double:
+			return "Double";
+
+		case EJsonType_False:
+			return "False";
+
+		case EJsonType_True:
+			return "True";
+
+		case EJsonType_Null:
+			return "Null";
+
+		case EJsonType_Array:
+			return "Array";
+	}
+}
+
+

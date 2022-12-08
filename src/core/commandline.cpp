@@ -3,6 +3,7 @@
 #include "core/console.h"
 #include "core/filesystem.h"
 #include "core/log.h"
+#include "core/app_info.h"
 #include "util.h"
 
 #include <stdarg.h>
@@ -33,12 +34,15 @@ extern "C"
 		FileSys_Init( workingDir );
 		Assert_Init();
 
+		Core_LoadAppInfo();
+
 		Args_RegisterEx( "Execute Scripts on Engine Start", "-exec" );
 	}
 
 	void DLL_EXPORT core_exit()
 	{
 		Con_Archive();
+		Core_DestroyAppInfo();
 		sys_shutdown();
 	}
 }

@@ -3,6 +3,7 @@
 #include "core/filesystem.h"
 #include "core/log.h"
 #include "core/systemmanager.h"
+#include "core/app_info.h"
 #include "util.h"
 
  #include "imgui_impl_sdl.h"
@@ -1037,7 +1038,21 @@ public:
 		if ( gMaxWindow )
 			flags |= SDL_WINDOW_MAXIMIZED;
 
-		gpWindow = SDL_CreateWindow( "Chocolate Engine - Compiled on " __DATE__, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
+		std::string windowName;
+
+		if ( Core_GetAppInfo().apWindowTitle )
+		{
+			windowName = Core_GetAppInfo().apWindowTitle;
+		}
+		else
+		{
+			windowName = "Chocolate Engine - Compiled on " __TIMESTAMP__;
+		}
+
+		windowName += " - Build ";
+		windowName += vstring( "%zd", Core_GetBuildNumber() );
+
+		gpWindow = SDL_CreateWindow( windowName.c_str(), SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
 		                             gWidth, gHeight, flags );
 
 		if ( !Render_Init( gpWindow ) )

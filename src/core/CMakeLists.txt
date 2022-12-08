@@ -1,9 +1,27 @@
 message( "Current Project: Core" )
 
-file(
-	GLOB_RECURSE SRC_FILES CONFIGURE_DEPENDS
-	*.cpp
-	*.h
+add_custom_target(
+	BuildNumberUpdater
+    COMMAND ${CMAKE_COMMAND} -E touch_nocreate "${CMAKE_CURRENT_SOURCE_DIR}/build_number.cpp"
+)
+
+set(
+	SRC_FILES
+	"app_info.cpp"
+	"asserts.cpp"
+	"build_number.cpp"
+	"commandline.cpp"
+	"console.cpp"
+	"filesystem.cpp"
+	"json5.cpp"
+	"log.cpp"
+	"mempool.cpp"
+	"platform.cpp"
+	"platform_linux.cpp"
+	"profiler.cpp"
+	# "resource.cpp"
+	"systemmanager.cpp"
+	"util.cpp"
 )
 
 file(
@@ -20,8 +38,10 @@ add_compile_definitions( "CORE_DLL" "TRACY_EXPORTS" )
 
 add_library( Core SHARED ${SRC_FILES} ${PUBLIC_FILES} ${TRACY_FILES} )
 
+add_dependencies( Core BuildNumberUpdater )
+
 if( MSVC )
-	target_link_libraries( Core Shlwapi )
+	target_link_libraries( Core PRIVATE Shlwapi )
 endif()
 
 set_target_properties(

@@ -10,9 +10,12 @@
 
 #ifdef _WIN32
 #define stat _stat
-constexpr char PATH_SEP = '\\';
+constexpr char        PATH_SEP     = '\\';
+// constexpr const char* PATH_SEP_STR = "\\";
+#define PATH_SEP_STR "\\"
 #elif __unix__
-constexpr char PATH_SEP = '/';
+constexpr char        PATH_SEP     = '/';
+#define PATH_SEP_STR "/"
 #endif
 
 
@@ -44,10 +47,13 @@ CORE_API const std::string& FileSys_GetExePath();
 
 CORE_API const std::vector< std::string >& FileSys_GetSearchPaths();
 CORE_API void                              FileSys_ClearSearchPaths();
+CORE_API void                              FileSys_ClearBinPaths();
 CORE_API void                              FileSys_DefaultSearchPaths();
+CORE_API void                              FileSys_PrintSearchPaths();
 
-CORE_API void                              FileSys_AddSearchPath( const std::string& path );
-CORE_API void                              FileSys_RemoveSearchPath( const std::string& path );
+CORE_API std::string                       FileSys_BuildSearchPath( std::string_view sPath );
+CORE_API void                              FileSys_AddSearchPath( const std::string& path, bool sBinPath = false );
+CORE_API void                              FileSys_RemoveSearchPath( const std::string& path, bool sBinPath = false );
 CORE_API void                              FileSys_InsertSearchPath( size_t index, const std::string& path );
 
 // ================================================================================
@@ -57,7 +63,7 @@ CORE_API void                              FileSys_InsertSearchPath( size_t inde
 CORE_API std::string FileSys_FindFileF( const char* spFmt, ... );
 
 // Find the path to a file within the search paths.
-CORE_API std::string FileSys_FindFile( const std::string& file );
+CORE_API std::string FileSys_FindFile( const std::string& file, bool sBinFile = false );
 
 // Find the path to a directory within the search paths.  */
 CORE_API std::string FileSys_FindDir( const std::string& dir );

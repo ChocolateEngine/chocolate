@@ -92,4 +92,5 @@ struct JsonObject_t
 CORE_API EJsonError  Json_Parse( JsonObject_t* spRoot, const char* spSource );
 CORE_API void        Json_Free( JsonObject_t* spRoot );
 CORE_API const char* Json_ErrorToStr( EJsonError sErr );
+CORE_API const char* Json_TypeToStr( EJsonType sType );
 

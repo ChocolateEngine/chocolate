@@ -60,7 +60,7 @@ bool Mod_Load( const char* spPath )
 	std::string pathExt = spPath;
 	pathExt += EXT_DLL;
 
-	std::string path = FileSys_FindFile( pathExt );
+	std::string path = FileSys_FindFile( pathExt, true );
 
 	if ( path.empty() )
 	{
