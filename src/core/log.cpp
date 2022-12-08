@@ -400,30 +400,37 @@ static std::string FormatLog( LogChannel_t* channel, LogType sType, const char* 
 		{
 			default:
 			case LogType::Normal:
-				output += vstring( "%s[%s] %*.*s", color, channel->aName.data(), dist, dist, last );
+				output += vstring( "%s[%s] ", color, channel->aName.data() );
+				output.append( last, dist );
 				break;
 
 			case LogType::Dev:
 			case LogType::Dev2:
 			case LogType::Dev3:
 			case LogType::Dev4:
-				output += vstring( "%s[%s] [DEV %u] %*.*s", color, channel->aName.data(), sType, dist, dist, last );
+				output += vstring( "%s[%s] [DEV %u] ", color, channel->aName.data(), sType );
+				output.append( last, dist );
 				break;
 
 			case LogType::Input:
-				output += vstring( "%s] %*.*s\n", color, dist, dist, last );
+				output += vstring( "%s] ", color );
+				output.append( last, dist );
+				output.append( "\n" );
 				break;
 
 			case LogType::Warning:
-				output += vstring( "%s[%s] [WARNING] %*.*s", color, channel->aName.data(), dist, dist, last );
+				output += vstring( "%s[%s] [WARNING] ", color, channel->aName.data() );
+				output.append( last, dist );
 				break;
 
 			case LogType::Error:
-				output += vstring( "%s[%s] [ERROR] %*.*s", color, channel->aName.data(), dist, dist, last );
+				output += vstring( "%s[%s] [ERROR] ", color, channel->aName.data() );
+				output.append( last, dist );
 				break;
 
 			case LogType::Fatal:
-				output += vstring( "%s[%s] [FATAL] %*.*s", color, channel->aName.data(), dist, dist, last );
+				output += vstring( "%s[%s] [FATAL] ", color, channel->aName.data() );
+				output.append( last, dist );
 				break;
 		}
 
