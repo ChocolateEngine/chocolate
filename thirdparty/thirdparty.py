@@ -166,10 +166,9 @@ def build_ktx():
 
     os.chdir("KTX-Software")
 
-    # TODO: this should disable AVX2 for the astc encoder, not ktx itself,
-    # but whatever is going on in the ktx cmake script causes this to be ignored
+    # disable AVX2 for the astc encoder
     # we have a friend who has a pc without AVX2 lol
-    build_options = "-DISA_AVX2=OFF"
+    build_options = "-DISA_SSE2=ON"
 
     # TODO: this --config thing doesn't actually work on linux,
     # use build/Release and build/Debug folders instead?
