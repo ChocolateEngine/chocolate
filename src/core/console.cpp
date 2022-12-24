@@ -3,6 +3,7 @@
 #include "core/profiler.h"
 #include "core/platform.h"
 #include "core/log.h"
+#include "core/build_number.h"
 #include "util.h"
 
 #include <cstring>
@@ -1312,4 +1313,11 @@ CONCMD_VA( _abort, CVARF_INSTANT, "funny" )
 {
 	abort();
 }
+
+
+CONCMD( build_number, "Print Build Number" )
+{
+	Log_MsgF( "Chocolate Engine Build Number: %zu\n", Core_GetBuildNumber() );
+}
+
 
