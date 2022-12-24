@@ -25,6 +25,8 @@ glm::vec3        Util_VectorToAngles( const glm::vec3& srForward, const glm::vec
 
 glm::vec3        Util_GetMatrixPosition( const glm::mat4& mat );
 glm::vec3        Util_GetMatrixScale( const glm::mat4& mat );
+glm::quat        Util_GetMatrixRotation( const glm::mat4& mat );
+glm::vec3        Util_GetMatrixAngles( const glm::mat4& mat );
 void             Util_GetMatrixDirection( const glm::mat4& mat, glm::vec3* forward, glm::vec3* right = nullptr, glm::vec3* up = nullptr );
 void             Util_GetViewMatrixZDirection( const glm::mat4& mat, glm::vec3& forward, glm::vec3& right, glm::vec3& up );
 

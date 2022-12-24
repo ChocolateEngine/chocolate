@@ -155,6 +155,36 @@ glm::vec3 Util_GetMatrixScale( const glm::mat4& mat )
 }
 
 
+glm::quat Util_GetMatrixRotation( const glm::mat4& mat )
+{
+	glm::vec3 scale = {};
+	for ( int i = 0; i < 3; i++ )
+		scale[ i ] = glm::length( glm::vec3( mat[ i ] ) );
+
+	const glm::mat3 rotMtx(
+		glm::vec3( mat[ 0 ] ) / scale[ 0 ],
+		glm::vec3( mat[ 1 ] ) / scale[ 1 ],
+		glm::vec3( mat[ 2 ] ) / scale[ 2 ] );
+
+	return glm::quat_cast( rotMtx );
+}
+
+
+glm::vec3 Util_GetMatrixAngles( const glm::mat4& mat )
+{
+	glm::vec3 scale = {};
+	for ( int i = 0; i < 3; i++ )
+		scale[ i ] = glm::length( glm::vec3( mat[ i ] ) );
+
+	const glm::mat3 rotMtx(
+		glm::vec3( mat[ 0 ] ) / scale[ 0 ],
+		glm::vec3( mat[ 1 ] ) / scale[ 1 ],
+		glm::vec3( mat[ 2 ] ) / scale[ 2 ] );
+
+	return QuatToAng( glm::quat_cast( rotMtx ) );
+}
+
+
 void Util_GetMatrixDirection( const glm::mat4& mat, glm::vec3* forward, glm::vec3* right, glm::vec3* up )
 {
 	glm::vec3 scale = Util_GetMatrixScale( mat );
