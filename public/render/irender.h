@@ -360,6 +360,8 @@ struct TextureCreateData_t
 	ESamplerAddressMode aSamplerAddress = ESamplerAddressMode_Repeat;
 	EImageUsage         aUsage          = EImageUsage_None;
 	EImageFilter        aFilter         = EImageFilter_Linear;
+
+	bool                aDepthCompare   = false;
 };
 
 

@@ -83,6 +83,8 @@ struct TextureVK
 	VkFormat             aFormat         = VK_FORMAT_UNDEFINED;
 	VkFilter             aFilter         = VK_FILTER_NEAREST;
 	VkSamplerAddressMode aSamplerAddress = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+	VkBool32             aDepthCompare   = VK_FALSE;
+
 
 	// VMA
 	VmaAllocation        aAllocation{};
@@ -350,7 +352,7 @@ void                                  VK_DestroyBuffer( BufferVK* spBuffer );
 
 void                                  VK_CreateTextureSamplers();
 void                                  VK_DestroyTextureSamplers();
-VkSampler                             VK_GetSampler( VkFilter sFilter, VkSamplerAddressMode addressMode );
+VkSampler                             VK_GetSampler( VkFilter sFilter, VkSamplerAddressMode addressMode, VkBool32 sDepthCompare );
 
 TextureVK*                            VK_NewTexture();
 bool                                  VK_LoadTexture( TextureVK* spTexture, const std::string& srPath, const TextureCreateData_t& srCreateData );

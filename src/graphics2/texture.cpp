@@ -8,7 +8,8 @@
 
 
 // VkSampler                                          gSamplers[ 2 ];
-VkSampler                                          gSamplers[ 2 ][ 5 ];  // [texture filter][sampler address]
+//VkSampler                                          gSamplers[ 2 ][ 5 ];  // [texture filter][sampler address]
+VkSampler                                          gSamplers[ 2 ][ 5 ][ 2 ];
 
 std::vector< TextureVK* >                          gTextures;
 static std::vector< RenderTarget* >                gRenderTargets;
@@ -173,7 +174,8 @@ void VK_CreateTextureSamplers()
 	{
 		for ( int address = 0; address < 5; address++ )
 		{
-			VK_GetSampler( ( VkFilter )i, ( VkSamplerAddressMode )address );
+			VK_GetSampler( ( VkFilter )i, ( VkSamplerAddressMode )address, VK_FALSE );
+			VK_GetSampler( ( VkFilter )i, ( VkSamplerAddressMode )address, VK_TRUE );
 		}
 	}
 }
@@ -185,16 +187,19 @@ void VK_DestroyTextureSamplers()
 	{
 		for ( int address = 0; address < 5; address++ )
 		{
-			if ( gSamplers[ i ][ address ] )
-				vkDestroySampler( VK_GetDevice(), gSamplers[ i ][ address ], nullptr );
+			if ( gSamplers[ i ][ address ][ 0 ] )
+				vkDestroySampler( VK_GetDevice(), gSamplers[ i ][ address ][ 0 ], nullptr );
+			if ( gSamplers[ i ][ address ][ 1 ] )
+				vkDestroySampler( VK_GetDevice(), gSamplers[ i ][ address ][ 1 ], nullptr );
 
-			gSamplers[ i ][ address ] = VK_NULL_HANDLE;
+			gSamplers[ i ][ address ][ 0 ] = VK_NULL_HANDLE;
+			gSamplers[ i ][ address ][ 1 ] = VK_NULL_HANDLE;
 		}
 	}
 }
 
 
-VkSampler VK_GetSampler( VkFilter sFilter, VkSamplerAddressMode addressMode )
+VkSampler VK_GetSampler( VkFilter sFilter, VkSamplerAddressMode addressMode, VkBool32 sDepthCompare )
 {
 	int index = 0;
 	int addressIndex = 0;
@@ -233,8 +238,8 @@ VkSampler VK_GetSampler( VkFilter sFilter, VkSamplerAddressMode addressMode )
 			break;
 	}
 
-	if ( gSamplers[ index ][ addressIndex ] )
-		return gSamplers[ index ][ addressIndex ];
+	if ( gSamplers[ index ][ addressIndex ][ sDepthCompare ] )
+		return gSamplers[ index ][ addressIndex ][ sDepthCompare ];
 
 	const auto&         deviceProps = VK_GetPhysicalDeviceProperties();
 
@@ -249,16 +254,16 @@ VkSampler VK_GetSampler( VkFilter sFilter, VkSamplerAddressMode addressMode )
 	samplerInfo.maxAnisotropy           = deviceProps.limits.maxSamplerAnisotropy;
 	samplerInfo.borderColor             = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
 	samplerInfo.unnormalizedCoordinates = VK_FALSE;
-	samplerInfo.compareEnable           = VK_FALSE;
-	samplerInfo.compareOp               = VK_COMPARE_OP_ALWAYS;
+	samplerInfo.compareEnable           = sDepthCompare;
+	samplerInfo.compareOp               = VK_COMPARE_OP_LESS;
 	samplerInfo.mipmapMode              = VK_SAMPLER_MIPMAP_MODE_LINEAR;
 	samplerInfo.mipLodBias              = 0.f;
 	samplerInfo.maxLod                  = std::max( 0.f, r_maxmiplod.GetFloat() );
 	samplerInfo.minLod                  = std::min( std::max( 0.f, r_minmiplod.GetFloat() ), samplerInfo.maxLod );
 
-	VK_CheckResult( vkCreateSampler( VK_GetDevice(), &samplerInfo, NULL, &gSamplers[ index ][ addressIndex ] ), "Failed to create sampler!" );
+	VK_CheckResult( vkCreateSampler( VK_GetDevice(), &samplerInfo, NULL, &gSamplers[ index ][ addressIndex ][ sDepthCompare ] ), "Failed to create sampler!" );
 
-	return gSamplers[ index ][ addressIndex ];
+	return gSamplers[ index ][ addressIndex ][ sDepthCompare ];
 }
 
 
@@ -293,6 +298,7 @@ bool VK_LoadTexture( TextureVK* tex, const std::string& srPath, const TextureCre
 
 	tex->aFilter         = VK_ToVkFilter( srCreateData.aFilter );
 	tex->aSamplerAddress = VK_ToVkSamplerAddress( srCreateData.aSamplerAddress );
+	tex->aDepthCompare   = srCreateData.aDepthCompare;	// Does this need a dedicated function?
 
 #ifdef _DEBUG
 	// add a debug label onto it
@@ -326,6 +332,7 @@ TextureVK* VK_CreateTexture( const TextureCreateInfo_t& srCreate, const TextureC
 	tex->apName          = srCreate.apName;
 	tex->aFilter         = VK_ToVkFilter( srCreateData.aFilter );
 	tex->aSamplerAddress = VK_ToVkSamplerAddress( srCreateData.aSamplerAddress );
+	tex->aDepthCompare   = srCreateData.aDepthCompare;
 
 	VkImageCreateInfo createInfo{ VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO };
 	createInfo.imageType     = VK_IMAGE_TYPE_2D;
