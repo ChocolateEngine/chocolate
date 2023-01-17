@@ -1,9 +1,13 @@
 message( "Current Project: ImGui" )
 
 file(
-	GLOB IMGUI_FILES CONFIGURE_DEPENDS
-	${CH_PUBLIC}/imgui/*.h
+	GLOB_RECURSE IMGUI_FILES CONFIGURE_DEPENDS
 	*.cpp
+)
+
+file(
+	GLOB PUBLIC_FILES CONFIGURE_DEPENDS
+	${CH_PUBLIC}/imgui/*.h
 )
 
 include_directories( ${CH_PUBLIC}/imgui )
@@ -12,11 +16,10 @@ if( MSVC )
 	include_directories( ${CH_PUBLIC}/SDL2 )
 endif()
 
-include( ${CH_ROOT}/scripts/vulkan.cmake )
-
 add_library(
 	ImGui SHARED
-	${IMGUI_FILES} )
+	${IMGUI_FILES}
+	${PUBLIC_FILES} )
 
 set_target_properties(
 	ImGui PROPERTIES
@@ -24,3 +27,14 @@ set_target_properties(
 	OUTPUT_NAME imgui
 )
 
+source_group(
+	TREE ${CMAKE_CURRENT_LIST_DIR}
+	PREFIX "Source Files"
+	FILES ${IMGUI_FILES}
+)
+
+source_group(
+	TREE ${CH_PUBLIC}
+	PREFIX "Public"
+	FILES ${PUBLIC_FILES}
+)
