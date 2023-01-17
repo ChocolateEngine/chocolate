@@ -170,6 +170,9 @@ void VK_SetImageLayout( VkCommandBuffer c, VkImage sImage, VkImageLayout sOldLay
 
 void VK_CreateTextureSamplers()
 {
+	return;
+
+#if 0
 	for ( int i = 0; i < 2; i++ )
 	{
 		for ( int address = 0; address < 5; address++ )
@@ -178,6 +181,7 @@ void VK_CreateTextureSamplers()
 			VK_GetSampler( ( VkFilter )i, ( VkSamplerAddressMode )address, VK_TRUE );
 		}
 	}
+#endif
 }
 
 
@@ -382,7 +386,7 @@ TextureVK* VK_CreateTexture( const TextureCreateInfo_t& srCreate, const TextureC
 
 			VK_CreateBuffer( &stagingBuffer, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT );
 
-			VK_memcpy( stagingBuffer.aAllocation, srCreate.aDataSize, srCreate.apData );
+			VK_memcpy( stagingBuffer.aMemory, srCreate.aDataSize, srCreate.apData );
 
 			// Copy Buffer to Image
 			VkBufferImageCopy region{};
@@ -841,6 +845,8 @@ void VK_DestroyRenderTargets()
 
 TextureVK* CreateBackBufferColor()
 {
+	Log_Msg( "creating back buffer\n" );
+
 	TextureVK* colorTex     = VK_NewTexture();
 	colorTex->aRenderTarget = true;
 
@@ -1144,19 +1150,31 @@ Handle VK_GetFramebufferHandle( VkFramebuffer sFrameBuffer )
 
 void VK_CreateImage( VkImageCreateInfo& srCreateInfo, TextureVK* spTexture )
 {
-	VmaAllocationCreateInfo allocInfo = {};
-	allocInfo.usage                   = VMA_MEMORY_USAGE_AUTO;
-	allocInfo.memoryTypeBits          = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+	Log_Dev( gLC_Render, 1, " *** Creating Image\n" );
 
-	// vmaCreateImage
-	VK_CheckResult(
-		vmaCreateImage( gVmaAllocator, &srCreateInfo, &allocInfo, &spTexture->aImage, &spTexture->aAllocation, nullptr ),
-		"Failed to create VkImage" );
+	// VmaAllocationCreateInfo allocInfo = {};
+	// allocInfo.usage                   = VMA_MEMORY_USAGE_AUTO;
+	// allocInfo.memoryTypeBits          = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+
+	VK_CheckResult( vkCreateImage( VK_GetDevice(), &srCreateInfo, nullptr, &spTexture->aImage ), "Failed to create color image!" );
+
+	VkMemoryRequirements memReqs;
+	vkGetImageMemoryRequirements( VK_GetDevice(), spTexture->aImage, &memReqs );
+
+	VkMemoryAllocateInfo allocInfo{ VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO };
+	allocInfo.pNext           = nullptr;
+	allocInfo.allocationSize  = memReqs.size;
+	allocInfo.memoryTypeIndex = VK_GetMemoryType( memReqs.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT );
+
+	VK_CheckResult( vkAllocateMemory( VK_GetDevice(), &allocInfo, nullptr, &spTexture->aMemory ), "Failed to allocate color image memory!" );
+	VK_CheckResult( vkBindImageMemory( VK_GetDevice(), spTexture->aImage, spTexture->aMemory, 0 ), "Failed to bind back buffer color image memory" );
 }
 
 
 void VK_CreateMissingTexture()
 {
+	Log_Dev( gLC_Render, 1, "Creating Missing Texture\n" );
+
 	TextureCreateInfo_t create{};
 	create.apName    = "__missing_texture";
 	create.aSize.x   = gMissingTextureWidth;
