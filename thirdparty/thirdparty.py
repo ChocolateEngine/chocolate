@@ -245,33 +245,6 @@ def post_jolt_extract():
 # =================================================================================================
 
 
-def build_vma():
-    if ARGS.no_build:
-        return
-
-    set_project("VulkanMemoryAllocator")
-    os.chdir("VulkanMemoryAllocator")
-
-    if not syscmd(f"cmake -S . -B build", "Failed to run cmake"):
-        return
-
-    print("Building VulkanMemoryAllocator - Release\n")
-    if not syscmd(f"cmake --build build --config Release", "Failed to build in Release"):
-        return
-
-    # is this windows only?
-    print("Building VulkanMemoryAllocator - RelWithDebInfo\n")
-    if not syscmd(f"cmake --build build --config RelWithDebInfo", "Failed to build in RelWithDebInfo"):
-        return
-
-    print("Building VulkanMemoryAllocator - Debug\n")
-    if not syscmd(f"cmake --build build --config Debug", "Failed to build in Debug"):
-        return
-
-
-# =================================================================================================
-
-
 def build_mimalloc():
     if ARGS.no_build:
         return
@@ -585,7 +558,6 @@ FILE_LIST = {
 # just a list of functions to run, simple
 SUBMODULE_LIST = [
     build_mimalloc,
-    build_vma,
     build_ktx,
 ]
 

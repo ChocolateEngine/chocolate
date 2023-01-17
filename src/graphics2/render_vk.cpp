@@ -54,7 +54,7 @@ static VkCommandPool                                     gPrimary;
 // static std::unordered_map< ImageInfo*, VkDescriptorSet > gImGuiTextures;
 static std::vector< std::vector< char > >                gFontData;
 
-// static std::vector< VkBuffer >                           gBuffers;
+static std::vector< VkBuffer >                           gBuffers;
 
 ResourceList< BufferVK >                                 gBufferHandles;
 ResourceList< TextureVK* >                               gTextureHandles;
@@ -71,8 +71,6 @@ static Render_OnReset_t                                  gpOnResetFunc      = nu
 
 bool                                                     gNeedTextureUpdate = false;
 extern std::vector< TextureVK* >                         gTextures;
-
-VmaAllocator                                             gVmaAllocator;
 
 // tracy contexts
 #if TRACY_ENABLE
@@ -173,10 +171,10 @@ const char* VKString( VkResult sResult )
 
 void VK_CheckCorruption()
 {
-	VkResult result = vmaCheckCorruption( gVmaAllocator, 0 );
-
-	if ( result != VK_SUCCESS )
-		Log_FatalF( gLC_Render, "Vulkan Error: Corruption Detected: %s\n", VKString( result ) );
+	// VkResult result = vmaCheckCorruption( gVmaAllocator, 0 );
+	// 
+	// if ( result != VK_SUCCESS )
+	// 	Log_FatalF( gLC_Render, "Vulkan Error: Corruption Detected: %s\n", VKString( result ) );
 }
 
 
@@ -594,24 +592,24 @@ VkSamplerAddressMode VK_ToVkSamplerAddress( ESamplerAddressMode mode )
 
 
 // Copies memory to the GPU.
-void VK_memcpy( VmaAllocation sAllocation, VkDeviceSize sSize, const void* spData )
+void VK_memcpy( VkDeviceMemory sBufferMemory, VkDeviceSize sSize, const void* spData )
 {
 	// TODO: add an option that doesn't need the size here
 	void* pData = nullptr;
-	VK_CheckResult( vmaMapMemory( gVmaAllocator, sAllocation, &pData ), "Failed to map memory" );
+	VK_CheckResult( vkMapMemory( VK_GetDevice(), sBufferMemory, 0, sSize, 0, &pData ), "Failed to map memory" );
 	memcpy( pData, spData, (size_t)sSize );
-	vmaUnmapMemory( gVmaAllocator, sAllocation );
+	vkUnmapMemory( VK_GetDevice(), sBufferMemory );
 }
 
 
 // Copies memory from the GPU to the host
-void VK_memread( VmaAllocation sAllocation, VkDeviceSize sSize, void* spData )
+void VK_memread( VkDeviceMemory sBufferMemory, VkDeviceSize sSize, void* spData )
 {
 	// TODO: add an option that doesn't need the size here
 	void* pData = nullptr;
-	VK_CheckResult( vmaMapMemory( gVmaAllocator, sAllocation, &pData ), "Failed to map memory" );
+	VK_CheckResult( vkMapMemory( VK_GetDevice(), sBufferMemory, 0, sSize, 0, &pData ), "Failed to map memory" );
 	memcpy( spData, pData, (size_t)sSize );
-	vmaUnmapMemory( gVmaAllocator, sAllocation );
+	vkUnmapMemory( VK_GetDevice(), sBufferMemory );
 }
 
 
@@ -715,19 +713,27 @@ void VK_CreateBuffer( BufferVK* spBuffer, VkBufferUsageFlags sUsage, VkMemoryPro
 	PROF_SCOPE();
 
 	// create a vertex buffer
-	VkBufferCreateInfo bufferInfo{ VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
-	bufferInfo.size                   = spBuffer->aSize;
-	bufferInfo.usage                  = sUsage;
-	bufferInfo.sharingMode            = VK_SHARING_MODE_EXCLUSIVE;
+	VkBufferCreateInfo aBufferInfo{ VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
+	aBufferInfo.size        = spBuffer->aSize;
+	aBufferInfo.usage       = sUsage;
+	aBufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
-	VmaAllocationCreateInfo allocInfo = {};
-	allocInfo.usage                   = VMA_MEMORY_USAGE_AUTO;
-	allocInfo.memoryTypeBits          = sMemBits;
+	VK_CheckResult( vkCreateBuffer( VK_GetDevice(), &aBufferInfo, nullptr, &spBuffer->aBuffer ), "Failed to create buffer" );
 
-	if ( sMemBits & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT || sMemBits & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT )
-		allocInfo.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
+	// allocate memory for the vertex buffer
+	VkMemoryRequirements aMemReqs;
+	vkGetBufferMemoryRequirements( VK_GetDevice(), spBuffer->aBuffer, &aMemReqs );
 
-	VK_CheckResult( vmaCreateBuffer( gVmaAllocator, &bufferInfo, &allocInfo, &spBuffer->aBuffer, &spBuffer->aAllocation, nullptr ), "Failed to create buffer" );
+	VkMemoryAllocateInfo aMemAllocInfo{ VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO };
+	aMemAllocInfo.allocationSize  = aMemReqs.size;
+	aMemAllocInfo.memoryTypeIndex = VK_GetMemoryType( aMemReqs.memoryTypeBits, sMemBits );
+
+	VK_CheckResult( vkAllocateMemory( VK_GetDevice(), &aMemAllocInfo, nullptr, &spBuffer->aMemory ), "Failed to allocate buffer memory" );
+
+	// bind the vertex buffer to the device memory
+	VK_CheckResult( vkBindBufferMemory( VK_GetDevice(), spBuffer->aBuffer, spBuffer->aMemory, 0 ), "Failed to bind buffer" );
+
+	gBuffers.push_back( spBuffer->aBuffer );
 }
 
 
@@ -765,13 +771,12 @@ void VK_DestroyBuffer( BufferVK* spBuffer )
 
 	if ( spBuffer->aBuffer )
 	{
-		// vec_remove_if( gBuffers, srBuffer );
-		vmaDestroyBuffer( gVmaAllocator, spBuffer->aBuffer, spBuffer->aAllocation );
-		// vkDestroyBuffer( VK_GetDevice(), srBuffer, nullptr );
+		vec_remove_if( gBuffers, spBuffer->aBuffer );
+		vkDestroyBuffer( VK_GetDevice(), spBuffer->aBuffer, nullptr );
 	}
 
-	// if ( srBufferMem )
-	// 	vkFreeMemory( VK_GetDevice(), srBufferMem, nullptr );
+	if ( spBuffer->aMemory )
+		vkFreeMemory( VK_GetDevice(), spBuffer->aMemory, nullptr );
 }
 
 
@@ -839,15 +844,6 @@ bool Render_Init( void* spWindow )
 	VK_SetupPhysicalDevice();
 	VK_CreateDevice();
 
-	// Init Vulkan Memory Allocator
-	VmaAllocatorCreateInfo createInfo{};
-	createInfo.physicalDevice   = VK_GetPhysicalDevice();
-	createInfo.device           = VK_GetDevice();
-	createInfo.instance         = VK_GetInstance();
-	createInfo.vulkanApiVersion = VK_HEADER_VERSION_COMPLETE;
-
-	vmaCreateAllocator( &createInfo, &gVmaAllocator );
-
 	VK_CreateCommandPool( VK_GetSingleTimeCommandPool() );
 	VK_CreateCommandPool( VK_GetPrimaryCommandPool() );
 
@@ -876,8 +872,6 @@ void Render_Shutdown()
 {
 	if ( gpViewports )
 		delete gpViewports;
-
-	vmaDestroyAllocator( gVmaAllocator );
 
 	ImGui_ImplVulkan_Shutdown();
 
@@ -1203,11 +1197,11 @@ public:
 		if ( sSize > bufVK->aSize )
 		{
 			Log_WarnF( gLC_Render, "BufferWrite: Trying to write more data than buffer size can store (data size: %zd > buffer size: %zd)\n", sSize, bufVK->aSize );
-			VK_memcpy( bufVK->aAllocation, sSize, spData );
+			VK_memcpy( bufVK->aMemory, sSize, spData );
 			return sSize;
 		}
 
-		VK_memcpy( bufVK->aAllocation, bufVK->aSize, spData );
+		VK_memcpy( bufVK->aMemory, bufVK->aSize, spData );
 		return bufVK->aSize;
 	}
 
@@ -1226,11 +1220,11 @@ public:
 		if ( sSize > bufVK->aSize )
 		{
 			Log_WarnF( gLC_Render, "BufferRead: Trying to write more data than buffer size can store (data size: %zd > buffer size: %zd)\n", sSize, bufVK->aSize );
-			VK_memread( bufVK->aAllocation, sSize, spData );
+			VK_memread( bufVK->aMemory, sSize, spData );
 			return sSize;
 		}
 
-		VK_memread( bufVK->aAllocation, bufVK->aSize, spData );
+		VK_memread( bufVK->aMemory, bufVK->aSize, spData );
 		return bufVK->aSize;
 	}
 

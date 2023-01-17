@@ -6,7 +6,6 @@
   #define VMA_STATS_STRING_ENABLED 0
 #endif
 
-#include "vk_mem_alloc.h"
 #include <vulkan/vulkan.h>
 
 #if TRACY_ENABLE
@@ -39,7 +38,6 @@ struct GraphicsPipelineCreate_t;
 struct TextureCreateInfo_t;
 struct RenderPassCreate_t;
 
-extern VmaAllocator gVmaAllocator;
 
 
 #if _DEBUG
@@ -66,7 +64,6 @@ struct BufferVK
 {
 	VkBuffer       aBuffer;
 	VkDeviceMemory aMemory;
-	VmaAllocation  aAllocation;
 	size_t         aSize;
 };
 
@@ -84,10 +81,6 @@ struct TextureVK
 	VkFilter             aFilter         = VK_FILTER_NEAREST;
 	VkSamplerAddressMode aSamplerAddress = VK_SAMPLER_ADDRESS_MODE_REPEAT;
 	VkBool32             aDepthCompare   = VK_FALSE;
-
-
-	// VMA
-	VmaAllocation        aAllocation{};
 
 	// Texture Information
 	const char*          apName          = nullptr;
@@ -171,8 +164,8 @@ VkAttachmentStoreOp                   VK_ToVkStoreOp( EAttachmentStoreOp storeOp
 VkFilter                              VK_ToVkFilter( EImageFilter filter );
 VkSamplerAddressMode                  VK_ToVkSamplerAddress( ESamplerAddressMode mode );
 
-void                                  VK_memcpy( VmaAllocation sAllocation, VkDeviceSize sSize, const void* spData );
-void                                  VK_memread( VmaAllocation sAllocation, VkDeviceSize sSize, void* spData );
+void                                  VK_memcpy( VkDeviceMemory sBufferMemory, VkDeviceSize sSize, const void* spData );
+void                                  VK_memread( VkDeviceMemory sBufferMemory, VkDeviceSize sSize, void* spData );
 
 void                                  VK_Reset( ERenderResetFlags sFlags = ERenderResetFlags_None );
 
