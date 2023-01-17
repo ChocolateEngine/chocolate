@@ -13,7 +13,6 @@
 
 #ifdef NDEBUG
 constexpr bool        gEnableValidationLayers = false;
-bool                  gListExts               = false;
 
 constexpr char const* gpValidationLayers[]    = { 0 };
 bool                  vk_verbose              = false;
@@ -22,12 +21,14 @@ bool                  vk_formatted            = false;
 #else
 
 bool                  gEnableValidationLayers = Args_Register( false, "Enable Vulkan Validation Layers Extensions", "-vk-valid" );
-bool                  gListExts               = Args_Register( false, "List All Vulkan Extensions, marking what ones are loaded", "-list-exts" );
 
 constexpr char const* gpValidationLayers[]    = { "VK_LAYER_KHRONOS_validation" };
 CONVAR( vk_verbose, 0 );
 CONVAR( vk_formatted, 1 );
 #endif
+
+
+bool                  gListExts      = Args_Register( false, "List All Vulkan Extensions, marking what ones are loaded", "-list-exts" );
 
 
 constexpr char const* gpExtensions[] = {
