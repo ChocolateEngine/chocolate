@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include <dlfcn.h>
 #include <csignal>
+#include <unistd.h>
 
 void sys_init()
 {

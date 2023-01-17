@@ -1315,7 +1315,7 @@ CONCMD_VA( _abort, CVARF_INSTANT, "funny" )
 }
 
 
-CONCMD( build_number, "Print Build Number" )
+CONCMD_VA( build_number, "Print Build Number" )
 {
 	Log_MsgF( "Chocolate Engine Build Number: %zu\n", Core_GetBuildNumber() );
 }

@@ -13,6 +13,10 @@ functionality where a STL vector may cause segfaults.
 #include "asserts.h"
 #include "profiler.h"
 
+#if __unix__
+#include <memory.h>
+#endif /* __unix__  */
+
 
 template< typename T >
 struct ChVector
