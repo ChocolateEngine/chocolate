@@ -516,10 +516,10 @@ FILE_LIST = {
             setup_vs_env,           # function to run post extraction (optional)
         ],
         [
-            "https://www.libsdl.org/release/SDL2-devel-2.0.16-VC.zip",
+            "https://github.com/libsdl-org/SDL/releases/download/release-2.26.5/SDL2-devel-2.26.5-VC.zip",
             "zip",                  # file extension it's stored as
             "SDL2",                 # folder to check for if it exists already
-            "SDL2-2.0.16",          # folder it extracts as to rename to another folder (optional)
+            "SDL2-2.26.5",          # folder it extracts as to rename to another folder (optional)
             ".",                    # extract into this folder (optional)
             post_sdl_extract,       # function to run post extraction (optional)
         ],
