@@ -800,6 +800,12 @@ void GuiSystem::DrawConsole( bool wasConsoleOpen )
 	// ImVec2 dropDownPos( popupPos.x, popupPos.y + ImGui::GetFrameHeight() );
 	// dropDownPos.y += ImGui::GetFrameHeight();
 
+	// test
+	if ( ImGui::Button( "Toggle ConVar List" ) )
+	{
+		aConVarListShown = !aConVarListShown;
+	}
+
 	ImGui::End();
 
 	if ( !gCmdAutoComplete.empty() )

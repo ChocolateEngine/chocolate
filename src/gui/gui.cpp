@@ -44,6 +44,9 @@ void GuiSystem::DrawGui()
 	if ( aConsoleShown )
 		DrawConsole( wasConsoleOpen );
 
+	if ( aConsoleShown && aConVarListShown )
+		DrawConVarList( false );
+
 	wasConsoleOpen = aConsoleShown;
 
 	ImGuiWindowFlags devFlags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_AlwaysAutoResize;
@@ -232,6 +235,7 @@ bool GuiSystem::Init()
 {
 	StyleImGui();
 	InitConsole();
+	InitConVarList();
 
 	return true;
 }
