@@ -106,7 +106,7 @@ bool AudioSystem::Init()
 	{
 		// NOTE: technically this isn't a fatal error, and should be moved elsewhere so you can pick the output audio device while running
 		Log_MsgF( gAduioChannel, "SDL_OpenAudioDevice failed: %s\n", SDL_GetError() );
-		return false;
+		return true;
 	}
 
 	InitSteamAudio();
