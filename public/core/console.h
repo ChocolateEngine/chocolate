@@ -39,6 +39,29 @@ using ConVarFlag_t = size_t;
 class ConVarRef;
 
 
+enum EChConfigOption
+{
+	EChConfigOption_None,
+
+	EChConfigOption_Bool,      // Boolean
+	EChConfigOption_Int,       // Integer
+	EChConfigOption_Float,     // Float
+	EChConfigOption_String,    // String Value
+	EChConfigOption_DropDown,  // Drop-Down of String Values
+
+	// not a good type
+	EChConfigOption_Slider,    // Float Slider
+};
+
+
+class CORE_API ChConfigOption
+{
+  public:
+
+	  EChConfigOption aType;
+};
+
+
 class CORE_API ConVarBase
 {
 public:
@@ -65,9 +88,6 @@ private:
 	// NO COPYING!!
 	ConVarBase( const ConVarBase& );
 };
-
-
-// CORE_API ConVarBase* gpConVarBases;
 
 
 class CORE_API ConCommand : public ConVarBase
@@ -454,12 +474,17 @@ CORE_API void                                Con_ParseCommandLineEx( std::string
 CORE_API ConVarFlag_t                        Con_CreateCvarFlag( const char* name );
 CORE_API const char*                         Con_GetCvarFlagName( ConVarFlag_t flag );
 CORE_API ConVarFlag_t                        Con_GetCvarFlag( const char* name );
+CORE_API size_t                              Con_GetCvarFlagCount();
 
 // Add a callback function to add data to the config.cfg file
 CORE_API void                                Con_AddArchiveCallback( FArchive* spFunc );
 
 // Write a config of all stuff we want saved
 CORE_API void                                Con_Archive( const char* spFile = nullptr );
+
+// New Convar System
+
+// CORE_API Handle                              Con_RegisterVar( const char* spName, const char* spDesc );
 
 
 #define NEW_CVAR_FLAG( name ) ConVarFlag_t name = Con_CreateCvarFlag( #name )

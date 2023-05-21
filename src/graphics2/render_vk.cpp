@@ -4,10 +4,13 @@
 #include "core/log.h"
 #include "core/systemmanager.h"
 #include "core/app_info.h"
+#include "core/build_number.h"
 #include "util.h"
 
- #include "imgui_impl_sdl.h"
- #include "imgui_impl_vulkan.h"
+#include "imgui_impl_sdl.h"
+#include "imgui_impl_vulkan.h"
+
+#include "SDL_hints.h"
 
 #include <unordered_map>
 #include <filesystem>
@@ -1027,24 +1030,28 @@ public:
 		if ( SDL_Init( SDL_INIT_VIDEO | SDL_INIT_EVENTS | SDL_INIT_AUDIO ) != 0 )
 			Log_Fatal( "Unable to initialize SDL2!" );
 
-		int flags = SDL_WINDOW_VULKAN | SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE;
+		int flags = SDL_WINDOW_VULKAN | SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI;
 
 		if ( gMaxWindow )
 			flags |= SDL_WINDOW_MAXIMIZED;
 
 		std::string windowName;
 
-		if ( Core_GetAppInfo().apWindowTitle )
+		windowName = ( Core_GetAppInfo().apWindowTitle ) ? Core_GetAppInfo().apWindowTitle : "Chocolate Engine";
+		windowName += vstring( " - Build %zd - Compiled On - %s %s", Core_GetBuildNumber(), Core_GetBuildDate(), Core_GetBuildTime() );
+
+#ifdef _WIN32
+		// SDL_SetHint( SDL_HINT_WINDOWS_DPI_AWARENESS, "system" );
+		if ( SDL_SetHint( "SDL_WINDOWS_DPI_AWARENESS", "permonitor" ) == SDL_FALSE )
 		{
-			windowName = Core_GetAppInfo().apWindowTitle;
-		}
-		else
-		{
-			windowName = "Chocolate Engine - Compiled on " __TIMESTAMP__;
+			Log_Error( "SDL_WINDOWS_DPI_AWARENESS\n" );
 		}
 
-		windowName += " - Build ";
-		windowName += vstring( "%zd", Core_GetBuildNumber() );
+		if ( SDL_SetHint( "SDL_WINDOWS_DPI_SCALING", "1" ) == SDL_FALSE )
+		{
+			Log_Error( "SDL_WINDOWS_DPI_SCALING\n" );
+		}
+#endif
 
 		gpWindow = SDL_CreateWindow( windowName.c_str(), SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
 		                             gWidth, gHeight, flags );

@@ -822,6 +822,11 @@ ConVarFlag_t Con_GetCvarFlag( const char* name )
 	return CVARF_NONE;
 }
 
+size_t Con_GetCvarFlagCount()
+{
+	return gConVarFlags.size();
+}
+
 
 // Add a callback function to add data to the config.cfg file
 void Con_AddArchiveCallback( FArchive* sFunc )
@@ -1320,4 +1325,9 @@ CONCMD( build_number, "Print Build Number" )
 	Log_MsgF( "Chocolate Engine Build Number: %zu\n", Core_GetBuildNumber() );
 }
 
+
+CONCMD( cat, "Print a File" )
+{
+	Log_Msg( "\"cat\" command not implemented\n" );
+}
 

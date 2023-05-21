@@ -67,7 +67,7 @@ void VK_CreateSwapchain( VkSwapchainKHR spOldSwapchain )
 	if ( spOldSwapchain )
 		vkDestroySwapchainKHR( VK_GetDevice(), spOldSwapchain, NULL );
 
-	VK_CheckResult( vkGetSwapchainImagesKHR( VK_GetDevice(), gSwapChain, &imageCount, NULL ), "Failed to get swapchain images" );
+	//VK_CheckResult( vkGetSwapchainImagesKHR( VK_GetDevice(), gSwapChain, &imageCount, NULL ), "Failed to get swapchain images" );
 	gImages.resize( imageCount );
 	VK_CheckResult( vkGetSwapchainImagesKHR( VK_GetDevice(), gSwapChain, &imageCount, gImages.data() ), "Failed to get swapchain images" );
 

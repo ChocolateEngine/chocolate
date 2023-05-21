@@ -23,13 +23,4 @@ CORE_API void             Core_DestroyAppInfo();
 CORE_API const AppInfo_t& Core_GetAppInfo();
 
 
-/*
- *    Time in seconds since the chocolate epoch.
- *    Same as the seconds from the unix epoch from the first commit.
- * 
- *    @return size_t
- *        The number of seconds since the chocolate epoch. 
- *        time since 2/15/2021 14:11:26 from the current time.
- */
-CORE_API size_t           Core_GetBuildNumber();
 

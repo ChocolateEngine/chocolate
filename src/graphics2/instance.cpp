@@ -11,24 +11,22 @@
 #include <set>
 
 
+bool gListExts = Args_Register( false, "List All Vulkan Extensions, marking what ones are loaded", "-vk-list-exts" );
+
+
 #ifdef NDEBUG
-constexpr bool        gEnableValidationLayers = false;
+	constexpr bool        gEnableValidationLayers = false;
+	constexpr char const* gpValidationLayers[]    = { 0 };
 
-constexpr char const* gpValidationLayers[]    = { 0 };
-bool                  vk_verbose              = false;
-bool                  vk_formatted            = false;
-
+	constexpr bool        vk_verbose              = false;
+	constexpr bool        vk_formatted            = false;
 #else
+	bool                  gEnableValidationLayers = Args_Register( false, "Enable Vulkan Validation Layers Extensions", "-vk-valid" );
+	constexpr char const* gpValidationLayers[]    = { "VK_LAYER_KHRONOS_validation" };
 
-bool                  gEnableValidationLayers = Args_Register( false, "Enable Vulkan Validation Layers Extensions", "-vk-valid" );
-
-constexpr char const* gpValidationLayers[]    = { "VK_LAYER_KHRONOS_validation" };
-CONVAR( vk_verbose, 0 );
-CONVAR( vk_formatted, 1 );
+	CONVAR( vk_verbose, 0 );
+	CONVAR( vk_formatted, 1 );
 #endif
-
-
-bool                  gListExts      = Args_Register( false, "List All Vulkan Extensions, marking what ones are loaded", "-list-exts" );
 
 
 constexpr char const* gpExtensions[] = {
@@ -632,6 +630,8 @@ void VK_SetupPhysicalDevice()
 
 void VK_CreateDevice()
 {
+	Log_Dev( gLC_Render, 1, "Creating VkDevice" );
+
 	float queuePriority = 1.0f;
 	u32   graphics, present;
 	VK_FindQueueFamilies( gPhysicalDevice, &graphics, &present );
@@ -658,12 +658,12 @@ void VK_CreateDevice()
 	indexing.descriptorBindingVariableDescriptorCount = VK_TRUE;
 
 	VkPhysicalDeviceFeatures deviceFeatures{};
-	deviceFeatures.samplerAnisotropy = VK_TRUE;
-	deviceFeatures.sampleRateShading = VK_TRUE;
-	deviceFeatures.depthBiasClamp    = VK_TRUE;
-	deviceFeatures.depthClamp        = VK_TRUE;
-	deviceFeatures.wideLines         = VK_TRUE;
-	deviceFeatures.fillModeNonSolid  = VK_TRUE;
+	deviceFeatures.samplerAnisotropy        = VK_TRUE;
+	deviceFeatures.sampleRateShading        = VK_TRUE;
+	deviceFeatures.depthBiasClamp           = VK_TRUE;
+	deviceFeatures.depthClamp               = VK_TRUE;
+	deviceFeatures.wideLines                = VK_TRUE;
+	deviceFeatures.fillModeNonSolid         = VK_TRUE;
 
 	VkDeviceCreateInfo createInfo    = {
 		   .sType                   = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,

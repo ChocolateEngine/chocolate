@@ -3,6 +3,7 @@
 
 constexpr size_t gChocolateEpoch = 1613416286;
 
+
 /*
  *    Time in seconds since the chocolate epoch.
  *    Same as the seconds from the unix epoch from the first commit.
@@ -13,6 +14,18 @@ constexpr size_t gChocolateEpoch = 1613416286;
  *        2021-02-15 14:11:26 in the original time zone, EST.
  */
 size_t Core_GetBuildNumber()
+{
+	// Calcualte the build number
+	static size_t buildNumber = Core_GetBuildTimeUnix() - gChocolateEpoch;
+	return buildNumber;
+}
+
+
+/*
+ *    @return size_t
+ *        Time in seconds when the engine was last built
+ */
+size_t Core_GetBuildTimeUnix()
 {
 	static size_t buildNumber = 0;
 	if ( buildNumber != 0 )
@@ -28,7 +41,7 @@ size_t Core_GetBuildNumber()
 	}
 
 	memcpy( buildTime, __TIMESTAMP__ "\0", 25 );
-	
+
 	// Add null terminators
 	buildTime[ 7 ]  = '\0';
 	buildTime[ 10 ] = '\0';
@@ -84,13 +97,31 @@ size_t Core_GetBuildNumber()
 
 	// Create a unix timestamp
 	time_t date         = mktime( timeinfo );
-
-	// Calcualte the build number
-	buildNumber         = date - gChocolateEpoch;
+	buildNumber         = date;
 
 	// Free the temporary string
 	CH_STACK_FREE( buildTime );
 
 	return buildNumber;
+}
+
+
+/*
+ *    @return const char*
+ *        The __DATE__ Preproccessor Macro
+ */
+const char* Core_GetBuildDate()
+{
+	return __DATE__;
+}
+
+
+/*
+ *    @return const char*
+ *        The __TIME__ Preproccessor Macro
+ */
+const char* Core_GetBuildTime()
+{
+	return __TIME__;
 }
 

@@ -10,9 +10,28 @@ build_number.h ( Authored by Demez )
  *    Time in seconds since the chocolate epoch.
  *    Same as the seconds from the unix epoch from the first commit.
  * 
- *    @return size_t
+ *    @return s64
  *        The number of seconds since the chocolate epoch. 
- *        time since 2/15/2021 14:11:26 from the current time.
+ *        time since 2021-02-15 19:11:26 UTC from the current time.
+ *        2021-02-15 14:11:26 in the original time zone, EST.
  */
-CORE_API size_t Core_GetBuildNumber();
+CORE_API size_t      Core_GetBuildNumber();
+
+/*
+ *    @return size_t
+ *        Time in seconds when the engine was last built
+ */
+CORE_API size_t      Core_GetBuildTimeUnix();
+
+/*
+ *    @return const char*
+ *        The __DATE__ Preproccessor Macro
+ */
+CORE_API const char* Core_GetBuildDate();
+
+/*
+ *    @return const char*
+ *        The __TIME__ Preproccessor Macro
+ */
+CORE_API const char* Core_GetBuildTime();
 
