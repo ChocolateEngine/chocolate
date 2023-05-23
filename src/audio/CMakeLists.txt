@@ -84,7 +84,7 @@ add_dependencies( Aduio "Core" )
 
 set_target_properties(
 	Aduio PROPERTIES
-	OUTPUT_NAME aduio
+	OUTPUT_NAME ch_aduio
 	PREFIX ""
 )
 

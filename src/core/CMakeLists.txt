@@ -46,7 +46,7 @@ endif()
 
 set_target_properties(
 	Core PROPERTIES
-	OUTPUT_NAME core
+	OUTPUT_NAME ch_core
 )
 
 target_precompile_headers( Core PUBLIC "${CH_PUBLIC}/core/core.h" )

@@ -22,7 +22,7 @@ add_dependencies( Input "Core" "ImGui" )
 
 set_target_properties(
 	Input PROPERTIES
-	OUTPUT_NAME input
+	OUTPUT_NAME ch_input
 )
 
 source_group(
