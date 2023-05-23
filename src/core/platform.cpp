@@ -265,7 +265,7 @@ void sys_init()
 
 	// Get Module Handle because we don't use WinMain at the moment (probably should tbh, idk)
 	// ghInst = GetModuleHandle( 0 );
-	ghInst = GetModuleHandle( "core.dll" );
+	ghInst = GetModuleHandle( "ch_core.dll" );
 
 
 	// Init Console
