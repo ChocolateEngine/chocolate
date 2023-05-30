@@ -6,7 +6,7 @@ struct ImFont;
 struct ImFontConfig;
 
 
-class BaseGuiSystem : public BaseSystem
+class IGuiSystem : public ISystem
 {
 public:
 	// Compile an ImGui font.

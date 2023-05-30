@@ -8,7 +8,7 @@
 #include "system.h"
 #include "igui.h"
 
-class GuiSystem : public BaseGuiSystem
+class GuiSystem : public IGuiSystem
 {
   protected:
 	bool                       aConsoleShown    = true;

@@ -631,7 +631,7 @@ struct ComputePassExecution
 typedef void ( *Render_OnReset_t )( ERenderResetFlags sFlags );
 
 
-class IRender : public BaseSystem
+class IRender : public ISystem
 {
   public:
 	// --------------------------------------------------------------------------------------------

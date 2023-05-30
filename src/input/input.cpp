@@ -18,13 +18,13 @@ input.h
   #include "mimalloc-new-delete.h"
 #endif
 
-InputSystem *input = new InputSystem;
+InputSystem* input = new InputSystem;
+IGuiSystem*  gui   = nullptr;
 
 LOG_REGISTER_CHANNEL( InputSystem, LogColor::Default );
 
 CONVAR( in_show_mouse_events, 0 );
 
-BaseGuiSystem*           gui           = nullptr;
 
 static ModuleInterface_t gInterfaces[] = {
 	{ input, IINPUTSYSTEM_NAME, IINPUTSYSTEM_HASH }
@@ -39,7 +39,7 @@ extern "C"
 	}
 }
 
-InputSystem::InputSystem(  ) : BaseInputSystem(  )
+InputSystem::InputSystem(  ) : IInputSystem(  )
 {
 	MakeAliases(  );
 	ParseBindings(  );
@@ -182,7 +182,7 @@ void InputSystem::ParseInput()
 
 bool InputSystem::Init()
 {
-	gui = ( BaseGuiSystem* )Mod_GetInterface( IGUI_NAME, IGUI_HASH );
+	gui = ( IGuiSystem* )Mod_GetInterface( IGUI_NAME, IGUI_HASH );
 	
 	if ( gui == nullptr )
 	{

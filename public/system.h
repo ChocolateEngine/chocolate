@@ -6,7 +6,7 @@ systems inherit.
 */
 #pragma once
 
-class BaseSystem
+class ISystem
 {
 protected:
 public:
@@ -15,5 +15,5 @@ public:
 	/* Initialize system.  */
 	virtual bool 	 Init()              = 0;
 	/* Destructs the system, freeing any used memory.  */
-	virtual 	~BaseSystem()            = default;
+	virtual 	~ISystem()            = default;
 };

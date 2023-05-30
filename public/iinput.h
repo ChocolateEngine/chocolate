@@ -19,7 +19,7 @@ enum
 typedef unsigned char KeyState;
 
 
-class BaseInputSystem : public BaseSystem
+class IInputSystem : public ISystem
 {
 	using Inputs = std::vector< SDL_Event >;
 protected:

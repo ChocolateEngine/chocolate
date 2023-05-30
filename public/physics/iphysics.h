@@ -464,7 +464,7 @@ struct Phys_DebugFuncs_t
 };
 
 
-class Ch_IPhysics : public BaseSystem
+class Ch_IPhysics : public ISystem
 {
 public:
 	virtual IPhysicsEnvironment* CreatePhysEnv()                                  = 0;

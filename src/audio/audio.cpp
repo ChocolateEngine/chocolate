@@ -65,7 +65,7 @@ bool HandleSteamAudioReturn(IPLerror ret, const char* msg)
 }
 
 
-AudioSystem::AudioSystem(  ) : BaseAudioSystem(  )
+AudioSystem::AudioSystem(  ) : IAudioSystem(  )
 {
 }
 

@@ -20,7 +20,7 @@ public:
 };
 
 
-class InputSystem : public BaseInputSystem
+class InputSystem : public IInputSystem
 {
 protected:
 	typedef std::vector< KeyAlias > KeyAliases;

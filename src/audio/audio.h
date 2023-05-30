@@ -114,14 +114,14 @@ class BaseCodec
 	virtual int         Seek( AudioStream* stream, double pos )                           = 0;
 	virtual void        Close( AudioStream* stream )                                      = 0;
 
-	virtual void        SetAudioSystem( BaseAudioSystem* system ) { apAudio = system; };
-	BaseAudioSystem*    apAudio;
+	virtual void        SetAudioSystem( IAudioSystem* system ) { apAudio = system; };
+	IAudioSystem*       apAudio;
 };
 
 // ===========================================================================
 // Audio System
 
-class AudioSystem : public BaseAudioSystem
+class AudioSystem : public IAudioSystem
 {
   public:
 	AudioSystem();

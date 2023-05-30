@@ -5,7 +5,7 @@
 
 LOG_REGISTER_CHANNEL2( Module, LogColor::Default );
 
-static std::vector< BaseSystem* > gSystems;
+static std::vector< ISystem* > gSystems;
 
 static std::unordered_map< const char*, Module > gModuleHandles;
 static std::vector< ModuleInterface_t* >         gInterfaces;
@@ -16,7 +16,7 @@ bool Mod_InitSystems()
 	// load saved cvar values and other stuff
 	core_post_load();
 
-	for ( BaseSystem* sys : gSystems )
+	for ( ISystem* sys : gSystems )
 	{
 		if ( sys->Init() )
 			continue;
@@ -127,7 +127,7 @@ bool Mod_AddSystems( AppModules_t* spModules, size_t sCount )
 		}
 
 		*spModules[ i ].apSystem = system;
-		gSystems.push_back( static_cast< BaseSystem* >( system ) );
+		gSystems.push_back( static_cast< ISystem* >( system ) );
 	}
 
 	if ( failed.size() )

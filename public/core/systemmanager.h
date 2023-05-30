@@ -25,7 +25,7 @@ an interface for getting systems from the engine
 #define GET_SYSTEM_CHECK GET_SYSTEM_ASSERT
 
 
-class BaseSystem;
+class ISystem;
 
 
 struct ModuleInterface_t

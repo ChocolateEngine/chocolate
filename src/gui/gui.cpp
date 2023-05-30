@@ -240,7 +240,7 @@ bool GuiSystem::Init()
 	return true;
 }
 
-GuiSystem::GuiSystem(  ) : BaseGuiSystem(  )
+GuiSystem::GuiSystem(  ) : IGuiSystem(  )
 {
 	gui = this;
 }

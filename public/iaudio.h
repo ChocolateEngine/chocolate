@@ -9,7 +9,7 @@
 
 
 class BaseCodec;
-class BaseAudioSystem;
+class IAudioSystem;
 
 using AudioEffects = unsigned char;
 
@@ -41,7 +41,7 @@ struct AudioComponentSpatial
 #endif
 
 
-class BaseAudioSystem: public BaseSystem
+class IAudioSystem: public ISystem
 {
 public:
 	// -------------------------------------------------------------------------------------
