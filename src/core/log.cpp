@@ -1546,6 +1546,12 @@ CONCMD_VA( log_dump, "Dump Logging History to file" )
 		return;
 	}
 
+	if ( FileSys_IsFile( outputPath, true ) )
+	{
+		Log_ErrorF( gLC_Logging, "Output file for log_dump already exists: \"%s\"\n", outputPath.c_str() );
+		return;
+	}
+
 	std::string output;
 	Log_BuildHistoryString( output, -1 );
 
