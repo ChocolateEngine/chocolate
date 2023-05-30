@@ -19,12 +19,12 @@ static ResourceList< ShaderVK >         gShaders;
 static ResourceList< VkPipelineLayout > gPipelineLayouts;
 
 
-CONVAR_CMD_EX( r_sampled_textures, 0, CVARF_ARCHIVE, "Enable/Disable MSAA on Textures, this is VERY EXPENSIVE!" )
+CONVAR_CMD_EX( r_msaa_textures, 0, CVARF_ARCHIVE, "Enable/Disable MSAA on Textures, this is VERY EXPENSIVE!" )
 {
-	// if ( !VK_UseMSAA() )
-	//	return;
+	if ( !VK_UseMSAA() )
+		return;
 
-	// VK_Reset( ERenderResetFlags_MSAA );
+	VK_Reset( ERenderResetFlags_MSAA );
 }
 
 
@@ -285,7 +285,7 @@ bool VK_CreateGraphicsPipeline( Handle& srHandle, GraphicsPipelineCreate_t& srGr
 
 	// Performs anti-aliasing
 	VkPipelineMultisampleStateCreateInfo multisampling{ VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO };
-	multisampling.sampleShadingEnable   = r_sampled_textures;
+	multisampling.sampleShadingEnable   = r_msaa_textures;
 	multisampling.rasterizationSamples  = renderPassInfo->aUsesMSAA ? VK_GetMSAASamples() : VK_SAMPLE_COUNT_1_BIT;
 	multisampling.minSampleShading      = 1.0f;      // Optional
 	multisampling.pSampleMask           = NULL;      // Optional
