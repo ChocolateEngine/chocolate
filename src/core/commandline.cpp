@@ -27,10 +27,9 @@ extern "C"
 {
 	void DLL_EXPORT core_init( int argc, char* argv[], const char* workingDir )
 	{
-		sys_init();
-
 		Args_Init( argc, argv );
 		Log_Init();
+		sys_init();
 		FileSys_Init( workingDir );
 		Assert_Init();
 
