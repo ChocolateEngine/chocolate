@@ -15,6 +15,7 @@
 
 
 #include "core/platform.h"
+#include "core/log.h"
 
 
 bool            gIsWindows10 = false;
@@ -305,6 +306,45 @@ void sys_init()
 	{
 		sys_print_last_error( "Failed to create theme context" );
 	}
+
+	// Set Process Priority
+	bool argPriorityHigh = Args_Register( "Set the engine to high priority", "-high" );
+	bool argPriorityLow  = Args_Register( "Set the engine to low priority", "-low" );
+
+	if ( argPriorityHigh && argPriorityLow )
+	{
+		Log_Warn( "High and Low Process Priority in Arguments, picking Default Process Priority\n" );
+	}
+	else if ( argPriorityHigh || argPriorityLow )
+	{
+		HANDLE hProcess   = GetCurrentProcess();
+		DWORD  dwPriority = GetPriorityClass( hProcess );
+
+		// TODO: check to see if we have THREAD_SET_INFORMATION or THREAD_SET_LIMITED_INFORMATION access right?
+		// https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-setthreadpriority
+
+		if ( argPriorityHigh )
+		{
+			Log_Dev( 1, "Setting Engine to High Process Priority\n" );
+
+			if ( dwPriority != HIGH_PRIORITY_CLASS )
+			{
+				SetPriorityClass( hProcess, HIGH_PRIORITY_CLASS );
+				SetThreadPriority( hProcess, THREAD_PRIORITY_ABOVE_NORMAL );
+			}
+		}
+		else if ( argPriorityLow )
+		{
+			Log_Dev( 1, "Setting Engine to Low Process Priority\n" );
+
+			if ( dwPriority != IDLE_PRIORITY_CLASS )
+			{
+				SetPriorityClass( hProcess, IDLE_PRIORITY_CLASS );
+				SetThreadPriority( hProcess, THREAD_PRIORITY_BELOW_NORMAL );
+			}
+		}
+	}
+	
 
 #if 0 //def _DEBUG
 	// Get the current state of the flag
