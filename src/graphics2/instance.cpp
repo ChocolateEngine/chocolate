@@ -378,7 +378,11 @@ bool VK_CreateInstance()
 		Log_Msg( gLC_Render, "\n" );
 	}
 
+#ifdef _WIN32
+	std::vector< const char* > sdlExt = { "VK_KHR_surface", "VK_KHR_win32_surface" };
+#else
 	std::vector< const char* > sdlExt = VK_GetSDL2Extensions();
+#endif
 
 	// Add debug extension, we need this to relay debug messages
 	if ( hasValidation )
@@ -585,10 +589,20 @@ bool VK_SuitableCard( VkPhysicalDevice sDevice )
 
 void VK_CreateSurface( void* spWindow )
 {
+#ifdef _WIN32
+	VkWin32SurfaceCreateInfoKHR surfCreateInfo{ VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR };
+	surfCreateInfo.hwnd      = (HWND)spWindow;
+	surfCreateInfo.hinstance = GetModuleHandle( NULL );
+	surfCreateInfo.flags     = 0;
+	surfCreateInfo.pNext     = NULL;
+
+	VK_CheckResult( vkCreateWin32SurfaceKHR( VK_GetInstance(), &surfCreateInfo, nullptr, &gSurface ), "Failed to create Surface" );
+#else
 	if ( !SDL_Vulkan_CreateSurface( (SDL_Window*)spWindow, VK_GetInstance(), &gSurface ) )
 	{
 		Log_FatalF( gLC_Render, "Error: Failed to create SDL Vulkan Surface: %s\n", SDL_GetError() );
 	}
+#endif
 }
 
 

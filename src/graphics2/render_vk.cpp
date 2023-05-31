@@ -1030,34 +1030,44 @@ public:
 		if ( SDL_Init( SDL_INIT_VIDEO | SDL_INIT_EVENTS | SDL_INIT_AUDIO ) != 0 )
 			Log_Fatal( "Unable to initialize SDL2!" );
 
-		int flags = SDL_WINDOW_VULKAN | SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI;
-
-		if ( gMaxWindow )
-			flags |= SDL_WINDOW_MAXIMIZED;
-
 		std::string windowName;
 
 		windowName = ( Core_GetAppInfo().apWindowTitle ) ? Core_GetAppInfo().apWindowTitle : "Chocolate Engine";
 		windowName += vstring( " - Build %zd - Compiled On - %s %s", Core_GetBuildNumber(), Core_GetBuildDate(), Core_GetBuildTime() );
 
 #ifdef _WIN32
-		// SDL_SetHint( SDL_HINT_WINDOWS_DPI_AWARENESS, "system" );
-		if ( SDL_SetHint( "SDL_WINDOWS_DPI_AWARENESS", "permonitor" ) == SDL_FALSE )
+		void* window = Sys_CreateWindow( windowName.c_str(), gWidth, gHeight );
+
+		if ( !window )
 		{
-			Log_Error( "SDL_WINDOWS_DPI_AWARENESS\n" );
+			Log_Error( gLC_Render, "Failed to create window\n" );
+			return false;
 		}
 
-		if ( SDL_SetHint( "SDL_WINDOWS_DPI_SCALING", "1" ) == SDL_FALSE )
-		{
-			Log_Error( "SDL_WINDOWS_DPI_SCALING\n" );
-		}
-#endif
+		gpWindow = SDL_CreateWindowFrom( window );
+#else
+		int flags = SDL_WINDOW_VULKAN | SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI;
+
+		if ( gMaxWindow )
+			flags |= SDL_WINDOW_MAXIMIZED;
 
 		gpWindow = SDL_CreateWindow( windowName.c_str(), SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
 		                             gWidth, gHeight, flags );
+#endif
 
+		if ( !gpWindow )
+		{
+			Log_Error( gLC_Render, "Failed to create SDL2 Window\n" );
+			return false;
+		}
+
+#ifdef _WIN32
+		if ( !Render_Init( window ) )
+			return false;
+#else
 		if ( !Render_Init( gpWindow ) )
 			return false;
+#endif
 
 		if ( !ImGui_ImplSDL2_InitForVulkan( gpWindow ) )
 		{

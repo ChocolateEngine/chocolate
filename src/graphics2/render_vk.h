@@ -6,6 +6,10 @@
   #define VMA_STATS_STRING_ENABLED 0
 #endif
 
+#ifdef _WIN32
+  #define VK_USE_PLATFORM_WIN32_KHR 1
+#endif
+
 #include <vulkan/vulkan.h>
 
 #if TRACY_ENABLE

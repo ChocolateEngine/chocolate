@@ -22,6 +22,9 @@ typedef void* Module;
 #endif
 
 
+using FResizeCallback = void( void );
+
+
 // why is msvc like this with this dllexport/dllimport stuff aaaa
 void            CORE_API    sys_init();
 void            CORE_API    sys_shutdown();
@@ -43,3 +46,8 @@ int             CORE_API    sys_allow_console_input();
 void            CORE_API    sys_wait_for_debugger();
 void            CORE_API    sys_debug_break();
 
+// window management
+#ifdef _WIN32
+void            CORE_API*   Sys_CreateWindow( const char* spWindowName, int sWidth, int sHeight );
+void            CORE_API    Sys_SetResizeCallback( FResizeCallback callback );
+#endif

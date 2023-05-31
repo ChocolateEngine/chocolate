@@ -21,14 +21,14 @@
 bool            gIsWindows10 = false;
 OSVERSIONINFOEX gOSVer{};
 
-HMODULE ghInst = 0;
+HMODULE         ghInst   = 0;
 
-HANDLE gConOut = INVALID_HANDLE_VALUE;
-HANDLE gConIn  = INVALID_HANDLE_VALUE;
+HANDLE          gConOut  = INVALID_HANDLE_VALUE;
+HANDLE          gConIn   = INVALID_HANDLE_VALUE;
 
-HANDLE ghActCtx = INVALID_HANDLE_VALUE;
-ACTCTX gActCtx;
-ULONG_PTR gActCookie;
+HANDLE          ghActCtx = INVALID_HANDLE_VALUE;
+ACTCTX          gActCtx;
+ULONG_PTR       gActCookie;
 
 
 // super based
@@ -82,6 +82,63 @@ BOOL win32_get_version( OSVERSIONINFOEX* os )
 
 	FreeLibrary(hMod);
 	return TRUE;
+}
+
+
+static const char* Win32_GetExceptionName( DWORD code )
+{
+	static char buf[ 32 ];
+
+	switch ( code )
+	{
+		case EXCEPTION_ACCESS_VIOLATION: return "ACCESS_VIOLATION";
+		case EXCEPTION_DATATYPE_MISALIGNMENT: return "DATATYPE_MISALIGNMENT";
+		case EXCEPTION_ARRAY_BOUNDS_EXCEEDED: return "ARRAY_BOUNDS_EXCEEDED";
+		case EXCEPTION_PRIV_INSTRUCTION: return "PRIV_INSTRUCTION";
+		case EXCEPTION_IN_PAGE_ERROR: return "IN_PAGE_ERROR";
+		case EXCEPTION_ILLEGAL_INSTRUCTION: return "ILLEGAL_INSTRUCTION";
+		case EXCEPTION_NONCONTINUABLE_EXCEPTION: return "NONCONTINUABLE_EXCEPTION";
+		case EXCEPTION_STACK_OVERFLOW: return "STACK_OVERFLOW";
+		case EXCEPTION_INVALID_DISPOSITION: return "INVALID_DISPOSITION";
+		case EXCEPTION_GUARD_PAGE: return "GUARD_PAGE";
+		case EXCEPTION_INVALID_HANDLE: return "INVALID_HANDLE";
+		default: break;
+	}
+
+	sprintf( buf, "0x%08X", (unsigned int)code );
+	return buf;
+}
+
+
+static LONG WINAPI Win32_ExceptionFilter( struct _EXCEPTION_POINTERS* ExceptionInfo )
+{
+	if ( ExceptionInfo->ExceptionRecord->ExceptionCode != EXCEPTION_BREAKPOINT )
+	{
+		char  msg[ 128 ];
+		byte *addr, *base;
+		bool  vma;
+
+		addr = (byte*)ExceptionInfo->ExceptionRecord->ExceptionAddress;
+		base = (byte*)GetModuleHandle( NULL );
+
+		if ( addr >= base )
+		{
+			addr = (byte*)( addr - base );
+			vma  = true;
+		}
+		else
+		{
+			vma = false;
+		}
+
+		sprintf( msg, "Exception Code: %s\nException Address: %p%s",
+		         Win32_GetExceptionName( ExceptionInfo->ExceptionRecord->ExceptionCode ),
+		         addr, vma ? " (VMA)" : "" );
+
+		Log_ErrorF( "Unhandled exception caught\n%s", msg );
+	}
+
+	return EXCEPTION_EXECUTE_HANDLER;
 }
 
 
@@ -268,6 +325,7 @@ void sys_init()
 	// ghInst = GetModuleHandle( 0 );
 	ghInst = GetModuleHandle( "ch_core.dll" );
 
+	SetUnhandledExceptionFilter( Win32_ExceptionFilter );
 
 	// Init Console
 	gConOut = GetStdHandle( STD_OUTPUT_HANDLE );
@@ -373,6 +431,126 @@ void sys_shutdown()
 		DeactivateActCtx(0, gActCookie);
 		ReleaseActCtx(ghActCtx);
 	}
+}
+
+static FResizeCallback* gResizeCallbackFunc = nullptr;
+
+LRESULT Win32_WindowProc( HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam )
+{
+	// ImGui_ImplWin32_WndProcHandler( hwnd, uMsg, wParam, lParam );
+
+  #if 0
+	switch ( uMsg )
+	{
+		case WM_INPUT:
+		{
+			RAWINPUT  input;
+			UINT      szData = sizeof( input ), szHeader = sizeof( RAWINPUTHEADER );
+			HRAWINPUT handle = reinterpret_cast< HRAWINPUT >( lParam );
+
+			GetRawInputData( handle, RID_INPUT, &input, &szData, szHeader );
+			if ( input.header.dwType == RIM_TYPEMOUSE )
+			{
+				// Here input.data.mouse.ulRawButtons is 0 at all times.
+			}
+
+			printf( "WM_INPUT\n" );
+			break;
+		}
+		default:
+			break;
+	}
+  #endif
+
+	// drawing events
+	switch ( uMsg )
+	{
+		// Don't repaint for these
+		case WM_SHOWWINDOW:
+		case WM_NCACTIVATE:
+			break;
+
+		case WM_DPICHANGED:
+		case WM_PAINT:
+		{
+			// hack
+			static bool firstTime = true;
+			if ( firstTime )
+			{
+				firstTime = false;
+				break;
+			}
+
+			if ( gResizeCallbackFunc )
+				gResizeCallbackFunc();
+
+			break;
+		}
+	}
+
+	return DefWindowProc( hwnd, uMsg, wParam, lParam );
+}
+
+
+void Sys_SetResizeCallback( FResizeCallback callback )
+{
+	gResizeCallbackFunc = callback;
+}
+
+
+void* Sys_CreateWindow( const char* spWindowName, int sWidth, int sHeight )
+{
+	WNDCLASSEX wc = { 0 };
+	ZeroMemory( &wc, sizeof( wc ) );
+
+	wc.cbClsExtra    = 0;
+	wc.cbSize        = sizeof( wc );
+	wc.cbWndExtra    = 0;
+	wc.hInstance     = GetModuleHandle( NULL );
+	wc.hCursor       = LoadCursor( NULL, IDC_ARROW );
+	wc.hIcon         = LoadIcon( NULL, IDI_APPLICATION );
+	wc.hIconSm       = LoadIcon( 0, IDI_APPLICATION );
+	wc.hbrBackground = (HBRUSH)GetStockObject( BLACK_BRUSH );  // does this affect perf? i hope not
+	wc.style         = CS_HREDRAW | CS_VREDRAW;                // redraw if size changes
+	wc.lpszClassName = "chocolate_engine";
+	wc.lpszMenuName  = 0;
+	wc.lpfnWndProc   = Win32_WindowProc;
+
+	ATOM _Atom( RegisterClassEx( &wc ) );
+
+	if ( _Atom == 0 )
+	{
+		// somehow not running on windows nt?
+		return nullptr;
+	}
+
+	const LPTSTR _ClassName( MAKEINTATOM( _Atom ) );
+
+	DWORD        dwStyle   = WS_VISIBLE | WS_OVERLAPPEDWINDOW | WS_EX_CONTROLPARENT;
+	DWORD        dwExStyle = 0;
+
+	HWND         window    = CreateWindowEx(
+				 dwExStyle,
+				 _ClassName,
+				 spWindowName,
+				 dwStyle,
+				 CW_USEDEFAULT,
+				 CW_USEDEFAULT,
+				 // 1280, 720,
+				 CW_USEDEFAULT, CW_USEDEFAULT,
+				 NULL, NULL,
+				 GetModuleHandle( NULL ),
+				 nullptr );
+
+	// UpdateWindow( gHWND );
+
+	if ( !window )
+	{
+		sys_print_last_error( "Failed to create window\n" );
+		return nullptr;
+	}
+
+	return window;
 }
 
 
