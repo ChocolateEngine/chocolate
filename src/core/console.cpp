@@ -635,6 +635,48 @@ void Con_RunCommand( std::string_view command )
 }
 
 
+bool Con_RunCommandBase( ConVarBase* cvar, const std::vector< std::string >& args )
+{
+	bool commandCalled = false;
+
+	if ( typeid( *cvar ) == typeid( ConVar ) )
+	{
+		ConVar* convar = static_cast< ConVar* >( cvar );
+
+		commandCalled  = true;
+
+		if ( !args.empty() )
+		{
+			if ( convar->aFunc )
+			{
+				std::string prevString = convar->aValue;
+				float       prevFloat  = convar->aValueFloat;
+
+				convar->SetValue( args[ 0 ] );
+
+				convar->aFunc( prevString, prevFloat, args );
+			}
+			else
+			{
+				convar->SetValue( args[ 0 ] );
+			}
+		}
+		else
+		{
+			Log_Msg( gConsoleChannel, convar->GetPrintMessage().c_str() );
+		}
+	}
+	else if ( typeid( *cvar ) == typeid( ConCommand ) )
+	{
+		ConCommand* cmd = static_cast< ConCommand* >( cvar );
+		commandCalled   = true;
+		cmd->aFunc( args );
+	}
+
+	return commandCalled;
+}
+
+
 bool Con_RunCommandArgs( const std::string& name, const std::vector< std::string >& args )
 {
 	PROF_SCOPE();
@@ -789,6 +831,12 @@ void Con_ParseCommandLineEx( std::string_view command, std::string& name, std::v
 
 ConVarFlag_t Con_CreateCvarFlag( const char* name )
 {
+	// make sure this exists first
+	if ( ConVarFlag_t flag = Con_GetCvarFlag( name ) )
+	{
+		return flag;
+	}
+
 	ConVarFlag_t newBitShift = (1 << gConVarFlags.size());
 	size_t len = strlen( name );
 	gConVarFlags.emplace_back( newBitShift, name, len );

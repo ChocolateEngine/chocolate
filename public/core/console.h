@@ -482,11 +482,15 @@ CORE_API void                                Con_AddArchiveCallback( FArchive* s
 // Write a config of all stuff we want saved
 CORE_API void                                Con_Archive( const char* spFile = nullptr );
 
+// make sure the convar flag is created when doing static initilization
+// CORE_API ConVarFlag_t                        Con_StaticGetCvarFlag( const char* spFile = nullptr );
+
 // New Convar System
 
 // CORE_API Handle                              Con_RegisterVar( const char* spName, const char* spDesc );
 
 
+#define CVARF( name )         Con_CreateCvarFlag( "CVARF_" #name )
 #define NEW_CVAR_FLAG( name ) ConVarFlag_t name = Con_CreateCvarFlag( #name )
 #define EXT_CVAR_FLAG( name ) extern ConVarFlag_t name
 
