@@ -97,7 +97,7 @@ bool Mod_Load( const char* spPath )
 	for ( size_t i = 0; i < count; i++ )
 	{
 		gInterfaces.push_back( &interfaces[ i ] );
-		Log_DevF( gLC_Module, 1, "    Found Interface: %s\n", interfaces[ i ].apName );
+		Log_DevF( gLC_Module, 1, "    Found Interface: %s - Version %zd\n", interfaces[ i ].apName, interfaces[ i ].aHash );
 	}
 
 	return true;
