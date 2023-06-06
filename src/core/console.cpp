@@ -762,12 +762,12 @@ void Con_ParseCommandLineEx( std::string_view command, std::string& name, std::v
 	{
 		if ( name.size() )
 		{
-			if ( command[i] == ' ' )
+			if ( command[ i ] == ' ' || command[ i ] == ';' )
 				break;
 
 			name += command[i];
 		}
-		else if ( command[i] == ' ' )
+		else if ( command[ i ] == ' ' || command[ i ] == ';' )
 		{
 			continue;
 		}
