@@ -219,6 +219,16 @@ inline float Round( float val, size_t precision = 100 )
 	return roundf( val * precision ) / precision;
 }
 
+inline int RandomInt( int sMin, int sMax )
+{
+	return sMin + rand() % ( sMax + 1 - sMin );
+}
+
+inline float RandomFloat( float sMin, float sMax )
+{
+	return sMin + ( ( static_cast<float>( rand() ) / static_cast<float>( RAND_MAX ) ) * ( sMax - sMin ) );
+}
+
 
 // ==============================================================================
 // Helper Functions for SpeedyKeyV
