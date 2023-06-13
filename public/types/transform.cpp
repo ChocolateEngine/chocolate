@@ -192,13 +192,28 @@ void Util_GetMatrixDirection( const glm::mat4& mat, glm::vec3* forward, glm::vec
 	glm::quat quat  = mat / glm::scale( scale );
 
 	if ( forward )
-		*forward = ( quat * glm::vec3( 1, 0, 0 ) );
+		*forward = ( quat * vec_forward );
 
 	if ( right )
-		*right = ( quat * glm::vec3( 0, 1, 0 ) );
+		*right = ( quat * vec_right );
 
 	if ( up )
-		*up = ( quat * glm::vec3( 0, 0, 1 ) );
+		*up = ( quat * vec_up );
+}
+
+
+void Util_GetMatrixDirectionNoScale( const glm::mat4& mat, glm::vec3* forward, glm::vec3* right, glm::vec3* up )
+{
+	glm::quat quat = mat;
+
+	if ( forward )
+		*forward = ( quat * vec_forward );
+
+	if ( right )
+		*right = ( quat * vec_right );
+
+	if ( up )
+		*up = ( quat * vec_up );
 }
 
 
