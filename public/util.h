@@ -224,6 +224,11 @@ inline int RandomInt( int sMin, int sMax )
 	return sMin + rand() % ( sMax + 1 - sMin );
 }
 
+inline size_t RandomSizeT( size_t sMin, size_t sMax )
+{
+	return sMin + rand() % ( sMax + 1 - sMin );
+}
+
 inline float RandomFloat( float sMin, float sMax )
 {
 	return sMin + ( ( static_cast<float>( rand() ) / static_cast<float>( RAND_MAX ) ) * ( sMax - sMin ) );
