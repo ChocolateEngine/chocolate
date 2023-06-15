@@ -48,14 +48,14 @@ bool CodecVorbis::Open( const char* soundPath, AudioStream *stream )
     // check if valid
     if (ov_open_callbacks(soundFileHandle, oggFile, NULL, 0, OV_CALLBACKS_NOCLOSE) < 0)
     {
-        Log_MsgF( gVorbisChannel, "Not a valid ogg file: \"{}\"\n", soundPath );
+        Log_MsgF( gVorbisChannel, "Not a valid ogg file: \"%s\"\n", soundPath );
         ov_clear(oggFile);
         return false;
     }
 
     if (!ov_seekable(oggFile))
     {
-        Log_MsgF( gVorbisChannel, "Stream not seekable: \"{}\"\n", soundPath );
+        Log_MsgF( gVorbisChannel, "Stream not seekable: \"%s\"\n", soundPath );
         ov_clear(oggFile);
         return false;
     }
@@ -63,7 +63,7 @@ bool CodecVorbis::Open( const char* soundPath, AudioStream *stream )
     ovfInfo = ov_info(oggFile, 0);
     if (!ovfInfo)
     {
-        Log_MsgF( gVorbisChannel, "Unable to get stream info: \"{}\".\n", soundPath );
+        Log_MsgF( gVorbisChannel, "Unable to get stream info: \"%s\".\n", soundPath );
         ov_clear(oggFile);
         return false;
     }
@@ -71,7 +71,7 @@ bool CodecVorbis::Open( const char* soundPath, AudioStream *stream )
     long numStreams = ov_streams(oggFile);
     if (numStreams != 1)
     {
-        Log_MsgF( gVorbisChannel, "More than one ({0}) stream in \"{1}\".\n", numStreams, stream->name );
+        Log_MsgF( gVorbisChannel, "More than one (%s) stream in \"%s\".\n", numStreams, stream->name.c_str() );
         ov_clear(oggFile);
         return false;
     }
