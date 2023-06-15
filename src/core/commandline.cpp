@@ -437,7 +437,7 @@ void Args_PrintRegistered()
 {
 	ChVector< std::string > args;
 	
-	Log_Msg( gConsoleChannel, "\Arguments:\n--------------------------------------\n" );
+	Log_Msg( gConsoleChannel, "\nArguments:\n--------------------------------------\n" );
 	for ( const Arg_t& arg : gArgList )
 	{
 		if ( arg.aNames.empty() )
