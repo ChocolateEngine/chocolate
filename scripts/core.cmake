@@ -136,6 +136,8 @@ if( MSVC )
 		"/wd4100"  # 'X' unreferenced formal paramter
 		"/wd4201"  # nonstandard extension used: nameless struct/union (used in glm)
 		"/wd5045"  # Compiler will insert Spectre mitigation for memory load if /Qspectre switch specified
+
+		"/wd4706"  # assignment within conditional expression
 		
 		# probably temporary
 		"/wd4365"  # signed/unsigned mismatch
@@ -144,8 +146,19 @@ if( MSVC )
 		# padding stuff
 		"/wd4324"  # 'X' structure was padded due to alignment specifier
 		"/wd4820"  # 'X' bytes padding added after data member 'Y'
+
+		# Treat these warnings as errors
+
+		# MSVC doesn't care about this one, but this errors on gcc and can help catch a mistake i made unknowingly
+		"/we4002"  # Too many arguments for function-like macro invocation
+
+		# I accidently get this a lot with printing std::string, so I want this to error so I know i made a mistake
+		"/we4840"  # non-portable use of class 'type' as an argument to a variadic function
+
+		# This is self-explanitory
+		"/we4129"  # 'X' unrecognized character escape sequence
 	)
-	
+
 	set( COMPILE_OPTIONS_DEBUG
 		"/Od"        # no optimizations
 		"/ZI"        # edit and continue
