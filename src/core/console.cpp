@@ -1374,7 +1374,7 @@ CONCMD_VA( build_number, "Print Build Number" )
 }
 
 
-CONCMD( cat, "Print a File" )
+CONCMD_VA( cat, "Print a File" )
 {
 	Log_Msg( "\"cat\" command not implemented\n" );
 }
