@@ -306,6 +306,35 @@ def post_openal_extract():
 # =================================================================================================
 
 
+def post_capnproto_extract():
+    if ARGS.no_build:
+        return
+        
+    set_project("Cap'N Proto")
+
+    os.chdir("capnproto")
+
+    build_options = "-DBUILD_TESTING=OFF"
+
+    # sets -fPIC
+    if SYS_OS == OS.Linux:
+        build_options += " -DCMAKE_POSITION_INDEPENDENT_CODE=ON"
+
+    if not syscmd(f"cmake -B build {build_options} .", "Failed to run cmake"):
+        return
+
+    print("Building Cap'N Proto - Release\n")
+    if not syscmd(f"cmake --build ./build --config Release", "Failed to build in Release"):
+        return
+
+    print("Building Cap'N Proto - Debug\n")
+    if not syscmd(f"cmake --build ./build --config Debug", "Failed to build in Debug"):
+        return
+
+
+# =================================================================================================
+
+
 def vorbis_copy_built_files(proj: str, cfg: str, build_dir: str, out_dir: str):
     if not out_dir:
         return
@@ -469,6 +498,14 @@ FILE_LIST = {
 
     # All Platforms
     OS.Any: [
+        [
+            "https://github.com/capnproto/capnproto/archive/refs/tags/v0.10.4.zip",
+            "zip",                   # file extension it's stored as
+            "capnproto",             # folder to check for if it exists already
+            "capnproto-0.10.4",      # folder it extracts as to rename to the folder above (optional)
+            ".",                     # extract into this folder (optional)
+            post_capnproto_extract,
+        ],
         [
             "https://github.com/ValveSoftware/steam-audio/releases/download/v4.0.3/steamaudio_4.0.3.zip",
             "zip",                  # file extension it's stored as
