@@ -20,23 +20,44 @@ Declares the sdfhuosdfhuiosdfhusdfhuisfhu
 #endif
 
 
-typedef std::function< void( const std::vector< std::string >& args ) > ConCommandFunc;
-typedef std::function< void( const std::string& prevString, float prevFloat, const std::vector< std::string >& args ) > ConVarFunc;
+class ConVarBase;
+class ConCommand;
+class ConVar;
+class ConVarRef;
 
-typedef std::function< void(
-	const std::vector< std::string >& args,  // arguments currently typed in by the user
-	std::vector< std::string >& results      // results to populate the dropdown list with
-) > ConCommandDropdownFunc;
 
+enum ECVarFlagChange
+{
+	ECVarFlagChange_Allow,
+	ECVarFlagChange_Deny,
+};
+
+
+// Whenever a convar value changes or concommand wants to be called, we check all flags to see if any have callbacks.
+// If the flag has a registered callback function, then we have to check that first before we can change the cvar value, or run the command.
+// If it returns true, we can proceed normally.
+// If it returns false, don't change the ConVar value or run the ConCommand.
+using ConVarFlagChangeFunc = std::function< bool( ConVarBase* spBase, const std::vector< std::string >& args ) >;
+
+// Function to call for a Console Command
+using ConCommandFunc = std::function< void( const std::vector< std::string >& args ) >;
+
+// Callback Function for when a ConVar Value Changes
+using ConVarFunc = std::function< void( const std::string& prevString, float prevFloat, const std::vector< std::string >& args ) >;
+
+// Callback Function for populating an autocomplete list for a ConCommand
+// TODO: Support ConVar dropdowns
+using ConCommandDropdownFunc = std::function< void(
+  const std::vector< std::string >& args,    // arguments currently typed in by the user
+  std::vector< std::string >&       results  // results to populate the dropdown list with
+  ) >;
+
+// Callback function to add data to the config.cfg file written from CVARF_ARCHIVE
 using FArchive = void( std::string& srOutput );
 
 // ConCommand console dropdown list function
 
 using ConVarFlag_t = size_t;
-
-
-// why do i not need to forward declare the other ones?
-class ConVarRef;
 
 
 enum EChConfigOption
@@ -415,10 +436,7 @@ private:
 	ConCommand name##_cmd( #name, name, __VA_ARGS__, func );              \
 	void       name( const std::vector< std::string >& args )
 
-#define CON_COMMAND( name ) \
-	void       name( const std::vector< std::string >& args ); \
-	ConCommand name##_cmd( #name, name );              \
-	void       name( const std::vector< std::string >& args )
+#define CON_COMMAND( name ) CONCMD( name )
 
 #define CON_COMMAND_LAMBDA( name ) \
 	ConCommand* name = new ConCommand( #name, [ & ]( const std::vector< std::string >& sArgs )
@@ -429,58 +447,61 @@ private:
 
 
 // Register all the ConCommands and ConVars created from static initialization
-CORE_API void                                Con_RegisterConVars();
+CORE_API void  Con_RegisterConVars();
 
-CORE_API const std::vector< std::string >&   Con_GetCommandHistory();
+CORE_API const std::vector< std::string >& Con_GetCommandHistory();
 
 // Checks if the current ConVar is a reference, if so, then return what it's pointing to
 // return nullptr if it doesn't point to anything, and return the normal cvar if it's not a ConVarRef
 // CORE_API ConVarBase*                         Con_CheckForConVarRef( ConVarBase* cvar );
 
 // Build an auto complete list
-CORE_API void                                Con_BuildAutoCompleteList( const std::string& srSearch, std::vector< std::string >& srResults );
+CORE_API void                              Con_BuildAutoCompleteList( const std::string& srSearch, std::vector< std::string >& srResults );
 
 // Get all ConVars
 // CORE_API const ChVector< ConVarBase* >&      Con_GetConVars();
 
-CORE_API uint32_t                            Con_GetConVarCount();
-CORE_API ConVarBase*                         Con_GetConVar( uint32_t sIndex );
+CORE_API uint32_t                          Con_GetConVarCount();
+CORE_API ConVarBase*                       Con_GetConVar( uint32_t sIndex );
 
-CORE_API ConVar*                             Con_GetConVar( std::string_view name );
-CORE_API ConVarBase*                         Con_GetConVarBase( std::string_view name );
+CORE_API ConVar*                           Con_GetConVar( std::string_view name );
+CORE_API ConVarBase*                       Con_GetConVarBase( std::string_view name );
 
-CORE_API const std::string&                  Con_GetConVarValue( std::string_view name );
-CORE_API float                               Con_GetConVarFloat( std::string_view name );
+CORE_API const std::string&   Con_GetConVarValue( std::string_view name );
+CORE_API float                Con_GetConVarFloat( std::string_view name );
 
-CORE_API void                                Con_PrintAllConVars();
+CORE_API void                 Con_PrintAllConVars();
 
 // Add a command to the queue
-CORE_API void                                Con_QueueCommand( const std::string& srCmd );
-CORE_API void                                Con_QueueCommandSilent( const std::string& srCmd, bool sAddToHistory = true );
+CORE_API void                 Con_QueueCommand( const std::string& srCmd );
+CORE_API void                 Con_QueueCommandSilent( const std::string& srCmd, bool sAddToHistory = true );
 
 // Go through and run every command in the queue
-CORE_API void                                Con_Update();
+CORE_API void                 Con_Update();
 
 // Find and run a command instantly
-CORE_API void                                Con_RunCommand( std::string_view command );
+CORE_API void                 Con_RunCommand( std::string_view command );
 // CORE_API void                                Con_RunCommandF( const char* command, ... );
 
 // Find and run a parsed command instantly
-CORE_API bool                                Con_RunCommandArgs( const std::string &name, const std::vector< std::string > &args );
+CORE_API bool                 Con_RunCommandArgs( const std::string& name, const std::vector< std::string >& args );
 
-CORE_API void                                Con_ParseCommandLine( std::string_view command, std::string& name, std::vector< std::string >& args );
-CORE_API void                                Con_ParseCommandLineEx( std::string_view command, std::string& name, std::vector< std::string >& args, size_t& i );
+CORE_API void                 Con_ParseCommandLine( std::string_view command, std::string& name, std::vector< std::string >& args );
+CORE_API void                 Con_ParseCommandLineEx( std::string_view command, std::string& name, std::vector< std::string >& args, size_t& i );
 
-CORE_API ConVarFlag_t                        Con_CreateCvarFlag( const char* name );
-CORE_API const char*                         Con_GetCvarFlagName( ConVarFlag_t flag );
-CORE_API ConVarFlag_t                        Con_GetCvarFlag( const char* name );
-CORE_API size_t                              Con_GetCvarFlagCount();
+CORE_API ConVarFlag_t         Con_CreateCvarFlag( const char* name );
+CORE_API const char*          Con_GetCvarFlagName( ConVarFlag_t flag );
+CORE_API ConVarFlag_t         Con_GetCvarFlag( const char* name );
+CORE_API size_t               Con_GetCvarFlagCount();
 
-// Add a callback function to add data to the config.cfg file
-CORE_API void                                Con_AddArchiveCallback( FArchive* spFunc );
+CORE_API void                 Con_SetCvarFlagCallback( ConVarFlag_t sFlag, ConVarFlagChangeFunc sCallback );
+CORE_API ConVarFlagChangeFunc Con_GetCvarFlagCallback( ConVarFlag_t flag );
+
+// Add a callback function to add data to the config.cfg file written from CVARF_ARCHIVE
+CORE_API void                 Con_AddArchiveCallback( FArchive* spFunc );
 
 // Write a config of all stuff we want saved
-CORE_API void                                Con_Archive( const char* spFile = nullptr );
+CORE_API void                 Con_Archive( const char* spFile = nullptr );
 
 // make sure the convar flag is created when doing static initilization
 // CORE_API ConVarFlag_t                        Con_StaticGetCvarFlag( const char* spFile = nullptr );

@@ -17,9 +17,10 @@ LOG_REGISTER_CHANNEL( Console, LogColor::Gray );
 
 struct ConVarFlagData_t
 {
-	ConVarFlag_t flag;
-	const char*  name;
-	size_t       nameLen;
+	ConVarFlag_t         flag;
+	const char*          name;
+	size_t               nameLen;
+	ConVarFlagChangeFunc aCallback;
 };
 
 
@@ -639,10 +640,25 @@ bool Con_RunCommandBase( ConVarBase* cvar, const std::vector< std::string >& arg
 {
 	bool commandCalled = false;
 
+	// Check Flag Callbacks
+	if ( cvar->aFlags )
+	{
+		for ( auto& data : gConVarFlags )
+		{
+			if ( !( cvar->aFlags & data.flag ) )
+				continue;
+
+			// Can we execute these arguments on the ConVar/ConCommand?
+			if ( data.aCallback && !data.aCallback( cvar, args ) )
+			{
+				return true;  // HACK: RETURN TRUE IN THIS CASE
+			}
+		}
+	}
+
 	if ( typeid( *cvar ) == typeid( ConVar ) )
 	{
 		ConVar* convar = static_cast< ConVar* >( cvar );
-
 		commandCalled  = true;
 
 		if ( !args.empty() )
@@ -653,7 +669,6 @@ bool Con_RunCommandBase( ConVarBase* cvar, const std::vector< std::string >& arg
 				float       prevFloat  = convar->aValueFloat;
 
 				convar->SetValue( args[ 0 ] );
-
 				convar->aFunc( prevString, prevFloat, args );
 			}
 			else
@@ -700,40 +715,7 @@ bool Con_RunCommandArgs( const std::string& name, const std::vector< std::string
 		if ( Con_IsConVarRef( cvar ) )
 			continue;
 
-		if ( typeid(*cvar) == typeid(ConVar) )
-		{
-			ConVar* convar = static_cast<ConVar*>(cvar);
-
-			commandCalled = true;
-
-			if ( !args.empty() )
-			{
-				if ( convar->aFunc )
-				{
-					std::string prevString = convar->aValue;
-					float       prevFloat  = convar->aValueFloat;
-
-					convar->SetValue( args[ 0 ] );
-
-					convar->aFunc( prevString, prevFloat, args );
-				}
-				else
-				{
-					convar->SetValue( args[ 0 ] );
-				}
-			}
-			else
-			{
-				Log_Msg( gConsoleChannel, convar->GetPrintMessage().c_str() );
-			}
-		}
-		else if ( typeid(*cvar) == typeid(ConCommand) )
-		{
-			ConCommand* cmd = static_cast<ConCommand*>(cvar);
-			commandCalled = true;
-			cmd->aFunc( args );
-		}
-
+		commandCalled = Con_RunCommandBase( cvar, args );
 		break;
 	}
 
@@ -873,6 +855,28 @@ ConVarFlag_t Con_GetCvarFlag( const char* name )
 size_t Con_GetCvarFlagCount()
 {
 	return gConVarFlags.size();
+}
+
+
+void Con_SetCvarFlagCallback( ConVarFlag_t sFlag, ConVarFlagChangeFunc sCallback )
+{
+	for ( auto& data : gConVarFlags )
+	{
+		if ( data.flag == sFlag )
+			data.aCallback = sCallback;
+	}
+}
+
+
+ConVarFlagChangeFunc Con_GetCvarFlagCallback( ConVarFlag_t sFlag )
+{
+	for ( auto& data : gConVarFlags )
+	{
+		if ( data.flag == sFlag )
+			return data.aCallback;
+	}
+
+	return {};
 }
 
 
