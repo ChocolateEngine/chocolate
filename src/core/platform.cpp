@@ -18,6 +18,9 @@
 #include "core/log.h"
 
 
+static bool     gMaxWindow   = false;
+
+
 bool            gIsWindows10 = false;
 OSVERSIONINFOEX gOSVer{};
 
@@ -403,6 +406,7 @@ void sys_init()
 		}
 	}
 	
+	gMaxWindow = Args_Register( "Maximize the main window", "-max" );
 
 #if 0 //def _DEBUG
 	// Get the current state of the flag
@@ -548,6 +552,11 @@ void* Sys_CreateWindow( const char* spWindowName, int sWidth, int sHeight )
 	{
 		sys_print_last_error( "Failed to create window\n" );
 		return nullptr;
+	}
+
+	if ( gMaxWindow )
+	{
+		ShowWindow( window, SW_MAXIMIZE );
 	}
 
 	return window;
