@@ -37,7 +37,7 @@ enum ECVarFlagChange
 // If the flag has a registered callback function, then we have to check that first before we can change the cvar value, or run the command.
 // If it returns true, we can proceed normally.
 // If it returns false, don't change the ConVar value or run the ConCommand.
-using ConVarFlagChangeFunc = std::function< bool( ConVarBase* spBase, const std::vector< std::string >& args ) >;
+using ConVarFlagChangeFunc = bool( ConVarBase* spBase, const std::vector< std::string >& args );
 
 // Function to call for a Console Command
 using ConCommandFunc = std::function< void( const std::vector< std::string >& args ) >;
@@ -467,41 +467,41 @@ CORE_API ConVarBase*                       Con_GetConVar( uint32_t sIndex );
 CORE_API ConVar*                           Con_GetConVar( std::string_view name );
 CORE_API ConVarBase*                       Con_GetConVarBase( std::string_view name );
 
-CORE_API const std::string&   Con_GetConVarValue( std::string_view name );
-CORE_API float                Con_GetConVarFloat( std::string_view name );
+CORE_API const std::string&    Con_GetConVarValue( std::string_view name );
+CORE_API float                 Con_GetConVarFloat( std::string_view name );
 
-CORE_API void                 Con_PrintAllConVars();
+CORE_API void                  Con_PrintAllConVars();
 
 // Add a command to the queue
-CORE_API void                 Con_QueueCommand( const std::string& srCmd );
-CORE_API void                 Con_QueueCommandSilent( const std::string& srCmd, bool sAddToHistory = true );
+CORE_API void                  Con_QueueCommand( const std::string& srCmd );
+CORE_API void                  Con_QueueCommandSilent( const std::string& srCmd, bool sAddToHistory = true );
 
 // Go through and run every command in the queue
-CORE_API void                 Con_Update();
+CORE_API void                  Con_Update();
 
 // Find and run a command instantly
-CORE_API void                 Con_RunCommand( std::string_view command );
+CORE_API void                  Con_RunCommand( std::string_view command );
 // CORE_API void                                Con_RunCommandF( const char* command, ... );
 
 // Find and run a parsed command instantly
-CORE_API bool                 Con_RunCommandArgs( const std::string& name, const std::vector< std::string >& args );
+CORE_API bool                  Con_RunCommandArgs( const std::string& name, const std::vector< std::string >& args );
 
-CORE_API void                 Con_ParseCommandLine( std::string_view command, std::string& name, std::vector< std::string >& args );
-CORE_API void                 Con_ParseCommandLineEx( std::string_view command, std::string& name, std::vector< std::string >& args, size_t& i );
+CORE_API void                  Con_ParseCommandLine( std::string_view command, std::string& name, std::vector< std::string >& args );
+CORE_API void                  Con_ParseCommandLineEx( std::string_view command, std::string& name, std::vector< std::string >& args, size_t& i );
 
-CORE_API ConVarFlag_t         Con_CreateCvarFlag( const char* name );
-CORE_API const char*          Con_GetCvarFlagName( ConVarFlag_t flag );
-CORE_API ConVarFlag_t         Con_GetCvarFlag( const char* name );
-CORE_API size_t               Con_GetCvarFlagCount();
+CORE_API ConVarFlag_t          Con_CreateCvarFlag( const char* name );
+CORE_API const char*           Con_GetCvarFlagName( ConVarFlag_t flag );
+CORE_API ConVarFlag_t          Con_GetCvarFlag( const char* name );
+CORE_API size_t                Con_GetCvarFlagCount();
 
-CORE_API void                 Con_SetCvarFlagCallback( ConVarFlag_t sFlag, ConVarFlagChangeFunc sCallback );
-CORE_API ConVarFlagChangeFunc Con_GetCvarFlagCallback( ConVarFlag_t flag );
+CORE_API void                  Con_SetCvarFlagCallback( ConVarFlag_t sFlag, ConVarFlagChangeFunc* spCallback );
+CORE_API ConVarFlagChangeFunc* Con_GetCvarFlagCallback( ConVarFlag_t flag );
 
 // Add a callback function to add data to the config.cfg file written from CVARF_ARCHIVE
-CORE_API void                 Con_AddArchiveCallback( FArchive* spFunc );
+CORE_API void                  Con_AddArchiveCallback( FArchive* spFunc );
 
 // Write a config of all stuff we want saved
-CORE_API void                 Con_Archive( const char* spFile = nullptr );
+CORE_API void                  Con_Archive( const char* spFile = nullptr );
 
 // make sure the convar flag is created when doing static initilization
 // CORE_API ConVarFlag_t                        Con_StaticGetCvarFlag( const char* spFile = nullptr );

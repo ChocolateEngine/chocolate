@@ -17,10 +17,10 @@ LOG_REGISTER_CHANNEL( Console, LogColor::Gray );
 
 struct ConVarFlagData_t
 {
-	ConVarFlag_t         flag;
-	const char*          name;
-	size_t               nameLen;
-	ConVarFlagChangeFunc aCallback;
+	ConVarFlag_t          flag;
+	const char*           name;
+	size_t                nameLen;
+	ConVarFlagChangeFunc* apCallback = nullptr;
 };
 
 
@@ -649,7 +649,7 @@ bool Con_RunCommandBase( ConVarBase* cvar, const std::vector< std::string >& arg
 				continue;
 
 			// Can we execute these arguments on the ConVar/ConCommand?
-			if ( data.aCallback && !data.aCallback( cvar, args ) )
+			if ( data.apCallback && !data.apCallback( cvar, args ) )
 			{
 				return true;  // HACK: RETURN TRUE IN THIS CASE
 			}
@@ -858,22 +858,22 @@ size_t Con_GetCvarFlagCount()
 }
 
 
-void Con_SetCvarFlagCallback( ConVarFlag_t sFlag, ConVarFlagChangeFunc sCallback )
+void Con_SetCvarFlagCallback( ConVarFlag_t sFlag, ConVarFlagChangeFunc* spCallback )
 {
 	for ( auto& data : gConVarFlags )
 	{
 		if ( data.flag == sFlag )
-			data.aCallback = sCallback;
+			data.apCallback = spCallback;
 	}
 }
 
 
-ConVarFlagChangeFunc Con_GetCvarFlagCallback( ConVarFlag_t sFlag )
+ConVarFlagChangeFunc* Con_GetCvarFlagCallback( ConVarFlag_t sFlag )
 {
 	for ( auto& data : gConVarFlags )
 	{
 		if ( data.flag == sFlag )
-			return data.aCallback;
+			return data.apCallback;
 	}
 
 	return {};
