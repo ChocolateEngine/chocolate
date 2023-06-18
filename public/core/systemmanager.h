@@ -56,6 +56,15 @@ extern "C"
 	CORE_API bool  Mod_Load( const char* spPath );
 	CORE_API bool  Mod_AddSystems( AppModules_t* spModules, size_t sCount );
 
+	CORE_API void  Mod_AddLoadedSystem( ISystem* spSystem );
+
 	CORE_API void* Mod_GetInterface( const char* spName, size_t sHash );
+}
+
+
+template< typename T >
+inline T* Mod_GetInterfaceCast( const char* spName, size_t sVer )
+{
+	return static_cast< T* >( Mod_GetInterface( spName, sVer ) );
 }
 

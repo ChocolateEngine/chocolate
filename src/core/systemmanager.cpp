@@ -149,6 +149,15 @@ bool Mod_AddSystems( AppModules_t* spModules, size_t sCount )
 }
 
 
+void Mod_AddLoadedSystem( ISystem* spSystem )
+{
+	if ( !spSystem )
+		return;
+
+	gSystems.push_back( spSystem );
+}
+
+
 void* Mod_GetInterface( const char* spName, size_t sHash )
 {
 	for ( const auto& interface : gInterfaces )
