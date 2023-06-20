@@ -306,28 +306,29 @@ def post_openal_extract():
 # =================================================================================================
 
 
-def post_capnproto_extract():
+def post_flatbuffers_extract():
     if ARGS.no_build:
         return
         
-    set_project("Cap'N Proto")
+    set_project("FlatBuffers")
 
-    os.chdir("capnproto")
+    os.chdir("flatbuffers")
 
-    build_options = "-DBUILD_TESTING=OFF"
+    build_options = ""
+     build_options = "-DFLATBUFFERS_BUILD_TESTS=OFF"
 
     # sets -fPIC
-    if SYS_OS == OS.Linux:
-        build_options += " -DCMAKE_POSITION_INDEPENDENT_CODE=ON"
+    # if SYS_OS == OS.Linux:
+    #     build_options += " -DCMAKE_POSITION_INDEPENDENT_CODE=ON"
 
     if not syscmd(f"cmake -B build {build_options} .", "Failed to run cmake"):
         return
 
-    print("Building Cap'N Proto - Release\n")
+    print("Building FlatBuffers - Release\n")
     if not syscmd(f"cmake --build ./build --config Release", "Failed to build in Release"):
         return
 
-    print("Building Cap'N Proto - Debug\n")
+    print("Building FlatBuffers - Debug\n")
     if not syscmd(f"cmake --build ./build --config Debug", "Failed to build in Debug"):
         return
 
@@ -499,12 +500,12 @@ FILE_LIST = {
     # All Platforms
     OS.Any: [
         [
-            "https://github.com/capnproto/capnproto/archive/refs/tags/v0.10.4.zip",
+            "https://github.com/google/flatbuffers/archive/refs/tags/v23.5.26.zip",
             "zip",                   # file extension it's stored as
-            "capnproto",             # folder to check for if it exists already
-            "capnproto-0.10.4",      # folder it extracts as to rename to the folder above (optional)
+            "flatbuffers",           # folder to check for if it exists already
+            "flatbuffers-23.5.26",   # folder it extracts as to rename to the folder above (optional)
             ".",                     # extract into this folder (optional)
-            post_capnproto_extract,
+            post_flatbuffers_extract,
         ],
         [
             "https://github.com/ValveSoftware/steam-audio/releases/download/v4.0.3/steamaudio_4.0.3.zip",
