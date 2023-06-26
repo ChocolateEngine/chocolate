@@ -200,8 +200,8 @@ struct PhysicsShapeInfo
 
 	union
 	{
-		PhysDataConvex_t aConvexData;
-		PhysDataConcave_t aConcaveData;
+		PhysDataConvex_t    aConvexData;
+		PhysDataConcave_t   aConcaveData;
 
 		// Otherwise, use this (maybe make a separate thing? idk)
 		glm::vec3           aBounds;

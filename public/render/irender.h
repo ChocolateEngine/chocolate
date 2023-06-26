@@ -236,7 +236,7 @@ enum : EBufferFlags
 using EBufferMemory = char;
 enum : EBufferMemory
 {
-	EBufferMemory_None      = 0,
+	EBufferMemory_None   = 0,
 	EBufferMemory_Device = ( 1 << 0 ),
 	EBufferMemory_Host   = ( 1 << 1 ),
 };

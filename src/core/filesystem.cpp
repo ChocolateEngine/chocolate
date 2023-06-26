@@ -470,7 +470,11 @@ std::string FileSys_GetFileName( std::string_view sPath )
     if ( i == sPath.size() )
 		return "";
 
-    size_t      startIndex = i + 1;
+    size_t startIndex = i + 1;
+
+    if ( startIndex == sPath.size() )
+		return "";
+
 	std::string output( &sPath[ startIndex ], sPath.size() - startIndex );
 	return output;
 }

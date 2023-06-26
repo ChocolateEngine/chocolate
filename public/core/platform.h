@@ -46,6 +46,8 @@ int             CORE_API    sys_allow_console_input();
 void            CORE_API    sys_wait_for_debugger();
 void            CORE_API    sys_debug_break();
 
+int CORE_API                Sys_GetCoreCount();
+
 // window management
 #ifdef _WIN32
 void            CORE_API*   Sys_CreateWindow( const char* spWindowName, int sWidth, int sHeight );

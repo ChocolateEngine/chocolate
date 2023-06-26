@@ -225,30 +225,6 @@ void Util_GetViewMatrixZDirection( const glm::mat4& mat, glm::vec3& forward, glm
 }
 
 
-void Util_ToMatrix( glm::mat4& srMatrix, const glm::vec3& srPos, const glm::vec3& srAng )
-{
-	srMatrix = glm::translate( srPos );
-
-	srMatrix *= glm::eulerAngleYZX(
-	  glm::radians( srAng.x ),
-	  glm::radians( srAng.y ),
-	  glm::radians( srAng.z ) );
-}
-
-
-void Util_ToMatrix( glm::mat4& srMatrix, const glm::vec3& srPos, const glm::vec3& srAng, const glm::vec3& srScale )
-{
-	srMatrix = glm::translate( srPos );
-
-	srMatrix = glm::scale( srMatrix, srScale );
-
-	srMatrix *= glm::eulerAngleYZX(
-	  glm::radians( srAng.x ),
-	  glm::radians( srAng.y ),
-	  glm::radians( srAng.z ) );
-}
-
-
 void Util_ToMatrix( glm::mat4& srMatrix, const glm::vec3* spPos, const glm::vec3* spAng, const glm::vec3* spScale )
 {
 	if ( spPos )
@@ -264,6 +240,18 @@ void Util_ToMatrix( glm::mat4& srMatrix, const glm::vec3* spPos, const glm::vec3
 		  glm::radians( spAng->x ),
 		  glm::radians( spAng->y ),
 		  glm::radians( spAng->z ) );
+}
+
+
+void Util_ToMatrix( glm::mat4& srMatrix, const glm::vec3& srPos, const glm::vec3& srAng )
+{
+	Util_ToMatrix( srMatrix, &srPos, &srAng );
+}
+
+
+void Util_ToMatrix( glm::mat4& srMatrix, const glm::vec3& srPos, const glm::vec3& srAng, const glm::vec3& srScale )
+{
+	Util_ToMatrix( srMatrix, &srPos, &srAng, &srScale );
 }
 
 

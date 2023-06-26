@@ -47,7 +47,10 @@ LOG_REGISTER_CHANNEL( Validation, LogColor::DarkYellow );
 
 int                                                      gWidth     = Args_RegisterF( 1280, "Width of the main window", 2, "-width", "-w" );
 int                                                      gHeight    = Args_RegisterF( 720, "Height of the main window", 2, "-height", "-h" );
+
+#ifndef _WIN32
 static bool                                              gMaxWindow = Args_Register( "Maximize the main window", "-max" );
+#endif
 
 SDL_Window*                                              gpWindow = nullptr;
 

@@ -29,10 +29,6 @@ static std::vector< Log >                      gLogHistory;
 
 static std::unordered_map< LogGroup, Log >     gLogGroups;
 
-// filtered text output for game console
-static std::string                             gFilterEx;  // super basic exclude filter
-static std::string                             gFilterIn;  // super basic include filter
-
 static std::vector< LogChannelShownCallbackF > gCallbacksChannelShown;
 
 constexpr glm::vec4                            gVecTo255( 255, 255, 255, 255 );
@@ -40,7 +36,8 @@ constexpr glm::vec4                            gVecTo255( 255, 255, 255, 255 );
 
 /* Windows Specific Functions for console text colors.  */
 #ifdef _WIN32
-#include <Windows.h>
+#include <consoleapi2.h>
+#include <debugapi.h>
 
 constexpr int Win32GetColor( LogColor color )
 {
@@ -887,6 +884,7 @@ void Log_SplitStringColors( LogColor sMainColor, std::string_view sBuffer, ChVec
 void Log_SysPrint( LogColor sMainColor, const Log& srLog, FILE* spStream )
 {
 #ifdef _WIN32
+	
 	// on win32, we need to split up the string by colors
 	ChVector< LogColorBuf_t > colorList;
 	Log_SplitStringColors( sMainColor, srLog.aFormatted, colorList );

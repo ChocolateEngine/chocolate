@@ -13,6 +13,7 @@
 #include <string>
 #include <algorithm>
 #include <atomic>
+#include <unordered_map>
 
 #include <time.h>
 
@@ -45,12 +46,20 @@
 
 	// obtain size of block of memory allocated from heap
 	#define CH_MALLOC_SIZE( block )     ( _msize( block ) )
+
+	#define CH_FUNC_NAME                 __func__
+	#define CH_FUNC_NAME_CLASS           __FUNCTION__
+	#define CH_FUNC_SIG                  __PRETTY_FUNCTION__
 #else
 	#define CH_STACK_ALLOC( size )      alloca( CH_ALIGN_VALUE( size, 16 ) )
 	#define CH_STACK_FREE( data )       
 
 	// obtain size of block of memory allocated from heap
 	#define CH_MALLOC_SIZE( block )     ( malloc_usable_size( block ) )
+
+	#define CH_FUNC_NAME                 __func__
+	#define CH_FUNC_NAME_CLASS           __FUNCTION__
+	#define CH_FUNC_SIG                  __PRETTY_FUNCTION__
 #endif
 
 // #define CH_STACK_NEW( type, count ) ( type* ) CH_STACK_ALLOC( sizeof( type ) * count )
@@ -232,6 +241,14 @@ inline size_t RandomSizeT( size_t sMin, size_t sMax )
 inline float RandomFloat( float sMin, float sMax )
 {
 	return sMin + ( ( static_cast<float>( rand() ) / static_cast<float>( RAND_MAX ) ) * ( sMax - sMin ) );
+}
+
+template< typename KEY, typename VALUE >
+inline size_t Util_SizeOfUnordredMap( const std::unordered_map< KEY, VALUE >& srMap )
+{
+	return ( srMap.size() * ( sizeof( std::unordered_map< KEY, VALUE >::value_type ) + sizeof( void* ) ) +  // data list
+	         srMap.bucket_count() * ( sizeof( void* ) + sizeof( size_t ) ) )                                // bucket index
+	       * 1.5;                                                                                           // estimated allocation overheads
 }
 
 

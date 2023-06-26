@@ -76,6 +76,10 @@ constexpr glm::vec3 vec_up( 0, 0, 1 );
 constexpr glm::vec3 vec_right( 0, 1, 0 );
 constexpr glm::vec3 vec_forward( 1, 0, 0 );
 
+constexpr glm::vec3 vec3_pitch( 0, 0, 1 );
+constexpr glm::vec3 vec3_yaw( 0, 1, 0 );
+constexpr glm::vec3 vec3_roll( 1, 0, 0 );
+
 
 // only 24 bytes, use this when you don't need scaling
 struct TransformSmall

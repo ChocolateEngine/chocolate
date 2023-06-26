@@ -54,7 +54,7 @@ protected:
 
 	glm::ivec2  aMouseDelta = {0, 0};
 	glm::ivec2  aMousePos = {0, 0};
-	bool        aHasFocus = false;
+	bool        aHasFocus = true;
 
 public:
 	/* Parses SDL inputs and if there is a valid input, execute the console command.  */
