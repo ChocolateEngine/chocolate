@@ -314,8 +314,7 @@ def post_flatbuffers_extract():
 
     os.chdir("flatbuffers")
 
-    build_options = ""
-     build_options = "-DFLATBUFFERS_BUILD_TESTS=OFF"
+    build_options = "-DFLATBUFFERS_BUILD_TESTS=OFF"
 
     # sets -fPIC
     # if SYS_OS == OS.Linux:
