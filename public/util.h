@@ -290,9 +290,16 @@ struct RefCounted
 		aRefCount++;
 	}
 
-	inline void Release() const
+	// Returns true if this was deleted
+	inline bool Release() const
 	{
-		if ( --aRefCount == 0 ) delete this;
+		if ( --aRefCount == 0 )
+		{
+			delete this;
+			return true;
+		}
+
+		return false;
 	}
 
 	mutable std::atomic< u32 > aRefCount = 0;  // Current reference count
