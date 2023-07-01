@@ -43,9 +43,20 @@ void PhysicsObject::SetPos( const glm::vec3& pos, bool activate )
 	apEnv->apPhys->GetBodyInterface().SetPosition( apBody->GetID(), toJolt( pos ), GetActivateEnum( activate ) );
 }
 
+
 void PhysicsObject::SetAng( const glm::vec3& ang, bool activate )
 {
 	apEnv->apPhys->GetBodyInterface().SetRotation( apBody->GetID(), toJoltRot( glm::radians( ang ) ), GetActivateEnum( activate ) );
+}
+
+
+void PhysicsObject::SetShape( IPhysicsShape* spShape, bool sUpdateMass, bool sActivate )
+{
+	if ( !spShape )
+		return;
+
+	auto physShape = static_cast< PhysicsShape* >( spShape );
+	apEnv->apPhys->GetBodyInterface().SetShape( apBody->GetID(), physShape->aShape, sUpdateMass, sActivate ? JPH::EActivation::Activate : JPH::EActivation::DontActivate );
 }
 
 
@@ -202,6 +213,12 @@ PhysShapeType PhysicsObject::GetShapeType()
 }
 
 
+void PhysicsObject::SetSensor( bool sSensor )
+{
+	return apBody->SetIsSensor( sSensor );
+}
+
+
 bool PhysicsObject::IsSensor()
 {
 	return apBody->IsSensor();
@@ -212,6 +229,7 @@ void PhysicsObject::SetAllowDebugDraw( bool sAllow )
 {
 	aAllowDebugDraw = sAllow;
 }
+
 
 bool PhysicsObject::GetAllowDebugDraw()
 {

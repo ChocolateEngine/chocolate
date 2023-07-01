@@ -259,72 +259,74 @@ class PhysCollisionCollector;
 // this could technically be a Handle, but i mean, that would add a lot of functions so
 class IPhysicsObject
 {
-public:
-	virtual ~IPhysicsObject() = default;
+  public:
+	virtual ~IPhysicsObject()                                                                                                             = default;
 
-	virtual glm::vec3             GetPos() = 0;
-	virtual glm::vec3             GetAng() = 0;
+	virtual glm::vec3         GetPos()                                                                                                    = 0;
+	virtual glm::vec3         GetAng()                                                                                                    = 0;
 
-	virtual void                  SetPos( const glm::vec3& pos, bool activate = true ) = 0;
-	virtual void                  SetAng( const glm::vec3& ang, bool activate = true ) = 0;
+	virtual void              SetPos( const glm::vec3& pos, bool activate = true )                                                        = 0;
+	virtual void              SetAng( const glm::vec3& ang, bool activate = true )                                                        = 0;
+	virtual void              SetScale( const glm::vec3& scale )                                                                          = 0;
 
-	virtual void                  Activate( bool active ) = 0;
-	virtual void                  SetCollisionEnabled( bool enable ) = 0;
+	virtual void              SetShape( IPhysicsShape* spShape, bool sUpdateMass, bool sActivate )                                        = 0;
+
+	virtual void              Activate( bool active )                                                                                     = 0;
+	virtual void              SetCollisionEnabled( bool enable )                                                                          = 0;
 
 	// maybe change this to just a simple bool, like SetHighQualityMotion()/IsHighQualityMotion()
-	virtual void                  SetMotionQuality( PhysMotionQuality sQuality ) = 0;
-	virtual PhysMotionQuality     GetMotionQuality() = 0;
+	virtual void              SetMotionQuality( PhysMotionQuality sQuality )                                                              = 0;
+	virtual PhysMotionQuality GetMotionQuality()                                                                                          = 0;
 
-	virtual void                  SetScale( const glm::vec3& scale ) = 0;
+	virtual void              SetMaxLinearVelocity( float velocity )                                                                      = 0;
+	virtual float             GetMaxLinearVelocity()                                                                                      = 0;
 
-	virtual void                  SetMaxLinearVelocity( float velocity ) = 0;
-	virtual float                 GetMaxLinearVelocity() = 0;
+	virtual void              SetMaxAngularVelocity( float velocity )                                                                     = 0;
+	virtual float             GetMaxAngularVelocity()                                                                                     = 0;
 
-	virtual void                  SetMaxAngularVelocity( float velocity ) = 0;
-	virtual float                 GetMaxAngularVelocity() = 0;
+	virtual void              SetLinearVelocity( const glm::vec3& velocity )                                                              = 0;
+	virtual void              SetAngularVelocity( const glm::vec3& velocity )                                                             = 0;
 
-	virtual void                  SetLinearVelocity( const glm::vec3& velocity ) = 0;
-	virtual void                  SetAngularVelocity( const glm::vec3& velocity ) = 0;
+	virtual glm::vec3         GetLinearVelocity()                                                                                         = 0;
+	virtual glm::vec3         GetAngularVelocity()                                                                                        = 0;
 
-	virtual glm::vec3             GetLinearVelocity() = 0;
-	virtual glm::vec3             GetAngularVelocity() = 0;
+	virtual void              SetAllowSleeping( bool allow )                                                                              = 0;
+	virtual bool              GetAllowSleeping()                                                                                          = 0;
 
-	virtual void                  SetAllowSleeping( bool allow ) = 0;
-	virtual bool                  GetAllowSleeping() = 0;
+	virtual void              SetFriction( float val )                                                                                    = 0;
+	virtual float             GetFriction()                                                                                               = 0;
 
-	virtual void                  SetFriction( float val ) = 0;
-	virtual float                 GetFriction() = 0;
+	virtual void              SetGravityEnabled( bool enabled )                                                                           = 0;
+	virtual bool              GetGravityEnabled()                                                                                         = 0;
 
-	virtual void                  SetGravityEnabled( bool enabled ) = 0;
-	virtual bool                  GetGravityEnabled() = 0;
+	virtual void              AddForce( const glm::vec3& force )                                                                          = 0;
+	virtual void              AddImpulse( const glm::vec3& impulse )                                                                      = 0;
 
-	virtual void                  AddForce( const glm::vec3& force ) = 0;
-	virtual void                  AddImpulse( const glm::vec3& impulse ) = 0;
+	virtual int               ContactTest()                                                                                               = 0;
 
-	virtual int                   ContactTest() = 0;
-
-	virtual PhysShapeType         GetShapeType() = 0;
+	virtual PhysShapeType     GetShapeType()                                                                                              = 0;
 
 	// A sensor will receive collision callbacks, but will not cause any collision responses and can be used as a trigger volume.
-	virtual bool                  IsSensor() = 0;
+	virtual void              SetSensor( bool sSensor )                                                                                   = 0;
+	virtual bool              IsSensor()                                                                                                  = 0;
 
-	virtual void                  SetAllowDebugDraw( bool sAllow ) = 0;
-	virtual bool                  GetAllowDebugDraw() = 0;
+	virtual void              SetAllowDebugDraw( bool sAllow )                                                                            = 0;
+	virtual bool              GetAllowDebugDraw()                                                                                         = 0;
 
 	// ===============================================================
 	// Part of Motion Properties
 
-	virtual void                  SetInverseMass( float inverseMass ) = 0;
-	virtual float                 GetInverseMass() = 0;
+	virtual void              SetInverseMass( float inverseMass )                                                                         = 0;
+	virtual float             GetInverseMass()                                                                                            = 0;
 
 	// Set the inverse inertia tensor in local space by setting the diagonal and the rotation: \f$I_{body}^{-1} = R \: D \: R^{-1}\f$
-	virtual void                  SetInverseInertia( const glm::vec3& diagonal, const glm::quat& rot ) = 0;
+	virtual void              SetInverseInertia( const glm::vec3& diagonal, const glm::quat& rot )                                        = 0;
 
 	// ===============================================================
 	// Physics World Interactions
 
-	virtual void                  CheckCollision( float sMaxSeparationDist, PhysCollisionCollector* spPhysCollector ) = 0;
-	virtual void                  CheckCollision( IPhysicsShape* spShape, float sMaxSeparationDist, PhysCollisionCollector* spPhysCollector ) = 0;
+	virtual void              CheckCollision( float sMaxSeparationDist, PhysCollisionCollector* spPhysCollector )                         = 0;
+	virtual void              CheckCollision( IPhysicsShape* spShape, float sMaxSeparationDist, PhysCollisionCollector* spPhysCollector ) = 0;
 
 	// TODO: make some CastRay function here and in IPhysicsEnvironment
 };

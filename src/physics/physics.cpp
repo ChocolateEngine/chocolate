@@ -599,11 +599,11 @@ IPhysicsObject* PhysicsEnvironment::CreateObject( IPhysicsShape* spShape, const 
 		layer
 	);
 
-	bodySettings.mAllowSleeping             = physInfo.aAllowSleeping;
-	bodySettings.mIsSensor                  = physInfo.aIsSensor;
-	bodySettings.mMaxLinearVelocity         = physInfo.aMaxLinearVelocity;
-	bodySettings.mMaxAngularVelocity        = physInfo.aMaxAngularVelocity;
-	bodySettings.mMotionQuality             = (JPH::EMotionQuality)physInfo.aMotionQuality;
+	bodySettings.mAllowSleeping      = physInfo.aAllowSleeping;
+	bodySettings.mIsSensor           = physInfo.aIsSensor;
+	bodySettings.mMaxLinearVelocity  = physInfo.aMaxLinearVelocity;
+	bodySettings.mMaxAngularVelocity = physInfo.aMaxAngularVelocity;
+	bodySettings.mMotionQuality      = (JPH::EMotionQuality)physInfo.aMotionQuality;
 
 	if ( physInfo.aCustomMass )
 	{
@@ -623,12 +623,12 @@ IPhysicsObject* PhysicsEnvironment::CreateObject( IPhysicsShape* spShape, const 
 	}
 
 	PhysicsObject* phys = new PhysicsObject;
-	phys->aPhysInfo = physInfo;
-	phys->apShape = physShape;
-	phys->apBody = body;
-	phys->apEnv = this;
-	phys->aLayer = layer;
-	phys->aOrigLayer = layer;
+	phys->aPhysInfo     = physInfo;
+	phys->apShape       = physShape;
+	phys->apBody        = body;
+	phys->apEnv         = this;
+	phys->aLayer        = layer;
+	phys->aOrigLayer    = layer;
 
 	// Add it to the world
 	bodyInterface.AddBody( body->GetID(), physInfo.aStartActive ? JPH::EActivation::Activate : JPH::EActivation::DontActivate );

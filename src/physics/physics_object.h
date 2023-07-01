@@ -20,6 +20,8 @@ public:
 	void                  SetPos( const glm::vec3& pos, bool activate = true ) override;
 	void                  SetAng( const glm::vec3& ang, bool activate = true ) override;
 
+	void                  SetShape( IPhysicsShape* spShape, bool sUpdateMass, bool sActivate ) override;
+
 	void                  Activate( bool active ) override;
 	void                  SetCollisionEnabled( bool enable ) override;
 
@@ -59,6 +61,7 @@ public:
 	PhysShapeType         GetShapeType() override;
 
 	// Check if this is a sensor. A sensor will receive collision callbacks, but will not cause any collision responses and can be used as a trigger volume.
+	void                  SetSensor( bool sSensor ) override;
 	bool                  IsSensor() override;
 
 	void                  SetAllowDebugDraw( bool sAllow ) override;
