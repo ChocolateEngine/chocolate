@@ -9,7 +9,8 @@
 
 #include <SDL.h>
 
-CONVAR( developer, 1 );
+// CONVAR( developer, 1 );
+CONVAR( log_dev_global, 1 );
 
 LogColor                                       gCurrentColor       = LogColor::Default;
 LogChannel                                     gLC_General         = INVALID_LOG_CHANNEL;
@@ -678,12 +679,27 @@ u32 GetColorU32( LogChannel_t *channel, const Log& log )
 }
 
 
+// Is this LogType one of the developer levels?
+inline bool Log_IsDevType( LogType sType )
+{
+	return ( sType == LogType::Dev ||
+	         sType == LogType::Dev2 ||
+	         sType == LogType::Dev3 ||
+	         sType == LogType::Dev4 );
+}
+
+
 inline bool Log_DevLevelVisible( const Log& log )
 {
-	if ( developer.GetInt() < (int)log.aType && ( log.aType == LogType::Dev ||
-	                                              log.aType == LogType::Dev2 ||
-	                                              log.aType == LogType::Dev3 ||
-	                                              log.aType == LogType::Dev4 ) )
+	LogChannel_t* channel = Log_GetChannelData( log.aChannel );
+
+	if ( channel )
+	{
+		if ( channel->aDevLevel >= (int)log.aType && Log_IsDevType( log.aType ) )
+			return true;
+	}
+
+	if ( log_dev_global.GetInt() < (int)log.aType && Log_IsDevType( log.aType ) )
 		return false;
 
 	return true;
@@ -1227,6 +1243,39 @@ void Log_ExV( LogChannel sChannel, LogType sLevel, const char* spFmt, va_list ar
 
 	gLogMutex.lock();
 
+	// Is this a developer level?
+	if ( Log_IsDevType( sLevel ) )
+	{
+		// Is the global dev level less than the log's developer level?
+		if ( log_dev_global.GetInt() < static_cast< int >( sLevel ) )
+		{
+			// Check if the channel dev level is less than the log's developer level
+			LogChannel_t* channel = Log_GetChannelData( sChannel );
+			if ( !channel )
+			{
+				Log_Error( "Unable to find channel when checking developer level\n" );
+				gLogMutex.unlock();
+				return;
+			}
+
+			// log_dev_global is the base value for every channel
+			if ( channel->aDevLevel <= log_dev_global.GetInt() )
+			{
+				gLogMutex.unlock();
+				return;
+			}
+
+			// Don't even save this log, it's probably flooding the log history
+			// and slowing down perf with adding it, and the 2 vnsprintf calls
+			// TODO: maybe we can have an convar option to save this anyway?
+			if ( channel->aDevLevel < static_cast< int >( sLevel ) )
+			{
+				gLogMutex.unlock();
+				return;
+			}
+		}
+	}
+
 	gLogHistory.emplace_back( sChannel, sLevel, "" );
 	Log&    log = gLogHistory[ gLogHistory.size() - 1 ];
 
@@ -1566,5 +1615,56 @@ CONCMD_VA( log_dump, "Dump Logging History to file" )
 	fclose( fp );
 
 	Log_DevF( gLC_Logging, 1, "Wrote Log History to File: \"%s\"\n", outputPath.c_str() );
+}
+
+
+static void log_dev_dropdown(
+  const std::vector< std::string >& args,  // arguments currently typed in by the user
+  std::vector< std::string >&       results )    // results to populate the dropdown list with
+{
+	for ( const LogChannel_t& channel : GetLogChannels() )
+	{
+		if ( args.size() && !channel.aName.starts_with( args[ 0 ] ) )
+			continue;
+
+		std::string value = vstring( "%s %d", channel.aName.data(), channel.aDevLevel );
+		results.push_back( value );
+	}
+}
+
+
+CONCMD_DROP_VA( log_dev, log_dev_dropdown, 0, "Change Log Developer Level of a Channel" )
+{
+	if ( !args.size() )
+	{
+		Log_Msg( log_dev_cmd.GetPrintMessage().c_str() );
+		return;
+	}
+
+	LogChannel_t* channel = Log_GetChannelByName( args[ 0 ].c_str() );
+
+	if ( !channel )
+	{
+		Log_ErrorF( "Log Channel Not Found: %s\n", args[ 0 ].c_str() );
+		return;
+	}
+
+	if ( args.size() > 1 )
+	{
+		long out = 0;
+		if ( !ToLong2( args[ 1 ], out ) )
+		{
+			Log_ErrorF( "Failed to convert requested developer to int: %s\n", args[ 1 ].c_str() );
+		}
+		else
+		{
+			channel->aDevLevel = std::clamp( out, 0L, 4L );
+			Log_MsgF( "Set Developer Level of Log Channel \"%s\" to %d\n", channel->aName.data(), channel->aDevLevel );
+		}
+	}
+	else
+	{
+		Log_MsgF( "Log Channel \"%s\" - Developer Level: %d\n", channel->aName.data(), channel->aDevLevel );
+	}
 }
 

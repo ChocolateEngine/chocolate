@@ -78,6 +78,7 @@ struct LogChannel_t
 	std::string_view aName;
 	bool             aShown;
 	LogColor         aColor;
+	int              aDevLevel;
 };
 
 using LogChannel = unsigned char;
