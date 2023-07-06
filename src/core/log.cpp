@@ -1216,11 +1216,50 @@ void Log_GroupV( LogGroup sGroup, const char* spFmt, va_list args )
     va_end( args )
 
 
+bool Log_ShouldAddLog( LogChannel sChannel, LogType sLevel )
+{
+	// Is this a developer level?
+	if ( !Log_IsDevType( sLevel ) )
+		return true;
+
+	// Is the global dev level less than the log's developer level?
+	if ( log_dev_global.GetInt() < static_cast< int >( sLevel ) )
+	{
+		// Check if the channel dev level is less than the log's developer level
+		LogChannel_t* channel = Log_GetChannelData( sChannel );
+		if ( !channel )
+		{
+			Log_Error( "Unable to find channel when checking developer level\n" );
+			return false;
+		}
+
+		// log_dev_global is the base value for every channel
+		if ( channel->aDevLevel <= log_dev_global.GetInt() )
+			return false;
+
+		// Don't even save this log, it's probably flooding the log history
+		// and slowing down perf with adding it, and the 2 vnsprintf calls
+		// TODO: maybe we can have an convar option to save this anyway?
+		if ( channel->aDevLevel < static_cast< int >( sLevel ) )
+			return false;
+	}
+
+	return true;
+}
+
+
 void Log_Ex( LogChannel sChannel, LogType sLevel, const char* spBuf )
 {
 	PROF_SCOPE();
 
 	gLogMutex.lock();
+
+	// Is this a developer level?
+	if ( !Log_ShouldAddLog( sChannel, sLevel ) )
+	{
+		gLogMutex.unlock();
+		return;
+	}
 
 	gLogHistory.emplace_back( sChannel, sLevel, spBuf );
 	Log& log = gLogHistory[ gLogHistory.size() - 1 ];
@@ -1244,36 +1283,10 @@ void Log_ExV( LogChannel sChannel, LogType sLevel, const char* spFmt, va_list ar
 	gLogMutex.lock();
 
 	// Is this a developer level?
-	if ( Log_IsDevType( sLevel ) )
+	if ( !Log_ShouldAddLog( sChannel, sLevel ) )
 	{
-		// Is the global dev level less than the log's developer level?
-		if ( log_dev_global.GetInt() < static_cast< int >( sLevel ) )
-		{
-			// Check if the channel dev level is less than the log's developer level
-			LogChannel_t* channel = Log_GetChannelData( sChannel );
-			if ( !channel )
-			{
-				Log_Error( "Unable to find channel when checking developer level\n" );
-				gLogMutex.unlock();
-				return;
-			}
-
-			// log_dev_global is the base value for every channel
-			if ( channel->aDevLevel <= log_dev_global.GetInt() )
-			{
-				gLogMutex.unlock();
-				return;
-			}
-
-			// Don't even save this log, it's probably flooding the log history
-			// and slowing down perf with adding it, and the 2 vnsprintf calls
-			// TODO: maybe we can have an convar option to save this anyway?
-			if ( channel->aDevLevel < static_cast< int >( sLevel ) )
-			{
-				gLogMutex.unlock();
-				return;
-			}
-		}
+		gLogMutex.unlock();
+		return;
 	}
 
 	gLogHistory.emplace_back( sChannel, sLevel, "" );
