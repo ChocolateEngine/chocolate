@@ -52,4 +52,7 @@ int CORE_API                Sys_GetCoreCount();
 #ifdef _WIN32
 void            CORE_API*   Sys_CreateWindow( const char* spWindowName, int sWidth, int sHeight );
 void            CORE_API    Sys_SetResizeCallback( FResizeCallback callback );
+
+int             CORE_API    Sys_Execute( const char* spFile, const char* spArgs );
+int             CORE_API    Sys_ExecuteV( const char* spFile, const char* spArgs, ... );
 #endif

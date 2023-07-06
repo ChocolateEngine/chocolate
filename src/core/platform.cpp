@@ -437,6 +437,16 @@ void sys_shutdown()
 	}
 }
 
+
+int Sys_GetCoreCount()
+{
+	SYSTEM_INFO sysinfo;
+	GetSystemInfo( &sysinfo );
+	int numCPU = sysinfo.dwNumberOfProcessors;
+	return numCPU;
+}
+
+
 static FResizeCallback* gResizeCallbackFunc = nullptr;
 
 LRESULT Win32_WindowProc( HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam )
@@ -560,6 +570,57 @@ void* Sys_CreateWindow( const char* spWindowName, int sWidth, int sHeight )
 	}
 
 	return window;
+}
+
+
+// TODO: https://learn.microsoft.com/en-us/windows/win32/procthread/creating-a-child-process-with-redirected-input-and-output?redirectedfrom=MSDN
+int Sys_Execute( const char* spFile, const char* spArgs )
+{
+	SHELLEXECUTEINFO ShExecInfo = { 0 };
+	ShExecInfo.cbSize           = sizeof( SHELLEXECUTEINFO );
+	ShExecInfo.fMask            = SEE_MASK_NOCLOSEPROCESS;
+	ShExecInfo.hwnd             = NULL;
+	ShExecInfo.lpVerb           = NULL;
+	ShExecInfo.lpFile           = spFile;
+	ShExecInfo.lpParameters     = spArgs;
+	ShExecInfo.lpDirectory      = NULL;
+	ShExecInfo.nShow            = SW_SHOW;
+	ShExecInfo.hInstApp         = NULL;
+	ShellExecuteEx( &ShExecInfo );
+
+	WaitForSingleObject( ShExecInfo.hProcess, INFINITE );
+
+	LPDWORD exitCode;
+	BOOL   ret = GetExitCodeProcess( ShExecInfo.hProcess, exitCode );
+
+	return (int)exitCode;
+}
+
+
+int Sys_ExecuteV( const char* spFile, const char* spArgs, ... )
+{
+	va_list args;
+	va_start( args, spArgs );
+
+	va_list copy;
+	va_copy( copy, args );
+	int len = std::vsnprintf( nullptr, 0, spArgs, copy );
+	va_end( copy );
+
+	if ( len < 0 )
+	{
+		Log_Error( "\n *** Sys_ExecuteV: vsnprintf failed?\n\n" );
+		return -1;
+	}
+
+	std::string argString;
+	argString.resize( std::size_t( len ) + 1, '\0' );
+	std::vsnprintf( argString.data(), argString.size(), spArgs, args );
+	argString.resize( len );
+
+	va_end( args );
+
+	return Sys_Execute( spFile, argString.data() );
 }
 
 
