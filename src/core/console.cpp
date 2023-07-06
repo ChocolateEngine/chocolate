@@ -289,13 +289,8 @@ static bool ConVarNameCheck( const char* name, const char* search, size_t size )
 	if ( con_search_behavior == 0.f )
 	{
 		// Must start with string
-#ifdef _WIN32
-		if ( _strnicmp( name, search, size ) == 0 )
+		if ( ch_strncasecmp( name, search, size ) == 0 )
 			return true;
-#else
-		if ( strncasecmp( name, search, size ) == 0 )
-			return true;
-#endif
 	}
 	else
 	{
@@ -705,13 +700,9 @@ bool Con_RunCommandArgs( const std::string& name, const std::vector< std::string
 		if ( name.size() != cvarNameLen )
 			continue;
 
-#ifdef _WIN32
-		if ( _strnicmp( cvar->aName, name.c_str(), cvarNameLen ) != 0 )
+		if ( ch_strncasecmp( cvar->aName, name.c_str(), cvarNameLen ) != 0 )
 			continue;
-#else
-		if ( strncasecmp( cvar->aName, name.c_str(), cvarNameLen ) != 0 )
-			continue;
-#endif
+
 		if ( Con_IsConVarRef( cvar ) )
 			continue;
 

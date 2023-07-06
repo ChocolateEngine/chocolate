@@ -41,25 +41,31 @@
 
 // msvc
 #if _MSC_VER
-	#define CH_STACK_ALLOC( size )      _malloca( CH_ALIGN_VALUE( size, 16 ) )
-	#define CH_STACK_FREE( data )       _freea( data )
+  #define CH_STACK_ALLOC( size )  _malloca( CH_ALIGN_VALUE( size, 16 ) )
+  #define CH_STACK_FREE( data )   _freea( data )
 
 	// obtain size of block of memory allocated from heap
-	#define CH_MALLOC_SIZE( block )     ( _msize( block ) )
+  #define CH_MALLOC_SIZE( block ) ( _msize( block ) )
 
-	#define CH_FUNC_NAME                 __func__
-	#define CH_FUNC_NAME_CLASS           __FUNCTION__
-	#define CH_FUNC_SIG                  __PRETTY_FUNCTION__
+  #define CH_FUNC_NAME            __func__
+  #define CH_FUNC_NAME_CLASS      __FUNCTION__
+  #define CH_FUNC_SIG             __PRETTY_FUNCTION__
+
+  #define ch_strncasecmp          _strnicmp
+  #define ch_strcasecmp           _stricmp
 #else
-	#define CH_STACK_ALLOC( size )      alloca( CH_ALIGN_VALUE( size, 16 ) )
-	#define CH_STACK_FREE( data )       
+  #define CH_STACK_ALLOC( size )      alloca( CH_ALIGN_VALUE( size, 16 ) )
+  #define CH_STACK_FREE( data )       
+  
+  // obtain size of block of memory allocated from heap
+  #define CH_MALLOC_SIZE( block )     ( malloc_usable_size( block ) )
+  
+  #define CH_FUNC_NAME                __func__
+  #define CH_FUNC_NAME_CLASS          __FUNCTION__
+  #define CH_FUNC_SIG                 __PRETTY_FUNCTION__
 
-	// obtain size of block of memory allocated from heap
-	#define CH_MALLOC_SIZE( block )     ( malloc_usable_size( block ) )
-
-	#define CH_FUNC_NAME                 __func__
-	#define CH_FUNC_NAME_CLASS           __FUNCTION__
-	#define CH_FUNC_SIG                  __PRETTY_FUNCTION__
+  #define ch_strncasecmp              strncasecmp
+  #define ch_strcasecmp               strcasecmp
 #endif
 
 // #define CH_STACK_NEW( type, count ) ( type* ) CH_STACK_ALLOC( sizeof( type ) * count )
@@ -76,6 +82,32 @@ inline To* assert_cast( From* in )
 	return static_cast< To >( in );
 #endif
 }
+
+
+// inline int ch_strcasecmp( const char* spStr1, const char* spStr2 )
+// {
+// #ifdef _MSC_VER
+// 	return _stricmp( spStr1, spStr1 );
+// #else
+// 	return strcasecmp( spStr1, spStr1 );
+// #endif
+// }
+
+
+//inline int ch_strncasecmp( const char* spStr1, const char* spStr2, size_t sCount )
+//{
+//#ifdef _MSC_VER
+//	return _strnicmp( spStr1, spStr1, sCount );
+//#else
+//	return strncasecmp( spStr1, spStr1, sCount );
+//#endif
+//}
+
+#ifdef _MSC_VER
+#else
+  
+#endif
+
 
 // ==============================================================================
 // Short Types
