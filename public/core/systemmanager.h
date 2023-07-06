@@ -32,16 +32,27 @@ struct ModuleInterface_t
 {
 	void*       apInterface;
 	const char* apName;
-	size_t      aHash;
+	size_t      aVersion;
 };
 
 
-struct AppModules_t
+struct AppModule_t
 {
-	void**      apSystem;
+	// void**      apSystem;
+	ISystem**   apSystem;
 	const char* apModuleName;
 	const char* apInterfaceName;
-	size_t      apInterfaceHash;
+	size_t      apInterfaceVer;
+	bool        aRequired = true;
+};
+
+
+enum EModLoadError
+{
+	EModLoadError_Success,
+	EModLoadError_LoadModule,
+	EModLoadError_LoadInterface,
+	EModLoadError_InitInterface,
 };
 
 
@@ -50,15 +61,19 @@ typedef ModuleInterface_t* ( *cframework_GetInterfacesF )( size_t& srCount );
 
 extern "C"
 {
-	CORE_API bool  Mod_InitSystems();
-	CORE_API void  Mod_Shutdown();
+	CORE_API bool          Mod_InitSystems();
+	CORE_API void          Mod_Shutdown();
 
-	CORE_API bool  Mod_Load( const char* spPath );
-	CORE_API bool  Mod_AddSystems( AppModules_t* spModules, size_t sCount );
+	CORE_API Module        Mod_Load( const char* spPath );
+	CORE_API void          Mod_Free( const char* spPath );
 
-	CORE_API void  Mod_AddLoadedSystem( ISystem* spSystem );
+	CORE_API bool          Mod_AddSystems( AppModule_t* spModules, size_t sCount );
+	CORE_API EModLoadError Mod_LoadSystem( AppModule_t& srModule );
+	CORE_API EModLoadError Mod_LoadAndInitSystem( AppModule_t& srModule );
 
-	CORE_API void* Mod_GetInterface( const char* spName, size_t sHash );
+	// CORE_API void   Mod_AddLoadedSystem( Module spModule, ISystem* spSystem );
+
+	CORE_API void*         Mod_GetInterface( const char* spName, size_t sHash );
 }
 
 
