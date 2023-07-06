@@ -1437,7 +1437,13 @@ public:
 		PROF_SCOPE();
 
 		if ( shTexture == InvalidHandle )
+		{
+			// Use the Missing Texture's Format
+			if ( gTextures.size() )
+				return VK_ToGraphicsFmt( gTextures[ 0 ]->aFormat );
+
 			return GraphicsFmt::INVALID;
+		}
 
 		TextureVK* tex = nullptr;
 		if ( !gTextureHandles.Get( shTexture, &tex ) )
@@ -1452,7 +1458,13 @@ public:
 	glm::uvec2 GetTextureSize( Handle shTexture ) override
 	{
 		if ( shTexture == InvalidHandle )
+		{
+			// Use the Missing Texture's Size
+			if ( gTextures.size() )
+				return gTextures[ 0 ]->aSize;
+
 			return {};
+		}
 
 		TextureVK* tex = nullptr;
 		if ( !gTextureHandles.Get( shTexture, &tex ) )
