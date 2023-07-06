@@ -23,7 +23,8 @@ static LOG_REGISTER_CHANNEL( Resource, LogColor::DarkYellow );
 
 using Handle = size_t;
 
-constexpr Handle InvalidHandle = 0;
+constexpr Handle InvalidHandle     = 0;
+constexpr Handle CH_INVALID_HANDLE = InvalidHandle;  // TODO: REPLACE THE ABOVE WITH THIS ONE
 
 
 template< typename T >
@@ -517,6 +518,22 @@ struct ResourceList
 
 	/*
     * 
+    *    Get a Random Handle
+    * 
+    *    @return Handle    The Handle picked at random
+	*/
+	Handle Random( size_t sMin, size_t sMax ) const
+	{
+		Assert( sMin <= aSize );
+		Assert( sMax <= aSize );
+		Assert( sMin < sMax );
+
+		size_t value = RandomSizeT( sMin, sMax );
+		return GetHandleByIndex( value );
+	}
+
+	/*
+    * 
     *    Get the number of resources.
     * 
     *    @return size_t    The number of resources.
@@ -524,6 +541,17 @@ struct ResourceList
 	size_t size() const
 	{
 		return aSize;
+	}
+
+	/*
+    * 
+    *    Is this resource list empty?
+    * 
+    *    @return bool
+	*/
+	bool empty() const
+	{
+		return aSize == 0;
 	}
 
 	/*
