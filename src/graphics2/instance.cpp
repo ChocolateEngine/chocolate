@@ -11,7 +11,8 @@
 #include <set>
 
 
-bool gListExts = Args_Register( false, "List All Vulkan Extensions, marking what ones are loaded", "-vk-list-exts" );
+bool gListExts    = Args_Register( false, "List All Vulkan Extensions, marking what ones are loaded", "-vk-list-exts" );
+int  gDeviceIndex = Args_Register( -1, "Manually select a GPU by the index in the device list", "-gpu" );
 
 
 #ifdef NDEBUG
@@ -611,6 +612,20 @@ void VK_DestroySurface()
 }
 
 
+void VK_SelectDevice( const VkPhysicalDevice& srDevice )
+{
+	gPhysicalDevice = srDevice;
+	vkGetPhysicalDeviceProperties( gPhysicalDevice, &gPhysicalDeviceProperties );
+
+	// SetOption( "MSAA Samples", aSampleCount );
+
+	if ( gPhysicalDevice == VK_NULL_HANDLE )
+		Log_Fatal( "Failed to find a suitable GPU!" );
+
+	Log_MsgF( gLC_Render, "Using GPU \"%s\"\n", gPhysicalDeviceProperties.deviceName );
+}
+
+
 void VK_SetupPhysicalDevice()
 {
 	gPhysicalDevice      = VK_NULL_HANDLE;
@@ -619,32 +634,54 @@ void VK_SetupPhysicalDevice()
 	VK_CheckResult( vkEnumeratePhysicalDevices( gInstance, &deviceCount, NULL ), "Failed to Enumerate Physical Devices" );
 	if ( deviceCount == 0 )
 	{
-		Log_Fatal( gLC_Render, "Failed to find GPUs with Vulkan support!" );
+		Log_Fatal( gLC_Render, "Failed to find a GPU with Vulkan support!" );
 	}
 
 	std::vector< VkPhysicalDevice > devices( deviceCount );
 	VK_CheckResult( vkEnumeratePhysicalDevices( gInstance, &deviceCount, devices.data() ), "Failed to Enumerate Physical Devices" );
-
-	for ( const auto& device : devices )
+	
+	if ( gDeviceIndex > -1 )
 	{
-		if ( VK_SuitableCard( device ) )
+		if ( gDeviceIndex > devices.size() )
 		{
-			gPhysicalDevice = device;
-			vkGetPhysicalDeviceProperties( gPhysicalDevice, &gPhysicalDeviceProperties );
+			// Build a string list of devices available to us
+			std::string deviceList;
 
-			// SetOption( "MSAA Samples", aSampleCount );
-			break;
+			for ( size_t i = 0; i < devices.size(); i++ )
+			{
+				VkPhysicalDeviceProperties deviceProps;
+				vkGetPhysicalDeviceProperties( devices[ i ], &deviceProps );
+
+				bool suitable = VK_SuitableCard( devices[ i ] );
+
+				deviceList += vstring( "GPU %zd - %s%s\n", i, deviceProps.deviceName, suitable ? "" : " (Unsupported)" );
+			}
+
+			Log_FatalF( gLC_Render, "Only %zd GPU's Found, but user requested GPU index %d\nGPU's available to us:\n\n%s",
+			            devices.size(), gDeviceIndex, deviceList.c_str() );
+		}
+		else if ( VK_SuitableCard( devices[ gDeviceIndex ] ) )
+		{
+			VK_SelectDevice( devices[ gDeviceIndex ] );
 		}
 	}
-
-	if ( gPhysicalDevice == VK_NULL_HANDLE )
-		Log_Fatal( "Failed to find a suitable GPU!" );
+	else
+	{
+		for ( const VkPhysicalDevice& device : devices )
+		{
+			if ( VK_SuitableCard( device ) )
+			{
+				VK_SelectDevice( device );
+				break;
+			}
+		}
+	}
 }
 
 
 void VK_CreateDevice()
 {
-	Log_Dev( gLC_Render, 1, "Creating VkDevice" );
+	Log_Dev( gLC_Render, 1, "Creating VkDevice\n" );
 
 	float queuePriority = 1.0f;
 	u32   graphics, present;
