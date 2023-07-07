@@ -284,9 +284,6 @@ def post_openal_extract():
     if ARGS.no_build:
         return
 
-    # NOT USED YET !!!
-    return
-
     set_project("OpenAL")
 
     os.chdir("openal-soft/build")
@@ -532,10 +529,10 @@ FILE_LIST = {
             None,
         ],
         [
-            "https://github.com/kcat/openal-soft/archive/6f9311b1ba26211895b507670b421356cc305bee.zip",
+            "https://github.com/kcat/openal-soft/archive/refs/tags/1.23.1.zip",
             "zip",                   # file extension it's stored as
             "openal-soft",              # folder to check for if it exists already
-            "openal-soft-6f9311b1ba26211895b507670b421356cc305bee",         # folder it extracts as to rename to the folder above (optional)
+            "openal-soft-1.23.1",         # folder it extracts as to rename to the folder above (optional)
             ".",                    # extract into this folder (optional)
             post_openal_extract,
         ],

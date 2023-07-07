@@ -11,7 +11,7 @@ protected:
 public:
 	virtual bool            Init() override;
 	virtual const char*     GetName() override { return "Vorbis Audio Codec"; }
-	virtual bool            CheckExt( const char* ext ) override;
+	virtual bool            CheckExt( std::string_view sExt ) override;
 
 	virtual bool            Open( const char* soundPath, AudioStream *stream ) override;
 	//virtual long            ReadPacket( AudioStream *stream, std::vector<float> &data );

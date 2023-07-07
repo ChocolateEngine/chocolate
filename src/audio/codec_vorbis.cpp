@@ -27,9 +27,9 @@ bool CodecVorbis::Init(  )
 }
 
 
-bool CodecVorbis::CheckExt( const char* ext )
+bool CodecVorbis::CheckExt( std::string_view sExt )
 {
-	return (strncmp( ".ogg", ext, 3) == 0);
+	return sExt == "ogg";
 }
 
 
