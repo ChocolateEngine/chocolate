@@ -10,6 +10,9 @@
 #define PROF_SCOPE_NAMED( name )
 #define PROF_SCOPE()
 
+#define CH_PROF_ZONE_TEXT( name, len )
+#define CH_PROF_ZONE_NAME( name, len )
+
 #define TracyAlloc( ptr, size )
 #define TracyFree( ptr )
 #define TracyMessageC( txt, size, color )
@@ -23,6 +26,9 @@
 
 #define PROF_SCOPE_NAMED( name ) PROF_SCOPE_NAMED_BASE( __tracy_scope, name, true )
 #define PROF_SCOPE() PROF_SCOPE_BASE( __tracy_scope, true )
+
+#define CH_PROF_ZONE_TEXT( name, len ) __tracy_scope.Text( name, len )
+#define CH_PROF_ZONE_NAME( name, len ) __tracy_scope.Name( name, len )
 
 #endif
 
