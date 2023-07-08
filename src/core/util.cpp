@@ -90,6 +90,8 @@ char* strcasestr( const char* s, const char* find )
 // https://stackoverflow.com/questions/55424746/is-there-an-analogous-function-to-vsnprintf-that-works-with-stdstring
 void vstring( std::string& result, const char* format, ... )
 {
+	PROF_SCOPE();
+
 	va_list args, args_copy;
 
 	va_start( args, format );
@@ -116,6 +118,8 @@ void vstring( std::string& result, const char* format, ... )
 
 void vstringV( std::string& s, const char* format, va_list args )
 {
+	PROF_SCOPE();
+
 	va_list copy;
 	va_copy( copy, args );
 	int len = std::vsnprintf( nullptr, 0, format, copy );
@@ -138,6 +142,8 @@ void vstringV( std::string& s, const char* format, va_list args )
 // https://stackoverflow.com/questions/55424746/is-there-an-analogous-function-to-vsnprintf-that-works-with-stdstring
 std::string vstring( const char* format, ... )
 {
+	PROF_SCOPE();
+
 	std::string result;
 	va_list args, args_copy;
 
@@ -167,6 +173,8 @@ std::string vstring( const char* format, ... )
 
 std::string vstringV( const char* format, va_list args )
 {
+	PROF_SCOPE();
+
 	va_list copy;
 	va_copy( copy, args );
 	int len = std::vsnprintf( nullptr, 0, format, copy );
