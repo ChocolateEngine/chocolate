@@ -3,7 +3,7 @@
 #include "audio.h"
 
 #if ENABLE_LIBAV
-class CodecLibAV: public BaseCodec
+class CodecLibAV: public IAudioCodec
 {
 protected:
 	virtual ~CodecLibAV() = default;

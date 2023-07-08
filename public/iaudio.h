@@ -12,7 +12,7 @@ constexpr int MAX_AUDIO_STREAMS  = 64;
 constexpr int MAX_AUDIO_CHANNELS = 32;
 
 
-using AudioEffect                = unsigned char;
+using AudioEffect                = u32;
 
 enum : AudioEffect
 {
@@ -37,27 +37,29 @@ enum : AudioEffect
 
 
 // still don't like this
-enum AudioEffectData
+enum EAudioEffectData : u32
 {
-	AudioData_None = 0,
+	EAudioEffectData_None = 0,
 
 	// ===================================
 	// Loop Effect
 
-	Audio_Loop_Enabled,    // bool (use int)
-	Audio_Loop_StartTime,  // float
-	Audio_Loop_EndTime,    // float
+	EAudio_Loop_Enabled,    // bool (use int)
+	EAudio_Loop_StartTime,  // float
+	EAudio_Loop_EndTime,    // float
 
 	// ===================================
 	// World Effect (totally not copy and paste of openal)
 
-	Audio_World_Pos,             // glm::vec3
-	Audio_World_Velocity,        // glm::vec3
-	Audio_World_Falloff,         // float, [0.0 -  ], default 1.0
-	Audio_World_MaxDist,         // float, [0.0 -  ], default FLT_MAX
-	Audio_World_ConeInnerAngle,  // float, [0 - 360], default 360
-	Audio_World_ConeOuterAngle,  // float, [0 - 360], default 360
-	Audio_World_ConeOuterGain,   // float, [0 - 1.0], default 0
+	EAudio_World_Pos,             // glm::vec3
+	EAudio_World_Velocity,        // glm::vec3
+	EAudio_World_Falloff,         // float, [0.0 -  ], default 1.0
+	EAudio_World_Radius,         // float, [0.0 -  ], default FLT_MAX
+	EAudio_World_ConeInnerAngle,  // float, [0 - 360], default 360
+	EAudio_World_ConeOuterAngle,  // float, [0 - 360], default 360
+	EAudio_World_ConeOuterGain,   // float, [0 - 1.0], default 0
+
+	EAudioEffectData_Count,
 };
 
 
@@ -85,21 +87,24 @@ class IAudioSystem : public ISystem
 	// General Audio System Functions (no global volume because that's up the ConVar snd_volume)
 	// -------------------------------------------------------------------------------------
 
-	virtual void               SetListenerTransform( const glm::vec3& pos, const glm::vec3& ang )               = 0;
-	virtual void               SetListenerVelocity( const glm::vec3& vel )                                      = 0;
-	virtual void               SetListenerOrient( const glm::vec3& forward, const glm::vec3& up )               = 0;
+	virtual void               SetListenerTransform( const glm::vec3& pos, const glm::vec3& ang )                = 0;
+	virtual void               SetListenerVelocity( const glm::vec3& vel )                                       = 0;
+	// virtual void               SetListenerOrient( const glm::vec3& forward, const glm::vec3& up )                = 0;
 
-	virtual void               SetDopplerScale( float scale )                                                   = 0;
-	virtual void               SetSoundSpeed( float speed )                                                     = 0;
+	// virtual void               SetDopplerScale( float sSpeed )                                                   = 0;
+	// virtual void               SetSoundTravelSpeed( float sSpeed )                                               = 0;
 
-	virtual void               SetPaused( bool paused )                                                         = 0;
-	virtual void               SetGlobalSpeed( float speed )                                                    = 0;
+	// Pause the entire audio system
+	virtual void               SetPaused( bool paused )                                                          = 0;
 
-	virtual void               SetOccluder( IAudioOccluder* spOccluder )                                        = 0;
-	virtual IAudioOccluder*    GetOccluder()                                                                    = 0;
+	// Set a global playback speed on the sound system
+	// virtual void               SetGlobalSpeed( float speed )                                                     = 0;
+
+	virtual void               SetOccluder( IAudioOccluder* spOccluder )                                         = 0;
+	virtual IAudioOccluder*    GetOccluder()                                                                     = 0;
 
 	// Define your own custom audio occluding interface
-	// This disables the built in audio occlusion system and the static audio mesh creation functions
+	// This disables the built in audio occlusion system and the static audio mesh creation functions (only with steam audio)
 	// virtual void               SetCustomOccluder( IAudioOccluder* spOccluder )                                        = 0;
 	// virtual IAudioOccluder*    GetCustomOccluder()                                                                    = 0;
 
@@ -107,69 +112,84 @@ class IAudioSystem : public ISystem
 	// Audio Channels
 	// -------------------------------------------------------------------------------------
 
-	virtual Handle             RegisterChannel( const char* name )                                              = 0;
+	// Create a new audio channel, if one with the same name is already taken, it will return the existing channel
+	virtual Handle             RegisterChannel( const char* spName )                                             = 0;
 
-	virtual Handle             GetChannel( const std::string& name )                                            = 0;
-	virtual const std::string& GetChannelName( Handle channel )                                                 = 0;
+	// Get's an Audio Channel Handle by the name of it
+	virtual Handle             GetChannel( std::string_view sName )                                              = 0;
 
-	virtual float              GetChannelVolume( Handle channel )                                               = 0;
-	virtual void               SetChannelVolume( Handle channel, float vol )                                    = 0;
+	// Get's an Audio Channel's Name
+	virtual const std::string& GetChannelName( Handle sChannel )                                                 = 0;
+
+	// Get and Set the Volume of this Audio Channel
+	virtual float              GetChannelVolume( Handle sChannel )                                               = 0;
+	virtual void               SetChannelVolume( Handle sChannel, float sVol )                                   = 0;
+
+	// Get and Set whether all sounds playing on this channel are paused or not
+	virtual bool               GetChannelPaused( Handle sChannel )                                               = 0;
+	virtual void               SetChannelPaused( Handle sChannel, bool sPaused )                                 = 0;
 
 	// -------------------------------------------------------------------------------------
-	// Audio Streams
+	// Sound Playback
 	// -------------------------------------------------------------------------------------
 
-	// Load a sound from a path (change to OpenSound?)
-	virtual Handle             LoadSound( std::string_view sSoundPath )                                         = 0;
+	// Preload a entire sound for playback, useful for playing a sound multiple times in a row
+	// virtual Handle             PrecacheSound( std::string_view sSoundPath )                                      = 0;
 
-	// Create a playback instance of a sound
-	// virtual Handle             CreateSoundInstance( std::string soundPath )                                     = 0;
+	// Free a Preloaded sound
+	// virtual void               FreePrecachedSound( Handle sSound )                                               = 0;
 
-	/* Load a sound from audio data from a SoundInfo struct (is this worth setting up?) */
+	// Load a sound from a path, usable for one time playback only
+	virtual Handle             OpenSound( std::string_view sSoundPath )                                           = 0;
+
+	// Load a sound from a precached sound handle
+	// virtual Handle             OpenSound( Handle sSound )                                                        = 0;
+
+	// Read an entire opened sound for playback
+	virtual bool               PreloadSound( Handle sSound )                                                      = 0;
+
+	// Load a sound from audio data from a SoundInfo struct (is this worth setting up?)
 	// virtual Handle               LoadSoundFromData( const SoundInfo& soundInfo ) = 0;
 
-	/* Load the entire sound into an audio buffer instead of streaming it from the disk on playback */
-	virtual bool               PreloadSound( Handle stream )                                                    = 0;
-
 	// Play an instance of a sound, you can play a handle multiple times
-	virtual bool               PlaySound( Handle stream )                                                       = 0;
+	virtual bool               PlaySound( Handle sSound )                                                        = 0;
 
-	/* Free a sound */
-	virtual void               FreeSound( Handle stream )                                                       = 0;
+	// Free a sound */
+	virtual void               FreeSound( Handle sSound )                                                        = 0;
 
-	/* Is This a Valid Audio Stream? */
-	virtual bool               IsValid( Handle stream )                                                         = 0;
+	// Is This a Valid Audio Stream? */
+	virtual bool               IsValid( Handle sSound )                                                          = 0;
 
-	/* Audio Stream Volume ranges from 0.0f to 1.0f */
-	virtual void               SetVolume( Handle stream, float vol )                                            = 0;
-	virtual float              GetVolume( Handle stream )                                                       = 0;
+	// Audio Stream Volume ranges from 0.0f to 1.0f
+	virtual void               SetVolume( Handle sSound, float vol )                                             = 0;
+	virtual float              GetVolume( Handle sSound )                                                        = 0;
 
-	/* Audio Stream Volume ranges from 0.0f to 1.0f */
+	// Audio Stream Volume ranges from 0.0f to 1.0f
 	//virtual bool                    SetSampleRate( Handle stream, float vol ) = 0;
 	//virtual float                   GetSampleRate( Handle stream ) = 0;
 
-	/* Audio Volume Channels (ex. General, Music, Voices, Commentary, etc.) */
-	virtual void               SetChannel( Handle stream, Handle channel )                                      = 0;
-	virtual Handle             GetChannel( Handle stream )                                                      = 0;
+	// Audio Volume Channels (ex. General, Music, Voices, Commentary, etc.)
+	virtual void               SetChannel( Handle sSound, Handle sChannel )                                       = 0;
+	virtual Handle             GetChannel( Handle sSound )                                                       = 0;
 
-	/* UNTESTED: seek to different point in the audio file */
-	virtual bool               Seek( Handle stream, double pos )                                                = 0;
+	// UNTESTED: seek to different point in the audio file
+	virtual bool               Seek( Handle sSound, double sPos )                                                = 0;
 
 	// -------------------------------------------------------------------------------------
 	// Audio Effects
 	// -------------------------------------------------------------------------------------
 
-	virtual void               AddEffect( Handle stream, AudioEffect effect )                                   = 0;
-	virtual void               RemoveEffect( Handle stream, AudioEffect effect )                                = 0;
-	virtual bool               HasEffect( Handle stream, AudioEffect effect )                                   = 0;
+	virtual void               AddEffects( Handle stream, AudioEffect effect )                                   = 0;
+	virtual void               RemoveEffects( Handle stream, AudioEffect effect )                                = 0;
+	virtual bool               HasEffects( Handle stream, AudioEffect effect )                                   = 0;
 
-	virtual bool               SetEffectData( Handle stream, AudioEffectData sDataType, int data )              = 0;
-	virtual bool               SetEffectData( Handle stream, AudioEffectData sDataType, float data )            = 0;
-	virtual bool               SetEffectData( Handle stream, AudioEffectData sDataType, const glm::vec3& data ) = 0;
+	virtual bool               SetEffectData( Handle stream, EAudioEffectData sDataType, int data )              = 0;
+	virtual bool               SetEffectData( Handle stream, EAudioEffectData sDataType, float data )            = 0;
+	virtual bool               SetEffectData( Handle stream, EAudioEffectData sDataType, const glm::vec3& data ) = 0;
 
-	virtual bool               GetEffectData( Handle stream, AudioEffectData sDataType, int& data )             = 0;
-	virtual bool               GetEffectData( Handle stream, AudioEffectData sDataType, float& data )           = 0;
-	virtual bool               GetEffectData( Handle stream, AudioEffectData sDataType, glm::vec3& data )       = 0;
+	virtual bool               GetEffectData( Handle stream, EAudioEffectData sDataType, int& data )             = 0;
+	virtual bool               GetEffectData( Handle stream, EAudioEffectData sDataType, float& data )           = 0;
+	virtual bool               GetEffectData( Handle stream, EAudioEffectData sDataType, glm::vec3& data )       = 0;
 
 #if 0
 	// -------------------------
@@ -204,5 +224,5 @@ class IAudioSystem : public ISystem
 
 
 #define IADUIO_NAME "Aduio"
-#define IADUIO_VER  2
+#define IADUIO_VER  4
 

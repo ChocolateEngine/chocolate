@@ -3,7 +3,7 @@
 #include "audio.h"
 
 #if ENABLE_WAV
-class CodecWav: public BaseCodec
+class CodecWav: public IAudioCodec
 {
 protected:
 	virtual ~CodecWav() = default;

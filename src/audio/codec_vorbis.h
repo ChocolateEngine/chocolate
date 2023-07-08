@@ -3,7 +3,7 @@
 #include "audio.h"
 
 #if ENABLE_VORBIS
-class CodecVorbis: public BaseCodec
+class CodecVorbis : public IAudioCodec
 {
 protected:
 	virtual ~CodecVorbis() = default;
