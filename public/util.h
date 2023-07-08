@@ -7,6 +7,7 @@
  */
 
 #include "core/platform.h"
+#include "core/asserts.h"
 
 #include <cstdarg>
 #include <vector>
@@ -30,7 +31,8 @@
 
 #define MALLOC_NEW( type ) (type*)malloc(sizeof(struct type))
 
-#define ARR_SIZE( arr ) (sizeof(arr) / sizeof(arr[0]))
+#define CH_ARR_SIZE( arr ) (sizeof(arr) / sizeof(arr[0]))
+#define ARR_SIZE           CH_ARR_SIZE
 
 // much faster alternative to dynamic_cast
 #define IS_TYPE( var1, var2 ) typeid(var1) == typeid(var2)
@@ -76,11 +78,19 @@ inline To* assert_cast( From* in )
 {
 #ifdef _DEBUG
 	To* to = dynamic_cast< To >( in );
-	Assert( to != nullptr );
+	CH_ASSERT( to != nullptr );
 	return to;
 #else
 	return static_cast< To >( in );
 #endif
+}
+
+
+template< typename To, typename From >
+inline To* ch_pointer_cast( From* in )
+{
+	CH_ASSERT( in );
+	return static_cast< To* >( in );
 }
 
 
