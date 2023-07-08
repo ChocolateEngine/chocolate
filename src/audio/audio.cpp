@@ -738,94 +738,63 @@ AudioChannel* AudioSystem::GetChannelData( Handle handle )
 // -------------------------------------------------------------------------------------
 
 
-void AudioSystem::AddEffects( Handle handle, AudioEffect effect )
+void AudioSystem::AddEffects( Handle sHandle, AudioEffect sEffects )
 {
-	AudioStream* stream = GetStream( handle );
+	AudioStream* stream = GetStream( sHandle );
 	if ( !stream )
 		return;
 
-	if ( stream->aEffects & effect )
+	if ( sEffects & AudioEffect_World && !( stream->aEffects & AudioEffect_World ) )
 	{
-		Log_WarnF( gLC_Aduio, "Stream Already has Effect: %s\n", Effect2Str( effect ) );
-		return;
+		stream->aEffects |= AudioEffect_World;
+
+		stream->CreateVar< glm::vec3 >( EAudio_World_Pos, {} );
+		stream->CreateVar< glm::vec3 >( EAudio_World_Velocity, {} );
+		stream->CreateVar( EAudio_World_Falloff, 1.f );
+		stream->CreateVar( EAudio_World_Radius, 1000.f );
+		stream->CreateVar( EAudio_World_ConeInnerAngle, 360.f );
+		stream->CreateVar( EAudio_World_ConeOuterAngle, 360.f );
+		stream->CreateVar( EAudio_World_ConeOuterGain, 1.f );
 	}
 
-	// Create Vars for Effect
-	switch ( effect )
+	if ( sEffects & AudioEffect_Loop && !( stream->aEffects & AudioEffect_Loop ) )
 	{
-		case AudioEffect_World:
-			stream->CreateVar< glm::vec3 >( EAudio_World_Pos, {} );
-			stream->CreateVar< glm::vec3 >( EAudio_World_Velocity, {} );
-			stream->CreateVar( EAudio_World_Falloff, 1.f );
-			stream->CreateVar( EAudio_World_Radius, 1000.f );
-			stream->CreateVar( EAudio_World_ConeInnerAngle, 360.f );
-			stream->CreateVar( EAudio_World_ConeOuterAngle, 360.f );
-			stream->CreateVar( EAudio_World_ConeOuterGain, 1.f );
+		stream->aEffects |= AudioEffect_Loop;
 
-			break;
-
-		case AudioEffect_Loop:
-			stream->CreateVar( EAudio_Loop_Enabled, 1 );
-			stream->CreateVar( EAudio_Loop_StartTime, 0.f );
-			stream->CreateVar( EAudio_Loop_EndTime, -1.f );
-			break;
-
-		default:
-			Log_Warn( gLC_Aduio, "Trying to Add an Unknown Audio Effect To Stream\n" );
-			return;
+		stream->CreateVar( EAudio_Loop_Enabled, 1 );
+		stream->CreateVar( EAudio_Loop_StartTime, 0.f );
+		stream->CreateVar( EAudio_Loop_EndTime, -1.f );
 	}
-
-	stream->aEffects |= effect;
 }
 
 
-void AudioSystem::RemoveEffects( Handle handle, AudioEffect effect )
+void AudioSystem::RemoveEffects( Handle sHandle, AudioEffect sEffects )
 {
-	AudioStream* stream = GetStream( handle );
+	AudioStream* stream = GetStream( sHandle );
 	if ( !stream )
 		return;
 
-#if 1
-	if ( !( stream->aEffects & effect ) )
-	{
-		Log_WarnF( gLC_Aduio, "Trying to Remove non-existent Audio Effect on Audio Stream: %s\n", Effect2Str( effect ) );
-		return;
-	}
-
-	stream->aEffects &= ~effect;
-#else
-	auto it = std::find( stream->aEffects.begin(), stream->aEffects.end(), effect );
-	if ( it == stream->aEffects.end() )
-	{
-		Log_Warn( gLC_Aduio, "Trying to Remove non-existent Audio Effect on Audio Stream: %s\n", Effect2Str( effect ) );
-		return;
-	}
-
-	vec_remove_index( stream->aEffects, it - stream->aEffects.begin() );
-#endif
-
 	// Delete Vars for Effect
-	switch ( effect )
+	if ( sEffects & AudioEffect_World && stream->aEffects & AudioEffect_World )
 	{
-		case AudioEffect_World:
-			stream->RemoveVar( EAudio_World_Pos );
-			stream->RemoveVar( EAudio_World_Velocity );
-			stream->RemoveVar( EAudio_World_Falloff );
-			stream->RemoveVar( EAudio_World_Radius );
-			stream->RemoveVar( EAudio_World_ConeInnerAngle );
-			stream->RemoveVar( EAudio_World_ConeOuterAngle );
-			stream->RemoveVar( EAudio_World_ConeOuterGain );
-			break;
+		stream->aEffects &= ~AudioEffect_World;
 
-		case AudioEffect_Loop:
-			stream->RemoveVar( EAudio_Loop_Enabled );
-			stream->RemoveVar( EAudio_Loop_StartTime );
-			stream->RemoveVar( EAudio_Loop_EndTime );
-			break;
+		stream->RemoveVar( EAudio_World_Pos );
+		stream->RemoveVar( EAudio_World_Velocity );
+		stream->RemoveVar( EAudio_World_Falloff );
+		stream->RemoveVar( EAudio_World_Radius );
+		stream->RemoveVar( EAudio_World_ConeInnerAngle );
+		stream->RemoveVar( EAudio_World_ConeOuterAngle );
+		stream->RemoveVar( EAudio_World_ConeOuterGain );
+	}
 
-		default:
-			Log_Warn( gLC_Aduio, "Trying to Remove an Unknown Audio Effect on an Audio Stream\n" );
-			return;
+	if ( sEffects & AudioEffect_Loop && stream->aEffects & AudioEffect_Loop )
+	{
+		stream->aEffects &= ~AudioEffect_Loop;
+
+		stream->RemoveVar( EAudio_Loop_Enabled );
+		stream->RemoveVar( EAudio_Loop_StartTime );
+		stream->RemoveVar( EAudio_Loop_EndTime );
 	}
 }
 
