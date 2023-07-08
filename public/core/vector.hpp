@@ -53,7 +53,7 @@ struct ChVector
 		{
 			void* newData = realloc( apData, sSize * sizeof( T ) );
 			if ( newData == nullptr )
-				Log_FatalF( "Failed to Resize ChVector: %zd bytes\n", sSize );
+				Log_FatalF( "Failed to Resize ChVector< %s >: %zd bytes\n", typeid( T ).name(), sSize );
 
 			// if ( newData != apData )
 			{
@@ -87,7 +87,7 @@ struct ChVector
 		{
 			void* newData = realloc( apData, sSize * sizeof( T ) );
 			if ( newData == nullptr )
-				Log_FatalF( "Failed to Resize ChVector: %zd bytes\n", sSize );
+				Log_FatalF( "Failed to Resize ChVector< %s >: %zd bytes\n", typeid( T ).name(), sSize );
 
 			// if ( newData != apData )
 			{
@@ -142,7 +142,7 @@ struct ChVector
 		{
 			void* newData = realloc( apData, aSize * sizeof( T ) );
 			if ( newData == nullptr )
-				Log_FatalF( "Failed to Resize ChVector: %zd bytes\n", apData );
+				Log_FatalF( "Failed to Resize ChVector< %s >: %zd bytes\n", typeid( T ).name(), apData );
 
 			apData = static_cast< T* >( newData );
 		}
@@ -190,13 +190,13 @@ struct ChVector
 	}
 
 	// Find the index of an item in the vector
-	uint32_t index( const T& sItem, uint32_t fallback = UINT32_MAX )
+	uint32_t index( const T& sItem, uint32_t sFallback = UINT32_MAX )
 	{
 		auto it = std::find( begin(), end(), sItem );
 		if ( it != end() )
 			return it - begin();
 
-		return fallback;
+		return sFallback;
 	}
 
 	// Search for an item and remove it from the vector
@@ -206,12 +206,26 @@ struct ChVector
 
 		if ( index == UINT32_MAX )
 		{
-			Log_Error( "Failed to find item in ChVector!\n" );
+			Log_ErrorF( "Failed to find item in ChVector< %s >!\n", typeid( T ).name() );
 			return;
 		}
 
 		remove( index );
 	}
+
+	// void insert( const T& sItem, uint32_t sIndex )
+	// {
+	// 	resize( aSize + 1, true );
+	// 
+	// 	// shift all memory after this index by one index
+	// 	if ( aSize > 1 )
+	// 	{
+	// 		uint32_t sSize = aSize - sIndex;
+	// 		memcpy( &apData[ sIndex + 1 ], &apData[ sIndex ], sSize * sizeof( T ) );
+	// 	}
+	// 
+	// 	apData[ sIndex ] = std::move( sItem );
+	// }
 
 	// Index into the buffer
 	T& operator[]( uint32_t sIndex ) const
@@ -232,6 +246,22 @@ struct ChVector
 	{
 		return &apData[ aSize ];
 	}
+
+	// T front() const
+	// {
+	// 	if ( aSize == 0 )
+	// 		Log_Fatal( "Attempted to get front() when vector size is 0\n" );
+	// 
+	// 	return apData[ 0 ];
+	// }
+	// 
+	// T back() const
+	// {
+	// 	if ( aSize == 0 )
+	// 		Log_Fatal( "Attempted to get back() when vector size is 0\n" );
+	// 
+	// 	return apData[ aSize > 0 ? aSize - 1 : 0 ];
+	// }
 
 	ChVector() :
 		apData( nullptr ), aSize( 0 ), aCapacity( 0 )
