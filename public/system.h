@@ -8,12 +8,17 @@ systems inherit.
 
 class ISystem
 {
-protected:
-public:
-	/* Self explanatory.  */
-	virtual void     Update( float sDT ) = 0;
-	/* Initialize system.  */
-	virtual bool 	 Init()              = 0;
-	/* Destructs the system, freeing any used memory.  */
-	virtual 	~ISystem()            = default;
+  public:
+	// Main Update Function for this system (remove this? all systems usually have their own update function)
+	virtual void Update( float sDT ) = 0;
+
+	// Initialize System
+	virtual bool Init()              = 0;
+
+	// Shutdown This System
+	virtual void Shutdown(){};
+
+	// Destructs the system, freeing any used memory
+	virtual ~ISystem() = default;
 };
+
