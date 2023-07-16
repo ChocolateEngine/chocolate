@@ -18,10 +18,11 @@
 #include "core/log.h"
 
 
-static bool     gMaxWindow   = false;
+static bool     gMaxWindow         = false;
+static bool     gExceptionDebugger = false;
 
 
-bool            gIsWindows10 = false;
+bool            gIsWindows10       = false;
 OSVERSIONINFOEX gOSVer{};
 
 HMODULE         ghInst   = 0;
@@ -139,6 +140,9 @@ static LONG WINAPI Win32_ExceptionFilter( struct _EXCEPTION_POINTERS* ExceptionI
 		         addr, vma ? " (VMA)" : "" );
 
 		Log_ErrorF( "Unhandled exception caught\n%s", msg );
+
+		if ( gExceptionDebugger )
+			sys_wait_for_debugger();
 	}
 
 	return EXCEPTION_EXECUTE_HANDLER;
@@ -405,8 +409,9 @@ void sys_init()
 			}
 		}
 	}
-	
-	gMaxWindow = Args_Register( "Maximize the main window", "-max" );
+
+	gMaxWindow         = Args_Register( "Maximize the main window", "-max" );
+	gExceptionDebugger = Args_Register( "Wait for debugger on catching a fatal exception", "-exception-debugger" );
 
 #if 0 //def _DEBUG
 	// Get the current state of the flag
