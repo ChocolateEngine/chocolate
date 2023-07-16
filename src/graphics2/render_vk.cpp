@@ -19,31 +19,15 @@
   #include "mimalloc-new-delete.h"
 #endif
 
-LOG_REGISTER_CHANNEL2( VMA, LogColor::Cyan );
-
-#define VMA_IMPLEMENTATION
-
 #ifdef _WIN32
   #define WIN32_LEAN_AND_MEAN 1
 #endif
 
-// turn on for extra debugging
-#if 0
-  #define VMA_DEBUG_MARGIN                                  16
-  #define VMA_DEBUG_DETECT_CORRUPTION                       1
-  #define VMA_DEBUG_DONT_EXCEED_MAX_MEMORY_ALLOCATION_COUNT 1
-  #define VMA_HEAVY_ASSERT                                  Assert
-
-  #define VMA_DEBUG_LOG( format, ... )                      Log_DevF( gLC_VMA, 2, format "\n", __VA_ARGS__ )
-#endif
-
-#define VMA_ASSERT Assert
-
 #include "render_vk.h"
 
 LOG_REGISTER_CHANNEL2( Render, LogColor::Cyan );
-LOG_REGISTER_CHANNEL( Vulkan, LogColor::DarkYellow );
-LOG_REGISTER_CHANNEL( Validation, LogColor::DarkYellow );
+LOG_REGISTER_CHANNEL2( Vulkan, LogColor::DarkYellow );
+LOG_REGISTER_CHANNEL2( Validation, LogColor::DarkYellow );
 
 int                                                      gWidth     = Args_RegisterF( 1280, "Width of the main window", 2, "-width", "-w" );
 int                                                      gHeight    = Args_RegisterF( 720, "Height of the main window", 2, "-height", "-h" );
@@ -691,27 +675,6 @@ VkCommandPool& VK_GetPrimaryCommandPool()
 {
 	return gPrimary;
 }
-
-
-#if VMA_STATS_STRING_ENABLED
-void VK_PrintVMAStats()
-{
-	char* statsString = nullptr;
-	vmaBuildStatsString( gVmaAllocator, &statsString, true );
-
-	// lol
-	Log_Msg( gLC_VMA, statsString );
-	Log_Msg( gLC_VMA, "\n" );
-
-	vmaFreeStatsString( gVmaAllocator, statsString );
-}
-
-
-CONCMD( r_vma_print_stats )
-{
-	VK_PrintVMAStats();
-}
-#endif
 
 
 void VK_CreateBuffer( BufferVK* spBuffer, VkBufferUsageFlags sUsage, VkMemoryPropertyFlags sMemBits )
@@ -1903,6 +1866,20 @@ public:
 		{
 			Log_Error( gLC_Render, "CmdSetDepthBias: Invalid Command Buffer\n" );
 			return;
+		}
+
+		// clamp within the limits
+		const VkPhysicalDeviceLimits& limits = VK_GetPhysicalDeviceProperties().limits;
+
+		if ( limits.lineWidthRange[ 0 ] > sLineWidth )
+		{
+			Log_ErrorF( gLC_Render, "Line Width is below minimum width, clamping to %.6f (was %.6f)\n", limits.lineWidthRange[ 0 ], sLineWidth );
+			sLineWidth = limits.lineWidthRange[ 0 ];
+		}
+		else if ( limits.lineWidthRange[ 1 ] < sLineWidth )
+		{
+			Log_ErrorF( gLC_Render, "Line Width is above maximum width, clamping to %.6f (was %.6f)\n", limits.lineWidthRange[ 1 ], sLineWidth );
+			sLineWidth = limits.lineWidthRange[ 1 ];
 		}
 
 		vkCmdSetLineWidth( c, sLineWidth );
