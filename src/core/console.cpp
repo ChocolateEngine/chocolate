@@ -247,12 +247,12 @@ std::string ConVarRef::GetPrintMessage(  )
 
 void ConVarRef::SetValue( const std::string& value )
 {
-	if ( apRef ) SetValue( value );
+	if ( apRef ) apRef->SetValue( value );
 }
 
 void ConVarRef::SetValue( float value )
 {
-	if ( apRef ) SetValue( value );
+	if ( apRef ) apRef->SetValue( value );
 }
 
 const std::string& ConVarRef::GetValue(  )
