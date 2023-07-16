@@ -461,7 +461,14 @@ bool AudioSystem::ApplyEffects( AudioStream* stream )
 	if ( read == 0 )
 		return false;
 
-	outAudio.resize( read );
+	if ( read < outAudio.size() )
+	{
+		// add 0's to it so steam audio is happy
+		for ( size_t i = read; i < outAudio.size(); i++ )
+		{
+			outAudio[ i ] = 0.f;
+		}
+	}
 
 	// apply stream volume
 	for ( int i = 0; i < read; i++ )
@@ -473,7 +480,7 @@ bool AudioSystem::ApplyEffects( AudioStream* stream )
 	// TODO: split these effects up
 	if ( stream->aEffects & AudioEffect_World )
 	{
-		ApplySpatialEffects( stream, outAudio.data(), read );
+		ApplySpatialEffects( stream, outAudio.data(), outAudio.size() );
 	}
 	else
 	{
@@ -571,17 +578,41 @@ int AudioSystem::ApplySpatialEffects( AudioStream* stream, float* data, size_t f
 	if ( distanceAtten == 0.f )
 		return 0;
 
+	IPLerror       err = IPL_STATUS_SUCCESS;
+
 	// TODO ONCE WORKING: don't allocate and free multiple times an audio update
 	// probably move this to an effect class or some job class thing, idk
 	// and then just store it in a memory pool, and then just use memset on it to clear it if needed
-	IPLAudioBuffer tempInBuffer = {};
-	iplAudioBufferAllocate( aCtx, 2, frameCount, &tempInBuffer );
+	IPLAudioBuffer tempInBuffer{};
+	IPLAudioBuffer tempMidBuffer{};
+	IPLAudioBuffer tempOutBuffer{};
 
-	IPLAudioBuffer tempMidBuffer = {};
-	iplAudioBufferAllocate( aCtx, 2, frameCount, &tempMidBuffer );
+	err = iplAudioBufferAllocate( aCtx, 2, frameCount, &tempInBuffer );
 
-	IPLAudioBuffer tempOutBuffer = {};
-	iplAudioBufferAllocate( aCtx, 2, frameCount, &tempOutBuffer );
+	if ( CH_IF_ASSERT( err == IPL_STATUS_SUCCESS ) )
+	{
+		Log_Error( gLC_Aduio, "Failed to allocate input phonon buffer\n" );
+		return 0;
+	}
+
+	err = iplAudioBufferAllocate( aCtx, 2, frameCount, &tempMidBuffer );
+
+	if ( CH_IF_ASSERT( err == IPL_STATUS_SUCCESS ) )
+	{
+		iplAudioBufferFree( aCtx, &tempInBuffer );
+		Log_Error( gLC_Aduio, "Failed to allocate mid phonon buffer\n" );
+		return 0;
+	}
+
+	err = iplAudioBufferAllocate( aCtx, 2, frameCount, &tempOutBuffer );
+
+	if ( CH_IF_ASSERT( err == IPL_STATUS_SUCCESS ) )
+	{
+		iplAudioBufferFree( aCtx, &tempInBuffer );
+		iplAudioBufferFree( aCtx, &tempMidBuffer );
+		Log_Error( gLC_Aduio, "Failed to allocate output phonon buffer\n" );
+		return 0;
+	}
 
 	// copy over samples
 	for ( uint32_t i = 0, j = 0; i < frameCount / 2; i++ )
@@ -603,6 +634,8 @@ int AudioSystem::ApplySpatialEffects( AudioStream* stream, float* data, size_t f
 	directParams.distanceAttenuation = distanceAtten;
 	directParams.directivity         = snd_phonon_directivity;
 
+	CH_ASSERT( _heapchk() == _HEAPOK );
+
 	iplDirectEffectApply( apDirectEffect, &directParams, &tempInBuffer, &tempMidBuffer );
 
 	IPLBinauralEffectParams binauralParams{};
@@ -613,6 +646,8 @@ int AudioSystem::ApplySpatialEffects( AudioStream* stream, float* data, size_t f
 
 	iplBinauralEffectApply( apBinauralEffect, &binauralParams, &tempMidBuffer, &tempOutBuffer );
 
+	CH_ASSERT( _heapchk() == _HEAPOK );
+
 	for ( uint32_t i = 0; i < frameCount / 2; i++ )
 	{
 		for ( uint32_t ch = 0; ch < 2; ch++ )
@@ -621,9 +656,19 @@ int AudioSystem::ApplySpatialEffects( AudioStream* stream, float* data, size_t f
 		}
 	}
 
+	CH_ASSERT( _heapchk() == _HEAPOK );
+
 	iplAudioBufferFree( aCtx, &tempInBuffer );
+
+	CH_ASSERT( _heapchk() == _HEAPOK );
+
 	iplAudioBufferFree( aCtx, &tempMidBuffer );
+
+	CH_ASSERT( _heapchk() == _HEAPOK );
+
 	iplAudioBufferFree( aCtx, &tempOutBuffer );
+
+	CH_ASSERT( _heapchk() == _HEAPOK );
 
 	return 0;
 }
