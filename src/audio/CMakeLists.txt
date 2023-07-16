@@ -1,8 +1,6 @@
 message( "Current Project: Aduio" )
 
-set( OPENAL_DIR ${CH_THIRDPARTY}/openal-soft )
-
-message( OPENAL_DIR = ${OPENAL_DIR} )
+set( STEAMAUDIO_DIR ${CH_THIRDPARTY}/steamaudio )
 
 file(
 	GLOB_RECURSE SRC_FILES CONFIGURE_DEPENDS
@@ -27,7 +25,7 @@ add_compile_definitions(
 )
 
 include_directories(
-	"${OPENAL_DIR}/include"
+	"${STEAMAUDIO_DIR}/include"
 	"${CH_THIRDPARTY}/libogg/include"
 	"${CH_THIRDPARTY}/libvorbis/include"
 	if( MSVC )
@@ -35,19 +33,9 @@ include_directories(
 	endif()
 )
 
-if ( CMAKE_BUILD_TYPE EQUAL Debug )
-	link_directories(
-		"${OPENAL_DIR}/build/Debug"
-	)
-else()
-	link_directories(
-		"${OPENAL_DIR}/build/Release"
-	)
-endif()
-
 if( MSVC )
 	link_libraries(
-		"OpenAL32"
+		"${STEAMAUDIO_DIR}/lib/windows-x64/phonon.lib"
 	)
 	
 	# stupdi
@@ -67,8 +55,9 @@ if( MSVC )
 	
 	add_link_options( "/LTCG" )
 else()
+	link_directories( "${STEAMAUDIO_DIR}/lib/linux-x64" )
 	link_libraries(
-		"libOpenAL32.so"
+		"libphonon.so"  # uh how does this work on cmake on linux
 		"vorbis"
 		"vorbisfile"
 	)
@@ -101,12 +90,15 @@ set_target_properties(
 
 target_precompile_headers( Aduio PRIVATE "${CH_PUBLIC}/core/core.h" )
 
-message( "Copying OpenAL32 DLL" )
+# copy phonon over
+message( "Copying Steam Audio DLL (phonon)" )
 
 if( MSVC )
-	configure_file( "${OPENAL_DIR}/build/Release/OpenAL32.dll" "${CH_BUILD}/OpenAL32.dll" COPYONLY )
+	configure_file( "${STEAMAUDIO_DIR}/lib/windows-x64/phonon.dll" "${CH_BUILD}/phonon.dll" COPYONLY )
+	configure_file( "${STEAMAUDIO_DIR}/lib/windows-x64/GPUUtilities.dll" "${CH_BUILD}/GPUUtilities.dll" COPYONLY )
+	configure_file( "${STEAMAUDIO_DIR}/lib/windows-x64/TrueAudioNext.dll" "${CH_BUILD}/TrueAudioNext.dll" COPYONLY )
 else()
-	configure_file( "${OPENAL_DIR}/build/Release/libOpenAL32.so" "${CH_BUILD}/libOpenAL32.so" COPYONLY )
+	configure_file( "${STEAMAUDIO_DIR}/lib/linux-x64/libphonon.so" "${CH_BUILD}/libphonon.so" COPYONLY )
 endif()
 
 source_group(
