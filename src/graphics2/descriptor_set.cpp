@@ -447,6 +447,18 @@ Handle VK_CreateVariableDescLayout( const CreateVariableDescLayout_t& srCreate )
 	layoutBinding.stageFlags      = VK_ToVkShaderStage( srCreate.aStages );
 	layoutBinding.binding         = srCreate.aBinding;
 
+	// Check Device Limits
+	if ( layoutBinding.descriptorType == EDescriptorType_UniformBuffer )
+	{
+		if ( srCreate.aCount > VK_GetPhysicalDeviceProperties().limits.maxPerStageDescriptorUniformBuffers )
+		{
+			Log_ErrorF( "Surpassed maxPerStageDescriptorUniformBuffers limit of %zd (tried to create %zd buffers)\n",
+			            VK_GetPhysicalDeviceProperties().limits.maxPerStageDescriptorUniformBuffers, srCreate.aCount );
+
+			return CH_INVALID_HANDLE;
+		}
+	}
+
 	VkDescriptorSetLayoutBindingFlagsCreateInfoEXT extend{ VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO_EXT };
 	extend.pNext         = nullptr;
 	extend.bindingCount  = 1;
