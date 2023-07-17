@@ -52,6 +52,8 @@ void DLL_EXPORT core_post_load()
 {
 	if ( FileSys_Exists( "cfg/config.cfg" ) )
 		Con_QueueCommandSilent( "exec config", false );
+	else if ( FileSys_Exists( "cfg/config_default.cfg" ) )
+		Con_QueueCommandSilent( "exec config_default", false );
 
 	if ( FileSys_Exists( "cfg/autoexec.cfg" ) )
 		Con_QueueCommandSilent( "exec autoexec", false );
