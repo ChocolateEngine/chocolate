@@ -1492,6 +1492,11 @@ CONCMD_DROP( log_channel_show, log_channel_dropdown )
 }
 
 
+constexpr const char* LOG_CHANNEL_DUMP_HEADER     = "Channel Name%*s  | Shown  | Developer Level | Color\n";
+constexpr size_t      LOG_CHANNEL_DUMP_HEADER_LEN = 53;
+
+
+// TODO: this is not very good, clean this up, adding developer levels broke it and i haven't fixed it yet
 CONCMD( log_channel_dump )
 {
     // Calculate max name length
@@ -1502,12 +1507,14 @@ CONCMD( log_channel_dump )
     for ( const auto& channel : GetLogChannels() )
 	{
 		maxNameLength = std::max( logNameLen, std::max( maxNameLength, channel.aName.size() ) );
-		maxLength = std::max( maxLength, maxNameLength + 23 );
+		// maxLength = std::max( maxLength, maxNameLength + 23 );
+		maxLength = std::max( maxLength, maxNameLength + ( LOG_CHANNEL_DUMP_HEADER_LEN - logNameLen ) );
 	}
 
 	LogGroup group = Log_GroupBegin( gLC_Logging );
 
-    Log_GroupF( group, "Channel Name%*s  | Shown  | Color\n", maxNameLength > logNameLen ? maxNameLength - logNameLen : logNameLen, "" );
+    // Log_GroupF( group, "Channel Name%*s  | Shown  | Color \n", maxNameLength > logNameLen ? maxNameLength - logNameLen : logNameLen, "" );
+	Log_GroupF( group, LOG_CHANNEL_DUMP_HEADER, maxNameLength > logNameLen ? maxNameLength - logNameLen : logNameLen, "" );
 
     // Build separator bar
     // Example Output: ---------------|--------|------------
@@ -1515,7 +1522,7 @@ CONCMD( log_channel_dump )
 
     for ( size_t i = 0; i < maxLength; i++ )
 	{
-		if ( i == maxNameLength + 1 || maxLength - 13 == i )
+		if ( i == maxNameLength + 1 || maxLength - logNameLen == i )
 		{
 			separator[ i ] = '|';
 			continue;
@@ -1533,12 +1540,13 @@ CONCMD( log_channel_dump )
 	{
 		Log_GroupF(
 		  group,
-		  "%s%s%*s | %s | %s\n",
+		  "%s%s%*s | %s | %d | %s\n",
 		  Log_ColorToUnix( channel.aColor ),
 		  channel.aName.data(),
 		  maxNameLength - channel.aName.size(),
 		  "",
 		  channel.aShown ? "Shown " : "Hidden",
+		  channel.aDevLevel,
 		  Log_ColorToStr( channel.aColor ) );
     }
 
@@ -1637,8 +1645,15 @@ static void log_dev_dropdown(
 {
 	for ( const LogChannel_t& channel : GetLogChannels() )
 	{
-		if ( args.size() && !channel.aName.starts_with( args[ 0 ] ) )
-			continue;
+		// if ( args.size() && !channel.aName.starts_with( args[ 0 ] ) )
+		if ( args.size() )
+		{
+			if ( args[ 0 ].size() > channel.aName.size() )
+				continue;
+
+			if ( ch_strncasecmp( channel.aName.data(), args[ 0 ].data(), args[ 0 ].size() ) != 0 )
+				continue;
+		}
 
 		std::string value = vstring( "%s %d", channel.aName.data(), channel.aDevLevel );
 		results.push_back( value );

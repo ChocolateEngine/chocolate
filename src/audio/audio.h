@@ -4,122 +4,215 @@
 #include "system.h"
 
 #include <SDL2/SDL.h>
+#include <phonon.h>
 
-#if ENABLE_AUDIO
-  #include <phonon.h>
-#endif /* ENABLE_AUDIO  */
+LOG_CHANNEL2( Aduio );
 
-class BaseCodec;
-class IAudioEffect;
+constexpr size_t FRAME_SIZE         = 256;
+constexpr size_t SOUND_RATE         = 48000;
+constexpr size_t MAX_STREAMS        = 32;
+constexpr size_t CH_OUT_BUFFER_SIZE = 2048;
+
+extern Handle    gDefaultChannel;
+
+bool             HandleIPLErr( IPLerror ret, const char* msg );
+
+class IAudioCodec;
+
+
+// ===========================================================================
+// Audio Effect Var
+
+
+// attempt 3: MaterialVar like idea
+// this does work, but is it really necessary for this?
+// it might have no actual benefit and only just add some overhead
+enum class AudioVar
+{
+	Invalid = 0,
+	Float,
+	Int,
+	Vec3,
+};
+
+
+class AudioEffectVar
+{
+  private:
+	AudioEffectVar( EAudioEffectData name, AudioVar type ) :
+		aName( name ), aType( type )
+	{
+	}
+
+  public:
+	AudioEffectVar( EAudioEffectData name, float data ) :
+		AudioEffectVar( name, AudioVar::Float )
+	{
+		aDataFloat = data;
+	}
+
+	AudioEffectVar( EAudioEffectData name, int data ) :
+		AudioEffectVar( name, AudioVar::Int )
+	{
+		aDataInt = data;
+	}
+
+	AudioEffectVar( EAudioEffectData name, const glm::vec3& data ) :
+		AudioEffectVar( name, AudioVar::Vec3 )
+	{
+		aDataVec3 = data;
+	}
+
+	EAudioEffectData aName;
+	AudioVar         aType;
+
+	union
+	{
+		float     aDataFloat;
+		int       aDataInt;
+		glm::vec2 aDataVec2;
+		glm::vec3 aDataVec3;
+		glm::vec4 aDataVec4;
+	};
+
+	inline void SetFloat( float val )
+	{
+		aType      = AudioVar::Float;
+		aDataFloat = val;
+	}
+	inline void SetInt( int val )
+	{
+		aType    = AudioVar::Int;
+		aDataInt = val;
+	}
+	inline void SetVec3( const glm::vec3& val )
+	{
+		aType     = AudioVar::Vec3;
+		aDataVec3 = val;
+	}
+
+	inline float            GetFloat( float fallback = 0.f ) { return ( aType == AudioVar::Float ) ? aDataFloat : fallback; }
+	inline int              GetInt( int fallback = 0 ) { return ( aType == AudioVar::Int ) ? aDataInt : fallback; }
+	inline const glm::vec3& GetVec3( const glm::vec3& fallback ) { return ( aType == AudioVar::Vec3 ) ? aDataVec3 : fallback; }
+};
+
+
+// ===========================================================================
+// Audio Stream
+
 
 struct AudioStream
 {
-	bool                         Valid() { return valid; }
+	// ============================================================
+	// Audio Codec
 
-	BaseCodec*                   codec = nullptr;
-	void*                        data;  // data for the codec only
+	IAudioCodec*         codec = nullptr;
+	void*                data;  // data for the codec only
 
-	std::string                  name;
-	size_t                       frame = 0;
+	// ============================================================
+	// Audio Data
 
-	unsigned char                channels;
-	size_t                       rate;
-	SDL_AudioFormat              format = AUDIO_F32;
-	unsigned int                 size;
-	unsigned int                 samples;
-	unsigned int                 bits;
-	unsigned char                width;  // ???
+	std::string          name;
+	size_t               frame = 0;
+	unsigned char        channels;
+	size_t               rate;
+	SDL_AudioFormat      format = AUDIO_F32;
+	unsigned int         size;
+	unsigned int         samples;
+	unsigned int         bits;
+	unsigned char        width;  // ???
 
-	float                        vol       = 1.f;
-	float                        radius    = 100.0f;
-	float                        falloff   = 16.f;
+	// ============================================================
+	// Audio System Info
 
-	bool                         loop      = false;  // should we loop the file when it ends?
-	//double time = 0;        // time in seconds in the file
-	double                       startTime = 0;  // time in seconds to start playback
-	//double endTime = 0;     // time in seconds to end playback
-	//float speed = 1.0f;
+	bool                 paused      = false;
+	bool                 valid       = false;
+	bool                 preloaded   = false;  // hmm
+	float                vol         = 1.f;
 
-	// must be set before playing a sound
-	AudioEffects                 effects   = AudioEffect_None;
-	std::vector< IAudioEffect* > aEffects{};
-
-	bool                         paused      = false;
-	bool                         valid       = false;
-	bool                         preloaded   = false;  // bruh
+	// Audio Playback Channel
+	Handle               aChannel    = gDefaultChannel;
 
 	// audio stream to store audio from the codec and covert it
-	SDL_AudioStream*             audioStream = nullptr;
+	SDL_AudioStream*     audioStream = nullptr;
 
 	// stored audio data
-	std::vector< float >         preloadedAudio;
+	std::vector< float > preloadedAudio;
 
-	// --------------------------------------------------
-	// 3d sound
-	glm::vec3                    pos;
+	// Final output audio
+	IPLAudioBuffer       outBuffer{};
 
-	// maybe std::vector will work here? try later
-	//float *inBufferAudio = nullptr;
-	//float *midBufferAudio = nullptr;
-	//float *outBufferAudio = nullptr;
+	// ============================================================
+	// Audio Effects - must be set before playing a sound
 
-	IPLAudioBuffer               outBuffer{};
+	template< typename T >
+	AudioEffectVar* CreateVar( EAudioEffectData sName, T sData )
+	{
+		AudioEffectVar* var = new AudioEffectVar( sName, sData );
+		aVars.push_back( var );
+		return var;
+	}
 
-	// IPLhandle directSoundEffect = {};
-	// IPLhandle binauralEffect = {};
+	bool                           RemoveVar( EAudioEffectData sName );
 
-	// IPLBinauralEffect               apBinauralEffect = nullptr;
+	AudioEffectVar*                GetVar( EAudioEffectData sName );
+
+	void                           SetVar( EAudioEffectData sName, float sData );
+	void                           SetVar( EAudioEffectData sName, int sData );
+	void                           SetVar( EAudioEffectData sName, const glm::vec3& sData );
+
+	float                          GetFloat( EAudioEffectData sName );
+	int                            GetInt( EAudioEffectData sName );
+	const glm::vec3&               GetVec3( EAudioEffectData sName );
+
+	AudioEffect                    aEffects = AudioEffect_None;
+	// std::vector< AudioEffect > aEffects = {};
+
+	std::vector< AudioEffectVar* > aVars    = {};
+
+	// AudioEffects effects = AudioEffect_None;
+	// std::vector< IAudioEffect* > aEffects{};
+
+	// typeid hash - data
+	// std::unordered_map< AudioEffects, IAudioEffect* > aEffects{};
 };
+
+
 
 // ===========================================================================
-// Audio Effects
+// Audio Codec Interface
 
-class IAudioEffect
-{
-	//virtual void RunEffect( std::vector< float* >& buffer ) = 0;
-};
 
-class AudioEffectWorld : public IAudioEffect
-{
-  public:
-	//void RunEffect( std::vector< float* >& buffer );
-
-  private:
-	glm::vec3      pos;
-	IPLAudioBuffer buffer;
-};
-
-struct AudioEffectLoop : public IAudioEffect
-{
-	bool   loop      = false;  // should we loop the file when it ends?
-	double startTime = 0;      // time in seconds to start playback
-							   //double endTime = 0;     // time in seconds to end playback
-};
-
-// ===========================================================================
-// Base Codec
-
-class BaseCodec
+class IAudioCodec
 {
   protected:
-	virtual ~BaseCodec() = default;
+	virtual ~IAudioCodec() = default;
 
   public:
 	virtual bool        Init()                                                            = 0;
 	virtual const char* GetName()                                                         = 0;
-	virtual bool        CheckExt( const char* ext )                                       = 0;
+	virtual bool        CheckExt( std::string_view sExt )                                 = 0;
 
 	virtual bool        Open( const char* soundPath, AudioStream* stream )                = 0;
 	virtual long        Read( AudioStream* stream, size_t size, ChVector< float >& data ) = 0;
 	virtual int         Seek( AudioStream* stream, double pos )                           = 0;
 	virtual void        Close( AudioStream* stream )                                      = 0;
 
-	virtual void        SetAudioSystem( IAudioSystem* system ) { apAudio = system; };
 	IAudioSystem*       apAudio;
 };
 
+
 // ===========================================================================
 // Audio System
+
+
+struct AudioChannel
+{
+	std::string aName;
+	float       aVol    = 1.f;
+	bool        aPaused = false;
+};
+
 
 class AudioSystem : public IAudioSystem
 {
@@ -131,58 +224,112 @@ class AudioSystem : public IAudioSystem
 	// General Audio System Functions
 	// -------------------------------------------------------------------------------------
 
-	virtual void                  SetListenerTransform( const glm::vec3& pos, const glm::quat& rot ) override;
-	virtual void                  SetListenerTransform( const glm::vec3& pos, const glm::vec3& ang ) override;
-	virtual void                  SetPaused( bool paused ) override;
-	virtual void                  SetGlobalSpeed( float speed ) override;
+	void                          SetListenerTransform( const glm::vec3& pos, const glm::vec3& ang ) override;
+	void                          SetListenerVelocity( const glm::vec3& vel ) override;
+	//void                          SetListenerOrient( const glm::vec3& forward, const glm::vec3& up ) override;
 
-	virtual Handle                LoadSound( std::string soundPath ) override;
-	virtual bool                  PreloadSound( Handle stream ) override;
-	virtual bool                  PlaySound( Handle sStream ) override;
-	virtual void                  FreeSound( Handle sStream ) override;
+	//void                          SetDopplerScale( float sSpeed ) override;
+	//void                          SetSoundTravelSpeed( float sSpeed ) override;
+
+	// Pause the entire audio system
+	void                          SetPaused( bool paused ) override;
+
+	// Set a global playback speed on the sound system
+	//void                          SetGlobalSpeed( float speed ) override;
+
+	void                          SetOccluder( IAudioOccluder* spOccluder ) override;
+	IAudioOccluder*               GetOccluder() override;
+
+	// Define your own custom audio occluding interface
+	// This disables the built in audio occlusion system and the static audio mesh creation functions (only with steam audio)
+	// virtual void               SetCustomOccluder( IAudioOccluder* spOccluder )                                        override;
+	// virtual IAudioOccluder*    GetCustomOccluder()                                                                    override;
 
 	// -------------------------------------------------------------------------------------
-	// Audio Stream Functions
+	// Audio Channels
 	// -------------------------------------------------------------------------------------
 
-	/* Is This a Valid Audio Stream? */
-	virtual bool                  IsValid( Handle stream ) override;
+	// Create a new audio channel, if one with the same name is already taken, it will return the existing channel
+	Handle                        RegisterChannel( const char* spName ) override;
+
+	// Get's an Audio Channel Handle by the name of it
+	Handle                        GetChannel( std::string_view sName ) override;
+
+	// Get's an Audio Channel's Name
+	const std::string&            GetChannelName( Handle sChannel ) override;
+
+	// Get and Set the Volume of this Audio Channel
+	float                         GetChannelVolume( Handle sChannel ) override;
+	void                          SetChannelVolume( Handle sChannel, float sVol ) override;
+
+	// Get and Set whether all sounds playing on this channel are paused or not
+	bool                          GetChannelPaused( Handle sChannel ) override;
+	void                          SetChannelPaused( Handle sChannel, bool sPaused ) override;
+
+	// Internal Function for getting the Audio Channel data
+	AudioChannel*                 GetChannelData( Handle sChannel );
+
+	// -------------------------------------------------------------------------------------
+	// Sound Playback
+	// -------------------------------------------------------------------------------------
+
+	// Preload a entire sound for playback, useful for playing a sound multiple times in a row
+	// Handle                        PrecacheSound( std::string_view sSoundPath ) override;
+
+	// Free a Preloaded sound
+	// void                          FreePrecachedSound( Handle sSound ) override;
+
+	// Load a sound from a path, usable for one time playback only
+	Handle                        OpenSound( std::string_view sSoundPath ) override;
+
+	// Load a sound from a precached sound handle
+	// Handle                        OpenSound( Handle sSound ) override;
+
+	// Read an entire opened sound for playback
+	bool                          PreloadSound( Handle sSound ) override;
+
+	// Load a sound from audio data from a SoundInfo struct (is this worth setting up?)
+	// virtual Handle               LoadSoundFromData( const SoundInfo& soundInfo ) = 0;
+
+	// Play an instance of a sound, you can play a handle multiple times
+	bool                          PlaySound( Handle sSound ) override;
+
+	// Free a sound
+	void                          FreeSound( Handle sSound ) override;
+
+	// Is This a Valid Sound?
+	bool                          IsValid( Handle sSound ) override;
+
+	// Sound Volume ranges from 0.0f to 1.0f
+	void                          SetVolume( Handle sSound, float sVol ) override;
+	float                         GetVolume( Handle sSound ) override;
 
 	/* Audio Stream Volume ranges from 0.0f to 1.0f */
-	virtual void                  SetVolume( Handle stream, float vol ) override;
-	virtual float                 GetVolume( Handle stream ) override;
+	//bool                    SetSampleRate( Handle stream, float vol ) = 0;
+	//float                   GetSampleRate( Handle stream ) = 0;
 
-	/* Audio Stream Volume ranges from 0.0f to 1.0f */
-	//virtual bool                    SetSampleRate( Handle stream, float vol ) override;
-	//virtual float                   GetSampleRate( Handle stream ) override;
+	// Audio Volume Channels (ex. General, Music, Voices, Commentary, etc.)
+	void                          SetChannel( Handle sSound, Handle sChannel ) override;
+	Handle                        GetChannel( Handle sSound ) override;
 
-	/* Sound Position in World */
-	virtual void                  SetWorldPos( Handle stream, const glm::vec3& pos ) override;
-	virtual const glm::vec3&      GetWorldPos( Handle stream ) override;
-
-	/* Sound Loop Parameters (make a component?) */
-	virtual void                  SetLoop( Handle stream, bool loop ) override;
-	virtual bool                  DoesSoundLoop( Handle stream ) override;  // um
-
-	/* Audio Volume Channels (ex. General, Music, Voices, Commentary, etc.) */
-	// virtual void                    SetChannel( Handle stream, int channel ) = 0;
-	// virtual int                     GetChannel( Handle stream ) = 0;
-
-	virtual void                  SetEffects( Handle stream, AudioEffects effect ) override;
-	virtual AudioEffects          GetEffects( Handle stream ) override;
-
-	virtual bool                  Seek( Handle streamPublic, double pos ) override;
+	// UNTESTED: seek to different point in the audio file
+	bool                          Seek( Handle sSound, double sPos ) override;
 
 	// -------------------------------------------------------------------------------------
-	// Audio Stream Components
+	// Audio Effects
 	// -------------------------------------------------------------------------------------
 
-	// TODO: setup an audio component system internally
-	// will need to think about it's design more
+	void                          AddEffects( Handle stream, AudioEffect effect ) override;
+	void                          RemoveEffects( Handle stream, AudioEffect effect ) override;
+	bool                          HasEffects( Handle stream, AudioEffect effect ) override;
 
-	// virtual Handle                  CreateComponent( AudioComponentType type ) = 0;
-	// virtual void                    AddComponent( Handle stream, Handle component, AudioComponentType type ) = 0;
-	// virtual Handle                  GetComponent( Handle stream, AudioComponentType type ) = 0;
+	bool                          SetEffectData( Handle stream, EAudioEffectData sDataType, int data ) override;
+	bool                          SetEffectData( Handle stream, EAudioEffectData sDataType, float data ) override;
+	bool                          SetEffectData( Handle stream, EAudioEffectData sDataType, const glm::vec3& data ) override;
+
+	bool                          GetEffectData( Handle stream, EAudioEffectData sDataType, int& data ) override;
+	bool                          GetEffectData( Handle stream, EAudioEffectData sDataType, float& data ) override;
+	bool                          GetEffectData( Handle stream, EAudioEffectData sDataType, glm::vec3& data ) override;
 
 	// -------------------------------------------------------------------------------------
 	// Internal Functions
@@ -193,8 +340,7 @@ class AudioSystem : public IAudioSystem
 	/* Checks If This a Valid Audio Stream, if not, throw a warning and return nullptr. */
 	AudioStream*                  GetStream( Handle stream );
 
-	//virtual bool                    RegisterCodec( BaseCodec *codec ) override;
-	bool                          RegisterCodec( BaseCodec* codec );
+	bool                          RegisterCodec( IAudioCodec* codec );
 
 	bool                          UpdateStream( AudioStream* stream );
 	bool                          ReadAudio( AudioStream* stream );
@@ -208,9 +354,11 @@ class AudioSystem : public IAudioSystem
 	virtual bool                  Init() override;
 	virtual void                  Update( float frameTime ) override;
 
-	// --------------------------------------------------
-	// steam audio settings
+	// -------------------------------------------------------------------------------------
+	// Steam Audio Settings
+	// -------------------------------------------------------------------------------------
 
+	IPLDirectEffect               apDirectEffect   = nullptr;
 	IPLBinauralEffect             apBinauralEffect = nullptr;
 
 	IPLContext                    aCtx{ nullptr };
@@ -219,33 +367,35 @@ class AudioSystem : public IAudioSystem
 	//IPLhandle                       scene {nullptr};
 	//IPLhandle                       probeManager {nullptr};
 	//IPLhandle                       environment {nullptr};
-	IPLSimulationSettings         simulationSettings{};
+	IPLSimulationSettings         aSimulationSettings{};
 
 	//IPLhandle                       envRenderer = {};
 	//IPLhandle                       renderer = {};
 
 	// memory buffer for phonon rendering final mix
-	float*                        apMixBufferAudio = nullptr;
+	ChVector< float >             apMixBufferAudio;
 	// IPLAudioBuffer                  mixBufferContext;
 	IPLAudioBuffer                aMixBuffer;
-	std::vector< IPLAudioBuffer > unmixedBuffers;
+	std::vector< IPLAudioBuffer > aUnmixedBuffers;
 
-	// --------------------------------------------------
+	// -------------------------------------------------------------------------------------
 
-	std::vector< BaseCodec* >     aCodecs;
+	std::vector< IAudioCodec* >   aCodecs;
+	IAudioOccluder*               apOccluder = nullptr;
 
 	ResourceList< AudioStream* >  aStreams;         // all streams loaded into memory
 	std::vector< Handle >         aStreamsPlaying;  // streams currently playing audio for
 
+	ResourceList< AudioChannel* > aChannels;
+
 	SDL_AudioDeviceID             aOutputDeviceID;
 	SDL_AudioSpec                 aAudioSpec;
 
-	glm::vec3                     aListenerPos = { 0, 0, 0 };
-	glm::quat                     aListenerRot = { 0, 0, 0, 0 };
+	glm::vec3                     aListenerPos = {};
+	glm::vec3                     aListenerAng = {};
+	glm::quat                     aListenerRot = {};
+	glm::vec3                     aListenerVel = {};
+
 	bool                          aPaused      = false;
 	float                         aSpeed       = 1.f;
-
-	//AudioEffect3D*                  aEffect3D = new AudioEffect3D;
-
-	//std::vector< IAudioEffect* >    aEffects;
 };

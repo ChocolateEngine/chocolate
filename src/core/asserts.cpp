@@ -166,6 +166,26 @@ void HandleAssert( const char* file, u32 line, const char* cond, const char* msg
 }
 
 
+bool IfAssert( bool sResult, const char* file, unsigned int line, const char* cond, const char* title, const char* msg )
+{
+	if ( !sResult )
+		return false;
+
+    HandleAssert( file, line, cond, title, msg );
+	return sResult;
+}
+
+
+bool IfAssert( bool sResult, const char* file, unsigned int line, const char* cond, const char* msg )
+{
+	if ( !sResult )
+		return false;
+
+	HandleAssert( file, line, cond, msg );
+	return sResult;
+}
+
+
 #else
 
 void Assert_Init()
@@ -178,6 +198,22 @@ void HandleAssert( const char* file, u32 line, const char* cond, const char* tit
 
 void HandleAssert( const char* file, u32 line, const char* cond, const char* msg )
 {
+}
+
+bool IfAssert( bool sResult, const char* file, unsigned int line, const char* cond, const char* title, const char* msg )
+{
+	if ( sResult )
+		Log_Error( msg );
+
+	return sResult;
+}
+
+bool IfAssert( bool sResult, const char* file, unsigned int line, const char* cond, const char* msg )
+{
+	if ( sResult )
+		Log_Error( msg );
+
+	return sResult;
 }
 
 #endif

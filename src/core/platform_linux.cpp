@@ -12,7 +12,7 @@ void sys_init()
 {
 }
 
-Module          sys_load_library( const char* path )
+Module sys_load_library( const char* path )
 {
     auto pHandle = dlopen( path, RTLD_LAZY );
     if ( !pHandle )
@@ -23,7 +23,7 @@ Module          sys_load_library( const char* path )
     return ( Module )pHandle;
 }
 
-void            sys_close_library( Module mod )
+void sys_close_library( Module mod )
 {
     if ( !mod )
         return;
@@ -31,7 +31,7 @@ void            sys_close_library( Module mod )
     dlclose( mod );
 }
 
-void*           sys_load_func( Module mod, const char* path )
+void* sys_load_func( Module mod, const char* path )
 {
     auto pFunc = dlsym( mod, path );
     if ( !pFunc )
@@ -42,14 +42,14 @@ void*           sys_load_func( Module mod, const char* path )
     return pFunc;
 }
 
-const char*     sys_get_error()
+const char* sys_get_error()
 {
     return dlerror();
 }
 
-void            sys_print_last_error( const char* userErrorMessage )
+void sys_print_last_error( const char* userErrorMessage )
 {
-    fprintf( stderr, "Error: %s\n%s\n", userErrorMessage, sys_get_error(  ) );
+    fprintf( stderr, "Error: %s\n%s\n", userErrorMessage, sys_get_error() );
 }
 
 
@@ -75,6 +75,13 @@ void sys_debug_break()
 
 void sys_shutdown()
 {
+}
+
+
+int Sys_GetCoreCount()
+{
+    int numCPU = sysconf(_SC_NPROCESSORS_ONLN);
+	return numCPU;
 }
 
 

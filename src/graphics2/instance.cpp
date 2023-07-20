@@ -117,8 +117,8 @@ VKAPI_ATTR VkBool32 VKAPI_CALL VK_DebugCallback( VkDebugUtilsMessageSeverityFlag
 	const Log* log = Log_GetLastLog();
 
 	// blech
-	if ( log && log->aChannel != gVulkanChannel )
-		Log_Ex( gVulkanChannel, LogType::Raw, "\n" );
+	if ( log && log->aChannel != gLC_Vulkan )
+		Log_Ex( gLC_Vulkan, LogType::Raw, "\n" );
 
 	std::string formatted;
 
@@ -184,17 +184,17 @@ VKAPI_ATTR VkBool32 VKAPI_CALL VK_DebugCallback( VkDebugUtilsMessageSeverityFlag
 	if ( messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT )
 	{
 		if ( vk_verbose )
-			Log_Dev( gVulkanChannel, 1, formatted.c_str() );
+			Log_Dev( gLC_Vulkan, 1, formatted.c_str() );
 	}
 
 	else if ( messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT )
-		Log_Error( gVulkanChannel, formatted.c_str() );
+		Log_Error( gLC_Vulkan, formatted.c_str() );
 
 	else if ( messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT )
-		Log_Warn( gVulkanChannel,  formatted.c_str() );
+		Log_Warn( gLC_Vulkan, formatted.c_str() );
 
 	else
-		Log_Msg( gVulkanChannel, formatted.c_str() );
+		Log_Msg( gLC_Vulkan, formatted.c_str() );
 
 	return VK_FALSE;
 }
@@ -342,10 +342,10 @@ bool VK_CreateInstance()
 	}
 
 	VkApplicationInfo appInfo{ VK_STRUCTURE_TYPE_APPLICATION_INFO };
-	appInfo.pApplicationName   = "ProtoViewer";
+	appInfo.pApplicationName   = "Chocolate Engine";
 	appInfo.applicationVersion = VK_MAKE_VERSION( 1, 0, 0 );
-	appInfo.pEngineName        = "ProtoViewer";
-	appInfo.engineVersion      = VK_MAKE_VERSION( 1, 0, 0 );
+	appInfo.pEngineName        = "Chocolate Engine Renderer";
+	appInfo.engineVersion      = VK_MAKE_VERSION( 1, IRENDER_VER, 0 );
 	appInfo.apiVersion         = VK_HEADER_VERSION_COMPLETE;
 
 	VkInstanceCreateInfo createInfo{ VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO };
@@ -747,10 +747,10 @@ void VK_CreateDevice()
 	pfnCmdInsertDebugUtilsLabel   = (PFN_vkCmdInsertDebugUtilsLabelEXT)vkGetInstanceProcAddr( VK_GetInstance(), "vkCmdInsertDebugUtilsLabelEXT" );
 
 	if ( pfnSetDebugUtilsObjectName )
-		Log_Dev( gVulkanChannel, 1, "Loaded PFN_vkSetDebugUtilsObjectNameEXT\n" );
+		Log_Dev( gLC_Vulkan, 1, "Loaded PFN_vkSetDebugUtilsObjectNameEXT\n" );
 
 	if ( pfnSetDebugUtilsObjectTag )
-		Log_Dev( gVulkanChannel, 1, "Loaded PFN_vkSetDebugUtilsObjectTagEXT\n" );
+		Log_Dev( gLC_Vulkan, 1, "Loaded PFN_vkSetDebugUtilsObjectTagEXT\n" );
 	
 #if NV_CHECKPOINTS
 	pfnCmdSetCheckpointNV       = (PFN_vkCmdSetCheckpointNV)vkGetInstanceProcAddr( VK_GetInstance(), "vkCmdSetCheckpointNV" );
@@ -816,8 +816,204 @@ VkSampleCountFlagBits VK_FindMaxMSAASamples()
 }
 
 
+const char* VK_SamplesStr( VkSampleCountFlags counts )
+{
+	if ( counts & VK_SAMPLE_COUNT_64_BIT ) return "VK_SAMPLE_COUNT_64_BIT";
+	if ( counts & VK_SAMPLE_COUNT_32_BIT ) return "VK_SAMPLE_COUNT_32_BIT";
+	if ( counts & VK_SAMPLE_COUNT_16_BIT ) return "VK_SAMPLE_COUNT_16_BIT";
+	if ( counts & VK_SAMPLE_COUNT_8_BIT ) return "VK_SAMPLE_COUNT_8_BIT";
+	if ( counts & VK_SAMPLE_COUNT_4_BIT ) return "VK_SAMPLE_COUNT_4_BIT";
+	if ( counts & VK_SAMPLE_COUNT_2_BIT ) return "VK_SAMPLE_COUNT_2_BIT";
+
+	return "VK_SAMPLE_COUNT_1_BIT";
+}
+
+
 const VkPhysicalDeviceProperties& VK_GetPhysicalDeviceProperties()
 {
 	return gPhysicalDeviceProperties;
+}
+
+
+CONCMD( vk_device_info )
+{
+	if ( !gDevice )
+	{
+		Log_Error( gLC_Vulkan, "vk_device_info: No Device Loaded yet!\n" );
+		return;
+	}
+
+	LogGroup group = Log_GroupBegin( gLC_Vulkan );
+
+	Log_GroupF( group, "Device Name:    %s\n", gPhysicalDeviceProperties.deviceName );
+
+	// deviceType
+	switch ( gPhysicalDeviceProperties.deviceType )
+	{
+		case VK_PHYSICAL_DEVICE_TYPE_OTHER:
+			Log_Group( group, "Device Type:    Other\n" );
+			break;
+
+		case VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU:
+			Log_Group( group, "Device Type:    Integrated GPU\n" );
+			break;
+
+		case VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU:
+			Log_Group( group, "Device Type:    Discrete GPU\n" );
+			break;
+
+		case VK_PHYSICAL_DEVICE_TYPE_VIRTUAL_GPU:
+			Log_Group( group, "Device Type:    Virtual GPU\n" );
+			break;
+
+		case VK_PHYSICAL_DEVICE_TYPE_CPU:
+			Log_Group( group, "Device Type:    CPU\n" );
+			break;
+	}
+
+	Log_GroupF( group, "API Version:    %zd\n", gPhysicalDeviceProperties.apiVersion );
+	Log_GroupF( group, "Driver Version: %zd\n", gPhysicalDeviceProperties.driverVersion );
+	Log_GroupF( group, "Device ID:      %zd\n", gPhysicalDeviceProperties.deviceID );
+	Log_GroupF( group, "Vendor ID:      %zd\n", gPhysicalDeviceProperties.vendorID );
+
+	Log_GroupEnd( group );
+}
+
+
+// hefty function
+CONCMD_VA( vk_dump_limits, "Dump Device Limits and current usage of those limits if applicable\n" )
+{
+	if ( !gDevice )
+	{
+		Log_Error( gLC_Vulkan, "vk_dump_limits: No Device Loaded yet!\n" );
+		return;
+	}
+
+	LogGroup group = Log_GroupBegin( gLC_Vulkan );
+
+	VkPhysicalDeviceLimits& limits = gPhysicalDeviceProperties.limits;
+
+	// general min/max values
+	Log_GroupF( group, "maxImageDimension1D:             %zd\n", limits.maxImageDimension1D );
+	Log_GroupF( group, "maxImageDimension2D:             %zd\n", limits.maxImageDimension2D );
+	Log_GroupF( group, "maxImageDimension3D:             %zd\n", limits.maxImageDimension3D );
+	Log_GroupF( group, "maxImageDimensionCube:           %zd\n", limits.maxImageDimensionCube );
+	Log_GroupF( group, "maxImageArrayLayers:             %zd\n", limits.maxImageArrayLayers );
+	Log_GroupF( group, "maxTexelBufferElements:          %zd\n", limits.maxTexelBufferElements );
+	Log_GroupF( group, "maxUniformBufferRange:           %zd\n", limits.maxUniformBufferRange );
+	Log_GroupF( group, "maxStorageBufferRange:           %zd\n", limits.maxStorageBufferRange );
+	Log_GroupF( group, "maxPushConstantsSize:            %zd\n", limits.maxPushConstantsSize );  // TODO: VULKAN_TRACKING
+	Log_GroupF( group, "maxMemoryAllocationCount:        %zd\n", limits.maxMemoryAllocationCount );
+	Log_GroupF( group, "maxSamplerAllocationCount:       %zd\n", limits.maxSamplerAllocationCount );  // TODO: VULKAN_TRACKING
+	Log_GroupF( group, "maxColorAttachments:             %zd\n", limits.maxColorAttachments );
+	Log_GroupF( group, "maxClipDistances:                %zd\n", limits.maxClipDistances );
+	Log_GroupF( group, "maxCullDistances:                %zd\n", limits.maxCullDistances );
+	Log_GroupF( group, "maxCombinedClipAndCullDistances: %zd\n\n", limits.maxCombinedClipAndCullDistances );
+
+	Log_GroupF( group, "maxBoundDescriptorSets:                %zd\n", limits.maxBoundDescriptorSets );
+	Log_GroupF( group, "maxPerStageDescriptorSamplers:         %zd\n", limits.maxPerStageDescriptorSamplers );
+	Log_GroupF( group, "maxPerStageDescriptorUniformBuffers:   %zd\n", limits.maxPerStageDescriptorUniformBuffers );
+	Log_GroupF( group, "maxPerStageDescriptorStorageBuffers:   %zd\n", limits.maxPerStageDescriptorStorageBuffers );
+	Log_GroupF( group, "maxPerStageDescriptorSampledImages:    %zd\n", limits.maxPerStageDescriptorSampledImages );
+	Log_GroupF( group, "maxPerStageDescriptorStorageImages:    %zd\n", limits.maxPerStageDescriptorStorageImages );
+	Log_GroupF( group, "maxPerStageDescriptorInputAttachments: %zd\n", limits.maxPerStageDescriptorInputAttachments );
+	Log_GroupF( group, "maxPerStageResources:                  %zd\n\n", limits.maxPerStageResources );
+
+	Log_GroupF( group, "maxDescriptorSetSamplers:              %zd\n", limits.maxDescriptorSetSamplers );
+	Log_GroupF( group, "maxDescriptorSetUniformBuffers:        %zd\n", limits.maxDescriptorSetUniformBuffers );
+	Log_GroupF( group, "maxDescriptorSetUniformBuffersDynamic: %zd\n", limits.maxDescriptorSetUniformBuffersDynamic );
+	Log_GroupF( group, "maxDescriptorSetStorageBuffers:        %zd\n", limits.maxDescriptorSetStorageBuffers );
+	Log_GroupF( group, "maxDescriptorSetStorageBuffersDynamic: %zd\n", limits.maxDescriptorSetStorageBuffersDynamic );
+	Log_GroupF( group, "maxDescriptorSetSampledImages:         %zd\n", limits.maxDescriptorSetSampledImages );
+	Log_GroupF( group, "maxDescriptorSetStorageImages:         %zd\n", limits.maxDescriptorSetStorageImages );
+	Log_GroupF( group, "maxDescriptorSetInputAttachments:      %zd\n\n", limits.maxDescriptorSetInputAttachments );
+
+	Log_GroupF( group, "maxVertexInputAttributes:      %zd\n", limits.maxVertexInputAttributes );
+	Log_GroupF( group, "maxVertexInputBindings:        %zd\n", limits.maxVertexInputBindings );
+	Log_GroupF( group, "maxVertexInputAttributeOffset: %zd\n", limits.maxVertexInputAttributeOffset );
+	Log_GroupF( group, "maxVertexInputBindingStride:   %zd\n", limits.maxVertexInputBindingStride );
+	Log_GroupF( group, "maxVertexOutputComponents:     %zd\n\n", limits.maxVertexOutputComponents );
+
+	Log_GroupF( group, "maxTessellationGenerationLevel:                  %zd\n", limits.maxTessellationGenerationLevel );
+	Log_GroupF( group, "maxTessellationPatchSize:                        %zd\n", limits.maxTessellationPatchSize );
+	Log_GroupF( group, "maxTessellationControlPerVertexInputComponents:  %zd\n", limits.maxTessellationControlPerVertexInputComponents );
+	Log_GroupF( group, "maxTessellationControlPerVertexOutputComponents: %zd\n", limits.maxTessellationControlPerVertexOutputComponents );
+	Log_GroupF( group, "maxTessellationControlPerPatchOutputComponents:  %zd\n", limits.maxTessellationControlPerPatchOutputComponents );
+	Log_GroupF( group, "maxTessellationControlTotalOutputComponents:     %zd\n", limits.maxTessellationControlTotalOutputComponents );
+	Log_GroupF( group, "maxTessellationEvaluationInputComponents:        %zd\n", limits.maxTessellationEvaluationInputComponents );
+	Log_GroupF( group, "maxTessellationEvaluationOutputComponents:       %zd\n\n", limits.maxTessellationEvaluationOutputComponents );
+
+	Log_GroupF( group, "maxGeometryShaderInvocations:     %zd\n", limits.maxGeometryShaderInvocations );
+	Log_GroupF( group, "maxGeometryInputComponents:       %zd\n", limits.maxGeometryInputComponents );
+	Log_GroupF( group, "maxGeometryOutputComponents:      %zd\n", limits.maxGeometryOutputComponents );
+	Log_GroupF( group, "maxGeometryOutputVertices:        %zd\n", limits.maxGeometryOutputVertices );
+	Log_GroupF( group, "maxGeometryTotalOutputComponents: %zd\n\n", limits.maxGeometryTotalOutputComponents );
+
+	Log_GroupF( group, "maxFragmentInputComponents:         %zd\n", limits.maxFragmentInputComponents );
+	Log_GroupF( group, "maxFragmentOutputAttachments:       %zd\n", limits.maxFragmentOutputAttachments );
+	Log_GroupF( group, "maxFragmentDualSrcAttachments:      %zd\n", limits.maxFragmentDualSrcAttachments );
+	Log_GroupF( group, "maxFragmentCombinedOutputResources: %zd\n\n", limits.maxFragmentCombinedOutputResources );
+
+	Log_GroupF( group, "maxComputeSharedMemorySize:     %zd\n", limits.maxComputeSharedMemorySize );
+	Log_GroupF( group, "maxComputeWorkGroupCount:       %zd, %zd, %zd\n", limits.maxComputeWorkGroupCount[ 0 ], limits.maxComputeWorkGroupCount[ 1 ], limits.maxComputeWorkGroupCount[ 2 ] );
+	Log_GroupF( group, "maxComputeWorkGroupInvocations: %zd\n", limits.maxComputeWorkGroupInvocations );
+	Log_GroupF( group, "maxComputeWorkGroupSize:        %zd, %zd, %zd\n\n", limits.maxComputeWorkGroupSize[ 0 ], limits.maxComputeWorkGroupSize[ 1 ], limits.maxComputeWorkGroupSize[ 2 ] );
+
+	Log_GroupF( group, "subPixelPrecisionBits:    %zd\n", limits.subPixelPrecisionBits );
+	Log_GroupF( group, "subTexelPrecisionBits:    %zd\n", limits.subTexelPrecisionBits );
+	Log_GroupF( group, "mipmapPrecisionBits:      %zd\n", limits.mipmapPrecisionBits );
+	Log_GroupF( group, "maxDrawIndexedIndexValue: %zd\n", limits.maxDrawIndexedIndexValue );  // TODO: VULKAN_TRACKING
+	Log_GroupF( group, "maxDrawIndirectCount:     %zd\n", limits.maxDrawIndirectCount );      // TODO: VULKAN_TRACKING
+	Log_GroupF( group, "maxSamplerLodBias:        %.6f\n", limits.maxSamplerLodBias );
+	Log_GroupF( group, "maxSamplerAnisotropy:     %.6f\n\n", limits.maxSamplerAnisotropy );
+
+	Log_GroupF( group, "maxViewports:          %zd\n", limits.maxViewports );
+	Log_GroupF( group, "maxViewportDimensions: %zd, %zd\n", limits.maxViewportDimensions[ 0 ], limits.maxViewportDimensions[ 1 ] );
+	Log_GroupF( group, "viewportBoundsRange:   %.6f, %.6f\n", limits.viewportBoundsRange[ 0 ], limits.viewportBoundsRange[ 1 ] );
+	Log_GroupF( group, "viewportSubPixelBits:  %zd\n\n", limits.viewportSubPixelBits );
+
+	Log_GroupF( group, "minMemoryMapAlignment:           %zd\n", limits.minMemoryMapAlignment );
+	Log_GroupF( group, "minTexelBufferOffsetAlignment:   %zd\n", limits.minTexelBufferOffsetAlignment );
+	Log_GroupF( group, "minUniformBufferOffsetAlignment: %zd\n", limits.minUniformBufferOffsetAlignment );
+	Log_GroupF( group, "minStorageBufferOffsetAlignment: %zd\n", limits.minStorageBufferOffsetAlignment );
+	Log_GroupF( group, "minTexelOffset:                  %zd\n", limits.minTexelOffset );
+	Log_GroupF( group, "maxTexelOffset:                  %zd\n", limits.maxTexelOffset );
+	Log_GroupF( group, "minTexelGatherOffset:            %zd\n", limits.minTexelGatherOffset );
+	Log_GroupF( group, "maxTexelGatherOffset:            %zd\n", limits.maxTexelGatherOffset );
+	Log_GroupF( group, "minInterpolationOffset:          %.6f\n", limits.minInterpolationOffset );
+	Log_GroupF( group, "maxInterpolationOffset:          %.6f\n", limits.maxInterpolationOffset );
+	Log_GroupF( group, "subPixelInterpolationOffsetBits: %zd\n", limits.subPixelInterpolationOffsetBits );
+	Log_GroupF( group, "maxFramebufferWidth:             %zd\n", limits.maxFramebufferWidth );
+	Log_GroupF( group, "maxFramebufferHeight:            %zd\n", limits.maxFramebufferHeight );
+	Log_GroupF( group, "maxFramebufferLayers:            %zd\n\n", limits.maxFramebufferLayers );
+
+	// FLAGS
+	Log_GroupF( group, "framebufferColorSampleCounts:         %s\n", VK_SamplesStr( limits.framebufferColorSampleCounts ) );
+	Log_GroupF( group, "framebufferDepthSampleCounts:         %s\n", VK_SamplesStr( limits.framebufferDepthSampleCounts ) );
+	Log_GroupF( group, "framebufferStencilSampleCounts:       %s\n", VK_SamplesStr( limits.framebufferStencilSampleCounts ) );
+	Log_GroupF( group, "framebufferNoAttachmentsSampleCounts: %s\n", VK_SamplesStr( limits.framebufferNoAttachmentsSampleCounts ) );
+	Log_GroupF( group, "sampledImageColorSampleCounts:        %s\n", VK_SamplesStr( limits.sampledImageColorSampleCounts ) );
+	Log_GroupF( group, "sampledImageIntegerSampleCounts:      %s\n", VK_SamplesStr( limits.sampledImageIntegerSampleCounts ) );
+	Log_GroupF( group, "sampledImageDepthSampleCounts:        %s\n", VK_SamplesStr( limits.sampledImageDepthSampleCounts ) );
+	Log_GroupF( group, "sampledImageStencilSampleCounts:      %s\n", VK_SamplesStr( limits.sampledImageStencilSampleCounts ) );
+	Log_GroupF( group, "storageImageSampleCounts:             %s\n\n", VK_SamplesStr( limits.storageImageSampleCounts ) );
+
+	Log_GroupF( group, "maxSampleMaskWords:                 %zd\n", limits.maxSampleMaskWords );
+	Log_GroupF( group, "timestampComputeAndGraphics:        %zd\n", limits.timestampComputeAndGraphics );
+	Log_GroupF( group, "timestampPeriod:                    %.6f\n", limits.timestampPeriod );
+	Log_GroupF( group, "discreteQueuePriorities:            %zd\n", limits.discreteQueuePriorities );
+	Log_GroupF( group, "pointSizeRange:                     %.6f, %.6f\n", limits.pointSizeRange[ 0 ], limits.pointSizeRange[ 1 ] );
+	Log_GroupF( group, "lineWidthRange:                     %.6f, %.6f\n", limits.lineWidthRange[ 0 ], limits.lineWidthRange[ 1 ] );
+	Log_GroupF( group, "pointSizeGranularity:               %.6\n", limits.pointSizeGranularity );
+	Log_GroupF( group, "lineWidthGranularity:               %.6\n", limits.lineWidthGranularity );
+	Log_GroupF( group, "strictLines:                        %s\n", limits.strictLines ? "TRUE" : "FALSE" );
+	Log_GroupF( group, "standardSampleLocations:            %s\n", limits.standardSampleLocations ? "TRUE" : "FALSE" );
+	Log_GroupF( group, "optimalBufferCopyOffsetAlignment:   %zd\n", limits.optimalBufferCopyOffsetAlignment );
+	Log_GroupF( group, "optimalBufferCopyRowPitchAlignment: %zd\n", limits.optimalBufferCopyRowPitchAlignment );
+	Log_GroupF( group, "nonCoherentAtomSize:                %zd\n", limits.nonCoherentAtomSize );
+	Log_GroupF( group, "bufferImageGranularity:             %zd\n", limits.bufferImageGranularity );
+	Log_GroupF( group, "sparseAddressSpaceSize:             %zd\n", limits.sparseAddressSpaceSize );
+
+	Log_GroupEnd( group );
 }
 

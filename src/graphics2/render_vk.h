@@ -18,8 +18,8 @@
 
 
 LOG_CHANNEL2( Render );
-LOG_CHANNEL( Vulkan );
-LOG_CHANNEL( Validation );
+LOG_CHANNEL2( Vulkan );
+LOG_CHANNEL2( Validation );
 
 
 extern int             gWidth;
