@@ -1121,6 +1121,9 @@ public:
 		if ( sBufferFlags & EBufferFlags_Uniform )
 			flagBits |= VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
 
+		if ( sBufferFlags & EBufferFlags_Storage )
+			flagBits |= VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
+
 		if ( sBufferFlags & EBufferFlags_Index )
 			flagBits |= VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
 
@@ -1137,6 +1140,18 @@ public:
 
 		if ( sBufferMem & EBufferMemory_Host )
 			memBits |= VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+
+		if ( flagBits == 0 )
+		{
+			Log_ErrorF( gLC_Render, "Tried to create buffer \"%s\" without any flags", spName ? spName : "" );
+			return CH_INVALID_HANDLE;
+		}
+
+		if ( memBits == 0 )
+		{
+			Log_ErrorF( gLC_Render, "Tried to create buffer \"%s\" without any memory bits", spName ? spName : "" );
+			return CH_INVALID_HANDLE;
+		}
 
 		VK_CreateBuffer( spName, buffer, flagBits, memBits );
 

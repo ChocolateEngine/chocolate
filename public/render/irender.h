@@ -227,9 +227,10 @@ enum : EBufferFlags
 	EBufferFlags_TransferSrc = ( 1 << 0 ),
 	EBufferFlags_TransferDst = ( 1 << 1 ),
 	EBufferFlags_Uniform     = ( 1 << 2 ),
-	EBufferFlags_Index       = ( 1 << 3 ),
-	EBufferFlags_Vertex      = ( 1 << 4 ),
-	EBufferFlags_Indirect    = ( 1 << 5 ),
+	EBufferFlags_Storage     = ( 1 << 3 ),
+	EBufferFlags_Index       = ( 1 << 4 ),
+	EBufferFlags_Vertex      = ( 1 << 5 ),
+	EBufferFlags_Indirect    = ( 1 << 6 ),
 };
 
 
@@ -791,5 +792,5 @@ class IRender : public ISystem
 
 
 #define IRENDER_NAME "Render"
-#define IRENDER_VER 8
+#define IRENDER_VER 9
 
