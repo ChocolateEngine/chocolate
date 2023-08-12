@@ -232,7 +232,7 @@ std::string FileSys_FindFileF( const char* spFmt, ... )
 }
 
 
-std::string FileSys_FindFile( const std::string& file, bool sBinFile )
+std::string FileSys_FindBinFile( const std::string& file )
 {
     PROF_SCOPE();
 
@@ -244,35 +244,54 @@ std::string FileSys_FindFile( const std::string& file, bool sBinFile )
     if ( file == "" )
         return file;
 
-    if ( !sBinFile )
-	{
-		for ( auto searchPath : gSearchPaths )
-		{
-			std::string fullPath = FileSys_CleanPath( searchPath + PATH_SEP + file );
+    for ( auto searchPath : gBinPaths )
+    {
+		std::string fullPath = FileSys_CleanPath( searchPath + PATH_SEP + file );
 
-			// does item exist?
-			if ( exists( fullPath ) )
-			{
-				return fullPath;
-			}
-		}
-    }
-	else
-	{
-        for ( auto searchPath : gBinPaths )
+        // does item exist?
+        if ( exists( fullPath ) )
         {
-		    std::string fullPath = FileSys_CleanPath( searchPath + PATH_SEP + file );
-
-            // does item exist?
-            if ( exists( fullPath ) )
-            {
-                return fullPath;
-            }
-	    }
-    }
+            return fullPath;
+        }
+	}
 
     // file not found
     return "";
+}
+
+
+std::string FileSys_FindFile( const std::string& file )
+{
+	// if it's an absolute path already,
+	// don't bother to look in the search paths for it, and make sure it exists
+	if ( FileSys_IsAbsolute( file.data() ) )
+		return exists( file ) ? file : "";
+
+	if ( file == "" )
+		return file;
+
+	for ( auto searchPath : gSearchPaths )
+	{
+		std::string fullPath = FileSys_CleanPath( searchPath + PATH_SEP + file );
+
+		// does item exist?
+		if ( exists( fullPath ) )
+		{
+			return fullPath;
+		}
+	}
+
+	// file not found
+	return "";
+}
+
+
+std::string FileSys_FindFile( const std::string& file, bool sBinFile )
+{
+	if ( sBinFile )
+	    return FileSys_FindBinFile( file );
+	else
+	    return FileSys_FindFile( file );
 }
 
 

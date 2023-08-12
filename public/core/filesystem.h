@@ -63,7 +63,13 @@ CORE_API void                              FileSys_InsertSearchPath( size_t inde
 CORE_API std::string FileSys_FindFileF( const char* spFmt, ... );
 
 // Find the path to a file within the search paths.
-CORE_API std::string FileSys_FindFile( const std::string& file, bool sBinFile = false );
+CORE_API std::string FileSys_FindBinFile( const std::string& file );
+
+// Find the path to a file within the search paths.
+CORE_API std::string FileSys_FindFile( const std::string& file );
+
+// Find the path to a file within the search paths.
+CORE_API std::string FileSys_FindFile( const std::string& file, bool sBinFile );
 
 // Find the path to a directory within the search paths.  */
 CORE_API std::string FileSys_FindDir( const std::string& dir );
@@ -119,16 +125,18 @@ CORE_API std::string FileSys_CleanPath( std::string_view path );
 // ================================================================================
 // Directory Reading
 
-// Read the first file in a Directory  */
+// Read the first file in a Directory
 CORE_API DirHandle   FileSys_ReadFirst( const std::string& path, std::string& file, ReadDirFlags flags = ReadDir_None );
 
-// Get the next file in the Directory */
+// Get the next file in the Directory
 CORE_API bool        FileSys_ReadNext( DirHandle dirh, std::string& file );
 
-// Close a Directory  */
+// Close a Directory
 CORE_API bool        FileSys_ReadClose( DirHandle dirh );
 
-// Scan an entire Directory  */
+// Scan an entire Directory
+// TODO: add callback function version to call as were iterating through the directory?
+// or would it just be faster for the disk to blast through it all like we do right now?
 CORE_API std::vector< std::string > FileSys_ScanDir( const std::string& path, ReadDirFlags flags = ReadDir_None );
 
 //DirHandle                               FileSys_ReadFirst( const std::string &path, const std::string& wildcard, std::string &file );
