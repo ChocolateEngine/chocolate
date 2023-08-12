@@ -105,7 +105,7 @@ static EJsonError Json_ParseQuote( const char*& str, char endChar, char*& output
 		if ( *str == '\n' || *str == '\r' )
 			return EJsonError_NewLineInQuote;
 
-		if ( i == STRING_MALLOC_SIZE )
+		if ( i % STRING_MALLOC_SIZE == 0 )
 		{
 			auto* tmp = (char*)realloc( output, STRING_MALLOC_SIZE * ( j + 1 ) );
 			if ( tmp == nullptr )
@@ -125,11 +125,11 @@ static EJsonError Json_ParseQuote( const char*& str, char endChar, char*& output
 			str++;
 
 			if ( *str == 'n' )
-				output[i] = '\n';
+				output[ i ] = '\n';
 			else if ( *str == 't' )
-				output[i] = '\t';
+				output[ i ] = '\t';
 			else
-				output[i] = *str;
+				output[ i ] = *str;
 		}
 		else
 		{
