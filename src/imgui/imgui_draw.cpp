@@ -3545,11 +3545,88 @@ void ImFont::RenderChar(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col
     draw_list->PrimRectUV(ImVec2(pos.x + glyph->X0 * scale, pos.y + glyph->Y0 * scale), ImVec2(pos.x + glyph->X1 * scale, pos.y + glyph->Y1 * scale), ImVec2(glyph->U0, glyph->V0), ImVec2(glyph->U1, glyph->V1), col);
 }
 
+// IMGUI COLOR CODES
+static const int kMaxChar = 262144;
+static char      char_buf[ kMaxChar ];
+static ImU32     col_buf[ kMaxChar ];
+
+bool ParseColor( const char* s, ImU32* col )
+{
+	*col = 0;
+	// if ( s[ 0 ] != '\033' || s[ 1 ] != '#' )
+	if ( s[ 0 ] != '\033' )
+	{
+		return false;
+	}
+	else
+	{
+		int i = 0;
+		for (; i < 8; ++i )
+		{
+			*col *= 16;
+			char c = s[ i + 1 ];
+			if ( c == 'm' )  // end character
+			{
+			    break;
+			}
+			else if ( c >= '0' && c <= '9' )
+			{
+				*col += c - '0';
+			}
+			else if ( c >= 'A' && c <= 'F' )
+			{
+				*col += c - 'A' + 10;
+			}
+			else if ( c >= 'a' && c <= 'f' )
+			{
+				*col += c - 'a' + 10;
+			}
+			else
+			{
+				return false;
+			}
+		}
+		ImU32 flip_col = 0;
+		for ( int i = 0; i < 4; ++i )
+		{
+			flip_col <<= 8;
+			flip_col += ( *col >> 8 * i ) & 0x000000FF;
+		}
+		*col = flip_col;
+		return true;
+	}
+}
+
 // Note: as with every ImDrawList drawing function, this expects that the font atlas texture is bound.
 void ImFont::RenderText(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col, const ImVec4& clip_rect, const char* text_begin, const char* text_end, float wrap_width, bool cpu_fine_clip) const
 {
     if (!text_end)
         text_end = text_begin + strlen(text_begin); // ImGui:: functions generally already provides a valid text_end, so this is merely to handle direct calls.
+
+    // IMGUI COLOR CODES
+    {
+		int         index = 0;
+		int         chain = 0;
+		const char* s     = text_begin;
+		ImU32       temp_col;
+		while ( s < text_end )
+		{
+			if ( s < text_end - 10 && ParseColor( s, &temp_col ) )
+			{
+				col = temp_col;
+				s += 10;
+			}
+			else
+			{
+				char_buf[ index ] = *s;
+				col_buf[ index ]  = col;
+				++index;
+				++s;
+			}
+		}
+		text_begin = &char_buf[ 0 ];
+		text_end   = &char_buf[ index ];
+	}
 
     // Align to be pixel perfect
     pos.x = IM_FLOOR(pos.x);

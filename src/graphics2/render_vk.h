@@ -17,6 +17,9 @@
 #endif
 
 
+#include <unordered_set>
+
+
 LOG_CHANNEL2( Render );
 LOG_CHANNEL2( Vulkan );
 LOG_CHANNEL2( Validation );
@@ -131,11 +134,11 @@ struct FramebufferVK
 
 struct RenderTarget
 {
-	std::vector< TextureVK* > aColors;
+	std::vector< ChHandle_t >    aColors;
 	// std::vector< TextureVK* > aInput;
-	std::vector< TextureVK* > aResolve;
+	std::vector< ChHandle_t >    aResolve;
 	// std::vector< TextureVK* > aPreserve;
-	TextureVK*                apDepth = 0;
+	ChHandle_t                   aDepth = 0;
 
 	// std::vector< VkImageView >   aColors;
 	// std::vector< VkImageView >   aResolve;
@@ -145,11 +148,22 @@ struct RenderTarget
 };
 
 
+// TODO: migrate all the global data here
+struct GraphicsAPI_t
+{
+	std::unordered_set< ChHandle_t > aSampledTextures;
+};
+
+
+extern GraphicsAPI_t                  gGraphicsAPIData;
+
+
 // --------------------------------------------------------------------------------------
 // General
 
 const char*                           VKString( VkResult sResult );
 
+void                                  VK_CheckResultF( VkResult sResult, char const* spArgs, ... );
 void                                  VK_CheckResult( VkResult sResult, char const* spMsg );
 void                                  VK_CheckResult( VkResult sResult );
 
@@ -211,6 +225,7 @@ VkPresentModeKHR                      VK_ChooseSwapPresentMode();
 VkExtent2D                            VK_ChooseSwapExtent();
 
 const VkPhysicalDeviceProperties&     VK_GetPhysicalDeviceProperties();
+const VkPhysicalDeviceLimits&         VK_GetPhysicalDeviceLimits();
 
 // --------------------------------------------------------------------------------------
 // Swapchain
@@ -244,27 +259,30 @@ VkDescriptorPool                      VK_GetDescPool();
 Handle                                VK_GetSamplerLayoutHandle();
 const std::vector< Handle >&          VK_GetSamplerSetsHandles();
 
-VkDescriptorSetLayout                 VK_GetImageLayout();
-VkDescriptorSetLayout                 VK_GetUniformBufferLayout();
-VkDescriptorSetLayout                 VK_GetImageStorageLayout();
+// VkDescriptorSetLayout                 VK_GetImageLayout();
+// VkDescriptorSetLayout                 VK_GetImageStorageLayout();
 
-const std::vector< VkDescriptorSet >& VK_GetImageSets();
-const std::vector< VkDescriptorSet >& VK_GetImageStorage();
-VkDescriptorSet                       VK_GetImageSet( size_t sIndex );
+// const std::vector< VkDescriptorSet >& VK_GetImageSets();
+// const std::vector< VkDescriptorSet >& VK_GetImageStorage();
+// VkDescriptorSet                       VK_GetImageSet( size_t sIndex );
 void                                  VK_UpdateImageSets();
 void                                  VK_CalcTextureIndices();
+void                                  VK_SetImageSets( ChHandle_t* spDescSets, int sCount, u32 sBinding );
 
-Handle                                VK_CreateVariableDescLayout( const CreateVariableDescLayout_t& srCreate );
+Handle                                VK_CreateDescLayout( const CreateDescLayout_t& srCreate );
+void                                  VK_UpdateDescSets( WriteDescSet_t* spUpdate, u32 sCount );
+
+bool                                  VK_AllocateDescLayout( const AllocDescLayout_t& srCreate, Handle* handles );
 bool                                  VK_AllocateVariableDescLayout( const AllocVariableDescLayout_t& srCreate, Handle* handles );
-void                                  VK_UpdateVariableDescSet( const UpdateVariableDescSet_t& srUpdate );
+
 
 VkDescriptorSetLayout                 VK_GetDescLayout( Handle sHandle );
 VkDescriptorSet                       VK_GetDescSet( Handle sHandle );
 
-void                                  VK_AddUniformBuffer( BufferVK* spTexture );
-void                                  VK_WriteUniformBuffer( BufferVK* spTexture );
-void                                  VK_RemoveUniformBuffer( BufferVK* spTexture );
-void                                  VK_UpdateUniformBuffers();
+// void                                  VK_AddUniformBuffer( BufferVK* spTexture );
+// void                                  VK_WriteUniformBuffer( BufferVK* spTexture );
+// void                                  VK_RemoveUniformBuffer( BufferVK* spTexture );
+// void                                  VK_UpdateUniformBuffers();
 
 void                                  VK_AddImageStorage( TextureVK* spTexture );
 void                                  VK_RemoveImageStorage( TextureVK* spTexture );
@@ -351,12 +369,13 @@ void                                  VK_CreateTextureSamplers();
 void                                  VK_DestroyTextureSamplers();
 VkSampler                             VK_GetSampler( VkFilter sFilter, VkSamplerAddressMode addressMode, VkBool32 sDepthCompare );
 
-TextureVK*                            VK_NewTexture();
-bool                                  VK_LoadTexture( TextureVK* spTexture, const std::string& srPath, const TextureCreateData_t& srCreateData );
-TextureVK*                            VK_CreateTexture( const TextureCreateInfo_t& srTextureCreateInfo, const TextureCreateData_t& srCreateData );
-void                                  VK_DestroyTexture( TextureVK* spTexture );
+TextureVK*                            VK_NewTexture( ChHandle_t& srHandle );
+bool                                  VK_LoadTexture( ChHandle_t& srHandle, TextureVK* spTexture, const std::string& srPath, const TextureCreateData_t& srCreateData );
+TextureVK*                            VK_CreateTexture( ChHandle_t& srHandle, const TextureCreateInfo_t& srTextureCreateInfo, const TextureCreateData_t& srCreateData );
+void                                  VK_DestroyTexture( ChHandle_t sTexture );
 void                                  VK_DestroyAllTextures();
-TextureVK*                            VK_GetTexture( Handle texture );
+TextureVK*                            VK_GetTexture( ChHandle_t sTexture );
+TextureVK*                            VK_GetTextureNoMissing( ChHandle_t sTexture );  // Same as above, but does not return the missing texture as a fallback
 
 Handle                                VK_CreateFramebuffer( VkRenderPass sRenderPass, u16 sWidth, u16 sHeight, const VkImageView* spAttachments, u32 sCount );
 Handle                                VK_CreateFramebuffer( const VkFramebufferCreateInfo& sCreateInfo );

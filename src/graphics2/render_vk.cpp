@@ -60,7 +60,8 @@ static u32                                               gMaxViewports      = 0;
 static Render_OnReset_t                                  gpOnResetFunc      = nullptr;
 
 bool                                                     gNeedTextureUpdate = false;
-extern std::vector< TextureVK* >                         gTextures;
+
+GraphicsAPI_t                                            gGraphicsAPIData;
 
 // tracy contexts
 #if TRACY_ENABLE
@@ -185,6 +186,37 @@ void VK_DumpCheckpoints()
 		Log_DevF( gLC_Render, 1, "NV CHECKPOINT: stage %08x name %s\n", cp.stage, cp.pCheckpointMarker ? static_cast< const char* >( cp.pCheckpointMarker ) : "??" );
 	}
 #endif
+}
+
+
+void VK_CheckResultF( VkResult sResult, char const* spArgs, ... )
+{
+	if ( sResult == VK_SUCCESS )
+		return;
+
+	va_list args;
+	va_start( args, spArgs );
+
+	va_list copy;
+	va_copy( copy, args );
+	int len = std::vsnprintf( nullptr, 0, spArgs, copy );
+	va_end( copy );
+
+	if ( len < 0 )
+	{
+		Log_Error( "\n *** Sys_ExecuteV: vsnprintf failed?\n\n" );
+		Log_FatalF( gLC_Render, "Vulkan Error: %s: %s", spArgs, VKString( sResult ) );
+		return;
+	}
+
+	std::string argString;
+	argString.resize( std::size_t( len ) + 1, '\0' );
+	std::vsnprintf( argString.data(), argString.size(), spArgs, args );
+	argString.resize( len );
+
+	va_end( args );
+
+	VK_CheckResult( sResult, argString.data() );
 }
 
 
@@ -509,6 +541,38 @@ VkImageUsageFlags VK_ToVkImageUsage( EImageUsage usage )
 }
 
 
+EImageUsage VK_ToImageUsage( VkImageUsageFlags usage )
+{
+	EImageUsage flags = 0;
+
+	if ( usage & VK_IMAGE_USAGE_TRANSFER_SRC_BIT )
+		flags |= EImageUsage_TransferSrc;
+
+	if ( usage & VK_IMAGE_USAGE_TRANSFER_DST_BIT )
+		flags |= EImageUsage_TransferDst;
+
+	if ( usage & VK_IMAGE_USAGE_SAMPLED_BIT )
+		flags |= EImageUsage_Sampled;
+
+	if ( usage & VK_IMAGE_USAGE_STORAGE_BIT )
+		flags |= EImageUsage_Storage;
+
+	if ( usage & VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT )
+		flags |= EImageUsage_AttachColor;
+
+	if ( usage & VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT )
+		flags |= EImageUsage_AttachDepthStencil;
+
+	if ( usage & VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT )
+		flags |= EImageUsage_AttachTransient;
+
+	if ( usage & VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT )
+		flags |= EImageUsage_AttachInput;
+
+	return flags;
+}
+
+
 VkAttachmentLoadOp VK_ToVkLoadOp( EAttachmentLoadOp loadOp )
 {
 	switch ( loadOp )
@@ -614,7 +678,7 @@ VkSampleCountFlagBits VK_GetMSAASamples()
 	if ( !r_msaa )
 		return VK_SAMPLE_COUNT_1_BIT;
 
-	auto maxSamples = VK_GetMaxMSAASamples();
+	VkSampleCountFlags maxSamples = VK_GetMaxMSAASamples();
 
 	if ( r_msaa_samples >= 64 && maxSamples & VK_SAMPLE_COUNT_64_BIT )
 		return VK_SAMPLE_COUNT_64_BIT;
@@ -1143,13 +1207,13 @@ public:
 
 		if ( flagBits == 0 )
 		{
-			Log_ErrorF( gLC_Render, "Tried to create buffer \"%s\" without any flags", spName ? spName : "" );
+			Log_ErrorF( gLC_Render, "Tried to create buffer \"%s\" without any flags", spName ? spName : "UNNAMED" );
 			return CH_INVALID_HANDLE;
 		}
 
 		if ( memBits == 0 )
 		{
-			Log_ErrorF( gLC_Render, "Tried to create buffer \"%s\" without any memory bits", spName ? spName : "" );
+			Log_ErrorF( gLC_Render, "Tried to create buffer \"%s\" without any memory bits", spName ? spName : "UNNAMED" );
 			return CH_INVALID_HANDLE;
 		}
 
@@ -1271,7 +1335,7 @@ public:
 	// Materials and Textures
 	// --------------------------------------------------------------------------------------------
 
-	Handle LoadTexture( Handle& srHandle, const std::string& srTexturePath, const TextureCreateData_t& srCreateData ) override
+	ChHandle_t LoadTexture( ChHandle_t& srHandle, const std::string& srTexturePath, const TextureCreateData_t& srCreateData ) override
 	{
 		if ( srHandle == InvalidHandle )
 		{
@@ -1298,6 +1362,8 @@ public:
 		if ( fullPath.empty() )
 		{
 			// add it to the paths anyway, if you do a texture reload, then maybe the texture will have been added
+			// TODO: We should probably allocate a handle and a new texture anyway,
+			// so if it appears on the disk, we can use it in hotloading later
 			gTexturePaths[ srTexturePath ] = InvalidHandle;
 			Log_ErrorF( gLC_Render, "Failed to find Texture: \"%s\"\n", srTexturePath.c_str() );
 			return InvalidHandle;
@@ -1324,9 +1390,9 @@ public:
 				vkFreeMemory( VK_GetDevice(), tex->aMemory, nullptr );
 			}
 
-			if ( !VK_LoadTexture( tex, fullPath, srCreateData ) )
+			if ( !VK_LoadTexture( srHandle, tex, fullPath, srCreateData ) )
 			{
-				VK_DestroyTexture( tex );
+				VK_DestroyTexture( srHandle );
 				return InvalidHandle;
 			}
 
@@ -1339,14 +1405,13 @@ public:
 		}
 		else
 		{
-			TextureVK* tex = VK_NewTexture();
-			if ( !VK_LoadTexture( tex, fullPath, srCreateData ) )
+			TextureVK* tex = VK_NewTexture( srHandle );
+			if ( !VK_LoadTexture( srHandle, tex, fullPath, srCreateData ) )
 			{
-				VK_DestroyTexture( tex );
+				VK_DestroyTexture( srHandle );
 				return InvalidHandle;
 			}
 
-			srHandle                       = gTextureHandles.Add( tex );
 			gTexturePaths[ srTexturePath ] = srHandle;
 			gTextureInfo[ srHandle ]       = srCreateData;
 		}
@@ -1354,27 +1419,20 @@ public:
 		return srHandle;
 	}
 
-	Handle CreateTexture( const TextureCreateInfo_t& srTextureCreateInfo, const TextureCreateData_t& srCreateData ) override
+	ChHandle_t CreateTexture( const TextureCreateInfo_t& srTextureCreateInfo, const TextureCreateData_t& srCreateData ) override
 	{
-		TextureVK* tex = VK_CreateTexture( srTextureCreateInfo, srCreateData );
+		ChHandle_t handle = CH_INVALID_HANDLE;
+		TextureVK* tex    = VK_CreateTexture( handle, srTextureCreateInfo, srCreateData );
 		if ( tex == nullptr )
 			return InvalidHandle;
 
-		Handle handle = gTextureHandles.Add( tex );
 		gTextureInfo[ handle ] = srCreateData;
 		return handle;
 	}
 
-	void FreeTexture( Handle sTexture ) override
+	void FreeTexture( ChHandle_t sTexture ) override
 	{
-		TextureVK* tex = nullptr;
-		if ( !gTextureHandles.Get( sTexture, &tex ) )
-		{
-			Log_Error( gLC_Render, "FreeTexture: Failed to find texture\n" );
-			return;
-		}
-
-		VK_DestroyTexture( tex );
+		VK_DestroyTexture( sTexture );
 		gTextureHandles.Remove( sTexture );
 		gTextureInfo.erase( sTexture );
 
@@ -1388,7 +1446,12 @@ public:
 		}
 	}
 
-	int GetTextureIndex( Handle shTexture ) override
+	// EImageUsage GetTextureUsage( ChHandle_t shTexture ) override
+	// {
+	// 	VK_ToImageUsage();
+	// }
+
+	int GetTextureIndex( ChHandle_t shTexture ) override
 	{
 		PROF_SCOPE();
 
@@ -1410,48 +1473,28 @@ public:
 		return tex->aIndex;
 	}
 
-	GraphicsFmt GetTextureFormat( Handle shTexture ) override
+	GraphicsFmt GetTextureFormat( ChHandle_t shTexture ) override
 	{
 		PROF_SCOPE();
 
-		if ( shTexture == InvalidHandle )
-		{
-			// Use the Missing Texture's Format
-			if ( gTextures.size() )
-				return VK_ToGraphicsFmt( gTextures[ 0 ]->aFormat );
+		TextureVK* tex = VK_GetTexture( shTexture );
 
-			return GraphicsFmt::INVALID;
-		}
+		if ( tex )
+			return VK_ToGraphicsFmt( tex->aFormat );
 
-		TextureVK* tex = nullptr;
-		if ( !gTextureHandles.Get( shTexture, &tex ) )
-		{
-			Log_Error( gLC_Render, "GetTextureFormat: Failed to find texture\n" );
-			return GraphicsFmt::INVALID;
-		}
-
-		return VK_ToGraphicsFmt( tex->aFormat );
+		Log_ErrorF( gLC_Render, "GetTextureFormat: Failed to find texture %zd\n", shTexture );
+		return GraphicsFmt::INVALID;
 	}
 	
-	glm::uvec2 GetTextureSize( Handle shTexture ) override
+	glm::uvec2 GetTextureSize( ChHandle_t shTexture ) override
 	{
-		if ( shTexture == InvalidHandle )
-		{
-			// Use the Missing Texture's Size
-			if ( gTextures.size() )
-				return gTextures[ 0 ]->aSize;
+		TextureVK* tex = VK_GetTexture( shTexture );
 
-			return {};
-		}
+		if ( tex )
+			return tex->aSize;
 
-		TextureVK* tex = nullptr;
-		if ( !gTextureHandles.Get( shTexture, &tex ) )
-		{
-			Log_Error( gLC_Render, "GetTextureSize: Failed to find texture\n" );
-			return {};
-		}
-
-		return tex->aSize;
+		Log_ErrorF( gLC_Render, "GetTextureSize: Failed to find texture %zd\n", shTexture );
+		return {};
 	}
 
 	void ReloadTextures() override
@@ -1486,6 +1529,11 @@ public:
 		return VK_GetFramebufferSize( shFramebuffer );
 	}
 
+	void SetTextureDescSet( ChHandle_t* spDescSets, int sCount, u32 sBinding ) override
+	{
+		VK_SetImageSets( spDescSets, sCount, sBinding );
+	}
+
 	// --------------------------------------------------------------------------------------------
 	// Shader System
 	// --------------------------------------------------------------------------------------------
@@ -1510,31 +1558,24 @@ public:
 		VK_DestroyPipelineLayout( sPipeline );
 	}
 
-	Handle GetSamplerLayout() override
+	Handle CreateDescLayout( const CreateDescLayout_t& srCreate ) override
 	{
-		return VK_GetSamplerLayoutHandle();
+		return VK_CreateDescLayout( srCreate );
 	}
 
-	void GetSamplerSets( Handle* spHandles ) override
+	void UpdateDescSets( WriteDescSet_t* spUpdate, u32 sCount ) override
 	{
-		const std::vector< Handle >& handles = VK_GetSamplerSetsHandles();
-		spHandles[ 0 ]                       = handles[ 0 ];
-		spHandles[ 1 ]                       = handles[ 1 ];
-	}
-
-	Handle CreateVariableDescLayout( const CreateVariableDescLayout_t& srCreate ) override
-	{
-		return VK_CreateVariableDescLayout( srCreate );
+		VK_UpdateDescSets( spUpdate, sCount );
 	}
 	
 	bool AllocateVariableDescLayout( const AllocVariableDescLayout_t& srCreate, Handle* handles ) override
 	{
 		return VK_AllocateVariableDescLayout( srCreate, handles );
 	}
-
-	void UpdateVariableDescSet( const UpdateVariableDescSet_t& srUpdate ) override
+	
+	bool AllocateDescLayout( const AllocDescLayout_t& srCreate, Handle* handles ) override
 	{
-		VK_UpdateVariableDescSet( srUpdate );
+		return VK_AllocateDescLayout( srCreate, handles );
 	}
 
 	// --------------------------------------------------------------------------------------------
@@ -1625,12 +1666,6 @@ public:
 
 	void PreRenderPass() override
 	{
-		PROF_SCOPE();
-
-		if ( gNeedTextureUpdate )
-			VK_UpdateImageSets();
-
-		gNeedTextureUpdate = false;
 	}
 
 	void Present() override
@@ -1654,14 +1689,19 @@ public:
 	}
 
 	// blech again
-	void GetCommandBufferHandles( std::vector< Handle >& srHandles ) override
+	u32 GetCommandBufferHandles( Handle* spHandles ) override
 	{
 		extern ResourceList< VkCommandBuffer > gCommandBufferHandles;  // wtf
 
-		for ( size_t i = 0; i < gCommandBufferHandles.size(); i++ )
+		if ( spHandles != nullptr )
 		{
-			srHandles.push_back( gCommandBufferHandles.GetHandleByIndex( i ) );
+			for ( size_t i = 0; i < gCommandBufferHandles.size(); i++ )
+			{
+				spHandles[ i ] = gCommandBufferHandles.GetHandleByIndex( i );
+			}
 		}
+
+		return gCommandBufferHandles.size();
 	}
 
 #if 0
@@ -1884,7 +1924,7 @@ public:
 		}
 
 		// clamp within the limits
-		const VkPhysicalDeviceLimits& limits = VK_GetPhysicalDeviceProperties().limits;
+		const VkPhysicalDeviceLimits& limits = VK_GetPhysicalDeviceLimits();
 
 		if ( limits.lineWidthRange[ 0 ] > sLineWidth )
 		{

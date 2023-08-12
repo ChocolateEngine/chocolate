@@ -126,11 +126,24 @@ bool VK_CreatePipelineLayout( Handle& srHandle, PipelineLayoutCreate_t& srPipeli
 }
 
 
-void VK_GetShaderStageCreateInfo( const std::vector< ShaderModule_t >& shaderModules, std::vector< VkPipelineShaderStageCreateInfo >& shaderStages )
+bool VK_GetShaderStageCreateInfo( const std::vector< ShaderModule_t >& shaderModules, std::vector< VkPipelineShaderStageCreateInfo >& shaderStages )
 {
 	for ( const auto& stage : shaderModules )
 	{
-		auto  fileData   = FileSys_ReadFile( stage.aModulePath );
+		std::string absPath = FileSys_FindFile( stage.aModulePath );
+		if ( absPath.empty() )
+		{
+			Log_ErrorF( gLC_Render, "Failed to find shader: \"%s\"\n", stage.aModulePath );
+			return false;
+		}
+
+		std::vector< char > fileData = FileSys_ReadFile( stage.aModulePath );
+
+		if ( fileData.empty() )
+		{
+			Log_ErrorF( gLC_Render, "Shader file is empty: \"%s\"\n", stage.aModulePath );
+			return false;
+		}
 
 		auto& stageInfo  = shaderStages.emplace_back( VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO );
 		stageInfo.pName  = stage.apEntry;
@@ -145,6 +158,8 @@ void VK_GetShaderStageCreateInfo( const std::vector< ShaderModule_t >& shaderMod
 		else if ( stage.aStage & ShaderStage_Compute )
 			stageInfo.stage = VK_SHADER_STAGE_COMPUTE_BIT;
 	}
+
+	return true;
 }
 
 
@@ -165,19 +180,23 @@ bool VK_CreateGraphicsPipeline( Handle& srHandle, GraphicsPipelineCreate_t& srGr
 	VkPipelineLayout* layout = gPipelineLayouts.Get( srGraphicsCreate.aPipelineLayout );
 	if ( layout == nullptr )
 	{
-		Log_Error( gLC_Render, "VK_CreateGraphicsPipeline(): Pipeline Layout not found!\n" );
-		return InvalidHandle;
+		Log_ErrorF( gLC_Render, "VK_CreateGraphicsPipeline(): Pipeline Layout not found: \"%s\"\n", srGraphicsCreate.apName );
+		return false;
 	}
 	
 	VkRenderPass renderPass = VK_GetRenderPass( srGraphicsCreate.aRenderPass );
 	if ( renderPass == nullptr )
 	{
-		Log_Error( gLC_Render, "VK_CreateGraphicsPipeline(): RenderPass not found!\n" );
-		return InvalidHandle;
+		Log_ErrorF( gLC_Render, "VK_CreateGraphicsPipeline(): RenderPass not found: \"%s\"\n", srGraphicsCreate.apName );
+		return false;
 	}
 
 	std::vector< VkPipelineShaderStageCreateInfo > shaderStages;
-	VK_GetShaderStageCreateInfo( srGraphicsCreate.aShaderModules, shaderStages );
+	if ( !VK_GetShaderStageCreateInfo( srGraphicsCreate.aShaderModules, shaderStages ) )
+	{
+		Log_ErrorF( gLC_Render, "VK_CreateGraphicsPipeline(): Failed to create shader stage info: \"%s\"\n", srGraphicsCreate.apName );
+		return false;
+	}
 
 	ChVector< VkVertexInputBindingDescription >   bindingDescriptions( srGraphicsCreate.aVertexBindings.size() );
 	ChVector< VkVertexInputAttributeDescription > attributeDescriptions( srGraphicsCreate.aVertexAttributes.size() );
@@ -391,12 +410,12 @@ bool VK_CreateGraphicsPipeline( Handle& srHandle, GraphicsPipelineCreate_t& srGr
 
 	ShaderVK* shader                 = nullptr;
 
-	if ( srHandle != InvalidHandle )
+	if ( srHandle != CH_INVALID_HANDLE )
 	{
 		shader = gShaders.Get( srHandle );
 		if ( !shader )
 		{
-			Log_Error( gLC_Render, "VK_CreateGraphicsPipeline(): Shader not found for recreation!\n" );
+			Log_ErrorF( gLC_Render, "VK_CreateGraphicsPipeline(): Shader not found for recreation: \"%s\"\n", srGraphicsCreate.apName );
 			return false;
 		}
 	}
@@ -408,7 +427,9 @@ bool VK_CreateGraphicsPipeline( Handle& srHandle, GraphicsPipelineCreate_t& srGr
 	shader->aBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
 
 	// TODO: look into trying to make multiple pipelines at once
-	VK_CheckResult( vkCreateGraphicsPipelines( VK_GetDevice(), VK_NULL_HANDLE, 1, &pipelineInfo, NULL, &shader->aPipeline ), "Failed to create graphics pipeline!" );
+	VK_CheckResultF(
+	  vkCreateGraphicsPipelines( VK_GetDevice(), VK_NULL_HANDLE, 1, &pipelineInfo, NULL, &shader->aPipeline ),
+	  "Failed to create graphics pipeline for shader: \"%s\"", srGraphicsCreate.apName );
 
 #ifdef _DEBUG
 	if ( srGraphicsCreate.apName && pfnSetDebugUtilsObjectName )

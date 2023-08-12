@@ -11,7 +11,6 @@
 //VkSampler                                          gSamplers[ 2 ][ 5 ];  // [texture filter][sampler address]
 VkSampler                                          gSamplers[ 2 ][ 5 ][ 2 ];
 
-std::vector< TextureVK* >                          gTextures;
 static std::vector< RenderTarget* >                gRenderTargets;
 static RenderTarget*                               gpBackBuffer = nullptr;
 
@@ -24,7 +23,10 @@ extern ResourceList< BufferVK >                    gBufferHandles;
 
 // kind of a hack
 static std::unordered_map< VkFramebuffer, Handle > gFramebufferHandles;
-std::unordered_map< TextureVK*, Handle >           gBackbufferHandles;
+// std::unordered_map< TextureVK*, Handle >           gBackbufferHandles;
+
+// the true handle of the missing texture, but handle of 0 will also give the missing texture
+static ChHandle_t                                  gMissingTexHandle = CH_INVALID_HANDLE;
 
 extern bool                                        gNeedTextureUpdate;
 
@@ -283,16 +285,16 @@ void VK_RecreateTextureSamplers()
 }
 
 
-TextureVK* VK_NewTexture()
+TextureVK* VK_NewTexture( ChHandle_t& srHandle )
 {
 	TextureVK* tex = new TextureVK;
 	tex->aIndex    = -1;
-	gTextures.push_back( tex );
+	srHandle       = gTextureHandles.Add( tex );
 	return tex;
 }
 
 
-bool VK_LoadTexture( TextureVK* tex, const std::string& srPath, const TextureCreateData_t& srCreateData )
+bool VK_LoadTexture( ChHandle_t& srHandle, TextureVK* tex, const std::string& srPath, const TextureCreateData_t& srCreateData )
 {
 	if ( !KTX_LoadTexture( tex, srPath.c_str() ) )
 	{
@@ -303,6 +305,12 @@ bool VK_LoadTexture( TextureVK* tex, const std::string& srPath, const TextureCre
 	tex->aFilter         = VK_ToVkFilter( srCreateData.aFilter );
 	tex->aSamplerAddress = VK_ToVkSamplerAddress( srCreateData.aSamplerAddress );
 	tex->aDepthCompare   = srCreateData.aDepthCompare;	// Does this need a dedicated function?
+
+	// textures loaded through KTX are always sampled currently
+	if ( tex->aUsage & VK_IMAGE_USAGE_SAMPLED_BIT )
+	{
+		gGraphicsAPIData.aSampledTextures.emplace( srHandle );
+	}
 
 #ifdef _DEBUG
 	// add a debug label onto it
@@ -326,10 +334,10 @@ bool VK_LoadTexture( TextureVK* tex, const std::string& srPath, const TextureCre
 }
 
 
-TextureVK* VK_CreateTexture( const TextureCreateInfo_t& srCreate, const TextureCreateData_t& srCreateData )
+TextureVK* VK_CreateTexture( ChHandle_t& srHandle, const TextureCreateInfo_t& srCreate, const TextureCreateData_t& srCreateData )
 {
-	TextureVK* tex       = gTextures.emplace_back( new TextureVK );
-	tex->aIndex          = gTextures.size() - 1;
+	TextureVK* tex       = VK_NewTexture( srHandle );
+	tex->aIndex          = gTextureHandles.size() - 1;
 	tex->aSize           = srCreate.aSize;
 	tex->aFormat         = VK_ToVkFormat( srCreate.aFormat );
 	tex->aUsage          = VK_ToVkImageUsage( srCreateData.aUsage );
@@ -337,6 +345,11 @@ TextureVK* VK_CreateTexture( const TextureCreateInfo_t& srCreate, const TextureC
 	tex->aFilter         = VK_ToVkFilter( srCreateData.aFilter );
 	tex->aSamplerAddress = VK_ToVkSamplerAddress( srCreateData.aSamplerAddress );
 	tex->aDepthCompare   = srCreateData.aDepthCompare;
+
+	if ( tex->aUsage & VK_IMAGE_USAGE_SAMPLED_BIT )
+	{
+		gGraphicsAPIData.aSampledTextures.emplace( srHandle );
+	}
 
 	VkImageCreateInfo createInfo{ VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO };
 	createInfo.imageType     = VK_IMAGE_TYPE_2D;
@@ -504,38 +517,57 @@ TextureVK* VK_CreateTexture( const TextureCreateInfo_t& srCreate, const TextureC
 }
 
 
-void VK_DestroyTexture( TextureVK* srTexture )
+void VK_DestroyTexture( ChHandle_t sTexture )
 {
-	// big hack, blech
-	if ( !srTexture->aSwapChain )
+	TextureVK* texture = VK_GetTextureNoMissing( sTexture );
+
+	if ( texture == nullptr )
 	{
-		if ( srTexture->aImageView )
-			vkDestroyImageView( VK_GetDevice(), srTexture->aImageView, nullptr );
+		Log_Error( "Failed to find texture to destroy\n" );
+		return;
+	}
 
-		if ( srTexture->aMemory )
+	// big hack, blech
+	if ( !texture->aSwapChain )
+	{
+		if ( texture->aImageView )
+			vkDestroyImageView( VK_GetDevice(), texture->aImageView, nullptr );
+
+		if ( texture->aMemory )
 		{
-			if ( srTexture->aImage )
-				vkDestroyImage( VK_GetDevice(), srTexture->aImage, nullptr );
+			if ( texture->aImage )
+				vkDestroyImage( VK_GetDevice(), texture->aImage, nullptr );
 
-			vkFreeMemory( VK_GetDevice(), srTexture->aMemory, nullptr );
+			vkFreeMemory( VK_GetDevice(), texture->aMemory, nullptr );
+		}
+	}
+	else
+	{
+		if ( texture->aUsage & VK_IMAGE_USAGE_SAMPLED_BIT )
+		{
+			gGraphicsAPIData.aSampledTextures.erase( sTexture );
 		}
 	}
 
-	size_t index = vec_index( gTextures, srTexture );
-	if ( index != SIZE_MAX )
-		vec_remove_index( gTextures, index );
-
-	delete srTexture;
+	gTextureHandles.Remove( sTexture );
+	delete texture;
 }
 
 
+// Used on shutdown
 void VK_DestroyAllTextures()
 {
-	for ( auto& tex : gTextures )
+	for ( u32 i = 0; i < gTextureHandles.aHandles.size(); i++ )
 	{
-		if ( !tex )
+		ChHandle_t texHandle = gTextureHandles.aHandles[ i ];
+		TextureVK* tex       = nullptr;
+		if ( !gTextureHandles.Get( texHandle, &tex ) )
+		{
+			Log_Error( "Failed to find texture data when destroying all textures\n" );
 			continue;
+		}
 
+		// basically an ugly hack
 		if ( tex->aSwapChain )
 			continue;
 
@@ -549,18 +581,36 @@ void VK_DestroyAllTextures()
 
 	VK_DestroyTextureSamplers();
 
-	gTextures.clear();
-	// gImageMap.clear();
+	gTextureHandles.clear();
 }
 
 
-TextureVK* VK_GetTexture( Handle texture )
+TextureVK* VK_GetTexture( ChHandle_t sTexture )
 {
-	// TextureVK* find = gTextureHandles.Get( texture );
-	// 
-	// // Image is loaded
-	// if ( find != gTextureHandles.end() )
-	// 	return find->second;
+	TextureVK* find = nullptr;
+
+	if ( sTexture != 0 && gTextureHandles.Get( sTexture, &find ) )
+	{
+		// Image is loaded
+		return find;
+	}
+
+	if ( sTexture != 0 && sTexture != gMissingTexHandle )
+		Log_ErrorF( gLC_Render, "Failed to find texture from handle %zd!\n", sTexture );
+
+	if ( gTextureHandles.Get( gMissingTexHandle, &find ) )
+		return find;
+
+	Log_Fatal( gLC_Render, "Missing Texture is not in texture list?\n" );
+	return nullptr;
+}
+
+
+TextureVK* VK_GetTextureNoMissing( ChHandle_t sTexture )
+{
+	TextureVK* find = nullptr;
+	if ( gTextureHandles.Get( sTexture, &find ) )
+		return find;
 
 	return nullptr;
 }
@@ -823,8 +873,8 @@ void VK_DestroyRenderTarget( RenderTarget* spTarget )
 	for ( auto& texture : spTarget->aResolve )
 		VK_DestroyTexture( texture );
 
-	if ( spTarget->apDepth )
-		VK_DestroyTexture( spTarget->apDepth );
+	if ( spTarget->aDepth )
+		VK_DestroyTexture( spTarget->aDepth );
 
 	vec_remove( gRenderTargets, spTarget );
 	delete spTarget;
@@ -843,15 +893,14 @@ void VK_DestroyRenderTargets()
 }
 
 
-TextureVK* CreateBackBufferColor()
+static TextureVK* CreateBackBufferColor( ChHandle_t& srHandle )
 {
 	Log_Msg( "creating back buffer\n" );
 
-	TextureVK* colorTex     = VK_NewTexture();
+	TextureVK* colorTex     = VK_NewTexture( srHandle );
 	colorTex->aRenderTarget = true;
 
-	VkImageCreateInfo color;
-	color.sType                 = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+	VkImageCreateInfo color{ VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO };
 	color.pNext                 = nullptr;
 	color.flags                 = 0;
 	color.imageType             = VK_IMAGE_TYPE_2D;
@@ -888,8 +937,7 @@ TextureVK* CreateBackBufferColor()
 	// VK_CheckResult( vkAllocateMemory( VK_GetDevice(), &allocInfo, nullptr, &colorTex->aMemory ), "Failed to allocate color image memory!" );
 	// VK_CheckResult( vkBindImageMemory( VK_GetDevice(), colorTex->aImage, colorTex->aMemory, 0 ), "Failed to bind back buffer color image memory" );
 
-	VkImageViewCreateInfo colorView;
-	colorView.sType                           = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+	VkImageViewCreateInfo colorView{ VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO };
 	colorView.pNext                           = nullptr;
 	colorView.flags                           = 0;
 	colorView.image                           = colorTex->aImage;
@@ -916,10 +964,13 @@ RenderTarget* CreateBackBuffer()
      *    so we'll make those now.
      */
 
+	ChHandle_t colorHandle = CH_INVALID_HANDLE;
+	ChHandle_t depthHandle = CH_INVALID_HANDLE;
+
 	// ------------------------------------------------------
 	// Create Depth Texture
 
-	TextureVK* depthTex     = VK_NewTexture();
+	TextureVK*  depthTex     = VK_NewTexture( depthHandle );
 	depthTex->aRenderTarget = true;
 
 	VkImageCreateInfo depth;
@@ -979,55 +1030,55 @@ RenderTarget* CreateBackBuffer()
 	gRenderTargets.push_back( target );
 
 	TextureVK* colorTex = nullptr;
-	Handle     colorHandle = InvalidHandle;
 
-	gBackbufferHandles.clear();
+	// gBackbufferHandles.clear();
 
 	// gBackbufferHandles[ swapTextures[ 0 ] ] = gSwapImageHandles[ 0 ];
 	// gBackbufferHandles[ swapTextures[ 1 ] ] = gSwapImageHandles[ 1 ];
 
 	if ( VK_UseMSAA() )
 	{
-		colorTex    = CreateBackBufferColor();
-		colorHandle = gTextureHandles.Add( colorTex );
-		gBackbufferHandles[ colorTex ] = colorHandle;
-		target->aColors.push_back( colorTex );
+		colorTex = CreateBackBufferColor( colorHandle );
+		// gBackbufferHandles[ colorTex ] = colorHandle;
+
+		target->aColors.push_back( colorHandle );
 	}
 	else
 	{
-		TextureVK* tex  = VK_NewTexture();
-		tex->aFormat    = gColorFormat;
-		tex->aFrames    = 1;
-		tex->aMemory    = nullptr;
-		tex->aMipLevels = 1;
-		tex->aUsage     = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
-		tex->aImageView = swapTextures[ 0 ];
-		tex->aSwapChain = true;
+		ChHandle_t texHandle = CH_INVALID_HANDLE;
+		TextureVK* tex       = VK_NewTexture( texHandle );
+		tex->aFormat         = gColorFormat;
+		tex->aFrames         = 1;
+		tex->aMemory         = nullptr;
+		tex->aMipLevels      = 1;
+		tex->aUsage          = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+		tex->aImageView      = swapTextures[ 0 ];
+		tex->aSwapChain      = true;
 
 		// uhh
 		// target->aColors.push_back( swapTextures[ 0 ] );
-		target->aColors.push_back( tex );
+		target->aColors.push_back( texHandle );
 	}
 
-	Handle depthHandle             = gTextureHandles.Add( depthTex );
-	gBackbufferHandles[ depthTex ] = depthHandle;
+	// gBackbufferHandles[ depthTex ] = depthHandle;
 
-	target->apDepth = depthTex;
+	target->aDepth = depthHandle;
 
 	if ( VK_UseMSAA() )
 	{
-		TextureVK* tex  = VK_NewTexture();
-		tex->aFormat    = gColorFormat;
-		tex->aFrames    = 1;
-		tex->aMemory    = nullptr;
-		tex->aMipLevels = 1;
-		tex->aUsage     = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
-		tex->aImageView = swapTextures[ 1 ];
-		tex->aSwapChain = true;
+		ChHandle_t resolveHandle = CH_INVALID_HANDLE;
+		TextureVK* tex           = VK_NewTexture( resolveHandle );
+		tex->aFormat             = gColorFormat;
+		tex->aFrames             = 1;
+		tex->aMemory             = nullptr;
+		tex->aMipLevels          = 1;
+		tex->aUsage              = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+		tex->aImageView          = swapTextures[ 1 ];
+		tex->aSwapChain          = true;
 
 		// target->aResolve.push_back( swapTextures[ 0 ] );
 		// target->aResolve.push_back( swapTextures[ 1 ] );
-		target->aResolve.push_back( tex );
+		target->aResolve.push_back( resolveHandle );
 		// target->aResolve[ 0 ]->aUsage |= VK_IMAGE_USAGE_SAMPLED_BIT; // WHAT
 	}
 
@@ -1189,7 +1240,7 @@ void VK_CreateMissingTexture()
 	data.aUsage    = EImageUsage_Sampled;
 	data.aFilter   = EImageFilter_Nearest;
 
-	TextureVK* tex = VK_CreateTexture( create, data );
+	TextureVK* tex = VK_CreateTexture( gMissingTexHandle, create, data );
 
 	if ( !tex )
 	{
@@ -1198,7 +1249,5 @@ void VK_CreateMissingTexture()
 	}
 
 	gNeedTextureUpdate = true;
-
-	// don't add to handles, this will represent InvalidHandle, and should be texture 0
 }
 

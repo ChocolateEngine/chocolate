@@ -5,33 +5,54 @@
 #include "render_vk.h"
 
 
-static uint32_t                                                     gDescriptorCount    = 128;
-static uint32_t                                                     gDescriptorPoolSize = 128;
-static VkDescriptorPool                                             gDescriptorPool;
-static std::vector< VkDescriptorSet >                               gDescriptorSets;
+// TODO: allocate a new pool when we fill up the current pool
 
-static Handle                                                       gSamplerLayoutHandle;
-static std::vector< Handle >                                        gSamplerSetsHandles;
-static VkDescriptorSetLayout                                        gImageLayout;
-static std::vector< VkDescriptorSet >                               gImageSets;
-constexpr u32                                                       MAX_IMAGES = 1000;
 
-static std::unordered_map< Handle, std::vector< VkDescriptorSet > > gUniformSets;
+struct DescriptorPoolTypeStats_t
+{
+	u32 aAllocated = 0;
+	u32 aUsed      = 0;
+};
+
+
+struct DescriptorPoolStats_t
+{
+	u32                       aSetsAllocated = 0;
+	u32                       aSetsUsed      = 0;
+
+	DescriptorPoolTypeStats_t aTypes[ EDescriptorType_Max ];
+};
+
+
+enum EDescriptorPoolSize
+{
+	EDescriptorPoolSize_Storage               = 8192,
+	EDescriptorPoolSize_Uniform               = 128,
+	EDescriptorPoolSize_CombinedImageSamplers = 4096,
+	EDescriptorPoolSize_SampledImages         = 0,
+};
+
+
+static u32                                                          gDescriptorSetCount = 512;
+
+static VkDescriptorPool                                             gVkDescriptorPool;
+// static std::vector< VkDescriptorSet >                               gDescriptorSets;
+
+static DescriptorPoolStats_t                                        gDescriptorPoolStats;
+
+// static std::unordered_map< Handle, std::vector< VkDescriptorSet > > gUniformSets;
 
 // static std::vector< BufferVK* >                                     gUniformBuffers;
 // constexpr u32                                                       MAX_UNIFORM_BUFFERS = 1000;
 
-static VkDescriptorSetLayout                                        gImageStorageLayout;
-static std::vector< VkDescriptorSet >                               gImageStorage;
-static std::vector< TextureVK* >                                    gImageStorageTextures;  // why
-bool                                                                gImageStorageUpdate = true;
-constexpr u32                                                       MAX_STORAGE_IMAGES  = 10;
-
 static ResourceList< VkDescriptorSetLayout >                        gDescLayouts;
 static ResourceList< VkDescriptorSet >                              gDescSets;
 
-extern std::vector< TextureVK* >                                    gTextures;
+extern ResourceList< TextureVK* >                                   gTextureHandles;
 extern ResourceList< BufferVK >                                     gBufferHandles;
+
+static std::vector< ChHandle_t >                                    gImageSets;
+static u32                                                          gImageBinding = 0;
 
 
 VkDescriptorType VK_ToVKDescriptorType( EDescriptorType type )
@@ -79,399 +100,201 @@ VkDescriptorType VK_ToVKDescriptorType( EDescriptorType type )
 }
 
 
+static const char* gDescriptorTypeStr[] = {
+	"Sampler",
+	"CombinedImageSampler",
+	"SampledImage",
+	"StorageImage",
+	"UniformTexelBuffer",
+	"StorageTexelBuffer",
+	"UniformBuffer",
+	"StorageBuffer",
+	"UniformBufferDynamic",
+	"StorageBufferDynamic",
+	"InputAttachment",
+};
+
+
+static_assert( CH_ARR_SIZE( gDescriptorTypeStr ) == EDescriptorType_Max );
+
+
 void VK_CreateDescriptorPool()
 {
 	VkDescriptorPoolSize aPoolSizes[] = {
-		// { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, gDescriptorPoolSize },
-		{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, gDescriptorPoolSize }
+		{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, EDescriptorPoolSize_CombinedImageSamplers },
+		// { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, EDescriptorPoolSize_SampledImages },
+		{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, EDescriptorPoolSize_Uniform },
+		{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, EDescriptorPoolSize_Storage },
 	};
 
-	VkDescriptorPoolCreateInfo aDescriptorPoolInfo = {};
-	aDescriptorPoolInfo.sType                      = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-	aDescriptorPoolInfo.poolSizeCount              = ARR_SIZE( aPoolSizes );
-	aDescriptorPoolInfo.pPoolSizes                 = aPoolSizes;
-	aDescriptorPoolInfo.maxSets                    = gDescriptorCount;
+	VkDescriptorPoolCreateInfo aDescriptorPoolInfo{ VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO };
+	aDescriptorPoolInfo.poolSizeCount = CH_ARR_SIZE( aPoolSizes );
+	aDescriptorPoolInfo.pPoolSizes    = aPoolSizes;
+	aDescriptorPoolInfo.maxSets       = gDescriptorSetCount;
 
-	VK_CheckResult( vkCreateDescriptorPool( VK_GetDevice(), &aDescriptorPoolInfo, nullptr, &gDescriptorPool ), "Failed to create descriptor pool!" );
-}
+	// Allows you to update descriptors after they have been bound in a command buffer
+	aDescriptorPoolInfo.flags         = VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT;
 
+	VK_CheckResult( vkCreateDescriptorPool( VK_GetDevice(), &aDescriptorPoolInfo, nullptr, &gVkDescriptorPool ), "Failed to create descriptor pool!" );
 
-// TODO: Rethink this
-#if 0
-void VK_CreateDescriptorSetLayouts()
-{
-	VkDescriptorSetLayoutBinding aLayoutBindings[] = {
-		// { 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, nullptr },
-		{ 0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_VERTEX_BIT, nullptr },
-	};
-
-	VkDescriptorSetLayoutCreateInfo bufferLayout = {};
-	bufferLayout.sType                           = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-	bufferLayout.pNext                           = nullptr;
-	bufferLayout.flags                           = 0;
-	bufferLayout.bindingCount                    = 1;
-	bufferLayout.pBindings                       = &aLayoutBindings[ 0 ];
-
-	VK_CheckResult( vkCreateDescriptorSetLayout( VK_GetDevice(), &bufferLayout, nullptr, &gBufferLayout ), "Failed to create descriptor set layout!" );
-
-	VkDescriptorSetLayoutCreateInfo imageLayout = {};
-	imageLayout.sType                           = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-	imageLayout.pNext                           = nullptr;
-	imageLayout.flags                           = 0;
-	imageLayout.bindingCount                    = 1;
-	imageLayout.pBindings                       = &aLayoutBindings[ 1 ];
-
-	VK_CheckResult( vkCreateDescriptorSetLayout( VK_GetDevice(), &imageLayout, nullptr, &gImageLayout ), "Failed to create descriptor set layout!" );
-}
-#endif
-
-
-void VK_AllocSets()
-{
-	// Allocate Image Sets
-	{
-		uint32_t                                           counts[] = { MAX_IMAGES, MAX_IMAGES };
-		VkDescriptorSetVariableDescriptorCountAllocateInfo dc{ VK_STRUCTURE_TYPE_DESCRIPTOR_SET_VARIABLE_DESCRIPTOR_COUNT_ALLOCATE_INFO };
-		dc.descriptorSetCount = VK_GetSwapImageCount();
-		dc.pDescriptorCounts  = counts;
-
-		std::vector< VkDescriptorSetLayout > layouts( VK_GetSwapImageCount(), gImageLayout );
-
-		VkDescriptorSetAllocateInfo          a{};
-		a.sType              = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-		a.pNext              = &dc;
-		a.descriptorPool     = VK_GetDescPool();
-		a.descriptorSetCount = VK_GetSwapImageCount();
-		a.pSetLayouts        = layouts.data();
-
-		gImageSets.resize( VK_GetSwapImageCount() );
-		gSamplerSetsHandles.resize( VK_GetSwapImageCount() );
-		VK_CheckResult( vkAllocateDescriptorSets( VK_GetDevice(), &a, gImageSets.data() ), "Failed to allocate image descriptor sets!" );
-		
-		for ( u32 i = 0; i < gImageSets.size(); i++ )
-			gSamplerSetsHandles[ i ] = gDescSets.Add( gImageSets[ i ] );
-	}
-
-#if 0
-	// ----------------------------------------------------------------------------
-	// Allocate Uniform Buffer Descriptor Sets
-	{
-		uint32_t                                           counts[] = { MAX_UNIFORM_BUFFERS, MAX_UNIFORM_BUFFERS };
-		VkDescriptorSetVariableDescriptorCountAllocateInfo dc{ VK_STRUCTURE_TYPE_DESCRIPTOR_SET_VARIABLE_DESCRIPTOR_COUNT_ALLOCATE_INFO };
-		dc.descriptorSetCount = VK_GetSwapImageCount();
-		dc.pDescriptorCounts  = counts;
-
-		std::vector< VkDescriptorSetLayout > layouts( VK_GetSwapImageCount(), gImageLayout );
-
-		VkDescriptorSetAllocateInfo          a{};
-		a.sType              = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-		a.pNext              = &dc;
-		a.descriptorPool     = VK_GetDescPool();
-		a.descriptorSetCount = VK_GetSwapImageCount();
-		a.pSetLayouts        = layouts.data();
-
-		gImageSets.resize( VK_GetSwapImageCount() );
-		VK_CheckResult( vkAllocateDescriptorSets( VK_GetDevice(), &a, gImageSets.data() ), "Failed to allocate uniform buffer descriptor sets!" );
-	}
-#endif
-
-	// ----------------------------------------------------------------------------
-	// Allocate Image Storage Descriptor Sets
-	{
-		uint32_t                                           counts[] = { MAX_STORAGE_IMAGES, MAX_STORAGE_IMAGES };
-		VkDescriptorSetVariableDescriptorCountAllocateInfo dc{ VK_STRUCTURE_TYPE_DESCRIPTOR_SET_VARIABLE_DESCRIPTOR_COUNT_ALLOCATE_INFO };
-		dc.descriptorSetCount = VK_GetSwapImageCount();
-		dc.pDescriptorCounts  = counts;
-
-		std::vector< VkDescriptorSetLayout > layouts( VK_GetSwapImageCount(), gImageStorageLayout );
-
-		VkDescriptorSetAllocateInfo          a{};
-		a.sType              = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-		a.pNext              = &dc;
-		a.descriptorPool     = VK_GetDescPool();
-		a.descriptorSetCount = VK_GetSwapImageCount();
-		a.pSetLayouts        = layouts.data();
-
-		gImageStorage.resize( VK_GetSwapImageCount() );
-		VK_CheckResult( vkAllocateDescriptorSets( VK_GetDevice(), &a, gImageStorage.data() ), "Failed to allocate descriptor sets!" );
-	}
+	gDescriptorPoolStats.aSetsAllocated                                     = gDescriptorSetCount;
+	gDescriptorPoolStats.aTypes[ EDescriptorType_CombinedImageSampler ].aAllocated = EDescriptorPoolSize_CombinedImageSamplers;
+	// gDescriptorPoolStats.aTypes[ EDescriptorType_SampledImage ].aAllocated  = EDescriptorPoolSize_SampledImages;
+	gDescriptorPoolStats.aTypes[ EDescriptorType_UniformBuffer ].aAllocated = EDescriptorPoolSize_Uniform;
+	gDescriptorPoolStats.aTypes[ EDescriptorType_StorageBuffer ].aAllocated = EDescriptorPoolSize_Storage;
 }
 
 
 void VK_CalcTextureIndices()
 {
 	size_t index = 0;
-	for ( uint32_t j = 0; j < gTextures.size(); j++ )
+	for ( uint32_t j = 0; j < gTextureHandles.size(); j++ )
 	{
-		// must be a sampled image
-		if ( !( gTextures[ j ]->aUsage & VK_IMAGE_USAGE_SAMPLED_BIT ) )
+		TextureVK* tex = VK_GetTexture( gTextureHandles.aHandles[ j ] );
+
+		if ( !tex )
 			continue;
 
-		gTextures[ j ]->aIndex = index++;
+		// must be a sampled image
+		if ( !( tex->aUsage & VK_IMAGE_USAGE_SAMPLED_BIT ) )
+			continue;
+
+		tex->aIndex = index++;
 	}
 
 	Log_DevF( gLC_Render, 1, "Texture Index Count: %d\n", index );
 }
 
-
+#if 1
 void VK_UpdateImageSets()
 {
-	if ( !gTextures.size() )
-		return;
-
 	// hmm, this doesn't crash on Nvidia, though idk how AMD would react
 	// also would this be >= or just >, lol
-	if ( gTextures.size() >= MAX_IMAGES )
+	if ( gGraphicsAPIData.aSampledTextures.size() >= EDescriptorPoolSize_CombinedImageSamplers )
 	{
-		Log_FatalF( gLC_Render, "Over Max Images allocated (at %zu, max is %d)", gTextures.size(), MAX_IMAGES );
+		Log_FatalF( gLC_Render, "Over Max Sampled Textures allocated (at %zu, max is %d)", gGraphicsAPIData.aSampledTextures.size(), EDescriptorPoolSize_CombinedImageSamplers );
 	}
 
-	for ( uint32_t i = 0; i < gImageSets.size(); ++i )
+	WriteDescSet_t write{};
+	write.aDescSetCount = gImageSets.size();
+	write.apDescSets    = gImageSets.data();
+
+	write.aBindingCount = 1;
+	write.apBindings    = ch_calloc_count< WriteDescSetBinding_t >( 1 );
+
+	ChVector< ChHandle_t > imageData;
+	imageData.reserve( gGraphicsAPIData.aSampledTextures.size() );
+
+	size_t index = 0;
+	// for ( uint32_t j = 0; j < gGraphicsAPIData.aSampledTextures.size(); j++ )
+	for ( ChHandle_t texHandle : gGraphicsAPIData.aSampledTextures )
 	{
-		std::vector< VkDescriptorImageInfo > infos;
-		size_t                               index = 0;
+		TextureVK* tex = VK_GetTexture( texHandle );
 
-		for ( uint32_t j = 0; j < gTextures.size(); j++ )
-		{
-			// must be a sampled image
-			if ( !(gTextures[ j ]->aUsage & VK_IMAGE_USAGE_SAMPLED_BIT) )
-				continue;
-
-			VkDescriptorImageInfo img{};
-			img.imageLayout        = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-			img.imageView          = gTextures[ j ]->aImageView;
-			img.sampler            = VK_GetSampler( gTextures[ j ]->aFilter, gTextures[ j ]->aSamplerAddress, gTextures[ j ]->aDepthCompare );
-
-			gTextures[ j ]->aIndex = index++;
-			infos.push_back( img );
-		}
-
-		if ( infos.empty() )
+		if ( !tex )
 			continue;
 
-		VkWriteDescriptorSet w{};
-		w.sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-		w.dstBinding      = 0;
-		w.dstArrayElement = 0;
-		w.descriptorType  = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		w.descriptorCount = infos.size();
-		w.pBufferInfo     = 0;
-		w.dstSet          = gImageSets[ i ];
-		w.pImageInfo      = infos.data();
+		// must be a sampled image
+		if ( !( tex->aUsage & VK_IMAGE_USAGE_SAMPLED_BIT ) )
+			continue;
 
-		vkUpdateDescriptorSets( VK_GetDevice(), 1, &w, 0, nullptr );
+		tex->aIndex = index++;
+		imageData.push_back( texHandle );
 	}
+
+	write.apBindings[ 0 ].aBinding = gImageBinding;
+	write.apBindings[ 0 ].aType    = EDescriptorType_CombinedImageSampler;
+	write.apBindings[ 0 ].aCount   = imageData.size();
+	write.apBindings[ 0 ].apData   = imageData.data();
+
+	VK_UpdateDescSets( &write, 1 );
+
+	free( write.apBindings );
 
 	Log_Dev( gLC_Render, 1, "Updated Image Sets\n" );
 }
-
-
-void VK_UpdateImageStorage()
-{
-	if ( !gImageStorageUpdate || gImageStorageTextures.empty() )
-		return;
-
-	for ( uint32_t i = 0; i < gImageStorage.size(); ++i )
-	{
-		std::vector< VkDescriptorImageInfo > infos;
-
-		for ( uint32_t j = 0; j < gImageStorageTextures.size(); j++ )
-		{
-			VkDescriptorImageInfo img{};
-			img.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
-			img.imageView   = gImageStorageTextures[ j ]->aImageView;
-			img.sampler     = VK_GetSampler( gImageStorageTextures[ j ]->aFilter, gImageStorageTextures[ j ]->aSamplerAddress, gImageStorageTextures[ j ]->aDepthCompare );
-			infos.push_back( img );
-		}
-
-		if ( infos.empty() )
-			continue;
-
-		VkWriteDescriptorSet w{};
-		w.sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-		w.dstBinding      = 0;
-		w.dstArrayElement = 0;
-		w.descriptorType  = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
-		w.descriptorCount = infos.size();
-		w.pBufferInfo     = 0;
-		w.dstSet          = gImageStorage[ i ];
-		w.pImageInfo      = infos.data();
-
-		vkUpdateDescriptorSets( VK_GetDevice(), 1, &w, 0, nullptr );
-	}
-
-	gImageStorageUpdate = false;
-}
-
-
-void VK_AddImageStorage( TextureVK* spTexture )
-{
-	if ( !spTexture )
-		return;
-
-	size_t index = vec_index( gImageStorageTextures, spTexture );
-
-	if ( index != SIZE_MAX )
-		return;
-
-	gImageStorageTextures.push_back( spTexture );
-	gImageStorageUpdate = true;
-}
-
-
-void VK_RemoveImageStorage( TextureVK* spTexture )
-{
-	if ( !spTexture )
-		return;
-
-	size_t index = vec_index( gImageStorageTextures, spTexture );
-
-	if ( index == SIZE_MAX )
-		return;
-
-	vec_remove_index( gImageStorageTextures, index );
-	gImageStorageUpdate = true;
-}
-
-
-void VK_CreateDescriptorSetLayouts()
-{
-	// Texture Samplers
-	{
-		VkDescriptorBindingFlagsEXT  bindFlag = VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT_EXT | VK_DESCRIPTOR_BINDING_VARIABLE_DESCRIPTOR_COUNT_BIT_EXT;
-
-		VkDescriptorSetLayoutBinding imageBinding{};
-		imageBinding.descriptorCount                             = MAX_IMAGES;
-		imageBinding.descriptorType                              = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		imageBinding.stageFlags                                  = VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT;
-		imageBinding.binding                                     = 0;
-
-		VkDescriptorSetLayoutBindingFlagsCreateInfoEXT extend{ VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO_EXT };
-		extend.pNext         = nullptr;
-		extend.bindingCount  = 1;
-		extend.pBindingFlags = &bindFlag;
-
-		VkDescriptorSetLayoutCreateInfo layoutInfo{ VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO };
-		layoutInfo.pNext        = &extend;
-		layoutInfo.bindingCount = 1;
-		layoutInfo.pBindings    = &imageBinding;
-
-		VK_CheckResult( vkCreateDescriptorSetLayout( VK_GetDevice(), &layoutInfo, NULL, &gImageLayout ), "Failed to create image descriptor set layout!" );
-
-		gSamplerLayoutHandle = gDescLayouts.Add( gImageLayout );
-	}
-
-	// ----------------------------------------------------------------------------
-	// Uniform Buffers Layout
-#if 0
-	{
-		VkDescriptorBindingFlagsEXT  bindFlag = VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT_EXT | VK_DESCRIPTOR_BINDING_VARIABLE_DESCRIPTOR_COUNT_BIT_EXT;
-
-		VkDescriptorSetLayoutBinding layoutBinding{};
-		layoutBinding.descriptorCount                           = MAX_IMAGES;
-		layoutBinding.descriptorType                            = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-		layoutBinding.stageFlags                                = VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT;
-		layoutBinding.binding                                   = 0;
-
-		VkDescriptorSetLayoutBindingFlagsCreateInfoEXT extend{ VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO_EXT };
-		extend.pNext         = nullptr;
-		extend.bindingCount  = 1;
-		extend.pBindingFlags = &bindFlag;
-
-		VkDescriptorSetLayoutCreateInfo layoutInfo{ VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO };
-		layoutInfo.pNext        = &extend;
-		layoutInfo.bindingCount = 1;
-		layoutInfo.pBindings    = &layoutBinding;
-
-		VK_CheckResult( vkCreateDescriptorSetLayout( VK_GetDevice(), &layoutInfo, NULL, &gImageLayout ), "Failed to create image descriptor set layout!" );
-	}
 #endif
 
-	// ----------------------------------------------------------------------------
-	// Texture Storage Layout
+
+void VK_SetImageSets( ChHandle_t* spDescSets, int sCount, u32 sBinding )
+{
+	gImageBinding = sBinding;
+	gImageSets.resize( sCount );
+
+	for ( int i = 0; i < sCount; i++ )
 	{
-		VkDescriptorBindingFlagsEXT  bindFlag = VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT_EXT | VK_DESCRIPTOR_BINDING_VARIABLE_DESCRIPTOR_COUNT_BIT_EXT;
-
-		VkDescriptorSetLayoutBinding samplerLayoutBinding{};
-		samplerLayoutBinding.binding                             = 0;
-		samplerLayoutBinding.descriptorCount                     = MAX_STORAGE_IMAGES;
-		samplerLayoutBinding.descriptorType                      = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
-		samplerLayoutBinding.pImmutableSamplers                  = nullptr;
-		samplerLayoutBinding.stageFlags                          = VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT;
-
-		VkDescriptorSetLayoutBindingFlagsCreateInfoEXT extend{ VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO_EXT };
-		extend.pNext         = nullptr;
-		extend.bindingCount  = 1;
-		extend.pBindingFlags = &bindFlag;
-
-		VkDescriptorSetLayoutCreateInfo samplerLayoutInfo{ VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO };
-		samplerLayoutInfo.pNext = &extend;
-		samplerLayoutInfo.bindingCount = 1;
-		samplerLayoutInfo.pBindings    = &samplerLayoutBinding;
-
-		VK_CheckResult( vkCreateDescriptorSetLayout( VK_GetDevice(), &samplerLayoutInfo, NULL, &gImageStorageLayout ), "Failed to create image descriptor set layout!" );
+		gImageSets[ i ] = spDescSets[ i ];
 	}
-
-	VK_AllocSets();
 }
 
 
 void VK_CreateDescSets()
 {
 	VK_CreateDescriptorPool();
-	VK_CreateDescriptorSetLayouts();
 }
 
 
 void VK_DestroyDescSets()
 {
-	if ( gImageLayout )
-		vkDestroyDescriptorSetLayout( VK_GetDevice(), gImageLayout, nullptr );
-
-	if ( gImageStorageLayout )
-		vkDestroyDescriptorSetLayout( VK_GetDevice(), gImageStorageLayout, nullptr );
-
-	if ( gDescriptorPool )
-		vkDestroyDescriptorPool( VK_GetDevice(), gDescriptorPool, nullptr );
+	if ( gVkDescriptorPool )
+		vkDestroyDescriptorPool( VK_GetDevice(), gVkDescriptorPool, nullptr );
 }
 
 
-Handle VK_CreateVariableDescLayout( const CreateVariableDescLayout_t& srCreate )
+// --------------------------------------------------------------------------------------------
+
+
+Handle VK_CreateDescLayout( const CreateDescLayout_t& srCreate )
 {
-	// Create the layouts
-	VkDescriptorBindingFlagsEXT  bindFlag = VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT_EXT | VK_DESCRIPTOR_BINDING_VARIABLE_DESCRIPTOR_COUNT_BIT_EXT;
+	std::vector< VkDescriptorBindingFlagsEXT >  layoutBindingFlags;
+	std::vector< VkDescriptorSetLayoutBinding > layoutBindings;
 
-	VkDescriptorSetLayoutBinding layoutBinding{};
-	layoutBinding.descriptorCount = srCreate.aCount;
-	layoutBinding.descriptorType  = VK_ToVKDescriptorType( srCreate.aType );
-	layoutBinding.stageFlags      = VK_ToVkShaderStage( srCreate.aStages );
-	layoutBinding.binding         = srCreate.aBinding;
+	layoutBindingFlags.resize( srCreate.aBindings.size() );
+	layoutBindings.resize( srCreate.aBindings.size() );
 
-	// Check Device Limits
-	if ( layoutBinding.descriptorType == EDescriptorType_UniformBuffer )
+	// Create the layout bindings
+	for ( size_t i = 0; i < srCreate.aBindings.size(); i++ )
 	{
-		if ( srCreate.aCount > VK_GetPhysicalDeviceProperties().limits.maxPerStageDescriptorUniformBuffers )
+		const CreateDescBinding_t& createBinding = srCreate.aBindings[ i ];
+
+		// Unused descriptors don't need to be filled in with this
+		layoutBindingFlags[ i ]                  = VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT;
+
+		// if ( createBinding.aCount > 1 )
+		// 	layoutBindingFlags[ i ] |= VK_DESCRIPTOR_BINDING_VARIABLE_DESCRIPTOR_COUNT_BIT;
+
+		layoutBindings[ i ].descriptorCount = createBinding.aCount;
+		layoutBindings[ i ].descriptorType  = VK_ToVKDescriptorType( createBinding.aType );
+		layoutBindings[ i ].stageFlags      = VK_ToVkShaderStage( createBinding.aStages );
+		layoutBindings[ i ].binding         = createBinding.aBinding;
+
+		// Check Pool Stats for this Descriptor Type
+		DescriptorPoolTypeStats_t& typeStats = gDescriptorPoolStats.aTypes[ layoutBindings[ i ].descriptorType ];
+
+		if ( typeStats.aUsed >= typeStats.aAllocated )
 		{
-			Log_ErrorF( "Surpassed maxPerStageDescriptorUniformBuffers limit of %zd (tried to create %zd buffers)\n",
-			            VK_GetPhysicalDeviceProperties().limits.maxPerStageDescriptorUniformBuffers, srCreate.aCount );
+			Log_ErrorF( gLC_Render, "Out of %s Descriptors (Max of %zd)\n",
+			            gDescriptorTypeStr[ layoutBindings[ i ].descriptorType ], typeStats.aAllocated );
 
 			return CH_INVALID_HANDLE;
 		}
+
+		typeStats.aUsed += createBinding.aCount;
 	}
 
-	VkDescriptorSetLayoutBindingFlagsCreateInfoEXT extend{ VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO_EXT };
+	VkDescriptorSetLayoutBindingFlagsCreateInfoEXT extend{ VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO };
 	extend.pNext         = nullptr;
-	extend.bindingCount  = 1;
-	extend.pBindingFlags = &bindFlag;
+	extend.bindingCount  = static_cast< u32 >( layoutBindingFlags.size() );
+	extend.pBindingFlags = layoutBindingFlags.data();
 
 	VkDescriptorSetLayoutCreateInfo layoutInfo{ VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO };
 	layoutInfo.pNext        = &extend;
-	layoutInfo.bindingCount = 1;
-	layoutInfo.pBindings    = &layoutBinding;
+	layoutInfo.bindingCount = static_cast< u32 >( layoutBindings.size() );
+	layoutInfo.pBindings    = layoutBindings.data();
 
 	VkDescriptorSetLayout layout;
 
-	VK_CheckResult( vkCreateDescriptorSetLayout( VK_GetDevice(), &layoutInfo, NULL, &layout ), "Failed to create image descriptor set layout!" );
+	VK_CheckResult( vkCreateDescriptorSetLayout( VK_GetDevice(), &layoutInfo, NULL, &layout ), "Failed to create descriptor set layout!" );
 
 #ifdef _DEBUG
 	// add a debug label onto it
@@ -493,6 +316,74 @@ Handle VK_CreateVariableDescLayout( const CreateVariableDescLayout_t& srCreate )
 }
 
 
+bool VK_AllocateDescLayout( const AllocDescLayout_t& srCreate, Handle* handles )
+{
+	if ( handles == nullptr )
+		return false;
+
+	VkDescriptorSetLayout layout = VK_GetDescLayout( srCreate.aLayout );
+	if ( layout == VK_NULL_HANDLE )
+		return false;
+
+	if ( gDescriptorPoolStats.aSetsUsed + srCreate.aSetCount >= gDescriptorPoolStats.aSetsAllocated )
+	{
+		Log_ErrorF( gLC_Render, "Out of Descriptor Sets in Pool (Max of %zd)\n", gDescriptorPoolStats.aSetsAllocated );
+		return false;
+	}
+
+	gDescriptorPoolStats.aSetsUsed += srCreate.aSetCount;
+
+	// ----------------------------------------------------------------------------
+	// Allocate the Layouts
+
+	std::vector< VkDescriptorSetLayout > layouts( srCreate.aSetCount, layout );
+
+	VkDescriptorSetAllocateInfo          a{ VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO };
+	a.pNext                   = nullptr;
+	a.descriptorPool          = VK_GetDescPool();
+	a.descriptorSetCount      = srCreate.aSetCount;
+	a.pSetLayouts             = layouts.data();
+
+	VkDescriptorSet* descSets = new VkDescriptorSet[ srCreate.aSetCount ];
+
+	VK_CheckResult( vkAllocateDescriptorSets( VK_GetDevice(), &a, descSets ), "Failed to Allocate Descriptor Sets!" );
+
+	gDescSets.EnsureSize( srCreate.aSetCount );
+	for ( u32 i = 0; i < srCreate.aSetCount; i++ )
+	{
+		handles[ i ] = gDescSets.Add( descSets[ i ] );
+
+#ifdef _DEBUG
+		// add a debug label onto it
+		if ( pfnSetDebugUtilsObjectName && srCreate.apName )
+		{
+			const VkDebugUtilsObjectNameInfoEXT nameInfo = {
+				VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,  // sType
+				NULL,                                                // pNext
+				VK_OBJECT_TYPE_DESCRIPTOR_SET,                       // objectType
+				(uint64_t)descSets[ i ],                             // objectHandle
+				srCreate.apName,                                     // pObjectName
+			};
+
+			VK_CheckResultE( pfnSetDebugUtilsObjectName( VK_GetDevice(), &nameInfo ), "Failed to Set Descriptor Set Debug Name" );
+		}
+#endif
+	}
+
+	delete[] descSets;
+
+	return true;
+}
+
+
+void VK_FreeDescLayout( Handle sLayout )
+{
+}
+
+
+// --------------------------------------------------------------------------------------------
+
+
 bool VK_AllocateVariableDescLayout( const AllocVariableDescLayout_t& srCreate, Handle* handles )
 {
 	VkDescriptorSetLayout layout = VK_GetDescLayout( srCreate.aLayout );
@@ -512,8 +403,7 @@ bool VK_AllocateVariableDescLayout( const AllocVariableDescLayout_t& srCreate, H
 
 	std::vector< VkDescriptorSetLayout > layouts( srCreate.aSetCount, layout );
 
-	VkDescriptorSetAllocateInfo          a{};
-	a.sType              = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+	VkDescriptorSetAllocateInfo          a{ VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO };
 	a.pNext              = &dc;
 	a.descriptorPool     = VK_GetDescPool();
 	a.descriptorSetCount = srCreate.aSetCount;
@@ -521,7 +411,7 @@ bool VK_AllocateVariableDescLayout( const AllocVariableDescLayout_t& srCreate, H
 
 	VkDescriptorSet* descSets = new VkDescriptorSet[ srCreate.aSetCount ];
 
-	VK_CheckResult( vkAllocateDescriptorSets( VK_GetDevice(), &a, descSets ), "Failed to allocate uniform buffer descriptor sets!" );
+	VK_CheckResult( vkAllocateDescriptorSets( VK_GetDevice(), &a, descSets ), "Failed to Allocate Descriptor Sets!" );
 
 	gDescSets.EnsureSize( srCreate.aSetCount );
 	for ( u32 i = 0; i < srCreate.aSetCount; i++ )
@@ -557,115 +447,148 @@ void VK_FreeVariableDescLayout( Handle sLayout )
 }
 
 
-void VK_UpdateVariableDescSet( const UpdateVariableDescSet_t& srUpdate )
+// TODO: this could be made better with multiple updates at once
+void VK_UpdateDescSets( WriteDescSet_t* spUpdate, u32 sCount )
 {
-	VK_WaitForGraphicsQueue();
+	if ( spUpdate == nullptr || sCount == 0 )
+		return;
 
-	for ( uint32_t i = 0; i < srUpdate.aDescSets.size(); ++i )
+	ChVector< VkWriteDescriptorSet > writes;
+	size_t totalWrites = 0;
+
+	for ( uint32_t i = 0; i < sCount; i++ )
 	{
-		if ( srUpdate.aBuffers.empty() )
-			continue;
+		totalWrites += spUpdate[ i ].aDescSetCount * spUpdate[ i ].aBindingCount;
+	}
 
-		VkDescriptorType                      type    = VK_ToVKDescriptorType( srUpdate.aType );
-		VkDescriptorSet                       descSet = VK_GetDescSet( srUpdate.aDescSets[ i ] );
+	writes.resize( totalWrites );
 
-		std::vector< VkDescriptorBufferInfo > buffers( srUpdate.aBuffers.size() );
-		std::vector< VkDescriptorImageInfo >  images( srUpdate.aImages.size() );
+	bool failed = false;
 
-		for ( uint32_t j = 0; j < srUpdate.aBuffers.size(); j++ )
+	u32  writeI = 0;
+	for ( uint32_t updateI = 0; updateI < sCount; updateI++ )
+	{
+		WriteDescSet_t& update = spUpdate[ updateI ];
+
+		for ( uint32_t i = 0; i < update.aDescSetCount; i++ )
 		{
-			BufferVK* buffer = nullptr;
-			if ( !gBufferHandles.Get( srUpdate.aBuffers[ j ], &buffer ) )
+			for ( uint32_t b = 0; b < update.aBindingCount; b++ )
 			{
-				Log_ErrorF( gLC_Render, "Failed to find buffer %u\n", j );
-				continue;
+				WriteDescSetBinding_t&  binding = update.apBindings[ b ];
+
+				VkWriteDescriptorSet&   write   = writes[ writeI++ ];
+				write.sType                     = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+				write.pNext                     = nullptr;
+				write.dstSet                    = VK_GetDescSet( update.apDescSets[ i ] );
+				write.dstBinding                = binding.aBinding;
+				write.dstArrayElement           = 0;
+				write.descriptorCount           = binding.aCount;
+				write.descriptorType            = VK_ToVKDescriptorType( binding.aType );
+				write.pImageInfo                = nullptr;
+				write.pBufferInfo               = nullptr;
+				write.pTexelBufferView          = nullptr;
+
+				if ( write.dstSet == VK_NULL_HANDLE )
+				{
+					Log_Error( gLC_Render, "Failed to Get Descriptor Set for VK_UpdateDescSets()\n" );
+					failed = true;
+					break;
+				}
+		
+				switch ( binding.aType )
+				{
+					default:
+					{
+						Log_ErrorF( gLC_Render, "Unhandled Descriptor Type for VK_UpdateDescSets(): %c\n", binding.aType );
+						failed = true;
+						break;
+					}
+
+					case EDescriptorType_CombinedImageSampler:
+					case EDescriptorType_SampledImage:
+					case EDescriptorType_StorageImage:
+					{
+						auto images = ch_malloc_count< VkDescriptorImageInfo >( binding.aCount );
+
+						for ( uint32_t j = 0; j < binding.aCount; j++ )
+						{
+							TextureVK* tex = VK_GetTexture( binding.apData[ j ] );
+							if ( !tex )
+							{
+								Log_ErrorF( gLC_Render, "Failed to find texture %u\n", j );
+								continue;
+							}
+
+							images[ j ].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+							images[ j ].imageView   = tex->aImageView;
+							images[ j ].sampler     = VK_GetSampler( tex->aFilter, tex->aSamplerAddress, tex->aDepthCompare );
+						}
+
+						write.pImageInfo = images;
+						break;
+					}
+
+					case EDescriptorType_UniformBuffer:
+					case EDescriptorType_StorageBuffer:
+					case EDescriptorType_UniformBufferDynamic:
+					case EDescriptorType_StorageBufferDynamic:
+					{
+						auto buffers = ch_malloc_count< VkDescriptorBufferInfo >( binding.aCount );
+
+						for ( u32 j = 0; j < binding.aCount; j++ )
+						{
+							BufferVK* buffer = nullptr;
+							if ( !gBufferHandles.Get( binding.apData[ j ], &buffer ) )
+							{
+								Log_ErrorF( gLC_Render, "Failed to find buffer %u in VK_UpdateDescSets()\n", j );
+								failed = true;
+								break;
+							}
+
+							buffers[ j ].buffer = buffer->aBuffer;
+							buffers[ j ].offset = 0;
+							buffers[ j ].range  = buffer->aSize;
+						}
+
+						write.pBufferInfo = buffers;
+						break;
+					}
+				}
 			}
-
-			buffers[ j ].buffer = buffer->aBuffer;
-			buffers[ j ].offset = 0;
-			buffers[ j ].range  = buffer->aSize;
 		}
+	}
 
-		for ( uint32_t j = 0; j < srUpdate.aImages.size(); j++ )
+	if ( !failed )
+	{
+		VK_WaitForGraphicsQueue();
+		vkUpdateDescriptorSets( VK_GetDevice(), writes.size(), writes.data(), 0, nullptr );
+	}
+
+	// Free Memory
+	for ( uint32_t i = 0; i < writes.size(); ++i )
+	{
+		VkWriteDescriptorSet& write = writes[ i ];
+
+		if ( write.pImageInfo )
 		{
-			TextureVK* tex = VK_GetTexture( srUpdate.aImages[ j ] );
-			if ( !tex )
-			{
-				Log_ErrorF( gLC_Render, "Failed to find texture %u\n", j );
-				continue;
-			}
-
-			images[ j ].imageLayout = VK_IMAGE_LAYOUT_GENERAL;
-			images[ j ].imageView   = tex->aImageView;
-			images[ j ].sampler     = VK_GetSampler( tex->aFilter, tex->aSamplerAddress, tex->aDepthCompare );
+			auto images = const_cast< VkDescriptorImageInfo* >( write.pImageInfo );
+			free( images );
 		}
-
-		VkWriteDescriptorSet w{ VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET };
-		w.pNext            = nullptr;
-		w.dstSet           = descSet;
-		w.dstBinding       = 0;
-		w.dstArrayElement  = 0;
-		w.descriptorCount  = static_cast< uint32_t >( buffers.size() + images.size() );
-		w.descriptorType   = VK_ToVKDescriptorType( srUpdate.aType );
-		w.pImageInfo       = images.data();
-		w.pBufferInfo      = buffers.data();
-		w.pTexelBufferView = nullptr;
-
-		vkUpdateDescriptorSets( VK_GetDevice(), 1, &w, 0, nullptr );
+		else if ( write.pBufferInfo )
+		{
+			auto buffers = const_cast< VkDescriptorBufferInfo* >( write.pBufferInfo );
+			free( buffers );
+		}
 	}
 }
+
+
+// --------------------------------------------------------------------------------------------
 
 
 VkDescriptorPool VK_GetDescPool()
 {
-	return gDescriptorPool;
-}
-
-
-VkDescriptorSetLayout VK_GetImageLayout()
-{
-	return gImageLayout;
-}
-
-
-Handle VK_GetSamplerLayoutHandle()
-{
-	return gSamplerLayoutHandle;
-}
-
-const std::vector< Handle >& VK_GetSamplerSetsHandles()
-{
-	return gSamplerSetsHandles;
-}
-
-
-VkDescriptorSetLayout VK_GetImageStorageLayout()
-{
-	return gImageStorageLayout;
-}
-
-
-const std::vector< VkDescriptorSet >& VK_GetImageSets()
-{
-	return gImageSets;
-}
-
-
-const std::vector< VkDescriptorSet >& VK_GetImageStorage()
-{
-	return gImageStorage;
-}
-
-
-VkDescriptorSet VK_GetImageSet( size_t sIndex )
-{
-	if ( gImageSets.size() >= sIndex )
-	{
-		printf( "VK_GetImageSet() - sIndex out of range!\n" );
-		return nullptr;
-	}
-
-	return gImageSets[ sIndex ];
+	return gVkDescriptorPool;
 }
 
 
