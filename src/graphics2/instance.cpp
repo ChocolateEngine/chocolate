@@ -268,7 +268,7 @@ bool VK_CheckDeviceExtensionSupport( VkPhysicalDevice sDevice )
 	std::vector< VkExtensionProperties > availableExtensions( extensionCount );
 	vkEnumerateDeviceExtensionProperties( sDevice, NULL, &extensionCount, availableExtensions.data() );
 
-	std::set< std::string > requiredExtensions( gpDeviceExtensions, gpDeviceExtensions + ARR_SIZE( gpDeviceExtensions ) );
+	std::set< std::string_view > requiredExtensions( gpDeviceExtensions, gpDeviceExtensions + ARR_SIZE( gpDeviceExtensions ) );
 
 	if ( gListExts )
 	{
@@ -299,7 +299,21 @@ bool VK_CheckDeviceExtensionSupport( VkPhysicalDevice sDevice )
 		}
 	}
 
-	return requiredExtensions.empty();
+	if ( requiredExtensions.empty() )
+		return true;
+
+	std::string errorMsg = "Failed to start renderer: Your device does not have these required Vulkan Extensions:";
+
+	for ( std::string_view extension : requiredExtensions )
+	{
+		errorMsg += "\n    ";
+		errorMsg += extension.data();
+	}
+
+	errorMsg += "\n";
+	Log_Fatal( gLC_Render, errorMsg.c_str() );
+
+	return false;
 }
 
 
@@ -832,6 +846,12 @@ const char* VK_SamplesStr( VkSampleCountFlags counts )
 const VkPhysicalDeviceProperties& VK_GetPhysicalDeviceProperties()
 {
 	return gPhysicalDeviceProperties;
+}
+
+
+const VkPhysicalDeviceLimits& VK_GetPhysicalDeviceLimits()
+{
+	return gPhysicalDeviceProperties.limits;
 }
 
 
