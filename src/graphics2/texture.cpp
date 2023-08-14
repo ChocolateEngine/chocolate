@@ -309,7 +309,7 @@ bool VK_LoadTexture( ChHandle_t& srHandle, TextureVK* tex, const std::string& sr
 	// textures loaded through KTX are always sampled currently
 	if ( tex->aUsage & VK_IMAGE_USAGE_SAMPLED_BIT )
 	{
-		gGraphicsAPIData.aSampledTextures.emplace( srHandle );
+		gGraphicsAPIData.aSampledTextures.push_back( srHandle );
 	}
 
 #ifdef _DEBUG
@@ -348,7 +348,7 @@ TextureVK* VK_CreateTexture( ChHandle_t& srHandle, const TextureCreateInfo_t& sr
 
 	if ( tex->aUsage & VK_IMAGE_USAGE_SAMPLED_BIT )
 	{
-		gGraphicsAPIData.aSampledTextures.emplace( srHandle );
+		gGraphicsAPIData.aSampledTextures.push_back( srHandle );
 	}
 
 	VkImageCreateInfo createInfo{ VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO };
@@ -540,9 +540,7 @@ void VK_DestroyTexture( ChHandle_t sTexture )
 
 			vkFreeMemory( VK_GetDevice(), texture->aMemory, nullptr );
 		}
-	}
-	else
-	{
+
 		if ( texture->aUsage & VK_IMAGE_USAGE_SAMPLED_BIT )
 		{
 			gGraphicsAPIData.aSampledTextures.erase( sTexture );

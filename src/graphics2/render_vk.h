@@ -183,7 +183,7 @@ struct GraphicsAPI_t
 
 	CommandBufferGroup_t           aCommandGroups[ ECommandBufferType_Count ];
 
-	std::set< ChHandle_t >         aSampledTextures;
+	ChVector< ChHandle_t >         aSampledTextures;
 
 	ChVector< QueuedBufferCopy_t > aBufferCopies;
 };
@@ -312,15 +312,6 @@ bool                                  VK_AllocateVariableDescLayout( const Alloc
 VkDescriptorSetLayout                 VK_GetDescLayout( Handle sHandle );
 VkDescriptorSet                       VK_GetDescSet( Handle sHandle );
 
-// void                                  VK_AddUniformBuffer( BufferVK* spTexture );
-// void                                  VK_WriteUniformBuffer( BufferVK* spTexture );
-// void                                  VK_RemoveUniformBuffer( BufferVK* spTexture );
-// void                                  VK_UpdateUniformBuffers();
-
-void                                  VK_AddImageStorage( TextureVK* spTexture );
-void                                  VK_RemoveImageStorage( TextureVK* spTexture );
-void                                  VK_UpdateImageStorage();
-
 // --------------------------------------------------------------------------------------
 // Command Pool
 
@@ -349,7 +340,6 @@ RenderPassInfoVK*                     VK_GetRenderPassInfo( VkRenderPass renderP
 // --------------------------------------------------------------------------------------
 // Present
 
-VkCommandBuffer                       VK_GetCommandBuffer();
 VkCommandBuffer                       VK_GetCommandBuffer( Handle cmd );
 u32                                   VK_GetCommandIndex();
 
