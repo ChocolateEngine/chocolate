@@ -27,7 +27,6 @@ std::vector< VkFence >          gFences;
 std::vector< VkFence >          gInFlightFences;
 
 u8                              gFrameIndex      = 0;
-u8                              gCmdIndex        = 0;
 
 bool                            gInTransferQueue = false;
 bool                            gInGraphicsQueue = false;
@@ -35,21 +34,9 @@ bool                            gInGraphicsQueue = false;
 std::mutex                      gGraphicsMutex;
 
 
-VkCommandBuffer VK_GetCommandBuffer()
-{
-	return gCommandBuffers[ gCmdIndex ];
-}
-
-
 VkCommandBuffer VK_GetCommandBuffer( Handle cmd )
 {
 	return *gCommandBufferHandles.Get( cmd );
-}
-
-
-u32 VK_GetCommandIndex()
-{
-	return gCmdIndex;
 }
 
 
@@ -394,5 +381,4 @@ void VK_Present( u32 sImageIndex )
 
 	gFrameIndex     = ( gFrameIndex + 1 ) % MAX_FRAMES_IN_FLIGHT;
 }
-
 
