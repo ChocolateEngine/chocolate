@@ -40,6 +40,7 @@ SDL_Window*                                              gpWindow = nullptr;
 
 static VkCommandPool                                     gSingleTime;
 static VkCommandPool                                     gPrimary;
+static VkCommandPool                                     gCmdPoolTransfer;
 
 // static std::unordered_map< ImageInfo*, VkDescriptorSet > gImGuiTextures;
 static std::vector< std::vector< char > >                gFontData;
@@ -648,6 +649,16 @@ VkSamplerAddressMode VK_ToVkSamplerAddress( ESamplerAddressMode mode )
 // Copies memory to the GPU.
 void VK_memcpy( VkDeviceMemory sBufferMemory, VkDeviceSize sSize, const void* spData )
 {
+	#pragma message( "BE ABLE TO ONLY MAP CERTAIN REGIONS OF A BUFFER" )
+
+	// maybe what you could do is manually map and unmap the memory? probably useless, idk
+
+	// render->BufferMap();
+	// render->BufferUnmap();
+
+	// or you could copy the idea of VkBufferCopy and make your own buffer region writing stuff
+	// and then internally we can automatically map the regions needed and write to it
+
 	// TODO: add an option that doesn't need the size here
 	void* pData = nullptr;
 	VK_CheckResult( vkMapMemory( VK_GetDevice(), sBufferMemory, 0, sSize, 0, &pData ), "Failed to map memory" );
@@ -703,15 +714,15 @@ VkSampleCountFlagBits VK_GetMSAASamples()
 }
 
 
-void VK_CreateCommandPool( VkCommandPool& sCmdPool, VkCommandPoolCreateFlags sFlags )
+void VK_CreateCommandPool( VkCommandPool& sCmdPool, u32 sQueueFamily, VkCommandPoolCreateFlags sFlags )
 {
-	u32 graphics;
-	VK_FindQueueFamilies( VK_GetPhysicalDevice(), &graphics, nullptr );
+	// u32 graphics;
+	// VK_FindQueueFamilies( VK_GetPhysicalDeviceProperties(), VK_GetPhysicalDevice(), &graphics, nullptr );
 
 	VkCommandPoolCreateInfo aCommandPoolInfo{ VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO };
 	aCommandPoolInfo.pNext            = nullptr;
 	aCommandPoolInfo.flags            = sFlags;
-	aCommandPoolInfo.queueFamilyIndex = graphics;
+	aCommandPoolInfo.queueFamilyIndex = sQueueFamily;
 
 	VK_CheckResult( vkCreateCommandPool( VK_GetDevice(), &aCommandPoolInfo, nullptr, &sCmdPool ), "Failed to create command pool!" );
 }
@@ -738,6 +749,12 @@ VkCommandPool& VK_GetSingleTimeCommandPool()
 VkCommandPool& VK_GetPrimaryCommandPool()
 {
 	return gPrimary;
+}
+
+
+VkCommandPool& VK_GetTransferCommandPool()
+{
+	return gCmdPoolTransfer;
 }
 
 
@@ -877,8 +894,9 @@ bool Render_Init( void* spWindow )
 	VK_SetupPhysicalDevice();
 	VK_CreateDevice();
 
-	VK_CreateCommandPool( VK_GetSingleTimeCommandPool() );
-	VK_CreateCommandPool( VK_GetPrimaryCommandPool() );
+	VK_CreateCommandPool( VK_GetSingleTimeCommandPool(), gGraphicsAPIData.aQueueFamilyGraphics );
+	VK_CreateCommandPool( VK_GetPrimaryCommandPool(), gGraphicsAPIData.aQueueFamilyGraphics );
+	VK_CreateCommandPool( VK_GetTransferCommandPool(), gGraphicsAPIData.aQueueFamilyTransfer );
 
 	VK_CreateSwapchain();
 	VK_CreateFences();
@@ -923,6 +941,7 @@ void Render_Shutdown()
 	VK_DestroySemaphores();
 	VK_DestroyCommandPool( VK_GetSingleTimeCommandPool() );
 	VK_DestroyCommandPool( VK_GetPrimaryCommandPool() );
+	VK_DestroyCommandPool( VK_GetTransferCommandPool() );
 	VK_DestroyDescSets();
 
 	VK_DestroyInstance();
@@ -946,19 +965,6 @@ void VK_Reset( ERenderResetFlags sFlags )
 
 	if ( gpOnResetFunc )
 		gpOnResetFunc( sFlags );
-}
-
-
-void Render_Reset()
-{
-	VK_Reset();
-}
-
-
-void Render_Present()
-{
-	VK_RecordCommands();
-	VK_Present();
 }
 
 
@@ -1111,6 +1117,16 @@ public:
 
 	void Shutdown()
 	{
+		for ( u32 i = 0; i < gGraphicsAPIData.aBufferCopies.aCapacity; i++ )
+		{
+			QueuedBufferCopy_t& bufferCopy = gGraphicsAPIData.aBufferCopies.apData[ i ];
+
+			if ( bufferCopy.apRegions )
+				free( bufferCopy.apRegions );
+
+			bufferCopy.apRegions = nullptr;
+		}
+
 		Render_Shutdown();
 	}
 
@@ -1290,45 +1306,122 @@ public:
 		return bufVK->aSize;
 	}
 
-	virtual u32 BufferCopy( Handle shSrc, Handle shDst, u32 sSize ) override
+	virtual bool BufferCopy( Handle shSrc, Handle shDst, BufferRegionCopy_t* spRegions, u32 sRegionCount ) override
 	{
 		PROF_SCOPE();
+
+		if ( spRegions == nullptr || sRegionCount == 0 )
+		{
+			Log_Error( gLC_Render, "BufferCopy: No Regions to Copy\n" );
+			return false;
+		}
 
 		BufferVK* bufSrc = gBufferHandles.Get( shSrc );
 		if ( !bufSrc )
 		{
 			Log_Error( gLC_Render, "BufferCopy: Failed to find Source Buffer\n" );
-			return 0;
+			return false;
 		}
 
 		BufferVK* bufDst = gBufferHandles.Get( shDst );
 		if ( !bufDst )
 		{
 			Log_Error( gLC_Render, "BufferCopy: Failed to find Dest Buffer\n" );
-			return 0;
+			return false;
 		}
 
-		u32 size = sSize;
+		auto regions = CH_STACK_NEW( VkBufferCopy, sRegionCount );
 
-		if ( size > bufSrc->aSize )
+		for ( u32 i = 0; i < sRegionCount; i++ )
 		{
-			size = bufSrc->aSize;
+			BufferRegionCopy_t& region = spRegions[ i ];
+			u32                 size   = region.aSize;
+
+			if ( size > bufSrc->aSize )
+			{
+				size = bufSrc->aSize;
+			}
+
+			if ( size > bufDst->aSize )
+			{
+				size = bufDst->aSize;
+			}
+
+			regions[ i ].srcOffset = region.aSrcOffset;
+			regions[ i ].dstOffset = region.aDstOffset;
+			regions[ i ].size      = size;
 		}
 
-		if ( size > bufDst->aSize )
+		VkCommandBuffer c = VK_BeginOneTimeCommand();
+		vkCmdCopyBuffer( c, bufSrc->aBuffer, bufDst->aBuffer, sRegionCount, regions );
+		VK_EndOneTimeCommand( c );
+
+		CH_STACK_FREE( regions );
+
+		return true;
+	}
+
+	virtual bool BufferCopyQueued( Handle shSrc, Handle shDst, BufferRegionCopy_t* spRegions, u32 sRegionCount ) override
+	{
+		PROF_SCOPE();
+
+		if ( spRegions == nullptr || sRegionCount == 0 )
 		{
-			size = bufDst->aSize;
+			Log_Error( gLC_Render, "BufferCopy: No Regions to Copy\n" );
+			return false;
 		}
-		
-		VkBufferCopy copyRegion{};
-		copyRegion.srcOffset = 0;  // Optional
-		copyRegion.dstOffset = 0;  // Optional
-		copyRegion.size      = size;
 
-		VK_OneTimeCommand( [ & ]( VkCommandBuffer c )
-		                  { vkCmdCopyBuffer( c, bufSrc->aBuffer, bufDst->aBuffer, 1, &copyRegion ); } );
+		BufferVK* bufSrc = gBufferHandles.Get( shSrc );
+		if ( !bufSrc )
+		{
+			Log_Error( gLC_Render, "BufferCopy: Failed to find Source Buffer\n" );
+			return false;
+		}
 
-		return size;
+		BufferVK* bufDst = gBufferHandles.Get( shDst );
+		if ( !bufDst )
+		{
+			Log_Error( gLC_Render, "BufferCopy: Failed to find Dest Buffer\n" );
+			return false;
+		}
+
+		QueuedBufferCopy_t& bufferCopy = gGraphicsAPIData.aBufferCopies.emplace_back( false );
+		bufferCopy.aSource             = bufSrc->aBuffer;
+		bufferCopy.aDest               = bufDst->aBuffer;
+
+		if ( bufferCopy.aRegionCount < sRegionCount && bufferCopy.apRegions )
+		{
+			// from an earlier copy, we need more memory allocated here, so free it and allocate more after
+			free( bufferCopy.apRegions );
+			bufferCopy.apRegions = nullptr;
+		}
+
+		bufferCopy.aRegionCount = sRegionCount;
+
+		if ( !bufferCopy.apRegions )
+			bufferCopy.apRegions = ch_malloc_count< VkBufferCopy >( sRegionCount );
+
+		for ( u32 i = 0; i < sRegionCount; i++ )
+		{
+			BufferRegionCopy_t& region = spRegions[ i ];
+			u32                 size   = region.aSize;
+
+			if ( size > bufSrc->aSize )
+			{
+				size = bufSrc->aSize;
+			}
+
+			if ( size > bufDst->aSize )
+			{
+				size = bufDst->aSize;
+			}
+
+			bufferCopy.apRegions[ i ].srcOffset = region.aSrcOffset;
+			bufferCopy.apRegions[ i ].dstOffset = region.aDstOffset;
+			bufferCopy.apRegions[ i ].size      = size;
+		}
+
+		return true;
 	}
 
 	// --------------------------------------------------------------------------------------------
@@ -1500,7 +1593,7 @@ public:
 	void ReloadTextures() override
 	{
 		VK_WaitForGraphicsQueue();
-		VK_WaitForPresentQueue();
+		VK_WaitForTransferQueue();
 
 		for ( auto& [ path, handle ] : gTexturePaths )
 		{
@@ -1668,9 +1761,28 @@ public:
 	{
 	}
 
-	void Present() override
+	void CopyQueuedBuffers() override
 	{
-		VK_Present();
+		VkCommandBuffer c = VK_BeginOneTimeCommand();
+
+		for ( QueuedBufferCopy_t& bufferCopy : gGraphicsAPIData.aBufferCopies )
+		{
+			vkCmdCopyBuffer( c, bufferCopy.aSource, bufferCopy.aDest, bufferCopy.aRegionCount, bufferCopy.apRegions );
+		}
+
+		VK_EndOneTimeCommand( c );
+
+		gGraphicsAPIData.aBufferCopies.clear();
+	}
+
+	u32 GetFlightImageIndex() override
+	{
+		return VK_GetNextImage();
+	}
+
+	void Present( u32 sImageIndex ) override
+	{
+		VK_Present( sImageIndex );
 	}
 
 	void WaitForQueues() override
@@ -1678,7 +1790,7 @@ public:
 		PROF_SCOPE();
 
 		VK_WaitForGraphicsQueue();
-		VK_WaitForPresentQueue();
+		VK_WaitForTransferQueue();
 	}
 
 	void ResetCommandPool() override

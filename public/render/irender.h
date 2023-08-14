@@ -340,6 +340,15 @@ enum ESamplerAddressMode : char
 };
 
 
+enum ECommandBufferType
+{
+	ECommandBufferType_Graphics,
+	ECommandBufferType_Transfer,
+
+	ECommandBufferType_Count,
+};
+
+
 // -----------------------------------------------------------------------------
 // Structs
 // -----------------------------------------------------------------------------
@@ -597,6 +606,14 @@ struct AllocDescLayout_t
 };
 
 
+struct BufferRegionCopy_t
+{
+	size_t aSrcOffset;
+	size_t aDstOffset;
+	size_t aSize;
+};
+
+
 #if 0
 //resources are used to comunicate to a renderpass what and how a resource is used
 //the shader dictates what type of resource must be bound where
@@ -705,7 +722,10 @@ class IRender : public ISystem
 	virtual u32         BufferRead( Handle buffer, u32 sSize, void* spData )                                                       = 0;
 
 	// Copy one buffer to another buffer, useful for copying between host and device memory
-	virtual u32         BufferCopy( Handle shSrc, Handle shDst, u32 sSize )                                                        = 0;
+	virtual bool        BufferCopy( Handle shSrc, Handle shDst, BufferRegionCopy_t* spRegions, u32 sRegionCount )                      = 0;
+
+	// Queues a copy of one buffer to another buffer, useful for copying between host and device memory
+	virtual bool        BufferCopyQueued( Handle shSrc, Handle shDst, BufferRegionCopy_t* spRegions, u32 sRegionCount )                = 0;
 
 	// --------------------------------------------------------------------------------------------
 	// Textures
@@ -767,29 +787,31 @@ class IRender : public ISystem
 	// Rendering
 	// --------------------------------------------------------------------------------------------
 
-	virtual void        SetResetCallback( Render_OnReset_t sFunc )                                                                 = 0;
+	virtual void        SetResetCallback( Render_OnReset_t sFunc )                                                                     = 0;
 
-	virtual void        Reset()                                                                                                    = 0;
-	virtual void        NewFrame()                                                                                                 = 0;
-	virtual void        PreRenderPass()                                                                                            = 0;
-	virtual void        Present()                                                                                                  = 0;
+	virtual void        Reset()                                                                                                        = 0;
+	virtual void        NewFrame()                                                                                                     = 0;
+	virtual void        PreRenderPass()                                                                                                = 0;
+	virtual void        CopyQueuedBuffers()                                                                                            = 0;
+	virtual u32         GetFlightImageIndex()                                                                                          = 0;
+	virtual void        Present( u32 sImageIndex )                                                                                     = 0;
 
-	virtual void        WaitForQueues()                                                                                            = 0;
-	virtual void        ResetCommandPool()                                                                                         = 0;
-
-	// blech
-	virtual u32         GetCommandBufferHandles( Handle* spHandles )                                                               = 0;
-
-	virtual void        BeginCommandBuffer( Handle cmd )                                                                           = 0;
-	virtual void        EndCommandBuffer( Handle cmd )                                                                             = 0;
-
-	virtual Handle      CreateRenderPass( const RenderPassCreate_t& srCreate )                                                     = 0;
-	virtual void        DestroyRenderPass( Handle shPass )                                                                         = 0;
-	virtual void        BeginRenderPass( Handle cmd, const RenderPassBegin_t& srBegin )                                            = 0;
-	virtual void        EndRenderPass( Handle cmd )                                                                                = 0;
+	virtual void        WaitForQueues()                                                                                                = 0;
+	virtual void        ResetCommandPool()                                                                                             = 0;
 
 	// blech
-	virtual void        DrawImGui( ImDrawData* spDrawData, Handle cmd )                                                            = 0;
+	virtual u32         GetCommandBufferHandles( Handle* spHandles )                                                                   = 0;
+
+	virtual void        BeginCommandBuffer( Handle cmd )                                                                               = 0;
+	virtual void        EndCommandBuffer( Handle cmd )                                                                                 = 0;
+
+	virtual Handle      CreateRenderPass( const RenderPassCreate_t& srCreate )                                                         = 0;
+	virtual void        DestroyRenderPass( Handle shPass )                                                                             = 0;
+	virtual void        BeginRenderPass( Handle cmd, const RenderPassBegin_t& srBegin )                                                = 0;
+	virtual void        EndRenderPass( Handle cmd )                                                                                    = 0;
+
+	// blech
+	virtual void        DrawImGui( ImDrawData* spDrawData, Handle cmd )                                                                = 0;
 
 	// --------------------------------------------------------------------------------------------
 	// Vulkan Commands
@@ -846,5 +868,5 @@ class IRender : public ISystem
 
 
 #define IRENDER_NAME "Render"
-#define IRENDER_VER 10
+#define IRENDER_VER 11
 

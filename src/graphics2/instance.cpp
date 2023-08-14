@@ -11,8 +11,9 @@
 #include <set>
 
 
-bool gListExts    = Args_Register( false, "List All Vulkan Extensions, marking what ones are loaded", "-vk-list-exts" );
-int  gDeviceIndex = Args_Register( -1, "Manually select a GPU by the index in the device list", "-gpu" );
+static bool gListExts    = Args_Register( false, "List All Vulkan Extensions, marking what ones are loaded", "-vk-list-exts" );
+static bool gListQueues  = Args_Register( false, "List All Device Queues", "-vk-list-queues" );
+static int  gDeviceIndex = Args_Register( -1, "Manually select a GPU by the index in the device list", "-gpu" );
 
 
 #ifdef NDEBUG
@@ -88,7 +89,7 @@ static VkSurfaceKHR                      gSurface;
 static VkPhysicalDevice                  gPhysicalDevice;
 static VkDevice                          gDevice;
 static VkQueue                           gGraphicsQueue;
-static VkQueue                           gPresentQueue;
+static VkQueue                           gTransferQueue;
 
 static VkPhysicalDeviceProperties        gPhysicalDeviceProperties;
 
@@ -451,44 +452,98 @@ uint32_t VK_GetMemoryType( uint32_t sTypeFilter, VkMemoryPropertyFlags sProperti
 }
 
 
-// TODO: rethink this
-void VK_FindQueueFamilies( VkPhysicalDevice sDevice, u32* spGraphics, u32* spPresent )
+// TODO: rethink this and check for compute and transfer queues (there could be multiple of each)
+void VK_FindQueueFamilies( const VkPhysicalDeviceProperties& srDeviceProps, VkPhysicalDevice sDevice, u32& srGraphics, u32& srTransfer )
 {
 	uint32_t queueFamilyCount = 0;
 	vkGetPhysicalDeviceQueueFamilyProperties( sDevice, &queueFamilyCount, nullptr );
 
-	std::vector< VkQueueFamilyProperties > queueFamilies( queueFamilyCount );
-	vkGetPhysicalDeviceQueueFamilyProperties( sDevice, &queueFamilyCount, queueFamilies.data() );  // Logic to find queue family indices to populate struct with
+	if ( queueFamilyCount == 0 )
+	{
+		Log_FatalF( gLC_Render, "Device \"%s\" has no queue families???\n" );
+		return;
+	}
+
+	auto queueFamilies = CH_STACK_NEW( VkQueueFamilyProperties, queueFamilyCount );
+
+	if ( !queueFamilies )
+	{
+		Log_FatalF( gLC_Render, "Failed to stack allocate queue family properties array\n" );
+		return;
+	}
+
+	vkGetPhysicalDeviceQueueFamilyProperties( sDevice, &queueFamilyCount, queueFamilies );  // Logic to find queue family indices to populate struct with
 
 	// *spPresent  = UINT32_MAX;
 	// *spGraphics = UINT32_MAX;
 
-	u32 i = 0;
-	for ( const auto& queueFamily : queueFamilies )
+	// hack, as this is called multiple times for some reason
+	static bool listedQueues = false;
+
+	if ( gListQueues && !listedQueues )
 	{
-		if ( queueFamily.queueFlags & ( VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_COMPUTE_BIT ) )
+		listedQueues          = true;
+		std::string queueDump = vstring( "Device \"%s\" has %zd Queues\n", srDeviceProps.deviceName, queueFamilyCount );
+
+		for ( u32 queueIndex = 0; queueIndex < queueFamilyCount; queueIndex++ )
 		{
+			const VkQueueFamilyProperties& queueFamily = queueFamilies[ queueIndex ];
+
+			queueDump += vstring( "Queue %zd:\n    Count: %zd\n    Supports Present: ", queueIndex, queueFamily.queueCount );
+
 			VkBool32 presentSupport = false;
-			VK_CheckResult( vkGetPhysicalDeviceSurfaceSupportKHR( sDevice, i, VK_GetSurface(), &presentSupport ),
+			VK_CheckResult( vkGetPhysicalDeviceSurfaceSupportKHR( sDevice, queueIndex, VK_GetSurface(), &presentSupport ),
 			                "Failed to Get Physical Device Surface Support" );
 
-			if ( presentSupport && spPresent )
-				*spPresent = i;
+			queueDump += vstring( "%s\n    Flags:\n", presentSupport ? "Yes" : "No" );
 
-			*spGraphics = i;
+			if ( queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT )
+				queueDump += "        VK_QUEUE_GRAPHICS_BIT\n";
+
+			if ( queueFamily.queueFlags & VK_QUEUE_COMPUTE_BIT )
+				queueDump += "        VK_QUEUE_COMPUTE_BIT\n";
+
+			if ( queueFamily.queueFlags & VK_QUEUE_TRANSFER_BIT )
+				queueDump += "        VK_QUEUE_TRANSFER_BIT\n";
+
+			if ( queueFamily.queueFlags & VK_QUEUE_SPARSE_BINDING_BIT )
+				queueDump += "        VK_QUEUE_SPARSE_BINDING_BIT\n";
+
+			if ( queueFamily.queueFlags & VK_QUEUE_PROTECTED_BIT )
+				queueDump += "        VK_QUEUE_PROTECTED_BIT\n";
+
+			queueDump += "\n";
 		}
 
-		// if ( *spGraphics != UINT32_MAX && *spPresent != UINT32_MAX )
-		// 	break;
-		return;
-
-		i++;
+		Log_Dev( gLC_Render, 1, queueDump.c_str() );
 	}
-}
 
-bool VK_ValidQueueFamilies( u32& srPresent, u32& srGraphics )
-{
-	return true;
+	for ( u32 queueIndex = 0; queueIndex < queueFamilyCount; queueIndex++ )
+	{
+		const VkQueueFamilyProperties& queueFamily = queueFamilies[ queueIndex ];
+
+		if ( queueFamily.queueCount == 0 )
+			continue;
+
+		VkBool32 presentSupport = false;
+		VK_CheckResult( vkGetPhysicalDeviceSurfaceSupportKHR( sDevice, queueIndex, VK_GetSurface(), &presentSupport ),
+		                "Failed to Get Physical Device Surface Support" );
+
+		if ( srGraphics == UINT32_MAX && queueFamily.queueFlags & ( VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_COMPUTE_BIT ) )
+		{
+			if ( !presentSupport )
+				continue;
+
+			srGraphics = queueIndex;
+		}
+
+		if ( queueFamily.queueFlags & VK_QUEUE_TRANSFER_BIT && ( srTransfer == UINT32_MAX || srGraphics == srTransfer ) )
+		{
+			srTransfer = queueIndex;
+		}
+	}
+
+	CH_STACK_FREE( queueFamilies );
 }
 
 
@@ -587,18 +642,21 @@ bool VK_SetupSwapchainInfo( VkPhysicalDevice sDevice )
 }
 
 
-bool VK_SuitableCard( VkPhysicalDevice sDevice )
+bool VK_SuitableCard( const VkPhysicalDeviceProperties& srDeviceProps, VkPhysicalDevice sDevice )
 {
-	bool extensionsSupported = VK_CheckDeviceExtensionSupport( sDevice );
-	bool swapChainAdequate   = false;
+	if ( !VK_CheckDeviceExtensionSupport( sDevice ) )
+		return false;
 
-	if ( extensionsSupported )
-		swapChainAdequate = VK_SetupSwapchainInfo( sDevice );
+	if ( !VK_SetupSwapchainInfo( sDevice ) )
+		return false;
 
-	u32 graphics, present;
-	VK_FindQueueFamilies( sDevice, &graphics, &present );
+	u32 graphics = UINT32_MAX, transfer = UINT32_MAX;
+	VK_FindQueueFamilies( srDeviceProps, sDevice, graphics, transfer );
 
-	return VK_ValidQueueFamilies( present, graphics ) && extensionsSupported && swapChainAdequate;
+	if ( graphics == UINT32_MAX || transfer == UINT32_MAX )
+		return false;
+
+	return true;
 }
 
 
@@ -626,7 +684,7 @@ void VK_DestroySurface()
 }
 
 
-void VK_SelectDevice( const VkPhysicalDevice& srDevice )
+void VK_SelectDevice( const VkPhysicalDeviceProperties& srDeviceProps, const VkPhysicalDevice& srDevice )
 {
 	gPhysicalDevice = srDevice;
 	vkGetPhysicalDeviceProperties( gPhysicalDevice, &gPhysicalDeviceProperties );
@@ -656,6 +714,7 @@ void VK_SetupPhysicalDevice()
 	
 	if ( gDeviceIndex > -1 )
 	{
+		// If we tried to select an invalid device index, dump all available devices to the user
 		if ( gDeviceIndex > devices.size() )
 		{
 			// Build a string list of devices available to us
@@ -666,7 +725,7 @@ void VK_SetupPhysicalDevice()
 				VkPhysicalDeviceProperties deviceProps;
 				vkGetPhysicalDeviceProperties( devices[ i ], &deviceProps );
 
-				bool suitable = VK_SuitableCard( devices[ i ] );
+				bool suitable = VK_SuitableCard( deviceProps, devices[ i ] );
 
 				deviceList += vstring( "GPU %zd - %s%s\n", i, deviceProps.deviceName, suitable ? "" : " (Unsupported)" );
 			}
@@ -674,18 +733,28 @@ void VK_SetupPhysicalDevice()
 			Log_FatalF( gLC_Render, "Only %zd GPU's Found, but user requested GPU index %d\nGPU's available to us:\n\n%s",
 			            devices.size(), gDeviceIndex, deviceList.c_str() );
 		}
-		else if ( VK_SuitableCard( devices[ gDeviceIndex ] ) )
+		else
 		{
-			VK_SelectDevice( devices[ gDeviceIndex ] );
+			VkPhysicalDeviceProperties deviceProps;
+			vkGetPhysicalDeviceProperties( devices[ gDeviceIndex ], &deviceProps );
+
+			if ( VK_SuitableCard( deviceProps, devices[ gDeviceIndex ] ) )
+			{
+				VK_SelectDevice( deviceProps, devices[ gDeviceIndex ] );
+			}
 		}
+		
 	}
 	else
 	{
 		for ( const VkPhysicalDevice& device : devices )
 		{
-			if ( VK_SuitableCard( device ) )
+			VkPhysicalDeviceProperties deviceProps;
+			vkGetPhysicalDeviceProperties( device, &deviceProps );
+
+			if ( VK_SuitableCard( deviceProps, device ) )
 			{
-				VK_SelectDevice( device );
+				VK_SelectDevice( deviceProps, device );
 				break;
 			}
 		}
@@ -695,20 +764,33 @@ void VK_SetupPhysicalDevice()
 
 void VK_CreateDevice()
 {
+	if ( !gPhysicalDevice )
+	{
+		Log_Fatal( gLC_Render, "Failed to select a physical device???\n" );
+		return;
+	}
+
 	Log_Dev( gLC_Render, 1, "Creating VkDevice\n" );
 
 	float queuePriority = 1.0f;
-	u32   graphics, present;
-	VK_FindQueueFamilies( gPhysicalDevice, &graphics, &present );
+	VK_FindQueueFamilies( gPhysicalDeviceProperties, gPhysicalDevice, gGraphicsAPIData.aQueueFamilyGraphics, gGraphicsAPIData.aQueueFamilyTransfer );
 
-	std::set< u32 >                        uniqueQueueFamilies = { graphics, present };
 	std::vector< VkDeviceQueueCreateInfo > queueCreateInfos;
 
-	for ( uint32_t queueFamily : uniqueQueueFamilies )
+	VkDeviceQueueCreateInfo                queueCreateInfo = {
+					   .sType            = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
+					   .queueFamilyIndex = gGraphicsAPIData.aQueueFamilyGraphics,
+					   .queueCount       = 1,
+					   .pQueuePriorities = &queuePriority,
+	};
+
+	queueCreateInfos.push_back( queueCreateInfo );
+
+	if ( gGraphicsAPIData.aQueueFamilyGraphics != gGraphicsAPIData.aQueueFamilyTransfer )
 	{
 		VkDeviceQueueCreateInfo queueCreateInfo = {
 			.sType            = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
-			.queueFamilyIndex = queueFamily,
+			.queueFamilyIndex = gGraphicsAPIData.aQueueFamilyTransfer,
 			.queueCount       = 1,
 			.pQueuePriorities = &queuePriority,
 		};
@@ -745,8 +827,8 @@ void VK_CreateDevice()
 
 	VK_CheckResult( vkCreateDevice( gPhysicalDevice, &createInfo, NULL, &gDevice ), "Failed to create logical device!" );
 
-	vkGetDeviceQueue( gDevice, graphics, 0, &gGraphicsQueue );
-	vkGetDeviceQueue( gDevice, present, 0, &gPresentQueue );
+	vkGetDeviceQueue( gDevice, gGraphicsAPIData.aQueueFamilyGraphics, 0, &gGraphicsQueue );
+	vkGetDeviceQueue( gDevice, gGraphicsAPIData.aQueueFamilyTransfer, 0, &gTransferQueue );
 
 #if _DEBUG
 	pfnSetDebugUtilsObjectName    = (PFN_vkSetDebugUtilsObjectNameEXT)vkGetInstanceProcAddr( VK_GetInstance(), "vkSetDebugUtilsObjectNameEXT" );
@@ -804,9 +886,9 @@ VkQueue VK_GetGraphicsQueue()
 }
 
 
-VkQueue VK_GetPresentQueue()
+VkQueue VK_GetTransferQueue()
 {
-	return gPresentQueue;
+	return gTransferQueue;
 }
 
 

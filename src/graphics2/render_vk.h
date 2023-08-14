@@ -17,7 +17,7 @@
 #endif
 
 
-#include <unordered_set>
+#include <set>
 
 
 LOG_CHANNEL2( Render );
@@ -148,10 +148,44 @@ struct RenderTarget
 };
 
 
+struct QueuedBufferCopy_t
+{
+	VkBuffer      aSource      = VK_NULL_HANDLE;
+	VkBuffer      aDest        = VK_NULL_HANDLE;
+	u32           aRegionCount = 0;
+	VkBufferCopy* apRegions    = nullptr;
+};
+
+
+struct CommandBufferGroup_t
+{
+	u32              aCountPerFrame;
+	u32              aUsedThisFrame;
+	VkCommandBuffer* apBuffers;
+	VkCommandPool    aPool;
+};
+
+
+// idk
+struct SemaphoreGroup_t
+{
+	VkSemaphore aImageAvailable;
+	VkSemaphore aRenderFinished;
+	VkSemaphore aTransferFinished;
+};
+
+
 // TODO: migrate all the global data here
 struct GraphicsAPI_t
 {
-	std::unordered_set< ChHandle_t > aSampledTextures;
+	u32                            aQueueFamilyGraphics = UINT32_MAX;
+	u32                            aQueueFamilyTransfer = UINT32_MAX;
+
+	CommandBufferGroup_t           aCommandGroups[ ECommandBufferType_Count ];
+
+	std::set< ChHandle_t >         aSampledTextures;
+
+	ChVector< QueuedBufferCopy_t > aBufferCopies;
 };
 
 
@@ -208,15 +242,14 @@ VkDevice                              VK_GetDevice();
 VkPhysicalDevice                      VK_GetPhysicalDevice();
 
 VkQueue                               VK_GetGraphicsQueue();
-VkQueue                               VK_GetPresentQueue();
+VkQueue                               VK_GetTransferQueue();
 
 bool                                  VK_CheckValidationLayerSupport();
 VkSampleCountFlags                    VK_GetMaxMSAASamples();
 VkSampleCountFlagBits                 VK_FindMaxMSAASamples();
 
 uint32_t                              VK_GetMemoryType( uint32_t sTypeFilter, VkMemoryPropertyFlags sProperties );
-void                                  VK_FindQueueFamilies( VkPhysicalDevice sDevice, u32* spGraphics, u32* spPresent );
-bool                                  VK_ValidQueueFamilies( u32& srPresent, u32& srGraphics );
+void                                  VK_FindQueueFamilies( const VkPhysicalDeviceProperties& srDeviceProps, VkPhysicalDevice sDevice, u32& srGraphics, u32& srTransfer );
 
 void                                  VK_UpdateSwapchainInfo();
 VkSurfaceCapabilitiesKHR              VK_GetSwapCapabilities();
@@ -291,12 +324,13 @@ void                                  VK_UpdateImageStorage();
 // --------------------------------------------------------------------------------------
 // Command Pool
 
-void                                  VK_CreateCommandPool( VkCommandPool& srPool, VkCommandPoolCreateFlags sFlags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT );
+void                                  VK_CreateCommandPool( VkCommandPool& srPool, u32 sQueueFamily, VkCommandPoolCreateFlags sFlags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT );
 void                                  VK_DestroyCommandPool( VkCommandPool& srPool );
 void                                  VK_ResetCommandPool( VkCommandPool& srPool, VkCommandPoolResetFlags sFlags = 0 );
 
 VkCommandPool&                        VK_GetSingleTimeCommandPool();
 VkCommandPool&                        VK_GetPrimaryCommandPool();
+VkCommandPool&                        VK_GetTransferCommandPool();
 
 // --------------------------------------------------------------------------------------
 // Render Pass
@@ -332,11 +366,12 @@ VkCommandBuffer                       VK_BeginOneTimeCommand();
 void                                  VK_EndOneTimeCommand( VkCommandBuffer c );
 void                                  VK_OneTimeCommand( std::function< void( VkCommandBuffer ) > sFunc );
 
-void                                  VK_WaitForPresentQueue();
+void                                  VK_WaitForTransferQueue();
 void                                  VK_WaitForGraphicsQueue();
 
 void                                  VK_RecordCommands();
-void                                  VK_Present();
+u32                                   VK_GetNextImage();
+void                                  VK_Present( u32 sImageIndex );
 
 void                                  VK_CheckFenceStatus();
 

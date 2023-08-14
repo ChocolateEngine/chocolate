@@ -276,7 +276,7 @@ VkSampler VK_GetSampler( VkFilter sFilter, VkSamplerAddressMode addressMode, VkB
 void VK_RecreateTextureSamplers()
 {
 	VK_WaitForGraphicsQueue();
-	VK_WaitForPresentQueue();
+	VK_WaitForTransferQueue();
 
 	VK_DestroyTextureSamplers();
 	VK_CreateTextureSamplers();

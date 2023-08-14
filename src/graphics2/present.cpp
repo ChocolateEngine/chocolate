@@ -29,7 +29,7 @@ std::vector< VkFence >          gInFlightFences;
 u8                              gFrameIndex      = 0;
 u8                              gCmdIndex        = 0;
 
-bool                            gInPresentQueue  = false;
+bool                            gInTransferQueue = false;
 bool                            gInGraphicsQueue = false;
 
 std::mutex                      gGraphicsMutex;
@@ -219,14 +219,30 @@ void VK_OneTimeCommand( std::function< void( VkCommandBuffer ) > sFunc )
 }
 
 
-void VK_WaitForPresentQueue()
+VkCommandBuffer VK_BeginCommandBuffer( CommandBufferGroup_t& srGroup )
+{
+	return VK_NULL_HANDLE;
+}
+
+
+void VK_EndCommandBuffer( VkCommandBuffer sCmd )
+{
+}
+
+
+void VK_ResetCommandBuffers( CommandBufferGroup_t& srGroup )
+{
+}
+
+
+void VK_WaitForTransferQueue()
 {
 	PROF_SCOPE();
 
-	if ( gInPresentQueue )
-		VK_CheckResult( vkQueueWaitIdle( VK_GetPresentQueue() ), "Failed waiting for present queue" );
+	if ( gInTransferQueue )
+		VK_CheckResult( vkQueueWaitIdle( VK_GetTransferQueue() ), "Failed waiting for transfer queue" );
 
-	gInPresentQueue = false;
+	gInTransferQueue = false;
 }
 
 
@@ -296,7 +312,7 @@ void VK_RecordCommands()
 }
 
 
-void VK_Present()
+u32 VK_GetNextImage()
 {
 	PROF_SCOPE();
 
@@ -310,20 +326,26 @@ void VK_Present()
 		// Recreate all resources.
 		printf( "VK_Reset - vkAcquireNextImageKHR\n" );
 		VK_Reset();
+
+		return VK_GetNextImage();
 	}
 
 	else if ( res != VK_SUCCESS && res != VK_SUBOPTIMAL_KHR )
 	{
 		// Classic typo must remain.
 		VK_CheckResult( res, "Failed ot acquire swapchain image!" );
+		return UINT_MAX;
 	}
 
-	if ( gInFlightFences[ imageIndex ] != VK_NULL_HANDLE )
-	{
-		VK_CheckResult( vkWaitForFences( VK_GetDevice(), 1, &gInFlightFences[ imageIndex ], VK_TRUE, UINT64_MAX ), "Failed waiting for in-flight fences" );
-	}
+	return imageIndex;
+}
 
-	gInFlightFences[ imageIndex ] = gFences[ gFrameIndex ];
+
+void VK_Present( u32 sImageIndex )
+{
+	PROF_SCOPE();
+
+	gInFlightFences[ sImageIndex ]          = gFences[ gFrameIndex ];
 
 	VkSemaphore          waitSemaphores[]   = { gImageAvailableSemaphores[ gFrameIndex ] };
 	VkSemaphore          signalSemaphores[] = { gRenderFinishedSemaphores[ gFrameIndex ] };
@@ -334,7 +356,7 @@ void VK_Present()
 	submitInfo.pWaitSemaphores      = waitSemaphores;
 	submitInfo.pWaitDstStageMask    = waitStages;
 	submitInfo.commandBufferCount   = 1;
-	submitInfo.pCommandBuffers      = &gCommandBuffers[ imageIndex ];
+	submitInfo.pCommandBuffers      = &gCommandBuffers[ sImageIndex ];
 	submitInfo.signalSemaphoreCount = ARR_SIZE( signalSemaphores );
 	submitInfo.pSignalSemaphores    = signalSemaphores;
 
@@ -348,12 +370,12 @@ void VK_Present()
 	presentInfo.pNext              = nullptr;
 	presentInfo.waitSemaphoreCount = ARR_SIZE( signalSemaphores );
 	presentInfo.pWaitSemaphores    = signalSemaphores;
-	presentInfo.swapchainCount     = ARR_SIZE( swapChains );
+	presentInfo.swapchainCount     = 1;
 	presentInfo.pSwapchains        = swapChains;
-	presentInfo.pImageIndices      = &imageIndex;
+	presentInfo.pImageIndices      = &sImageIndex;
 	presentInfo.pResults           = nullptr;
 
-	res                            = vkQueuePresentKHR( VK_GetGraphicsQueue(), &presentInfo );
+	VkResult res                   = vkQueuePresentKHR( VK_GetGraphicsQueue(), &presentInfo );
 
 	if ( res == VK_ERROR_OUT_OF_DATE_KHR || res == VK_SUBOPTIMAL_KHR )
 	{
@@ -368,7 +390,7 @@ void VK_Present()
 
 	// gGraphicsMutex.unlock();
 
-	gInPresentQueue = true;
+	gInGraphicsQueue = true;
 
 	gFrameIndex     = ( gFrameIndex + 1 ) % MAX_FRAMES_IN_FLIGHT;
 }

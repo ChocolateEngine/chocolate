@@ -46,11 +46,13 @@ void VK_CreateSwapchain( VkSwapchainKHR spOldSwapchain )
 	createInfo.clipped               = VK_TRUE;
 	createInfo.oldSwapchain          = spOldSwapchain;
 
-	uint32_t queueFamilyIndices[ 2 ] = { 0, 0 };
-	VK_FindQueueFamilies( VK_GetPhysicalDevice(), &queueFamilyIndices[ 0 ], &queueFamilyIndices[ 1 ] );
+	u32 queueFamilyIndices[ 2 ];
 
-	if ( queueFamilyIndices[ 0 ] != queueFamilyIndices[ 1 ] )
+	if ( gGraphicsAPIData.aQueueFamilyGraphics != gGraphicsAPIData.aQueueFamilyTransfer )
 	{
+		queueFamilyIndices[ 0 ]          = gGraphicsAPIData.aQueueFamilyGraphics;
+		queueFamilyIndices[ 1 ]          = gGraphicsAPIData.aQueueFamilyTransfer;
+
 		createInfo.imageSharingMode      = VK_SHARING_MODE_CONCURRENT;
 		createInfo.queueFamilyIndexCount = 2;
 		createInfo.pQueueFamilyIndices   = queueFamilyIndices;
@@ -96,7 +98,8 @@ void VK_CreateSwapchain( VkSwapchainKHR spOldSwapchain )
 
 void VK_DestroySwapchain()
 {
-	VK_WaitForPresentQueue();
+	VK_WaitForGraphicsQueue();
+	VK_WaitForTransferQueue();
 
 	for ( auto& imgView : gImageViews )
 		vkDestroyImageView( VK_GetDevice(), imgView, nullptr );
@@ -111,7 +114,8 @@ void VK_DestroySwapchain()
 
 void VK_RecreateSwapchain()
 {
-	VK_WaitForPresentQueue();
+	VK_WaitForGraphicsQueue();
+	VK_WaitForTransferQueue();
 
 	for ( auto& imgView : gImageViews )
 		vkDestroyImageView( VK_GetDevice(), imgView, nullptr );
