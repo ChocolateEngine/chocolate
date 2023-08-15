@@ -1352,9 +1352,11 @@ public:
 			regions[ i ].size      = size;
 		}
 
-		VkCommandBuffer c = VK_BeginOneTimeCommand();
+		// TODO: PERF: only use the transfer queue if you need to copy from host to device local memory
+		// this is slower than the graphics queue when copying from device local to device local
+		VkCommandBuffer c = VK_BeginOneTimeTransferCommand();
 		vkCmdCopyBuffer( c, bufSrc->aBuffer, bufDst->aBuffer, sRegionCount, regions );
-		VK_EndOneTimeCommand( c );
+		VK_EndOneTimeTransferCommand( c );
 
 		CH_STACK_FREE( regions );
 
@@ -1763,14 +1765,14 @@ public:
 
 	void CopyQueuedBuffers() override
 	{
-		VkCommandBuffer c = VK_BeginOneTimeCommand();
+		VkCommandBuffer c = VK_BeginOneTimeTransferCommand();
 
 		for ( QueuedBufferCopy_t& bufferCopy : gGraphicsAPIData.aBufferCopies )
 		{
 			vkCmdCopyBuffer( c, bufferCopy.aSource, bufferCopy.aDest, bufferCopy.aRegionCount, bufferCopy.apRegions );
 		}
 
-		VK_EndOneTimeCommand( c );
+		VK_EndOneTimeTransferCommand( c );
 
 		gGraphicsAPIData.aBufferCopies.clear();
 	}

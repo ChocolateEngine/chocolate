@@ -352,6 +352,10 @@ void                                  VK_DestroySemaphores();
 void                                  VK_AllocateCommands();
 void                                  VK_FreeCommands();
 
+// kinda ugly
+VkCommandBuffer                       VK_BeginOneTimeTransferCommand();
+void                                  VK_EndOneTimeTransferCommand( VkCommandBuffer c );
+
 VkCommandBuffer                       VK_BeginOneTimeCommand();
 void                                  VK_EndOneTimeCommand( VkCommandBuffer c );
 void                                  VK_OneTimeCommand( std::function< void( VkCommandBuffer ) > sFunc );

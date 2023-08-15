@@ -20,6 +20,7 @@ constexpr u32                  MAX_FRAMES_IN_FLIGHT = 2;
 std::vector< VkCommandBuffer >  gCommandBuffers;
 ResourceList< VkCommandBuffer > gCommandBufferHandles;  // wtf
 VkCommandBuffer                 gSingleCommandBuffer;
+VkCommandBuffer                 gSingleCommandBufferTransfer;
 
 std::vector< VkSemaphore >      gImageAvailableSemaphores;
 std::vector< VkSemaphore >      gRenderFinishedSemaphores;
@@ -135,13 +136,26 @@ void VK_AllocateCommands()
 	VK_CheckResult( vkAllocateCommandBuffers( VK_GetDevice(), &primAlloc, gCommandBuffers.data() ), "Failed to allocate primary command buffers" );
 
 	// Allocate one time command buffer
-	VkCommandBufferAllocateInfo aCommandBufferAllocateInfo{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO };
-	aCommandBufferAllocateInfo.pNext              = nullptr;
-	aCommandBufferAllocateInfo.commandPool        = VK_GetSingleTimeCommandPool();
-	aCommandBufferAllocateInfo.level              = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-	aCommandBufferAllocateInfo.commandBufferCount = 1;
+	{
+		VkCommandBufferAllocateInfo aCommandBufferAllocateInfo{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO };
+		aCommandBufferAllocateInfo.pNext              = nullptr;
+		aCommandBufferAllocateInfo.commandPool        = VK_GetSingleTimeCommandPool();
+		aCommandBufferAllocateInfo.level              = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+		aCommandBufferAllocateInfo.commandBufferCount = 1;
 
-	VK_CheckResult( vkAllocateCommandBuffers( VK_GetDevice(), &aCommandBufferAllocateInfo, &gSingleCommandBuffer ), "Failed to allocate command buffer!" );
+		VK_CheckResult( vkAllocateCommandBuffers( VK_GetDevice(), &aCommandBufferAllocateInfo, &gSingleCommandBuffer ), "Failed to allocate command buffer!" );
+	}
+	
+	// Allocate one time transfer command buffer
+	{
+		VkCommandBufferAllocateInfo aCommandBufferAllocateInfo{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO };
+		aCommandBufferAllocateInfo.pNext              = nullptr;
+		aCommandBufferAllocateInfo.commandPool        = VK_GetTransferCommandPool();
+		aCommandBufferAllocateInfo.level              = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+		aCommandBufferAllocateInfo.commandBufferCount = 1;
+
+		VK_CheckResult( vkAllocateCommandBuffers( VK_GetDevice(), &aCommandBufferAllocateInfo, &gSingleCommandBufferTransfer ), "Failed to allocate command buffer!" );
+	}
 
 	for ( const auto& cmd : gCommandBuffers )
 		gCommandBufferHandles.Add( cmd );
@@ -159,6 +173,44 @@ void VK_FreeCommands()
 
 	if ( gSingleCommandBuffer )
 		vkFreeCommandBuffers( VK_GetDevice(), VK_GetSingleTimeCommandPool(), 1, &gSingleCommandBuffer );
+
+	if ( gSingleCommandBufferTransfer )
+		vkFreeCommandBuffers( VK_GetDevice(), VK_GetTransferCommandPool(), 1, &gSingleCommandBufferTransfer );
+}
+
+
+VkCommandBuffer VK_BeginOneTimeTransferCommand()
+{
+	VkCommandBufferBeginInfo aCommandBufferBeginInfo{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
+	aCommandBufferBeginInfo.pNext = nullptr;
+	aCommandBufferBeginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+
+	VK_CheckResult( vkBeginCommandBuffer( gSingleCommandBufferTransfer, &aCommandBufferBeginInfo ), "Failed to begin command buffer!" );
+
+	return gSingleCommandBufferTransfer;
+}
+
+
+void VK_EndOneTimeTransferCommand( VkCommandBuffer c )
+{
+	PROF_SCOPE();
+
+	VK_CheckResult( vkEndCommandBuffer( c ), "Failed to end command buffer!" );
+
+	VkSubmitInfo submitInfo{ VK_STRUCTURE_TYPE_SUBMIT_INFO };
+	submitInfo.commandBufferCount = 1;
+	submitInfo.pCommandBuffers    = &c;
+
+	VK_WaitForTransferQueue();
+	gGraphicsMutex.lock();
+
+	VK_CheckResult( vkQueueSubmit( VK_GetTransferQueue(), 1, &submitInfo, VK_NULL_HANDLE ), "Failed to Submit OneTimeTransferCommand" );
+	gInTransferQueue = true;
+
+	VK_WaitForTransferQueue();
+	gGraphicsMutex.unlock();
+
+	VK_ResetCommandPool( VK_GetTransferCommandPool() );
 }
 
 
