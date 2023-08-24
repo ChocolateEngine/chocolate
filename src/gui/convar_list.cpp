@@ -180,7 +180,7 @@ void GuiSystem::DrawConVarList( bool wasOpen )
 			}
 
 			ImGui::TableSetColumnIndex( 3 );
-			if ( cvar->aFunc )
+			if ( cvar->apFunc )
 			{
 				ImGui::PushStyleColor( ImGuiCol_Text, ToImCol( LogColor::Yellow ) );
 				ImGui::TextUnformatted( "Has Callback" );

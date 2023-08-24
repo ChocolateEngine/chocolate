@@ -40,17 +40,17 @@ enum ECVarFlagChange
 using ConVarFlagChangeFunc = bool( ConVarBase* spBase, const std::vector< std::string >& args );
 
 // Function to call for a Console Command
-using ConCommandFunc = std::function< void( const std::vector< std::string >& args ) >;
+using ConCommandFunc = void( const std::vector< std::string >& args );
 
 // Callback Function for when a ConVar Value Changes
-using ConVarFunc = std::function< void( const std::string& prevString, float prevFloat, const std::vector< std::string >& args ) >;
+using ConVarFunc = void( const std::string& prevString, float prevFloat, const std::vector< std::string >& args );
 
 // Callback Function for populating an autocomplete list for a ConCommand
 // TODO: Support ConVar dropdowns
-using ConCommandDropdownFunc = std::function< void(
+using ConCommandDropdownFunc = void(
   const std::vector< std::string >& args,    // arguments currently typed in by the user
   std::vector< std::string >&       results  // results to populate the dropdown list with
-  ) >;
+  );
 
 // Callback function to add data to the config.cfg file written from CVARF_ARCHIVE
 using FArchive = void( std::string& srOutput );
@@ -75,12 +75,56 @@ enum EChConfigOption
 };
 
 
+enum EConVar2Type
+{
+	EConVar2Type_None,
+
+	EConVar2Type_Bool,      // Boolean
+	EConVar2Type_Int,       // Integer
+	EConVar2Type_Float,     // Float
+	EConVar2Type_String,    // String Value
+	EConVar2Type_DropDown,  // Drop-Down of String Values
+};
+
+
 class CORE_API ChConfigOption
 {
   public:
 
 	  EChConfigOption aType;
 };
+
+
+struct ConVar2Data_t
+{
+	const char*  aName;
+	const char*  aDesc;
+	ConVarFlag_t aFlags;
+	ConVarFunc*   aFunc;
+
+	EConVar2Type aType;
+	void*        apData;
+	void*        apDefaultData;
+};
+
+
+struct ConCommand2Data_t
+{
+	const char*  aName;
+	const char*  aDesc;
+	ConVarFlag_t aFlags;
+
+	EConVar2Type aType;
+	void*        apData;
+	void*        apDefaultData;
+};
+
+
+constexpr auto what3 = sizeof( ConVar2Data_t );
+constexpr auto what4 = sizeof( ConVar2Data_t::aFunc );
+
+
+bool&          Con_RegisterConVar2_Bool( const char* spName );
 
 
 class CORE_API ConVarBase
@@ -115,48 +159,48 @@ class CORE_API ConCommand : public ConVarBase
 {
 public:
 
-	ConCommand( const char* name, ConCommandFunc func, ConVarFlag_t flags = 0 ):
+	ConCommand( const char* name, ConCommandFunc* func, ConVarFlag_t flags = 0 ):
 		ConVarBase( name, flags )
 	{
-		Init( func, aDropDownFunc );
+		Init( func, nullptr );
 	}
 
-	ConCommand( const char* name, ConCommandFunc func, const char* desc ) :
+	ConCommand( const char* name, ConCommandFunc* func, const char* desc ) :
 		ConVarBase( name, desc )
 	{
-		Init( func, aDropDownFunc );
+		Init( func, nullptr );
 	}
 
-	ConCommand( const char* name, ConCommandFunc func, ConCommandDropdownFunc dropDownFunc ):
+	ConCommand( const char* name, ConCommandFunc* func, ConCommandDropdownFunc* dropDownFunc ):
 		ConVarBase( name )
 	{
 		Init( func, dropDownFunc );
 	}
 
-	ConCommand( const char* name, ConCommandFunc func, ConVarFlag_t flags, ConCommandDropdownFunc dropDownFunc ):
+	ConCommand( const char* name, ConCommandFunc* func, ConVarFlag_t flags, ConCommandDropdownFunc* dropDownFunc ):
 		ConVarBase( name, flags )
 	{
 		Init( func, dropDownFunc );
 	}
 	
-	ConCommand( const char* name, ConCommandFunc func, ConVarFlag_t flags, const char* desc ) :
+	ConCommand( const char* name, ConCommandFunc* func, ConVarFlag_t flags, const char* desc ) :
 		ConVarBase( name, flags, desc )
 	{
-		Init( func, aDropDownFunc );
+		Init( func, nullptr );
 	}
 
-	ConCommand( const char* name, ConCommandFunc func, ConVarFlag_t flags, const char* desc, ConCommandDropdownFunc dropDownFunc ) :
+	ConCommand( const char* name, ConCommandFunc* func, ConVarFlag_t flags, const char* desc, ConCommandDropdownFunc* dropDownFunc ) :
 		ConVarBase( name, flags, desc )
 	{
 		Init( func, dropDownFunc );
 	}
 
-	void Init( ConCommandFunc func, ConCommandDropdownFunc dropDownFunc );
+	void Init( ConCommandFunc* func, ConCommandDropdownFunc* dropDownFunc );
 
 	std::string GetPrintMessage(  ) override;
 
-	ConCommandFunc aFunc;
-	ConCommandDropdownFunc aDropDownFunc;
+	ConCommandFunc*         apFunc;
+	ConCommandDropdownFunc* apDropDownFunc;
 
 	friend class Console;
 
@@ -193,19 +237,19 @@ public:
 	ConVar( const char* name, std::string_view defaultValue, ConVarFlag_t flags = 0 ) :
 		ConVarBase( name, flags )
 	{
-		Init( defaultValue, aFunc );
+		Init( defaultValue, nullptr );
 	}
 
 	ConVar( const char* name, std::string_view defaultValue, const char* desc ) :
 		ConVarBase( name, desc )
 	{
-		Init( defaultValue, aFunc );
+		Init( defaultValue, nullptr );
 	}
 
 	ConVar( const char* name, std::string_view defaultValue, ConVarFlag_t flags, const char* desc ) :
 		ConVarBase( name, flags, desc )
 	{
-		Init( defaultValue, aFunc );
+		Init( defaultValue, nullptr );
 	}
 
 	ConVar( const char* name, std::string_view defaultValue, ConVarFlag_t flags, const char* desc, ConVarFunc callback ) :
@@ -218,43 +262,43 @@ public:
 	ConVar( const char* name, float defaultValue, ConVarFlag_t flags = 0 ):
 		ConVarBase( name, flags )
 	{
-		Init( defaultValue, aFunc );
+		Init( defaultValue, nullptr );
 	}
 
 	ConVar( const char* name, float defaultValue, const char* desc ) :
 		ConVarBase( name, desc )
 	{
-		Init( defaultValue, aFunc );
+		Init( defaultValue, nullptr );
 	}
 
 	ConVar( const char* name, float defaultValue, ConVarFlag_t flags, const char* desc ) :
 		ConVarBase( name, flags, desc )
 	{
-		Init( defaultValue, aFunc );
+		Init( defaultValue, nullptr );
 	}
 
-	ConVar( const char* name, float defaultValue, ConVarFlag_t flags, const char* desc, ConVarFunc callback ) :
+	ConVar( const char* name, float defaultValue, ConVarFlag_t flags, const char* desc, ConVarFunc* callback ) :
 		ConVarBase( name, flags, desc )
 	{
 		Init( defaultValue, callback );
 	}
 
 
-	ConVar( const char* name, std::string_view defaultValue, ConVarFunc callback ) :
+	ConVar( const char* name, std::string_view defaultValue, ConVarFunc* callback ) :
 		ConVarBase( name )
 	{
 		Init( defaultValue, callback );
 	}
 
-	ConVar( const char* name, float defaultValue, ConVarFunc callback ):
+	ConVar( const char* name, float defaultValue, ConVarFunc* callback ):
 		ConVarBase( name )
 	{
 		Init( defaultValue, callback );
 	}
 
 	
-	void               Init( std::string_view defaultValue, ConVarFunc func );
-	void               Init( float defaultValue, ConVarFunc func );
+	void               Init( std::string_view defaultValue, ConVarFunc* func );
+	void               Init( float defaultValue, ConVarFunc* func );
 
 	std::string        GetPrintMessage() override;
 
@@ -317,7 +361,7 @@ public:
 	std::string aValue;
 	float       aDefaultValueFloat;
 	float       aValueFloat;
-	ConVarFunc  aFunc;
+	ConVarFunc* apFunc;
 
 private:
 	// NO COPYING!!

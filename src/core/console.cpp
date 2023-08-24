@@ -24,7 +24,6 @@ struct ConVarFlagData_t
 };
 
 
-int                                            gCmdIndex = -1;
 std::vector< std::string >                     gQueue;
 std::vector< std::string >                     gCommandHistory;
 std::vector< ConCommand* >                     gInstantConVars;
@@ -92,10 +91,10 @@ ConVarFlag_t ConVarBase::GetFlags()
 // ================================================================================
 
 
-void ConCommand::Init( ConCommandFunc func, ConCommandDropdownFunc dropDownFunc )
+void ConCommand::Init( ConCommandFunc* func, ConCommandDropdownFunc* dropDownFunc )
 {
-	aFunc = func;
-	aDropDownFunc = dropDownFunc;
+	apFunc = func;
+	apDropDownFunc = dropDownFunc;
 }
 
 std::string ConCommand::GetPrintMessage(  )
@@ -109,21 +108,21 @@ std::string ConCommand::GetPrintMessage(  )
 // ================================================================================
 
 
-void ConVar::Init( std::string_view defaultValue, ConVarFunc callback )
+void ConVar::Init( std::string_view defaultValue, ConVarFunc* callback )
 {
 	aDefaultValue = defaultValue;
 	aDefaultValueFloat = ToDouble( defaultValue.data(), 0.f );
-	aFunc = callback;
+	apFunc = callback;
 
 	SetValue( defaultValue );
 }
 
 
-void ConVar::Init( float defaultValue, ConVarFunc callback )
+void ConVar::Init( float defaultValue, ConVarFunc* callback )
 {
 	aDefaultValue = ToString( defaultValue );
 	aDefaultValueFloat = defaultValue;
-	aFunc = callback;
+	apFunc = callback;
 
 	SetValue( aDefaultValue );
 }
@@ -183,7 +182,7 @@ void ConVar::SetValue( float value )
 
 void ConVar::Reset()
 {
-	Init( aDefaultValue.c_str(), aFunc );
+	Init( aDefaultValue.c_str(), apFunc );
 }
 
 
@@ -333,7 +332,7 @@ void Con_CheckInstantCommands( const std::string &srCmd )
 	for ( size_t i = 0; i < gInstantConVars.size(); i++ )
 	{
 		if ( gInstantConVars[i]->GetName() == srCmd )
-			gInstantConVars[i]->aFunc( {} );
+			gInstantConVars[i]->apFunc( {} );
 	}
 }
 
@@ -561,10 +560,10 @@ void Con_BuildAutoCompleteList( const std::string& srSearch, std::vector< std::s
 		{
 			auto cmd = static_cast<ConCommand*>(cvar);
 
-			if ( cmd->aDropDownFunc )
+			if ( cmd->apDropDownFunc )
 			{
 				std::vector< std::string > dropDownArgs;
-				cmd->aDropDownFunc( args, dropDownArgs );
+				cmd->apDropDownFunc( args, dropDownArgs );
 
 				for ( auto dropArg: dropDownArgs )
 				{
@@ -658,13 +657,13 @@ bool Con_RunCommandBase( ConVarBase* cvar, const std::vector< std::string >& arg
 
 		if ( !args.empty() )
 		{
-			if ( convar->aFunc )
+			if ( convar->apFunc )
 			{
 				std::string prevString = convar->aValue;
 				float       prevFloat  = convar->aValueFloat;
 
 				convar->SetValue( args[ 0 ] );
-				convar->aFunc( prevString, prevFloat, args );
+				convar->apFunc( prevString, prevFloat, args );
 			}
 			else
 			{
@@ -680,7 +679,7 @@ bool Con_RunCommandBase( ConVarBase* cvar, const std::vector< std::string >& arg
 	{
 		ConCommand* cmd = static_cast< ConCommand* >( cvar );
 		commandCalled   = true;
-		cmd->aFunc( args );
+		cmd->apFunc( args );
 	}
 
 	return commandCalled;
@@ -1373,4 +1372,39 @@ CONCMD_VA( cat, "Print a File" )
 {
 	Log_Msg( "\"cat\" command not implemented\n" );
 }
+
+
+#ifdef _WIN32
+CONCMD( heapcheck )
+{
+	int result = _heapchk();
+
+	switch ( result )
+	{
+		case _HEAPEMPTY:
+			Log_Msg( "Heap Empty\n" );
+			break;
+
+		case _HEAPOK:
+			Log_Msg( "Heap OK\n" );
+			break;
+
+		case _HEAPBADBEGIN:
+			Log_Msg( "Heap Bad Begin\n" );
+			break;
+
+		case _HEAPBADNODE:
+			Log_Msg( "Heap Bad Node\n" );
+			break;
+
+		case _HEAPEND:
+			Log_Msg( "Heap End\n" );
+			break;
+
+		case _HEAPBADPTR:
+			Log_Msg( "Heap Bat Pointer\n" );
+			break;
+	}
+}
+#endif
 
