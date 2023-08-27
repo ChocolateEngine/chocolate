@@ -108,11 +108,29 @@ std::string ConCommand::GetPrintMessage(  )
 // ================================================================================
 
 
+ConVar::~ConVar()
+{
+	if ( apDefaultValue )
+		free( apDefaultValue );
+
+	if ( apValue )
+		free( apValue );
+
+	apDefaultValue = nullptr;
+	apValue        = nullptr;
+}
+
+
 void ConVar::Init( std::string_view defaultValue, ConVarFunc* callback )
 {
-	aDefaultValue = defaultValue;
+	aDefaultValueLen = defaultValue.size();
+	apDefaultValue   = ch_malloc_count< char >( defaultValue.size() + 1 );
+
+	memcpy( apDefaultValue, defaultValue.data(), sizeof( char ) * aDefaultValueLen );
+	apDefaultValue[ aDefaultValueLen ] = '\0';
+
 	aDefaultValueFloat = ToDouble( defaultValue.data(), 0.f );
-	apFunc = callback;
+	apFunc             = callback;
 
 	SetValue( defaultValue );
 }
@@ -120,11 +138,17 @@ void ConVar::Init( std::string_view defaultValue, ConVarFunc* callback )
 
 void ConVar::Init( float defaultValue, ConVarFunc* callback )
 {
-	aDefaultValue = ToString( defaultValue );
-	aDefaultValueFloat = defaultValue;
-	apFunc = callback;
+	std::string defaultValueStr = ToString( defaultValue );
+	aDefaultValueLen            = defaultValueStr.size();
+	apDefaultValue              = ch_malloc_count< char >( defaultValueStr.size() + 1 );
 
-	SetValue( aDefaultValue );
+	memcpy( apDefaultValue, defaultValueStr.data(), sizeof( char ) * aDefaultValueLen );
+	apDefaultValue[ aDefaultValueLen ] = '\0';
+
+	aDefaultValueFloat          = defaultValue;
+	apFunc                      = callback;
+
+	SetValue( defaultValueStr );
 }
 
 // 1 as a size_t
@@ -136,8 +160,8 @@ std::string ConVar::GetPrintMessage()
 	// TODO: make a shared util function for some of this, smh
 	std::string msg = vstring( "%s%s %s", UNIX_CLR_DEFAULT, aName, GetValue().data() );
 
-	if ( GetValue() != aDefaultValue )
-		msg += vstring( " " UNIX_CLR_YELLOW "(%s default)", aDefaultValue.c_str() );
+	if ( ch_strcmplen( GetValue(), aDefaultValueLen, apDefaultValue ) )
+		msg += vstring( " " UNIX_CLR_YELLOW "(%s default)", apDefaultValue );
 
 	if ( aFlags )
 	{
@@ -169,26 +193,41 @@ std::string ConVar::GetPrintMessage()
 
 void ConVar::SetValue( std::string_view value )
 {
-	aValue = value;
+	//if ( apValue )
+	//	free( apValue );
+
 	aValueFloat = ToDouble( value.data(), aValueFloat );
+	apValue     = ch_realloc_count< char >( apValue, value.size() + 1 );
+	aValueLen   = value.size();
+
+	memcpy( apValue, value.data(), sizeof( char ) * aValueLen );
+	apValue[ aValueLen ] = '\0';
 }
 
 void ConVar::SetValue( float value )
 {
-	aValue = ToString( value );
-	aValueFloat = value;
+	//if ( apValue )
+	//	free( apValue );
+
+	aValueFloat             = value;
+	std::string valueStdStr = ToString( value );
+	apValue                 = ch_realloc_count< char >( apValue, valueStdStr.size() + 1 );
+	aValueLen               = valueStdStr.size();
+
+	memcpy( apValue, valueStdStr.data(), sizeof( char ) * aValueLen );
+	apValue[ aValueLen ] = '\0';
 }
 
 
 void ConVar::Reset()
 {
-	Init( aDefaultValue.c_str(), apFunc );
+	Init( apDefaultValue, apFunc );
 }
 
 
 std::string_view ConVar::GetValue()
 {
-	return aValue;
+	return std::string_view( apValue, aValueLen );
 }
 
 float ConVar::GetFloat()
@@ -254,10 +293,10 @@ void ConVarRef::SetValue( float value )
 	if ( apRef ) apRef->SetValue( value );
 }
 
-const std::string& ConVarRef::GetValue(  )
+std::string_view ConVarRef::GetValue(  )
 {
 	static std::string empty = "";
-	return apRef ? apRef->aValue : empty;
+	return apRef ? apRef->apValue : empty;
 }
 
 float ConVarRef::GetFloat(  )
@@ -304,6 +343,217 @@ static bool ConVarNameCheck( const char* name, const char* search, size_t size )
 
 // remove duplicate user inputs from the history
 CONVAR( con_remove_dup_input_history, 1 );
+
+
+// ================================================================================
+// ConVar2 System
+
+
+static auto& Con_GetConVar2Map()
+{
+	static std::unordered_map< std::string_view, ConVar2Data_t* > convars;
+	return convars;
+}
+
+
+static auto& Con_GetConVar2Desc()
+{
+	static std::unordered_map< std::string_view, const char* > convars;
+	return convars;
+}
+
+
+struct ConVarTempData_t
+{
+	EConVar2Type aType;
+	void*        apData;
+
+	~ConVarTempData_t()
+	{
+		// if ( apData )
+		// 	free( apData );
+	}
+};
+
+
+// used to store values for when convars are trying to register a new convar with the same name as an existing convar, but as a different type
+static auto& Con_GetConVarTempDataList()
+{
+	static ChVector< ConVarTempData_t > data;
+	return data;
+}
+
+
+template< typename T >
+T& Con_RegisterConVar_Base( const char* spName, const char* spDesc, EConVar2Type sType, T sDefault, ConVarFlag_t sFlags, ConVarFunc* spCallbackFunc )
+{
+	auto it = Con_GetConVar2Map().find( spName );
+
+	if ( it != Con_GetConVar2Map().end() )
+	{
+		ConVar2Data_t* conVarData = it->second;
+
+		if ( conVarData->aType != sType )
+		{
+			// Actually, what if we just did this:
+			return sDefault;
+
+			// Allocate a temporary variable and return it to make the code happy
+			// we will not store this anywhere
+			// ConVarTempData_t& tempData = Con_GetConVarTempDataList().emplace_back();
+			// tempData.aType             = sType;
+			// tempData.apData            = &sDefault;
+			// 
+			// return *static_cast< T* >( tempData.apData );
+		}
+		else
+		{
+			return *static_cast< T* >( conVarData->apData );
+		}
+	}
+
+	ConVar2Data_t* conVarData = new ConVar2Data_t;
+	conVarData->aFlags        = sFlags;
+	conVarData->apFunc        = spCallbackFunc;
+	conVarData->aType         = sType;
+	conVarData->apDefaultData = &sDefault;
+
+	conVarData->apData        = ch_malloc_count< T >( 1 );
+	memcpy( conVarData->apData, &sDefault, sizeof( T ) );
+
+	Con_GetConVar2Map()[ spName ]  = conVarData;
+	Con_GetConVar2Desc()[ spName ] = spDesc;
+
+	return *static_cast< T* >( conVarData->apData );
+}
+
+
+// ------------------------------------------------------------------------------
+
+
+bool& Con_RegisterConVar_Bool( const char* spName, const char* spDesc, bool sDefault, ConVarFlag_t sFlags, ConVarFunc* spCallbackFunc )
+{
+	return Con_RegisterConVar_Base( spName, spDesc, EConVar2Type_Bool, sDefault, sFlags, spCallbackFunc );
+}
+
+
+int& Con_RegisterConVar_Int( const char* spName, const char* spDesc, int sDefault, ConVarFlag_t sFlags, ConVarFunc* spCallbackFunc )
+{
+	return Con_RegisterConVar_Base( spName, spDesc, EConVar2Type_Int, sDefault, sFlags, spCallbackFunc );
+}
+
+
+float& Con_RegisterConVar_Float( const char* spName, const char* spDesc, float sDefault, ConVarFlag_t sFlags, ConVarFunc* spCallbackFunc )
+{
+	return Con_RegisterConVar_Base( spName, spDesc, EConVar2Type_Float, sDefault, sFlags, spCallbackFunc );
+}
+
+
+const char*& Con_RegisterConVar_Str( const char* spName, const char* spDesc, const char* spDefault, ConVarFlag_t sFlags, ConVarFunc* spCallbackFunc )
+{
+	return Con_RegisterConVar_Base( spName, spDesc, EConVar2Type_String, spDefault, sFlags, spCallbackFunc );
+}
+
+
+glm::vec2& Con_RegisterConVar_Vec2( const char* spName, const char* spDesc, const glm::vec2& srDefault, ConVarFlag_t sFlags, ConVarFunc* spCallbackFunc )
+{
+	return Con_RegisterConVar_Base( spName, spDesc, EConVar2Type_Vec2, srDefault, sFlags, spCallbackFunc );
+}
+
+
+glm::vec3& Con_RegisterConVar_Vec3( const char* spName, const char* spDesc, const glm::vec3& srDefault, ConVarFlag_t sFlags, ConVarFunc* spCallbackFunc )
+{
+	return Con_RegisterConVar_Base( spName, spDesc, EConVar2Type_Vec3, srDefault, sFlags, spCallbackFunc );
+}
+
+
+glm::vec4& Con_RegisterConVar_Vec4( const char* spName, const char* spDesc, const glm::vec4& srDefault, ConVarFlag_t sFlags, ConVarFunc* spCallbackFunc )
+{
+	return Con_RegisterConVar_Base( spName, spDesc, EConVar2Type_Vec4, srDefault, sFlags, spCallbackFunc );
+}
+
+
+static float tempCvarRange = 0.f;
+float& Con_RegisterConVar_Range( const char* spName, const char* spDesc, float sDefault, float sMin, float sMax, ConVarFlag_t sFlags, ConVarFunc* spCallbackFunc )
+{
+	// special case, hmm
+	return tempCvarRange;
+}
+
+
+// ------------------------------------------------------------------------------
+
+
+void Con_SetConVarValue( const char* spName, bool sValue )
+{
+}
+
+
+void Con_SetConVarValue( const char* spName, int sValue )
+{
+}
+
+
+void Con_SetConVarValue( const char* spName, float sValue )
+{
+	// check if the convar type is float or ranged
+}
+
+
+void Con_SetConVarValue( const char* spName, const char* spValue )
+{
+}
+
+
+// ------------------------------------------------------------------------------
+
+
+#if 0
+bool& Con_RegisterConVarRef_Bool( const char* spName, bool sFallback )
+{
+}
+
+
+int& Con_RegisterConVarRef_Int( const char* spName, int sFallback )
+{
+}
+
+
+float& Con_RegisterConVarRef_Float( const char* spName, float sFallback )
+{
+}
+
+
+const char*& Con_RegisterConVarRef_Str( const char* spName, const char* spFallback )
+{
+}
+
+
+float& Con_RegisterConVarRef_Range( const char* spName, float sFallback )
+{
+}
+#endif
+
+
+// ------------------------------------------------------------------------------
+
+
+ConVarBase2Data_t* Con_GetConVarBase2Data( const char* spName )
+{
+	return nullptr;
+}
+
+
+ConVar2Data_t* Con_GetConVar2Data( const char* spName )
+{
+	return nullptr;
+}
+
+
+ConCommand2Data_t* Con_GetConCommand2Data( const char* spName )
+{
+	return nullptr;
+}
 
 
 // ================================================================================
@@ -449,10 +699,10 @@ ConVarBase* Con_GetConVarBase( std::string_view name )
 static std::string g_strEmpty = "";
 
 
-const std::string& Con_GetConVarValue( std::string_view name )
+std::string_view Con_GetConVarValue( std::string_view name )
 {
 	if ( ConVar* convar = Con_GetConVar( name ) )
-		return convar->aValue;
+		return convar->GetValue();
 	
 	return g_strEmpty;
 }
@@ -659,11 +909,11 @@ bool Con_RunCommandBase( ConVarBase* cvar, const std::vector< std::string >& arg
 		{
 			if ( convar->apFunc )
 			{
-				std::string prevString = convar->aValue;
-				float       prevFloat  = convar->aValueFloat;
+				std::string_view prevString = convar->GetValue();
+				float            prevFloat  = convar->aValueFloat;
 
 				convar->SetValue( args[ 0 ] );
-				convar->apFunc( prevString, prevFloat, args );
+				convar->apFunc( prevString.data(), prevFloat, args );
 			}
 			else
 			{
@@ -680,6 +930,68 @@ bool Con_RunCommandBase( ConVarBase* cvar, const std::vector< std::string >& arg
 		ConCommand* cmd = static_cast< ConCommand* >( cvar );
 		commandCalled   = true;
 		cmd->apFunc( args );
+	}
+
+	return commandCalled;
+}
+
+
+void Con_SetConVarValueInternal( ConVar2Data_t* cvar, std::string_view sValue )
+{
+	// find the type of this convar, and cast this data to that type
+	switch ( cvar->aType )
+	{
+		case EConVar2Type_Bool:
+		{
+			// TODO: look at how you do component networking for this
+			break;
+		}
+	}
+}
+
+
+bool Con_RunCommandBaseV2( ConVar2Data_t* cvar, const std::vector< std::string >& args )
+{
+	bool commandCalled = false;
+
+	// Check Flag Callbacks
+#if 0
+	if ( cvar->aFlags )
+	{
+		for ( auto& data : gConVarFlags )
+		{
+			if ( !( cvar->aFlags & data.flag ) )
+				continue;
+
+			// Can we execute these arguments on the ConVar/ConCommand?
+			if ( data.apCallback && !data.apCallback( cvar, args ) )
+			{
+				return true;  // HACK: RETURN TRUE IN THIS CASE
+			}
+		}
+	}
+#endif
+
+	commandCalled  = true;
+
+	if ( !args.empty() )
+	{
+		if ( cvar->apFunc )
+		{
+			// create a copy of the previous value, and run the callback function, then free it
+			void* prevValue = cvar->apData;
+
+			Con_SetConVarValueInternal( cvar, args[ 0 ] );
+			// convar->apFunc( prevString.data(), prevFloat, args );
+		}
+		else
+		{
+			Con_SetConVarValueInternal( cvar, args[ 0 ] );
+		}
+	}
+	else
+	{
+		// Log_Msg( gConsoleChannel, convar->GetPrintMessage().c_str() );
 	}
 
 	return commandCalled;
@@ -706,6 +1018,19 @@ bool Con_RunCommandArgs( const std::string& name, const std::vector< std::string
 			continue;
 
 		commandCalled = Con_RunCommandBase( cvar, args );
+		break;
+	}
+
+	// ConVar2 System - TODO: STORE THE CVAR NAMES AS LOWER CASE AND HASH SEARCH THEM
+	for ( auto& [ cvarName, cvarData ] : Con_GetConVar2Map() )
+	{
+		if ( name.size() != cvarName.size() )
+			continue;
+
+		if ( ch_strncasecmp( cvarName.data(), name.c_str(), cvarName.size() ) != 0 )
+			continue;
+
+		commandCalled = Con_RunCommandBaseV2( cvarData, args );
 		break;
 	}
 

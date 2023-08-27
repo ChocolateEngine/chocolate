@@ -83,6 +83,10 @@ enum EConVar2Type
 	EConVar2Type_Int,       // Integer
 	EConVar2Type_Float,     // Float
 	EConVar2Type_String,    // String Value
+	EConVar2Type_Ranged,    // Clamped Float Value
+	EConVar2Type_Vec2,      // 2 Float Values
+	EConVar2Type_Vec3,      // 3 Float Values
+	EConVar2Type_Vec4,      // 4 Float Values
 	EConVar2Type_DropDown,  // Drop-Down of String Values
 };
 
@@ -95,36 +99,75 @@ class CORE_API ChConfigOption
 };
 
 
+// name is stored elsewhere
+struct ConVarBase2Data_t
+{
+	const char*  apDesc;
+};
+
+
 struct ConVar2Data_t
 {
-	const char*  aName;
-	const char*  aDesc;
 	ConVarFlag_t aFlags;
-	ConVarFunc*   aFunc;
-
+	ConVarFunc*  apFunc;
 	EConVar2Type aType;
 	void*        apData;
 	void*        apDefaultData;
 };
 
 
+using ConVarFlagChangeFunc2 = bool( ConVar2Data_t* spBase, const std::vector< std::string >& args );
+
+
+// data not used very often, this is only used for ui for the drop down function
+struct ConCommand2LocalData_t
+{
+	ConCommandDropdownFunc* apDropDownFunc;
+};
+
+
+// data used in the console update function
 struct ConCommand2Data_t
 {
-	const char*  aName;
-	const char*  aDesc;
-	ConVarFlag_t aFlags;
-
-	EConVar2Type aType;
-	void*        apData;
-	void*        apDefaultData;
+	ConVarFlag_t    aFlags;
+	ConCommandFunc* apFunc;
 };
 
 
-constexpr auto what3 = sizeof( ConVar2Data_t );
-constexpr auto what4 = sizeof( ConVar2Data_t::aFunc );
+struct ChConfigOptionDropDown_t
+{
+	char* apData;
+	u32   aLen;
+};
 
 
-bool&          Con_RegisterConVar2_Bool( const char* spName );
+// what if instead of returning a reference, it takes in an existing variable to use and copies that for the default value?
+// this way it can easily stay on the stack, unless these variables are allocated on the stack already for speed
+
+
+CORE_API bool&              Con_RegisterConVar_Bool( const char* spName, const char* spDesc, bool sDefault, ConVarFlag_t sFlags = 0, ConVarFunc* spCallbackFunc = nullptr );
+CORE_API int&               Con_RegisterConVar_Int( const char* spName, const char* spDesc, int sDefault, ConVarFlag_t sFlags = 0, ConVarFunc* spCallbackFunc = nullptr );
+CORE_API float&             Con_RegisterConVar_Float( const char* spName, const char* spDesc, float sDefault, ConVarFlag_t sFlags = 0, ConVarFunc* spCallbackFunc = nullptr );
+CORE_API const char*&       Con_RegisterConVar_Str( const char* spName, const char* spDesc, const char* spDefault, ConVarFlag_t sFlags = 0, ConVarFunc* spCallbackFunc = nullptr );
+CORE_API glm::vec2&         Con_RegisterConVar_Vec2( const char* spName, const char* spDesc, const glm::vec2& srDefault, ConVarFlag_t sFlags = 0, ConVarFunc* spCallbackFunc = nullptr );
+CORE_API glm::vec3&         Con_RegisterConVar_Vec3( const char* spName, const char* spDesc, const glm::vec3& srDefault, ConVarFlag_t sFlags = 0, ConVarFunc* spCallbackFunc = nullptr );
+CORE_API glm::vec4&         Con_RegisterConVar_Vec4( const char* spName, const char* spDesc, const glm::vec4& srDefault, ConVarFlag_t sFlags = 0, ConVarFunc* spCallbackFunc = nullptr );
+CORE_API float&             Con_RegisterConVar_Range( const char* spName, const char* spDesc, float sDefault, float sMin = FLT_MIN, float sMax = FLT_MAX, ConVarFlag_t sFlags = 0, ConVarFunc* spCallbackFunc = nullptr );
+
+CORE_API bool&              Con_RegisterConVarRef_Bool( const char* spName, bool sFallback );
+CORE_API int&               Con_RegisterConVarRef_Int( const char* spName, int sFallback );
+CORE_API float&             Con_RegisterConVarRef_Float( const char* spName, float sFallback );
+CORE_API const char*&       Con_RegisterConVarRef_Str( const char* spName, const char* spFallback );
+CORE_API float&             Con_RegisterConVarRef_Range( const char* spName, float sFallback );
+
+CORE_API void               Con_SetConVarValue( const char* spName, bool sValue );
+CORE_API void               Con_SetConVarValue( const char* spName, int sValue );
+CORE_API void               Con_SetConVarValue( const char* spName, float sValue );
+CORE_API void               Con_SetConVarValue( const char* spName, const char* spValue );
+
+CORE_API ConVarBase2Data_t* Con_GetConVarBase2Data( const char* spName );
+CORE_API ConVar2Data_t*     Con_GetConVar2Data( const char* spName );
+CORE_API ConCommand2Data_t* Con_GetConCommand2Data( const char* spName );
 
 
 class CORE_API ConVarBase
@@ -296,6 +339,7 @@ public:
 		Init( defaultValue, callback );
 	}
 
+	~ConVar();
 	
 	void               Init( std::string_view defaultValue, ConVarFunc* func );
 	void               Init( float defaultValue, ConVarFunc* func );
@@ -317,20 +361,21 @@ public:
 	operator const float&()                             { return aValueFloat; }
 	//operator double()                                   { return aValueFloat; }
 	//operator bool()                                     { return GetBool(); }
-	operator const std::string&()                       { return aValue; }
-	operator const char*()                              { return aValue.c_str(); }
+	// operator const std::string&()                       { return aValue.data(); }
+	operator std::string_view()                         { return apValue; }
+	operator const char*()                              { return apValue; }
 
 	bool    operator==( const bool& other )             { return other == GetBool(); }
 	bool    operator==( const float& other )            { return other == aValueFloat; }
 	bool    operator==( const double& other )           { return other == aValueFloat; }
-	bool    operator==( const std::string& other )      { return other == aValue; }
-	bool    operator==( const char* other )             { return other == aValue; }
+	bool    operator==( const std::string& other )      { return ch_strcmplen( other, aValueLen, apValue ); }
+	bool    operator==( const char* other )             { return ch_strcmplen( other, aValueLen, apValue ); }
 
 	bool    operator!=( const bool& other )             { return other != GetBool(); }
 	bool    operator!=( const float& other )            { return other != aValueFloat; }
 	bool    operator!=( const double& other )           { return other != aValueFloat; }
-	bool    operator!=( const std::string& other )      { return other != aValue; }
-	bool    operator!=( const char* other )             { return other != aValue; }
+	bool    operator!=( const std::string& other )      { return !ch_strcmplen( other, aValueLen, apValue ); }
+	bool    operator!=( const char* other )             { return !ch_strcmplen( other, aValueLen, apValue ); }
 
 	void    operator=( const bool& other )              { SetValue( other ? 1.f : 0.f ); }
 	void    operator=( const float& other )             { SetValue( other ); }
@@ -357,11 +402,15 @@ public:
 	friend class Console;
 	friend class ConVarRef;
 
-	std::string aDefaultValue;
-	std::string aValue;
-	float       aDefaultValueFloat;
-	float       aValueFloat;
-	ConVarFunc* apFunc;
+	u32              aDefaultValueLen;
+	u32              aValueLen;
+
+	char*            apDefaultValue = nullptr;
+	char*            apValue        = nullptr;
+
+	float            aDefaultValueFloat;
+	float            aValueFloat;
+	ConVarFunc*      apFunc;
 
 private:
 	// NO COPYING!!
@@ -387,7 +436,7 @@ public:
 	void                SetValue( const std::string& value );
 	void                SetValue( float value );
 
-	const std::string&  GetValue();
+	std::string_view    GetValue();
 	float               GetFloat();
 	bool                GetBool();  // is aValueFloat equal to 1.f?
 
@@ -399,8 +448,8 @@ public:
 	operator float()                                    { return GetFloat(); }
 	//operator double()                                   { return GetFloat(); }
 	//operator bool()                                     { return GetBool(); }
-	operator std::string()                              { return GetValue(); }
-	operator const char*()                              { return GetValue().c_str(); }
+	operator std::string_view()                         { return GetValue(); }
+	operator const char*()                              { return GetValue().data(); }
 
 	bool    operator==( const bool& other )             { return other == GetBool(); }
 	float   operator==( const float& other )            { return other == GetFloat(); }
@@ -511,7 +560,7 @@ CORE_API ConVarBase*                       Con_GetConVar( uint32_t sIndex );
 CORE_API ConVar*                           Con_GetConVar( std::string_view name );
 CORE_API ConVarBase*                       Con_GetConVarBase( std::string_view name );
 
-CORE_API const std::string&    Con_GetConVarValue( std::string_view name );
+CORE_API std::string_view      Con_GetConVarValue( std::string_view name );
 CORE_API float                 Con_GetConVarFloat( std::string_view name );
 
 CORE_API void                  Con_PrintAllConVars();

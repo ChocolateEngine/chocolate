@@ -409,9 +409,8 @@ void DrawInputDropDownBox( const std::vector< std::string >& cvarAutoComplete, I
 	std::string maxLengthItem;
 	for ( size_t i = 0; i < cvarAutoComplete.size(); i++ )
 	{
-		std::string item = cvarAutoComplete[ i ];
-
-		const std::string& value = Con_GetConVarValue( item );
+		std::string item  = cvarAutoComplete[ i ];
+		std::string value = Con_GetConVarValue( item ).data();
 
 		if ( value.size() )
 			item += " " + value;
@@ -446,9 +445,10 @@ void DrawInputDropDownBox( const std::vector< std::string >& cvarAutoComplete, I
 		{
 			for ( size_t i = 0; i < cvarAutoComplete.size(); i++ )
 			{
-				std::string item = cvarAutoComplete[i];
+				std::string item = cvarAutoComplete[ i ];
 
-				item += " " + Con_GetConVarValue( item );
+				item += " ";
+				item += Con_GetConVarValue( cvarAutoComplete[ i ] );
 
 				if ( ImGui::Selectable( item.c_str(), gCmdDropDownIndex == i ) )
 				{

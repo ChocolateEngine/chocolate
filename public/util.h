@@ -94,6 +94,55 @@ inline To* ch_pointer_cast( From* in )
 }
 
 
+// Allocate X Amount of a specific type, could be named better
+template< typename To >
+inline To* ch_malloc_count( size_t sCount )
+{
+	To* data = static_cast< To* >( malloc( sizeof( To ) * sCount ) );
+	CH_ASSERT( data );
+	return data;
+}
+
+
+// Reallocate X Amount of a specific type, could be named better
+template< typename To >
+inline To* ch_realloc_count( To* spData, size_t sCount )
+{
+	To* data = static_cast< To* >( realloc( spData, sizeof( To ) * sCount ) );
+	CH_ASSERT( data );
+	return data;
+}
+
+
+// Reallocate X Amount of a specific type, could be named better
+template< typename To >
+inline bool ch_realloc_count2( To*& spData, size_t sCount )
+{
+	To* data = static_cast< To* >( realloc( spData, sizeof( To ) * sCount ) );
+	
+	CH_ASSERT( data );
+	if ( !data )
+		return false;
+
+	spData = data;
+	return true;
+}
+
+
+// Allocate X Amount of a specific type and zero the memory, could be named better
+template< typename To >
+inline To* ch_calloc_count( size_t sCount )
+{
+	To* data = static_cast< To* >( calloc( sCount, sizeof( To ) ) );
+	CH_ASSERT( data );
+	return data;
+}
+
+
+CORE_API bool ch_strcmplen( size_t sLenA, char* spA, size_t sLenB, char* spB );
+CORE_API bool ch_strcmplen( std::string_view sA, size_t sLenB, char* spB );
+
+
 // inline int ch_strcasecmp( const char* spStr1, const char* spStr2 )
 // {
 // #ifdef _MSC_VER

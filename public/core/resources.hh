@@ -18,22 +18,40 @@
 
 static LOG_REGISTER_CHANNEL( Resource, LogColor::DarkYellow );
 
-#define GET_HANDLE_INDEX( sHandle ) ( sHandle & 0xFFFFFFFF )
-#define GET_HANDLE_MAGIC( sHandle ) ( sHandle >> 32 )
+#define CH_GET_HANDLE_INDEX( sHandle ) ( sHandle & 0xFFFFFFFF )
+#define CH_GET_HANDLE_MAGIC( sHandle ) ( sHandle >> 32 )
 
-using Handle = size_t;
+// backwards compatibility
+#define GET_HANDLE_INDEX( sHandle )    CH_GET_HANDLE_INDEX( sHandle )
+#define GET_HANDLE_MAGIC( sHandle )    CH_GET_HANDLE_MAGIC( sHandle )
 
-constexpr Handle InvalidHandle     = 0;
-constexpr Handle CH_INVALID_HANDLE = InvalidHandle;  // TODO: REPLACE THE ABOVE WITH THIS ONE
+using ChHandle_t = size_t;
+using Handle     = ChHandle_t;  // backwards compatibility
+
+constexpr ChHandle_t CH_INVALID_HANDLE = 0;
+constexpr ChHandle_t InvalidHandle     = CH_INVALID_HANDLE;  // backwards compatibility
+
+
+// TODO: IDEA TO ALLOW FOR CONSOLIDATING MEMORY
+// what if the index stored in the handle is actually an index into a different memory pool
+// this different memory pool will store the real index for where our data is in the main memory pool
+// this can allow us to consolidate the main memory pool and free a good chunk of memory
+// the memory used in the alternate memory pool should be very small, so it won't matter that we can't consolidate that
+// 
+// however, lookups of data would be slower, since we have to load the index memory pool to get the index
+// and then load the main memory pool and return our data from that
+// 
 
 
 template< typename T >
 struct ResourceList
 {
-	mempool_t*         apPool;
-	size_t             aSize;
-	size_t             aStepSize;
-	ChVector< Handle > aHandles;
+	mempool_t*             apPool;
+	size_t                 aSize;
+	size_t                 aStepSize;
+
+	// TODO: this could just be `ChHandle_t* apHandles` and `size_t aHandlesAllocated`
+	ChVector< ChHandle_t > aHandles;
 
 	/*
      *    Construct a resource manager.
@@ -343,14 +361,14 @@ struct ResourceList
 		// Check if the buffer is nullptr
 		if ( pBuf == nullptr )
 		{
-			Log_WarnF( gResourceChannel, "GetHandleData(): Invalid index - Buffer is nullptr: %zd\n", index );
+			Log_WarnF( gResourceChannel, CH_FUNC_NAME_CLASS ": Invalid index - Buffer is nullptr: %zd\n", index );
 			return;
 		}
 
 		// Verify the magic numbers at the start of the buffer match
 		if ( *(unsigned int*)pBuf != magic )
 		{
-			Log_Warn( gResourceChannel, "GetHandleData(): Invalid magic number\n" );
+			Log_Warn( gResourceChannel, CH_FUNC_NAME_CLASS ": Invalid magic number\n" );
 			return;
 		}
 

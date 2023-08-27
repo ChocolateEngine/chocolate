@@ -32,6 +32,40 @@
 LOG_REGISTER_CHANNEL( KeyValue, LogColor::DarkGray );
 
 
+bool ch_strcmplen( size_t sLenA, char* spA, size_t sLenB, char* spB )
+{
+	// is the pointer the same?
+	if ( spA == spB )
+		return true;
+
+	// check if either is nullptr
+	if ( !spA || !spB )
+		return false;
+
+	// check if the length is different
+	if ( sLenA != sLenB )
+		return false;
+
+	// finally, do the string comparison
+	return strncmp( spA, spB, sLenA ) == 0;
+}
+
+
+bool ch_strcmplen( std::string_view sA, size_t sLenB, char* spB )
+{
+	// check if either is nullptr
+	if ( sA.empty() || !spB )
+		return false;
+
+	// check if the length is different
+	if ( sA.size() != sLenB )
+		return false;
+
+	// finally, do the string comparison
+	return strncmp( sA.data(), spB, sLenB ) == 0;
+}
+
+
 void str_upper( std::string &string )
 {
 	std::transform( string.begin(), string.end(), string.begin(), ::toupper );
