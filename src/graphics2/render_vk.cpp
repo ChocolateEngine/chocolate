@@ -1238,15 +1238,13 @@ public:
 		return handle;
 	}
 	
-	Handle CreateBuffer( u32 sSize, EBufferFlags sBufferFlags, EBufferMemory sBufferMem ) override
+	ChHandle_t CreateBuffer( u32 sSize, EBufferFlags sBufferFlags, EBufferMemory sBufferMem ) override
 	{
 		return CreateBuffer( nullptr, sSize, sBufferFlags, sBufferMem );
 	}
 
-	void DestroyBuffer( Handle buffer ) override
+	void DestroyBuffer( ChHandle_t buffer ) override
 	{
-		PROF_SCOPE();
-
 		BufferVK* bufVK = gBufferHandles.Get( buffer );
 
 		if ( !bufVK )
@@ -1258,6 +1256,12 @@ public:
 		VK_DestroyBuffer( bufVK );
 
 		gBufferHandles.Remove( buffer );
+	}
+
+	void DestroyBuffers( ChHandle_t* spBuffers, u32 sCount ) override
+	{
+		for ( u32 i = 0; i < sCount; i++ )
+			DestroyBuffer( spBuffers[ i ] );
 	}
 
 	virtual u32 BufferWrite( Handle buffer, u32 sSize, void* spData ) override
@@ -1633,17 +1637,22 @@ public:
 	// Shader System
 	// --------------------------------------------------------------------------------------------
 
-	bool CreatePipelineLayout( Handle& sHandle, PipelineLayoutCreate_t& srPipelineCreate ) override
+	bool CreatePipelineLayout( ChHandle_t& sHandle, PipelineLayoutCreate_t& srPipelineCreate ) override
 	{
 		return VK_CreatePipelineLayout( sHandle, srPipelineCreate );
 	}
 
-	bool CreateGraphicsPipeline( Handle& sHandle, GraphicsPipelineCreate_t& srGraphicsCreate ) override
+	bool CreateGraphicsPipeline( ChHandle_t& sHandle, GraphicsPipelineCreate_t& srGraphicsCreate ) override
 	{
 		return VK_CreateGraphicsPipeline( sHandle, srGraphicsCreate );
 	}
 
-	void DestroyPipeline( Handle sPipeline ) override
+	bool CreateComputePipeline( ChHandle_t& sHandle, ComputePipelineCreate_t& srComputeCreate ) override
+	{
+		return VK_CreateComputePipeline( sHandle, srComputeCreate );
+	}
+
+	void DestroyPipeline( ChHandle_t sPipeline ) override
 	{
 		VK_DestroyPipeline( sPipeline );
 	}
@@ -1652,6 +1661,10 @@ public:
 	{
 		VK_DestroyPipelineLayout( sPipeline );
 	}
+
+	// --------------------------------------------------------------------------------------------
+	// Descriptor Pool
+	// --------------------------------------------------------------------------------------------
 
 	Handle CreateDescLayout( const CreateDescLayout_t& srCreate ) override
 	{
@@ -2266,6 +2279,21 @@ public:
 		}
 
 		vkCmdDrawIndexed( c, sIndexCount, sInstanceCount, sFirstIndex, sVertOffset, sFirstInstance );
+	}
+
+	void CmdDispatch( ChHandle_t sCmd, u32 sGroupCountX, u32 sGroupCountY, u32 sGroupCountZ ) override
+	{
+		PROF_SCOPE();
+
+		VkCommandBuffer c = VK_GetCommandBuffer( sCmd );
+
+		if ( c == nullptr )
+		{
+			Log_Error( gLC_Render, "CmdDrawIndexed: Invalid Command Buffer\n" );
+			return;
+		}
+
+		vkCmdDispatch( c, sGroupCountX, sGroupCountY, sGroupCountZ );
 	}
 };
 

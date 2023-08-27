@@ -375,8 +375,9 @@ void                                  VK_CheckFenceStatus();
 VkShaderModule                        VK_CreateShaderModule( u32* spByteCode, u32 sSize );
 void                                  VK_DestroyShaderModule( VkShaderModule shaderModule );
 
-bool                                  VK_CreatePipelineLayout( Handle& sHandle, PipelineLayoutCreate_t& srPipelineCreate );
-bool                                  VK_CreateGraphicsPipeline( Handle& sHandle, GraphicsPipelineCreate_t& srGraphicsCreate );
+bool                                  VK_CreatePipelineLayout( ChHandle_t& sHandle, PipelineLayoutCreate_t& srPipelineCreate );
+bool                                  VK_CreateGraphicsPipeline( ChHandle_t& sHandle, GraphicsPipelineCreate_t& srGraphicsCreate );
+bool                                  VK_CreateComputePipeline( ChHandle_t& srHandle, ComputePipelineCreate_t& srPipelineCreate );
 
 void                                  VK_DestroyPipeline( Handle sPipeline );
 void                                  VK_DestroyPipelineLayout( Handle sPipeline );

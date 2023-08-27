@@ -82,7 +82,7 @@ void VK_DestroyShaderModule( VkShaderModule shaderModule )
 }
 
 
-bool VK_CreatePipelineLayout( Handle& srHandle, PipelineLayoutCreate_t& srPipelineCreate )
+bool VK_CreatePipelineLayout( ChHandle_t& srHandle, PipelineLayoutCreate_t& srPipelineCreate )
 {
 	std::vector< VkDescriptorSetLayout > layouts;
 
@@ -126,11 +126,13 @@ bool VK_CreatePipelineLayout( Handle& srHandle, PipelineLayoutCreate_t& srPipeli
 }
 
 
-bool VK_GetShaderStageCreateInfo( const std::vector< ShaderModule_t >& shaderModules, std::vector< VkPipelineShaderStageCreateInfo >& shaderStages )
+bool VK_GetShaderStageCreateInfo( VkPipelineShaderStageCreateInfo* spStageCreate, ShaderModule_t* spShaderModules, u32 sStageCount )
 {
-	for ( const auto& stage : shaderModules )
+	for ( u32 i = 0; i < sStageCount; i++ )
 	{
-		std::string absPath = FileSys_FindFile( stage.aModulePath );
+		ShaderModule_t& stage   = spShaderModules[ i ];
+
+		std::string     absPath = FileSys_FindFile( stage.aModulePath );
 		if ( absPath.empty() )
 		{
 			Log_ErrorF( gLC_Render, "Failed to find shader: \"%s\"\n", stage.aModulePath );
@@ -145,7 +147,8 @@ bool VK_GetShaderStageCreateInfo( const std::vector< ShaderModule_t >& shaderMod
 			return false;
 		}
 
-		auto& stageInfo  = shaderStages.emplace_back( VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO );
+		auto& stageInfo  = spStageCreate[ i ];
+		stageInfo.sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
 		stageInfo.pName  = stage.apEntry;
 		stageInfo.module = VK_CreateShaderModule( (u32*)fileData.data(), fileData.size() );
 
@@ -163,19 +166,74 @@ bool VK_GetShaderStageCreateInfo( const std::vector< ShaderModule_t >& shaderMod
 }
 
 
-// UNFINISHED !!!!!
-#if 0
-Handle VK_CreateComputePipeline( ComputePipelineCreate_t& srPipelineCreate )
+bool VK_CreateComputePipeline( ChHandle_t& srHandle, ComputePipelineCreate_t& srPipelineCreate )
 {
-	std::vector< VkPipelineShaderStageCreateInfo > shaderStages;
-	VK_GetShaderStageCreateInfo( srGraphicsCreate.aShaderModules, shaderStages );
+	VkPipelineLayout* layout = gPipelineLayouts.Get( srPipelineCreate.aPipelineLayout );
+	if ( layout == nullptr )
+	{
+		Log_ErrorF( gLC_Render, "VK_CreateGraphicsPipeline(): Pipeline Layout not found: \"%s\"\n", srPipelineCreate.apName );
+		return false;
+	}
 
-	VkPipelineLayout pipelineLayout = *gPipelineLayouts.Get( srGraphicsCreate.aPipelineLayout );
-}
+	VkPipelineShaderStageCreateInfo shaderStageCreate{};
+	if ( !VK_GetShaderStageCreateInfo( &shaderStageCreate, &srPipelineCreate.aShaderModule, 1 ) )
+	{
+		Log_ErrorF( gLC_Render, "VK_CreateGraphicsPipeline(): Failed to create shader stage info: \"%s\"\n", srPipelineCreate.apName );
+		return false;
+	}
+
+	//	Combine all the objects above into one parameter for graphics pipeline creation
+	VkComputePipelineCreateInfo pipelineInfo{ VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO };
+	pipelineInfo.flags               = 0;
+	pipelineInfo.stage               = shaderStageCreate;
+	pipelineInfo.layout              = *layout;
+	pipelineInfo.basePipelineHandle  = VK_NULL_HANDLE;  // Optional, very important for later when making new pipelines. It is less expensive to reference an existing similar pipeline
+	pipelineInfo.basePipelineIndex   = -1;              // Optional
+
+	ShaderVK* shader                 = nullptr;
+
+	if ( srHandle != CH_INVALID_HANDLE )
+	{
+		shader = gShaders.Get( srHandle );
+		if ( !shader )
+		{
+			Log_ErrorF( gLC_Render, "VK_CreateGraphicsPipeline(): Shader not found for recreation: \"%s\"\n", srPipelineCreate.apName );
+			return false;
+		}
+	}
+	else
+	{
+		srHandle = gShaders.Create( &shader );
+	}
+
+	shader->aBindPoint = VK_PIPELINE_BIND_POINT_COMPUTE;
+
+	// TODO: look into trying to make multiple pipelines at once
+	VK_CheckResultF(
+	  vkCreateComputePipelines( VK_GetDevice(), VK_NULL_HANDLE, 1, &pipelineInfo, NULL, &shader->aPipeline ),
+	  "Failed to create graphics pipeline for shader: \"%s\"", srPipelineCreate.apName );
+
+#ifdef _DEBUG
+	if ( srPipelineCreate.apName && pfnSetDebugUtilsObjectName )
+	{
+		// add a debug label onto it
+		const VkDebugUtilsObjectNameInfoEXT objectInfo = {
+			VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,  // sType
+			NULL,                                                // pNext
+			VK_OBJECT_TYPE_PIPELINE,                             // objectType
+			(uint64_t)shader->aPipeline,                         // objectHandle
+			srPipelineCreate.apName,                             // pObjectName
+		};
+
+		VK_CheckResultE( pfnSetDebugUtilsObjectName( VK_GetDevice(), &objectInfo ), "Failed to set Graphics Pipeline Debug Name" );
+	}
 #endif
 
+	return true;
+}
 
-bool VK_CreateGraphicsPipeline( Handle& srHandle, GraphicsPipelineCreate_t& srGraphicsCreate )
+
+bool VK_CreateGraphicsPipeline( ChHandle_t& srHandle, GraphicsPipelineCreate_t& srGraphicsCreate )
 {
 	VkPipelineLayout* layout = gPipelineLayouts.Get( srGraphicsCreate.aPipelineLayout );
 	if ( layout == nullptr )
@@ -192,7 +250,8 @@ bool VK_CreateGraphicsPipeline( Handle& srHandle, GraphicsPipelineCreate_t& srGr
 	}
 
 	std::vector< VkPipelineShaderStageCreateInfo > shaderStages;
-	if ( !VK_GetShaderStageCreateInfo( srGraphicsCreate.aShaderModules, shaderStages ) )
+	shaderStages.resize( srGraphicsCreate.aShaderModules.size() );
+	if ( !VK_GetShaderStageCreateInfo( shaderStages.data(), srGraphicsCreate.aShaderModules.data(), srGraphicsCreate.aShaderModules.size() ) )
 	{
 		Log_ErrorF( gLC_Render, "VK_CreateGraphicsPipeline(): Failed to create shader stage info: \"%s\"\n", srGraphicsCreate.apName );
 		return false;

@@ -471,6 +471,14 @@ struct PipelineLayoutCreate_t
 };
 
 
+struct ComputePipelineCreate_t
+{
+	const char*    apName = nullptr;
+	ShaderModule_t aShaderModule;
+	Handle         aPipelineLayout;
+};
+
+
 struct GraphicsPipelineCreate_t
 {
 	const char*                           apName = nullptr;
@@ -711,9 +719,10 @@ class IRender : public ISystem
 	// Buffers
 	// --------------------------------------------------------------------------------------------
 
-	virtual Handle      CreateBuffer( const char* spName, u32 sSize, EBufferFlags sBufferFlags, EBufferMemory sBufferMem )         = 0;
-	virtual Handle      CreateBuffer( u32 sSize, EBufferFlags sBufferFlags, EBufferMemory sBufferMem )                             = 0;
-	virtual void        DestroyBuffer( Handle buffer )                                                                             = 0;
+	virtual Handle      CreateBuffer( const char* spName, u32 sSize, EBufferFlags sBufferFlags, EBufferMemory sBufferMem )             = 0;
+	virtual Handle      CreateBuffer( u32 sSize, EBufferFlags sBufferFlags, EBufferMemory sBufferMem )                                 = 0;
+	virtual void        DestroyBuffer( Handle buffer )                                                                                 = 0;
+	virtual void        DestroyBuffers( ChHandle_t* spBuffers, u32 sCount )                                                            = 0;
 
 	// Returns the Amount Read/Written
 	virtual u32         BufferWrite( Handle buffer, u32 sSize, void* spData )                                                      = 0;
@@ -753,12 +762,12 @@ class IRender : public ISystem
 	// Shader System
 	// --------------------------------------------------------------------------------------------
 
-	virtual bool        CreatePipelineLayout( Handle& sHandle, PipelineLayoutCreate_t& srPipelineCreate )                          = 0;
-	virtual bool        CreateGraphicsPipeline( Handle& sHandle, GraphicsPipelineCreate_t& srGraphicsCreate )                      = 0;
-	// virtual bool        CreateComputePipeline( Handle& sHandle, ComputePipelineCreate_t& srGraphicsCreate )    = 0;
+	virtual bool        CreatePipelineLayout( ChHandle_t& sHandle, PipelineLayoutCreate_t& srPipelineCreate )                          = 0;
+	virtual bool        CreateGraphicsPipeline( ChHandle_t& sHandle, GraphicsPipelineCreate_t& srGraphicsCreate )                      = 0;
+	virtual bool        CreateComputePipeline( ChHandle_t& sHandle, ComputePipelineCreate_t& srComputeCreate )                         = 0;
 
-	virtual void        DestroyPipeline( Handle sPipeline )                                                                        = 0;
-	virtual void        DestroyPipelineLayout( Handle sPipeline )                                                                  = 0;
+	virtual void        DestroyPipeline( ChHandle_t sPipeline )                                                                        = 0;
+	virtual void        DestroyPipelineLayout( ChHandle_t sPipeline )                                                                  = 0;
 
 	// --------------------------------------------------------------------------------------------
 	// Descriptor Pool
@@ -864,9 +873,14 @@ class IRender : public ISystem
 	                                    u32    sFirstIndex,
 	                                    int    sVertOffset,
 	                                    u32    sFirstInstance ) = 0;
+
+	virtual void        CmdDispatch( ChHandle_t sCmd,
+	                                 u32        sGroupCountX,
+	                                 u32        sGroupCountY,
+	                                 u32        sGroupCountZ ) = 0;
 };
 
 
 #define IRENDER_NAME "Render"
-#define IRENDER_VER 11
+#define IRENDER_VER 12
 
