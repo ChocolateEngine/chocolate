@@ -26,7 +26,7 @@ struct DescriptorPoolStats_t
 
 enum EDescriptorPoolSize
 {
-	EDescriptorPoolSize_Storage               = 8192,
+	EDescriptorPoolSize_Storage               = 32767,
 	EDescriptorPoolSize_Uniform               = 128,
 	EDescriptorPoolSize_CombinedImageSamplers = 4096,
 	EDescriptorPoolSize_SampledImages         = 0,
@@ -53,6 +53,8 @@ extern ResourceList< BufferVK >                                     gBufferHandl
 
 static std::vector< ChHandle_t >                                    gImageSets;
 static u32                                                          gImageBinding = 0;
+
+extern Render_OnTextureIndexUpdate*                                 gpOnTextureIndexUpdateFunc;
 
 
 VkDescriptorType VK_ToVKDescriptorType( EDescriptorType type )
@@ -163,6 +165,9 @@ void VK_CalcTextureIndices()
 	}
 
 	Log_DevF( gLC_Render, 1, "Texture Index Count: %d\n", index );
+
+	if ( gpOnTextureIndexUpdateFunc )
+		gpOnTextureIndexUpdateFunc();
 }
 
 #if 1
@@ -212,6 +217,9 @@ void VK_UpdateImageSets()
 	free( write.apBindings );
 
 	Log_Dev( gLC_Render, 1, "Updated Image Sets\n" );
+
+	if ( gpOnTextureIndexUpdateFunc )
+		gpOnTextureIndexUpdateFunc();
 }
 #endif
 

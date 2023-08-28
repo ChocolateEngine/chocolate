@@ -340,6 +340,40 @@ enum ESamplerAddressMode : char
 };
 
 
+enum EPipelineStageFlags
+{
+	EPipelineStage_None,
+
+	EPipelineStage_TopOfPipe                    = ( 1 << 0 ),
+	EPipelineStage_DrawIndirect                 = ( 1 << 1 ),
+	EPipelineStage_VertexInput                  = ( 1 << 2 ),
+	EPipelineStage_VertexShader                 = ( 1 << 3 ),
+	EPipelineStage_TessellationControlShader    = ( 1 << 4 ),
+	EPipelineStage_TessellationEvaluationShader = ( 1 << 5 ),
+	EPipelineStage_GeometryShader               = ( 1 << 6 ),
+	EPipelineStage_FragmentShader               = ( 1 << 7 ),
+	EPipelineStage_EarlyFragmentTests           = ( 1 << 8 ),
+	EPipelineStage_LateFragmentTests            = ( 1 << 9 ),
+	EPipelineStage_ColorAttachmentOutput        = ( 1 << 10 ),
+	EPipelineStage_ComputeShader                = ( 1 << 11 ),
+	EPipelineStage_Transfer                     = ( 1 << 12 ),
+	EPipelineStage_BottomOfPipe                 = ( 1 << 13 ),
+	EPipelineStage_Host                         = ( 1 << 14 ),
+	EPipelineStage_AllGraphics                  = ( 1 << 15 ),
+	EPipelineStage_AllCommands                  = ( 1 << 16 ),
+};
+
+
+enum EDependencyFlags
+{
+	EDependency_None,
+	EDependency_ByRegion     = ( 1 << 0 ),
+	EDependency_DeviceGroup  = ( 1 << 1 ),
+	EDependency_ViewLocal    = ( 1 << 2 ),
+	EDependency_FeedbackLoop = ( 1 << 3 ),
+};
+
+
 enum ECommandBufferType
 {
 	ECommandBufferType_Graphics,
@@ -567,14 +601,6 @@ struct WriteDescSetBinding_t
 
 	u32             aCount   = 0;
 	ChHandle_t*     apData   = nullptr;
-
-	// ~WriteDescSetBinding_t()
-	// {
-	// 	if ( apData )
-	// 	{
-	// 		free( apData );
-	// 	}
-	// }
 };
 
 
@@ -585,14 +611,6 @@ struct WriteDescSet_t
 
 	u32                    aBindingCount = 0;
 	WriteDescSetBinding_t* apBindings    = nullptr;
-
-	// ~WriteDescSet_t()
-	// {
-	// 	if ( apBindings )
-	// 	{
-	// 		free( apBindings );
-	// 	}
-	// }
 };
 
 
@@ -620,6 +638,21 @@ struct BufferRegionCopy_t
 	size_t aDstOffset;
 	size_t aSize;
 };
+
+
+// struct PipelineBarrier_t
+// {
+// 	EPipelineStageFlags          aSrcStageMask;
+// 	EPipelineStageFlags          aDstStageMask;
+// 	EDependencyFlags             aDependencyFlags;
+// 
+// 	u32                          aMemoryBarrierCount;
+// 	const VkMemoryBarrier*       apMemoryBarriers;
+// 	u32                          aNufferMemoryBarrierCount;
+// 	const VkBufferMemoryBarrier* apBufferMemoryBarriers;
+// 	u32                          aImageMemoryBarrierCount;
+// 	const VkImageMemoryBarrier*  apImageMemoryBarriers;
+// };
 
 
 #if 0
@@ -698,6 +731,11 @@ struct ComputePassExecution
 
 // Function callback for game code for when renderer gets reset
 typedef void ( *Render_OnReset_t )( ERenderResetFlags sFlags );
+
+typedef void ( *Render_OnReset_t )( ERenderResetFlags sFlags );
+
+// Callback Function for when Texture Indices in the descriptor is updated
+using Render_OnTextureIndexUpdate = void();
 
 
 // TODO: if we keep this, rename this to IGraphicsAPI, and rename Graphics in sidury to Render, the names are backwards lol
@@ -797,6 +835,7 @@ class IRender : public ISystem
 	// --------------------------------------------------------------------------------------------
 
 	virtual void        SetResetCallback( Render_OnReset_t sFunc )                                                                     = 0;
+	virtual void        SetTextureIndexUpdateCallback( Render_OnTextureIndexUpdate* spFunc )                                           = 0;
 
 	virtual void        Reset()                                                                                                        = 0;
 	virtual void        NewFrame()                                                                                                     = 0;
@@ -882,5 +921,5 @@ class IRender : public ISystem
 
 
 #define IRENDER_NAME "Render"
-#define IRENDER_VER 12
+#define IRENDER_VER 13
 

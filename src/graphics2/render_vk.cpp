@@ -55,12 +55,13 @@ static std::unordered_map< std::string, Handle >         gTexturePaths;
 static std::unordered_map< Handle, TextureCreateData_t > gTextureInfo;
 
 // Static Memory Pools for Vulkan Commands
-static VkViewport*                                       gpViewports        = nullptr;
-static u32                                               gMaxViewports      = 0;
+static VkViewport*                                       gpViewports                = nullptr;
+static u32                                               gMaxViewports              = 0;
 
-static Render_OnReset_t                                  gpOnResetFunc      = nullptr;
+static Render_OnReset_t                                  gpOnResetFunc              = nullptr;
+Render_OnTextureIndexUpdate*                             gpOnTextureIndexUpdateFunc = nullptr;
 
-bool                                                     gNeedTextureUpdate = false;
+bool                                                     gNeedTextureUpdate         = false;
 
 GraphicsAPI_t                                            gGraphicsAPIData;
 
@@ -1762,6 +1763,11 @@ public:
 		gpOnResetFunc = sFunc;
 	}
 
+	void SetTextureIndexUpdateCallback( Render_OnTextureIndexUpdate* spFunc ) override
+	{
+		gpOnTextureIndexUpdateFunc = spFunc;
+	}
+
 	void NewFrame() override
 	{
 		ImGui_ImplVulkan_NewFrame();
@@ -2295,7 +2301,23 @@ public:
 
 		vkCmdDispatch( c, sGroupCountX, sGroupCountY, sGroupCountZ );
 	}
+
+	// void CmdPipelineBarrier( ChHandle_t sCmd, PipelineBarrier_t& srBarrier ) override
+	// {
+	// 	PROF_SCOPE();
+	// 
+	// 	VkCommandBuffer c = VK_GetCommandBuffer( sCmd );
+	// 
+	// 	if ( c == nullptr )
+	// 	{
+	// 		Log_Error( gLC_Render, "CmdDrawIndexed: Invalid Command Buffer\n" );
+	// 		return;
+	// 	}
+	// 
+	// 	vkCmdPipelineBarrier( c, sGroupCountX, sGroupCountY, sGroupCountZ );
+	// }
 };
+
 
 static RenderVK gRenderer;
 
