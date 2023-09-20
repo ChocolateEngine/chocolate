@@ -208,7 +208,11 @@ def post_jolt_extract():
 
     os.chdir("JoltPhysics/Build")
     
-    build_options = "-DUSE_AVX2=OFF -DUSE_F16C=OFF -DTARGET_UNIT_TESTS=OFF -DTARGET_HELLO_WORLD=OFF -DTARGET_PERFORMANCE_TEST=OFF -DTARGET_SAMPLES=OFF -DTARGET_VIEWER=OFF"
+    # TODO: build jolt with and without these options for old pc's
+    # I would like to have 2 physics dlls, one with avx2 and stuff, one without and without f16c and fmadd
+    # no need to gimp physics perf for newer pc's that can use this
+    
+    build_options = "-DUSE_AVX2=OFF -DUSE_F16C=OFF -DUSE_FMADD=OFF -DTARGET_UNIT_TESTS=OFF -DTARGET_HELLO_WORLD=OFF -DTARGET_PERFORMANCE_TEST=OFF -DTARGET_SAMPLES=OFF -DTARGET_VIEWER=OFF"
 
     if SYS_OS == OS.Windows:
         build_dir = "build"
