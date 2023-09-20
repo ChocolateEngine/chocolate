@@ -647,6 +647,125 @@ VkSamplerAddressMode VK_ToVkSamplerAddress( ESamplerAddressMode mode )
 }
 
 
+// blech
+VkPipelineStageFlags VK_ToPipelineStageFlags( EPipelineStageFlags sFlags )
+{
+	VkPipelineStageFlags flags = VK_PIPELINE_STAGE_NONE;
+
+	if ( sFlags & EPipelineStage_TopOfPipe )
+		flags |= VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+
+	if ( sFlags & EPipelineStage_DrawIndirect )
+		flags |= VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT;
+
+	if ( sFlags & EPipelineStage_VertexInput )
+		flags |= VK_PIPELINE_STAGE_VERTEX_INPUT_BIT;
+
+	if ( sFlags & EPipelineStage_VertexShader )
+		flags |= VK_PIPELINE_STAGE_VERTEX_SHADER_BIT;
+
+	if ( sFlags & EPipelineStage_TessellationControlShader )
+		flags |= VK_PIPELINE_STAGE_TESSELLATION_CONTROL_SHADER_BIT;
+
+	if ( sFlags & EPipelineStage_TessellationEvaluationShader )
+		flags |= VK_PIPELINE_STAGE_TESSELLATION_EVALUATION_SHADER_BIT;
+
+	if ( sFlags & EPipelineStage_GeometryShader )
+		flags |= VK_PIPELINE_STAGE_GEOMETRY_SHADER_BIT;
+
+	if ( sFlags & EPipelineStage_FragmentShader )
+		flags |= VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+
+	if ( sFlags & EPipelineStage_EarlyFragmentTests )
+		flags |= VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
+
+	if ( sFlags & EPipelineStage_LateFragmentTests )
+		flags |= VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
+
+	if ( sFlags & EPipelineStage_ColorAttachmentOutput )
+		flags |= VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+
+	if ( sFlags & EPipelineStage_ComputeShader )
+		flags |= VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
+
+	if ( sFlags & EPipelineStage_Transfer )
+		flags |= VK_PIPELINE_STAGE_TRANSFER_BIT;
+
+	if ( sFlags & EPipelineStage_BottomOfPipe )
+		flags |= VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+
+	if ( sFlags & EPipelineStage_Host )
+		flags |= VK_PIPELINE_STAGE_HOST_BIT;
+
+	if ( sFlags & EPipelineStage_AllGraphics )
+		flags |= VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT;
+
+	if ( sFlags & EPipelineStage_AllCommands )
+		flags |= VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
+
+	return flags;
+}
+
+
+VkAccessFlags VK_ToAccessFlags( EGraphicsAccessFlags sFlags )
+{
+	VkAccessFlags flags = VK_ACCESS_NONE;
+
+	if ( sFlags & EGraphicsAccess_IndirectCommandRead )
+		flags |= VK_ACCESS_INDIRECT_COMMAND_READ_BIT;
+
+	if ( sFlags & EGraphicsAccess_IndexRead )
+		flags |= VK_ACCESS_INDEX_READ_BIT;
+
+	if ( sFlags & EGraphicsAccess_VertexAttributeRead )
+		flags |= VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT;
+
+	if ( sFlags & EGraphicsAccess_UniformRead )
+		flags |= VK_ACCESS_UNIFORM_READ_BIT;
+
+	if ( sFlags & EGraphicsAccess_InputAttachemntRead )
+		flags |= VK_ACCESS_INPUT_ATTACHMENT_READ_BIT;
+
+	if ( sFlags & EGraphicsAccess_ShaderRead )
+		flags |= VK_ACCESS_SHADER_READ_BIT;
+
+	if ( sFlags & EGraphicsAccess_ShaderWrite )
+		flags |= VK_ACCESS_SHADER_WRITE_BIT;
+
+	if ( sFlags & EGraphicsAccess_ColorAttachmentRead )
+		flags |= VK_ACCESS_COLOR_ATTACHMENT_READ_BIT;
+
+	if ( sFlags & EGraphicsAccess_ColorAttachmentWrite )
+		flags |= VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+
+	if ( sFlags & EGraphicsAccess_DepthStencilRead )
+		flags |= VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT;
+
+	if ( sFlags & EGraphicsAccess_DepthStencilWrite )
+		flags |= VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+
+	if ( sFlags & EGraphicsAccess_TransferRead )
+		flags |= VK_ACCESS_TRANSFER_READ_BIT;
+
+	if ( sFlags & EGraphicsAccess_TransferWrite )
+		flags |= VK_ACCESS_TRANSFER_WRITE_BIT;
+
+	if ( sFlags & EGraphicsAccess_HostRead )
+		flags |= VK_ACCESS_HOST_READ_BIT;
+
+	if ( sFlags & EGraphicsAccess_HostWrite )
+		flags |= VK_ACCESS_HOST_WRITE_BIT;
+
+	if ( sFlags & EGraphicsAccess_MemoryRead )
+		flags |= VK_ACCESS_MEMORY_READ_BIT;
+
+	if ( sFlags & EGraphicsAccess_MemoryWrite )
+		flags |= VK_ACCESS_MEMORY_WRITE_BIT;
+
+	return flags;
+}
+
+
 // Copies memory to the GPU.
 void VK_memcpy( VkDeviceMemory sBufferMemory, VkDeviceSize sSize, const void* spData )
 {
@@ -2302,20 +2421,71 @@ public:
 		vkCmdDispatch( c, sGroupCountX, sGroupCountY, sGroupCountZ );
 	}
 
-	// void CmdPipelineBarrier( ChHandle_t sCmd, PipelineBarrier_t& srBarrier ) override
-	// {
-	// 	PROF_SCOPE();
-	// 
-	// 	VkCommandBuffer c = VK_GetCommandBuffer( sCmd );
-	// 
-	// 	if ( c == nullptr )
-	// 	{
-	// 		Log_Error( gLC_Render, "CmdDrawIndexed: Invalid Command Buffer\n" );
-	// 		return;
-	// 	}
-	// 
-	// 	vkCmdPipelineBarrier( c, sGroupCountX, sGroupCountY, sGroupCountZ );
-	// }
+	void CmdPipelineBarrier( ChHandle_t sCmd, PipelineBarrier_t& srBarrier ) override
+	{
+		PROF_SCOPE();
+	
+		VkCommandBuffer c = VK_GetCommandBuffer( sCmd );
+	
+		if ( c == nullptr )
+		{
+			Log_Error( gLC_Render, "CmdDrawIndexed: Invalid Command Buffer\n" );
+			return;
+		}
+
+		VkPipelineStageFlags srcStage = VK_ToPipelineStageFlags( srBarrier.aSrcStageMask );
+		VkPipelineStageFlags dstStage = VK_ToPipelineStageFlags( srBarrier.aDstStageMask );
+
+		VkDependencyFlags    dependFlags = 0;
+
+		if ( srBarrier.aDependencyFlags & EDependency_ByRegion )
+			dependFlags |= VK_DEPENDENCY_BY_REGION_BIT;
+
+		if ( srBarrier.aDependencyFlags & EDependency_DeviceGroup )
+			dependFlags |= VK_DEPENDENCY_DEVICE_GROUP_BIT;
+
+		if ( srBarrier.aDependencyFlags & EDependency_ViewLocal )
+			dependFlags |= VK_DEPENDENCY_VIEW_LOCAL_BIT;
+
+		if ( srBarrier.aDependencyFlags & EDependency_FeedbackLoop )
+			dependFlags |= VK_DEPENDENCY_FEEDBACK_LOOP_BIT_EXT;
+
+		auto bufferMem = CH_STACK_NEW( VkBufferMemoryBarrier, srBarrier.aBufferMemoryBarrierCount );
+		memset( bufferMem, 0, sizeof( VkBufferMemoryBarrier ) * srBarrier.aBufferMemoryBarrierCount );
+
+		for ( u32 i = 0; i < srBarrier.aBufferMemoryBarrierCount; i++ )
+		{
+			GraphicsBufferMemoryBarrier_t& bufBarrier = srBarrier.apBufferMemoryBarriers[ i ];
+			BufferVK*                      bufVK      = nullptr;
+
+			if ( !gBufferHandles.Get( srBarrier.apBufferMemoryBarriers[ i ].aBuffer, &bufVK ) )
+			{
+				Log_Error( gLC_Render, "CmdPipelineBarrier: Failed to find Buffer\n" );
+				CH_STACK_FREE( bufferMem );
+				return;
+			}
+
+			bufferMem[ i ].buffer              = bufVK->aBuffer;
+			bufferMem[ i ].offset              = bufBarrier.aOffset;
+			bufferMem[ i ].size                = bufBarrier.aSize == 0 ? bufVK->aSize : bufBarrier.aSize;
+
+			bufferMem[ i ].srcQueueFamilyIndex = gGraphicsAPIData.aQueueFamilyGraphics;
+			bufferMem[ i ].dstQueueFamilyIndex = gGraphicsAPIData.aQueueFamilyGraphics;
+
+			bufferMem[ i ].srcAccessMask       = VK_ToAccessFlags( bufBarrier.aSrcAccessMask );
+			bufferMem[ i ].dstAccessMask       = VK_ToAccessFlags( bufBarrier.aDstAccessMask );
+
+			bufferMem[ i ].sType               = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
+		}
+
+		vkCmdPipelineBarrier(
+		  c, srcStage, dstStage, dependFlags,
+		  0, nullptr,
+		  srBarrier.aBufferMemoryBarrierCount, bufferMem,
+		  0, nullptr );
+
+		CH_STACK_FREE( bufferMem );
+	}
 };
 
 

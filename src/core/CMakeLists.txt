@@ -19,7 +19,7 @@ set(
 	"platform.cpp"
 	"platform_linux.cpp"
 	"profiler.cpp"
-	# "resource.cpp"
+	"resource.cpp"
 	"systemmanager.cpp"
 	"util.cpp"
 )

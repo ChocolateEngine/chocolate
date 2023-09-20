@@ -297,7 +297,7 @@ int sys_allow_console_input()
 
 
 
-	//SetConsoleMode( con, );
+	//SetConsoleMode( con, );^
 
 	return true;
 }
@@ -555,8 +555,7 @@ void* Sys_CreateWindow( const char* spWindowName, int sWidth, int sHeight )
 				 dwStyle,
 				 CW_USEDEFAULT,
 				 CW_USEDEFAULT,
-				 // 1280, 720,
-				 CW_USEDEFAULT, CW_USEDEFAULT,
+				 sWidth, sHeight,
 				 NULL, NULL,
 				 GetModuleHandle( NULL ),
 				 nullptr );

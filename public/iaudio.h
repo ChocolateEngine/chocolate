@@ -1,6 +1,6 @@
 #pragma once
 
-#include "core/resources.hh"
+#include "core/resource.h"
 #include "system.h"
 
 #include <SDL2/SDL_audio.h>

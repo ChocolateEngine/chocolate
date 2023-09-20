@@ -1,13 +1,11 @@
 #pragma once
 
 #include "system.h"
-#include "core/resources.hh"
+#include "core/resource.h"
 #include <stdio.h>
 
 #include <glm/vec3.hpp>
 #include <glm/mat4x4.hpp>
-
-using Handle = size_t;
 
 struct SDL_Window;
 struct ImDrawData;
@@ -168,6 +166,20 @@ enum EImageFilter : char
 	EImageFilter_Nearest,
 	EImageFilter_Linear,
 	// EImageFilter_Cubic,
+};
+
+
+enum EImageLayout
+{
+	EImageLayout_Undefined,
+	EImageLayout_General,
+	EImageLayout_ColorAttachmentOptimal,
+	EImageLayout_DepthStencilAttachmentOptimal,
+	EImageLayout_DepthStencilReadOnlyOptimal,
+	EImageLayout_ShaderReadOnly,
+	EImageLayout_TransferSrc,
+	EImageLayout_TransferDst,
+	EImageLayout_PreInitialized,
 };
 
 
@@ -340,7 +352,8 @@ enum ESamplerAddressMode : char
 };
 
 
-enum EPipelineStageFlags
+using EPipelineStageFlags = int;
+enum : EPipelineStageFlags
 {
 	EPipelineStage_None,
 
@@ -364,6 +377,31 @@ enum EPipelineStageFlags
 };
 
 
+using EGraphicsAccessFlags = int;
+enum : EGraphicsAccessFlags
+{
+	EGraphicsAccess_None,
+
+	EGraphicsAccess_IndirectCommandRead  = ( 1 << 0 ),
+	EGraphicsAccess_IndexRead            = ( 1 << 1 ),
+	EGraphicsAccess_VertexAttributeRead  = ( 1 << 2 ),
+	EGraphicsAccess_UniformRead          = ( 1 << 3 ),
+	EGraphicsAccess_InputAttachemntRead  = ( 1 << 4 ),
+	EGraphicsAccess_ShaderRead           = ( 1 << 5 ),
+	EGraphicsAccess_ShaderWrite          = ( 1 << 6 ),
+	EGraphicsAccess_ColorAttachmentRead  = ( 1 << 7 ),
+	EGraphicsAccess_ColorAttachmentWrite = ( 1 << 8 ),
+	EGraphicsAccess_DepthStencilRead     = ( 1 << 9 ),
+	EGraphicsAccess_DepthStencilWrite    = ( 1 << 10 ),
+	EGraphicsAccess_TransferRead         = ( 1 << 11 ),
+	EGraphicsAccess_TransferWrite        = ( 1 << 12 ),
+	EGraphicsAccess_HostRead             = ( 1 << 13 ),
+	EGraphicsAccess_HostWrite            = ( 1 << 14 ),
+	EGraphicsAccess_MemoryRead           = ( 1 << 15 ),
+	EGraphicsAccess_MemoryWrite          = ( 1 << 16 ),
+};
+
+
 enum EDependencyFlags
 {
 	EDependency_None,
@@ -371,6 +409,15 @@ enum EDependencyFlags
 	EDependency_DeviceGroup  = ( 1 << 1 ),
 	EDependency_ViewLocal    = ( 1 << 2 ),
 	EDependency_FeedbackLoop = ( 1 << 3 ),
+};
+
+
+enum EGraphicsQueue
+{
+	EGraphicsQueue_Graphics,
+	EGraphicsQueue_Transfer,
+
+	EGraphicsQueue_Count,
 };
 
 
@@ -388,6 +435,7 @@ enum ECommandBufferType
 // -----------------------------------------------------------------------------
 
 
+// TODO: swap names with the struct below, the names are backwards lmao
 struct TextureCreateInfo_t
 {
 	const char* apName    = nullptr;  // Only Used for debugging
@@ -399,6 +447,7 @@ struct TextureCreateInfo_t
 };
 
 
+// Describes how to load the texture, what it's used for, filter method, etc.
 // used for both loading textures and creating textures
 struct TextureCreateData_t
 {
@@ -640,19 +689,49 @@ struct BufferRegionCopy_t
 };
 
 
-// struct PipelineBarrier_t
-// {
-// 	EPipelineStageFlags          aSrcStageMask;
-// 	EPipelineStageFlags          aDstStageMask;
-// 	EDependencyFlags             aDependencyFlags;
-// 
-// 	u32                          aMemoryBarrierCount;
-// 	const VkMemoryBarrier*       apMemoryBarriers;
-// 	u32                          aNufferMemoryBarrierCount;
-// 	const VkBufferMemoryBarrier* apBufferMemoryBarriers;
-// 	u32                          aImageMemoryBarrierCount;
-// 	const VkImageMemoryBarrier*  apImageMemoryBarriers;
-// };
+struct GraphicsMemoryBarrier_t
+{
+	EGraphicsAccessFlags aSrcAccessMask;
+	EGraphicsAccessFlags aDstAccessMask;
+};
+
+
+struct GraphicsBufferMemoryBarrier_t
+{
+	EGraphicsAccessFlags aSrcAccessMask;
+	EGraphicsAccessFlags aDstAccessMask;
+
+	ChHandle_t           aBuffer;
+	size_t               aOffset;
+	size_t               aSize;
+};
+
+
+struct GraphicsImageMemoryBarrier_t
+{
+	EGraphicsAccessFlags    aSrcAccessMask;
+	EGraphicsAccessFlags    aDstAccessMask;
+
+	EImageLayout            aOldLayout;
+	EImageLayout            aNewLayout;
+
+	ChHandle_t              aImage;
+};
+
+
+struct PipelineBarrier_t
+{
+	EPipelineStageFlags            aSrcStageMask;
+	EPipelineStageFlags            aDstStageMask;
+	EDependencyFlags               aDependencyFlags;
+
+	u32                            aMemoryBarrierCount;
+	GraphicsMemoryBarrier_t*       apMemoryBarriers;
+	u32                            aBufferMemoryBarrierCount;
+	GraphicsBufferMemoryBarrier_t* apBufferMemoryBarriers;
+	u32                            aImageMemoryBarrierCount;
+	GraphicsImageMemoryBarrier_t*  apImageMemoryBarriers;
+};
 
 
 #if 0
@@ -730,8 +809,6 @@ struct ComputePassExecution
 
 
 // Function callback for game code for when renderer gets reset
-typedef void ( *Render_OnReset_t )( ERenderResetFlags sFlags );
-
 typedef void ( *Render_OnReset_t )( ERenderResetFlags sFlags );
 
 // Callback Function for when Texture Indices in the descriptor is updated
@@ -917,9 +994,11 @@ class IRender : public ISystem
 	                                 u32        sGroupCountX,
 	                                 u32        sGroupCountY,
 	                                 u32        sGroupCountZ ) = 0;
+
+	virtual void        CmdPipelineBarrier( ChHandle_t sCmd, PipelineBarrier_t& srBarrier ) = 0;
 };
 
 
 #define IRENDER_NAME "Render"
-#define IRENDER_VER 13
+#define IRENDER_VER 14
 

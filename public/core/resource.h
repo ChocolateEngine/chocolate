@@ -1,20 +1,27 @@
-/*
- *    resources.h    --    Resource management
- *
- *    Authroed by Karl "p0lyh3dron" Kreuze on March 5, 2022
- *
- *    This files declares the resource manager, along with
- *    all the types related to handles and resource management.
- */
 #pragma once
 
 #include <cstring>
+#include <filesystem>
+#include <functional>
 
-#include "platform.h"
-#include "mempool.h"
-#include "vector.hpp"
-#include "log.h"
 #include "asserts.h"
+#include "core/filesystem.h"
+#include "log.h"
+#include "mempool.h"
+#include "platform.h"
+#include "util.h"
+#include "vector.hpp"
+
+namespace fs = std::filesystem;
+
+// -----------------------------------------------------------------------
+// Resource Manager (maybe change to Asset Manager?)
+//
+// The purpose of this is for hotloading support
+// The Update function will check all added resources to see if any on disk have changed in anyway
+// If any have, and the type is supplied with a callback function,
+// then the callback is run to tell whatever type it is to reload this file
+// -----------------------------------------------------------------------
 
 static LOG_REGISTER_CHANNEL( Resource, LogColor::DarkYellow );
 
@@ -25,11 +32,94 @@ static LOG_REGISTER_CHANNEL( Resource, LogColor::DarkYellow );
 #define GET_HANDLE_INDEX( sHandle )    CH_GET_HANDLE_INDEX( sHandle )
 #define GET_HANDLE_MAGIC( sHandle )    CH_GET_HANDLE_MAGIC( sHandle )
 
-using ChHandle_t = size_t;
-using Handle     = ChHandle_t;  // backwards compatibility
+// change Handle to this?
+using ChResource_t                     = size_t;
+
+using ChHandle_t                       = size_t;
+using Handle                           = ChHandle_t;  // backwards compatibility
 
 constexpr ChHandle_t CH_INVALID_HANDLE = 0;
 constexpr ChHandle_t InvalidHandle     = CH_INVALID_HANDLE;  // backwards compatibility
+
+using ResourceFunc_Load                = bool( ChHandle_t& item, const fs::path& srPath, void* spUserData );
+using ResourceFunc_Reload              = bool( ChHandle_t& item, const fs::path& srPath );
+using ResourceFunc_Create              = bool( ChHandle_t& item, const fs::path& srInternalPath, void* spData, void* spUserData );
+using ResourceFunc_Free                = void( ChHandle_t item );
+using ResourceFunc_OnLoadFinish        = void( ChHandle_t item );
+
+
+struct ResourceType_t
+{
+	const char*                apName = nullptr;
+	ResourceFunc_Load*         apFuncLoad;
+	ResourceFunc_Reload*       apFuncReload;
+	ResourceFunc_Create*       apFuncCreate;
+	ResourceFunc_Free*         apFuncFree;
+	ResourceFunc_OnLoadFinish* apFuncFinish;  // Called when this asset is finished loading in the background
+
+	bool                       aPaused = false;
+};
+
+
+CORE_API void       Resource_Update();
+
+// Free all still loaded resources
+CORE_API void       Resource_Shutdown();
+
+CORE_API ChHandle_t Resource_RegisterType( const ResourceType_t& srType );
+
+// CORE_API ChHandle_t Resource_RegisterType( const char* spName, ResourceFunc_Load* apFuncLoad, ResourceFunc_Create* apFuncCreate, ResourceFunc_Free* apFuncFree );
+
+// old idea's
+// CORE_API bool       Resource_Add( ChHandle_t shType, ChHandle_t shResource, const std::string& srPath );
+// CORE_API void       Resource_Remove( ChHandle_t shResource );
+
+// Load's this resource from disk
+CORE_API bool       Resource_Load( ChHandle_t shType, ChHandle_t& shResource, const fs::path& srPath );
+
+// Create's a resource from memory
+CORE_API bool       Resource_Create( ChHandle_t shType, ChHandle_t& shResource, const fs::path& srInternalPath, void* spData );
+
+// Add's an already created resource externally
+CORE_API bool       Resource_Add( ChHandle_t shType, ChHandle_t& shResource, const fs::path& srPath );
+
+// Queue's a Resource for Deletion
+CORE_API void       Resource_Free( ChHandle_t shType, ChHandle_t shResource );
+
+// Pause or Resume Updating of this Resource Type
+CORE_API void       Resource_SetTypePaused( ChHandle_t sType, bool sPaused );
+
+
+// locks a resource currently in use, so we don't try to update it in the background if it changed on disk
+// instead, we can queue that resource reload, and wait for the resource to be unlocked, and then do that reload
+// you can also lock a resource multiple times
+// returns a handle to a lock, this will be
+CORE_API ChHandle_t Resource_Lock( ChHandle_t sType, ChHandle_t sResource );
+CORE_API void       Resource_Unlock( ChHandle_t sLock );
+
+CORE_API void       Resource_IncrementRef( ChHandle_t sType, ChHandle_t sResource );
+CORE_API void       Resource_DecrementRef( ChHandle_t sType, ChHandle_t sResource );
+
+
+struct ResourceAutoLock_t
+{
+	ChHandle_t aLock;
+
+	ResourceAutoLock_t( ChHandle_t sType, ChHandle_t sResource )
+	{
+		aLock = Resource_Lock( sType, sResource );
+	}
+
+	~ResourceAutoLock_t()
+	{
+		Resource_Unlock( aLock );
+	}
+};
+
+
+// -----------------------------------------------------------------------
+// Original Resource List System
+// -----------------------------------------------------------------------
 
 
 // TODO: IDEA TO ALLOW FOR CONSOLIDATING MEMORY
@@ -37,10 +127,10 @@ constexpr ChHandle_t InvalidHandle     = CH_INVALID_HANDLE;  // backwards compat
 // this different memory pool will store the real index for where our data is in the main memory pool
 // this can allow us to consolidate the main memory pool and free a good chunk of memory
 // the memory used in the alternate memory pool should be very small, so it won't matter that we can't consolidate that
-// 
+//
 // however, lookups of data would be slower, since we have to load the index memory pool to get the index
 // and then load the main memory pool and return our data from that
-// 
+//
 
 
 template< typename T >
@@ -57,7 +147,7 @@ struct ResourceList
      *    Construct a resource manager.
      */
 	ResourceList() :
-	    aSize(), aStepSize( 8 )
+		aSize(), aStepSize( 8 )
 	{
 		apPool = mempool_new( ( sizeof( T ) + sizeof( unsigned int ) ) * 8 );
 	}
@@ -111,7 +201,7 @@ struct ResourceList
 		memerror_t err  = MEMERR_NONE;
 
 		// Allocate a chunk of memory.
-		err = mempool_alloc( apPool, sizeof( unsigned int ) + sizeof( T ), &pBuf );
+		err             = mempool_alloc( apPool, sizeof( unsigned int ) + sizeof( T ), &pBuf );
 
 		if ( err == MEMERR_NO_MEMORY )
 		{
@@ -129,13 +219,13 @@ struct ResourceList
 				Log_ErrorF( "Failed to Allocate Resource: %s\n", mempool_error2str( err ) );
 				return nullptr;
 			}
-        }
+		}
 		else if ( err != MEMERR_NONE )
 		{
 			return nullptr;
 		}
 
-        // Write the magic number to the chunk
+		// Write the magic number to the chunk
 		std::memcpy( pBuf, &sMagic, sizeof( sMagic ) );
 
 		return pBuf;
@@ -168,9 +258,9 @@ struct ResourceList
 		if ( pBuf == nullptr )
 			return InvalidHandle;
 
-        // Write the data to the chunk
-        // followed by the data.
-        std::memcpy( pBuf + sizeof( unsigned int ), &pData, sizeof( T ) );
+		// Write the data to the chunk
+		// followed by the data.
+		std::memcpy( pBuf + sizeof( unsigned int ), &pData, sizeof( T ) );
 
 		unsigned int index = ( (size_t)pBuf - (size_t)apPool->apBuf ) / ( sizeof( T ) + sizeof( magic ) );
 
@@ -202,8 +292,8 @@ struct ResourceList
 		if ( pBuf == nullptr )
 			return InvalidHandle;
 
-        // Re-assign the output pointer to a pointer to the data
-		*pData       = *(T*)( pBuf + sizeof( unsigned int ) );
+		// Re-assign the output pointer to a pointer to the data
+		*pData             = *(T*)( pBuf + sizeof( unsigned int ) );
 
 		unsigned int index = ( (size_t)pBuf - (size_t)apPool->apBuf ) / ( sizeof( T ) + sizeof( magic ) );
 
@@ -242,7 +332,7 @@ struct ResourceList
 			return InvalidHandle;
 
 		// Re-assign the output pointer to a pointer to the data
-		*pData = (T*)( pBuf + sizeof( unsigned int ) );
+		*pData             = (T*)( pBuf + sizeof( unsigned int ) );
 
 		unsigned int index = ( (size_t)pBuf - (size_t)apPool->apBuf ) / ( sizeof( T ) + sizeof( magic ) );
 
@@ -312,7 +402,7 @@ struct ResourceList
 		{
 			Log_Warn( gResourceChannel, "GetHandleData(): Invalid magic number\n" );
 			return nullptr;
-        }
+		}
 
 		return spBuf;
 	}
@@ -346,10 +436,10 @@ struct ResourceList
 	void Remove( Handle sHandle )
 	{
 		// Get handle data and check if the handle is valid
-		s8* pBuf = nullptr;
+		s8*          pBuf = nullptr;
 		// if ( !GetHandleData( sHandle, &pBuf ) )
 		// 	return;
-		
+
 		// Check if handle is valid
 		unsigned int magic, index;
 		if ( !GetMagicAndIndex( sHandle, magic, index ) )
@@ -400,7 +490,7 @@ struct ResourceList
 		if ( !( pBuf = GetHandleData( sHandle ) ) )
 			return nullptr;
 
-        // Return the data
+		// Return the data
 		return (T*)( pBuf + sizeof( unsigned int ) );
 	}
 
@@ -471,7 +561,7 @@ struct ResourceList
 		s8* pBuf = apPool->apBuf + sIndex * ( sizeof( T ) + sizeof( unsigned int ) );
 
 		// Set the data on the output parameter
-		*pData = *(T*)( pBuf + sizeof( unsigned int ) );
+		*pData   = *(T*)( pBuf + sizeof( unsigned int ) );
 
 		return true;
 	}
@@ -495,7 +585,7 @@ struct ResourceList
 		s8* pBuf = apPool->apBuf + sIndex * ( sizeof( T ) + sizeof( unsigned int ) );
 
 		// Set the data on the output parameter
-		*pData = (T*)( pBuf + sizeof( unsigned int ) );
+		*pData   = (T*)( pBuf + sizeof( unsigned int ) );
 
 		return true;
 	}
@@ -513,9 +603,9 @@ struct ResourceList
 			return InvalidHandle;
 
 		// Get the chunk of memory.
-		s8* pBuf      = apPool->apBuf + sIndex * ( sizeof( T ) + sizeof( unsigned int ) );
+		s8*          pBuf  = apPool->apBuf + sIndex * ( sizeof( T ) + sizeof( unsigned int ) );
 
-        unsigned int magic = *(unsigned int*)pBuf;
+		unsigned int magic = *(unsigned int*)pBuf;
 
 		return sIndex | (int64_t)magic << 32;
 	}
@@ -583,4 +673,3 @@ struct ResourceList
 		aSize         = 0;
 	}
 };
-

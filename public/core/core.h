@@ -10,7 +10,7 @@
 #include "filesystem.h"
 #include "log.h"
 #include "systemmanager.h"
-#include "resources.hh"
+#include "resource.h"
 #include "threadpool.h"
 #include "asserts.h"
 #include "profiler.h"

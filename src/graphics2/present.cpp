@@ -1,6 +1,5 @@
 #include "core/platform.h"
 #include "core/log.h"
-#include "core/resources.hh"
 #include "util.h"
 
 #include "render_vk.h"
