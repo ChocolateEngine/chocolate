@@ -1,4 +1,4 @@
-message( "Current Project: Graphics69" )
+message( "Current Project: RenderVK" )
 
 set(
 	RENDER_VK_FILES
@@ -38,36 +38,36 @@ file(
 
 include( ${CH_ROOT}/scripts/vulkan.cmake )
 
-add_library( Graphics2 SHARED ${RENDER_VK_FILES} ${PUBLIC_FILES} ${THIRDPARTY_FILES} )
+add_library( RenderVK SHARED ${RENDER_VK_FILES} ${PUBLIC_FILES} ${THIRDPARTY_FILES} )
 
-add_dependencies( Graphics2 "Core" "ImGui" )
+add_dependencies( RenderVK "Core" "ImGui" )
 
-target_precompile_headers( Graphics2 PRIVATE "${CH_PUBLIC}/core/core.h" )
+target_precompile_headers( RenderVK PRIVATE "${CH_PUBLIC}/core/core.h" )
 
 set_target_properties(
-	Graphics2 PROPERTIES
-	OUTPUT_NAME ch_graphics
+	RenderVK PROPERTIES
+	OUTPUT_NAME ch_render_vk
 )
 
 target_include_directories(
-	Graphics2 PRIVATE
+	RenderVK PRIVATE
 	${CH_PUBLIC}/imgui
 )
 
 target_link_libraries(
-	Graphics2 PRIVATE
+	RenderVK PRIVATE
 	Core
 	ImGui
 )
 
-add_vk_to_target( Graphics2 )
+add_vk_to_target( RenderVK )
 
 if ( VULKAN_DEBUG )
-	target_compile_definitions( Graphics2 PRIVATE
+	target_compile_definitions( RenderVK PRIVATE
 		-DVK_DEBUG=1
 	)
 else()
-	target_compile_definitions( Graphics2 PRIVATE
+	target_compile_definitions( RenderVK PRIVATE
 		-DVK_DEBUG=0
 	)
 endif()

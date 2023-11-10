@@ -23,7 +23,7 @@ link_libraries(
 
 add_library( GUI SHARED ${SRC_FILES} ${PUBLIC_FILES} )
 
-add_dependencies( Graphics2 "Core" "ImGui" )
+add_dependencies( GUI "Core" "ImGui" )
 
 set_target_properties(
 	GUI PROPERTIES
