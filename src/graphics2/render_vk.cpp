@@ -1306,8 +1306,8 @@ public:
 		BufferVK* buffer = nullptr;
 		Handle    handle = gBufferHandles.Create( &buffer );
 
-		buffer->aBuffer  = nullptr;
-		buffer->aMemory  = nullptr;
+		buffer->aBuffer  = VK_NULL_HANDLE;
+		buffer->aMemory  = VK_NULL_HANDLE;
 		buffer->aSize    = sSize;
 
 		int flagBits     = 0;
@@ -2307,7 +2307,7 @@ public:
 		CH_STACK_FREE( vkDescSets );
 	}
 
-	void CmdBindVertexBuffers( Handle cmd, u32 sFirstBinding, u32 sCount, const Handle* spBuffers, const size_t* spOffsets ) override
+	void CmdBindVertexBuffers( Handle cmd, u32 sFirstBinding, u32 sCount, const Handle* spBuffers, const uint64_t* spOffsets ) override
 	{
 		PROF_SCOPE();
 

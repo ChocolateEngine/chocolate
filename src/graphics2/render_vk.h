@@ -263,7 +263,7 @@ const VkPhysicalDeviceLimits&         VK_GetPhysicalDeviceLimits();
 // --------------------------------------------------------------------------------------
 // Swapchain
 
-void                                  VK_CreateSwapchain( VkSwapchainKHR spOldSwapchain = nullptr );
+void                                  VK_CreateSwapchain( VkSwapchainKHR spOldSwapchain = VK_NULL_HANDLE );
 void                                  VK_DestroySwapchain();
 void                                  VK_RecreateSwapchain();
 

@@ -8,7 +8,7 @@
 
 struct ShaderVK
 {
-	VkPipeline          aPipeline       = nullptr;
+	VkPipeline          aPipeline = VK_NULL_HANDLE;
 	// VkPipelineLayout    aPipelineLayout = nullptr;
 	VkPipelineBindPoint aBindPoint;
 };
@@ -54,7 +54,7 @@ VkPipelineLayout VK_GetPipelineLayout( Handle handle )
 	if ( layout == nullptr )
 	{
 		Log_Warn( gLC_Render, "VK_GetPipelineLayout(): Pipeline Layout not found!\n" );
-		return nullptr;
+		return VK_NULL_HANDLE;
 	}
 
 	return *layout;
@@ -242,7 +242,7 @@ bool VK_CreateGraphicsPipeline( ChHandle_t& srHandle, GraphicsPipelineCreate_t& 
 	}
 	
 	VkRenderPass renderPass = VK_GetRenderPass( srGraphicsCreate.aRenderPass );
-	if ( renderPass == nullptr )
+	if ( renderPass == VK_NULL_HANDLE )
 	{
 		Log_ErrorF( gLC_Render, "VK_CreateGraphicsPipeline(): RenderPass not found: \"%s\"\n", srGraphicsCreate.apName );
 		return false;

@@ -101,8 +101,9 @@ Module Mod_Load( const char* spPath )
 	if ( it != gModuleHandles.end() )
 		return it->second;  // already loaded
 
+	// TODO: improve this, what if it has a path before it
 	std::string pathExt = spPath;
-	pathExt += EXT_DLL;
+	pathExt = CH_PLAT_FOLDER "/" + pathExt + EXT_DLL;
 
 	std::string path = FileSys_FindFile( pathExt, true );
 

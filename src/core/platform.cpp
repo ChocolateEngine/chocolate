@@ -454,7 +454,7 @@ int Sys_GetCoreCount()
 
 static FResizeCallback* gResizeCallbackFunc = nullptr;
 
-LRESULT Win32_WindowProc( HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam )
+LRESULT __stdcall Win32_WindowProc( HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam )
 {
 	// ImGui_ImplWin32_WndProcHandler( hwnd, uMsg, wParam, lParam );
 

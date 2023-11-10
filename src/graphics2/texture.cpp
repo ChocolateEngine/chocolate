@@ -624,7 +624,7 @@ Handle VK_CreateFramebuffer( VkRenderPass sRenderPass, u16 sWidth, u16 sHeight, 
 	framebufferInfo.height          = sHeight;
 	framebufferInfo.layers          = 1;
 
-	VkFramebuffer buffer = nullptr;
+	VkFramebuffer buffer            = VK_NULL_HANDLE;
 	VK_CheckResult( vkCreateFramebuffer( VK_GetDevice(), &framebufferInfo, nullptr, &buffer ), "Failed to create framebuffer" );
 
 	return gFramebuffers.Add( buffer );
@@ -633,7 +633,7 @@ Handle VK_CreateFramebuffer( VkRenderPass sRenderPass, u16 sWidth, u16 sHeight, 
 
 Handle VK_CreateFramebuffer( const VkFramebufferCreateInfo& sCreateInfo )
 {
-	VkFramebuffer buffer = nullptr;
+	VkFramebuffer buffer = VK_NULL_HANDLE;
 	VK_CheckResult( vkCreateFramebuffer( VK_GetDevice(), &sCreateInfo, nullptr, &buffer ), "Failed to create framebuffer" );
 	return gFramebuffers.Add( buffer );
 }
@@ -642,7 +642,7 @@ Handle VK_CreateFramebuffer( const VkFramebufferCreateInfo& sCreateInfo )
 Handle VK_CreateFramebuffer( const CreateFramebuffer_t& srCreate )
 {
 	VkRenderPass renderPass = VK_GetRenderPass( srCreate.aRenderPass );
-	if ( renderPass == nullptr )
+	if ( renderPass == VK_NULL_HANDLE )
 	{
 		Log_Error( gLC_Render, "Failed to create Framebuffer: RenderPass not found!\n" );
 		return InvalidHandle;
@@ -757,7 +757,7 @@ Handle VK_CreateFramebufferVK( const CreateFramebufferVK& srCreate )
 
 void VK_DestroyFramebuffer( Handle shHandle )
 {
-	VkFramebuffer buffer = nullptr;
+	VkFramebuffer buffer = VK_NULL_HANDLE;
 	if ( !gFramebuffers.Get( shHandle, &buffer ) )
 	{
 		Log_Error( gLC_Render, "Failed to Get Framebuffer to destroy\n" );
@@ -772,7 +772,7 @@ void VK_DestroyFramebuffer( Handle shHandle )
 
 VkFramebuffer VK_GetFramebuffer( Handle shHandle )
 {
-	VkFramebuffer buffer = nullptr;
+	VkFramebuffer buffer = VK_NULL_HANDLE;
 	if ( !gFramebuffers.Get( shHandle, &buffer ) )
 	{
 		Log_Error( gLC_Render, "Failed to Get Framebuffer\n" );
@@ -1047,7 +1047,7 @@ RenderTarget* CreateBackBuffer()
 		TextureVK* tex       = VK_NewTexture( texHandle );
 		tex->aFormat         = gColorFormat;
 		tex->aFrames         = 1;
-		tex->aMemory         = nullptr;
+		tex->aMemory         = VK_NULL_HANDLE;
 		tex->aMipLevels      = 1;
 		tex->aUsage          = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 		tex->aImageView      = swapTextures[ 0 ];
@@ -1068,7 +1068,7 @@ RenderTarget* CreateBackBuffer()
 		TextureVK* tex           = VK_NewTexture( resolveHandle );
 		tex->aFormat             = gColorFormat;
 		tex->aFrames             = 1;
-		tex->aMemory             = nullptr;
+		tex->aMemory             = VK_NULL_HANDLE;
 		tex->aMipLevels          = 1;
 		tex->aUsage              = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 		tex->aImageView          = swapTextures[ 1 ];

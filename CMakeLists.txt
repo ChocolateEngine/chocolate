@@ -50,6 +50,10 @@ add_subdirectory( ${CH_SRC}/physics )
 
 if( MSVC )
 	message( "Copying SDL2" )
-	configure_file( "${CH_THIRDPARTY}/SDL2/lib/x64/SDL2.dll" "${CH_BUILD}/bin/SDL2.dll" COPYONLY )
-	configure_file( "${CH_THIRDPARTY}/SDL2/lib/x64/SDL2.dll" "${CH_BUILD}/SDL2.dll" COPYONLY )  # dumb launcher thing, blech
+	if ( ${64_BIT} )
+		configure_file( "${CH_THIRDPARTY}/SDL2/lib/x64/SDL2.dll" "${CH_BUILD}/bin/SDL2.dll" COPYONLY )
+		configure_file( "${CH_THIRDPARTY}/SDL2/lib/x64/SDL2.dll" "${CH_BUILD}/SDL2.dll" COPYONLY )  # dumb launcher thing, blech
+	else()
+		configure_file( "${CH_THIRDPARTY}/SDL2/lib/x86/SDL2.dll" "${CH_BUILD}/SDL2.dll" COPYONLY )
+	endif()
 endif()

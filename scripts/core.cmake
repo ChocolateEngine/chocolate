@@ -12,8 +12,37 @@ set( CXX_STANDARD 20 )  # could do 23
 set( CMAKE_CXX_STANDARD 20 )  # could do 23
 set( CMAKE_CXX_STANDARD_REQUIRED ON )
 
-set( CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CH_BUILD}/bin )
-set( CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CH_BUILD}/bin )
+if (${CMAKE_CL_64})
+	set( 64_BIT 1 )
+	set( 32_BIT 0 )
+	
+	if( MSVC )
+		set( PLAT_FOLDER win64 )
+	else()
+		set( PLAT_FOLDER linux64 )
+	endif()
+else()
+	set( 64_BIT 0 )
+	set( 32_BIT 1 )
+	
+	if( MSVC )
+		set( PLAT_FOLDER win32 )
+	else()
+		set( PLAT_FOLDER linux32 )
+	endif()
+endif()
+
+message( "CMAKE_GENERATOR: ${CMAKE_GENERATOR}" )
+message( "CMAKE_SIZE_OF_VOID_P: ${CMAKE_SIZE_OF_VOID_P}" )
+message( "CMAKE_GENERATOR_PLATFORM: ${CMAKE_GENERATOR_PLATFORM}" )
+message( "" )
+message( "CMAKE_CL_64:     ${CMAKE_CL_64}" )
+message( "Is 64-bit:       ${64_BIT}" )
+message( "Is 32-bit:       ${32_BIT}" )
+message( "Platform Folder: ${PLAT_FOLDER}" )
+
+set( CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CH_BUILD}/bin/${PLAT_FOLDER} )
+set( CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CH_BUILD}/bin/${PLAT_FOLDER} )
 set( CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CH_ROOT}/obj )
 
 # https://stackoverflow.com/questions/20638963/cmake-behaviour-custom-configuration-types-with-visual-studio-need-multiple-cma
@@ -26,8 +55,10 @@ set( CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CH_ROOT}/obj )
 # set output directories for all builds (Debug, Release, etc.)
 foreach( OUTPUTCONFIG ${CMAKE_CONFIGURATION_TYPES} )
     string( TOUPPER ${OUTPUTCONFIG} OUTPUTCONFIG )
-    set( CMAKE_RUNTIME_OUTPUT_DIRECTORY_${OUTPUTCONFIG} ${CH_BUILD}/bin )
-    set( CMAKE_LIBRARY_OUTPUT_DIRECTORY_${OUTPUTCONFIG} ${CH_BUILD}/bin )
+    
+    # set( CMAKE_RUNTIME_OUTPUT_DIRECTORY_${OUTPUTCONFIG} ${CH_BUILD}/bin )
+    set( CMAKE_RUNTIME_OUTPUT_DIRECTORY_${OUTPUTCONFIG} ${CH_BUILD}/bin/${PLAT_FOLDER} )
+    set( CMAKE_LIBRARY_OUTPUT_DIRECTORY_${OUTPUTCONFIG} ${CH_BUILD}/bin/${PLAT_FOLDER} )
     set( CMAKE_ARCHIVE_OUTPUT_DIRECTORY_${OUTPUTCONFIG} ${CH_BUILD}/obj )
 endforeach( OUTPUTCONFIG CMAKE_CONFIGURATION_TYPES )
 
@@ -70,6 +101,10 @@ add_compile_definitions(
 	"$<$<CONFIG:Debug>:${COMPILE_DEF_DEBUG}>"
 	"$<$<CONFIG:Release>:${COMPILE_DEF_RELEASE}>"
 	"$<$<CONFIG:RelWithDebInfo>:${COMPILE_DEF_RELEASE}>"
+	
+	CH_PLAT_FOLDER="${PLAT_FOLDER}"
+	"CH_64_BIT=${64_BIT}"
+	"CH_32_BIT=${32_BIT}"
 )
 
 
@@ -81,18 +116,24 @@ include_directories( ${MIMALLOC_DIR}/include )
 if( MSVC )
 
 	set( MIMALLOC_BUILD "${MIMALLOC_DIR}/out/msvc-x64" )
+	# set( MIMALLOC_BUILD "${MIMALLOC_DIR}/build" )
 
-	link_libraries(
-		"$<$<CONFIG:Debug>:${MIMALLOC_BUILD}/Debug/mimalloc-override.lib>"
-		"$<$<CONFIG:Release>:${MIMALLOC_BUILD}/Release/mimalloc-override.lib>"
-		"$<$<CONFIG:RelWithDebInfo>:${MIMALLOC_BUILD}/Release/mimalloc-override.lib>"
-		${MIMALLOC_DIR}/bin/mimalloc-redirect.lib
-	)
+	#link_libraries(
+	#	"$<$<CONFIG:Debug>:${MIMALLOC_DIR}/build/Debug/mimalloc-secure-debug.lib>"
+	#	"$<$<CONFIG:Release>:${MIMALLOC_BUILD}/Release/mimalloc-override.lib>"
+	#	"$<$<CONFIG:RelWithDebInfo>:${MIMALLOC_BUILD}/Release/mimalloc-override.lib>"
+	#	${MIMALLOC_DIR}/bin/mimalloc-redirect.lib
+	#)
 
-	# TODO: figure out vcpkg
-	link_directories(
-		${CH_THIRDPARTY}/SDL2/lib/x64
-	)
+	if ( ${64_BIT} )
+		link_directories(
+			${CH_THIRDPARTY}/SDL2/lib/x64
+		)
+	else()
+		link_directories(
+			${CH_THIRDPARTY}/SDL2/lib/x86
+		)
+	endif()
 	
 	include_directories(
 		${CH_THIRDPARTY}/glm
@@ -103,9 +144,18 @@ if( MSVC )
 		NOMINMAX
 		_CRT_SECURE_NO_WARNINGS
 		_ALLOW_RUNTIME_LIBRARY_MISMATCH _ALLOW_ITERATOR_DEBUG_LEVEL_MISMATCH _ALLOW_MSC_VER_MISMATCH
-		_AMD64_ __x86_64 __amd64
-		CH_USE_MIMALLOC=1
+		CH_USE_MIMALLOC=0
 	)
+
+	if ( ${64_BIT} )
+		add_compile_definitions(
+			_AMD64_ __x86_64 __amd64
+		)
+	else()
+		add_compile_definitions(
+			_X86_ __x86_32
+		)
+	endif()
 	
 	# Use these runtime libraries for both so it doesn't crash smh my head
 	# actually this is useless right now because of core.dll, god dammit

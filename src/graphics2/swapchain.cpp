@@ -109,7 +109,7 @@ void VK_DestroySwapchain()
 	gImageViews.clear();
 	gImages.clear();  // destroyed with vkDestroySwapchainKHR
 
-	gSwapChain = nullptr;
+	gSwapChain = VK_NULL_HANDLE;
 }
 
 void VK_RecreateSwapchain()

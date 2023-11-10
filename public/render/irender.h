@@ -970,7 +970,7 @@ class IRender : public ISystem
 	                                          u32           sFirstBinding,
 	                                          u32           sCount,
 	                                          const Handle* spBuffers,
-	                                          const size_t* spOffsets ) = 0;
+	                                          const uint64_t* spOffsets ) = 0;
 
 	virtual void        CmdBindIndexBuffer( Handle     cmd,
 	                                        Handle     shBuffer,
