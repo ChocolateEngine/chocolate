@@ -1296,7 +1296,7 @@ public:
 	}
 
 	// --------------------------------------------------------------------------------------------
-	// Testing
+	// Buffers
 	// --------------------------------------------------------------------------------------------
 	
 	Handle CreateBuffer( const char* spName, u32 sSize, EBufferFlags sBufferFlags, EBufferMemory sBufferMem ) override
@@ -1399,11 +1399,12 @@ public:
 		if ( sSize > bufVK->aSize )
 		{
 			Log_WarnF( gLC_Render, "BufferWrite: Trying to write more data than buffer size can store (data size: %zd > buffer size: %zd)\n", sSize, bufVK->aSize );
-			VK_memcpy( bufVK->aMemory, sSize, spData );
-			return sSize;
+			VK_memcpy( bufVK->aMemory, bufVK->aSize, spData );
+			return bufVK->aSize;
 		}
 
-		VK_memcpy( bufVK->aMemory, bufVK->aSize, spData );
+		// VK_memcpy( bufVK->aMemory, bufVK->aSize, spData );
+		VK_memcpy( bufVK->aMemory, sSize, spData );
 		return bufVK->aSize;
 	}
 
@@ -1422,11 +1423,11 @@ public:
 		if ( sSize > bufVK->aSize )
 		{
 			Log_WarnF( gLC_Render, "BufferRead: Trying to write more data than buffer size can store (data size: %zd > buffer size: %zd)\n", sSize, bufVK->aSize );
-			VK_memread( bufVK->aMemory, sSize, spData );
+			VK_memread( bufVK->aMemory, bufVK->aSize, spData );
 			return sSize;
 		}
 
-		VK_memread( bufVK->aMemory, bufVK->aSize, spData );
+		VK_memread( bufVK->aMemory, sSize, spData );
 		return bufVK->aSize;
 	}
 

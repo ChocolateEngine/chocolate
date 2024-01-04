@@ -1,7 +1,6 @@
 #include "gui.h"
 #include "util.h"
-#include "core/systemmanager.h"
-#include "core/commandline.h"
+#include "rmlui.h"
 
 #include "imgui/imgui_impl_sdl.h"
 
@@ -9,9 +8,12 @@
   #include "mimalloc-new-delete.h"
 #endif
 
-GuiSystem* gui = new GuiSystem;
+GuiSystem*               gui           = new GuiSystem;
 
-ImFont* gBuiltInFont = nullptr;
+ImFont*                  gBuiltInFont  = nullptr;
+
+double                   gRealTime     = 0.0;
+Rml::Context*            gRmlContext   = nullptr;
 
 static ModuleInterface_t gInterfaces[] = {
 	{ gui, IGUI_NAME, IGUI_HASH }
@@ -28,6 +30,11 @@ extern "C"
 
 void GuiSystem::Update( float sDT )
 {
+	gRealTime += sDT;
+
+	if ( gRmlContext )
+		gRmlContext->Update();
+
 	DrawGui();
 }
 
@@ -223,6 +230,7 @@ void GuiSystem::InsertDebugMessage( size_t index, const char* format, ... )
 	va_end( args );
 }
 
+
 /*
 *    Starts a new ImGui frame.
 */
@@ -231,19 +239,37 @@ void GuiSystem::StartFrame()
 	ImGui::NewFrame();
 }
 
+
 bool GuiSystem::Init()
 {
 	StyleImGui();
 	InitConsole();
 	InitConVarList();
 
+	// Set RmlUI Interfaces
+	// Rml::SetSystemInterface( &gRmlUI );
+
+	// Rml::Initialise();
+
+	// SDL_GetWindowSize();
+#pragma message( "DETECT RMLUI CONTEXT WINDOW SIZE" )
+	// gRmlContext = Rml::CreateContext( "default", Rml::Vector2i( 1280, 720 ) );
+
 	return true;
 }
+
+
+void GuiSystem::Shutdown()
+{
+	// Rml::Shutdown();
+}
+
 
 GuiSystem::GuiSystem(  ) : IGuiSystem(  )
 {
 	gui = this;
 }
+
 
 GuiSystem::~GuiSystem(  )
 {

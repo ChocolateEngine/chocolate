@@ -47,13 +47,13 @@ void VK_CheckFenceStatus()
 	VkResult result = VK_SUCCESS;
 
 	result          = vkGetFenceStatus( VK_GetDevice(), gFences[ 0 ] );
-	Assert( result != VK_ERROR_DEVICE_LOST );
+	CH_ASSERT( result != VK_ERROR_DEVICE_LOST );
 
 	if ( result == VK_ERROR_DEVICE_LOST )
 		Log_Fatal( "fence 0 status device lost\n" );
 
 	result = vkGetFenceStatus( VK_GetDevice(), gFences[ 1 ] );
-	Assert( result != VK_ERROR_DEVICE_LOST );
+	CH_ASSERT( result != VK_ERROR_DEVICE_LOST );
 
 	if ( result == VK_ERROR_DEVICE_LOST )
 		Log_Fatal( "fence 1 status device lost\n" );

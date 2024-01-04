@@ -19,32 +19,61 @@ enum
 typedef unsigned char KeyState;
 
 
+enum EButton
+{
+	// Add mouse buttons to the SDL scancode list
+	EButton_BeforeMouse = SDL_SCANCODE_ENDCALL,
+
+	EButton_MouseLeft,
+	EButton_MouseRight,
+	EButton_MouseMiddle,
+	EButton_MouseX1,
+	EButton_MouseX2,
+
+	// a bit strange how i have these as "buttons", but oh well
+	EButton_MouseWheelUp,
+	EButton_MouseWheelDown,
+	EButton_MouseWheelLeft,
+	EButton_MouseWheelRight,
+
+	EButton_Count,
+};
+
+
 class IInputSystem : public ISystem
 {
 	using Inputs = std::vector< SDL_Event >;
 protected:
 public:
-	virtual const glm::ivec2& GetMouseDelta(  ) = 0;
-	virtual const glm::ivec2& GetMousePos(  ) = 0;
+	virtual const glm::ivec2& GetMouseDelta() = 0;
+	virtual const glm::ivec2& GetMousePos() = 0;
+	virtual glm::ivec2        GetMouseScroll() = 0;
 
-	virtual bool WindowHasFocus(  ) = 0;
+	virtual bool              WindowHasFocus() = 0;
 
 	/* Add a Key to the key update list.  */
-	virtual void RegisterKey( SDL_Scancode key ) = 0;
+	virtual void              RegisterKey( EButton key ) = 0;
+
+	/* Get the display name for this key  */
+	virtual const char*       GetKeyName( EButton key ) = 0;
+	virtual const char*       GetKeyDisplayName( EButton key ) = 0;
+	virtual EButton           GetKeyFromName( std::string_view sName ) = 0;
 
 	/* Get the current KeyState value.  */
-	virtual KeyState GetKeyState( SDL_Scancode key ) = 0;
+	virtual KeyState          GetKeyState( EButton key ) = 0;
 
 	/* Convienence functions  */
-	virtual bool    KeyPressed( SDL_Scancode key ) = 0;
-	virtual bool    KeyReleased( SDL_Scancode key ) = 0;
-	virtual bool    KeyJustPressed( SDL_Scancode key ) = 0;
-	virtual bool    KeyJustReleased( SDL_Scancode key ) = 0;
+	virtual bool              KeyPressed( EButton key ) = 0;
+	virtual bool              KeyReleased( EButton key ) = 0;
+	virtual bool              KeyJustPressed( EButton key ) = 0;
+	virtual bool              KeyJustReleased( EButton key ) = 0;
+
+
 	/* Accessors.  */
 	virtual Inputs *GetEvents() = 0;
 };
 
 
 #define IINPUTSYSTEM_NAME "InputSystem"
-#define IINPUTSYSTEM_HASH 1
+#define IINPUTSYSTEM_HASH 2
 

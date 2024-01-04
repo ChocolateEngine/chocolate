@@ -181,7 +181,15 @@ glm::vec3 Util_GetMatrixAngles( const glm::mat4& mat )
 		glm::vec3( mat[ 1 ] ) / scale[ 1 ],
 		glm::vec3( mat[ 2 ] ) / scale[ 2 ] );
 
-	return QuatToAng( glm::quat_cast( rotMtx ) );
+	glm::vec3 outAng;
+	glm::vec3 tmpAng = Util_ToEulerAngles( glm::quat_cast( rotMtx ) );
+
+	// why?
+	outAng.x = tmpAng.z;
+	outAng.y = tmpAng.x;
+	outAng.z = tmpAng.y;
+
+	return outAng;
 }
 
 
@@ -234,12 +242,18 @@ void Util_ToMatrix( glm::mat4& srMatrix, const glm::vec3* spPos, const glm::vec3
 
 	if ( spScale )
 		srMatrix = glm::scale( srMatrix, *spScale );
+	
+	// if ( spAng )
+	// 	srMatrix *= glm::eulerAngleYZX(
+	// 	  glm::radians( spAng->x ),
+	// 	  glm::radians( spAng->y ),
+	// 	  glm::radians( spAng->z ) );
 
 	if ( spAng )
-		srMatrix *= glm::eulerAngleYZX(
-		  glm::radians( spAng->x ),
-		  glm::radians( spAng->y ),
-		  glm::radians( spAng->z ) );
+		srMatrix *= glm::eulerAngleZYX(
+			glm::radians( spAng->z ),
+			glm::radians( spAng->y ),
+			glm::radians( spAng->x ) );
 }
 
 

@@ -5,7 +5,14 @@
 
 #ifndef JPH_DEBUG_RENDERER
 	// Hack to compile DebugRenderer
-	#define JPH_DEBUG_RENDERER 1
+  #define JPH_DEBUG_RENDERER 1
+#endif
+
+#if 1
+  // we also have JPH_PROFILE_ENABLED
+  //#define JPH_EXTERNAL_PROFILE 1
+
+  //#define PROF_SCOPE()td
 #endif
 
 // workaround to not include chocolate's core/core.h, which should be renamed to ch_core/core.h

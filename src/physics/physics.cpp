@@ -40,7 +40,7 @@ static void TraceCallback( const char *pFmt, ... )
 }
 
 
-// Callback for asserts, connect this to your own assert handler if you have one
+// Callback for asserts, connect this to your own CH_ASSERT handler if you have one
 static bool AssertFailedCallback( const char *inExpression, const char *inMessage, const char *inFile, u32 inLine )
 {
 	HandleAssert( inFile, inLine, inExpression, inMessage );
@@ -68,7 +68,7 @@ static bool MyObjectCanCollide( JPH::ObjectLayer inObject1, JPH::ObjectLayer inO
 			return false; // Nothing collides with this
 
 		default:
-			Assert( false );
+			CH_ASSERT( false );
 			return false;
 	}
 };
@@ -105,7 +105,7 @@ static bool MyBroadPhaseCanCollide( JPH::ObjectLayer inLayer1, JPH::BroadPhaseLa
 			return false; // Nothing collides with this
 
 		default:
-			AssertMsg( false, "Invalid Physics Object Layer" );
+			CH_ASSERT_MSG( false, "Invalid Physics Object Layer" );
 			return false;
 	}
 }
@@ -561,7 +561,7 @@ IPhysicsShape* PhysicsEnvironment::CreateShape( const PhysicsShapeInfo& physInfo
 
 void PhysicsEnvironment::DestroyShape( IPhysicsShape *spShape )
 {
-	Assert( spShape );
+	CH_ASSERT( spShape );
 
 	if ( !spShape )
 		return;
@@ -577,7 +577,7 @@ void PhysicsEnvironment::DestroyShape( IPhysicsShape *spShape )
 
 IPhysicsObject* PhysicsEnvironment::CreateObject( IPhysicsShape* spShape, const PhysicsObjectInfo& physInfo )
 {
-	Assert( spShape );
+	CH_ASSERT( spShape );
 
 	if ( !spShape )
 		return nullptr;
@@ -642,7 +642,7 @@ IPhysicsObject* PhysicsEnvironment::CreateObject( IPhysicsShape* spShape, const 
 
 void PhysicsEnvironment::DestroyObject( IPhysicsObject *spPhysObj )
 {
-	Assert( spPhysObj );
+	CH_ASSERT( spPhysObj );
 
 	if ( !spPhysObj )
 		return;
@@ -797,7 +797,7 @@ void GetModelInd( Model* spModel, std::vector< JPH::Float3 >& srVerts, std::vect
 JPH::ShapeSettings* PhysicsEnvironment::LoadModel( const PhysicsShapeInfo& physInfo )
 {
 #if 1
-	// Assert( physInfo.aMeshData.apModel != nullptr );
+	// CH_ASSERT( physInfo.aMeshData.apModel != nullptr );
 
 	switch ( physInfo.aShapeType )
 	{

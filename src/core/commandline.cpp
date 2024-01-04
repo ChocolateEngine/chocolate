@@ -32,6 +32,7 @@ extern "C"
 		sys_init();
 		FileSys_Init( workingDir );
 		Assert_Init();
+		//Thread_Init();
 
 		Core_LoadAppInfo();
 
@@ -42,6 +43,7 @@ extern "C"
 	{
 		Con_Archive();
 		Core_DestroyAppInfo();
+		//Thread_Shutdown();
 		sys_shutdown();
 	}
 }
@@ -396,7 +398,7 @@ std::string Args_GetRegisteredPrint( const Arg_t* spArg )
 		default:
 		case EArgType_None:
 			Log_WarnF( gConsoleChannel, "Unknown argument type for arg: %s\n", spArg->aNames[ 0 ] );
-			AssertMsg( 0, "Unknown Argument Type" );
+			CH_ASSERT_MSG( 0, "Unknown Argument Type" );
 			break;
 
 		case EArgType_Custom:

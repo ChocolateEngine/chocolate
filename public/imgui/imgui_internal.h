@@ -124,6 +124,7 @@ struct ImGuiDockNode;               // Docking system node (hold a list of Windo
 struct ImGuiDockNodeSettings;       // Storage for a dock node in .ini file (we preserve those even if the associated dock node isn't active during the session)
 struct ImGuiGroupData;              // Stacked storage data for BeginGroup()/EndGroup()
 struct ImGuiInputTextState;         // Internal state of the currently focused/edited text input box
+struct ImGuiSelectableTextState;    // Internal state of the currently focused selectable text
 struct ImGuiLastItemData;           // Status storage for last submitted items
 struct ImGuiMenuColumns;            // Simple column measurement, currently used for MenuItem() only
 struct ImGuiNavItemData;            // Result of a gamepad/keyboard directional navigation move query result
@@ -1040,6 +1041,42 @@ struct IMGUI_API ImGuiInputTextState
     void        SelectAll()                 { Stb.select_start = 0; Stb.cursor = Stb.select_end = CurLenW; Stb.has_preferred_x = 0; }
 };
 
+// Internal state of the currently focused selectable text
+// For a given item ID, access with ImGui::GetSelectableTextState()
+struct IMGUI_API ImGuiSelectableTextState
+{
+    ImGuiID                 ID;                     // widget id owning the text state
+    int                     CurLenW, CurLenA;       // we need to maintain our buffer length in both UTF-8 and wchar format. UTF-8 length is valid even if TextA is not.
+    ImVector<ImWchar>       TextW;                  // edit buffer, we need to persist but can't guarantee the persistence of the user-provided buffer. so we copy into own buffer.
+    ImVector<char>          TextA;                  // temporary UTF8 buffer for callbacks and other operations. this is not updated in every code-path! size=capacity.
+    ImVector<char>          InitialTextA;           // backup of end-user buffer at the time of focus (in UTF-8, unaltered)
+    bool                    TextAIsValid;           // temporary UTF8 buffer is not initially valid before we make the widget active (until then we pull the data from user argument)
+    int                     BufCapacityA;           // end-user buffer capacity
+    float                   ScrollX;                // horizontal scrolling/offset
+    ImStb::STB_TexteditState Stb;                   // state for stb_textedit.h
+    float                   CursorAnim;             // timer for cursor blink, reset on every user action so the cursor reappears immediately
+    bool                    CursorFollow;           // set when we want scrolling to follow the current cursor position (not always!)
+    bool                    SelectedAllMouseLock;   // after a double-click to select all, we ignore further mouse drags to update selection
+    bool                    Edited;                 // edited this frame
+
+    ImGuiSelectableTextState()              { memset(this, 0, sizeof(*this)); }
+    void        ClearText()                 { CurLenW = CurLenA = 0; TextW[0] = 0; TextA[0] = 0; CursorClamp(); }
+    void        ClearFreeMemory()           { TextW.clear(); TextA.clear(); InitialTextA.clear(); }
+    int         GetUndoAvailCount() const   { return Stb.undostate.undo_point; }
+    int         GetRedoAvailCount() const   { return STB_TEXTEDIT_UNDOSTATECOUNT - Stb.undostate.redo_point; }
+    void        OnKeyPressed(int key);      // Cannot be inline because we call in code in stb_textedit.h implementation
+
+    // Cursor & Selection
+    void        CursorAnimReset()           { CursorAnim = -0.30f; }                                   // After a user-input the cursor stays on for a while without blinking
+    void        CursorClamp()               { Stb.cursor = ImMin(Stb.cursor, CurLenW); Stb.select_start = ImMin(Stb.select_start, CurLenW); Stb.select_end = ImMin(Stb.select_end, CurLenW); }
+    bool        HasSelection() const        { return Stb.select_start != Stb.select_end; }
+    void        ClearSelection()            { Stb.select_start = Stb.select_end = Stb.cursor; }
+    int         GetCursorPos() const        { return Stb.cursor; }
+    int         GetSelectionStart() const   { return Stb.select_start; }
+    int         GetSelectionEnd() const     { return Stb.select_end; }
+    void        SelectAll()                 { Stb.select_start = 0; Stb.cursor = Stb.select_end = CurLenW; Stb.has_preferred_x = 0; }
+};
+
 // Storage for current popup stack
 struct ImGuiPopupData
 {
@@ -1930,6 +1967,7 @@ struct ImGuiContext
     // Widget state
     ImVec2                  MouseLastValidPos;
     ImGuiInputTextState     InputTextState;
+    ImGuiSelectableTextState SelectableTextState;
     ImFont                  InputTextPasswordFont;
     ImGuiID                 TempInputId;                        // Temporary text input when CTRL+clicking on a slider, etc.
     ImGuiColorEditFlags     ColorEditOptions;                   // Store user options for color edit widgets
@@ -3122,7 +3160,7 @@ namespace ImGui
     IMGUI_API bool          TempInputScalar(const ImRect& bb, ImGuiID id, const char* label, ImGuiDataType data_type, void* p_data, const char* format, const void* p_clamp_min = NULL, const void* p_clamp_max = NULL);
     inline bool             TempInputIsActive(ImGuiID id)       { ImGuiContext& g = *GImGui; return (g.ActiveId == id && g.TempInputId == id); }
     inline ImGuiInputTextState* GetInputTextState(ImGuiID id)   { ImGuiContext& g = *GImGui; return (g.InputTextState.ID == id) ? &g.InputTextState : NULL; } // Get input text state if active
-
+    
     // Color
     IMGUI_API void          ColorTooltip(const char* text, const float* col, ImGuiColorEditFlags flags);
     IMGUI_API void          ColorEditOptionsPopup(const float* col, ImGuiColorEditFlags flags);

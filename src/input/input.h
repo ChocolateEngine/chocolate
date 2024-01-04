@@ -25,13 +25,14 @@ class InputSystem : public IInputSystem
 protected:
 	typedef std::vector< KeyAlias > KeyAliases;
 	typedef std::vector< KeyBind >	KeyBinds;
-	typedef std::unordered_map< SDL_Scancode, KeyState >	KeyStates;
 	
 	KeyAliases 	aKeyAliases;
 	KeyBinds 	aKeyBinds;
-	KeyStates 	aKeyStates;
-	const Uint8*    aKeyboardState;
-	std::vector< SDL_Event > aEvents;
+
+	std::unordered_map< EButton, KeyState > aKeyStates;
+
+	const Uint8*                            aKeyboardState;
+	std::vector< SDL_Event >                aEvents;
 
 	/* Parse the key aliases that can be bound to.  */
 	void 		MakeAliases();
@@ -48,35 +49,46 @@ protected:
 	/* Update all key states on this frame  */
 	void 		UpdateKeyStates();
 	/* Update all key states on this frame  */
-	void 		UpdateKeyState( SDL_Scancode key );
+	void 		UpdateKeyState( EButton key );
 
 	void        ResetInputs();
+
+	void        PressMouseButton( EButton sButton );
+	void        ReleaseMouseButton( EButton sButton );
 
 	glm::ivec2  aMouseDelta = {0, 0};
 	glm::ivec2  aMousePos = {0, 0};
 	bool        aHasFocus = true;
 
+	glm::ivec2  aScroll;
+
 public:
 	/* Parses SDL inputs and if there is a valid input, execute the console command.  */
 	void 		ParseInput(  );
 
-	const glm::ivec2& GetMouseDelta();
-	const glm::ivec2& GetMousePos();
+	const glm::ivec2&         GetMouseDelta() override;
+	const glm::ivec2&         GetMousePos() override;
+	virtual glm::ivec2        GetMouseScroll() override;
 
 	/* Is the engine window in focus?.  */
 	bool        WindowHasFocus();
 
 	/* Add a Key to the key update list.  */
-	void        RegisterKey( SDL_Scancode key );
+	void        RegisterKey( EButton key ) override;
+
+	/* Get the display name for this key  */
+	const char* GetKeyName( EButton key ) override;
+	const char* GetKeyDisplayName( EButton key ) override;
+	EButton     GetKeyFromName( std::string_view sName ) override;
 
 	/* Get the current KeyState value.  */
-	KeyState    GetKeyState( SDL_Scancode key );
+	KeyState    GetKeyState( EButton key ) override;
 
 	/* Convienence functions  */
-	bool KeyPressed( SDL_Scancode key ) { return GetKeyState(key) & KeyState_Pressed; }
-	bool KeyReleased( SDL_Scancode key ) { return GetKeyState(key) & KeyState_Released; }
-	bool KeyJustPressed( SDL_Scancode key ) { return GetKeyState(key) & KeyState_JustPressed; }
-	bool KeyJustReleased( SDL_Scancode key ) { return GetKeyState(key) & KeyState_JustReleased; }
+	bool KeyPressed( EButton key ) { return GetKeyState(key) & KeyState_Pressed; }
+	bool KeyReleased( EButton key ) { return GetKeyState(key) & KeyState_Released; }
+	bool KeyJustPressed( EButton key ) { return GetKeyState(key) & KeyState_JustPressed; }
+	bool KeyJustReleased( EButton key ) { return GetKeyState(key) & KeyState_JustReleased; }
 
 	/* Accessors.  */
 	std::vector< SDL_Event > *GetEvents() { return &aEvents; }

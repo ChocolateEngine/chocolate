@@ -1,12 +1,6 @@
 message( "Current Project: GUI" )
 
 file(
-	GLOB_RECURSE SRC_FILES CONFIGURE_DEPENDS
-	*.cpp
-	*.h
-)
-
-file(
 	#GLOB_RECURSE PUBLIC_FILES CONFIGURE_DEPENDS
 	GLOB PUBLIC_FILES CONFIGURE_DEPENDS
 	${CH_PUBLIC}/*.cpp
@@ -21,6 +15,24 @@ link_libraries(
 	ImGui
 )
 
+include( ${CH_ROOT}/scripts/rmlui.cmake )
+
+set(
+	SRC_FILES
+	
+	consoleui.cpp
+	consoleui.h
+	convar_list.cpp
+	gui.cpp
+	gui.h
+	rmlui.cpp
+	rmlui.h
+	
+	# NOTE: maybe use Win32 backend for windows?
+	${RMLUI_DIR}/Backends/RmlUi_Platform_SDL.cpp
+	${RMLUI_DIR}/Backends/RmlUi_Platform_SDL.h
+)
+
 add_library( GUI SHARED ${SRC_FILES} ${PUBLIC_FILES} )
 
 add_dependencies( GUI "Core" "ImGui" )
@@ -33,7 +45,7 @@ set_target_properties(
 source_group(
 	TREE ${CMAKE_CURRENT_LIST_DIR}
 	PREFIX "Source Files"
-	FILES ${SRC_FILES}
+	FILES ${CH_ROOT}
 )
 
 source_group(

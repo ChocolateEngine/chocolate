@@ -119,14 +119,14 @@ PhysMotionQuality PhysicsObject::GetMotionQuality()
 void PhysicsObject::SetMaxLinearVelocity( float velocity )
 {
 	auto motion = apBody->GetMotionProperties();
-	Assert( motion );
+	CH_ASSERT( motion );
 	motion->SetMaxLinearVelocity( velocity );
 }
 
 float PhysicsObject::GetMaxLinearVelocity()
 {
 	auto motion = apBody->GetMotionProperties();
-	Assert( motion );
+	CH_ASSERT( motion );
 	return motion->GetMaxLinearVelocity();
 }
 
@@ -134,14 +134,14 @@ float PhysicsObject::GetMaxLinearVelocity()
 void PhysicsObject::SetMaxAngularVelocity( float velocity )
 {
 	auto motion = apBody->GetMotionProperties();
-	Assert( motion );
+	CH_ASSERT( motion );
 	motion->SetMaxAngularVelocity( velocity );
 }
 
 float PhysicsObject::GetMaxAngularVelocity()
 {
 	auto motion = apBody->GetMotionProperties();
-	Assert( motion );
+	CH_ASSERT( motion );
 	return motion->GetMaxAngularVelocity();
 }
 

@@ -8,6 +8,8 @@
 #include "system.h"
 #include "igui.h"
 
+extern double gRealTime;
+
 class GuiSystem : public IGuiSystem
 {
   protected:
@@ -57,6 +59,7 @@ class GuiSystem : public IGuiSystem
 
 	void    InitConsole();
 	bool    Init() override;
+	void    Shutdown() override;
 
 	/* Constructor.  */
 	explicit GuiSystem();

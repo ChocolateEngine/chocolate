@@ -294,7 +294,7 @@ void mempool_free( mempool_t* spPool, s8* spChunk )
 	}
 
 	// Should not be nullptr?
-	Assert( pChunk );
+	CH_ASSERT( pChunk );
 
 	if ( !pChunk || pChunk->apData != spChunk )
 	{
@@ -306,6 +306,9 @@ void mempool_free( mempool_t* spPool, s8* spChunk )
      *    Free the chunk.
      */
 	pChunk->aUsed = false;
+
+	// Set it's memory to Zero
+	memset( pChunk->apData, 0, pChunk->aSize );
 }
 
 /*

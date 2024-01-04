@@ -43,6 +43,18 @@ InputSystem::InputSystem(  ) : IInputSystem(  )
 {
 	MakeAliases(  );
 	ParseBindings(  );
+
+	// Register Mouse Buttons
+	RegisterKey( EButton_MouseLeft );
+	RegisterKey( EButton_MouseRight );
+	RegisterKey( EButton_MouseMiddle );
+	RegisterKey( EButton_MouseX1 );
+	RegisterKey( EButton_MouseX2 );
+
+	RegisterKey( EButton_MouseWheelUp );
+	RegisterKey( EButton_MouseWheelDown );
+	RegisterKey( EButton_MouseWheelLeft );
+	RegisterKey( EButton_MouseWheelRight );
 }
 
 void InputSystem::MakeAliases(  )
@@ -100,6 +112,23 @@ void InputSystem::Bind( const std::string& srKey, const std::string& srCmd )
 		}
 	std::cout << srKey << " is not a valid key alias" << std::endl;
 }
+
+
+void InputSystem::PressMouseButton( EButton sButton )
+{
+	KeyState& state = aKeyStates[ sButton ];
+	state |= KeyState_Pressed | KeyState_JustPressed;
+	state &= ~(KeyState_Released | KeyState_JustReleased);
+}
+
+
+void InputSystem::ReleaseMouseButton( EButton sButton )
+{
+	KeyState& state = aKeyStates[ sButton ];
+	state |= KeyState_Released | KeyState_JustReleased;
+	state &= ~(KeyState_Pressed | KeyState_JustPressed);
+}
+
 
 void InputSystem::ParseInput()
 {
@@ -174,7 +203,78 @@ void InputSystem::ParseInput()
 				}
 				break;
 			}
-			
+
+			case SDL_MOUSEBUTTONDOWN:
+			{
+				switch ( aEvent.button.button )
+				{
+					case SDL_BUTTON_LEFT:
+						PressMouseButton( EButton_MouseLeft );
+						break;
+
+					case SDL_BUTTON_RIGHT:
+						PressMouseButton( EButton_MouseRight );
+						break;
+
+					case SDL_BUTTON_MIDDLE:
+						PressMouseButton( EButton_MouseMiddle );
+						break;
+
+					case SDL_BUTTON_X1:
+						PressMouseButton( EButton_MouseX1 );
+						break;
+
+					case SDL_BUTTON_X2:
+						PressMouseButton( EButton_MouseX2 );
+						break;
+				}
+				break;
+			}
+
+			case SDL_MOUSEBUTTONUP:
+			{
+				switch ( aEvent.button.button )
+				{
+					case SDL_BUTTON_LEFT:
+						ReleaseMouseButton( EButton_MouseLeft );
+						break;
+
+					case SDL_BUTTON_RIGHT:
+						ReleaseMouseButton( EButton_MouseRight );
+						break;
+
+					case SDL_BUTTON_MIDDLE:
+						ReleaseMouseButton( EButton_MouseMiddle );
+						break;
+
+					case SDL_BUTTON_X1:
+						ReleaseMouseButton( EButton_MouseX1 );
+						break;
+
+					case SDL_BUTTON_X2:
+						ReleaseMouseButton( EButton_MouseX2 );
+						break;
+				}
+				break;
+			}
+
+			case SDL_MOUSEWHEEL:
+			{
+				aScroll.x += aEvent.wheel.x;
+				aScroll.y += aEvent.wheel.y;
+
+				if ( aEvent.wheel.x > 0 )
+					PressMouseButton( EButton_MouseWheelRight );
+				else if ( aEvent.wheel.x < 0 )
+					PressMouseButton( EButton_MouseWheelLeft );
+
+				if ( aEvent.wheel.y > 0 )
+					PressMouseButton( EButton_MouseWheelUp );
+				else if ( aEvent.wheel.y < 0 )
+					PressMouseButton( EButton_MouseWheelDown );
+
+				break;
+			}
 		}
 	}
 }
@@ -198,29 +298,47 @@ void InputSystem::Update( float frameTime )
 {
 	PROF_SCOPE_NAMED( "Input System Update" );
 
-	ResetInputs(  );
-	ParseInput(  );
-	UpdateKeyStates(  );
+	ResetInputs();
+	ParseInput();
+	UpdateKeyStates();
 }
 
 
-void InputSystem::ResetInputs(  )
+void InputSystem::ResetInputs()
 {
 	PROF_SCOPE();
 
 	aMouseDelta = {0, 0};
 
 	aKeyboardState = SDL_GetKeyboardState( NULL );
+
+	aScroll = {0, 0};
+		
+	// ReleaseMouseButton( EButton_MouseLeft );
+	// ReleaseMouseButton( EButton_MouseRight );
+	// ReleaseMouseButton( EButton_MouseMiddle );
+	// ReleaseMouseButton( EButton_MouseX1 );
+	// ReleaseMouseButton( EButton_MouseX2 );
+	
+	ReleaseMouseButton( EButton_MouseWheelUp );
+	ReleaseMouseButton( EButton_MouseWheelDown );
+	ReleaseMouseButton( EButton_MouseWheelLeft );
+	ReleaseMouseButton( EButton_MouseWheelRight );
 }
 
-const glm::ivec2& InputSystem::GetMouseDelta(  )
+const glm::ivec2& InputSystem::GetMouseDelta()
 {
 	return aMouseDelta;
 }
 
-const glm::ivec2& InputSystem::GetMousePos(  )
+const glm::ivec2& InputSystem::GetMousePos()
 {
 	return aMousePos;
+}
+
+glm::ivec2 InputSystem::GetMouseScroll()
+{
+	return aScroll;
 }
 
 bool InputSystem::WindowHasFocus(  )
@@ -236,12 +354,38 @@ void InputSystem::UpdateKeyStates(  )
 		UpdateKeyState( key );
 }
 
-void InputSystem::UpdateKeyState( SDL_Scancode key )
+void InputSystem::UpdateKeyState( EButton key )
 {
 	PROF_SCOPE();
 
-	bool      pressed = aKeyboardState[ key ];
+	bool pressed = false;
 	KeyState& state   = aKeyStates[ key ];
+
+	if ( key > EButton_BeforeMouse )
+	{
+		if ( state & KeyState_Pressed )
+		{
+			if ( state & KeyState_JustPressed )
+				state &= ~KeyState_JustPressed;
+		}
+		else if ( state & KeyState_Released )
+		{
+			if ( state & KeyState_JustReleased )
+				state &= ~KeyState_JustReleased;
+		}
+		else
+		{
+			state |= KeyState_Released | KeyState_JustReleased;
+			state &= ~(KeyState_Pressed | KeyState_JustPressed);
+		}
+
+		return;
+	}
+	else
+	{
+		pressed = aKeyboardState[ key ];
+	}
+
 
 	if ( state & KeyState_Pressed )
 	{
@@ -272,7 +416,7 @@ void InputSystem::UpdateKeyState( SDL_Scancode key )
 	}
 }
 
-void InputSystem::RegisterKey( SDL_Scancode key )
+void InputSystem::RegisterKey( EButton key )
 {
 	auto state = aKeyStates.find( key );
 
@@ -286,9 +430,114 @@ void InputSystem::RegisterKey( SDL_Scancode key )
 	UpdateKeyState( key );
 }
 
-KeyState InputSystem::GetKeyState( SDL_Scancode key )
+
+static std::string_view gButtonStr[] = {
+
+	"MOUSE_L",
+	"MOUSE_R",
+	"MOUSE_M",
+	"MOUSE_X1",
+	"MOUSE_X2",
+
+	"MOUSE_WHEEL_UP",
+	"MOUSE_WHEEL_DOWN",
+	"MOUSE_WHEEL_LEFT",
+	"MOUSE_WHEEL_RIGHT",
+};
+
+
+static_assert( CH_ARR_SIZE( gButtonStr ) == EButton_Count - ( EButton_BeforeMouse + 1 ) );
+
+
+EButton InputSystem::GetKeyFromName( std::string_view sName )
 {
-	KeyStates::const_iterator state = aKeyStates.find( key );
+	for ( u32 i = 0; i < CH_ARR_SIZE( gButtonStr ); i++ )
+	{
+		if (sName == gButtonStr[i])
+			return (EButton)((u32)EButton_BeforeMouse + i);
+	}
+
+	return (EButton)SDL_GetScancodeFromName( sName.data() );
+}
+
+
+const char* InputSystem::GetKeyName( EButton key )
+{
+	if ( key > EButton_BeforeMouse )
+	{
+		if ( key < EButton_Count )
+			return gButtonStr[ key - EButton_BeforeMouse - 1 ].data();
+		else
+			return SDL_GetScancodeName( SDL_SCANCODE_UNKNOWN );
+			// return "INVALID";
+		
+		// switch (key)
+		// {
+		// 	case EButton_MouseLeft:
+		// 		return "MOUSE_L";
+		// 	case EButton_MouseRight:
+		// 		return "MOUSE_R";
+		// 	case EButton_MouseMiddle:
+		// 		return "MOUSE_M";
+		// 	case EButton_MouseX1:
+		// 		return "MOUSE_X1";
+		// 	case EButton_MouseX2:
+		// 		return "MOUSE_X2";
+		// 
+		// 	case EButton_MouseWheelUp:
+		// 		return "MOUSE_WHEEL_UP";
+		// 	case EButton_MouseWheelDown:
+		// 		return "MOUSE_WHEEL_DOWN";
+		// 	case EButton_MouseWheelLeft:
+		// 		return "MOUSE_WHEEL_LEFT";
+		// 	case EButton_MouseWheelRight:
+		// 		return "MOUSE_WHEEL_RIGHT";
+		// }
+	}
+	else
+	{
+		return SDL_GetScancodeName( (SDL_Scancode)key );
+	}
+}
+
+
+const char* InputSystem::GetKeyDisplayName( EButton key )
+{
+	if ( key > EButton_BeforeMouse )
+	{
+		switch (key)
+		{
+			case EButton_MouseLeft:
+				return "Left Mouse";
+			case EButton_MouseRight:
+				return "Right Mouse";
+			case EButton_MouseMiddle:
+				return "Middle Mouse";
+			case EButton_MouseX1:
+				return "Mouse X1";
+			case EButton_MouseX2:
+				return "Mouse X2";
+
+			case EButton_MouseWheelUp:
+				return "Mouse Wheel Up";
+			case EButton_MouseWheelDown:
+				return "Mouse Wheel Down";
+			case EButton_MouseWheelLeft:
+				return "Mouse Wheel Left";
+			case EButton_MouseWheelRight:
+				return "Mouse Wheel Right";
+		}
+	}
+	else
+	{
+		return SDL_GetKeyName( SDL_GetKeyFromScancode( (SDL_Scancode)key ) );
+	}
+}
+
+
+KeyState InputSystem::GetKeyState( EButton key )
+{
+	auto state = aKeyStates.find( key );
 
 	if ( state == aKeyStates.end() )
 	{
@@ -300,7 +549,7 @@ KeyState InputSystem::GetKeyState( SDL_Scancode key )
 		if ( state == aKeyStates.end() )
 		{
 			// would be odd if this got hit
-			Log_WarnF( gInputSystemChannel, "Invalid Key: \"%s\"\n", SDL_GetKeyName( SDL_GetKeyFromScancode(key) ) );
+			Log_WarnF( gInputSystemChannel, "Invalid Key: \"%s\"\n", GetKeyName( key ) );
 			return KeyState_Invalid;
 		}
 	}

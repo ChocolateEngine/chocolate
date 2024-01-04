@@ -25,22 +25,22 @@ bool CORE_API IfAssert( bool sResult, const char* file, unsigned int line, const
 
 
 #if !USE_ASSERTS
-  #define Assert( cond )
-  #define AssertMsg( cond, msg )
-  #define AssertTitleMsg( cond, title, msg )
+  #define CH_ASSERT( cond )
+  #define CH_ASSERT_MSG( cond, msg )
+  #define CH_ASSERT_TITLE_MSG( cond, title, msg )
 
   #define CH_IF_ASSERT( cond )                       ( !( cond ) )
   #define CH_IF_ASSERT_MSG( cond, msg )              ( !( cond ) )
   #define CH_IF_ASSERT_TITLE_MSG( cond, title, msg ) ( !( cond ) )
 
 #else
-  #define Assert( cond ) \
+  #define CH_ASSERT( cond ) \
 	if ( !( cond ) ) HandleAssert( __FILE__, __LINE__, #cond, "" )
 
-  #define AssertMsg( cond, msg ) \
+  #define CH_ASSERT_MSG( cond, msg ) \
 	if ( !( cond ) ) HandleAssert( __FILE__, __LINE__, #cond, msg )
 
-  #define AssertTitleMsg( cond, title, msg ) \
+  #define CH_ASSERT_TITLE_MSG( cond, title, msg ) \
 	if ( !( cond ) ) HandleAssert( __FILE__, __LINE__, #cond, title, msg )
 
   #define CH_IF_ASSERT( cond )                       ( IfAssert( !( cond ), __FILE__, __LINE__, #cond, "" ) )
@@ -48,8 +48,4 @@ bool CORE_API IfAssert( bool sResult, const char* file, unsigned int line, const
   #define CH_IF_ASSERT_TITLE_MSG( cond, title, msg ) ( IfAssert( !( cond ), __FILE__, __LINE__, #cond, title, msg ) )
 
 #endif
-
-#define CH_ASSERT( cond )                       Assert( cond )
-#define CH_ASSERT_MSG( cond, msg )              AssertMsg( cond, msg )
-#define CH_ASSERT_TITLE_MSG( cond, title, msg ) AssertTitleMsg( cond, title, msg )
 

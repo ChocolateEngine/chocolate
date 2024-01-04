@@ -247,7 +247,7 @@ struct ResourceList
      *
      *    @return Handle    The handle to the resource.
      */
-	Handle Add( const T& pData )
+	ChHandle_t Add( const T& pData )
 	{
 		// Generate a handle magic number.
 		unsigned int magic = ( rand() % 0xFFFFFFFE ) + 1;
@@ -270,8 +270,8 @@ struct ResourceList
 
 		aSize++;
 
-		Handle& handle = aHandles.emplace_back();
-		handle         = index | (int64_t)magic << 32;
+		ChHandle_t& handle = aHandles.emplace_back();
+		handle             = index | (int64_t)magic << 32;
 		return handle;
 	}
 
@@ -281,7 +281,7 @@ struct ResourceList
      *    @param  pData     Output structure
      *    @return Handle    The handle to the resource.
      */
-	Handle Create( T* pData, bool sZero = true )
+	ChHandle_t Create( T* pData, bool sZero = true )
 	{
 		// Generate a handle magic number.
 		unsigned int magic = ( rand() % 0xFFFFFFFE ) + 1;
@@ -293,14 +293,14 @@ struct ResourceList
 			return InvalidHandle;
 
 		// Re-assign the output pointer to a pointer to the data
-		*pData             = *(T*)( pBuf + sizeof( unsigned int ) );
+		*pData             = *(T*)( pBuf + sizeof( u32 ) );
 
-		unsigned int index = ( (size_t)pBuf - (size_t)apPool->apBuf ) / ( sizeof( T ) + sizeof( magic ) );
+		u32 index           = ( (size_t)pBuf - (size_t)apPool->apBuf ) / ( sizeof( T ) + sizeof( magic ) );
 
 		// Set the remaining memory to zero if wanted
 		if ( sZero )
 		{
-			memset( pBuf + sizeof( unsigned int ), 0, sizeof( T ) );
+			memset( pBuf + sizeof( u32 ), 0, sizeof( T ) );
 		}
 
 #if RESOURCE_DEBUG
@@ -309,8 +309,8 @@ struct ResourceList
 
 		aSize++;
 
-		Handle& handle = aHandles.emplace_back();
-		handle         = index | (int64_t)magic << 32;
+		ChHandle_t& handle = aHandles.emplace_back();
+		handle             = index | (int64_t)magic << 32;
 		return handle;
 	}
 
@@ -320,7 +320,7 @@ struct ResourceList
      *    @param  pData     Output structure for a pointer
      *    @return Handle    The handle to the resource.
      */
-	Handle Create( T** pData, bool sZero = true )
+	ChHandle_t Create( T** pData, bool sZero = true )
 	{
 		// Generate a handle magic number.
 		unsigned int magic = ( rand() % 0xFFFFFFFE ) + 1;
@@ -348,25 +348,25 @@ struct ResourceList
 
 		aSize++;
 
-		Handle& handle = aHandles.emplace_back();
-		handle         = index | (int64_t)magic << 32;
+		ChHandle_t& handle = aHandles.emplace_back();
+		handle             = index | (int64_t)magic << 32;
 		return handle;
 	}
 
 	/*
 	 *    Gets Magic Number and Index from handle, returns true/false if succeeded
 	 */
-	bool GetMagicAndIndex( Handle sHandle, unsigned int& srMagic, unsigned int& srIndex )
+	bool GetMagicAndIndex( ChHandle_t sHandle, u32& srMagic, u32& srIndex )
 	{
 		// Check if handle is valid
 		if ( sHandle == InvalidHandle )
 			return false;
 
 		// Get the magic number from the handle.
-		srMagic = GET_HANDLE_MAGIC( sHandle );
+		srMagic = CH_GET_HANDLE_MAGIC( sHandle );
 
 		// Get the index from the handle.
-		srIndex = GET_HANDLE_INDEX( sHandle ) * ( sizeof( T ) + sizeof( unsigned int ) );
+		srIndex = CH_GET_HANDLE_INDEX( sHandle ) * ( sizeof( T ) + sizeof( u32 ) );
 
 		if ( srIndex > mempool_capacity( apPool ) )
 		{
@@ -380,7 +380,7 @@ struct ResourceList
 	/*
 	 *    Gets Data from handle, returns true/false if succeeded
 	 */
-	s8* GetHandleData( Handle sHandle )
+	s8* GetHandleData( ChHandle_t sHandle )
 	{
 		// Check if handle is valid
 		unsigned int magic, index;
@@ -415,7 +415,7 @@ struct ResourceList
 	 * 
      *    @return bool      Whether the update was sucessful or not.
      */
-	bool Update( Handle sHandle, const T& pData )
+	bool Update( ChHandle_t sHandle, const T& pData )
 	{
 		// Get handle data and check if the handle is valid
 		s8* pBuf = nullptr;
@@ -423,7 +423,7 @@ struct ResourceList
 			return false;
 
 		// Write the new data to memory
-		std::memcpy( pBuf + sizeof( unsigned int ), &pData, sizeof( T ) );
+		std::memcpy( pBuf + sizeof( u32 ), &pData, sizeof( T ) );
 
 		return true;
 	}
@@ -433,7 +433,7 @@ struct ResourceList
      *
      *    @param Handle    The handle to the resource.
      */
-	void Remove( Handle sHandle )
+	void Remove( ChHandle_t sHandle )
 	{
 		// Get handle data and check if the handle is valid
 		s8*          pBuf = nullptr;
@@ -483,7 +483,7 @@ struct ResourceList
      *                     is invalid/ points to a different type.
      */
 
-	T* Get( Handle sHandle )
+	T* Get( ChHandle_t sHandle )
 	{
 		// Get handle data and check if the handle is valid
 		s8* pBuf = nullptr;
@@ -505,7 +505,7 @@ struct ResourceList
      *    @return bool     Returns whether the Handle was valid the resource data was found or not.
      */
 
-	bool Get( Handle sHandle, T* pData )
+	bool Get( ChHandle_t sHandle, T* pData )
 	{
 		// Get handle data and check if the handle is valid
 		s8* pBuf = nullptr;
@@ -529,7 +529,7 @@ struct ResourceList
      *    @return bool     Returns whether the Handle was valid the resource data was found or not.
      */
 
-	bool Get( Handle sHandle, T** pData )
+	bool Get( ChHandle_t sHandle, T** pData )
 	{
 		// Get handle data and check if the handle is valid
 		s8* pBuf = nullptr;
@@ -597,7 +597,7 @@ struct ResourceList
     *
     *    @return Handle   The handle to the resource, InvalidHandle if index is out of bounds
     */
-	Handle GetHandleByIndex( size_t sIndex )
+	ChHandle_t GetHandleByIndex( size_t sIndex )
 	{
 		if ( sIndex >= aSize )
 			return InvalidHandle;
@@ -630,14 +630,14 @@ struct ResourceList
     * 
     *    @return Handle    The Handle picked at random
 	*/
-	Handle Random( size_t sMin, size_t sMax ) const
+	ChHandle_t Random( size_t sMin, size_t sMax ) const
 	{
-		Assert( sMin <= aSize );
-		Assert( sMax <= aSize );
-		Assert( sMin < sMax );
+		CH_ASSERT( sMin <= aHandles.size() );
+		CH_ASSERT( sMax <= aHandles.size() );
+		CH_ASSERT( sMin < sMax );
 
 		size_t value = RandomSizeT( sMin, sMax );
-		return GetHandleByIndex( value );
+		return aHandles[ value ];
 	}
 
 	/*
