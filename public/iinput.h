@@ -52,7 +52,7 @@ public:
 	virtual bool              WindowHasFocus() = 0;
 
 	/* Add a Key to the key update list.  */
-	virtual void              RegisterKey( EButton key ) = 0;
+	virtual bool              RegisterKey( EButton key ) = 0;
 
 	/* Get the display name for this key  */
 	virtual const char*       GetKeyName( EButton key ) = 0;

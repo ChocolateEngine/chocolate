@@ -74,7 +74,7 @@ public:
 	bool        WindowHasFocus();
 
 	/* Add a Key to the key update list.  */
-	void        RegisterKey( EButton key ) override;
+	bool        RegisterKey( EButton key ) override;
 
 	/* Get the display name for this key  */
 	const char* GetKeyName( EButton key ) override;

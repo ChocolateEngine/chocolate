@@ -358,6 +358,12 @@ void InputSystem::UpdateKeyState( EButton key )
 {
 	PROF_SCOPE();
 
+	if ( key < 0 )
+	{
+		Log_ErrorF( gInputSystemChannel, "Invalid Button ID: %d\n", key );
+		return;
+	}
+
 	bool pressed = false;
 	KeyState& state   = aKeyStates[ key ];
 
@@ -385,7 +391,6 @@ void InputSystem::UpdateKeyState( EButton key )
 	{
 		pressed = aKeyboardState[ key ];
 	}
-
 
 	if ( state & KeyState_Pressed )
 	{
@@ -416,18 +421,25 @@ void InputSystem::UpdateKeyState( EButton key )
 	}
 }
 
-void InputSystem::RegisterKey( EButton key )
+bool InputSystem::RegisterKey( EButton key )
 {
+	if ( key < 0 )
+	{
+		Log_ErrorF( gInputSystemChannel, "Invalid Button ID: %d\n", key );
+		return false;
+	}
+
 	auto state = aKeyStates.find( key );
 
 	// Already registered
 	if ( state != aKeyStates.end() )
-		return;
+		return true;
 
 	// aKeyStates[key] = aKeyboardState[key] ? KeyState::JustPressed : KeyState::Released;
 	aKeyStates[ key ] = KeyState_Invalid;
 
 	UpdateKeyState( key );
+	return true;
 }
 
 
@@ -542,7 +554,8 @@ KeyState InputSystem::GetKeyState( EButton key )
 	if ( state == aKeyStates.end() )
 	{
 		// Try to register this key
-		RegisterKey( key );
+		if ( !RegisterKey( key ) )
+			return KeyState_Invalid;
 
 		state = aKeyStates.find( key );
 
