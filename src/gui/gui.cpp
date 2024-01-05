@@ -1,6 +1,6 @@
 #include "gui.h"
 #include "util.h"
-#include "rmlui.h"
+// #include "rmlui.h"
 
 #include "imgui/imgui_impl_sdl.h"
 
@@ -13,7 +13,7 @@ GuiSystem*               gui           = new GuiSystem;
 ImFont*                  gBuiltInFont  = nullptr;
 
 double                   gRealTime     = 0.0;
-Rml::Context*            gRmlContext   = nullptr;
+// Rml::Context*            gRmlContext   = nullptr;
 
 static ModuleInterface_t gInterfaces[] = {
 	{ gui, IGUI_NAME, IGUI_HASH }
@@ -32,8 +32,8 @@ void GuiSystem::Update( float sDT )
 {
 	gRealTime += sDT;
 
-	if ( gRmlContext )
-		gRmlContext->Update();
+	// if ( gRmlContext )
+	// 	gRmlContext->Update();
 
 	DrawGui();
 }

@@ -15,7 +15,7 @@ link_libraries(
 	ImGui
 )
 
-include( ${CH_ROOT}/scripts/rmlui.cmake )
+# include( ${CH_ROOT}/scripts/rmlui.cmake )
 
 set(
 	SRC_FILES
@@ -25,12 +25,12 @@ set(
 	convar_list.cpp
 	gui.cpp
 	gui.h
-	rmlui.cpp
-	rmlui.h
+	# rmlui.cpp
+	# rmlui.h
 	
 	# NOTE: maybe use Win32 backend for windows?
-	${RMLUI_DIR}/Backends/RmlUi_Platform_SDL.cpp
-	${RMLUI_DIR}/Backends/RmlUi_Platform_SDL.h
+	# ${RMLUI_DIR}/Backends/RmlUi_Platform_SDL.cpp
+	# ${RMLUI_DIR}/Backends/RmlUi_Platform_SDL.h
 )
 
 add_library( GUI SHARED ${SRC_FILES} ${PUBLIC_FILES} )
