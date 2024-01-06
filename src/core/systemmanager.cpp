@@ -14,7 +14,7 @@ LOG_REGISTER_CHANNEL2( Module, LogColor::Default );
 // 	Module             aModule     = nullptr;
 // };
 
-struct AppLoadedModule_t
+struct LoadedSystem_t
 {
 	ISystem*    apSystem;
 	Module      apModule;
@@ -25,11 +25,12 @@ struct AppLoadedModule_t
 
 static std::unordered_map< const char*, Module >        gModuleHandles;
 static std::unordered_map< ModuleInterface_t*, Module > gInterfaces;
-static std::vector< AppLoadedModule_t >                 gModules;
+static std::vector< LoadedSystem_t >                    gLoadedSystems;
 // static std::unordered_map< ISystem*, Module >           gSystems;
 
 
-bool Mod_InitSystem( AppLoadedModule_t& appModule )
+// TODO: double check this, this doesn't look right at all!!
+bool Mod_InitSystem( LoadedSystem_t& appModule )
 {
 	CH_ASSERT( appModule.apSystem );
 
@@ -58,7 +59,7 @@ bool Mod_InitSystems()
 	// load saved cvar values and other stuff
 	core_post_load();
 
-	for ( AppLoadedModule_t& appModule : gModules )
+	for ( LoadedSystem_t& appModule : gLoadedSystems )
 	{
 		CH_ASSERT( appModule.apSystem );
 
@@ -182,7 +183,7 @@ EModLoadError Mod_LoadSystem( AppModule_t& srModule )
 	*srModule.apSystem = static_cast< ISystem* >( system );
 	// gSystems.push_back( static_cast< ISystem* >( system ) );
 
-	AppLoadedModule_t loadedModule{};
+	LoadedSystem_t loadedModule{};
 	loadedModule.apModule        = module;
 	loadedModule.apSystem        = static_cast< ISystem* >( system );
 	loadedModule.aRequired       = srModule.aRequired;
@@ -196,7 +197,7 @@ EModLoadError Mod_LoadSystem( AppModule_t& srModule )
 
 	loadedModule.apName = name;
 
-	gModules.push_back( loadedModule );
+	gLoadedSystems.push_back( loadedModule );
 
 	return EModLoadError_Success;
 }
@@ -250,7 +251,7 @@ EModLoadError Mod_LoadAndInitSystem( AppModule_t& srModule )
 		return err;
 
 	// Dumb, find the AppLoadedModule_t struct we made so can initialize it
-	for ( AppLoadedModule_t& appModule : gModules )
+	for ( LoadedSystem_t& appModule : gLoadedSystems )
 	{
 		if ( strcmp( appModule.apName, srModule.apInterfaceName ) == 0 )
 		{
