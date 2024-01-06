@@ -7,7 +7,7 @@
 #include "core/build_number.h"
 #include "util.h"
 
-#include "imgui_impl_sdl.h"
+#include "imgui_impl_sdl2.h"
 #include "imgui_impl_vulkan.h"
 
 #include "SDL_hints.h"
@@ -952,17 +952,17 @@ void VK_DestroyBuffer( BufferVK* spBuffer )
 
 bool VK_CreateImGuiFonts()
 {
-	VkCommandBuffer c = VK_BeginOneTimeCommand();
+	// VkCommandBuffer c = VK_BeginOneTimeCommand();
 
-	if ( !ImGui_ImplVulkan_CreateFontsTexture( c ) )
+	if ( !ImGui_ImplVulkan_CreateFontsTexture() )
 	{
 		Log_Error( gLC_Render, "VK_CreateImGuiFonts(): Failed to create ImGui Fonts Texture!\n" );
 		return false;
 	}
 
-	VK_EndOneTimeCommand( c );
+	// VK_EndOneTimeCommand( c );
 
-	ImGui_ImplVulkan_DestroyFontUploadObjects();
+	// ImGui_ImplVulkan_DestroyFontUploadObjects();
 
 	// TODO: manually free FontData in ImGui fonts, why is it holding onto it and trying to free() it on shutdown?
 	return true;

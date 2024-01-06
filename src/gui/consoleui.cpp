@@ -4,7 +4,7 @@
 #include "core/core.h"
 
 #include "imgui/imgui.h"
-#include "imgui/imgui_impl_sdl.h"
+#include "imgui/imgui_impl_sdl2.h"
 
 
 CONVAR( conui_spam_test, 0 );
@@ -279,7 +279,7 @@ bool CheckAddLastCommand( ImGuiInputTextCallbackData* data )
 bool CheckEnterPress( char* buf )
 {
 	bool isPressed = ImGui::IsKeyPressed( ImGui::GetKeyIndex( ImGuiKey_Enter ), false );
-	isPressed |= ImGui::IsKeyPressed( ImGui::GetKeyIndex( ImGuiKey_KeyPadEnter ), false );
+	isPressed |= ImGui::IsKeyPressed( ImGui::GetKeyIndex( ImGuiKey_KeypadEnter ), false );
 
 	if ( isPressed )
 	{

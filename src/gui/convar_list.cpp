@@ -4,7 +4,7 @@
 #include "core/core.h"
 
 #include "imgui/imgui.h"
-#include "imgui/imgui_impl_sdl.h"
+#include "imgui/imgui_impl_sdl2.h"
 
 
 static int                        gCmdDropDownIndex = -1;

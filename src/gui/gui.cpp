@@ -2,7 +2,7 @@
 #include "util.h"
 // #include "rmlui.h"
 
-#include "imgui/imgui_impl_sdl.h"
+#include "imgui/imgui_impl_sdl2.h"
 
 #if CH_USE_MIMALLOC
   #include "mimalloc-new-delete.h"
