@@ -1331,7 +1331,20 @@ CONCMD_DROP_VA( exec, exec_dropdown, 0, "Execute a script full of console comman
 		return;
 	}
 
-	std::string path = "cfg/" + args[0];
+	std::string path;
+
+	if ( args[ 0 ].starts_with( "cfg/" )
+#ifdef _WIN32
+	     || args[ 0 ].starts_with( "cfg\\" )
+#endif
+	|| FileSys_IsAbsolute( args[ 0 ].c_str() ) )
+	{
+		path = args[ 0 ];
+	}
+	else
+	{
+		path = "cfg" CH_PATH_SEP_STR + args[ 0 ];
+	}
 
 	if ( !FileSys_IsFile( path ) )
 	{
