@@ -596,6 +596,9 @@ CORE_API void                  Con_AddArchiveCallback( FArchive* spFunc );
 // Write a config of all stuff we want saved
 CORE_API void                  Con_Archive( const char* spFile = nullptr );
 
+// Set Default Console Archive File, nullptr to reset to default
+CORE_API void                  Con_SetDefaultArchive( const char* spFile, const char* spDefaultFile );
+
 // make sure the convar flag is created when doing static initilization
 // CORE_API ConVarFlag_t                        Con_StaticGetCvarFlag( const char* spFile = nullptr );
 

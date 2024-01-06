@@ -10,12 +10,18 @@
 
 #ifdef _WIN32
 #define stat _stat
-constexpr char        PATH_SEP     = '\\';
-// constexpr const char* PATH_SEP_STR = "\\";
-#define PATH_SEP_STR "\\"
+constexpr char PATH_SEP = '\\';
+#define        PATH_SEP_STR "\\"
+
+constexpr char CH_PATH_SEP = '\\';
+#define        CH_PATH_SEP_STR "\\"
+
 #elif __unix__
-constexpr char        PATH_SEP     = '/';
-#define PATH_SEP_STR "/"
+constexpr char PATH_SEP = '/';
+#define        PATH_SEP_STR "/"
+
+constexpr char CH_PATH_SEP = '/';
+#define        CH_PATH_SEP_STR "/"
 #endif
 
 

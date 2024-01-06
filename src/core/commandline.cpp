@@ -23,6 +23,9 @@ static int               gArgC = 0;
 
 extern LogChannel        gConsoleChannel;
 
+extern std::string       gConArchiveFile;
+extern std::string       gConArchiveDefault;
+
 extern "C"
 {
 	void DLL_EXPORT core_init( int argc, char* argv[], const char* workingDir )
@@ -52,13 +55,14 @@ extern "C"
 // it runs all startup config files, like config.cfg to store saved cvar values
 void DLL_EXPORT core_post_load()
 {
-	if ( FileSys_Exists( "cfg/config.cfg" ) )
-		Con_QueueCommandSilent( "exec config", false );
-	else if ( FileSys_Exists( "cfg/config_default.cfg" ) )
-		Con_QueueCommandSilent( "exec config_default", false );
+	if ( FileSys_Exists( gConArchiveFile ) )
+		Con_QueueCommandSilent( "exec " + gConArchiveFile, false );
 
-	if ( FileSys_Exists( "cfg/autoexec.cfg" ) )
-		Con_QueueCommandSilent( "exec autoexec", false );
+	else if ( FileSys_Exists( gConArchiveDefault ) )
+		Con_QueueCommandSilent( "exec " + gConArchiveDefault, false );
+
+	// if ( FileSys_Exists( "cfg/autoexec.cfg" ) )
+	// 	Con_QueueCommandSilent( "exec autoexec", false );
 
 	std::string      exec = "exec ";
 	std::string_view execCfg;

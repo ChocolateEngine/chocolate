@@ -31,7 +31,10 @@ std::vector< ConVarFlagData_t >                gConVarFlags;
 
 std::vector< FArchive* >                       gArchiveCallbacks;
 
-constexpr const char*                          CON_ARCHIVE_FILE = "cfg/config.cfg";
+constexpr const char*                          CON_ARCHIVE_FILE    = "cfg/config.cfg";
+constexpr const char*                          CON_ARCHIVE_DEFAULT = "cfg/config_default.cfg";
+std::string                                    gConArchiveFile     = CON_ARCHIVE_FILE;
+std::string                                    gConArchiveDefault  = CON_ARCHIVE_DEFAULT;
 
 // std::unordered_map< ConVarBase*, std::string > gConVarLowercaseNames;
 
@@ -1235,11 +1238,11 @@ void Con_Archive( const char* spFile )
 		{
 			filename += ".cfg";
 		}
-		filename.insert( 0, "cfg/" );
+		filename.insert( 0, "cfg" PATH_SEP_STR );
 	}
 	else
 	{
-		filename = CON_ARCHIVE_FILE;
+		filename = gConArchiveFile;
 	}
 
 	// Write the data
@@ -1258,6 +1261,45 @@ void Con_Archive( const char* spFile )
 }
 
 
+// Set Default Console Archive File
+void Con_SetDefaultArchive( const char* spFile, const char* spDefaultFile )
+{
+	if ( !spFile )
+	{
+		gConArchiveFile = CON_ARCHIVE_FILE;
+	}
+	else
+	{
+		gConArchiveFile = spFile;
+
+		if ( !gConArchiveFile.starts_with( "cfg/" )
+#ifdef _WIN32
+		     && !gConArchiveFile.starts_with( "cfg\\" )
+#endif
+		)
+			gConArchiveFile = "cfg" PATH_SEP_STR + gConArchiveFile;
+	}
+
+	if ( !spDefaultFile )
+	{
+		gConArchiveDefault = CON_ARCHIVE_DEFAULT;
+	}
+	else
+	{
+		gConArchiveDefault = spDefaultFile;
+
+		if ( !gConArchiveDefault.starts_with( "cfg/" )
+#ifdef _WIN32
+		     && !gConArchiveDefault.starts_with( "cfg\\" )
+#endif
+		)
+			gConArchiveDefault = "cfg" PATH_SEP_STR + gConArchiveDefault;
+	}
+
+
+}
+
+
 // ================================================================================
 // Console ConCommands
 
@@ -1272,7 +1314,6 @@ void exec_dropdown(
 			continue;
 
 		std::string execName = FileSys_GetFileName( file );
-
 
 		if ( args.size() && !execName.starts_with( args[0] ) )
 			continue;
