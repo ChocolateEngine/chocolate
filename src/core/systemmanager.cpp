@@ -277,6 +277,12 @@ EModLoadError Mod_LoadAndInitSystem( AppModule_t& srModule )
 
 void* Mod_GetInterface( const char* spName, size_t sVersion )
 {
+	if ( spName == nullptr )
+	{
+		Log_ErrorF( gLC_Module, "Interface Search is nullptr\n" );
+		return nullptr;
+	}
+
 	for ( const auto& [ interface, module ] : gInterfaces )
 	{
 		if ( strcmp( interface->apName, spName ) != 0 )
