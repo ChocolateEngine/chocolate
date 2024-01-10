@@ -154,7 +154,25 @@ bool KTX_LoadTexture( TextureVK* spTexture, const char* spPath )
 	spTexture->aImage     = kVkTexture.image;
 	spTexture->aMemory    = kVkTexture.deviceMemory;
 	spTexture->aFormat    = kVkTexture.imageFormat;
-	spTexture->aViewType  = kVkTexture.viewType;
+
+	// hack
+	if ( kVkTexture.viewType == VK_IMAGE_VIEW_TYPE_2D_ARRAY )
+	{
+		// only use 2D array if we have more than 1 layer
+		if ( kVkTexture.layerCount > 1 )
+			spTexture->aViewType = VK_IMAGE_VIEW_TYPE_2D;
+	}
+	else if ( kVkTexture.viewType == VK_IMAGE_VIEW_TYPE_1D_ARRAY )
+	{
+		// only use 1D array if we have more than 1 layer
+		if ( kVkTexture.layerCount > 1 )
+			spTexture->aViewType = VK_IMAGE_VIEW_TYPE_1D;
+	}
+	else
+	{
+		spTexture->aViewType = kVkTexture.viewType;
+	}
+
 	spTexture->aFrames    = kVkTexture.layerCount;
 	spTexture->aUsage     = VK_IMAGE_USAGE_SAMPLED_BIT;
 

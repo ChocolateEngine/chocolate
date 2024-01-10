@@ -42,7 +42,7 @@ static VkCommandPool                                     gSingleTime;
 static VkCommandPool                                     gPrimary;
 static VkCommandPool                                     gCmdPoolTransfer;
 
-// static std::unordered_map< ImageInfo*, VkDescriptorSet > gImGuiTextures;
+static std::unordered_map< ChHandle_t, VkDescriptorSet > gImGuiTextures;
 static std::vector< std::vector< char > >                gFontData;
 
 static std::vector< VkBuffer >                           gBuffers;
@@ -290,6 +290,17 @@ GraphicsFmt VK_ToGraphicsFmt( VkFormat colorFmt )
 
 		case VK_FORMAT_B8G8R8A8_UNORM:
 			return GraphicsFmt::BGRA8888_UNORM;
+
+		// ------------------------------------------
+
+		case VK_FORMAT_R8G8B8A8_SRGB:
+			return GraphicsFmt::RGBA8888_SRGB;
+
+		case VK_FORMAT_R8G8B8A8_SNORM:
+			return GraphicsFmt::RGBA8888_SNORM;
+
+		case VK_FORMAT_R8G8B8A8_UNORM:
+			return GraphicsFmt::RGBA8888_UNORM;
 
 		// ------------------------------------------
 
@@ -1150,13 +1161,6 @@ ImFont* Render_AddFont( const std::filesystem::path& srPath, float sSizePixels, 
 }
 #endif
 
-bool Render_BuildFonts()
-{
-	bool ret = VK_CreateImGuiFonts();
-	gFontData.clear();
-	return ret;
-}
-
 
 void VK_SetCheckpoint( VkCommandBuffer c, const char* spName )
 {
@@ -1277,7 +1281,9 @@ public:
 			return false;
 		}
 
-		return Render_BuildFonts();
+		bool ret = VK_CreateImGuiFonts();
+		gFontData.clear();
+		return ret;
 	}
 
 	void ShutdownImGui() override
@@ -1294,6 +1300,53 @@ public:
 	{
 		SDL_GetWindowSize( gpWindow, &srWidth, &srHeight );
 	}
+
+	ImTextureID AddTextureToImGui( ChHandle_t sHandle ) override
+	{
+		if ( sHandle == CH_INVALID_HANDLE )
+		{
+			Log_ErrorF( gLC_Render, "AddTextureToImGui(): Invalid Image Handle!\n" );
+			return nullptr;
+		}
+
+		// Is this already loaded?
+		auto it = gImGuiTextures.find( sHandle );
+		if ( it != gImGuiTextures.end() )
+		{
+			return it->second;
+		}
+
+		TextureVK* tex = VK_GetTexture( sHandle );
+		if ( tex == nullptr )
+		{
+			Log_ErrorF( gLC_Render, "AddTextureToImGui(): No Vulkan Texture created for Image!\n" );
+			return nullptr;
+		}
+
+		// imgui can't handle 2d array textures
+		if ( tex->aRenderTarget || !( tex->aUsage & VK_IMAGE_USAGE_SAMPLED_BIT ) || tex->aViewType != VK_IMAGE_VIEW_TYPE_2D )
+		{
+			return nullptr;
+		}
+
+		// VK_SetImageLayout( tex->aImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 1 );
+
+		auto desc = ImGui_ImplVulkan_AddTexture( VK_GetSampler( tex->aFilter, VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_FALSE ), tex->aImageView, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
+
+		if ( desc )
+		{
+			gImGuiTextures[ sHandle ] = desc;
+			return desc;
+		}
+
+		printf( "Render_AddTextureToImGui(): Failed to add texture to ImGui\n" );
+		return nullptr;
+	}
+
+	// bool BuildImGuiFonts()
+	// {
+	// 	return true;
+	// }
 
 	// --------------------------------------------------------------------------------------------
 	// Buffers
@@ -1591,6 +1644,9 @@ public:
 
 		if ( srHandle )
 		{
+#pragma message( "TODO: HANDLE UPDATING IMGUI TEXTURES WHEN REPLACING THE DATA IN THE HANDLE" )
+			Log_Dev( 1, "TODO:  HANDLE UPDATING IMGUI TEXTURES WHEN REPLACING THE DATA IN THE HANDLE\n" );
+
 			// free old texture data
 			TextureVK* tex = nullptr;
 			if ( !gTextureHandles.Get( srHandle, &tex ) )
@@ -1726,6 +1782,52 @@ public:
 		{
 			LoadTexture( handle, path, gTextureInfo[ handle ] );
 		}
+	}
+	
+	const ChVector< ChHandle_t >& GetTextureList() override
+	{
+		return gTextureHandles.aHandles;
+	}
+	
+	TextureInfo_t GetTextureInfo( ChHandle_t sTexture ) override
+	{
+		TextureInfo_t info;
+
+		TextureVK*    tex = VK_GetTexture( sTexture );
+		if ( !tex )
+		{
+			Log_Error( gLC_Render, "GetTextureInfo: Failed to find texture\n" );
+			return info;
+		}
+
+		if ( gNeedTextureUpdate )
+			VK_UpdateImageSets();
+
+		gNeedTextureUpdate = false;
+
+		info.aFormat   = VK_ToGraphicsFmt( tex->aFormat );
+
+		if ( tex->apName )
+			info.aName = tex->apName;
+
+		info.aSize     = tex->aSize;
+		info.aGpuIndex = tex->aIndex;
+		// info.aViewType = tex->aViewType
+
+		for ( auto& [ path, handle ] : gTexturePaths )
+		{
+			if ( handle == sTexture )
+			{
+				info.aPath = path;
+
+				if ( info.aName.empty() )
+					info.aName = FileSys_GetFileName( path );
+
+				break;
+			}
+		}
+
+		return info;
 	}
 
 	Handle CreateFramebuffer( const CreateFramebuffer_t& srCreate ) override

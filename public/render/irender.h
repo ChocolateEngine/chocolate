@@ -7,6 +7,9 @@
 #include <glm/vec3.hpp>
 #include <glm/mat4x4.hpp>
 
+
+typedef void* ImTextureID;
+
 struct SDL_Window;
 struct ImDrawData;
 
@@ -36,9 +39,7 @@ enum class GraphicsFmt
 	RGB888_UINT,
 
 	RGBA8888_SRGB,
-	RGBA8888_SINT,
-	RGBA8888_UINT,
-
+	RGBA8888_SNORM,
 	RGBA8888_UNORM,
 
 	// -------------------------
@@ -257,7 +258,7 @@ enum : EBufferMemory
 };
 
 
-enum EPipelineBindPoint
+enum EPipelineBindPoint : u8
 {
 	EPipelineBindPoint_Graphics,
 	EPipelineBindPoint_Compute,
@@ -457,6 +458,16 @@ struct TextureCreateData_t
 	EImageFilter        aFilter         = EImageFilter_Linear;
 
 	bool                aDepthCompare   = false;
+};
+
+
+struct TextureInfo_t
+{
+	std::string aName;
+	std::string aPath;
+	glm::uvec2  aSize;
+	GraphicsFmt aFormat;
+	u32         aGpuIndex;
 };
 
 
@@ -822,13 +833,15 @@ class IRender : public ISystem
 	// --------------------------------------------------------------------------------------------
 	// General Purpose Functions
 	// --------------------------------------------------------------------------------------------
-
-	virtual bool        InitImGui( Handle shRenderPass )                                                                           = 0;
-	virtual void        ShutdownImGui()                                                                                            = 0;
-
+	  
+	virtual bool        InitImGui( Handle shRenderPass )                                                                               = 0;
+	virtual void        ShutdownImGui()                                                                                                = 0;
+	
 	// TODO: Remove this, the Graphics API should work with multiple windows/surfaces
-	virtual SDL_Window* GetWindow()                                                                                                = 0;
-	virtual void        GetSurfaceSize( int& srWidth, int& srHeight )                                                              = 0;
+	virtual SDL_Window* GetWindow()                                                                                                    = 0;
+	virtual void        GetSurfaceSize( int& srWidth, int& srHeight )                                                                  = 0;
+	
+	virtual ImTextureID AddTextureToImGui( ChHandle_t sHandle )                                                                        = 0;
 
 	// --------------------------------------------------------------------------------------------
 	// Buffers
@@ -840,10 +853,10 @@ class IRender : public ISystem
 	virtual void        DestroyBuffers( ChHandle_t* spBuffers, u32 sCount )                                                            = 0;
 
 	// Returns the Amount Read/Written
-	virtual u32         BufferWrite( Handle buffer, u32 sSize, void* spData )                                                      = 0;
+	virtual u32         BufferWrite( Handle buffer, u32 sSize, void* spData )                                                          = 0;
 
 	// Read data from a buffer
-	virtual u32         BufferRead( Handle buffer, u32 sSize, void* spData )                                                       = 0;
+	virtual u32         BufferRead( Handle buffer, u32 sSize, void* spData )                                                           = 0;
 
 	// Copy one buffer to another buffer, useful for copying between host and device memory
 	virtual bool        BufferCopy( Handle shSrc, Handle shDst, BufferRegionCopy_t* spRegions, u32 sRegionCount )                      = 0;
@@ -864,6 +877,8 @@ class IRender : public ISystem
 	virtual GraphicsFmt GetTextureFormat( ChHandle_t shTexture )                                                                       = 0;
 	virtual glm::uvec2  GetTextureSize( ChHandle_t shTexture )                                                                         = 0;
 	virtual void        ReloadTextures()                                                                                               = 0;
+	virtual const ChVector< ChHandle_t >& GetTextureList()                                                                             = 0;
+	virtual TextureInfo_t                 GetTextureInfo( ChHandle_t sTexture )                                                        = 0;
 
 	// Basically a hack function out of laziness, blech
 	// virtual void        CalcTextureIndices()                                                                                           = 0;
@@ -1000,5 +1015,5 @@ class IRender : public ISystem
 
 
 #define IRENDER_NAME "Render"
-#define IRENDER_VER 14
+#define IRENDER_VER 15
 

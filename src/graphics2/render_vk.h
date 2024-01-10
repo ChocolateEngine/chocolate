@@ -37,7 +37,7 @@ extern ConVar          r_msaa_samples;
 enum class GraphicsFmt;
 using ShaderStage = char;
 using EImageUsage = unsigned short;
-enum EPipelineBindPoint;
+enum EPipelineBindPoint : u8;
 enum EAttachmentLoadOp;
 
 struct PipelineLayoutCreate_t;
