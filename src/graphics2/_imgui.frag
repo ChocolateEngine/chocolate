@@ -29,9 +29,6 @@ vec4 toLinear( vec4 sRGB )
 
 void main()
 {
-    fColor = In.Color * texture(sTexture, In.UV.st);
-	
-    // Convert Color Space
-    fColor = toLinear( fColor );
+    fColor = toLinear( In.Color ) * texture(sTexture, In.UV.st);
 }
 
