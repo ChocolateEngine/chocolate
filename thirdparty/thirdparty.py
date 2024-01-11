@@ -334,6 +334,32 @@ def post_flatbuffers_extract():
 
 
 # =================================================================================================
+# Importer Libraries
+
+
+def post_mozjpeg_extract():
+    if ARGS.no_build:
+        return
+        
+    set_project("MozJPEG")
+
+    os.chdir("mozjpeg")
+
+    build_options = "-DPNG_SUPPORTED=0"
+
+    if not syscmd(f"cmake -B build {build_options} .", "Failed to run cmake"):
+        return
+
+    print("Building MozJPEG - Release\n")
+    if not syscmd(f"cmake --build ./build --config Release", "Failed to build in Release"):
+        return
+
+    print("Building MozJPEG - Debug\n")
+    if not syscmd(f"cmake --build ./build --config Debug", "Failed to build in Debug"):
+        return
+
+
+# =================================================================================================
 
 
 def vorbis_copy_built_files(proj: str, cfg: str, build_dir: str, out_dir: str):
@@ -499,6 +525,14 @@ FILE_LIST = {
 
     # All Platforms
     OS.Any: [
+        [
+            "https://github.com/mozilla/mozjpeg/archive/refs/tags/v4.1.1.zip",
+            "zip",                   # file extension it's stored as
+            "mozjpeg",              # folder to check for if it exists already
+            "mozjpeg-4.1.1",         # folder it extracts as to rename to the folder above (optional)
+            ".",                    # extract into this folder (optional)
+            post_mozjpeg_extract,
+        ],
         [
             "https://github.com/google/flatbuffers/archive/refs/tags/v23.5.26.zip",
             "zip",                   # file extension it's stored as
