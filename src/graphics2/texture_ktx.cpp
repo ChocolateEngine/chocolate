@@ -154,6 +154,7 @@ bool KTX_LoadTexture( TextureVK* spTexture, const char* spPath )
 	spTexture->aImage     = kVkTexture.image;
 	spTexture->aMemory    = kVkTexture.deviceMemory;
 	spTexture->aFormat    = kVkTexture.imageFormat;
+	spTexture->aMemorySize = kTexture->dataSize;
 
 	// hack
 	if ( kVkTexture.viewType == VK_IMAGE_VIEW_TYPE_2D_ARRAY )

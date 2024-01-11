@@ -467,6 +467,7 @@ struct TextureInfo_t
 	std::string aPath;
 	glm::uvec2  aSize;
 	GraphicsFmt aFormat;
+	u32         aMemoryUsage;
 	u32         aGpuIndex;
 };
 

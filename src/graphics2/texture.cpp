@@ -285,6 +285,103 @@ void VK_RecreateTextureSamplers()
 }
 
 
+bool VK_IsCompressedFormat( VkFormat sFormat )
+{
+	switch ( sFormat )
+	{
+		default:
+			return false;
+
+		case VK_FORMAT_BC7_UNORM_BLOCK:
+		case VK_FORMAT_BC7_SRGB_BLOCK:
+		case VK_FORMAT_BC6H_UFLOAT_BLOCK:
+		case VK_FORMAT_BC6H_SFLOAT_BLOCK:
+		case VK_FORMAT_BC3_UNORM_BLOCK:
+		case VK_FORMAT_BC3_SRGB_BLOCK:
+		case VK_FORMAT_BC1_RGB_UNORM_BLOCK:
+		case VK_FORMAT_BC1_RGB_SRGB_BLOCK:
+		case VK_FORMAT_BC1_RGBA_UNORM_BLOCK:
+		case VK_FORMAT_BC1_RGBA_SRGB_BLOCK:
+		case VK_FORMAT_BC4_UNORM_BLOCK:
+		case VK_FORMAT_BC4_SNORM_BLOCK:
+		case VK_FORMAT_BC5_UNORM_BLOCK:
+		case VK_FORMAT_BC5_SNORM_BLOCK:
+			return true;
+	}
+}
+
+
+// Returns a Float because of ASTC compression
+float VK_GetFormatSize( VkFormat sFormat )
+{
+	switch ( sFormat )
+	{
+		default:
+			return 0;
+
+		case VK_FORMAT_R8_UINT:
+		case VK_FORMAT_R8_SINT:
+		case VK_FORMAT_R8_SRGB:
+			return 8;
+
+		case VK_FORMAT_R8G8_UINT:
+		case VK_FORMAT_R8G8_SINT:
+		case VK_FORMAT_R8G8_SRGB:
+			return 16;
+
+		case VK_FORMAT_R8G8B8_UINT:
+		case VK_FORMAT_R8G8B8_SINT:
+		case VK_FORMAT_R8G8B8_SRGB:
+			return 24;
+
+		case VK_FORMAT_R8G8B8A8_UINT:
+		case VK_FORMAT_R8G8B8A8_SINT:
+		case VK_FORMAT_R8G8B8A8_SRGB:
+			return 32;
+
+		// -------------------------------------------------------
+		// Compressed Formats
+
+		case VK_FORMAT_BC7_UNORM_BLOCK:
+		case VK_FORMAT_BC7_SRGB_BLOCK:
+		case VK_FORMAT_BC6H_UFLOAT_BLOCK:
+		case VK_FORMAT_BC6H_SFLOAT_BLOCK:
+		case VK_FORMAT_BC3_UNORM_BLOCK:
+		case VK_FORMAT_BC3_SRGB_BLOCK:
+			return 4;  // 8
+
+		case VK_FORMAT_BC1_RGB_UNORM_BLOCK:
+		case VK_FORMAT_BC1_RGB_SRGB_BLOCK:
+		case VK_FORMAT_BC1_RGBA_UNORM_BLOCK:  // ???
+		case VK_FORMAT_BC1_RGBA_SRGB_BLOCK:   // ???
+		case VK_FORMAT_BC4_UNORM_BLOCK:
+		case VK_FORMAT_BC4_SNORM_BLOCK:
+		case VK_FORMAT_BC5_UNORM_BLOCK:
+		case VK_FORMAT_BC5_SNORM_BLOCK:
+			return 2;  // 4
+	}
+
+	return 0;
+}
+
+
+void VK_CalcTextureMemoryUsage( TextureVK* spTexture )
+{
+	float formatSize       = VK_GetFormatSize( spTexture->aFormat );
+
+	if ( VK_IsCompressedFormat( spTexture->aFormat ) )
+	{
+		// treat this as 4x4 blocks?
+		//spTexture->aMemorySize = ((spTexture->aSize.x * spTexture->aSize.y / 4.f) * formatSize);
+	}
+	else
+	{
+		//spTexture->aMemorySize = spTexture->aSize.x * spTexture->aSize.y * formatSize;
+	}
+
+}
+
+
 TextureVK* VK_NewTexture( ChHandle_t& srHandle )
 {
 	TextureVK* tex = new TextureVK;
@@ -329,6 +426,8 @@ bool VK_LoadTexture( ChHandle_t& srHandle, TextureVK* tex, const std::string& sr
 #endif
 	VK_CalcTextureIndices();
 	gNeedTextureUpdate = true;
+
+	// VK_CalcTextureMemoryUsage( tex );
 
 	return true;
 }
@@ -512,6 +611,8 @@ TextureVK* VK_CreateTexture( ChHandle_t& srHandle, const TextureCreateInfo_t& sr
 	VK_CalcTextureIndices();
 
 	gNeedTextureUpdate = true;
+
+	VK_CalcTextureMemoryUsage( tex );
 
 	return tex;
 }
@@ -1209,6 +1310,7 @@ void VK_CreateImage( VkImageCreateInfo& srCreateInfo, TextureVK* spTexture )
 
 	VkMemoryRequirements memReqs;
 	vkGetImageMemoryRequirements( VK_GetDevice(), spTexture->aImage, &memReqs );
+	spTexture->aMemorySize = memReqs.size;
 
 	VkMemoryAllocateInfo allocInfo{ VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO };
 	allocInfo.pNext           = nullptr;

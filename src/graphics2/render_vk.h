@@ -97,6 +97,9 @@ struct TextureVK
 	int                  aFrames       = 0;
 	bool                 aRenderTarget = false;
 	bool                 aSwapChain    = false;  // swapchain managed texture (wtf)
+
+	// How much memory this uses
+	u32                  aMemorySize   = 0;
 };
 
 
@@ -178,14 +181,16 @@ struct SemaphoreGroup_t
 // TODO: migrate all the global data here
 struct GraphicsAPI_t
 {
-	u32                            aQueueFamilyGraphics = UINT32_MAX;
-	u32                            aQueueFamilyTransfer = UINT32_MAX;
+	u32                                   aQueueFamilyGraphics = UINT32_MAX;
+	u32                                   aQueueFamilyTransfer = UINT32_MAX;
 
-	CommandBufferGroup_t           aCommandGroups[ ECommandBufferType_Count ];
+	CommandBufferGroup_t                  aCommandGroups[ ECommandBufferType_Count ];
 
-	ChVector< ChHandle_t >         aSampledTextures;
+	ChVector< ChHandle_t >                aSampledTextures;
 
-	ChVector< QueuedBufferCopy_t > aBufferCopies;
+	ChVector< QueuedBufferCopy_t >        aBufferCopies;
+
+	std::unordered_map< ChHandle_t, u32 > aTextureRefs;
 };
 
 

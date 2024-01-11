@@ -271,11 +271,44 @@ GraphicsFmt VK_ToGraphicsFmt( VkFormat colorFmt )
 
 		// ------------------------------------------
 
+		case VK_FORMAT_BC1_RGB_UNORM_BLOCK:
+			return GraphicsFmt::BC1_RGB_UNORM_BLOCK;
+			
 		case VK_FORMAT_BC1_RGB_SRGB_BLOCK:
 			return GraphicsFmt::BC1_RGB_SRGB_BLOCK;
 
+		case VK_FORMAT_BC1_RGBA_UNORM_BLOCK:
+			return GraphicsFmt::BC1_RGBA_UNORM_BLOCK;
+			
+		case VK_FORMAT_BC1_RGBA_SRGB_BLOCK:
+			return GraphicsFmt::BC1_RGBA_SRGB_BLOCK;
+
+		case VK_FORMAT_BC3_UNORM_BLOCK:
+			return GraphicsFmt::BC3_UNORM_BLOCK;
+
 		case VK_FORMAT_BC3_SRGB_BLOCK:
 			return GraphicsFmt::BC3_SRGB_BLOCK;
+
+		case VK_FORMAT_BC4_UNORM_BLOCK:
+			return GraphicsFmt::BC4_UNORM_BLOCK;
+
+		case VK_FORMAT_BC4_SNORM_BLOCK:
+			return GraphicsFmt::BC4_SNORM_BLOCK;
+
+		case VK_FORMAT_BC5_UNORM_BLOCK:
+			return GraphicsFmt::BC5_UNORM_BLOCK;
+
+		case VK_FORMAT_BC5_SNORM_BLOCK:
+			return GraphicsFmt::BC5_SNORM_BLOCK;
+
+		case VK_FORMAT_BC6H_UFLOAT_BLOCK:
+			return GraphicsFmt::BC6H_UFLOAT_BLOCK;
+
+		case VK_FORMAT_BC6H_SFLOAT_BLOCK:
+			return GraphicsFmt::BC6H_SFLOAT_BLOCK;
+
+		case VK_FORMAT_BC7_UNORM_BLOCK:
+			return GraphicsFmt::BC7_UNORM_BLOCK;
 
 		case VK_FORMAT_BC7_SRGB_BLOCK:
 			return GraphicsFmt::BC7_SRGB_BLOCK;
@@ -1616,6 +1649,7 @@ public:
 			if ( it != gTexturePaths.end() && it->second != InvalidHandle )
 			{
 				srHandle = it->second;
+				gGraphicsAPIData.aTextureRefs[ srHandle ]++;
 				return srHandle;
 			}
 		}
@@ -1676,6 +1710,7 @@ public:
 			if ( !gTextureHandles.Update( srHandle, tex ) )
 			{
 				Log_ErrorF( gLC_Render, "Failed to Update Texture Handle: \"%s\"\n", srTexturePath.c_str() );
+				gGraphicsAPIData.aTextureRefs.erase( srHandle );
 				return InvalidHandle;
 			}
 		}
@@ -1688,8 +1723,9 @@ public:
 				return InvalidHandle;
 			}
 
-			gTexturePaths[ srTexturePath ] = srHandle;
-			gTextureInfo[ srHandle ]       = srCreateData;
+			gTexturePaths[ srTexturePath ]            = srHandle;
+			gTextureInfo[ srHandle ]                  = srCreateData;
+			gGraphicsAPIData.aTextureRefs[ srHandle ] = 1;
 		}
 
 		return srHandle;
@@ -1702,15 +1738,21 @@ public:
 		if ( tex == nullptr )
 			return InvalidHandle;
 
-		gTextureInfo[ handle ] = srCreateData;
+		gTextureInfo[ handle ]                  = srCreateData;
+		gGraphicsAPIData.aTextureRefs[ handle ] = 1;
 		return handle;
 	}
 
 	void FreeTexture( ChHandle_t sTexture ) override
 	{
+		gGraphicsAPIData.aTextureRefs[ sTexture ]--;
+		if ( gGraphicsAPIData.aTextureRefs[ sTexture ] > 0 )
+			return;
+
 		VK_DestroyTexture( sTexture );
 		gTextureHandles.Remove( sTexture );
 		gTextureInfo.erase( sTexture );
+		gGraphicsAPIData.aTextureRefs.erase( sTexture );
 
 		for ( auto& [ path, handle ] : gTexturePaths )
 		{
@@ -1810,8 +1852,9 @@ public:
 		if ( tex->apName )
 			info.aName = tex->apName;
 
-		info.aSize     = tex->aSize;
-		info.aGpuIndex = tex->aIndex;
+		info.aSize        = tex->aSize;
+		info.aGpuIndex    = tex->aIndex;
+		info.aMemoryUsage = tex->aMemorySize;
 		// info.aViewType = tex->aViewType
 
 		for ( auto& [ path, handle ] : gTexturePaths )
