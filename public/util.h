@@ -343,6 +343,16 @@ inline size_t Util_SizeOfUnordredMap( const std::unordered_map< KEY, VALUE >& sr
 }
 
 
+inline float Util_BytesToMB( u32 bytes )
+{
+#ifdef _WIN32
+	return bytes * 0.00000095367432;  // 1024 multiples for windows
+#else
+	return bytes * 0.000001;
+#endif
+}
+
+
 // ==============================================================================
 // Helper Functions for SpeedyKeyV
 // mainly until speedykeyv can parse lists, one day

@@ -28,6 +28,12 @@ constexpr char CH_PATH_SEP = '/';
 using DirHandle = void*;
 
 
+// TODO: make the engine have full unicode support on windows
+struct ChPath_t
+{
+};
+
+
 enum ReadDirFlags_: unsigned char
 {
 	ReadDir_None = 0,
@@ -39,6 +45,15 @@ enum ReadDirFlags_: unsigned char
 };
 
 using ReadDirFlags = unsigned char;
+
+
+// TODO: custom path types?
+enum ESearchPathType
+{
+	ESearchPathType_Path,
+	ESearchPathType_Binary,
+	ESearchPathType_SourceAssets,
+};
 
 
 CORE_API int                FileSys_Init( const char* workingDir );
@@ -56,32 +71,45 @@ CORE_API void                              FileSys_ClearSearchPaths();
 CORE_API void                              FileSys_ClearBinPaths();
 CORE_API void                              FileSys_DefaultSearchPaths();
 CORE_API void                              FileSys_PrintSearchPaths();
+CORE_API void                              FileSys_ReloadSearchPaths();
 
+// Build Search Path replaces macros like $root_path$ and $app_path$ with their actual values
 CORE_API std::string                       FileSys_BuildSearchPath( std::string_view sPath );
-CORE_API void                              FileSys_AddSearchPath( const std::string& path, bool sBinPath = false );
-CORE_API void                              FileSys_RemoveSearchPath( const std::string& path, bool sBinPath = false );
-CORE_API void                              FileSys_InsertSearchPath( size_t index, const std::string& path );
+
+// auto builds the search path
+CORE_API void                              FileSys_AddSearchPath( const std::string& path, ESearchPathType sType = ESearchPathType_Path );
+CORE_API void                              FileSys_RemoveSearchPath( const std::string& path, ESearchPathType sType = ESearchPathType_Path );
+CORE_API void                              FileSys_InsertSearchPath( size_t index, const std::string& path, ESearchPathType sType = ESearchPathType_Path );
 
 // ================================================================================
 // Main Funcs
 
 // Find the path to a file within the search paths with printf syntax.
-CORE_API std::string FileSys_FindFileF( const char* spFmt, ... );
+CORE_API std::string FileSys_FindFileF( ESearchPathType sType, const char* spFmt, ... );
 
 // Find the path to a file within the search paths.
 CORE_API std::string FileSys_FindBinFile( const std::string& file );
 
 // Find the path to a file within the search paths.
+CORE_API std::string FileSys_FindSourceFile( const std::string& file );
+
+// Find the path to a file within the search paths.
 CORE_API std::string FileSys_FindFile( const std::string& file );
 
 // Find the path to a file within the search paths.
-CORE_API std::string FileSys_FindFile( const std::string& file, bool sBinFile );
+CORE_API std::string FileSys_FindFileEx( const std::string& file, ESearchPathType sType = ESearchPathType_Path );
 
-// Find the path to a directory within the search paths.  */
-CORE_API std::string FileSys_FindDir( const std::string& dir );
+// Find the path to a directory within the search paths.
+CORE_API std::string FileSys_FindDir( const std::string& dir, ESearchPathType sType = ESearchPathType_Path );
 
-// Reads a file - Returns an empty array if it doesn't exist.  */
+// Reads a file - Returns an empty array if it doesn't exist.
 CORE_API std::vector< char > FileSys_ReadFile( const std::string& file );
+
+// Reads a file - Returns an empty array if it doesn't exist.
+CORE_API std::vector< char > FileSys_ReadFileEx( const std::string& file, ESearchPathType sType = ESearchPathType_Path );
+
+// Saves a file - Returns true if it succeeded.
+CORE_API bool FileSys_SaveFile( const std::string& srFile, std::vector< char >& srData );
 
 // ================================================================================
 // File Information
@@ -127,6 +155,15 @@ CORE_API std::string FileSys_GetFileNameNoExt( std::string_view path );
 
 // Cleans up the path, removes useless ".." and "." 
 CORE_API std::string FileSys_CleanPath( std::string_view path );
+
+// Rename a File or Directory
+CORE_API bool        FileSys_Rename( std::string_view srOld, std::string_view srNew );
+
+// Get Date Created/Modified on a File
+CORE_API bool        FileSys_GetFileTimes( std::string_view srPath, float* spCreated, float* spModified );
+
+// Set Date Created/Modified on a File
+CORE_API bool        FileSys_SetFileTimes( std::string_view srPath, float* spCreated, float* spModified );
 
 // ================================================================================
 // Directory Reading

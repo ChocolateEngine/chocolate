@@ -3,6 +3,8 @@
 #include "core/profiler.h"
 #include "core/platform.h"
 #include "core/log.h"
+#include "core/json5.h"
+#include "core/app_info.h"
 #include "util.h"
 
 #include <array>
@@ -40,11 +42,18 @@ static std::string                gWorkingDir;
 static std::string                gExePath;
 static std::vector< std::string > gSearchPaths;
 static std::vector< std::string > gBinPaths;
+static std::vector< std::string > gSourceAssetPaths;
 
 
 CONCMD( fs_print_paths )
 {
 	FileSys_PrintSearchPaths();
+}
+
+
+CONCMD( fs_reload_paths )
+{
+	FileSys_ReloadSearchPaths();
 }
 
 
@@ -55,9 +64,6 @@ int FileSys_Init( const char* workingDir )
 
 	// change to desired working directory
 	chdir( workingDir );
-
-    // set default search paths
-	// FileSys_DefaultSearchPaths();
 
     return 0;
 }
@@ -102,7 +108,7 @@ void FileSys_DefaultSearchPaths()
 {
 	gBinPaths.clear();
     gSearchPaths.clear();
-    FileSys_AddSearchPath( gExePath + "/bin", true );
+    FileSys_AddSearchPath( gExePath + "/bin", ESearchPathType_Binary );
     FileSys_AddSearchPath( gExePath + "/" + gWorkingDir );
     FileSys_AddSearchPath( gExePath );
     FileSys_AddSearchPath( gExePath + "/core" );  // always add core as a search path, at least for now
@@ -175,32 +181,75 @@ std::string FileSys_BuildSearchPath( std::string_view sPath )
 }
 
 
-void FileSys_AddSearchPath( const std::string& path, bool sBinPath )
+void FileSys_AddSearchPath( const std::string& path, ESearchPathType sType )
 {
 	std::string fullPath = FileSys_BuildSearchPath( path );
 
-	if ( sBinPath )
-		gBinPaths.push_back( fullPath );
-	else    
-        gSearchPaths.push_back( fullPath );
+    switch ( sType )
+	{
+		default:
+		case ESearchPathType_Path:
+			gSearchPaths.push_back( fullPath );
+			break;
+
+		case ESearchPathType_Binary:
+			gBinPaths.push_back( fullPath );
+			break;
+
+		case ESearchPathType_SourceAssets:
+			gSourceAssetPaths.push_back( fullPath );
+			break;
+	}
 }
 
 
-void FileSys_RemoveSearchPath( const std::string& path, bool sBinPath )
+void FileSys_RemoveSearchPath( const std::string& path, ESearchPathType sType )
 {
 	std::string fullPath = FileSys_BuildSearchPath( path );
 
-	if ( sBinPath )
-		vec_remove_if( gBinPaths, path );
-	else
-	    vec_remove_if( gSearchPaths, path );
+    switch ( sType )
+	{
+		default:
+		case ESearchPathType_Path:
+			vec_remove_if( gSearchPaths, path );
+			break;
+
+		case ESearchPathType_Binary:
+			vec_remove_if( gBinPaths, path );
+			break;
+
+		case ESearchPathType_SourceAssets:
+			vec_remove_if( gSourceAssetPaths, path );
+			break;
+	}
 }
 
 
-void FileSys_InsertSearchPath( size_t index, const std::string& path )
+void FileSys_InsertSearchPath( size_t index, const std::string& path, ESearchPathType sType )
 {
 	std::string fullPath = FileSys_BuildSearchPath( path );
-	gSearchPaths.insert( gSearchPaths.begin() + index, fullPath );
+
+	switch ( sType )
+	{
+		default:
+		case ESearchPathType_Path:
+			gSearchPaths.insert( gSearchPaths.begin() + index, fullPath );
+			break;
+
+		case ESearchPathType_Binary:
+			gBinPaths.insert( gBinPaths.begin() + index, fullPath );
+			break;
+
+		case ESearchPathType_SourceAssets:
+			gSourceAssetPaths.insert( gSourceAssetPaths.begin() + index, fullPath );
+			break;
+	}
+}
+
+
+void FileSys_ReloadSearchPaths()
+{
+	Core_ReloadSearchPaths();
 }
 
 
@@ -221,14 +270,14 @@ inline bool is_dir( const std::string &path )
 }
 
 
-std::string FileSys_FindFileF( const char* spFmt, ... )
+std::string FileSys_FindFileF( ESearchPathType sType, const char* spFmt, ... )
 {
     PROF_SCOPE();
 
     std::string path;
 	VSTRING( path, spFmt );
 
-    return FileSys_FindFile( path );
+    return FileSys_FindFileEx( path, sType );
 }
 
 
@@ -245,6 +294,34 @@ std::string FileSys_FindBinFile( const std::string& file )
         return file;
 
     for ( auto searchPath : gBinPaths )
+    {
+		std::string fullPath = FileSys_CleanPath( searchPath + PATH_SEP + file );
+
+        // does item exist?
+        if ( exists( fullPath ) )
+        {
+            return fullPath;
+        }
+	}
+
+    // file not found
+    return "";
+}
+
+
+std::string FileSys_FindSourceFile( const std::string& file )
+{
+    PROF_SCOPE();
+
+    // if it's an absolute path already,
+    // don't bother to look in the search paths for it, and make sure it exists
+	if ( FileSys_IsAbsolute( file.data() ) )
+        return exists( file ) ? file : "";
+
+    if ( file == "" )
+        return file;
+
+    for ( auto searchPath : gSourceAssetPaths )
     {
 		std::string fullPath = FileSys_CleanPath( searchPath + PATH_SEP + file );
 
@@ -286,16 +363,24 @@ std::string FileSys_FindFile( const std::string& file )
 }
 
 
-std::string FileSys_FindFile( const std::string& file, bool sBinFile )
+std::string FileSys_FindFileEx( const std::string& file, ESearchPathType sType )
 {
-	if ( sBinFile )
-	    return FileSys_FindBinFile( file );
-	else
-	    return FileSys_FindFile( file );
+	switch ( sType )
+	{
+		default:
+		case ESearchPathType_Path:
+			return FileSys_FindFile( file );
+
+		case ESearchPathType_Binary:
+			return FileSys_FindBinFile( file );
+
+		case ESearchPathType_SourceAssets:
+			return FileSys_FindSourceFile( file );
+	}
 }
 
 
-std::string FileSys_FindDir( const std::string &dir )
+std::string FileSys_FindDir( const std::string& dir, ESearchPathType sType )
 {
     PROF_SCOPE();
 
@@ -304,9 +389,27 @@ std::string FileSys_FindDir( const std::string &dir )
 	if ( FileSys_IsAbsolute( dir.data() ) )
         return is_dir( dir ) ? dir : "";
 
-    for ( auto searchPath : gSearchPaths )
+    std::vector< std::string >* paths = nullptr;
+
+    switch ( sType )
+	{
+		default:
+		case ESearchPathType_Path:
+			paths = &gSearchPaths;
+			break;
+
+		case ESearchPathType_Binary:
+			paths = &gBinPaths;
+			break;
+
+		case ESearchPathType_SourceAssets:
+			paths = &gSourceAssetPaths;
+			break;
+	}
+
+    for ( auto searchPath : *paths )
     {
-        std::string fullPath = searchPath + "/" + dir;
+        std::string fullPath = searchPath + CH_PATH_SEP_STR + dir;
 
         // does item exist?
         if ( is_dir( fullPath ) )
@@ -350,6 +453,88 @@ std::vector< char > FileSys_ReadFile( const std::string& srFilePath )
     file.close(  );
 
     return buffer;
+}
+
+
+// Reads a file - Returns an empty array if it doesn't exist.
+std::vector< char > FileSys_ReadFileEx( const std::string& srFilePath, ESearchPathType sType )
+{
+    PROF_SCOPE();
+
+    // Find path first
+	std::string fullPath = FileSys_FindFileEx( srFilePath, sType );
+    if ( fullPath == "" )
+    {
+        Log_ErrorF( gFileSystemChannel, "Failed to find file: %s\n", srFilePath.c_str() );
+        return {};
+    }
+
+    /* Open file.  */
+    std::ifstream file( fullPath, std::ios::ate | std::ios::binary );
+    if ( !file.is_open() )
+    {
+        Log_ErrorF( gFileSystemChannel, "Failed to open file: %s\n", srFilePath.c_str() );
+        return {};
+    }
+
+    int fileSize = ( int )file.tellg(  );
+    std::vector< char > buffer( fileSize );
+    file.seekg( 0 );
+
+    /* Read contents.  */
+    file.read( buffer.data(  ), fileSize );
+    file.close(  );
+
+    return buffer;
+}
+
+
+// Saves a file - Returns true if it succeeded.
+// TODO: maybe change this to not rename the old file until the new file is fully written
+bool FileSys_SaveFile( const std::string& srFile, std::vector< char >& srData )
+{
+    // Is there a file with this name already?
+	std::string oldFile;
+
+    if ( FileSys_Exists( srFile ) )
+	{
+		// if it's a directory, don't save and return false
+		if ( FileSys_IsDir( srFile ) )
+		{
+			Log_ErrorF( gFileSystemChannel, "Can't Save file, file exists as directory already - \"%s\"\n", srFile.c_str() );
+			return false;
+		}
+		else
+		{
+			oldFile = srFile + ".bak";
+			if ( !FileSys_Rename( srFile.data(), oldFile.data() ) )
+			{
+				Log_ErrorF( gFileSystemChannel, "Failed to rename file to backup file - \"%s\"", srFile.c_str() );
+				return false;
+			}
+		}
+	}
+
+	// Open the file handle
+	FILE* fp = fopen( srFile.c_str(), "wb" );
+
+	if ( fp == nullptr )
+	{
+		Log_ErrorF( gFileSystemChannel, "Failed to open file handle to save file: \"%s\"\n", srFile.c_str() );
+		return false;
+	}
+
+	// Write Data
+	size_t amountWritten = fwrite( srData.data(), srData.size(), 1, fp );
+	fclose( fp );
+
+    // Did we have to rename an old file?
+    if ( oldFile.size() )
+	{
+        // Copy original date created on windows
+	}
+
+	return true;
 }
 
 
@@ -594,6 +779,66 @@ std::string FileSys_CleanPath( std::string_view sPath )
 }
 
 
+// Rename a File or Directory
+bool FileSys_Rename( std::string_view srOld, std::string_view srNew )
+{
+	return ( rename( srOld.data(), srNew.data() ) == 0 );
+}
+
+
+// Get Date Created/Modified on a File
+bool FileSys_GetFileTimes( std::string_view srPath, float* spCreated, float* spModified )
+{
+#ifdef WIN32
+	// open first file
+	HANDLE file = CreateFile(
+	  srPath.data(),          // file to open
+	  GENERIC_READ,           // open for reading
+	  FILE_SHARE_READ,        // share for reading
+	  NULL,                   // default security
+	  OPEN_EXISTING,          // existing file only
+	  FILE_ATTRIBUTE_NORMAL,  // normal file
+	  NULL                    // no attribute template
+	);
+
+    // Check if this is a valid file
+    if ( file == INVALID_HANDLE_VALUE )
+	{
+		Log_ErrorF( gFileSystemChannel, "Failed to open file handle: \"%s\" - error %d\n", srPath.data(), sys_get_error() );
+		return false;
+	}
+
+    FILETIME create, modified;
+	if ( !GetFileTime( file, &create, nullptr, &modified ) )
+	{
+		Log_ErrorF( gFileSystemChannel, "Failed to get file times of file: \"%s\" - error %d\n", srPath.data(), sys_get_error() );
+		return false;
+	}
+
+    return true;
+#else
+	#error "FileSys_GetCreateTime()"
+#endif
+}
+
+
+// Set Date Created/Modified on a File
+bool FileSys_SetFileTimes( std::string_view srPath, float* spCreated, float* spModified )
+{
+#ifdef WIN32
+	// if ( !GetFileTime( hFile1, &ftCreate1, &ftAccess1, &ftWrite1 ) )
+	// {
+	// 	printf( "GetFileTime Failed!\n" );
+	// 	return 1;
+	// }
+#else
+	#error "FileSys_GetCreateTime()"
+#endif
+
+    return false;
+}
+
+
 struct SearchParams
 {
     ReadDirFlags flags;
@@ -683,7 +928,7 @@ bool FileSys_ReadNext( DirHandle dirh, std::string &file )
     }
     else
     {
-        Log_Warn( "[Filesystem] handle not in handle list??\n" );
+        Log_Warn( gFileSystemChannel, "handle not in handle list??\n" );
         return false;
     }
 

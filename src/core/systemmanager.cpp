@@ -106,7 +106,7 @@ Module Mod_Load( const char* spPath )
 	std::string pathExt = spPath;
 	pathExt = CH_PLAT_FOLDER "/" + pathExt + EXT_DLL;
 
-	std::string path = FileSys_FindFile( pathExt, true );
+	std::string path = FileSys_FindFileEx( pathExt, ESearchPathType_Binary );
 
 	if ( path.empty() )
 	{
