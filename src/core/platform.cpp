@@ -481,16 +481,11 @@ LRESULT __stdcall Win32_WindowProc( HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM 
 	}
   #endif
 
-	// drawing events
+	// resize events
 	switch ( uMsg )
 	{
-		// Don't repaint for these
-		case WM_SHOWWINDOW:
-		case WM_NCACTIVATE:
-			break;
-
 		case WM_DPICHANGED:
-		case WM_PAINT:
+		case WM_SIZE:
 		{
 			// hack
 			static bool firstTime = true;
