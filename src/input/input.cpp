@@ -9,8 +9,6 @@ input.h
 #include "imgui/imgui.h"
 #include "imgui/imgui_impl_sdl2.h"
 
-#include "igui.h"
-
 #include <fstream>
 #include <iostream>
 
@@ -19,7 +17,6 @@ input.h
 #endif
 
 InputSystem* input = new InputSystem;
-IGuiSystem*  gui   = nullptr;
 
 LOG_REGISTER_CHANNEL( InputSystem, LogColor::Default );
 
@@ -178,10 +175,6 @@ void InputSystem::ParseInput()
 				aMousePos.y = aEvent.motion.y;
 				aMouseDelta.x += aEvent.motion.xrel;
 				aMouseDelta.y += aEvent.motion.yrel;
-
-				if ( in_show_mouse_events )
-					gui->DebugMessage( 12 + mouseEventCount++, "Mouse Motion X: %d Y:%d", aEvent.motion.xrel, aEvent.motion.yrel );
-
 				break;
 			}
 
@@ -282,14 +275,6 @@ void InputSystem::ParseInput()
 
 bool InputSystem::Init()
 {
-	gui = ( IGuiSystem* )Mod_GetInterface( IGUI_NAME, IGUI_HASH );
-	
-	if ( gui == nullptr )
-	{
-		Log_Error( gInputSystemChannel, "Failed to load GUI Interface\n" );
-		return false;
-	}
-
 	ResetInputs();
 	return true;
 }
@@ -313,12 +298,6 @@ void InputSystem::ResetInputs()
 	aKeyboardState = SDL_GetKeyboardState( NULL );
 
 	aScroll = {0, 0};
-		
-	// ReleaseMouseButton( EButton_MouseLeft );
-	// ReleaseMouseButton( EButton_MouseRight );
-	// ReleaseMouseButton( EButton_MouseMiddle );
-	// ReleaseMouseButton( EButton_MouseX1 );
-	// ReleaseMouseButton( EButton_MouseX2 );
 	
 	ReleaseMouseButton( EButton_MouseWheelUp );
 	ReleaseMouseButton( EButton_MouseWheelDown );
@@ -481,30 +460,6 @@ const char* InputSystem::GetKeyName( EButton key )
 			return gButtonStr[ key - EButton_BeforeMouse - 1 ].data();
 		else
 			return SDL_GetScancodeName( SDL_SCANCODE_UNKNOWN );
-			// return "INVALID";
-		
-		// switch (key)
-		// {
-		// 	case EButton_MouseLeft:
-		// 		return "MOUSE_L";
-		// 	case EButton_MouseRight:
-		// 		return "MOUSE_R";
-		// 	case EButton_MouseMiddle:
-		// 		return "MOUSE_M";
-		// 	case EButton_MouseX1:
-		// 		return "MOUSE_X1";
-		// 	case EButton_MouseX2:
-		// 		return "MOUSE_X2";
-		// 
-		// 	case EButton_MouseWheelUp:
-		// 		return "MOUSE_WHEEL_UP";
-		// 	case EButton_MouseWheelDown:
-		// 		return "MOUSE_WHEEL_DOWN";
-		// 	case EButton_MouseWheelLeft:
-		// 		return "MOUSE_WHEEL_LEFT";
-		// 	case EButton_MouseWheelRight:
-		// 		return "MOUSE_WHEEL_RIGHT";
-		// }
 	}
 	else
 	{
