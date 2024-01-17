@@ -1376,6 +1376,25 @@ public:
 		return nullptr;
 	}
 
+	void FreeTextureFromImGui( ChHandle_t sHandle ) override
+	{
+		if ( sHandle == CH_INVALID_HANDLE )
+		{
+			Log_ErrorF( gLC_Render, "FreeTextureFromImGui(): Invalid Image Handle!\n" );
+			return;
+		}
+
+		auto it = gImGuiTextures.find( sHandle );
+		if ( it != gImGuiTextures.end() )
+		{
+			Log_ErrorF( gLC_Render, "FreeTextureFromImGui(): Could not find ImGui TextureID!\n" );
+			return;
+		}
+
+		ImGui_ImplVulkan_RemoveTexture( it->second );
+		gImGuiTextures.erase( sHandle );
+	}
+
 	// bool BuildImGuiFonts()
 	// {
 	// 	return true;
@@ -1852,9 +1871,10 @@ public:
 		if ( tex->apName )
 			info.aName = tex->apName;
 
-		info.aSize        = tex->aSize;
-		info.aGpuIndex    = tex->aIndex;
-		info.aMemoryUsage = tex->aMemorySize;
+		info.aSize         = tex->aSize;
+		info.aGpuIndex     = tex->aIndex;
+		info.aMemoryUsage  = tex->aMemorySize;
+		info.aRenderTarget = tex->aRenderTarget || tex->aSwapChain;
 		// info.aViewType = tex->aViewType
 
 		for ( auto& [ path, handle ] : gTexturePaths )

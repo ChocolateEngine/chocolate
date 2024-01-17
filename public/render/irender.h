@@ -469,6 +469,7 @@ struct TextureInfo_t
 	GraphicsFmt aFormat;
 	u32         aMemoryUsage;
 	u32         aGpuIndex;
+	bool        aRenderTarget;
 };
 
 
@@ -843,6 +844,7 @@ class IRender : public ISystem
 	virtual void        GetSurfaceSize( int& srWidth, int& srHeight )                                                                  = 0;
 	
 	virtual ImTextureID AddTextureToImGui( ChHandle_t sHandle )                                                                        = 0;
+	virtual void        FreeTextureFromImGui( ChHandle_t sHandle )                                                                     = 0;
 
 	// --------------------------------------------------------------------------------------------
 	// Buffers
