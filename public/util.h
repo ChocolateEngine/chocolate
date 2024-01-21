@@ -353,6 +353,16 @@ inline float Util_BytesToMB( u32 bytes )
 }
 
 
+inline float Util_BytesToKB( u32 bytes )
+{
+#ifdef _WIN32
+	return bytes * 0.000976563;  // 1024 multiples for windows
+#else
+	return bytes * 0.001;
+#endif
+}
+
+
 // ==============================================================================
 // Helper Functions for SpeedyKeyV
 // mainly until speedykeyv can parse lists, one day
