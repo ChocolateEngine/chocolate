@@ -5,6 +5,7 @@ set_property( GLOBAL PROPERTY CH_ROOT           ${CMAKE_CURRENT_LIST_DIR} )
 set_property( GLOBAL PROPERTY CH_PUBLIC         ${CMAKE_CURRENT_LIST_DIR}/public )
 set_property( GLOBAL PROPERTY CH_THIRDPARTY     ${CMAKE_CURRENT_LIST_DIR}/thirdparty )
 set_property( GLOBAL PROPERTY CH_BUILD          ${CMAKE_CURRENT_LIST_DIR}/../output )
+set_property( GLOBAL PROPERTY CH_BIN            ${CH_BUILD}/bin/${PLAT_FOLDER} )
 
 set( CH_SRC ${CMAKE_CURRENT_LIST_DIR}/src )
 
@@ -13,6 +14,7 @@ get_property( CH_ROOT GLOBAL PROPERTY CH_ROOT )
 get_property( CH_PUBLIC GLOBAL PROPERTY CH_PUBLIC )
 get_property( CH_THIRDPARTY GLOBAL PROPERTY CH_THIRDPARTY )
 get_property( CH_BUILD GLOBAL PROPERTY CH_BUILD )
+get_property( CH_BIN GLOBAL PROPERTY CH_BIN )
 
 set( CMAKE_EXPORT_COMPILE_COMMANDS ON )
 
@@ -51,9 +53,8 @@ add_subdirectory( ${CH_SRC}/physics )
 if( MSVC )
 	message( "Copying SDL2" )
 	if ( ${64_BIT} )
-		configure_file( "${CH_THIRDPARTY}/SDL2/lib/x64/SDL2.dll" "${CH_BUILD}/bin/SDL2.dll" COPYONLY )
-		configure_file( "${CH_THIRDPARTY}/SDL2/lib/x64/SDL2.dll" "${CH_BUILD}/SDL2.dll" COPYONLY )  # dumb launcher thing, blech
+		configure_file( "${CH_THIRDPARTY}/SDL2/lib/x64/SDL2.dll" "${CH_BIN}/SDL2.dll" COPYONLY )
 	else()
-		configure_file( "${CH_THIRDPARTY}/SDL2/lib/x86/SDL2.dll" "${CH_BUILD}/SDL2.dll" COPYONLY )
+		configure_file( "${CH_THIRDPARTY}/SDL2/lib/x86/SDL2.dll" "${CH_BIN}/SDL2.dll" COPYONLY )
 	endif()
 endif()

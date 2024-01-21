@@ -12,13 +12,13 @@ if( MSVC )
 	
 	link_libraries( ${KTX_LIB_DIR}/ktx.lib ${KTX_LIB_DIR}/ktx_read.lib )
 	
-	configure_file( "${KTX_LIB_DIR}/ktx.dll" "${CH_BUILD}/ktx.dll" COPYONLY )
-	configure_file( "${KTX_LIB_DIR}/ktx_read.dll" "${CH_BUILD}/ktx_read.dll" COPYONLY )
+	configure_file( "${KTX_LIB_DIR}/ktx.dll" "${CH_BIN}/ktx.dll" COPYONLY )
+	configure_file( "${KTX_LIB_DIR}/ktx_read.dll" "${CH_BIN}/ktx_read.dll" COPYONLY )
 	
 	# uhh
 	if( (CMAKE_BUILD_TYPE STREQUAL Debug) )
-		configure_file( "${KTX_LIB_DIR}/ktx.pdb" "${CH_BUILD}/ktx.pdb" COPYONLY )
-		configure_file( "${KTX_LIB_DIR}/ktx_read.pdb" "${CH_BUILD}/ktx_read.pdb" COPYONLY )
+		configure_file( "${KTX_LIB_DIR}/ktx.pdb" "${CH_BIN}/ktx.pdb" COPYONLY )
+		configure_file( "${KTX_LIB_DIR}/ktx_read.pdb" "${CH_BIN}/ktx_read.pdb" COPYONLY )
 	endif()
 	
 else()
@@ -27,7 +27,7 @@ else()
 	link_directories( ${KTX_DIR}/build )
 	link_libraries( ${KTX_LIB_DIR}/libktx.so ${KTX_LIB_DIR}/libktx_read.so )
 	
-	configure_file( "${KTX_LIB_DIR}/libktx.so" "${CH_BUILD}/libktx.so" COPYONLY )
-	configure_file( "${KTX_LIB_DIR}/libktx_read.so" "${CH_BUILD}/libktx_read.so" COPYONLY )
+	configure_file( "${KTX_LIB_DIR}/libktx.so" "${CH_BIN}/libktx.so" COPYONLY )
+	configure_file( "${KTX_LIB_DIR}/libktx_read.so" "${CH_BIN}/libktx_read.so" COPYONLY )
 endif()
 

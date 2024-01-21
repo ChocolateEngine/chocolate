@@ -98,11 +98,11 @@ target_precompile_headers( Aduio PRIVATE "${CH_PUBLIC}/core/core.h" )
 message( "Copying Steam Audio DLL (phonon)" )
 
 if( MSVC )
-	configure_file( "${STEAMAUDIO_DIR}/lib/windows-x64/phonon.dll" "${CH_BUILD}/phonon.dll" COPYONLY )
-	configure_file( "${STEAMAUDIO_DIR}/lib/windows-x64/GPUUtilities.dll" "${CH_BUILD}/GPUUtilities.dll" COPYONLY )
-	configure_file( "${STEAMAUDIO_DIR}/lib/windows-x64/TrueAudioNext.dll" "${CH_BUILD}/TrueAudioNext.dll" COPYONLY )
+	configure_file( "${STEAMAUDIO_DIR}/lib/windows-x64/phonon.dll" "${CH_BIN}/phonon.dll" COPYONLY )
+	configure_file( "${STEAMAUDIO_DIR}/lib/windows-x64/GPUUtilities.dll" "${CH_BIN}/GPUUtilities.dll" COPYONLY )
+	configure_file( "${STEAMAUDIO_DIR}/lib/windows-x64/TrueAudioNext.dll" "${CH_BIN}/TrueAudioNext.dll" COPYONLY )
 else()
-	configure_file( "${STEAMAUDIO_DIR}/lib/linux-x64/libphonon.so" "${CH_BUILD}/libphonon.so" COPYONLY )
+	configure_file( "${STEAMAUDIO_DIR}/lib/linux-x64/libphonon.so" "${CH_BIN}/libphonon.so" COPYONLY )
 endif()
 
 source_group(
