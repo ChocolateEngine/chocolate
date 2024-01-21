@@ -26,6 +26,7 @@ if ( MSVC )
 	    "$<$<CONFIG:Debug>:${COMPILE_OPTION_MT_DEBUG}>"
 	    "$<$<CONFIG:Release>:${COMPILE_OPTION_MT_RELEASE}>"
 	    "$<$<CONFIG:RelWithDebInfo>:${COMPILE_OPTION_MT_RELEASE}>"
+	    "$<$<CONFIG:Profile>:${COMPILE_OPTION_MT_RELEASE}>"
 	)
 endif()
 

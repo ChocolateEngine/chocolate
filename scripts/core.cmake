@@ -4,7 +4,6 @@ get_property( CH_ROOT GLOBAL PROPERTY CH_ROOT )
 get_property( CH_PUBLIC GLOBAL PROPERTY CH_PUBLIC )
 get_property( CH_THIRDPARTY GLOBAL PROPERTY CH_THIRDPARTY )
 get_property( CH_BUILD GLOBAL PROPERTY CH_BUILD )
-get_property( CH_BIN GLOBAL PROPERTY CH_BIN )
 
 set( CMAKE_POSITION_INDEPENDENT_CODE ON )
 set( CMAKE_SHARED_LIBRARY_PREFIX "" )
@@ -13,7 +12,14 @@ set( CXX_STANDARD 20 )  # could do 23
 set( CMAKE_CXX_STANDARD 20 )  # could do 23
 set( CMAKE_CXX_STANDARD_REQUIRED ON )
 
-set(CMAKE_CONFIGURATION_TYPES "Debug;Release;RelWithDebInfo;Profile")
+if(CMAKE_CONFIGURATION_TYPES)
+    message("Multi-configuration generator")
+    set(CMAKE_CONFIGURATION_TYPES "Debug;Release;RelWithDebInfo;Profile" CACHE STRING "My multi config types" FORCE)
+else()
+    message("Single-configuration generator")
+endif()
+
+# set(CMAKE_CONFIGURATION_TYPES "Debug;Release;RelWithDebInfo;Profile")
 
 if (${CMAKE_CL_64})
 	set( 64_BIT 1 )
@@ -35,6 +41,9 @@ else()
 	endif()
 endif()
 
+set_property( GLOBAL PROPERTY CH_BIN            ${CH_BUILD}/bin/${PLAT_FOLDER} )
+get_property( CH_BIN GLOBAL PROPERTY CH_BIN )
+
 message( "CMAKE_GENERATOR: ${CMAKE_GENERATOR}" )
 message( "CMAKE_SIZE_OF_VOID_P: ${CMAKE_SIZE_OF_VOID_P}" )
 message( "CMAKE_GENERATOR_PLATFORM: ${CMAKE_GENERATOR_PLATFORM}" )
@@ -43,6 +52,8 @@ message( "CMAKE_CL_64:     ${CMAKE_CL_64}" )
 message( "Is 64-bit:       ${64_BIT}" )
 message( "Is 32-bit:       ${32_BIT}" )
 message( "Platform Folder: ${PLAT_FOLDER}" )
+
+message( CH_BIN ${CH_BIN} )
 
 set( CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CH_BIN} )
 set( CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CH_BIN} )
@@ -229,7 +240,8 @@ if( MSVC )
 	
 	set( COMPILE_OPTIONS_PROFILE
 		"/fp:fast"
-		"/Od"
+		"/Od"        # no optimizations
+		"/Zi"        # debug information
 	)
 	
 	add_compile_options(
@@ -247,11 +259,15 @@ if( MSVC )
 		""
 	)
 	
+	set( LINK_OPTIONS_PROFILE
+		"/DEBUG"
+	)
+	
 	add_link_options(
 		"$<$<CONFIG:Debug>:${LINK_OPTIONS_DEBUG}>"
 		"$<$<CONFIG:Release>:${LINK_OPTIONS_RELEASE}>"
 		"$<$<CONFIG:RelWithDebInfo>:${LINK_OPTIONS_RELEASE}>"
-		"$<$<CONFIG:Profile>:${LINK_OPTIONS_RELEASE}>"
+		"$<$<CONFIG:Profile>:${LINK_OPTIONS_PROFILE}>"
 	)
 	
 	add_link_options(
