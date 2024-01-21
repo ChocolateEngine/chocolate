@@ -65,10 +65,16 @@ bool                                                     gNeedTextureUpdate     
 
 GraphicsAPI_t                                            gGraphicsAPIData;
 
+// debug thing
+size_t                                                   gTotalBufferCopyPerFrame = 0;
+
 // tracy contexts
 #if TRACY_ENABLE
 static std::unordered_map< VkCommandBuffer, TracyVkCtx > gTracyCtx;
 #endif
+
+
+CONVAR( r_dbg_show_buffer_copy, 0 );
 
 
 CONVAR_CMD_EX( r_msaa, 1, CVARF_ARCHIVE, "Enable/Disable MSAA Globally" )
@@ -1580,6 +1586,8 @@ public:
 			regions[ i ].srcOffset = region.aSrcOffset;
 			regions[ i ].dstOffset = region.aDstOffset;
 			regions[ i ].size      = size;
+
+			gTotalBufferCopyPerFrame += size;
 		}
 
 		// TODO: PERF: only use the transfer queue if you need to copy from host to device local memory
@@ -2071,12 +2079,34 @@ public:
 	{
 		VkCommandBuffer c = VK_BeginOneTimeTransferCommand();
 
+		if ( r_dbg_show_buffer_copy )
+			Log_DevF( gLC_Render, 1, "Copy Queued Buffers:\n" );
+
+		size_t totalSize = 0;
 		for ( QueuedBufferCopy_t& bufferCopy : gGraphicsAPIData.aBufferCopies )
 		{
 			vkCmdCopyBuffer( c, bufferCopy.aSource, bufferCopy.aDest, bufferCopy.aRegionCount, bufferCopy.apRegions );
+
+			// calc size
+			size_t size = 0;
+
+			for ( int region = 0; region < bufferCopy.aRegionCount; region++ )
+			{
+				size += bufferCopy.apRegions[ region ].size;
+			}
+
+			if ( r_dbg_show_buffer_copy )
+				Log_DevF( gLC_Render, 1, "  Size: %.6f KB\n", Util_BytesToKB( size ) );
+
+			totalSize += size;
 		}
 
 		VK_EndOneTimeTransferCommand( c );
+
+		if ( r_dbg_show_buffer_copy )
+			Log_DevF( gLC_Render, 1, "Total Copy Size: %.6f KB\n", Util_BytesToKB( totalSize ) );
+
+		gTotalBufferCopyPerFrame += totalSize;
 
 		gGraphicsAPIData.aBufferCopies.clear();
 	}
@@ -2089,6 +2119,11 @@ public:
 	void Present( u32 sImageIndex ) override
 	{
 		VK_Present( sImageIndex );
+
+		if ( r_dbg_show_buffer_copy )
+			Log_DevF( gLC_Render, 1, "Total Buffer Copy Per Frame: %.6f KB\n", Util_BytesToKB( gTotalBufferCopyPerFrame ) );
+
+		gTotalBufferCopyPerFrame = 0;
 	}
 
 	void WaitForQueues() override
