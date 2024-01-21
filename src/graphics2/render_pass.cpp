@@ -167,21 +167,21 @@ VkRenderPass VK_CreateMainRenderPass()
 
 Handle VK_CreateRenderPass( const RenderPassCreate_t& srPass )
 {
-	std::vector< VkAttachmentDescription > attachments( srPass.aAttachments.size() );
-	std::vector< VkSubpassDescription >    subpasses( srPass.aSubpasses.size() );
+	ChVector< VkAttachmentDescription > attachments( srPass.aAttachments.size() );
+	ChVector< VkSubpassDescription >    subpasses( srPass.aSubpasses.size() );
 
 	// um
-	std::vector< VkSubpassDependency >     dependencies( 2 );
+	ChVector< VkSubpassDependency >     dependencies( 2 );
 
-	std::vector< VkAttachmentReference >   colorRefs;
-	VkAttachmentReference                  depthRef;
+	ChVector< VkAttachmentReference >   colorRefs;
+	VkAttachmentReference               depthRef;
 
 	// set it to this, if it changes, we have a depth attachment reference
 	depthRef.layout = VK_IMAGE_LAYOUT_MAX_ENUM;
 
 	bool useMSAA    = false;
 
-	for ( size_t i = 0; i < srPass.aAttachments.size(); i++ )
+	for ( u32 i = 0; i < srPass.aAttachments.size(); i++ )
 	{
 		const RenderPassAttachment_t& attach = srPass.aAttachments[ i ];
 		useMSAA |= attach.aUseMSAA && VK_UseMSAA();
@@ -212,7 +212,7 @@ Handle VK_CreateRenderPass( const RenderPassCreate_t& srPass )
 		}
 		else
 		{
-			colorRefs.emplace_back( i, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL );
+			colorRefs.push_back( { i, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL } );
 			attachments[ i ].finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
 		}
 	}

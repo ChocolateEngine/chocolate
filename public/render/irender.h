@@ -502,11 +502,11 @@ struct CreateRenderTarget_t
 
 struct FramebufferPass_t
 {
-	std::vector< Handle > aAttachColors;
-	// std::vector< Handle > aAttachInput;
-	std::vector< Handle > aAttachResolve;
-	// std::vector< Handle > aAttachPreserve;
-	Handle                aAttachDepth = 0;
+	ChVector< ChHandle_t > aAttachColors;
+	// ChVector< ChHandle_t > aAttachInput;
+	ChVector< ChHandle_t > aAttachResolve;
+	// ChVector< ChHandle_t > aAttachPreserve;
+	ChHandle_t             aAttachDepth = 0;
 };
 
 
@@ -562,8 +562,8 @@ struct ColorBlendAttachment_t
 
 struct PipelineLayoutCreate_t
 {
-	std::vector< Handle >              aLayouts;
-	std::vector< PushConstantRange_t > aPushConstants;
+	ChVector< ChHandle_t >              aLayouts;
+	ChVector< PushConstantRange_t > aPushConstants;
 };
 
 
@@ -577,22 +577,22 @@ struct ComputePipelineCreate_t
 
 struct GraphicsPipelineCreate_t
 {
-	const char*                           apName = nullptr;
+	const char*                        apName = nullptr;
 
-	std::vector< ShaderModule_t >         aShaderModules{};
-	std::vector< VertexInputBinding_t >   aVertexBindings{};
-	std::vector< VertexInputAttribute_t > aVertexAttributes{};
-	std::vector< ColorBlendAttachment_t > aColorBlendAttachments{};
+	ChVector< ShaderModule_t >         aShaderModules{};
+	ChVector< VertexInputBinding_t >   aVertexBindings{};
+	ChVector< VertexInputAttribute_t > aVertexAttributes{};
+	ChVector< ColorBlendAttachment_t > aColorBlendAttachments{};
 
-	EPrimTopology                         aPrimTopology;
-	EDynamicState                         aDynamicState;
-	ECullMode                             aCullMode;
+	EPrimTopology                      aPrimTopology;
+	EDynamicState                      aDynamicState;
+	ECullMode                          aCullMode;
 
-	bool                                  aDepthBiasEnable = false;
-	bool                                  aLineMode        = false;
+	bool                               aDepthBiasEnable = false;
+	bool                               aLineMode        = false;
 
-	Handle                                aPipelineLayout;
-	Handle                                aRenderPass;
+	Handle                             aPipelineLayout;
+	Handle                             aRenderPass;
 };
 
 
@@ -618,8 +618,8 @@ struct RenderPassSubpass_t
 // TODO: add subpass dependencies?
 struct RenderPassCreate_t
 {
-	std::vector< RenderPassAttachment_t > aAttachments;  // TODO: use FramebufferPass_t instead (separate argument to avoid copying to this struct)
-	std::vector< RenderPassSubpass_t >    aSubpasses;
+	ChVector< RenderPassAttachment_t > aAttachments;  // TODO: use FramebufferPass_t instead (separate argument to avoid copying to this struct)
+	ChVector< RenderPassSubpass_t >    aSubpasses;
 };
 
 
@@ -633,10 +633,10 @@ struct RenderPassClear_t
 
 struct RenderPassBegin_t
 {
-	Handle    aRenderPass  = InvalidHandle;
-	Handle    aFrameBuffer = InvalidHandle;
+	Handle                        aRenderPass  = InvalidHandle;
+	Handle                        aFrameBuffer = InvalidHandle;
 
-	std::vector< RenderPassClear_t > aClear;
+	ChVector< RenderPassClear_t > aClear;
 };
 
 
@@ -651,8 +651,8 @@ struct CreateDescBinding_t
 
 struct CreateDescLayout_t
 {
-	const char*                        apName  = nullptr;
-	std::vector< CreateDescBinding_t > aBindings;
+	const char*                     apName  = nullptr;
+	ChVector< CreateDescBinding_t > aBindings;
 };
 
 
@@ -1018,5 +1018,5 @@ class IRender : public ISystem
 
 
 #define IRENDER_NAME "Render"
-#define IRENDER_VER 15
+#define IRENDER_VER 16
 
