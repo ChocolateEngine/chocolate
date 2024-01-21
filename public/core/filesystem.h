@@ -67,8 +67,13 @@ CORE_API const std::string& FileSys_GetExePath();
 // Modify Search Paths
 
 CORE_API const std::vector< std::string >& FileSys_GetSearchPaths();
+CORE_API const std::vector< std::string >& FileSys_GetBinPaths();
+CORE_API const std::vector< std::string >& FileSys_GetSourcePaths();
+
 CORE_API void                              FileSys_ClearSearchPaths();
 CORE_API void                              FileSys_ClearBinPaths();
+CORE_API void                              FileSys_ClearSourcePaths();
+
 CORE_API void                              FileSys_DefaultSearchPaths();
 CORE_API void                              FileSys_PrintSearchPaths();
 CORE_API void                              FileSys_ReloadSearchPaths();

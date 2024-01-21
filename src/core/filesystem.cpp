@@ -92,6 +92,18 @@ const std::vector< std::string >& FileSys_GetSearchPaths()
 }
 
 
+const std::vector< std::string >& FileSys_GetBinPaths()
+{
+	return gBinPaths;
+}
+
+
+const std::vector< std::string >& FileSys_GetSourcePaths()
+{
+	return gSourceAssetPaths;
+}
+
+
 void FileSys_ClearSearchPaths()
 {
 	gSearchPaths.clear();
@@ -104,10 +116,17 @@ void FileSys_ClearBinPaths()
 }
 
 
+void FileSys_ClearSourcePaths()
+{
+	gSourceAssetPaths.clear();
+}
+
+
 void FileSys_DefaultSearchPaths()
 {
 	gBinPaths.clear();
     gSearchPaths.clear();
+	gSourceAssetPaths.clear();
     FileSys_AddSearchPath( gExePath + "/bin", ESearchPathType_Binary );
     FileSys_AddSearchPath( gExePath + "/" + gWorkingDir );
     FileSys_AddSearchPath( gExePath );
@@ -125,6 +144,10 @@ void FileSys_PrintSearchPaths()
 
 	Log_Group( group, "\nSearch Paths:\n" );
     for ( const auto& path : gSearchPaths )
+        Log_GroupF( group, "    %s\n", path.data() );
+
+	Log_Group( group, "\nSource Asset Paths:\n" );
+	for ( const auto& path : gSourceAssetPaths )
         Log_GroupF( group, "    %s\n", path.data() );
 
     Log_GroupEnd( group );

@@ -263,6 +263,10 @@ void Core_DestroyAppInfo()
 
 void Core_ReloadSearchPaths()
 {
+	FileSys_ClearSearchPaths();
+	FileSys_ClearBinPaths();
+	FileSys_ClearSourcePaths();
+
 	JsonObject_t root;
 	if ( !Core_GetAppInfoJson( root ) )
 		return;
