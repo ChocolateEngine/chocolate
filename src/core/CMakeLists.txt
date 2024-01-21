@@ -36,6 +36,8 @@ list( APPEND PUBLIC_FILES
 
 add_compile_definitions( "CORE_DLL" "TRACY_EXPORTS" )
 
+link_libraries( SDL2 )
+
 add_library( Core SHARED ${SRC_FILES} ${PUBLIC_FILES} ${TRACY_FILES} )
 
 add_dependencies( Core BuildNumberUpdater )
@@ -47,6 +49,11 @@ endif()
 set_target_properties(
 	Core PROPERTIES
 	OUTPUT_NAME ch_core
+)
+
+target_link_libraries(
+	Core PRIVATE
+	SDL2
 )
 
 target_precompile_headers( Core PUBLIC "${CH_PUBLIC}/core/core.h" )
@@ -90,6 +97,13 @@ if( MSVC )
 	add_custom_command(
 		TARGET Core POST_BUILD
         COMMAND "$<$<CONFIG:RelWithDebInfo>:${MIMALLOC_COPY_CMD_RELEASE}>"
+		COMMAND_EXPAND_LISTS
+        COMMENT "Copying mimalloc-override.dll to launcher directory"
+    )
+	
+	add_custom_command(
+		TARGET Core POST_BUILD
+        COMMAND "$<$<CONFIG:Profile>:${MIMALLOC_COPY_CMD_RELEASE}>"
 		COMMAND_EXPAND_LISTS
         COMMENT "Copying mimalloc-override.dll to launcher directory"
     )

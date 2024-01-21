@@ -10,11 +10,6 @@ file(
 	${CH_PUBLIC}/graphics2/*.h
 )
 
-link_libraries(
-	Core
-	ImGui
-)
-
 # include( ${CH_ROOT}/scripts/rmlui.cmake )
 
 set(
@@ -34,6 +29,13 @@ set(
 )
 
 add_library( GUI SHARED ${SRC_FILES} ${PUBLIC_FILES} )
+
+target_link_libraries(
+	GUI PRIVATE
+	Core
+	ImGui
+	SDL2
+)
 
 add_dependencies( GUI "Core" "ImGui" )
 

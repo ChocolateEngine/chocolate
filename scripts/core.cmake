@@ -12,6 +12,8 @@ set( CXX_STANDARD 20 )  # could do 23
 set( CMAKE_CXX_STANDARD 20 )  # could do 23
 set( CMAKE_CXX_STANDARD_REQUIRED ON )
 
+set(CMAKE_CONFIGURATION_TYPES "Debug;Release;RelWithDebInfo;Profile")
+
 if (${CMAKE_CL_64})
 	set( 64_BIT 1 )
 	set( 32_BIT 0 )
@@ -62,6 +64,8 @@ foreach( OUTPUTCONFIG ${CMAKE_CONFIGURATION_TYPES} )
     set( CMAKE_ARCHIVE_OUTPUT_DIRECTORY_${OUTPUTCONFIG} ${CH_BUILD}/obj )
 endforeach( OUTPUTCONFIG CMAKE_CONFIGURATION_TYPES )
 
+set( CMAKE_SHARED_LINKER_FLAGS_PROFILE ${CMAKE_SHARED_LINKER_FLAGS_RELEASE} )
+set( CMAKE_EXE_LINKER_FLAGS_PROFILE ${CMAKE_EXE_LINKER_FLAGS_RELEASE} )
 
 if ( ${CMAKE_GENERATOR} MATCHES "Visual Studio .*" )
 	set( IS_VISUAL_STUDIO 1 )
@@ -101,6 +105,7 @@ add_compile_definitions(
 	"$<$<CONFIG:Debug>:${COMPILE_DEF_DEBUG}>"
 	"$<$<CONFIG:Release>:${COMPILE_DEF_RELEASE}>"
 	"$<$<CONFIG:RelWithDebInfo>:${COMPILE_DEF_RELEASE}>"
+	"$<$<CONFIG:Profile>:${COMPILE_DEF_RELEASE}>"
 	
 	CH_PLAT_FOLDER="${PLAT_FOLDER}"
 	"CH_64_BIT=${64_BIT}"
@@ -122,6 +127,7 @@ if( MSVC )
 	#	"$<$<CONFIG:Debug>:${MIMALLOC_DIR}/build/Debug/mimalloc-secure-debug.lib>"
 	#	"$<$<CONFIG:Release>:${MIMALLOC_BUILD}/Release/mimalloc-override.lib>"
 	#	"$<$<CONFIG:RelWithDebInfo>:${MIMALLOC_BUILD}/Release/mimalloc-override.lib>"
+	#	"$<$<CONFIG:Profile>:${MIMALLOC_BUILD}/Release/mimalloc-override.lib>"
 	#	${MIMALLOC_DIR}/bin/mimalloc-redirect.lib
 	#)
 
@@ -220,10 +226,16 @@ if( MSVC )
 		"/fp:fast"
 	)
 	
+	set( COMPILE_OPTIONS_PROFILE
+		"/fp:fast"
+		"/Od"
+	)
+	
 	add_compile_options(
 		"$<$<CONFIG:Debug>:${COMPILE_OPTIONS_DEBUG}>"
 		"$<$<CONFIG:Release>:${COMPILE_OPTIONS_RELEASE}>"
 		"$<$<CONFIG:RelWithDebInfo>:${COMPILE_OPTIONS_RELEASE}>"
+		"$<$<CONFIG:Profile>:${COMPILE_OPTIONS_PROFILE}>"
 	)
 	
 	set( LINK_OPTIONS_DEBUG
@@ -238,6 +250,7 @@ if( MSVC )
 		"$<$<CONFIG:Debug>:${LINK_OPTIONS_DEBUG}>"
 		"$<$<CONFIG:Release>:${LINK_OPTIONS_RELEASE}>"
 		"$<$<CONFIG:RelWithDebInfo>:${LINK_OPTIONS_RELEASE}>"
+		"$<$<CONFIG:Profile>:${LINK_OPTIONS_RELEASE}>"
 	)
 	
 	add_link_options(
@@ -252,6 +265,7 @@ else()  # linux
 	# 	"$<$<CONFIG:Debug>:${MIMALLOC_BUILD}/Debug/mimalloc-override.lib>"
 	# 	"$<$<CONFIG:Release>:${MIMALLOC_BUILD}/Release/mimalloc-override.lib>"
 	# 	"$<$<CONFIG:RelWithDebInfo>:${MIMALLOC_BUILD}/Release/mimalloc-override.lib>"
+	# 	"$<$<CONFIG:Profile>:${MIMALLOC_BUILD}/Release/mimalloc-override.lib>"
 	# )
 
 	set( CMAKE_CXX_COMPILER g++ )
@@ -285,6 +299,19 @@ else()  # linux
 	
 endif()
 
-link_libraries( SDL2 )
-
 include( ${CH_ROOT}/scripts/tracy.cmake )
+
+
+
+
+
+
+# set(CMAKE_CONFIGURATION_TYPES "${CMAKE_CONFIGURATION_TYPES}"     CACHE STRING "List of supported configurations.")
+# 
+# mark_as_advanced(CMAKE_CONFIGURATION_TYPES)
+# 
+# if(NOT CMAKE_BUILD_TYPE)
+# 	message("Defaulting to release build.")
+# 	set(CMAKE_BUILD_TYPE Release         CACHE STRING         "Choose the type of build, options are: ${CMAKE_CONFIGURATION_TYPES}."         FORCE)
+# endif()
+

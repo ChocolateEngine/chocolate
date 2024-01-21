@@ -41,6 +41,11 @@ add_library(
 	${PUBLIC_FILES}
 )
 
+target_link_libraries(
+	Physics PRIVATE
+	SDL2
+)
+
 add_dependencies( Physics "Core" )
 
 set_target_properties(

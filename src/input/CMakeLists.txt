@@ -18,6 +18,11 @@ link_libraries( Core ImGui )
 
 add_library( Input SHARED ${SRC_FILES} ${PUBLIC_FILES} )
 
+target_link_libraries(
+	Input PRIVATE
+	SDL2
+)
+
 add_dependencies( Input "Core" "ImGui" )
 
 set_target_properties(

@@ -27,6 +27,11 @@ set_target_properties(
 	OUTPUT_NAME imgui
 )
 
+target_link_libraries(
+	ImGui PRIVATE
+	SDL2
+)
+
 source_group(
 	TREE ${CMAKE_CURRENT_LIST_DIR}
 	PREFIX "Source Files"

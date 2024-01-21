@@ -14,6 +14,7 @@ link_directories(
 	"$<$<CONFIG:Debug>:${JOLT_PATH_DEBUG}>"
 	"$<$<CONFIG:Release>:${JOLT_PATH_RELEASE}>"
 	"$<$<CONFIG:RelWithDebInfo>:${JOLT_PATH_RELEASE}>"
+	"$<$<CONFIG:Profile>:${JOLT_PATH_RELEASE}>"
 )
 
 include_directories( ${JOLTPHYSICS_DIR} ${JOLTPHYSICS_DIR}/Jolt )

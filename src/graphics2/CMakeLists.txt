@@ -58,6 +58,7 @@ target_link_libraries(
 	RenderVK PRIVATE
 	Core
 	ImGui
+	SDL2
 )
 
 add_vk_to_target( RenderVK )

@@ -63,7 +63,6 @@ else()
 	)
 endif()
 
-
 if( MSVC )
 	#set( WAV_FILES "${CH_THIRDPARTY}/libwav/src/wav.c" "${CH_THIRDPARTY}/libwav/include/wav.h" )
 	set( WAV_FILES )
@@ -86,6 +85,11 @@ set_target_properties(
 	Aduio PROPERTIES
 	OUTPUT_NAME ch_aduio
 	PREFIX ""
+)
+
+target_link_libraries(
+	Aduio PRIVATE
+	SDL2
 )
 
 target_precompile_headers( Aduio PRIVATE "${CH_PUBLIC}/core/core.h" )
