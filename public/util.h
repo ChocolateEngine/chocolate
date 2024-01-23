@@ -324,7 +324,12 @@ inline int RandomInt( int sMin, int sMax )
 	return sMin + rand() % ( sMax + 1 - sMin );
 }
 
-inline size_t RandomSizeT( size_t sMin, size_t sMax )
+inline u32 RandomU32( u32 sMin, u32 sMax )
+{
+	return sMin + rand() % ( sMax + 1 - sMin );
+}
+
+inline u64 RandomU64( u64 sMin, u64 sMax )
 {
 	return sMin + rand() % ( sMax + 1 - sMin );
 }
