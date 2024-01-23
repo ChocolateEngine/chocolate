@@ -542,6 +542,7 @@ struct ResourceList
 		return true;
 	}
 
+#if 0
 	/*
      *    Get a resource by index.
      *
@@ -589,6 +590,7 @@ struct ResourceList
 
 		return true;
 	}
+#endif
 
 	/*
     *    Get a resource by index.
@@ -684,5 +686,45 @@ struct ResourceList
 			return CH_INVALID_HANDLE;
 
 		return aHandles[ sIndex ];
+	}
+
+	/*
+     *    Get a resource by index.
+     *
+     *    @param size_t    The index of the resource.
+     * 
+     *    @param T*        The resource, nullptr if the handle
+     *                     is invalid/ points to a different type.
+     * 
+     *    @return bool     Returns whether the Handle was valid the resource data was found or not.
+     */
+	bool GetByIndex( size_t sIndex, T* pData )
+	{
+		ChHandle_t handle = GetHandleByIndex( sIndex );
+
+		if ( handle == CH_INVALID_HANDLE )
+			return false;
+
+		return Get( handle, pData );
+	}
+
+	/*
+     *    Get a resource by index.
+     *
+     *    @param size_t    The index of the resource.
+     * 
+     *    @param T**       The resource, nullptr if the handle
+     *                     is invalid/ points to a different type.
+     * 
+     *    @return bool     Returns whether the Handle was valid the resource data was found or not.
+     */
+	bool GetByIndex( size_t sIndex, T** pData )
+	{
+		ChHandle_t handle = GetHandleByIndex( sIndex );
+
+		if ( handle == CH_INVALID_HANDLE )
+			return false;
+
+		return Get( handle, pData );
 	}
 };
