@@ -72,6 +72,7 @@ struct BufferVK
 	VkBuffer       aBuffer;
 	VkDeviceMemory aMemory;
 	size_t         aSize;
+	const char*    apName;
 };
 
 

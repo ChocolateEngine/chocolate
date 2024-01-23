@@ -469,6 +469,8 @@ struct TextureInfo_t
 	GraphicsFmt aFormat;
 	u32         aMemoryUsage;
 	u32         aGpuIndex;
+	u32         aRefCount;
+	EImageUsage aUsage;
 	bool        aRenderTarget;
 };
 
@@ -747,80 +749,6 @@ struct PipelineBarrier_t
 };
 
 
-#if 0
-//resources are used to comunicate to a renderpass what and how a resource is used
-//the shader dictates what type of resource must be bound where
-//resources may be changed from frame to frame
-struct ResourceStorageBuffer_t
-{
-	Handle aBuffer;
-	bool                readOnly;
-	uint32_t            binding;
-};
-
-struct ResourceUniformBuffer_t
-{
-	Handle   buffer;
-	uint32_t            binding;
-};
-
-//if used as a storage image it is considered to be written to, causing additional barriers
-struct ResourceImage_t
-{
-	Handle      aImage;
-	uint32_t    aMipLevel;
-	uint32_t    aBinding;
-};
-
-struct ResourceSampler_t
-{
-	Handle aSampler;
-	u32    aBinding;
-};
-
-struct RenderPassResources_t
-{
-	std::vector< ResourceSampler_t >       aSamplers;
-	std::vector< ResourceStorageBuffer_t > aStorageBuffers;
-	std::vector< ResourceUniformBuffer_t > aUniformBuffers;
-	std::vector< ResourceImage_t >         aSampledImages;
-	std::vector< ResourceImage_t >         aStorageImages;
-
-	// maybe?
-	std::vector< ResourceVertexBuffer_t >  aVertexBuffers;
-	std::vector< ResourceIndexBuffer_t >   aIndexBuffers;
-};
-
-//generic info for a renderpass
-struct RenderPassExecution
-{
-	RenderPassHandle    handle;
-	RenderPassResources resources;
-};
-
-struct RenderTarget
-{
-	ImageHandle image;
-	uint32_t    mipLevel = 0;
-};
-
-// Contains RenderPassExecution and additional info for graphic pass
-struct GraphicPassExecution
-{
-	RenderPassExecution         genericInfo;
-	std::vector< RenderTarget > targets;
-};
-
-// Contains RenderPassExecution and additional info for compute pass
-struct ComputePassExecution
-{
-	RenderPassExecution genericInfo;
-	std::vector< char > pushConstants;
-	uint32_t            dispatchCount[ 3 ] = { 1, 1, 1 };
-};
-#endif
-
-
 // Function callback for game code for when renderer gets reset
 typedef void ( *Render_OnReset_t )( ERenderResetFlags sFlags );
 
@@ -866,6 +794,8 @@ class IRender : public ISystem
 
 	// Queues a copy of one buffer to another buffer, useful for copying between host and device memory
 	virtual bool        BufferCopyQueued( Handle shSrc, Handle shDst, BufferRegionCopy_t* spRegions, u32 sRegionCount )                = 0;
+
+	virtual const char* BufferGetName( ChHandle_t buffer )                                                                             = 0;
 
 	// --------------------------------------------------------------------------------------------
 	// Textures
@@ -1018,5 +948,5 @@ class IRender : public ISystem
 
 
 #define IRENDER_NAME "Render"
-#define IRENDER_VER 16
+#define IRENDER_VER 17
 

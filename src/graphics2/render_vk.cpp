@@ -1421,6 +1421,7 @@ public:
 		buffer->aBuffer  = VK_NULL_HANDLE;
 		buffer->aMemory  = VK_NULL_HANDLE;
 		buffer->aSize    = sSize;
+		buffer->apName   = spName;
 
 		int flagBits     = 0;
 
@@ -1665,12 +1666,31 @@ public:
 		return true;
 	}
 
+	const char* BufferGetName( ChHandle_t bufferHandle ) override
+	{
+		BufferVK* buffer = gBufferHandles.Get( bufferHandle );
+		if ( !buffer )
+		{
+			Log_Error( gLC_Render, "BufferGetName: Failed to find Source Buffer\n" );
+			return nullptr;
+		}
+
+		return buffer->apName;
+	}
+
 	// --------------------------------------------------------------------------------------------
 	// Materials and Textures
 	// --------------------------------------------------------------------------------------------
 
 	ChHandle_t LoadTexture( ChHandle_t& srHandle, const std::string& srTexturePath, const TextureCreateData_t& srCreateData ) override
 	{
+		// wants missing texture
+		if ( srTexturePath.empty() )
+		{
+			srHandle = CH_INVALID_HANDLE;
+			return CH_INVALID_HANDLE;
+		}
+
 		if ( srHandle == InvalidHandle )
 		{
 			auto it = gTexturePaths.find( srTexturePath );
@@ -1778,7 +1798,6 @@ public:
 			return;
 
 		VK_DestroyTexture( sTexture );
-		gTextureHandles.Remove( sTexture );
 		gTextureInfo.erase( sTexture );
 		gGraphicsAPIData.aTextureRefs.erase( sTexture );
 
@@ -1883,6 +1902,8 @@ public:
 		info.aSize         = tex->aSize;
 		info.aGpuIndex     = tex->aIndex;
 		info.aMemoryUsage  = tex->aMemorySize;
+		info.aRefCount     = gGraphicsAPIData.aTextureRefs[ sTexture ];
+		// info.aUsage        = tex->aUsage;
 		info.aRenderTarget = tex->aRenderTarget || tex->aSwapChain;
 		// info.aViewType = tex->aViewType
 
