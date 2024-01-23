@@ -1363,7 +1363,8 @@ public:
 		}
 
 		// imgui can't handle 2d array textures
-		if ( tex->aRenderTarget || !( tex->aUsage & VK_IMAGE_USAGE_SAMPLED_BIT ) || tex->aViewType != VK_IMAGE_VIEW_TYPE_2D )
+		// if ( tex->aRenderTarget || !( tex->aUsage & VK_IMAGE_USAGE_SAMPLED_BIT ) || tex->aViewType != VK_IMAGE_VIEW_TYPE_2D )
+		if ( !( tex->aUsage & VK_IMAGE_USAGE_SAMPLED_BIT ) || tex->aViewType != VK_IMAGE_VIEW_TYPE_2D )
 		{
 			return nullptr;
 		}
