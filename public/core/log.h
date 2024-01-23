@@ -134,6 +134,7 @@ LogChannel               CORE_API  Log_GetChannel( const char *sName );
 LogColor                 CORE_API  Log_GetChannelColor( LogChannel handle );
 std::string_view         CORE_API  Log_GetChannelName( LogChannel handle );
 bool                     CORE_API  Log_ChannelIsShown( LogChannel handle );
+int                      CORE_API  Log_GetChannelDevLevel( LogChannel handle );
 unsigned char            CORE_API  Log_GetChannelCount();
 
 // Log Information
@@ -141,6 +142,7 @@ void                     CORE_API  Log_BuildHistoryString( std::string& srOutput
 const std::vector< Log > CORE_API &Log_GetLogHistory();
 const Log                CORE_API *Log_GetLastLog();
 bool                     CORE_API  Log_IsVisible( const Log& log );
+int                      CORE_API  Log_GetDevLevel();
 
 void                     CORE_API  Log_AddChannelShownCallback( LogChannelShownCallbackF callback );
 

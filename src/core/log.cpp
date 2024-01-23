@@ -1079,6 +1079,22 @@ bool Log_ChannelIsShown( LogChannel handle )
 }
 
 
+int Log_GetChannelDevLevel( LogChannel handle )
+{
+	LogChannel_t* channel = Log_GetChannelData( handle );
+	if ( !channel )
+		return log_dev_global.GetFloat();
+
+	return std::max( (int)log_dev_global.GetFloat(), channel->aDevLevel );
+}
+
+
+int Log_GetDevLevel()
+{
+	return log_dev_global.GetFloat();
+}
+
+
 const Log* Log_GetLastLog()
 {
     if ( gLogHistory.size() == 0 )
