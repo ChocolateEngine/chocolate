@@ -137,10 +137,10 @@ template< typename T >
 struct ResourceList
 {
 	mempool_t*             apPool;
-	size_t                 aSize;
-	size_t                 aStepSize;
+	u32                    aSize;
+	u32                    aStepSize;
 
-	// TODO: this could just be `ChHandle_t* apHandles` and `size_t aHandlesAllocated`
+	// TODO: this could just be `ChHandle_t* apHandles` and `u32 aHandlesAllocated`
 	ChVector< ChHandle_t > aHandles;
 
 	/*
@@ -597,18 +597,18 @@ struct ResourceList
     *
     *    @return Handle   The handle to the resource, InvalidHandle if index is out of bounds
     */
-	ChHandle_t GetHandleByIndex( size_t sIndex )
-	{
-		if ( sIndex >= aSize )
-			return InvalidHandle;
-
-		// Get the chunk of memory.
-		s8*          pBuf  = apPool->apBuf + sIndex * ( sizeof( T ) + sizeof( unsigned int ) );
-
-		unsigned int magic = *(unsigned int*)pBuf;
-
-		return sIndex | (int64_t)magic << 32;
-	}
+	// ChHandle_t GetHandleByIndex( size_t sIndex )
+	// {
+	// 	if ( sIndex >= aSize )
+	// 		return InvalidHandle;
+	// 
+	// 	// Get the chunk of memory.
+	// 	s8*          pBuf  = apPool->apBuf + sIndex * ( sizeof( T ) + sizeof( unsigned int ) );
+	// 
+	// 	unsigned int magic = *(unsigned int*)pBuf;
+	// 
+	// 	return sIndex | (int64_t)magic << 32;
+	// }
 
 	/*
      *    Check if this handle is valid.
@@ -630,13 +630,13 @@ struct ResourceList
     * 
     *    @return Handle    The Handle picked at random
 	*/
-	ChHandle_t Random( size_t sMin, size_t sMax ) const
+	ChHandle_t Random( u32 sMin, u32 sMax ) const
 	{
 		CH_ASSERT( sMin <= aHandles.size() );
 		CH_ASSERT( sMax <= aHandles.size() );
 		CH_ASSERT( sMin < sMax );
 
-		size_t value = RandomSizeT( sMin, sMax );
+		u32 value = RandomU32( sMin, sMax );
 		return aHandles[ value ];
 	}
 
@@ -644,9 +644,9 @@ struct ResourceList
     * 
     *    Get the number of resources.
     * 
-    *    @return size_t    The number of resources.
+    *    @return u32    The number of resources.
 	*/
-	size_t size() const
+	u32 size() const
 	{
 		return aSize;
 	}
@@ -671,5 +671,18 @@ struct ResourceList
 		aHandles.clear();
 		apPool->aSize = 0;
 		aSize         = 0;
+	}
+	
+	u32 GetHandleCount()
+	{
+		return aHandles.size();
+	}
+
+	ChHandle_t GetHandleByIndex( u32 sIndex )
+	{
+		if ( aHandles.size() <= sIndex )
+			return CH_INVALID_HANDLE;
+
+		return aHandles[ sIndex ];
 	}
 };
