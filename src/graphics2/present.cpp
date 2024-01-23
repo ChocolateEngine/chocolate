@@ -429,7 +429,6 @@ void VK_Present( u32 sImageIndex )
 	// gGraphicsMutex.unlock();
 
 	gInGraphicsQueue = true;
-
-	gFrameIndex     = ( gFrameIndex + 1 ) % MAX_FRAMES_IN_FLIGHT;
+	gFrameIndex      = ( gFrameIndex + 1 ) % MAX_FRAMES_IN_FLIGHT;
 }
 

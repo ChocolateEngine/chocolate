@@ -523,7 +523,7 @@ void VK_UpdateDescSets( WriteDescSet_t* spUpdate, u32 sCount )
 							TextureVK* tex = VK_GetTexture( binding.apData[ j ] );
 							if ( !tex )
 							{
-								Log_ErrorF( gLC_Render, "Failed to find texture %u\n", j );
+								Log_ErrorF( gLC_Render, "Failed to find texture index %u\n", j );
 								continue;
 							}
 
