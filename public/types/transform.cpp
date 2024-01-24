@@ -181,15 +181,7 @@ glm::vec3 Util_GetMatrixAngles( const glm::mat4& mat )
 		glm::vec3( mat[ 1 ] ) / scale[ 1 ],
 		glm::vec3( mat[ 2 ] ) / scale[ 2 ] );
 
-	glm::vec3 outAng;
-	glm::vec3 tmpAng = Util_ToEulerAngles( glm::quat_cast( rotMtx ) );
-
-	// why?
-	outAng.x = tmpAng.z;
-	outAng.y = tmpAng.x;
-	outAng.z = tmpAng.y;
-
-	return outAng;
+	return Util_ToEulerAngles( glm::quat_cast( rotMtx ) );
 }
 
 
@@ -233,6 +225,21 @@ void Util_GetViewMatrixZDirection( const glm::mat4& mat, glm::vec3& forward, glm
 }
 
 
+void Util_ToMatrix( glm::mat4& srMatrix, const glm::vec3* spPos, const glm::quat* spRot, const glm::vec3* spScale )
+{
+	if ( spPos )
+		srMatrix = glm::translate( *spPos );
+	else
+		srMatrix = glm::identity< glm::mat4 >();
+
+	if ( spScale )
+		srMatrix = glm::scale( srMatrix, *spScale );
+
+	if ( spRot )
+		srMatrix *= glm::toMat4( *spRot );
+}
+
+
 void Util_ToMatrix( glm::mat4& srMatrix, const glm::vec3* spPos, const glm::vec3* spAng, const glm::vec3* spScale )
 {
 	if ( spPos )
@@ -266,6 +273,19 @@ void Util_ToMatrix( glm::mat4& srMatrix, const glm::vec3& srPos, const glm::vec3
 void Util_ToMatrix( glm::mat4& srMatrix, const glm::vec3& srPos, const glm::vec3& srAng, const glm::vec3& srScale )
 {
 	Util_ToMatrix( srMatrix, &srPos, &srAng, &srScale );
+}
+
+
+void Util_ToViewMatrixY( glm::mat4& srViewMatrix, const glm::quat& srRot )
+{
+	srViewMatrix = glm::toMat4( srRot );
+}
+
+
+void Util_ToViewMatrixY( glm::mat4& srViewMatrix, const glm::vec3& srPos, const glm::quat& srRot )
+{
+	Util_ToViewMatrixY( srViewMatrix, srRot );
+	srViewMatrix = glm::translate( srViewMatrix, -srPos );
 }
 
 
@@ -316,6 +336,21 @@ void Util_ToViewMatrixZ( glm::mat4& srViewMatrix, const glm::vec3& srPos, const 
 {
 	Util_ToViewMatrixZ( srViewMatrix, srAng );
 	srViewMatrix = glm::translate( srViewMatrix, -srPos );
+}
+
+
+glm::quat Util_RotateQuaternion( glm::quat sQuat, glm::vec3 sAxis, float sAngle )
+{
+	float     angleRad = glm::radians( sAngle );
+	glm::vec3 axisNorm = glm::normalize( sAxis );
+
+	float     w        = glm::cos( angleRad / 2 );
+	float     v        = glm::sin( angleRad / 2 );
+	glm::vec3 qv       = axisNorm * v;
+
+	glm::quat quaternion( w, qv );
+
+	return sQuat * quaternion;
 }
 
 
