@@ -73,6 +73,7 @@
 // #define CH_STACK_NEW( type, count ) ( type* ) CH_STACK_ALLOC( sizeof( type ) * count )
 #define CH_STACK_NEW( type, count ) static_cast< type* >( CH_STACK_ALLOC( sizeof( type ) * count ) )
 
+// dynamic_cast with a check for if it returns a nullptr
 template< typename To, typename From >
 inline To* assert_cast( From* in )
 {
@@ -86,6 +87,7 @@ inline To* assert_cast( From* in )
 }
 
 
+// Checks for a nullptr and casts it
 template< typename To, typename From >
 inline To* ch_pointer_cast( From* in )
 {
