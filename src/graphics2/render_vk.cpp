@@ -1344,7 +1344,7 @@ public:
 	{
 		if ( sHandle == CH_INVALID_HANDLE )
 		{
-			Log_ErrorF( gLC_Render, "AddTextureToImGui(): Invalid Image Handle!\n" );
+			Log_Error( gLC_Render, "AddTextureToImGui(): Invalid Image Handle!\n" );
 			return nullptr;
 		}
 
@@ -1358,13 +1358,13 @@ public:
 		TextureVK* tex = VK_GetTexture( sHandle );
 		if ( tex == nullptr )
 		{
-			Log_ErrorF( gLC_Render, "AddTextureToImGui(): No Vulkan Texture created for Image!\n" );
+			Log_Error( gLC_Render, "AddTextureToImGui(): No Vulkan Texture created for Image!\n" );
 			return nullptr;
 		}
 
 		// imgui can't handle 2d array textures
-		// if ( tex->aRenderTarget || !( tex->aUsage & VK_IMAGE_USAGE_SAMPLED_BIT ) || tex->aViewType != VK_IMAGE_VIEW_TYPE_2D )
-		if ( !( tex->aUsage & VK_IMAGE_USAGE_SAMPLED_BIT ) || tex->aViewType != VK_IMAGE_VIEW_TYPE_2D )
+		if ( tex->aRenderTarget || !( tex->aUsage & VK_IMAGE_USAGE_SAMPLED_BIT ) || tex->aViewType != VK_IMAGE_VIEW_TYPE_2D )
+		// if ( !( tex->aUsage & VK_IMAGE_USAGE_SAMPLED_BIT ) || tex->aViewType != VK_IMAGE_VIEW_TYPE_2D )
 		{
 			return nullptr;
 		}
@@ -1379,7 +1379,7 @@ public:
 			return desc;
 		}
 
-		printf( "Render_AddTextureToImGui(): Failed to add texture to ImGui\n" );
+		Log_Error( "Render_AddTextureToImGui(): Failed to add texture to ImGui\n" );
 		return nullptr;
 	}
 
@@ -1387,14 +1387,14 @@ public:
 	{
 		if ( sHandle == CH_INVALID_HANDLE )
 		{
-			Log_ErrorF( gLC_Render, "FreeTextureFromImGui(): Invalid Image Handle!\n" );
+			Log_Error( gLC_Render, "FreeTextureFromImGui(): Invalid Image Handle!\n" );
 			return;
 		}
 
 		auto it = gImGuiTextures.find( sHandle );
 		if ( it != gImGuiTextures.end() )
 		{
-			Log_ErrorF( gLC_Render, "FreeTextureFromImGui(): Could not find ImGui TextureID!\n" );
+			Log_Error( gLC_Render, "FreeTextureFromImGui(): Could not find ImGui TextureID!\n" );
 			return;
 		}
 
@@ -1406,6 +1406,31 @@ public:
 	// {
 	// 	return true;
 	// }
+
+	int GetMaxMSAASamples() override
+	{
+		VkSampleCountFlags maxSamples = VK_GetMaxMSAASamples();
+
+		if ( maxSamples & VK_SAMPLE_COUNT_64_BIT )
+			return 64;
+
+		if ( maxSamples & VK_SAMPLE_COUNT_32_BIT )
+			return 32;
+
+		if ( maxSamples & VK_SAMPLE_COUNT_16_BIT )
+			return 16;
+
+		if ( maxSamples & VK_SAMPLE_COUNT_8_BIT )
+			return 8;
+
+		if ( maxSamples & VK_SAMPLE_COUNT_4_BIT )
+			return 4;
+
+		if ( maxSamples & VK_SAMPLE_COUNT_2_BIT )
+			return 2;
+
+		return 1;
+	}
 
 	// --------------------------------------------------------------------------------------------
 	// Buffers

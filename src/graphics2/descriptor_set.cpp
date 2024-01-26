@@ -392,6 +392,7 @@ void VK_FreeDescLayout( Handle sLayout )
 // --------------------------------------------------------------------------------------------
 
 
+// currently usused
 bool VK_AllocateVariableDescLayout( const AllocVariableDescLayout_t& srCreate, Handle* handles )
 {
 	VkDescriptorSetLayout layout = VK_GetDescLayout( srCreate.aLayout );
@@ -419,7 +420,7 @@ bool VK_AllocateVariableDescLayout( const AllocVariableDescLayout_t& srCreate, H
 
 	VkDescriptorSet* descSets = new VkDescriptorSet[ srCreate.aSetCount ];
 
-	VK_CheckResult( vkAllocateDescriptorSets( VK_GetDevice(), &a, descSets ), "Failed to Allocate Descriptor Sets!" );
+	VK_CheckResult( vkAllocateDescriptorSets( VK_GetDevice(), &a, descSets ), "Failed to Allocate Variable Descriptor Sets!" );
 
 	gDescSets.EnsureSize( srCreate.aSetCount );
 	for ( u32 i = 0; i < srCreate.aSetCount; i++ )
@@ -438,7 +439,7 @@ bool VK_AllocateVariableDescLayout( const AllocVariableDescLayout_t& srCreate, H
 				srCreate.apName,                                     // pObjectName
 			};
 
-			VK_CheckResultE( pfnSetDebugUtilsObjectName( VK_GetDevice(), &nameInfo ), "Failed to Set Descriptor Set Debug Name" );
+			VK_CheckResultE( pfnSetDebugUtilsObjectName( VK_GetDevice(), &nameInfo ), "Failed to Set Variable Descriptor Set Debug Name" );
 		}
 #endif
 	}

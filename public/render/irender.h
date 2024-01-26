@@ -774,6 +774,8 @@ class IRender : public ISystem
 	virtual ImTextureID AddTextureToImGui( ChHandle_t sHandle )                                                                        = 0;
 	virtual void        FreeTextureFromImGui( ChHandle_t sHandle )                                                                     = 0;
 
+	virtual int         GetMaxMSAASamples()                                                                                            = 0;
+
 	// --------------------------------------------------------------------------------------------
 	// Buffers
 	// --------------------------------------------------------------------------------------------
@@ -948,5 +950,5 @@ class IRender : public ISystem
 
 
 #define IRENDER_NAME "Render"
-#define IRENDER_VER 17
+#define IRENDER_VER 18
 

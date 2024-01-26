@@ -54,6 +54,9 @@ constexpr char const* gpDeviceExtensions[] = {
 };
 
 
+#pragma message( "use KHR_maintenance1 to try and fix AMD VK_ERROR_OUT_OF_POOL_MEMORY vkAllocateDescriptorSets" )
+
+
 constexpr char const* gpOptionalExtensions[] = {
 	VK_EXT_FILTER_CUBIC_EXTENSION_NAME,
 };
