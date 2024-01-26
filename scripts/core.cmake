@@ -293,7 +293,7 @@ else()  # linux
 	)
 
 	# idk what's needed here or not
-	link_libraries( dl pthread X11 Xxf86vm Xrandr Xi )
+	link_libraries( dl pthread )
 	
 	if ( CMAKE_BUILD_TYPE STREQUAL Debug )
 		add_compile_options( -g -fsanitize=address -fpermissive )
