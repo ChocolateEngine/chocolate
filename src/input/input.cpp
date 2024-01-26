@@ -444,8 +444,8 @@ EButton InputSystem::GetKeyFromName( std::string_view sName )
 {
 	for ( u32 i = 0; i < CH_ARR_SIZE( gButtonStr ); i++ )
 	{
-		if (sName == gButtonStr[i])
-			return (EButton)((u32)EButton_BeforeMouse + i);
+		if ( sName == gButtonStr[ i ] )
+			return (EButton)( (u32)EButton_BeforeMouse + i + 1 );
 	}
 
 	return (EButton)SDL_GetScancodeFromName( sName.data() );
