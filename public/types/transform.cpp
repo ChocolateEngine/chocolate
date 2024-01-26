@@ -354,6 +354,18 @@ glm::quat Util_RotateQuaternion( glm::quat sQuat, glm::vec3 sAxis, float sAngle 
 }
 
 
+glm::quat Util_RotateQuaternion( glm::quat sQuat, glm::vec3 sAngle )
+{
+	glm::quat out = sQuat;
+
+	out *= Util_RotateQuaternion( out, vec_forward, sAngle.x );
+	out *= Util_RotateQuaternion( out, vec_right, sAngle.y );
+	out *= Util_RotateQuaternion( out, vec_up, sAngle.z );
+
+	return out;
+}
+
+
 // =================================================================
 
 

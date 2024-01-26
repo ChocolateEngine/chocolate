@@ -48,6 +48,7 @@ void             Util_ToViewMatrixZ( glm::mat4& srViewMatrix, const glm::vec3& s
 
 // Helper Function to rotate quaternions even though it's easy, this is easy to remember and use
 glm::quat        Util_RotateQuaternion( glm::quat sQuat, glm::vec3 sAxis, float sAngle );
+glm::quat        Util_RotateQuaternion( glm::quat sQuat, glm::vec3 sAngle );
 
 
 inline glm::mat4 Util_ToMatrix( const glm::vec3* spPos = nullptr, const glm::vec3* spAng = nullptr, const glm::vec3* spScale = nullptr )
