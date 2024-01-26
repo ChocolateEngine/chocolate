@@ -87,7 +87,7 @@ struct ChVector
 		{
 			void* newData = realloc( apData, sSize * sizeof( T ) );
 			if ( newData == nullptr )
-				Log_FatalF( "Failed to Resize ChVector< %s >: %zd bytes\n", typeid( T ).name(), sSize );
+				Log_FatalF( "Failed to Resize ChVector< %s >: %zd bytes\n", typeid( T ).name(), sSize * sizeof( T ) );
 
 			// if ( newData != apData )
 			{

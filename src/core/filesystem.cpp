@@ -840,7 +840,6 @@ bool FileSys_GetFileTimes( std::string_view srPath, float* spCreated, float* spM
 
     return true;
 #else
-	#error "FileSys_GetCreateTime()"
 #endif
 }
 
@@ -855,7 +854,6 @@ bool FileSys_SetFileTimes( std::string_view srPath, float* spCreated, float* spM
 	// 	return 1;
 	// }
 #else
-	#error "FileSys_GetCreateTime()"
 #endif
 
     return false;

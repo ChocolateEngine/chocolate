@@ -451,14 +451,14 @@ struct ResourceList
 		// Check if the buffer is nullptr
 		if ( pBuf == nullptr )
 		{
-			Log_WarnF( gResourceChannel, CH_FUNC_NAME_CLASS ": Invalid index - Buffer is nullptr: %zd\n", index );
+			Log_WarnF( gResourceChannel, "%s : Invalid index - Buffer is nullptr: %zd\n", CH_FUNC_NAME_CLASS,  index );
 			return;
 		}
 
 		// Verify the magic numbers at the start of the buffer match
 		if ( *(unsigned int*)pBuf != magic )
 		{
-			Log_Warn( gResourceChannel, CH_FUNC_NAME_CLASS ": Invalid magic number\n" );
+			Log_WarnF( gResourceChannel, "%s : Invalid magic number\n", CH_FUNC_NAME_CLASS );
 			return;
 		}
 

@@ -30,6 +30,10 @@ if ( MSVC )
 	)
 endif()
 
+include_directories(
+	"${CH_THIRDPARTY}/"
+)
+
 add_library( JoltPhysics STATIC IMPORTED )
 
 # Provide the full path to the library, so CMake knows where to find it.

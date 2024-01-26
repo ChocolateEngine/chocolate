@@ -100,6 +100,7 @@ add_compile_definitions(
 	GLM_FORCE_XYZW_ONLY=GLM_ENABLE
 	GLM_FORCE_SWIZZLE
 	GLM_DEPTH_ZERO_TO_ONE
+	GLM_ENABLE_EXPERIMENTAL
 	
 	#GLM_CONFIG_SIMD  # defined in GLM_FORCE_AVX2
 
@@ -295,9 +296,9 @@ else()  # linux
 	link_libraries( dl pthread X11 Xxf86vm Xrandr Xi )
 	
 	if ( CMAKE_BUILD_TYPE STREQUAL Debug )
-		add_compile_options( -g -fsanitize=address )
+		add_compile_options( -g -fsanitize=address -fpermissive )
 	else()
-		add_compile_options( -O2 )
+		add_compile_options( -O2 -fpermissive )
 	endif()
 	
 	# From Thermite:

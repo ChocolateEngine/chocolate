@@ -19,6 +19,10 @@ Declares the sdfhuosdfhuiosdfhusdfhuisfhu
 	#pragma warning(disable:4251)
 #endif
 
+#ifdef __unix__
+	#include <float.h>
+#endif /* __unix__  */
+
 
 class ConVarBase;
 class ConCommand;
