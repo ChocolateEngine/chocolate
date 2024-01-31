@@ -296,7 +296,7 @@ else()  # linux
 	link_libraries( dl pthread )
 	
 	if ( CMAKE_BUILD_TYPE STREQUAL Debug )
-		add_compile_options( -g -fsanitize=address -fpermissive )
+		add_compile_options( -g -fpermissive )
 	else()
 		add_compile_options( -O2 -fpermissive )
 	endif()
