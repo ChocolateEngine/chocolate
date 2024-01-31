@@ -352,6 +352,18 @@ inline size_t Util_SizeOfUnordredMap( const std::unordered_map< KEY, VALUE >& sr
 
 inline float Util_BytesToMB( u32 bytes )
 {
+	return bytes * 0.000001;
+}
+
+
+inline float Util_BytesToKB( u32 bytes )
+{
+	return bytes * 0.001;
+}
+
+
+inline float Sys_BytesToMB( u32 bytes )
+{
 #ifdef _WIN32
 	return bytes * 0.00000095367432;  // 1024 multiples for windows
 #else
@@ -360,7 +372,7 @@ inline float Util_BytesToMB( u32 bytes )
 }
 
 
-inline float Util_BytesToKB( u32 bytes )
+inline float Sys_BytesToKB( u32 bytes )
 {
 #ifdef _WIN32
 	return bytes * 0.000976563;  // 1024 multiples for windows

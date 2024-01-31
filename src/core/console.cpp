@@ -28,6 +28,8 @@ std::vector< std::string >                     gQueue;
 std::vector< std::string >                     gCommandHistory;
 std::vector< ConCommand* >                     gInstantConVars;
 std::vector< ConVarFlagData_t >                gConVarFlags;
+std::vector< ConVarData* >                     gConVarData;
+ConVarFlag_t                                   gConVarRegisterFlags;
 
 std::vector< FArchive* >                       gArchiveCallbacks;
 
@@ -57,22 +59,36 @@ static ChVector< ConVarBase* >& Con_GetConVars()
 }
 
 
+static void Con_RegisterConVar1( ConVarBase* spCvar )
+{
+	Con_GetConVars().push_back( spCvar );
+
+	if ( gConVarRegisterFlags )
+	{
+		spCvar->aFlags |= gConVarRegisterFlags;
+	}
+}
+
+
+void Con_SetConVarRegisterFlags( ConVarFlag_t sFlags )
+{
+	gConVarRegisterFlags = sFlags;
+}
+
+
 ConVarBase::ConVarBase( const char* name, ConVarFlag_t flags ) :
 	aName( name ), aDesc( nullptr ), aFlags( flags )
 {
-	Con_GetConVars().push_back( this );
 }
 
 ConVarBase::ConVarBase( const char* name, const char* desc ) :
 	aName( name ), aDesc( desc ), aFlags()
 {
-	Con_GetConVars().push_back( this );
 }
 
 ConVarBase::ConVarBase( const char* name, ConVarFlag_t flags, const char* desc ) :
 	aName( name ), aDesc( desc ), aFlags( flags )
 {
-	Con_GetConVars().push_back( this );
 }
 
 const char* ConVarBase::GetName()
@@ -96,8 +112,18 @@ ConVarFlag_t ConVarBase::GetFlags()
 
 void ConCommand::Init( ConCommandFunc* func, ConCommandDropdownFunc* dropDownFunc )
 {
-	apFunc = func;
-	apDropDownFunc = dropDownFunc;
+	apFunc           = func;
+	apDropDownFunc   = dropDownFunc;
+
+	ConVarBase* cvar = Con_GetConVarBase( aName );
+
+	if ( cvar )
+	{
+		Log_WarnF( "Multiple ConCommands with the same name! \"%s\"", aName );
+		return;
+	}
+
+	Con_RegisterConVar1( this );
 }
 
 std::string ConCommand::GetPrintMessage(  )
@@ -111,7 +137,7 @@ std::string ConCommand::GetPrintMessage(  )
 // ================================================================================
 
 
-ConVar::~ConVar()
+ConVarData::~ConVarData()
 {
 	if ( apDefaultValue )
 		free( apDefaultValue );
@@ -124,16 +150,46 @@ ConVar::~ConVar()
 }
 
 
+ConVar::~ConVar()
+{
+}
+
+
 void ConVar::Init( std::string_view defaultValue, ConVarFunc* callback )
 {
-	aDefaultValueLen = defaultValue.size();
-	apDefaultValue   = ch_malloc_count< char >( defaultValue.size() + 1 );
+	ConVar* cvar = Con_GetConVar( aName );
 
-	memcpy( apDefaultValue, defaultValue.data(), sizeof( char ) * aDefaultValueLen );
-	apDefaultValue[ aDefaultValueLen ] = '\0';
+	if ( cvar )
+	{
+		apData = cvar->apData;
 
-	aDefaultValueFloat = ToDouble( defaultValue.data(), 0.f );
-	apFunc             = callback;
+		if ( apData->apDefaultValue != defaultValue )
+			Log_WarnF( "Differing Default Values between Convar \"%s\" (A: %s, B: %s)", aName, apData->apDefaultValue, defaultValue.data() );
+
+		if ( gConVarRegisterFlags )
+		{
+			cvar->aFlags |= gConVarRegisterFlags;
+			aFlags |= gConVarRegisterFlags;
+		}
+
+		return;
+	}
+
+	if ( !apData )
+	{
+		apData = Con_CreateConVarData();
+
+		Con_RegisterConVar1( this );
+	}
+
+	apData->aDefaultValueLen = defaultValue.size();
+	apData->apDefaultValue   = ch_malloc_count< char >( defaultValue.size() + 1 );
+
+	memcpy( apData->apDefaultValue, defaultValue.data(), sizeof( char ) * apData->aDefaultValueLen );
+	apData->apDefaultValue[ apData->aDefaultValueLen ] = '\0';
+
+	apData->aDefaultValueFloat                         = ToDouble( defaultValue.data(), 0.f );
+	apData->apFunc                                     = callback;
 
 	SetValue( defaultValue );
 }
@@ -141,15 +197,40 @@ void ConVar::Init( std::string_view defaultValue, ConVarFunc* callback )
 
 void ConVar::Init( float defaultValue, ConVarFunc* callback )
 {
+	ConVar* cvar = Con_GetConVar( aName );
+
+	if ( cvar )
+	{
+		apData = cvar->apData;
+
+		if ( apData->aDefaultValueFloat != defaultValue )
+			Log_WarnF( "Differing Default Values between Convar \"%s\" (A: %.4f, B: %.4f)", aName, apData->aDefaultValueFloat, defaultValue );
+
+		if ( gConVarRegisterFlags )
+		{
+			cvar->aFlags |= gConVarRegisterFlags;
+			aFlags |= gConVarRegisterFlags;
+		}
+
+		return;
+	}
+
+	if ( !apData )
+	{
+		apData = Con_CreateConVarData();
+
+		Con_RegisterConVar1( this );
+	}
+
 	std::string defaultValueStr = ToString( defaultValue );
-	aDefaultValueLen            = defaultValueStr.size();
-	apDefaultValue              = ch_malloc_count< char >( defaultValueStr.size() + 1 );
+	apData->aDefaultValueLen    = defaultValueStr.size();
+	apData->apDefaultValue      = ch_malloc_count< char >( defaultValueStr.size() + 1 );
 
-	memcpy( apDefaultValue, defaultValueStr.data(), sizeof( char ) * aDefaultValueLen );
-	apDefaultValue[ aDefaultValueLen ] = '\0';
+	memcpy( apData->apDefaultValue, defaultValueStr.data(), sizeof( char ) * apData->aDefaultValueLen );
+	apData->apDefaultValue[ apData->aDefaultValueLen ] = '\0';
 
-	aDefaultValueFloat          = defaultValue;
-	apFunc                      = callback;
+	apData->aDefaultValueFloat                         = defaultValue;
+	apData->apFunc                                     = callback;
 
 	SetValue( defaultValueStr );
 }
@@ -163,8 +244,8 @@ std::string ConVar::GetPrintMessage()
 	// TODO: make a shared util function for some of this, smh
 	std::string msg = vstring( "%s%s %s", UNIX_CLR_DEFAULT, aName, GetValue().data() );
 
-	if ( ch_strcmplen( GetValue(), aDefaultValueLen, apDefaultValue ) )
-		msg += vstring( " " UNIX_CLR_YELLOW "(%s default)", apDefaultValue );
+	if ( ch_strcmplen( GetValue(), apData->aDefaultValueLen, apData->apDefaultValue ) )
+		msg += vstring( " " UNIX_CLR_YELLOW "(%s default)", apData->apDefaultValue );
 
 	if ( aFlags )
 	{
@@ -199,67 +280,83 @@ void ConVar::SetValue( std::string_view value )
 	//if ( apValue )
 	//	free( apValue );
 
-	aValueFloat = ToDouble( value.data(), aValueFloat );
-	apValue     = ch_realloc_count< char >( apValue, value.size() + 1 );
-	aValueLen   = value.size();
+	apData->aValueFloat = ToDouble( value.data(), apData->aValueFloat );
+	apData->apValue     = ch_realloc_count< char >( apData->apValue, value.size() + 1 );
+	apData->aValueLen   = value.size();
 
-	memcpy( apValue, value.data(), sizeof( char ) * aValueLen );
-	apValue[ aValueLen ] = '\0';
+	memcpy( apData->apValue, value.data(), sizeof( char ) * apData->aValueLen );
+	apData->apValue[ apData->aValueLen ] = '\0';
 }
+
 
 void ConVar::SetValue( float value )
 {
 	//if ( apValue )
 	//	free( apValue );
 
-	aValueFloat             = value;
+	apData->aValueFloat     = value;
 	std::string valueStdStr = ToString( value );
-	apValue                 = ch_realloc_count< char >( apValue, valueStdStr.size() + 1 );
-	aValueLen               = valueStdStr.size();
+	apData->apValue         = ch_realloc_count< char >( apData->apValue, valueStdStr.size() + 1 );
+	apData->aValueLen       = valueStdStr.size();
 
-	memcpy( apValue, valueStdStr.data(), sizeof( char ) * aValueLen );
-	apValue[ aValueLen ] = '\0';
+	memcpy( apData->apValue, valueStdStr.data(), sizeof( char ) * apData->aValueLen );
+	apData->apValue[ apData->aValueLen ] = '\0';
 }
 
 
 void ConVar::Reset()
 {
-	Init( apDefaultValue, apFunc );
+	Init( apData->apDefaultValue, apData->apFunc );
 }
 
 
-std::string_view ConVar::GetValue()
+const char* ConVar::GetChar() const
 {
-	return std::string_view( apValue, aValueLen );
+	return apData->apValue;
 }
 
-float ConVar::GetFloat()
+
+u32 ConVar::GetValueLen() const
 {
-	return aValueFloat;
+	return apData->aValueLen;
 }
 
-int ConVar::GetInt()
+
+std::string_view ConVar::GetValue() const
 {
-	return (int)aValueFloat;
+	return std::string_view( apData->apValue, apData->aValueLen );
 }
 
-bool ConVar::GetBool()
+
+float ConVar::GetFloat() const
 {
-	return aValueFloat >= 1.f;
+	return apData->aValueFloat;
+}
+
+
+int ConVar::GetInt() const
+{
+	return (int)apData->aValueFloat;
+}
+
+
+bool ConVar::GetBool() const
+{
+	return apData->aValueFloat >= 1.f;
 }
 
 
 // amazing, have to put these here or i get some ConVarRef undefined error
 // also not const due to the function call
-bool    ConVar::operator<=( ConVarRef& other )              { return aValueFloat <= other.GetFloat(); }
-bool    ConVar::operator>=( ConVarRef& other )              { return aValueFloat >= other.GetFloat(); }
-bool    ConVar::operator==( ConVarRef& other )              { return aValueFloat == other.GetFloat(); }
-bool    ConVar::operator!=( ConVarRef& other )              { return aValueFloat != other.GetFloat(); }
+bool    ConVar::operator<=( ConVarRef& other )              { return apData->aValueFloat <= other.GetFloat(); }
+bool    ConVar::operator>=( ConVarRef& other )              { return apData->aValueFloat >= other.GetFloat(); }
+bool    ConVar::operator==( ConVarRef& other )              { return apData->aValueFloat == other.GetFloat(); }
+bool    ConVar::operator!=( ConVarRef& other )              { return apData->aValueFloat != other.GetFloat(); }
 
-float   ConVar::operator*( ConVarRef& other )               { return aValueFloat * other.GetFloat(); }
-float   ConVar::operator/( ConVarRef& other )               { return aValueFloat / other.GetFloat(); }
-float   ConVar::operator+( ConVarRef& other )               { return aValueFloat + other.GetFloat(); }
-float   ConVar::operator-( ConVarRef& other )               { return aValueFloat - other.GetFloat(); }
+float   ConVar::operator*( ConVarRef& other )               { return apData->aValueFloat * other.GetFloat(); }
+float   ConVar::operator/( ConVarRef& other )               { return apData->aValueFloat / other.GetFloat(); }
+float   ConVar::operator+( ConVarRef& other )               { return apData->aValueFloat + other.GetFloat(); }
+float   ConVar::operator-( ConVarRef& other )               { return apData->aValueFloat - other.GetFloat(); }
 
 
 // ================================================================================
@@ -269,6 +366,8 @@ void ConVarRef::Init()
 {
 	// if this is created later, just search for the convar
 	SetReference( Con_GetConVar( aName ) );
+
+	Con_RegisterConVar1( this );
 }
 
 void ConVarRef::SetReference( ConVar* ref )
@@ -299,12 +398,12 @@ void ConVarRef::SetValue( float value )
 std::string_view ConVarRef::GetValue(  )
 {
 	static std::string empty = "";
-	return apRef ? apRef->apValue : empty;
+	return apRef ? apRef->apData->apValue : empty;
 }
 
 float ConVarRef::GetFloat(  )
 {
-	return apRef ? apRef->aValueFloat : 0.f;
+	return apRef ? apRef->apData->aValueFloat : 0.f;
 }
 
 bool ConVarRef::GetBool(  )
@@ -699,6 +798,24 @@ ConVarBase* Con_GetConVarBase( std::string_view name )
 }
 
 
+ConVarData* Con_CreateConVarData()
+{
+	ConVarData* cvarData = new ConVarData;
+	gConVarData.push_back( cvarData );
+	return cvarData;
+}
+
+
+void Con_FreeConVarData( ConVarData* spData )
+{
+	if ( !spData )
+		return;
+
+	vec_remove( gConVarData, spData );
+	delete spData;
+}
+
+
 static std::string g_strEmpty = "";
 
 
@@ -714,7 +831,7 @@ std::string_view Con_GetConVarValue( std::string_view name )
 float Con_GetConVarFloat( std::string_view name )
 {
 	if ( ConVar* convar = Con_GetConVar( name ) )
-		return convar->aValueFloat;
+		return convar->GetFloat();
 	
 	return 0.f;
 }
@@ -910,13 +1027,13 @@ bool Con_RunCommandBase( ConVarBase* cvar, const std::vector< std::string >& arg
 
 		if ( !args.empty() )
 		{
-			if ( convar->apFunc )
+			if ( convar->apData->apFunc )
 			{
 				std::string_view prevString = convar->GetValue();
-				float            prevFloat  = convar->aValueFloat;
+				float            prevFloat  = convar->apData->aValueFloat;
 
 				convar->SetValue( args[ 0 ] );
-				convar->apFunc( prevString.data(), prevFloat, args );
+				convar->apData->apFunc( prevString.data(), prevFloat, args );
 			}
 			else
 			{

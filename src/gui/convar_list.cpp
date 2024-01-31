@@ -158,10 +158,10 @@ void GuiSystem::DrawConVarList( bool wasOpen )
 			}
 
 			ImGui::TableSetColumnIndex( 1 );
-			ImGui::TextUnformatted( cvar->apValue );
+			ImGui::TextUnformatted( cvar->GetChar() );
 
 			ImGui::TableSetColumnIndex( 2 );
-			if ( !ch_strcmplen( cvar->aDefaultValueLen, cvar->apDefaultValue, cvar->aValueLen, cvar->apValue ) )
+			if ( !ch_strcmplen( cvar->apData->aDefaultValueLen, cvar->apData->apDefaultValue, cvar->GetValueLen(), cvar->apData->apValue ) )
 			{
 				ImGui::PushStyleColor( ImGuiCol_Text, ToImCol( LogColor::Yellow ) );
 				ImGui::TextUnformatted( "modified" );
@@ -170,7 +170,7 @@ void GuiSystem::DrawConVarList( bool wasOpen )
 				if ( ImGui::IsItemHovered() )
 				{
 					ImGui::BeginTooltip();
-					ImGui::Text( "Default Value: %s", cvar->apDefaultValue );
+					ImGui::Text( "Default Value: %s", cvar->apData->apDefaultValue );
 					ImGui::EndTooltip();
 				}
 			}
@@ -180,7 +180,7 @@ void GuiSystem::DrawConVarList( bool wasOpen )
 			}
 
 			ImGui::TableSetColumnIndex( 3 );
-			if ( cvar->apFunc )
+			if ( cvar->apData->apFunc )
 			{
 				ImGui::PushStyleColor( ImGuiCol_Text, ToImCol( LogColor::Yellow ) );
 				ImGui::TextUnformatted( "Has Callback" );
