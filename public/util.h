@@ -186,6 +186,8 @@ using s64 = long long;
 using f32 = float;
 using f64 = double;
 
+using bolean = bool;  // funny
+
 
 // ==============================================================================
 // Helper Functions for std::vector
@@ -322,6 +324,16 @@ inline float Round( float val, size_t precision = 100 )
 }
 
 inline int RandomInt( int sMin, int sMax )
+{
+	return sMin + rand() % ( sMax + 1 - sMin );
+}
+
+inline u8 RandomU8( u8 sMin, u8 sMax )
+{
+	return sMin + rand() % ( sMax + 1 - sMin );
+}
+
+inline u16 RandomU16( u16 sMin, u16 sMax )
 {
 	return sMin + rand() % ( sMax + 1 - sMin );
 }
