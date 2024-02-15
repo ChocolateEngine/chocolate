@@ -31,8 +31,10 @@ size_t Core_GetBuildTimeUnix()
 	if ( buildNumber != 0 )
 		return buildNumber;
 
+	size_t timestampLen = strlen( __TIMESTAMP__ ) + 1;
+
 	// allocate a tempory buffer to add null ternimators to
-	char* buildTime = CH_STACK_NEW( char, 25 );
+	char*  buildTime    = CH_STACK_NEW( char, timestampLen );
 
 	if ( buildTime == nullptr )
 	{
@@ -40,7 +42,7 @@ size_t Core_GetBuildTimeUnix()
 		return 0;
 	}
 
-	memcpy( buildTime, __TIMESTAMP__ "\0", 25 );
+	memcpy( buildTime, __TIMESTAMP__ "\0", timestampLen );
 
 	// Add null terminators
 	buildTime[ 7 ]  = '\0';
