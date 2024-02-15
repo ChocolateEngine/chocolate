@@ -12,6 +12,20 @@ constexpr int YAW = 1;    // left / right
 constexpr int ROLL = 2;   // fall over on your side and start crying about it https://cdn.discordapp.com/attachments/282679155345195018/895458645763031061/walterdeath.gif
 
 
+struct AABB
+{
+	glm::vec3 min;
+	glm::vec3 max;
+};
+
+
+struct Ray
+{
+	glm::vec3 origin;  // Origin Point of Ray
+	glm::vec3 dir;     // Direction Vector of the Ray
+};
+
+
 // https://en.wikipedia.org/wiki/Conversion_between_quaternions_and_Euler_angles
 #ifndef M_PI
 #define M_PI    3.14159265358979323846264338327950288   /**< pi */
@@ -47,8 +61,12 @@ void             Util_ToViewMatrixZ( glm::mat4& srViewMatrix, const glm::vec3& s
 
 
 // Helper Function to rotate quaternions even though it's easy, this is easy to remember and use
+glm::quat        Util_BuildRotateQuaternion( glm::vec3 sAxis, float sAngle );
 glm::quat        Util_RotateQuaternion( glm::quat sQuat, glm::vec3 sAxis, float sAngle );
 glm::quat        Util_RotateQuaternion( glm::quat sQuat, glm::vec3 sAngle );
+
+bool             Util_RayIntersectsWithAABB( Ray ray, AABB aabb );
+glm::vec3        Util_GetRayFromScreenSpace( glm::ivec2 mousePos, glm::mat4 projViewMat, glm::vec2 resolution );
 
 
 inline glm::mat4 Util_ToMatrix( const glm::vec3* spPos = nullptr, const glm::vec3* spAng = nullptr, const glm::vec3* spScale = nullptr )

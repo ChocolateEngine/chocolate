@@ -339,7 +339,7 @@ void Util_ToViewMatrixZ( glm::mat4& srViewMatrix, const glm::vec3& srPos, const 
 }
 
 
-glm::quat Util_RotateQuaternion( glm::quat sQuat, glm::vec3 sAxis, float sAngle )
+glm::quat Util_BuildRotateQuaternion( glm::vec3 sAxis, float sAngle )
 {
 	float     angleRad = glm::radians( sAngle );
 	glm::vec3 axisNorm = glm::normalize( sAxis );
@@ -350,7 +350,13 @@ glm::quat Util_RotateQuaternion( glm::quat sQuat, glm::vec3 sAxis, float sAngle 
 
 	glm::quat quaternion( w, qv );
 
-	return sQuat * quaternion;
+	return quaternion;
+}
+
+
+glm::quat Util_RotateQuaternion( glm::quat sQuat, glm::vec3 sAxis, float sAngle )
+{
+	return sQuat * Util_BuildRotateQuaternion( sAxis, sAngle );
 }
 
 
@@ -363,6 +369,54 @@ glm::quat Util_RotateQuaternion( glm::quat sQuat, glm::vec3 sAngle )
 	out *= Util_RotateQuaternion( out, vec_up, sAngle.z );
 
 	return out;
+}
+
+
+// https://tavianator.com/2011/ray_box.html
+// https://tavianator.com/2015/ray_box_nan.html
+// https://tavianator.com/2022/ray_box_boundary.html
+bool Util_RayIntersectsWithAABB( Ray ray, AABB aabb )
+{
+	double tMin = -INFINITY, tMax = INFINITY;
+
+	for ( int i = 0; i < 3; ++i )
+	{
+		// Compute the intersection points of the ray with the planes of the AABB along the current axis
+		double t1 = ( aabb.min[ i ] - ray.origin[ i ] ) / ray.dir[ i ];
+		double t2 = ( aabb.max[ i ] - ray.origin[ i ] ) / ray.dir[ i ];
+
+		// Keep track of the furthest entry point and closest exit point of the ray
+		tMin      = glm::max( tMin, glm::min( t1, t2 ) );
+		tMax      = glm::min( tMax, glm::max( t1, t2 ) );
+	}
+
+	return tMax > glm::max( tMin, 0.0 );
+}
+
+
+// https://stackoverflow.com/a/56348846
+glm::vec3 Util_GetRayFromScreenSpace( glm::ivec2 mousePos, glm::mat4 projViewMat, glm::vec2 resolution )
+{
+	glm::mat4 invProjView = glm::inverse( projViewMat );
+
+	float     halfWidth   = resolution.x / 2.f;
+	float     halfHeight  = resolution.y / 2.f;
+
+	// Calculate the normalized device coordinates for the near and far planes based on mouse position
+	glm::vec4 near( ( mousePos.x - halfWidth ) / halfWidth, -1 * ( mousePos.y - halfHeight ) / halfHeight, -1, 1.0 );
+	glm::vec4 far( ( mousePos.x - halfWidth ) / halfWidth, -1 * ( mousePos.y - halfHeight ) / halfHeight, 1, 1.0 );
+
+	// Transform these coordinates into world space
+	glm::vec4 nearResult = invProjView * near;
+	glm::vec4 farResult  = invProjView * far;
+
+	// Do Perspective Division - converts from homegenous coordinates (x, y, z, w)
+	// to cartesian coordiantes (x/w, y/w, z/w, 1)
+	nearResult /= nearResult.w;
+	farResult /= farResult.w;
+
+	// Return final ray direction, normalizing it so it's a unit vector (vector with a length/magnitude of 1)
+	return glm::normalize( farResult - nearResult );
 }
 
 
