@@ -388,6 +388,9 @@ VkFormat VK_ToVkFormat( GraphicsFmt colorFmt )
 		case GraphicsFmt::RGBA8888_SRGB:
 			return VK_FORMAT_R8G8B8A8_SRGB;
 
+		case GraphicsFmt::RGBA8888_SNORM:
+			return VK_FORMAT_R8G8B8A8_SNORM;
+
 		case GraphicsFmt::RGBA8888_UNORM:
 			return VK_FORMAT_R8G8B8A8_UNORM;
 
@@ -1946,6 +1949,92 @@ public:
 		}
 
 		return info;
+	}
+
+	void Screenshot()
+	{
+		// VkCommandBuffer c = VK_BeginOneTimeCommand();
+		// 
+		// // blit the image (TODO: not all devices support this)
+		// 
+		// 
+		// 
+		// VK_EndOneTimeCommand( c );
+	}
+
+	ReadTexture ReadTextureFromDevice( ChHandle_t textureHandle ) override
+	{
+		TextureVK*  tex = VK_GetTexture( textureHandle );
+
+		// if ( tex->aRenderTarget || !( tex->aUsage & VK_IMAGE_USAGE_SAMPLED_BIT ) || tex->aViewType != VK_IMAGE_VIEW_TYPE_2D )
+		// // if ( !( tex->aUsage & VK_IMAGE_USAGE_SAMPLED_BIT ) || tex->aViewType != VK_IMAGE_VIEW_TYPE_2D )
+		// {
+		// 	return;
+		// }
+
+		// probably an awful way of doing this
+
+		ReadTexture readTexture;
+		readTexture.size             = tex->aSize;
+		readTexture.dataSize         = tex->aSize.x * tex->aSize.y * sizeof( u32 );
+		readTexture.pData            = new u32[ tex->aSize.x * tex->aSize.y ];
+
+		// Copy to a buffer
+		ChHandle_t        tempBuffer = CreateBuffer( "READ TEXTURE BUFFER", readTexture.dataSize, EBufferFlags_TransferDst, EBufferMemory_Host );
+		BufferVK*         bufVK      = gBufferHandles.Get( tempBuffer );
+
+		// Get layout of the image (including row pitch)
+		// VkImageSubresource  subResource{ VK_IMAGE_ASPECT_COLOR_BIT, 0, 0 };
+		// VkSubresourceLayout subResourceLayout;
+		// vkGetImageSubresourceLayout( VK_GetDevice(), tex->aImage, &subResource, &subResourceLayout );
+
+		// do i use the transfer queue or graphics queue?
+		VkCommandBuffer   c          = VK_BeginOneTimeTransferCommand();
+
+		VkBufferImageCopy bufferCopy{};
+		bufferCopy.imageSubresource   = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1 };
+		bufferCopy.bufferImageHeight  = tex->aSize.y;
+		bufferCopy.imageExtent.width  = tex->aSize.x;
+		bufferCopy.imageExtent.height = tex->aSize.y;
+		bufferCopy.imageExtent.depth  = 1;
+
+		// TODO: PERF: change the layout to VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL according to vulkan
+		vkCmdCopyImageToBuffer( c, tex->aImage, VK_IMAGE_LAYOUT_GENERAL, bufVK->aBuffer, 1, &bufferCopy );
+
+		VK_EndOneTimeTransferCommand( c );
+
+		BufferRead( tempBuffer, readTexture.dataSize, readTexture.pData );
+
+		DestroyBuffer( tempBuffer );
+
+#if 0
+		// Get layout of the image (including row pitch)
+		VkImageSubresource  subResource{ VK_IMAGE_ASPECT_COLOR_BIT, 0, 0 };
+		VkSubresourceLayout subResourceLayout;
+		vkGetImageSubresourceLayout( VK_GetDevice(), tex->aImage, &subResource, &subResourceLayout );
+
+		// Map image memory so we can start copying from it
+
+		vkMapMemory( VK_GetDevice(), tex->aMemory, 0, tex->aMemorySize, 0, (void**)&readTexture.pData );
+		readTexture.pData += subResourceLayout.offset;
+
+		// readTexture.dataSize = tex->aMemorySize;
+		
+		// Clean up resources
+		vkUnmapMemory( VK_GetDevice(), tex->aMemory );
+		vkFreeMemory( VK_GetDevice(), tex->aMemory, nullptr );
+		vkDestroyImage( VK_GetDevice(), tex->aImage, nullptr );
+#endif
+
+		return readTexture;
+	}
+
+	void FreeReadTexture( ReadTexture* pData ) override
+	{
+		if ( !pData )
+			return;
+
+		delete[] pData->pData;
 	}
 
 	Handle CreateFramebuffer( const CreateFramebuffer_t& srCreate ) override

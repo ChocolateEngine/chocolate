@@ -213,7 +213,11 @@ Handle VK_CreateRenderPass( const RenderPassCreate_t& srPass )
 		else
 		{
 			colorRefs.push_back( { i, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL } );
-			attachments[ i ].finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+
+			if ( attach.aGeneralFinalLayout )
+				attachments[ i ].finalLayout = VK_IMAGE_LAYOUT_GENERAL;
+			else
+				attachments[ i ].finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
 		}
 	}
 

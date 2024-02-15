@@ -148,13 +148,14 @@ bool KTX_LoadTexture( TextureVK* spTexture, const char* spPath )
 
 	Log_DevF( gLC_Render, 2, "Loaded Image: %s - dataSize: %d\n", spPath, kTexture->dataSize );
 
-	spTexture->aSize.x    = kTexture->baseWidth;
-	spTexture->aSize.y    = kTexture->baseHeight;
-	spTexture->aMipLevels = kTexture->numLevels;
-	spTexture->aImage     = kVkTexture.image;
-	spTexture->aMemory    = kVkTexture.deviceMemory;
-	spTexture->aFormat    = kVkTexture.imageFormat;
+	spTexture->aSize.x     = kTexture->baseWidth;
+	spTexture->aSize.y     = kTexture->baseHeight;
+	spTexture->aMipLevels  = kTexture->numLevels;
+	spTexture->aImage      = kVkTexture.image;
+	spTexture->aMemory     = kVkTexture.deviceMemory;
+	spTexture->aFormat     = kVkTexture.imageFormat;
 	spTexture->aMemorySize = kTexture->dataSize;
+	spTexture->aDataSize   = kTexture->dataSize;
 
 	// hack
 	if ( kVkTexture.viewType == VK_IMAGE_VIEW_TYPE_2D_ARRAY )

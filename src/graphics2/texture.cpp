@@ -402,6 +402,7 @@ bool VK_LoadTexture( ChHandle_t& srHandle, TextureVK* tex, const std::string& sr
 	tex->aFilter         = VK_ToVkFilter( srCreateData.aFilter );
 	tex->aSamplerAddress = VK_ToVkSamplerAddress( srCreateData.aSamplerAddress );
 	tex->aDepthCompare   = srCreateData.aDepthCompare;	// Does this need a dedicated function?
+	tex->aBufferMemory   = EBufferMemory_Device;
 
 	// textures loaded through KTX are always sampled currently
 	if ( tex->aUsage & VK_IMAGE_USAGE_SAMPLED_BIT )
@@ -435,6 +436,12 @@ bool VK_LoadTexture( ChHandle_t& srHandle, TextureVK* tex, const std::string& sr
 
 TextureVK* VK_CreateTexture( ChHandle_t& srHandle, const TextureCreateInfo_t& srCreate, const TextureCreateData_t& srCreateData )
 {
+	if ( srCreate.aSize.x == 0 || srCreate.aSize.y == 0 )
+	{
+		Log_ErrorF( "Cannot Create Texture with Width or Height of 0" );
+		return nullptr;
+	}
+
 	TextureVK* tex       = VK_NewTexture( srHandle );
 	tex->aIndex          = gTextureHandles.size() - 1;
 	tex->aSize           = srCreate.aSize;
@@ -444,6 +451,8 @@ TextureVK* VK_CreateTexture( ChHandle_t& srHandle, const TextureCreateInfo_t& sr
 	tex->aFilter         = VK_ToVkFilter( srCreateData.aFilter );
 	tex->aSamplerAddress = VK_ToVkSamplerAddress( srCreateData.aSamplerAddress );
 	tex->aDepthCompare   = srCreateData.aDepthCompare;
+	tex->aDataSize       = srCreate.aDataSize;
+	tex->aBufferMemory   = srCreate.aMemoryType;
 
 	if ( tex->aUsage & VK_IMAGE_USAGE_SAMPLED_BIT )
 	{
@@ -458,7 +467,17 @@ TextureVK* VK_CreateTexture( ChHandle_t& srHandle, const TextureCreateInfo_t& sr
 	createInfo.mipLevels     = 1;
 	createInfo.arrayLayers   = 1;
 	createInfo.format        = tex->aFormat;
-	createInfo.tiling        = VK_IMAGE_TILING_OPTIMAL;
+
+	// hack
+	// if ( tex->aBufferMemory == EBufferMemory_Host )
+	// {
+	// 	createInfo.tiling = VK_IMAGE_TILING_LINEAR;
+	// }
+	// else
+	{
+		createInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
+	}
+
 	createInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 	createInfo.usage         = tex->aUsage;
 	createInfo.samples       = srCreateData.aUseMSAA ? VK_GetMSAASamples() : VK_SAMPLE_COUNT_1_BIT;
@@ -1300,13 +1319,13 @@ Handle VK_GetFramebufferHandle( VkFramebuffer sFrameBuffer )
 
 void VK_CreateImage( VkImageCreateInfo& srCreateInfo, TextureVK* spTexture )
 {
-	Log_Dev( gLC_Render, 1, " *** Creating Image\n" );
+	Log_Dev( gLC_Render, 2, "Creating Image\n" );
 
 	// VmaAllocationCreateInfo allocInfo = {};
 	// allocInfo.usage                   = VMA_MEMORY_USAGE_AUTO;
 	// allocInfo.memoryTypeBits          = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
 
-	VK_CheckResult( vkCreateImage( VK_GetDevice(), &srCreateInfo, nullptr, &spTexture->aImage ), "Failed to create color image!" );
+	VK_CheckResult( vkCreateImage( VK_GetDevice(), &srCreateInfo, nullptr, &spTexture->aImage ), "Failed to create image!" );
 
 	VkMemoryRequirements memReqs;
 	vkGetImageMemoryRequirements( VK_GetDevice(), spTexture->aImage, &memReqs );
@@ -1315,10 +1334,18 @@ void VK_CreateImage( VkImageCreateInfo& srCreateInfo, TextureVK* spTexture )
 	VkMemoryAllocateInfo allocInfo{ VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO };
 	allocInfo.pNext           = nullptr;
 	allocInfo.allocationSize  = memReqs.size;
-	allocInfo.memoryTypeIndex = VK_GetMemoryType( memReqs.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT );
 
-	VK_CheckResult( vkAllocateMemory( VK_GetDevice(), &allocInfo, nullptr, &spTexture->aMemory ), "Failed to allocate color image memory!" );
-	VK_CheckResult( vkBindImageMemory( VK_GetDevice(), spTexture->aImage, spTexture->aMemory, 0 ), "Failed to bind back buffer color image memory" );
+	// if ( spTexture->aBufferMemory == EBufferMemory_Host )
+	// {
+	// 	allocInfo.memoryTypeIndex = VK_GetMemoryType( memReqs.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT );
+	// }
+	// else
+	{
+		allocInfo.memoryTypeIndex = VK_GetMemoryType( memReqs.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT );
+	}
+
+	VK_CheckResult( vkAllocateMemory( VK_GetDevice(), &allocInfo, nullptr, &spTexture->aMemory ), "Failed to allocate image memory!" );
+	VK_CheckResult( vkBindImageMemory( VK_GetDevice(), spTexture->aImage, spTexture->aMemory, 0 ), "Failed to bind image memory" );
 }
 
 
@@ -1349,5 +1376,44 @@ void VK_CreateMissingTexture()
 	}
 
 	gNeedTextureUpdate = true;
+
+
+	// TEMP
+	// Write To File
+
+	FILE* selectPPM    = fopen( "MISSING_TEXTURE.ppm", "wb" );
+
+	fprintf( selectPPM, "P6\n%d %d\n255\n", gMissingTextureWidth, gMissingTextureHeight );
+
+	size_t missTexLen = ARR_SIZE( gpMissingTexture );
+
+	size_t index = 0;
+	for ( size_t y = 0; y < gMissingTextureHeight; ++y )
+	{
+		for ( size_t x = 0; x < gMissingTextureWidth; ++x )
+		{
+			// u32 pixel = gpMissingTexture[ y + x * gMissingTextureHeight ];
+	
+			// u8 r = ( pixel >> 16 ) & 0xFF;
+			// u8 g = ( pixel >> 8 ) & 0xFF;
+			// u8 b = pixel & 0xFF;
+	
+			// u8 r = gpMissingTexture[ ( y + x * gMissingTextureHeight ) ];
+			// u8 g = gpMissingTexture[ ( y + x * gMissingTextureHeight ) + 1 ];
+			// u8 b = gpMissingTexture[ ( y + x * gMissingTextureHeight ) + 2 ];
+			// u8 a = gpMissingTexture[ ( y + x * gMissingTextureHeight ) + 3 ];
+	
+			u8 r = gpMissingTexture[ index++ ];
+			u8 g = gpMissingTexture[ index++ ];
+			u8 b = gpMissingTexture[ index++ ];
+			u8 a = gpMissingTexture[ index++ ];
+	
+			fwrite( &r, 1, 1, selectPPM );
+			fwrite( &g, 1, 1, selectPPM );
+			fwrite( &b, 1, 1, selectPPM );
+		}
+	}
+
+	fclose( selectPPM );
 }
 

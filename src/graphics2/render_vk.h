@@ -89,6 +89,7 @@ struct TextureVK
 	VkFilter             aFilter         = VK_FILTER_NEAREST;
 	VkSamplerAddressMode aSamplerAddress = VK_SAMPLER_ADDRESS_MODE_REPEAT;
 	VkBool32             aDepthCompare   = VK_FALSE;
+	u32                  aDataSize       = 0;
 
 	// Texture Information
 	const char*          apName          = nullptr;
@@ -96,6 +97,7 @@ struct TextureVK
 	glm::uvec2           aSize{};
 	u8                   aMipLevels    = 0;
 	int                  aFrames       = 0;
+	EBufferMemory        aBufferMemory = EBufferMemory_None;
 	bool                 aRenderTarget = false;
 	bool                 aSwapChain    = false;  // swapchain managed texture (wtf)
 

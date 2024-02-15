@@ -439,12 +439,13 @@ enum ECommandBufferType
 // TODO: swap names with the struct below, the names are backwards lmao
 struct TextureCreateInfo_t
 {
-	const char* apName    = nullptr;  // Only Used for debugging
-	void*       apData    = nullptr;
-	u32         aDataSize = 0;
-	glm::uvec2  aSize;
-	GraphicsFmt aFormat;
-	EImageView  aViewType;
+	const char*   apName    = nullptr;  // Only Used for debugging
+	void*         apData    = nullptr;
+	u32           aDataSize = 0;
+	glm::uvec2    aSize;
+	GraphicsFmt   aFormat;
+	EImageView    aViewType;
+	EBufferMemory aMemoryType = EBufferMemory_None;
 };
 
 
@@ -608,6 +609,9 @@ struct RenderPassAttachment_t
 	EAttachmentStoreOp aStoreOp        = EAttachmentStoreOp_Store;
 	EAttachmentLoadOp  aStencilLoadOp  = EAttachmentLoadOp_DontCare;
 	EAttachmentStoreOp aStencilStoreOp = EAttachmentStoreOp_DontCare;
+
+	// HACK
+	bool               aGeneralFinalLayout = false;
 };
 
 
@@ -749,6 +753,15 @@ struct PipelineBarrier_t
 };
 
 
+struct ReadTexture
+{
+	glm::uvec2 size;
+	u32*       pData;
+	u32        dataSize = 0;
+	// GraphicsFmt format;
+};
+
+
 // Function callback for game code for when renderer gets reset
 typedef void ( *Render_OnReset_t )( ERenderResetFlags sFlags );
 
@@ -815,6 +828,10 @@ class IRender : public ISystem
 	virtual const ChVector< ChHandle_t >& GetTextureList()                                                                             = 0;
 	virtual TextureInfo_t                 GetTextureInfo( ChHandle_t sTexture )                                                        = 0;
 
+	// TODO: very early rough functions, need to be improved greatly
+	virtual ReadTexture                   ReadTextureFromDevice( ChHandle_t textureHandle )                                            = 0;
+	virtual void                          FreeReadTexture( ReadTexture* pData )                                                        = 0;
+	 
 	// Basically a hack function out of laziness, blech
 	// virtual void        CalcTextureIndices()                                                                                           = 0;
 	virtual void        SetTextureDescSet( ChHandle_t* spDescSets, int sCount, u32 sBinding )                                          = 0;
@@ -950,5 +967,5 @@ class IRender : public ISystem
 
 
 #define IRENDER_NAME "Render"
-#define IRENDER_VER 18
+#define IRENDER_VER 19
 
