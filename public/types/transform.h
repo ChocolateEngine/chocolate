@@ -65,7 +65,14 @@ glm::quat        Util_BuildRotateQuaternion( glm::vec3 sAxis, float sAngle );
 glm::quat        Util_RotateQuaternion( glm::quat sQuat, glm::vec3 sAxis, float sAngle );
 glm::quat        Util_RotateQuaternion( glm::quat sQuat, glm::vec3 sAngle );
 
+glm::vec4        Util_BuildPlane( glm::vec3 point, glm::vec3 normal );
+
+float            Util_RayPlaneIntersection( Ray ray, glm::vec4 plane );
+
 bool             Util_RayIntersectsWithAABB( Ray ray, AABB aabb );
+
+// Returns true if the ray interesected with any AABBs
+bool             Util_RayInteresectsWithAABBs( glm::vec3& outIntersectionPoint, u32& outIndex, Ray ray, const AABB* aabbList, u32 count );
 glm::vec3        Util_GetRayFromScreenSpace( glm::ivec2 mousePos, glm::mat4 projViewMat, glm::vec2 resolution );
 
 

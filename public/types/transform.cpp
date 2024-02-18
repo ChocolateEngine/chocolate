@@ -372,6 +372,36 @@ glm::quat Util_RotateQuaternion( glm::quat sQuat, glm::vec3 sAngle )
 }
 
 
+glm::vec4 Util_BuildPlane( glm::vec3 point, glm::vec3 normal )
+{
+	glm::vec4 res;
+	normal = glm::normalize( normal );
+	res.w  = glm::dot( normal, point );
+	res.x  = normal.x;
+	res.y  = normal.y;
+	res.z  = normal.z;
+	return res;
+}
+
+
+float Util_RayPlaneIntersection( Ray ray, glm::vec4 plane )
+{
+	glm::vec3 plane3 = { plane.x, plane.y, plane.z };
+	float numer      = glm::dot( plane3, ray.origin ) - plane.w;
+	float denom      = glm::dot( plane3, ray.dir );
+
+	// Check if the ray direction is nearly parallel to the plane (denominator is close to zero)
+	// normal is orthogonal to vector, cant intersect
+	if ( fabsf( denom ) < FLT_EPSILON ) 
+	{
+		// Ray is parallel to plane, no intersection
+		return -1.0f;
+	}
+
+	return -( numer / denom );
+}
+
+
 // https://tavianator.com/2011/ray_box.html
 // https://tavianator.com/2015/ray_box_nan.html
 // https://tavianator.com/2022/ray_box_boundary.html
@@ -379,7 +409,7 @@ bool Util_RayIntersectsWithAABB( Ray ray, AABB aabb )
 {
 	double tMin = -INFINITY, tMax = INFINITY;
 
-	for ( int i = 0; i < 3; ++i )
+	for ( int i = 0; i < 3; i++ )
 	{
 		// Compute the intersection points of the ray with the planes of the AABB along the current axis
 		double t1 = ( aabb.min[ i ] - ray.origin[ i ] ) / ray.dir[ i ];
@@ -394,6 +424,52 @@ bool Util_RayIntersectsWithAABB( Ray ray, AABB aabb )
 }
 
 
+bool Util_RayInteresectsWithAABBs( glm::vec3& outIntersectionPoint, u32& outIndex, Ray ray, const AABB* aabbList, u32 count )
+{
+	double tMin        = -INFINITY;  // Initialize tMin to negative infinity
+	double tMax        = INFINITY;   // Initialize tMax to positive infinity
+
+	bool   intersected = false;
+
+	for ( size_t i = 0; i < count; ++i )
+	{
+		const AABB& aabb      = aabbList[ i ];
+
+		double      localTMin = -INFINITY;
+		double      localTMax = INFINITY;
+
+		for ( int j = 0; j < 3; j++ )
+		{
+			// Compute the intersection points of the ray with the planes of the AABB along the current axis
+			double t1 = ( aabb.min[ j ] - ray.origin[ j ] ) / ray.dir[ j ];
+			double t2 = ( aabb.max[ j ] - ray.origin[ j ] ) / ray.dir[ j ];
+
+			// Keep track of the furthest entry point and closest exit point of the ray
+			localTMin = glm::max( localTMin, glm::min( t1, t2 ) );
+			localTMax = glm::min( localTMax, glm::max( t1, t2 ) );
+		}
+
+		// Check if the closest exit point of the ray is beyond the furthest entry point for this AABB
+		if ( localTMax > fmax( localTMin, 0.0 ) )
+		{
+			// Is this AABB is the first intersection or closer than the previously found intersection?
+			if ( !intersected || localTMin < tMin )
+			{
+				// Update the intersection point and AABB index
+				outIntersectionPoint.x = ray.origin.x + localTMin * ray.dir.x;
+				outIntersectionPoint.y = ray.origin.y + localTMin * ray.dir.y;
+				outIntersectionPoint.z = ray.origin.z + localTMin * ray.dir.z;
+				outIndex               = i;
+				intersected            = true;
+				tMin                   = localTMin;  // Update tMin for the closest intersection
+			}
+		}
+	}
+
+	return intersected;
+}
+
+
 // https://stackoverflow.com/a/56348846
 glm::vec3 Util_GetRayFromScreenSpace( glm::ivec2 mousePos, glm::mat4 projViewMat, glm::vec2 resolution )
 {
@@ -402,7 +478,7 @@ glm::vec3 Util_GetRayFromScreenSpace( glm::ivec2 mousePos, glm::mat4 projViewMat
 	float     halfWidth   = resolution.x / 2.f;
 	float     halfHeight  = resolution.y / 2.f;
 
-	// Calculate the normalized device coordinates for the near and far planes based on mouse position
+	// Calculate the screen space coordinates of the near and far planes based on mouse position
 	glm::vec4 near( ( mousePos.x - halfWidth ) / halfWidth, -1 * ( mousePos.y - halfHeight ) / halfHeight, -1, 1.0 );
 	glm::vec4 far( ( mousePos.x - halfWidth ) / halfWidth, -1 * ( mousePos.y - halfHeight ) / halfHeight, 1, 1.0 );
 
@@ -410,8 +486,7 @@ glm::vec3 Util_GetRayFromScreenSpace( glm::ivec2 mousePos, glm::mat4 projViewMat
 	glm::vec4 nearResult = invProjView * near;
 	glm::vec4 farResult  = invProjView * far;
 
-	// Do Perspective Division - converts from homegenous coordinates (x, y, z, w)
-	// to cartesian coordiantes (x/w, y/w, z/w, 1)
+	// DISARRANGE DISORDER DISRUPT DISTRUB DEPART DISORGANIZE JUMBLE BREAK UPSET UNSETTLE the result
 	nearResult /= nearResult.w;
 	farResult /= farResult.w;
 
