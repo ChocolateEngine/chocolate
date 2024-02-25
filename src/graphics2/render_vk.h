@@ -233,6 +233,11 @@ bool                                  VK_UseMSAA();
 VkSampleCountFlagBits                 VK_GetMSAASamples();
 
 // --------------------------------------------------------------------------------------
+// Debug Helpers
+
+void                                  VK_SetObjectName( VkObjectType type, u64 handle, const char* name );
+
+// --------------------------------------------------------------------------------------
 // Vulkan Instance
 
 bool                                  VK_CreateInstance();
@@ -240,7 +245,7 @@ void                                  VK_DestroyInstance();
 
 void                                  VK_CreateSurface( void* spWindow );
 
-void                                  VK_SetupPhysicalDevice();
+bool                                  VK_SetupPhysicalDevice();
 void                                  VK_CreateDevice();
 
 VkInstance                            VK_GetInstance();

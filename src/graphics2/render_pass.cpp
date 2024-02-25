@@ -187,7 +187,7 @@ Handle VK_CreateRenderPass( const RenderPassCreate_t& srPass )
 		useMSAA |= attach.aUseMSAA && VK_UseMSAA();
 
 		attachments[ i ].format              = VK_ToVkFormat( attach.aFormat );
-		attachments[ i ].samples             = attach.aUseMSAA ? VK_GetMSAASamples() : VK_SAMPLE_COUNT_1_BIT;
+		attachments[ i ].samples             = useMSAA ? VK_GetMSAASamples() : VK_SAMPLE_COUNT_1_BIT;
 		attachments[ i ].loadOp              = VK_ToVkLoadOp( attach.aLoadOp );
 		attachments[ i ].storeOp             = VK_ToVkStoreOp( attach.aStoreOp );
 		attachments[ i ].stencilLoadOp       = VK_ToVkLoadOp( attach.aStencilLoadOp );

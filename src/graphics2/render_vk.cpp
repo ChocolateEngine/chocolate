@@ -887,6 +887,29 @@ VkSampleCountFlagBits VK_GetMSAASamples()
 }
 
 
+void VK_SetObjectName( VkObjectType type, u64 handle, const char* name )
+{
+	// add a debug label onto it
+	if ( !pfnSetDebugUtilsObjectName && !name )
+		return;
+
+	const VkDebugUtilsObjectNameInfoEXT nameInfo = {
+		VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,  // sType
+		NULL,                                                // pNext
+		type,                                                // objectType
+		handle,                                              // objectHandle
+		name,                                                // pObjectName
+	};
+
+	VkResult result = pfnSetDebugUtilsObjectName( VK_GetDevice(), &nameInfo );
+	
+	if ( result == VK_SUCCESS )
+		return;
+
+	Log_ErrorF( gLC_Render, "Failed to Set Object Name \"%s\"", name );
+}
+
+
 void VK_CreateCommandPool( VkCommandPool& sCmdPool, u32 sQueueFamily, VkCommandPoolCreateFlags sFlags )
 {
 	// u32 graphics;
@@ -1064,7 +1087,13 @@ bool Render_Init( void* spWindow )
 	}
 
 	VK_CreateSurface( spWindow );
-	VK_SetupPhysicalDevice();
+
+	if ( !VK_SetupPhysicalDevice() )
+	{
+		Log_Error( "Failed to setup physical device\n" );
+		return false;
+	}
+
 	VK_CreateDevice();
 
 	VK_CreateCommandPool( VK_GetSingleTimeCommandPool(), gGraphicsAPIData.aQueueFamilyGraphics );

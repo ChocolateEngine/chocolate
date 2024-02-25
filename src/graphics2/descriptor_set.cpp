@@ -29,7 +29,7 @@ enum EDescriptorPoolSize
 	EDescriptorPoolSize_Storage               = 32767,
 	EDescriptorPoolSize_Uniform               = 128,
 	EDescriptorPoolSize_CombinedImageSamplers = 4096,
-	EDescriptorPoolSize_SampledImages         = 0,
+	EDescriptorPoolSize_SampledImages         = 32767,
 };
 
 
@@ -124,7 +124,7 @@ void VK_CreateDescriptorPool()
 {
 	VkDescriptorPoolSize aPoolSizes[] = {
 		{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, EDescriptorPoolSize_CombinedImageSamplers },
-		// { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, EDescriptorPoolSize_SampledImages },
+		{ VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, EDescriptorPoolSize_SampledImages },
 		{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, EDescriptorPoolSize_Uniform },
 		{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, EDescriptorPoolSize_Storage },
 	};
@@ -139,11 +139,13 @@ void VK_CreateDescriptorPool()
 
 	VK_CheckResult( vkCreateDescriptorPool( VK_GetDevice(), &aDescriptorPoolInfo, nullptr, &gVkDescriptorPool ), "Failed to create descriptor pool!" );
 
-	gDescriptorPoolStats.aSetsAllocated                                     = gDescriptorSetCount;
+	gDescriptorPoolStats.aSetsAllocated                                            = gDescriptorSetCount;
 	gDescriptorPoolStats.aTypes[ EDescriptorType_CombinedImageSampler ].aAllocated = EDescriptorPoolSize_CombinedImageSamplers;
-	// gDescriptorPoolStats.aTypes[ EDescriptorType_SampledImage ].aAllocated  = EDescriptorPoolSize_SampledImages;
-	gDescriptorPoolStats.aTypes[ EDescriptorType_UniformBuffer ].aAllocated = EDescriptorPoolSize_Uniform;
-	gDescriptorPoolStats.aTypes[ EDescriptorType_StorageBuffer ].aAllocated = EDescriptorPoolSize_Storage;
+	gDescriptorPoolStats.aTypes[ EDescriptorType_SampledImage ].aAllocated         = EDescriptorPoolSize_SampledImages;
+	gDescriptorPoolStats.aTypes[ EDescriptorType_UniformBuffer ].aAllocated        = EDescriptorPoolSize_Uniform;
+	gDescriptorPoolStats.aTypes[ EDescriptorType_StorageBuffer ].aAllocated        = EDescriptorPoolSize_Storage;
+
+	VK_SetObjectName( VK_OBJECT_TYPE_DESCRIPTOR_POOL, (u64)gVkDescriptorPool, "Global Descriptor Pool" );
 }
 
 
@@ -333,9 +335,11 @@ bool VK_AllocateDescLayout( const AllocDescLayout_t& srCreate, Handle* handles )
 	if ( layout == VK_NULL_HANDLE )
 		return false;
 
+	const char* name = srCreate.apName ? srCreate.apName : "unnamed";
+
 	if ( gDescriptorPoolStats.aSetsUsed + srCreate.aSetCount >= gDescriptorPoolStats.aSetsAllocated )
 	{
-		Log_ErrorF( gLC_Render, "Out of Descriptor Sets in Pool (Max of %zd)\n", gDescriptorPoolStats.aSetsAllocated );
+		Log_ErrorF( gLC_Render, "Out of Descriptor Sets in Pool trying to allocate a set for \"%s\" (Max of %zd)\n", name, gDescriptorPoolStats.aSetsAllocated );
 		return false;
 	}
 
@@ -354,7 +358,7 @@ bool VK_AllocateDescLayout( const AllocDescLayout_t& srCreate, Handle* handles )
 
 	VkDescriptorSet* descSets = new VkDescriptorSet[ srCreate.aSetCount ];
 
-	VK_CheckResult( vkAllocateDescriptorSets( VK_GetDevice(), &a, descSets ), "Failed to Allocate Descriptor Sets!" );
+	VK_CheckResultF( vkAllocateDescriptorSets( VK_GetDevice(), &a, descSets ), "Failed to Allocate Descriptor Sets for \"%s\"", name );
 
 	gDescSets.EnsureSize( srCreate.aSetCount );
 	for ( u32 i = 0; i < srCreate.aSetCount; i++ )

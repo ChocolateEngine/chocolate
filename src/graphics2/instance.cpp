@@ -14,6 +14,7 @@
 static bool gListExts    = Args_Register( false, "List All Vulkan Extensions, marking what ones are loaded", "-vk-list-exts" );
 static bool gListQueues  = Args_Register( false, "List All Device Queues", "-vk-list-queues" );
 static int  gDeviceIndex = Args_Register( -1, "Manually select a GPU by the index in the device list", "-gpu" );
+static int  gListDevices = Args_RegisterF( false, "List Graphics Cards detected", 2, "-gpus", "-list-gpus" );
 
 
 #ifdef NDEBUG
@@ -701,7 +702,27 @@ void VK_SelectDevice( const VkPhysicalDeviceProperties& srDeviceProps, const VkP
 }
 
 
-void VK_SetupPhysicalDevice()
+void VK_ShowDeviceListMessageBox( SDL_MessageBoxFlags type, const char* message, std::vector< VkPhysicalDevice >& devices )
+{
+	// Build a string list of devices available to us
+	std::string deviceList = vstring( "%d Devices Found:\n\n", devices.size() );
+
+	for ( size_t i = 0; i < devices.size(); i++ )
+	{
+		VkPhysicalDeviceProperties deviceProps;
+		vkGetPhysicalDeviceProperties( devices[ i ], &deviceProps );
+
+		bool suitable = VK_SuitableCard( deviceProps, devices[ i ] );
+
+		deviceList += vstring( "GPU %zd - %s%s\n", i, deviceProps.deviceName, suitable ? "" : " (Unsupported)" );
+	}
+
+	Log_Msg( deviceList.c_str() );
+	SDL_ShowSimpleMessageBox( type, "GPU Device List", deviceList.c_str(), NULL );
+}
+
+
+bool VK_SetupPhysicalDevice()
 {
 	gPhysicalDevice      = VK_NULL_HANDLE;
 	uint32_t deviceCount = 0;
@@ -714,27 +735,21 @@ void VK_SetupPhysicalDevice()
 
 	std::vector< VkPhysicalDevice > devices( deviceCount );
 	VK_CheckResult( vkEnumeratePhysicalDevices( gInstance, &deviceCount, devices.data() ), "Failed to Enumerate Physical Devices" );
+
+	if ( gListDevices )
+	{
+		VK_ShowDeviceListMessageBox( SDL_MESSAGEBOX_INFORMATION, "GPU Device List", devices );
+		return false;
+	}
 	
 	if ( gDeviceIndex > -1 )
 	{
 		// If we tried to select an invalid device index, dump all available devices to the user
-		if ( gDeviceIndex > devices.size() )
+		if ( gDeviceIndex >= devices.size() )
 		{
-			// Build a string list of devices available to us
-			std::string deviceList;
-
-			for ( size_t i = 0; i < devices.size(); i++ )
-			{
-				VkPhysicalDeviceProperties deviceProps;
-				vkGetPhysicalDeviceProperties( devices[ i ], &deviceProps );
-
-				bool suitable = VK_SuitableCard( deviceProps, devices[ i ] );
-
-				deviceList += vstring( "GPU %zd - %s%s\n", i, deviceProps.deviceName, suitable ? "" : " (Unsupported)" );
-			}
-
-			Log_FatalF( gLC_Render, "Only %zd GPU's Found, but user requested GPU index %d\nGPU's available to us:\n\n%s",
-			            devices.size(), gDeviceIndex, deviceList.c_str() );
+			std::string message = vstring( "Only %zd GPU's Found, but user requested GPU index %d\n", devices.size(), gDeviceIndex );
+			VK_ShowDeviceListMessageBox( SDL_MESSAGEBOX_ERROR, message.c_str(), devices );
+			return false;
 		}
 		else
 		{
@@ -744,6 +759,7 @@ void VK_SetupPhysicalDevice()
 			if ( VK_SuitableCard( deviceProps, devices[ gDeviceIndex ] ) )
 			{
 				VK_SelectDevice( deviceProps, devices[ gDeviceIndex ] );
+				return true;
 			}
 		}
 		
@@ -758,10 +774,12 @@ void VK_SetupPhysicalDevice()
 			if ( VK_SuitableCard( deviceProps, device ) )
 			{
 				VK_SelectDevice( deviceProps, device );
-				break;
+				return true;
 			}
 		}
 	}
+
+	return false;
 }
 
 
