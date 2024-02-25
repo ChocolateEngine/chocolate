@@ -235,7 +235,11 @@ VkSampleCountFlagBits                 VK_GetMSAASamples();
 // --------------------------------------------------------------------------------------
 // Debug Helpers
 
+#if _DEBUG
 void                                  VK_SetObjectName( VkObjectType type, u64 handle, const char* name );
+#else
+#define VK_SetObjectName( type, handle, name )
+#endif
 
 // --------------------------------------------------------------------------------------
 // Vulkan Instance

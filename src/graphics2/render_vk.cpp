@@ -887,6 +887,7 @@ VkSampleCountFlagBits VK_GetMSAASamples()
 }
 
 
+#ifdef _DEBUG
 void VK_SetObjectName( VkObjectType type, u64 handle, const char* name )
 {
 	// add a debug label onto it
@@ -908,6 +909,7 @@ void VK_SetObjectName( VkObjectType type, u64 handle, const char* name )
 
 	Log_ErrorF( gLC_Render, "Failed to Set Object Name \"%s\"", name );
 }
+#endif
 
 
 void VK_CreateCommandPool( VkCommandPool& sCmdPool, u32 sQueueFamily, VkCommandPoolCreateFlags sFlags )

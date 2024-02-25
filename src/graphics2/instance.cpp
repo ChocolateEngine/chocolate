@@ -19,7 +19,6 @@ static int  gListDevices = Args_RegisterF( false, "List Graphics Cards detected"
 
 #ifdef NDEBUG
 	constexpr bool        gEnableValidationLayers = false;
-	constexpr char const* gpValidationLayers[]    = { 0 };
 
 	constexpr bool        vk_verbose              = false;
 	constexpr bool        vk_formatted            = false;
@@ -55,19 +54,6 @@ constexpr char const* gpDeviceExtensions[] = {
 };
 
 
-#pragma message( "use KHR_maintenance1 to try and fix AMD VK_ERROR_OUT_OF_POOL_MEMORY vkAllocateDescriptorSets" )
-
-
-constexpr char const* gpOptionalExtensions[] = {
-	VK_EXT_FILTER_CUBIC_EXTENSION_NAME,
-};
-
-
-constexpr char const* gpOptionalDeviceExtensions[] = {
-	VK_EXT_FILTER_CUBIC_EXTENSION_NAME,
-};
-
-
 #if _DEBUG
 PFN_vkSetDebugUtilsObjectNameEXT    pfnSetDebugUtilsObjectName    = nullptr;
 PFN_vkSetDebugUtilsObjectTagEXT     pfnSetDebugUtilsObjectTag     = nullptr;
@@ -95,9 +81,9 @@ static VkDevice                          gDevice;
 static VkQueue                           gGraphicsQueue;
 static VkQueue                           gTransferQueue;
 
-static VkPhysicalDeviceProperties        gPhysicalDeviceProperties;
+static VkPhysicalDeviceProperties        gPhysicalDeviceProperties{};
 
-static VkSurfaceCapabilitiesKHR          gSwapCapabilities;
+static VkSurfaceCapabilitiesKHR          gSwapCapabilities{};
 static std::vector< VkSurfaceFormatKHR > gSwapFormats;
 static std::vector< VkPresentModeKHR >   gSwapPresentModes;
 
@@ -207,6 +193,7 @@ VKAPI_ATTR VkBool32 VKAPI_CALL VK_DebugCallback( VkDebugUtilsMessageSeverityFlag
 
 bool VK_CheckValidationLayerSupport()
 {
+#if _DEBUG
 	bool         layerFound = false;
 	unsigned int layerCount;
 	VK_CheckResult( vkEnumerateInstanceLayerProperties( &layerCount, NULL ), "Failed to enumerate instance layer properties" );
@@ -237,6 +224,9 @@ bool VK_CheckValidationLayerSupport()
 	}
 
 	return true;
+#else
+	return false;
+#endif
 }
 
 constexpr VkDebugUtilsMessengerCreateInfoEXT gLayerInfo = {
@@ -350,6 +340,7 @@ std::vector< const char* > VK_GetSDL2Extensions()
 
 bool VK_CreateInstance()
 {
+#if _DEBUG
 	bool hasValidation = gEnableValidationLayers;
 
 	if ( hasValidation )
@@ -359,6 +350,7 @@ bool VK_CreateInstance()
 		if ( !hasValidation )
 			Log_Error( "Validation layers requested, but not available!\n" );
 	}
+#endif
 
 	VkApplicationInfo appInfo{ VK_STRUCTURE_TYPE_APPLICATION_INFO };
 	appInfo.pApplicationName   = "Chocolate Engine";
@@ -370,6 +362,7 @@ bool VK_CreateInstance()
 	VkInstanceCreateInfo createInfo{ VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO };
 	createInfo.pApplicationInfo = &appInfo;
 
+#if _DEBUG
 	if ( hasValidation )
 	{
 		createInfo.enabledLayerCount   = (unsigned int)ARR_SIZE( gpValidationLayers );
@@ -377,6 +370,7 @@ bool VK_CreateInstance()
 		createInfo.pNext               = (VkDebugUtilsMessengerCreateInfoEXT*)&gLayerInfo;
 	}
 	else
+#endif
 	{
 		createInfo.enabledLayerCount = 0;
 		createInfo.pNext             = NULL;
@@ -404,15 +398,18 @@ bool VK_CreateInstance()
 	std::vector< const char* > sdlExt = VK_GetSDL2Extensions();
 #endif
 
+#if _DEBUG
 	// Add debug extension, we need this to relay debug messages
 	if ( hasValidation )
 		sdlExt.push_back( VK_EXT_DEBUG_UTILS_EXTENSION_NAME );
+#endif
 
 	createInfo.enabledExtensionCount   = static_cast< uint32_t >( sdlExt.size() );
 	createInfo.ppEnabledExtensionNames = sdlExt.data();
 
 	VK_CheckResult( vkCreateInstance( &createInfo, NULL, &gInstance ), "Failed to create instance!" );
 
+#if _DEBUG
 	if ( hasValidation )
 	{
 		VkResult result = VK_CreateValidationLayers();
@@ -425,6 +422,7 @@ bool VK_CreateInstance()
 			Log_ErrorF( gLC_Render, "Failed to Create Validation Layers: %s\n", VKString( result ) );
 		}
 	}
+#endif
 	
 	return true;
 }
@@ -774,12 +772,12 @@ bool VK_SetupPhysicalDevice()
 			if ( VK_SuitableCard( deviceProps, device ) )
 			{
 				VK_SelectDevice( deviceProps, device );
-				return true;
+				break;
 			}
 		}
 	}
 
-	return false;
+	return true;
 }
 
 
@@ -839,8 +837,12 @@ void VK_CreateDevice()
 		   .flags                   = 0,
 		   .queueCreateInfoCount    = (uint32_t)queueCreateInfos.size(),
 		   .pQueueCreateInfos       = queueCreateInfos.data(),
+
+#if _DEBUG
 		   .enabledLayerCount       = (uint32_t)ARR_SIZE( gpValidationLayers ),
 		   .ppEnabledLayerNames     = gpValidationLayers,
+#endif
+
 		   .enabledExtensionCount   = (uint32_t)ARR_SIZE( gpDeviceExtensions ),
 		   .ppEnabledExtensionNames = gpDeviceExtensions,
 		   .pEnabledFeatures        = &deviceFeatures,
