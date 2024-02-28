@@ -17,8 +17,6 @@ static std::vector< VkImageView > gImageViews;
 VkFormat                          gColorFormat = VK_FORMAT_B8G8R8A8_SRGB;
 VkColorSpaceKHR                   gColorSpace  = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR;
 
-// VkFormat                          gColorFormat = VK_FORMAT_B8G8R8A8_UNORM;
-// VkColorSpaceKHR                   gColorSpace  = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR;
 
 void VK_CreateSwapchain( VkSwapchainKHR spOldSwapchain )
 {
@@ -93,8 +91,12 @@ void VK_CreateSwapchain( VkSwapchainKHR spOldSwapchain )
 		aImageViewInfo.subresourceRange.layerCount     = 1;
 
 		VK_CheckResult( vkCreateImageView( VK_GetDevice(), &aImageViewInfo, nullptr, &gImageViews[ i ] ), "Failed to create image view" );
+
+		VK_SetObjectName( VK_OBJECT_TYPE_IMAGE, (u64)gImages[ i ], "Swapchain Image" );
+		VK_SetObjectName( VK_OBJECT_TYPE_IMAGE_VIEW, (u64)gImageViews[ i ], "Swapchain Image View" );
 	}
 }
+
 
 void VK_DestroySwapchain()
 {
@@ -111,6 +113,7 @@ void VK_DestroySwapchain()
 
 	gSwapChain = VK_NULL_HANDLE;
 }
+
 
 void VK_RecreateSwapchain()
 {

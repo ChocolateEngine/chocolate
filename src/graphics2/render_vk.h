@@ -47,7 +47,6 @@ struct RenderPassCreate_t;
 
 
 
-#if _DEBUG
 extern PFN_vkSetDebugUtilsObjectNameEXT    pfnSetDebugUtilsObjectName;
 extern PFN_vkSetDebugUtilsObjectTagEXT     pfnSetDebugUtilsObjectTag;
 
@@ -59,6 +58,7 @@ extern PFN_vkCmdBeginDebugUtilsLabelEXT    pfnCmdBeginDebugUtilsLabel;
 extern PFN_vkCmdEndDebugUtilsLabelEXT      pfnCmdEndDebugUtilsLabel;
 extern PFN_vkCmdInsertDebugUtilsLabelEXT   pfnCmdInsertDebugUtilsLabel;
 
+#if _DEBUG
 #define NV_CHECKPOINTS 0
 #if NV_CHECKPOINTS
 extern PFN_vkCmdSetCheckpointNV       pfnCmdSetCheckpointNV;
@@ -114,6 +114,7 @@ struct RenderPassInfoVK
 
 struct CreateFramebufferVK
 {
+	const char*                apName      = nullptr;
 	VkRenderPass               aRenderPass = VK_NULL_HANDLE;
 	glm::uvec2                 aSize{};
 
@@ -223,6 +224,8 @@ VkAttachmentLoadOp                    VK_ToVkLoadOp( EAttachmentLoadOp loadOp );
 VkAttachmentStoreOp                   VK_ToVkStoreOp( EAttachmentStoreOp storeOp );
 VkFilter                              VK_ToVkFilter( EImageFilter filter );
 VkSamplerAddressMode                  VK_ToVkSamplerAddress( ESamplerAddressMode mode );
+VkPipelineStageFlags                  VK_ToPipelineStageFlags( EPipelineStageFlags sFlags );
+VkAccessFlags                         VK_ToAccessFlags( EGraphicsAccessFlags sFlags );
 
 void                                  VK_memcpy( VkDeviceMemory sBufferMemory, VkDeviceSize sSize, const void* spData );
 void                                  VK_memread( VkDeviceMemory sBufferMemory, VkDeviceSize sSize, void* spData );
@@ -232,14 +235,13 @@ void                                  VK_Reset( ERenderResetFlags sFlags = ERend
 bool                                  VK_UseMSAA();
 VkSampleCountFlagBits                 VK_GetMSAASamples();
 
+const char*                           VK_ObjectTypeStr( VkObjectType type );
+
 // --------------------------------------------------------------------------------------
 // Debug Helpers
 
-#if _DEBUG
 void                                  VK_SetObjectName( VkObjectType type, u64 handle, const char* name );
-#else
-#define VK_SetObjectName( type, handle, name )
-#endif
+void                                  VK_SetObjectNameEx( VkObjectType type, u64 handle, const char* name, const char* typeName );
 
 // --------------------------------------------------------------------------------------
 // Vulkan Instance
@@ -424,8 +426,8 @@ void                                  VK_DestroyAllTextures();
 TextureVK*                            VK_GetTexture( ChHandle_t sTexture );
 TextureVK*                            VK_GetTextureNoMissing( ChHandle_t sTexture );  // Same as above, but does not return the missing texture as a fallback
 
-Handle                                VK_CreateFramebuffer( VkRenderPass sRenderPass, u16 sWidth, u16 sHeight, const VkImageView* spAttachments, u32 sCount );
-Handle                                VK_CreateFramebuffer( const VkFramebufferCreateInfo& sCreateInfo );
+Handle                                VK_CreateFramebuffer( const char* name, VkRenderPass sRenderPass, u16 sWidth, u16 sHeight, const VkImageView* spAttachments, u32 sCount );
+Handle                                VK_CreateFramebuffer( const char* name, const VkFramebufferCreateInfo& sCreateInfo );
 Handle                                VK_CreateFramebuffer( const CreateFramebuffer_t& srCreate );
 void                                  VK_DestroyFramebuffer( Handle shHandle );
 VkFramebuffer                         VK_GetFramebuffer( Handle shHandle );

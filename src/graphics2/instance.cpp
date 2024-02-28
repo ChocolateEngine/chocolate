@@ -15,6 +15,14 @@ static bool gListExts    = Args_Register( false, "List All Vulkan Extensions, ma
 static bool gListQueues  = Args_Register( false, "List All Device Queues", "-vk-list-queues" );
 static int  gDeviceIndex = Args_Register( -1, "Manually select a GPU by the index in the device list", "-gpu" );
 static int  gListDevices = Args_RegisterF( false, "List Graphics Cards detected", 2, "-gpus", "-list-gpus" );
+static int  gDebugUtils  = Args_Register( true, "Vulkan Debug Tools", "-vk-no-debug" );
+
+
+#if _DEBUG
+CONVAR( vk_debug_messages, 1 );
+#else
+CONVAR( vk_debug_messages, 0 );
+#endif
 
 
 #ifdef NDEBUG
@@ -31,17 +39,6 @@ static int  gListDevices = Args_RegisterF( false, "List Graphics Cards detected"
 #endif
 
 
-constexpr char const* gpExtensions[] = {
-	VK_KHR_SURFACE_EXTENSION_NAME,
-#ifdef _WIN32
-	"VK_KHR_win32_surface",
-#endif
-#if _DEBUG
-	VK_EXT_DEBUG_UTILS_EXTENSION_NAME,
-#endif
-};
-
-
 constexpr char const* gpDeviceExtensions[] = {
 	VK_KHR_SWAPCHAIN_EXTENSION_NAME,
 	"VK_EXT_descriptor_indexing",
@@ -54,7 +51,6 @@ constexpr char const* gpDeviceExtensions[] = {
 };
 
 
-#if _DEBUG
 PFN_vkSetDebugUtilsObjectNameEXT    pfnSetDebugUtilsObjectName    = nullptr;
 PFN_vkSetDebugUtilsObjectTagEXT     pfnSetDebugUtilsObjectTag     = nullptr;
 
@@ -66,6 +62,7 @@ PFN_vkCmdBeginDebugUtilsLabelEXT    pfnCmdBeginDebugUtilsLabel    = nullptr;
 PFN_vkCmdEndDebugUtilsLabelEXT      pfnCmdEndDebugUtilsLabel      = nullptr;
 PFN_vkCmdInsertDebugUtilsLabelEXT   pfnCmdInsertDebugUtilsLabel   = nullptr;
 
+#if _DEBUG
 #if NV_CHECKPOINTS
 PFN_vkCmdSetCheckpointNV       pfnCmdSetCheckpointNV       = nullptr;
 PFN_vkGetQueueCheckpointDataNV pfnGetQueueCheckpointDataNV = nullptr;
@@ -102,7 +99,7 @@ int gVkStripError = 18;
 VKAPI_ATTR VkBool32 VKAPI_CALL VK_DebugCallback( VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, VkDebugUtilsMessageTypeFlagsEXT messageType,
                                               const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData )
 {
-	if ( !gEnableValidationLayers )
+	if ( !gEnableValidationLayers || !vk_debug_messages.GetBool() )
 		return VK_FALSE;
 
 	const Log* log = Log_GetLastLog();
@@ -229,6 +226,28 @@ bool VK_CheckValidationLayerSupport()
 #endif
 }
 
+
+bool VK_CheckDebugUtilsSupport()
+{
+	bool         layerFound = false;
+	unsigned int layerCount;
+	VK_CheckResult( vkEnumerateInstanceLayerProperties( &layerCount, NULL ), "Failed to enumerate instance layer properties" );
+
+	std::vector< VkLayerProperties > availableLayers( layerCount );
+	VK_CheckResult( vkEnumerateInstanceLayerProperties( &layerCount, availableLayers.data() ), "Failed to enumerate instance layer properties" );
+
+	for ( const auto& layerProperties : availableLayers )
+	{
+		if ( strcmp( VK_EXT_DEBUG_UTILS_EXTENSION_NAME, layerProperties.layerName ) == 0 )
+		{
+			return true;
+		}
+	}
+
+	return true;
+}
+
+
 constexpr VkDebugUtilsMessengerCreateInfoEXT gLayerInfo = {
 	.sType           = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT,
 	.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT,
@@ -236,9 +255,9 @@ constexpr VkDebugUtilsMessengerCreateInfoEXT gLayerInfo = {
 	.pfnUserCallback = VK_DebugCallback,
 };
 
-VkResult VK_CreateValidationLayers()
+
+VkResult VK_CreateDebugUtilsMessenger()
 {
-	// TODO: look into VkDebugReportCallbackCreateInfoEXT
 	auto func = (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr( gInstance, "vkCreateDebugUtilsMessengerEXT" );
 	if ( func != NULL )
 		return func( gInstance, &gLayerInfo, nullptr, &gLayers );
@@ -247,7 +266,7 @@ VkResult VK_CreateValidationLayers()
 }
 
 
-void VK_DestroyValidationLayers()
+void VK_DestroyDebugUtilsMessenger()
 {
 	auto func = (PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr( gInstance, "vkDestroyDebugUtilsMessengerEXT" );
 	if ( func != NULL )
@@ -340,6 +359,8 @@ std::vector< const char* > VK_GetSDL2Extensions()
 
 bool VK_CreateInstance()
 {
+	bool hasDebugUtils = VK_CheckDebugUtilsSupport();
+
 #if _DEBUG
 	bool hasValidation = gEnableValidationLayers;
 
@@ -398,31 +419,27 @@ bool VK_CreateInstance()
 	std::vector< const char* > sdlExt = VK_GetSDL2Extensions();
 #endif
 
-#if _DEBUG
 	// Add debug extension, we need this to relay debug messages
-	if ( hasValidation )
+	if ( hasDebugUtils )
 		sdlExt.push_back( VK_EXT_DEBUG_UTILS_EXTENSION_NAME );
-#endif
 
 	createInfo.enabledExtensionCount   = static_cast< uint32_t >( sdlExt.size() );
 	createInfo.ppEnabledExtensionNames = sdlExt.data();
 
 	VK_CheckResult( vkCreateInstance( &createInfo, NULL, &gInstance ), "Failed to create instance!" );
 
-#if _DEBUG
-	if ( hasValidation )
+	if ( hasDebugUtils )
 	{
-		VkResult result = VK_CreateValidationLayers();
+		VkResult result = VK_CreateDebugUtilsMessenger();
 		if ( result == VK_SUCCESS )
 		{
-			Log_Dev( gLC_Render, 1, "Successfully Created Validation Layers\n" );
+			Log_Dev( gLC_Render, 1, "Successfully Created Debug Utils Messenger\n" );
 		}
 		else
 		{
-			Log_ErrorF( gLC_Render, "Failed to Create Validation Layers: %s\n", VKString( result ) );
+			Log_ErrorF( gLC_Render, "Failed to Create Debug Utils Messenger: %s\n", VKString( result ) );
 		}
 	}
-#endif
 	
 	return true;
 }
@@ -430,7 +447,7 @@ bool VK_CreateInstance()
 
 void VK_DestroyInstance()
 {
-	VK_DestroyValidationLayers();
+	VK_DestroyDebugUtilsMessenger();
 	vkDestroyDevice( gDevice, NULL );
 	vkDestroySurfaceKHR( gInstance, gSurface, NULL );
 	vkDestroyInstance( gInstance, NULL );
@@ -853,7 +870,6 @@ void VK_CreateDevice()
 	vkGetDeviceQueue( gDevice, gGraphicsAPIData.aQueueFamilyGraphics, 0, &gGraphicsQueue );
 	vkGetDeviceQueue( gDevice, gGraphicsAPIData.aQueueFamilyTransfer, 0, &gTransferQueue );
 
-#if _DEBUG
 	pfnSetDebugUtilsObjectName    = (PFN_vkSetDebugUtilsObjectNameEXT)vkGetInstanceProcAddr( VK_GetInstance(), "vkSetDebugUtilsObjectNameEXT" );
 	pfnSetDebugUtilsObjectTag     = (PFN_vkSetDebugUtilsObjectTagEXT)vkGetInstanceProcAddr( VK_GetInstance(), "vkSetDebugUtilsObjectTagEXT" );
 
@@ -871,11 +887,16 @@ void VK_CreateDevice()
 	if ( pfnSetDebugUtilsObjectTag )
 		Log_Dev( gLC_Vulkan, 1, "Loaded PFN_vkSetDebugUtilsObjectTagEXT\n" );
 	
-#if NV_CHECKPOINTS
+#if _DEBUG && NV_CHECKPOINTS
 	pfnCmdSetCheckpointNV       = (PFN_vkCmdSetCheckpointNV)vkGetInstanceProcAddr( VK_GetInstance(), "vkCmdSetCheckpointNV" );
 	pfnGetQueueCheckpointDataNV = (PFN_vkGetQueueCheckpointDataNV)vkGetInstanceProcAddr( VK_GetInstance(), "vkGetQueueCheckpointDataNV" );
 #endif
-#endif
+
+	VK_SetObjectName( VK_OBJECT_TYPE_PHYSICAL_DEVICE, (u64)gPhysicalDevice, gPhysicalDeviceProperties.deviceName );
+	VK_SetObjectName( VK_OBJECT_TYPE_DEVICE, (u64)gDevice, gPhysicalDeviceProperties.deviceName );
+
+	VK_SetObjectName( VK_OBJECT_TYPE_QUEUE, (u64)gGraphicsQueue, "Graphics" );
+	VK_SetObjectName( VK_OBJECT_TYPE_QUEUE, (u64)gTransferQueue, "Transfer" );
 }
 
 

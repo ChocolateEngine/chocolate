@@ -410,21 +410,8 @@ bool VK_LoadTexture( ChHandle_t& srHandle, TextureVK* tex, const std::string& sr
 		gGraphicsAPIData.aSampledTextures.push_back( srHandle );
 	}
 
-#ifdef _DEBUG
-	// add a debug label onto it
-	if ( pfnSetDebugUtilsObjectName )
-	{
-		const VkDebugUtilsObjectNameInfoEXT imageNameInfo = {
-			VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,  // sType
-			NULL,                                                // pNext
-			VK_OBJECT_TYPE_IMAGE,                                // objectType
-			(uint64_t)tex->aImage,                               // objectHandle
-			srPath.c_str(),                                      // pObjectName
-		};
+	VK_SetObjectName( VK_OBJECT_TYPE_IMAGE, (u64)tex->aImage, srPath.c_str() );
 
-		VK_CheckResultE( pfnSetDebugUtilsObjectName( VK_GetDevice(), &imageNameInfo ), "Failed to set VkImage Debug Name" );
-	}
-#endif
 	VK_CalcTextureIndices();
 	gNeedTextureUpdate = true;
 
@@ -610,22 +597,7 @@ TextureVK* VK_CreateTexture( ChHandle_t& srHandle, const TextureCreateInfo_t& sr
 
 	VK_CheckResult( vkCreateImageView( VK_GetDevice(), &viewInfo, nullptr, &tex->aImageView ), "Failed to create Image View" );
 
-#ifdef _DEBUG
-	// add a debug label onto it
-	if ( pfnSetDebugUtilsObjectName )
-	{
-		const VkDebugUtilsObjectNameInfoEXT nameInfo = {
-			VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,      // sType
-			NULL,                                                    // pNext
-			VK_OBJECT_TYPE_IMAGE,                                    // objectType
-			(uint64_t)tex->aImage,                                   // objectHandle
-			tex->apName ? tex->apName : "MANUALLY CREATED TEXTURE",  // pObjectName
-		};
-
-		// TODO: add image view name here
-		VK_CheckResultE( pfnSetDebugUtilsObjectName( VK_GetDevice(), &nameInfo ), "Failed to set VkImage Debug Name" );
-	}
-#endif
+	VK_SetObjectName( VK_OBJECT_TYPE_IMAGE, (u64)tex->aImage, tex->apName ? tex->apName : "MANUALLY CREATED TEXTURE" );
 
 	VK_CalcTextureIndices();
 
@@ -734,7 +706,7 @@ TextureVK* VK_GetTextureNoMissing( ChHandle_t sTexture )
 }
 
 
-Handle VK_CreateFramebuffer( VkRenderPass sRenderPass, u16 sWidth, u16 sHeight, const VkImageView* spAttachments, u32 sCount )
+Handle VK_CreateFramebuffer( const char* name, VkRenderPass sRenderPass, u16 sWidth, u16 sHeight, const VkImageView* spAttachments, u32 sCount )
 {
 	VkFramebufferCreateInfo framebufferInfo{ VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO };
 	framebufferInfo.renderPass      = sRenderPass;
@@ -745,16 +717,19 @@ Handle VK_CreateFramebuffer( VkRenderPass sRenderPass, u16 sWidth, u16 sHeight, 
 	framebufferInfo.layers          = 1;
 
 	VkFramebuffer buffer            = VK_NULL_HANDLE;
-	VK_CheckResult( vkCreateFramebuffer( VK_GetDevice(), &framebufferInfo, nullptr, &buffer ), "Failed to create framebuffer" );
+	VK_CheckResultF( vkCreateFramebuffer( VK_GetDevice(), &framebufferInfo, nullptr, &buffer ), "Failed to create framebuffer \"%s\"", name ? name : "unnamed" );
+	VK_SetObjectName( VK_OBJECT_TYPE_FRAMEBUFFER, (u64)buffer, name );
 
 	return gFramebuffers.Add( buffer );
 }
 
 
-Handle VK_CreateFramebuffer( const VkFramebufferCreateInfo& sCreateInfo )
+Handle VK_CreateFramebuffer( const char* name, const VkFramebufferCreateInfo& sCreateInfo )
 {
 	VkFramebuffer buffer = VK_NULL_HANDLE;
-	VK_CheckResult( vkCreateFramebuffer( VK_GetDevice(), &sCreateInfo, nullptr, &buffer ), "Failed to create framebuffer" );
+	VK_CheckResultF( vkCreateFramebuffer( VK_GetDevice(), &sCreateInfo, nullptr, &buffer ), "Failed to create framebuffer \"%s\"", name ? name : "unnamed" );
+	VK_SetObjectName( VK_OBJECT_TYPE_FRAMEBUFFER, (u64)buffer, name );
+
 	return gFramebuffers.Add( buffer );
 }
 
@@ -819,7 +794,7 @@ Handle VK_CreateFramebuffer( const CreateFramebuffer_t& srCreate )
 		attachments[ count++ ] = tex->aImageView;
 	}
 
-	Handle handle = VK_CreateFramebuffer( renderPass, srCreate.aSize.x, srCreate.aSize.y, attachments, count );
+	Handle handle = VK_CreateFramebuffer( srCreate.apName, renderPass, srCreate.aSize.x, srCreate.aSize.y, attachments, count );
 
 	if ( handle != InvalidHandle )
 	{
@@ -863,7 +838,7 @@ Handle VK_CreateFramebufferVK( const CreateFramebufferVK& srCreate )
 		attachments[ count++ ] = srCreate.aAttachResolve[ i ];
 	}
 
-	Handle handle = VK_CreateFramebuffer( srCreate.aRenderPass, srCreate.aSize.x, srCreate.aSize.y, attachments, count );
+	Handle handle = VK_CreateFramebuffer( srCreate.apName, srCreate.aRenderPass, srCreate.aSize.x, srCreate.aSize.y, attachments, count );
 
 	if ( handle != InvalidHandle )
 	{
@@ -1016,6 +991,7 @@ static TextureVK* CreateBackBufferColor( ChHandle_t& srHandle )
 	Log_Msg( "creating back buffer\n" );
 
 	TextureVK* colorTex     = VK_NewTexture( srHandle );
+	colorTex->apName        = "Backbuffer Color";
 	colorTex->aRenderTarget = true;
 
 	VkImageCreateInfo color{ VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO };
@@ -1069,6 +1045,9 @@ static TextureVK* CreateBackBufferColor( ChHandle_t& srHandle )
 	colorView.subresourceRange.layerCount     = 1;
 
 	VK_CheckResult( vkCreateImageView( VK_GetDevice(), &colorView, nullptr, &colorTex->aImageView ), "Failed to create color image view!" );
+
+	VK_SetObjectName( VK_OBJECT_TYPE_IMAGE_VIEW, (u64)colorTex->aImageView, "Backbuffer Color" );
+
 	return colorTex;
 }
 
@@ -1089,6 +1068,7 @@ RenderTarget* CreateBackBuffer()
 	// Create Depth Texture
 
 	TextureVK*  depthTex     = VK_NewTexture( depthHandle );
+	depthTex->apName         = "Backbuffer Depth";
 	depthTex->aRenderTarget = true;
 
 	VkImageCreateInfo depth;
@@ -1141,6 +1121,8 @@ RenderTarget* CreateBackBuffer()
 
 	VK_CheckResult( vkCreateImageView( VK_GetDevice(), &depthView, nullptr, &depthTex->aImageView ), "Failed to create depth image view!" );
 
+	VK_SetObjectName( VK_OBJECT_TYPE_IMAGE_VIEW, (u64)depthTex->aImageView, "Backbuffer Depth" );
+
 	// TODO: wtf use colorView and depthView, i love memory leaks lol
 	// Log_Warn( gLC_Render, "why am i not using the colorView and depthView we created???!?!?!!?\n" );
 
@@ -1165,6 +1147,7 @@ RenderTarget* CreateBackBuffer()
 	{
 		ChHandle_t texHandle = CH_INVALID_HANDLE;
 		TextureVK* tex       = VK_NewTexture( texHandle );
+		tex->apName          = "Backbuffer Color";
 		tex->aFormat         = gColorFormat;
 		tex->aFrames         = 1;
 		tex->aMemory         = VK_NULL_HANDLE;
@@ -1186,6 +1169,7 @@ RenderTarget* CreateBackBuffer()
 	{
 		ChHandle_t resolveHandle = CH_INVALID_HANDLE;
 		TextureVK* tex           = VK_NewTexture( resolveHandle );
+		tex->apName              = "Backbuffer Resolve";
 		tex->aFormat             = gColorFormat;
 		tex->aFrames             = 1;
 		tex->aMemory             = VK_NULL_HANDLE;
@@ -1201,6 +1185,7 @@ RenderTarget* CreateBackBuffer()
 	}
 
 	CreateFramebufferVK createBuffer{};
+	createBuffer.apName       = "Backbuffer Color";
 	createBuffer.aRenderPass  = VK_GetRenderPass();
 	createBuffer.aSize.x      = VK_GetSwapExtent().width;
 	createBuffer.aSize.y      = VK_GetSwapExtent().height;
@@ -1228,6 +1213,7 @@ RenderTarget* CreateBackBuffer()
 		createBuffer.aAttachColors[ 0 ] = swapTextures[ 1 ];
 	}
 
+	createBuffer.apName        = "Backbuffer Depth";
 	Handle frameBufDepthHandle = VK_CreateFramebufferVK( createBuffer );
 
 	target->aFrameBuffers.resize( 2 );
@@ -1327,6 +1313,8 @@ void VK_CreateImage( VkImageCreateInfo& srCreateInfo, TextureVK* spTexture )
 
 	VK_CheckResult( vkCreateImage( VK_GetDevice(), &srCreateInfo, nullptr, &spTexture->aImage ), "Failed to create image!" );
 
+	VK_SetObjectName( VK_OBJECT_TYPE_IMAGE, (u64)spTexture->aImage, spTexture->apName );
+
 	VkMemoryRequirements memReqs;
 	vkGetImageMemoryRequirements( VK_GetDevice(), spTexture->aImage, &memReqs );
 	spTexture->aMemorySize = memReqs.size;
@@ -1346,6 +1334,8 @@ void VK_CreateImage( VkImageCreateInfo& srCreateInfo, TextureVK* spTexture )
 
 	VK_CheckResult( vkAllocateMemory( VK_GetDevice(), &allocInfo, nullptr, &spTexture->aMemory ), "Failed to allocate image memory!" );
 	VK_CheckResult( vkBindImageMemory( VK_GetDevice(), spTexture->aImage, spTexture->aMemory, 0 ), "Failed to bind image memory" );
+
+	VK_SetObjectName( VK_OBJECT_TYPE_DEVICE_MEMORY, (u64)spTexture->aMemory, spTexture->apName );
 }
 
 

@@ -155,6 +155,8 @@ VkRenderPass VK_CreateMainRenderPass()
 
 	VK_CheckResult( vkCreateRenderPass( VK_GetDevice(), &renderPassInfo, nullptr, &gMainRenderPass ), "Failed to create main render pass!" );
 
+	VK_SetObjectName( VK_OBJECT_TYPE_RENDER_PASS, (u64)gMainRenderPass, "Main Render Pass" );
+
 	gRenderPassInfo[ gMainRenderPass ] = { VK_UseMSAA() };
 
 	delete[] attachments;
@@ -259,7 +261,9 @@ Handle VK_CreateRenderPass( const RenderPassCreate_t& srPass )
 	renderPassInfo.pDependencies   = dependencies.data();
 
 	VkRenderPass renderPass        = VK_NULL_HANDLE;
-	VK_CheckResult( vkCreateRenderPass( VK_GetDevice(), &renderPassInfo, nullptr, &renderPass ), "Failed to create main render pass!" );
+	VK_CheckResult( vkCreateRenderPass( VK_GetDevice(), &renderPassInfo, nullptr, &renderPass ), "Failed to create render pass!" );
+
+	VK_SetObjectName( VK_OBJECT_TYPE_RENDER_PASS, (u64)renderPass, srPass.apName );
 
 	gRenderPassInfo[ renderPass ] = { useMSAA };
 

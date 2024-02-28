@@ -212,21 +212,7 @@ bool VK_CreateComputePipeline( ChHandle_t& srHandle, ComputePipelineCreate_t& sr
 	  vkCreateComputePipelines( VK_GetDevice(), VK_NULL_HANDLE, 1, &pipelineInfo, NULL, &shader->aPipeline ),
 	  "Failed to create graphics pipeline for shader: \"%s\"", srPipelineCreate.apName );
 
-#ifdef _DEBUG
-	if ( srPipelineCreate.apName && pfnSetDebugUtilsObjectName )
-	{
-		// add a debug label onto it
-		const VkDebugUtilsObjectNameInfoEXT objectInfo = {
-			VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,  // sType
-			NULL,                                                // pNext
-			VK_OBJECT_TYPE_PIPELINE,                             // objectType
-			(uint64_t)shader->aPipeline,                         // objectHandle
-			srPipelineCreate.apName,                             // pObjectName
-		};
-
-		VK_CheckResultE( pfnSetDebugUtilsObjectName( VK_GetDevice(), &objectInfo ), "Failed to set Graphics Pipeline Debug Name" );
-	}
-#endif
+	VK_SetObjectNameEx( VK_OBJECT_TYPE_PIPELINE, (u64)shader->aPipeline, srPipelineCreate.apName, "Compute Pipeline" );
 
 	return true;
 }
@@ -489,21 +475,7 @@ bool VK_CreateGraphicsPipeline( ChHandle_t& srHandle, GraphicsPipelineCreate_t& 
 	  vkCreateGraphicsPipelines( VK_GetDevice(), VK_NULL_HANDLE, 1, &pipelineInfo, NULL, &shader->aPipeline ),
 	  "Failed to create graphics pipeline for shader: \"%s\"", srGraphicsCreate.apName );
 
-#ifdef _DEBUG
-	if ( srGraphicsCreate.apName && pfnSetDebugUtilsObjectName )
-	{
-		// add a debug label onto it
-		const VkDebugUtilsObjectNameInfoEXT objectInfo = {
-			VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,  // sType
-			NULL,                                                // pNext
-			VK_OBJECT_TYPE_PIPELINE,                             // objectType
-			(uint64_t)shader->aPipeline,                         // objectHandle
-			srGraphicsCreate.apName,                             // pObjectName
-		};
-
-		VK_CheckResultE( pfnSetDebugUtilsObjectName( VK_GetDevice(), &objectInfo ), "Failed to set Graphics Pipeline Debug Name" );
-	}
-#endif
+	VK_SetObjectNameEx( VK_OBJECT_TYPE_PIPELINE, (u64)shader->aPipeline, srGraphicsCreate.apName, "Graphics Pipeline" );
 
 	return true;
 }

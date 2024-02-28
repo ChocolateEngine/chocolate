@@ -13,6 +13,7 @@ set(
 	swapchain.cpp
 	texture.cpp
 	texture_ktx.cpp
+	conversions.cpp
 	
 	# imgui files
 	imgui_impl_vulkan.cpp

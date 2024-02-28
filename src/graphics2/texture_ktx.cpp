@@ -191,6 +191,9 @@ bool KTX_LoadTexture( TextureVK* spTexture, const char* spPath )
 
 	VK_CheckResult( vkCreateImageView( VK_GetDevice(), &viewInfo, nullptr, &spTexture->aImageView ), "Failed to create Image View" );
 
+	VK_SetObjectName( VK_OBJECT_TYPE_DEVICE_MEMORY, (u64)spTexture->aMemory, spPath );
+	VK_SetObjectName( VK_OBJECT_TYPE_IMAGE_VIEW, (u64)spTexture->aImageView, spPath );
+
 	ktxTexture_Destroy( kTexture );
 	ktxVulkanDeviceInfo_Destruct( &vdi );
 

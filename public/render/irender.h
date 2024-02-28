@@ -515,8 +515,9 @@ struct FramebufferPass_t
 
 struct CreateFramebuffer_t
 {
-	Handle           aRenderPass = InvalidHandle;
-	glm::uvec2       aSize{};
+	const char*       apName      = nullptr;
+	Handle            aRenderPass = InvalidHandle;
+	glm::uvec2        aSize{};
 	// const Handle*    aTextures = nullptr;
 	// u8               aTextureCount = 0;
 
@@ -624,6 +625,7 @@ struct RenderPassSubpass_t
 // TODO: add subpass dependencies?
 struct RenderPassCreate_t
 {
+	const char*                        apName = nullptr;
 	ChVector< RenderPassAttachment_t > aAttachments;  // TODO: use FramebufferPass_t instead (separate argument to avoid copying to this struct)
 	ChVector< RenderPassSubpass_t >    aSubpasses;
 };
@@ -967,5 +969,5 @@ class IRender : public ISystem
 
 
 #define IRENDER_NAME "Render"
-#define IRENDER_VER 19
+#define IRENDER_VER 20
 

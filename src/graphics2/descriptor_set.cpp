@@ -166,7 +166,7 @@ void VK_CalcTextureIndices()
 		tex->aIndex = index++;
 	}
 
-	Log_DevF( gLC_Render, 1, "Texture Index Count: %d\n", index );
+	Log_DevF( gLC_Render, 2, "Texture Index Count: %d\n", index );
 
 	if ( gpOnTextureIndexUpdateFunc )
 		gpOnTextureIndexUpdateFunc();
@@ -306,21 +306,7 @@ Handle VK_CreateDescLayout( const CreateDescLayout_t& srCreate )
 
 	VK_CheckResult( vkCreateDescriptorSetLayout( VK_GetDevice(), &layoutInfo, NULL, &layout ), "Failed to create descriptor set layout!" );
 
-#ifdef _DEBUG
-	// add a debug label onto it
-	if ( pfnSetDebugUtilsObjectName && srCreate.apName )
-	{
-		const VkDebugUtilsObjectNameInfoEXT nameInfo = {
-			VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,  // sType
-			NULL,                                                // pNext
-			VK_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT,                // objectType
-			(uint64_t)layout,                                    // objectHandle
-			srCreate.apName,                                     // pObjectName
-		};
-
-		VK_CheckResultE( pfnSetDebugUtilsObjectName( VK_GetDevice(), &nameInfo ), "Failed to Set Descriptor Set Layout Debug Name" );
-	}
-#endif
+	VK_SetObjectName( VK_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT, (u64)layout, srCreate.apName );
 
 	return gDescLayouts.Add( layout );
 }
@@ -364,22 +350,7 @@ bool VK_AllocateDescLayout( const AllocDescLayout_t& srCreate, Handle* handles )
 	for ( u32 i = 0; i < srCreate.aSetCount; i++ )
 	{
 		handles[ i ] = gDescSets.Add( descSets[ i ] );
-
-#ifdef _DEBUG
-		// add a debug label onto it
-		if ( pfnSetDebugUtilsObjectName && srCreate.apName )
-		{
-			const VkDebugUtilsObjectNameInfoEXT nameInfo = {
-				VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,  // sType
-				NULL,                                                // pNext
-				VK_OBJECT_TYPE_DESCRIPTOR_SET,                       // objectType
-				(uint64_t)descSets[ i ],                             // objectHandle
-				srCreate.apName,                                     // pObjectName
-			};
-
-			VK_CheckResultE( pfnSetDebugUtilsObjectName( VK_GetDevice(), &nameInfo ), "Failed to Set Descriptor Set Debug Name" );
-		}
-#endif
+		VK_SetObjectName( VK_OBJECT_TYPE_DESCRIPTOR_SET, (u64)descSets[ i ], srCreate.apName );
 	}
 
 	delete[] descSets;
@@ -430,22 +401,7 @@ bool VK_AllocateVariableDescLayout( const AllocVariableDescLayout_t& srCreate, H
 	for ( u32 i = 0; i < srCreate.aSetCount; i++ )
 	{
 		handles[ i ] = gDescSets.Add( descSets[ i ] );
-
-#ifdef _DEBUG
-		// add a debug label onto it
-		if ( pfnSetDebugUtilsObjectName && srCreate.apName )
-		{
-			const VkDebugUtilsObjectNameInfoEXT nameInfo = {
-				VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,  // sType
-				NULL,                                                // pNext
-				VK_OBJECT_TYPE_DESCRIPTOR_SET,                       // objectType
-				(uint64_t)descSets[ i ],                             // objectHandle
-				srCreate.apName,                                     // pObjectName
-			};
-
-			VK_CheckResultE( pfnSetDebugUtilsObjectName( VK_GetDevice(), &nameInfo ), "Failed to Set Variable Descriptor Set Debug Name" );
-		}
-#endif
+		VK_SetObjectNameEx( VK_OBJECT_TYPE_DESCRIPTOR_SET, (u64)descSets[ i ], srCreate.apName, "Variable Descriptor Set" );
 	}
 
 	delete[] descSets;
