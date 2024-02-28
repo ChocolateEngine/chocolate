@@ -1477,6 +1477,12 @@ CONCMD_DROP_VA( exec, exec_dropdown, 0, "Execute a script full of console comman
 
 	std::ifstream fileStream = std::ifstream(path, std::ios::in | std::ios::binary | std::ios::ate);
 
+	if ( !fileStream.is_open() )
+	{
+		Log_ErrorF( gConsoleChannel, "Failed to open file for exec: \"%s\"\n", path.c_str() );
+		return;
+	}
+
 	int fileLen = fileStream.tellg();
 	fileStream.seekg(0, fileStream.beg);
 
