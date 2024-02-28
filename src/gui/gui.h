@@ -12,7 +12,7 @@ extern double gRealTime;
 
 class GuiSystem : public IGuiSystem
 {
-  protected:
+   public:
 	bool                       aConsoleShown    = true;
 	bool                       aConVarListShown = false;
 
@@ -27,7 +27,6 @@ class GuiSystem : public IGuiSystem
 	void                       DrawConVarList( bool wasOpen );
 	void                       InitConVarList();
 
-  public:
 	/* Set to VGUI Style 😎 */
 	void    StyleImGui();
 
@@ -67,3 +66,4 @@ class GuiSystem : public IGuiSystem
 	~GuiSystem();
 };
 	
+extern GuiSystem* gui;

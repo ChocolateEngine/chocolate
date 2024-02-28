@@ -11,6 +11,12 @@ CONVAR( conui_spam_test, 0 );
 
 CONVAR( conui_max_history, -1 );  // idk
 CONVAR( conui_color_test, 0 );
+CONVAR( conui_max_buffer_size, 8192, "Maximum amount of characters in a string in the console output, it can go over the limit, but only to fit the remaining log message" );
+
+CONVAR_CMD( conui_show_convar_list, 0 )
+{
+	gui->aConVarListShown = conui_show_convar_list.GetBool();
+}
 
 void ReBuildConsoleOutput();
 void UpdateConsoleOutput();
@@ -544,7 +550,8 @@ static void AddToConsoleOutput( ConLogBuffer* spBuffer, const Log& srLog )
 		std::string buf( colorBuf.apStr, colorBuf.aLen );
 
 		// if ( colorBuf.aColor != spBuffer->aColor && spBuffer->aBuffer.size() || spBuffer->aBuffer.size() > CON_MAX_BUFFER_SIZE )
-		if ( mainColor != spBuffer->aColor && spBuffer->aBuffer.size() || spBuffer->aBuffer.size() > CON_MAX_BUFFER_SIZE )
+		// if ( mainColor != spBuffer->aColor && spBuffer->aBuffer.size() || spBuffer->aBuffer.size() > CON_MAX_BUFFER_SIZE )
+		if ( mainColor != spBuffer->aColor && spBuffer->aBuffer.size() )
 		{
 			spBuffer = &gConHistory.emplace_back( mainColor );
 			// spBuffer->aBuffer += ToImHex( colorBuf.aColor );
@@ -568,7 +575,7 @@ void ReBuildConsoleOutput()
 	gConHistory.clear();
 	gConHistory.resize( 1 );
 
-	const std::vector< Log >& logs   = Log_GetLogHistory();
+	const std::vector< Log >& logs = Log_GetLogHistory();
 
 	for ( const auto& log: logs )
 	{
@@ -691,7 +698,13 @@ void GuiSystem::DrawConsole( bool wasConsoleOpen )
 	PROF_SCOPE();
 
 	if ( conui_spam_test.GetBool() )
-		Log_Msg( "TEST\n" );
+	{
+		Log_Msg(
+		  "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.\n"
+		  "Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.\n"
+		  "Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.\n"
+		  "Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum\n" );
+	}
 
 	if ( !ImGui::Begin( "Developer Console", 0, ImGuiWindowFlags_NoScrollbar ) )
 	{
@@ -774,18 +787,17 @@ void GuiSystem::DrawConsole( bool wasConsoleOpen )
 
 	ImGui::PushAllowKeyboardFocus( false );
 
-	// if ( ImGui::Button( "Send" ) )
-	// // if ( false )
-	// {
-	// 	Con_QueueCommand( buf );
-	// 	snprintf( buf, 256, "" );
-	// 	Con_SetTextBuffer( buf );
-	// 	ImGui::SetKeyboardFocusHere();
-	// 
-	// 	gCmdUserInput     = "";
-	// 	gCmdHistoryIndex  = -1;
-	// 	gCmdDropDownIndex = -1;
-	// }
+	if ( ImGui::Button( "Send" ) )
+	// if ( false )
+	{
+		Con_QueueCommand( buf );
+		snprintf( buf, 256, "" );
+		ImGui::SetKeyboardFocusHere();
+	
+		gCmdUserInput     = "";
+		gCmdHistoryIndex  = -1;
+		gCmdDropDownIndex = -1;
+	}
 
 	ImGui::PopAllowKeyboardFocus();
 
@@ -801,10 +813,10 @@ void GuiSystem::DrawConsole( bool wasConsoleOpen )
 	// dropDownPos.y += ImGui::GetFrameHeight();
 
 	// test
-	if ( ImGui::Button( "Toggle ConVar List" ) )
-	{
-		aConVarListShown = !aConVarListShown;
-	}
+	// if ( ImGui::Button( "Toggle ConVar List" ) )
+	// {
+	// 	aConVarListShown = !aConVarListShown;
+	// }
 
 	ImGui::End();
 
