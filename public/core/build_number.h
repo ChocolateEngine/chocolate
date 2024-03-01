@@ -17,6 +17,10 @@ build_number.h ( Authored by Demez )
  */
 CORE_API size_t      Core_GetBuildNumber();
 
+// Returns the Unix Time of The very first commit to the chocolate engine repo
+// The date is 2021-02-15 19:11:26 UTC, or 2021-02-15 14:11:26 in the original time zone, EST.
+CORE_API size_t      Core_GetChocolateEpoch();
+
 /*
  *    @return size_t
  *        Time in seconds when the engine was last built
