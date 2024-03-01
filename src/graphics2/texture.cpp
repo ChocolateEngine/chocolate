@@ -30,6 +30,8 @@ static ChHandle_t                                  gMissingTexHandle = CH_INVALI
 
 extern bool                                        gNeedTextureUpdate;
 
+static int                                         gTextureSamplers = 0;
+
 // std::unordered_map< ImageInfo*, TextureVK* > gImageMap;
 
 void VK_RecreateTextureSamplers();
@@ -39,7 +41,26 @@ CONVAR_CMD( r_minmiplod, 0 )
 	VK_RecreateTextureSamplers();
 }
 
+
 CONVAR_CMD( r_maxmiplod, 1000 )
+{
+	VK_RecreateTextureSamplers();
+}
+
+
+CONVAR_CMD_EX( r_anisotropy, 16, CVARF_ARCHIVE, "Ansiotropic Filtering Setting" )
+{
+	VK_RecreateTextureSamplers();
+}
+
+
+CONVAR_CMD_EX( r_texture_filtering, 1, CVARF_ARCHIVE, "Enable or Disable Linear Texture Filtering" )
+{
+	VK_RecreateTextureSamplers();
+}
+
+
+CONVAR_CMD_EX( r_linear_mipmaps, 1, CVARF_ARCHIVE, "Enable or Disable Linear Mipmaps" )
 {
 	VK_RecreateTextureSamplers();
 }
@@ -202,23 +223,40 @@ void VK_DestroyTextureSamplers()
 			gSamplers[ i ][ address ][ 1 ] = VK_NULL_HANDLE;
 		}
 	}
+
+	gTextureSamplers = 0;
+
+	Log_DevF( 1, "Cleared Texture Samplers\n" );
 }
 
 
+int VK_GetAnisotropicFilteringLevel()
+{
+	const auto& deviceProps = VK_GetPhysicalDeviceProperties();
+	return glm::min( r_anisotropy.GetFloat(), deviceProps.limits.maxSamplerAnisotropy );
+}
+
+
+// TODO: use a hash map for caches
 VkSampler VK_GetSampler( VkFilter sFilter, VkSamplerAddressMode addressMode, VkBool32 sDepthCompare )
 {
+	auto& deviceLimits = VK_GetPhysicalDeviceLimits();
+
 	int index = 0;
 	int addressIndex = 0;
 
-	switch ( sFilter )
+	if ( r_texture_filtering.GetBool() )
 	{
-		default:
-		case VK_FILTER_NEAREST:
-			break;
+		switch ( sFilter )
+		{
+			default:
+			case VK_FILTER_NEAREST:
+				break;
 
-		case VK_FILTER_LINEAR:
-			index = 1;
-			break;
+			case VK_FILTER_LINEAR:
+				index = 1;
+				break;
+		}
 	}
 
 	switch ( addressMode )
@@ -247,27 +285,80 @@ VkSampler VK_GetSampler( VkFilter sFilter, VkSamplerAddressMode addressMode, VkB
 	if ( gSamplers[ index ][ addressIndex ][ sDepthCompare ] )
 		return gSamplers[ index ][ addressIndex ][ sDepthCompare ];
 
+	// This Sampler has not been created yet, so create a new texture sampler
+
+	if ( ++gTextureSamplers == deviceLimits.maxSamplerAllocationCount )
+	{
+		Log_ErrorF( "Out of Texture Samplers!\n" );
+
+		// just look for like any texture sampler
+		for ( int i = 0; i < 2; i++ )
+		{
+			for ( int address = 0; address < 5; address++ )
+			{
+				if ( gSamplers[ i ][ address ][ 0 ] )
+					return gSamplers[ i ][ address ][ 0 ];
+
+				if ( gSamplers[ i ][ address ][ 1 ] )
+					return gSamplers[ i ][ address ][ 1 ];
+			}
+		}
+
+		Log_FatalF( "No Texture Samplers found, yet we are at the maxSamplerAllocationCount of %d?\n", deviceLimits.maxSamplerAllocationCount );
+		return VK_NULL_HANDLE;
+	}
+
 	const auto&         deviceProps = VK_GetPhysicalDeviceProperties();
 
 	VkSamplerCreateInfo samplerInfo{ VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO };
-	samplerInfo.magFilter               = sFilter;
-	samplerInfo.minFilter               = sFilter;
-	samplerInfo.addressModeU            = addressMode;
-	samplerInfo.addressModeV            = addressMode;
-	samplerInfo.addressModeW            = addressMode;
 
-	samplerInfo.anisotropyEnable        = VK_TRUE;
-	samplerInfo.maxAnisotropy           = deviceProps.limits.maxSamplerAnisotropy;
+	samplerInfo.addressModeU = addressMode;
+	samplerInfo.addressModeV = addressMode;
+	samplerInfo.addressModeW = addressMode;
+
+	// make sure this device has anisotropic filtering and the user requests it
+	if ( r_anisotropy.GetInt() > 1 && deviceProps.limits.maxSamplerAnisotropy > 1 )
+	{
+		samplerInfo.anisotropyEnable = VK_TRUE;
+		samplerInfo.maxAnisotropy    = VK_GetAnisotropicFilteringLevel();
+	}
+	else
+	{
+		samplerInfo.anisotropyEnable = VK_FALSE;
+		samplerInfo.maxAnisotropy    = 0;
+	}
+
+	if ( r_texture_filtering.GetBool() )
+	{
+		samplerInfo.magFilter = sFilter;
+		samplerInfo.minFilter = sFilter;
+	}
+	else
+	{
+		samplerInfo.magFilter = VK_FILTER_NEAREST;
+		samplerInfo.minFilter = VK_FILTER_NEAREST;
+	}
+
+	if ( r_linear_mipmaps.GetBool() )
+	{
+		samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+	}
+	else
+	{
+		samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
+	}
+
 	samplerInfo.borderColor             = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
 	samplerInfo.unnormalizedCoordinates = VK_FALSE;
 	samplerInfo.compareEnable           = sDepthCompare;
 	samplerInfo.compareOp               = VK_COMPARE_OP_LESS;
-	samplerInfo.mipmapMode              = VK_SAMPLER_MIPMAP_MODE_LINEAR;
 	samplerInfo.mipLodBias              = 0.f;
 	samplerInfo.maxLod                  = std::max( 0.f, r_maxmiplod.GetFloat() );
 	samplerInfo.minLod                  = std::min( std::max( 0.f, r_minmiplod.GetFloat() ), samplerInfo.maxLod );
 
 	VK_CheckResult( vkCreateSampler( VK_GetDevice(), &samplerInfo, NULL, &gSamplers[ index ][ addressIndex ][ sDepthCompare ] ), "Failed to create sampler!" );
+
+	Log_DevF( 1, "Created New Texture Sampler (%d / %d Max Samplers)\n", gTextureSamplers, deviceLimits.maxSamplerAllocationCount );
 
 	return gSamplers[ index ][ addressIndex ][ sDepthCompare ];
 }
