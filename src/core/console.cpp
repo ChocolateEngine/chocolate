@@ -1362,6 +1362,16 @@ void Con_Archive( const char* spFile )
 		filename = gConArchiveFile;
 	}
 
+	// TODO: have a better way to check for a parent path
+	fs::path filenamePath = filename.c_str();
+	
+	fs::path parentPath   = filenamePath.parent_path();
+
+	if ( !parentPath.empty() )
+	{
+		FileSys_CreateDirectory( parentPath.string() );
+	}
+
 	// Write the data
 	FILE* fp = fopen( filename.c_str(), "wb" );
 
@@ -1904,7 +1914,7 @@ CONCMD( heapcheck )
 			break;
 
 		case _HEAPBADPTR:
-			Log_Msg( "Heap Bat Pointer\n" );
+			Log_Msg( "Heap Bad Pointer\n" );
 			break;
 	}
 }
