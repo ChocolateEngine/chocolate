@@ -170,6 +170,9 @@ CORE_API bool        FileSys_GetFileTimes( std::string_view srPath, float* spCre
 // Set Date Created/Modified on a File
 CORE_API bool        FileSys_SetFileTimes( std::string_view srPath, float* spCreated, float* spModified );
 
+// Create a Directory
+CORE_API bool        FileSys_CreateDirectory( std::string_view path );
+
 // ================================================================================
 // Directory Reading
 

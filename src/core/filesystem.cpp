@@ -860,6 +860,14 @@ bool FileSys_SetFileTimes( std::string_view srPath, float* spCreated, float* spM
 }
 
 
+// Create a Directory
+bool FileSys_CreateDirectory( std::string_view path )
+{
+	int ret = mkdir( path.data() );
+	return ret != 0;
+}
+
+
 struct SearchParams
 {
     ReadDirFlags flags;
