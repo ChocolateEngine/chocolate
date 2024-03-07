@@ -14,6 +14,7 @@ struct SDL_Window;
 struct ImDrawData;
 
 
+
 // -----------------------------------------------------------------------------
 // Data Types
 // -----------------------------------------------------------------------------
@@ -788,6 +789,7 @@ class IRender : public ISystem
 	
 	virtual ImTextureID AddTextureToImGui( ChHandle_t sHandle )                                                                        = 0;
 	virtual void        FreeTextureFromImGui( ChHandle_t sHandle )                                                                     = 0;
+	virtual bool        BuildFonts()                                                                                                   = 0;
 
 	virtual int         GetMaxMSAASamples()                                                                                            = 0;
 

@@ -614,6 +614,8 @@ void VK_SetCheckpoint( VkCommandBuffer c, const char* spName )
 // ----------------------------------------------------------------------------------
 // Chocolate Engine Render Abstraction
 
+static ImWchar gFontRanges[] = { 0x1, 0x1FFFF, 0 };
+
 
 class RenderVK : public IRender
 {
@@ -741,11 +743,9 @@ public:
 
 	ImTextureID AddTextureToImGui( ChHandle_t sHandle ) override
 	{
+		// User wants the Missing Texture
 		if ( sHandle == CH_INVALID_HANDLE )
-		{
-			Log_Error( gLC_Render, "AddTextureToImGui(): Invalid Image Handle!\n" );
-			return nullptr;
-		}
+			sHandle = gMissingTexHandle;
 
 		// Is this already loaded?
 		auto it = gImGuiTextures.find( sHandle );
@@ -801,10 +801,10 @@ public:
 		gImGuiTextures.erase( sHandle );
 	}
 
-	// bool BuildImGuiFonts()
-	// {
-	// 	return true;
-	// }
+	bool BuildFonts() override
+	{
+		return VK_CreateImGuiFonts();
+	}
 
 	int GetMaxMSAASamples() override
 	{

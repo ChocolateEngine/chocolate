@@ -34,6 +34,8 @@ extern VkColorSpaceKHR gColorSpace;
 extern ConVar          r_msaa;
 extern ConVar          r_msaa_samples;
 
+extern ChHandle_t      gMissingTexHandle;
+
 enum class GraphicsFmt;
 using ShaderStage = char;
 using EImageUsage = unsigned short;
@@ -106,6 +108,30 @@ struct TextureVK
 };
 
 
+// Whenever you create a texture, you get a handle to one of these
+// this saves texture memory by not having to make multiple copies of the texture for different sampler settings
+// if you load in multiple of the same texture, but all with different sampler settings, then each handle will be different
+// but all will point to the same texture internally
+struct TextureView
+{
+	TextureVK*           texture        = nullptr;
+	VkImageView          imageView      = VK_NULL_HANDLE;
+	VkSampler            sampler        = VK_NULL_HANDLE;
+
+	// apparently you can also change the format in VkImageView? no thanks
+	// NOTE: how does this work if the image loaded is a 2D image, but you view it as a CUBE? does it just crash? probably
+	VkImageViewType      viewType       = VK_IMAGE_VIEW_TYPE_2D;
+
+	// Sampler creation settings here
+	VkFilter             filter         = VK_FILTER_NEAREST;
+	VkSamplerAddressMode samplerAddress = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+	VkBool32             depthCompare   = VK_FALSE;
+};
+
+// VK_GetTextureView()
+// render->GetTexture( texHandle, viewSettings );
+
+
 struct RenderPassInfoVK
 {
 	bool aUsesMSAA = false;
@@ -124,6 +150,7 @@ struct CreateFramebufferVK
 	// std::vector< VkImageView > aAttachPreserve;
 	VkImageView                aAttachDepth = 0;
 };
+
 
 struct FramebufferVK
 {
