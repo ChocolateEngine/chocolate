@@ -26,7 +26,7 @@ static std::unordered_map< VkFramebuffer, Handle > gFramebufferHandles;
 // std::unordered_map< TextureVK*, Handle >           gBackbufferHandles;
 
 // the true handle of the missing texture, but handle of 0 will also give the missing texture
-static ChHandle_t                                  gMissingTexHandle = CH_INVALID_HANDLE;
+ChHandle_t                                         gMissingTexHandle = CH_INVALID_HANDLE;
 
 extern bool                                        gNeedTextureUpdate;
 
@@ -36,13 +36,13 @@ static int                                         gTextureSamplers = 0;
 
 void VK_RecreateTextureSamplers();
 
-CONVAR_CMD( r_minmiplod, 0 )
+CONVAR_CMD( r_miplod_min, 0 )
 {
 	VK_RecreateTextureSamplers();
 }
 
 
-CONVAR_CMD( r_maxmiplod, 1000 )
+CONVAR_CMD( r_miplod_max, 1000 )
 {
 	VK_RecreateTextureSamplers();
 }
@@ -245,7 +245,12 @@ VkSampler VK_GetSampler( VkFilter sFilter, VkSamplerAddressMode addressMode, VkB
 	int index = 0;
 	int addressIndex = 0;
 
-	if ( r_texture_filtering.GetBool() )
+	if ( r_texture_filtering.GetInt() == 2 )
+	{
+		// Force Linear Filtering
+		index = 1;
+	}
+	else if ( r_texture_filtering.GetBool() )
 	{
 		switch ( sFilter )
 		{
@@ -328,7 +333,13 @@ VkSampler VK_GetSampler( VkFilter sFilter, VkSamplerAddressMode addressMode, VkB
 		samplerInfo.maxAnisotropy    = 0;
 	}
 
-	if ( r_texture_filtering.GetBool() )
+	if ( r_texture_filtering.GetInt() == 2 )
+	{
+		// Force Linear Filtering
+		samplerInfo.magFilter = VK_FILTER_LINEAR;
+		samplerInfo.minFilter = VK_FILTER_LINEAR;
+	}
+	else if ( r_texture_filtering.GetBool() )
 	{
 		samplerInfo.magFilter = sFilter;
 		samplerInfo.minFilter = sFilter;
@@ -353,8 +364,8 @@ VkSampler VK_GetSampler( VkFilter sFilter, VkSamplerAddressMode addressMode, VkB
 	samplerInfo.compareEnable           = sDepthCompare;
 	samplerInfo.compareOp               = VK_COMPARE_OP_LESS;
 	samplerInfo.mipLodBias              = 0.f;
-	samplerInfo.maxLod                  = std::max( 0.f, r_maxmiplod.GetFloat() );
-	samplerInfo.minLod                  = std::min( std::max( 0.f, r_minmiplod.GetFloat() ), samplerInfo.maxLod );
+	samplerInfo.maxLod                  = std::max( 0.f, r_miplod_max.GetFloat() );
+	samplerInfo.minLod                  = std::min( std::max( 0.f, r_miplod_min.GetFloat() ), samplerInfo.maxLod );
 
 	VK_CheckResult( vkCreateSampler( VK_GetDevice(), &samplerInfo, NULL, &gSamplers[ index ][ addressIndex ][ sDepthCompare ] ), "Failed to create sampler!" );
 
@@ -1435,7 +1446,7 @@ void VK_CreateMissingTexture()
 	Log_Dev( gLC_Render, 1, "Creating Missing Texture\n" );
 
 	TextureCreateInfo_t create{};
-	create.apName    = "__missing_texture";
+	create.apName    = "__missing";
 	create.aSize.x   = gMissingTextureWidth;
 	create.aSize.y   = gMissingTextureHeight;
 	create.aFormat   = GraphicsFmt::RGBA8888_SRGB;
@@ -1457,44 +1468,5 @@ void VK_CreateMissingTexture()
 	}
 
 	gNeedTextureUpdate = true;
-
-
-	// TEMP
-	// Write To File
-
-	FILE* selectPPM    = fopen( "MISSING_TEXTURE.ppm", "wb" );
-
-	fprintf( selectPPM, "P6\n%d %d\n255\n", gMissingTextureWidth, gMissingTextureHeight );
-
-	size_t missTexLen = ARR_SIZE( gpMissingTexture );
-
-	size_t index = 0;
-	for ( size_t y = 0; y < gMissingTextureHeight; ++y )
-	{
-		for ( size_t x = 0; x < gMissingTextureWidth; ++x )
-		{
-			// u32 pixel = gpMissingTexture[ y + x * gMissingTextureHeight ];
-	
-			// u8 r = ( pixel >> 16 ) & 0xFF;
-			// u8 g = ( pixel >> 8 ) & 0xFF;
-			// u8 b = pixel & 0xFF;
-	
-			// u8 r = gpMissingTexture[ ( y + x * gMissingTextureHeight ) ];
-			// u8 g = gpMissingTexture[ ( y + x * gMissingTextureHeight ) + 1 ];
-			// u8 b = gpMissingTexture[ ( y + x * gMissingTextureHeight ) + 2 ];
-			// u8 a = gpMissingTexture[ ( y + x * gMissingTextureHeight ) + 3 ];
-	
-			u8 r = gpMissingTexture[ index++ ];
-			u8 g = gpMissingTexture[ index++ ];
-			u8 b = gpMissingTexture[ index++ ];
-			u8 a = gpMissingTexture[ index++ ];
-	
-			fwrite( &r, 1, 1, selectPPM );
-			fwrite( &g, 1, 1, selectPPM );
-			fwrite( &b, 1, 1, selectPPM );
-		}
-	}
-
-	fclose( selectPPM );
 }
 
