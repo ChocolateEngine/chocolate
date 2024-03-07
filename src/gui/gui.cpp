@@ -1,5 +1,6 @@
 #include "gui.h"
 #include "util.h"
+#include "render/irender.h"
 // #include "rmlui.h"
 
 #include "imgui/imgui_impl_sdl2.h"
@@ -9,11 +10,15 @@
 #endif
 
 GuiSystem*               gui           = new GuiSystem;
+IRender*                 render        = nullptr;
 
 ImFont*                  gBuiltInFont  = nullptr;
 
 double                   gRealTime     = 0.0;
 // Rml::Context*            gRmlContext   = nullptr;
+
+CONVAR( ui_show_fps, 1, CVARF_ARCHIVE, "Show a Framerate Counter Window" );
+CONVAR( ui_show_messages, 1, CVARF_ARCHIVE, "Show Debug Messages in a Window" );
 
 static ModuleInterface_t gInterfaces[] = {
 	{ gui, IGUI_NAME, IGUI_HASH }
@@ -56,6 +61,12 @@ void GuiSystem::DrawGui()
 
 	wasConsoleOpen = aConsoleShown;
 
+	if ( !ui_show_fps.GetBool() && !ui_show_messages.GetBool() )
+	{
+		prevtick = SDL_GetTicks();
+		return;
+	}
+
 	ImGuiWindowFlags devFlags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_AlwaysAutoResize;
 	if ( !aConsoleShown )
 		devFlags |= ImGuiWindowFlags_NoMove;
@@ -65,22 +76,29 @@ void GuiSystem::DrawGui()
 
 	// NOTE: imgui framerate is a rough estimate, might wanna have our own fps counter?
 	ImGui::Begin( "Dev Info", (bool*)0, devFlags );
-	float frameRate = ImGui::GetIO().Framerate;
-	ImGui::Text("%.1f FPS (%.3f ms/frame)", frameRate, 1000.0f / frameRate);
-	//ImGui::Text("%.1f FPS (%.3f ms/frame)", 1000.f / delta, (float)delta);  // ms/frame is inaccurate
 
-	std::string debugMessages;
-	for (int i = 0; i < aDebugMessages.size(); i++)
+	if ( ui_show_fps )
 	{
-		debugMessages += "\n";
-
-		if (aDebugMessages[i] != "")
-			debugMessages += aDebugMessages[i];
+		float frameRate = ImGui::GetIO().Framerate;
+		ImGui::Text("%.1f FPS (%.3f ms/frame)", frameRate, 1000.0f / frameRate);
+		//ImGui::Text("%.1f FPS (%.3f ms/frame)", 1000.f / delta, (float)delta);  // ms/frame is inaccurate
 	}
 
-	aDebugMessages.clear();
-	if ( !debugMessages.empty() )
-		ImGui::Text(debugMessages.c_str());
+	if ( ui_show_messages )
+	{
+		std::string debugMessages;
+		for (int i = 0; i < aDebugMessages.size(); i++)
+		{
+			debugMessages += "\n";
+
+			if (aDebugMessages[i] != "")
+				debugMessages += aDebugMessages[i];
+		}
+
+		aDebugMessages.clear();
+		if ( !debugMessages.empty() )
+			ImGui::Text( debugMessages.c_str() );
+	}
 
 	ImGui::End(  );
 	prevtick = SDL_GetTicks();
@@ -90,8 +108,11 @@ void GuiSystem::DrawGui()
 
 void GuiSystem::StyleImGui()
 {
-	// gBuiltInFont = BuildFont( "fonts/CascadiaMono.ttf" );
-	// gBuiltInFont = BuildFont( "fonts/MonoxRegular.ttf", 15.f );
+	gBuiltInFont = BuildFont( "fonts/CascadiaMono.ttf", 15.f );
+	gBuiltInFont = BuildFont( "fonts/MonoxRegular.ttf", 15.f );
+
+	if ( gBuiltInFont )
+		ImGui::GetIO().FontDefault = gBuiltInFont;
 
 	return;
 
@@ -174,7 +195,8 @@ ImFont* GuiSystem::BuildFont( const char* spPath, float sSizePixels, const ImFon
 
 	ImFont* font = ImGui::GetIO().Fonts->AddFontFromFileTTF( fontPath.c_str(), sSizePixels, spFontConfig );
 
-	IM_ASSERT(0);
+	render->BuildFonts();
+
 	#if 0
 	// AWFUL
 	VkCommandBuffer c = gpDevice->BeginSingleTimeCommands(  );
@@ -242,6 +264,8 @@ void GuiSystem::StartFrame()
 
 bool GuiSystem::Init()
 {
+	render = Mod_GetInterfaceCast< IRender >( IRENDER_NAME, IRENDER_VER );
+
 	StyleImGui();
 	InitConsole();
 	InitConVarList();
