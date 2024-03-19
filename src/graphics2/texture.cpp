@@ -504,7 +504,6 @@ bool VK_LoadTexture( ChHandle_t& srHandle, TextureVK* tex, const std::string& sr
 	tex->aFilter         = VK_ToVkFilter( srCreateData.aFilter );
 	tex->aSamplerAddress = VK_ToVkSamplerAddress( srCreateData.aSamplerAddress );
 	tex->aDepthCompare   = srCreateData.aDepthCompare;	// Does this need a dedicated function?
-	tex->aBufferMemory   = EBufferMemory_Device;
 
 	// textures loaded through KTX are always sampled currently
 	if ( tex->aUsage & VK_IMAGE_USAGE_SAMPLED_BIT )
@@ -541,7 +540,6 @@ TextureVK* VK_CreateTexture( ChHandle_t& srHandle, const TextureCreateInfo_t& sr
 	tex->aSamplerAddress = VK_ToVkSamplerAddress( srCreateData.aSamplerAddress );
 	tex->aDepthCompare   = srCreateData.aDepthCompare;
 	tex->aDataSize       = srCreate.aDataSize;
-	tex->aBufferMemory   = srCreate.aMemoryType;
 
 	if ( tex->aUsage & VK_IMAGE_USAGE_SAMPLED_BIT )
 	{
@@ -695,7 +693,19 @@ TextureVK* VK_CreateTexture( ChHandle_t& srHandle, const TextureCreateInfo_t& sr
 	viewInfo.subresourceRange.baseMipLevel   = 0;
 	viewInfo.subresourceRange.levelCount     = createInfo.mipLevels;
 	viewInfo.subresourceRange.baseArrayLayer = 0;
-	viewInfo.subresourceRange.layerCount     = createInfo.arrayLayers;
+
+	switch ( viewType )
+	{
+		default:
+			viewInfo.subresourceRange.layerCount = 1;
+			break;
+
+		case VK_IMAGE_VIEW_TYPE_1D_ARRAY:
+		case VK_IMAGE_VIEW_TYPE_2D_ARRAY:
+		case VK_IMAGE_VIEW_TYPE_CUBE_ARRAY:
+			viewInfo.subresourceRange.layerCount = createInfo.arrayLayers;
+			break;
+	}
 
 	VK_CheckResult( vkCreateImageView( VK_GetDevice(), &viewInfo, nullptr, &tex->aImageView ), "Failed to create Image View" );
 
