@@ -99,7 +99,6 @@ struct TextureVK
 	glm::uvec2           aSize{};
 	u8                   aMipLevels    = 0;
 	int                  aFrames       = 0;
-	EBufferMemory        aBufferMemory = EBufferMemory_None;
 	bool                 aRenderTarget = false;
 	bool                 aSwapChain    = false;  // swapchain managed texture (wtf)
 
@@ -109,9 +108,13 @@ struct TextureVK
 
 
 // Whenever you create a texture, you get a handle to one of these
-// this saves texture memory by not having to make multiple copies of the texture for different sampler settings
+// PAST ME: this saves texture memory by not having to make multiple copies of the texture for different sampler settings
+// CURRENT ME: THE ABOVE MAKES NO SENSE - you already have samplers separate from textures, this solves nothing!
+
 // if you load in multiple of the same texture, but all with different sampler settings, then each handle will be different
 // but all will point to the same texture internally
+
+// actually what do you gain with this again?
 struct TextureView
 {
 	TextureVK*           texture        = nullptr;

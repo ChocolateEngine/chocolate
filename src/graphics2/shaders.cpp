@@ -18,7 +18,7 @@ static ResourceList< ShaderVK >         gShaders;
 static ResourceList< VkPipelineLayout > gPipelineLayouts;
 
 
-CONVAR_CMD_EX( r_msaa_textures, 0, CVARF_ARCHIVE, "Enable/Disable MSAA on Textures, this is VERY EXPENSIVE!" )
+CONVAR_CMD_EX( r_msaa_textures, 0, CVARF_ARCHIVE, "Enable/Disable MSAA on Textures, this is VERY EXPENSIVE! It enables VkPipelineMultisampleStateCreateInfo::sampleShadingEnable" )
 {
 	if ( !VK_UseMSAA() )
 		return;
