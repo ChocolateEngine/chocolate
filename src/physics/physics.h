@@ -55,6 +55,9 @@
 #include <Physics/Body/BodyCreationSettings.h>
 #include <Physics/Body/BodyActivationListener.h>
 
+// character
+#include <Jolt/Physics/Character/CharacterVirtual.h>
+
 // #include <Renderer/DebugRenderer.h>
 
 #include "types/transform.h"
@@ -166,6 +169,41 @@ struct RayHit
 class PhysDebugDraw;
 
 
+class PhysVirtualCharacter : public IPhysVirtualCharacter
+{
+   public:
+	JPH::CharacterVirtual*   character;
+	bool                     disableCollision = false;
+
+	virtual glm::vec3        GetLinearVelocity() override;
+
+	/// Set the linear velocity of the character (m / s)
+	virtual void             SetLinearVelocity( const glm::vec3& linearVelocity ) override;
+
+	/// Get the position of the character
+	virtual glm::vec3        GetPosition() override;
+
+	/// Set the position of the character
+	virtual void             SetPosition( const glm::vec3& position ) override;
+
+	/// Get the rotation of the character
+	virtual glm::quat        GetRotation() override;
+
+	/// Set the rotation of the character
+	virtual void             SetRotation( const glm::quat& rotation ) override;
+
+	// Enable or Disable Collision
+	virtual void             EnableCollision( bool enabled ) override;
+
+	virtual EPhysGroundState GetGroundState() override;
+
+	virtual glm::vec3        GetShapeOffset()                          override;
+	virtual void             SetShapeOffset( const glm::vec3& offset ) override;
+
+	glm::mat4                GetCenterOfMassTransform() override;
+};
+
+
 class PhysicsEnvironment: public IPhysicsEnvironment
 {
 public:
@@ -179,12 +217,27 @@ public:
 	// IPhysicsObject*                 CreatePhysicsObject( PhysicsObjectInfo& physInfo ) override;
 	// void                            DeletePhysicsObject( IPhysicsObject *body ) override;
 
+	// ----------------------------------------------------------------------------
+	// Physics Object/Shape Creation
+
 	// hmm
 	IPhysicsShape*                  CreateShape( const PhysicsShapeInfo& physInfo ) override;
 	void                            DestroyShape( IPhysicsShape *body ) override;
 
 	IPhysicsObject*                 CreateObject( IPhysicsShape* spShape, const PhysicsObjectInfo& physInfo ) override;
-	void                            DestroyObject( IPhysicsObject *body ) override;
+	void                            DestroyObject( IPhysicsObject* body ) override;
+
+	// ----------------------------------------------------------------------------
+	// Virtual Character Creation
+
+	IPhysVirtualCharacter*            CreateVirtualCharacter( const PhysVirtualCharacterSettings& settings ) override;
+	void                              DestroyVirtualCharacter( IPhysVirtualCharacter* character ) override;
+
+	// Change the shape of the virtual character
+	bool                              SetVirtualCharacterShape( IPhysVirtualCharacter* character, IPhysicsShape* shape, float maxPenetrationDepth ) override;
+
+	// ----------------------------------------------------------------------------
+	// Environment Controls
 
 	void                            SetGravity( const glm::vec3& gravity ) override;
 	void                            SetGravityY( float gravity ) override; // convenience functions
@@ -193,7 +246,8 @@ public:
 
 	// void                            RayTest( const glm::vec3& from, const glm::vec3& to, std::vector< RayHit* >& hits );
 
-	std::vector< PhysicsObject* >   aPhysObjs;
+	std::vector< PhysicsObject* >     aPhysObjs;
+	ChVector< PhysVirtualCharacter* > aVirtualChars;
 
 public:
 	JPH::ShapeSettings*             LoadModel( const PhysicsShapeInfo& physInfo );

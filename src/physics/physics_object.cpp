@@ -104,8 +104,7 @@ void PhysicsObject::SetCollisionEnabled( bool enable )
 
 void PhysicsObject::SetMotionQuality( PhysMotionQuality quality )
 {
-	auto motion = apBody->GetMotionProperties();
-	motion->SetMotionQuality( (JPH::EMotionQuality)quality );
+	apEnv->apPhys->GetBodyInterface().SetMotionQuality( apBody->GetID(), (JPH::EMotionQuality)quality );
 }
 
 
@@ -345,16 +344,16 @@ void PhysicsObject::CheckCollision( IPhysicsShape* spShape, float sMaxSeparation
 	settings.mBackFaceMode = JPH::EBackFaceMode::IgnoreBackFaces;
 	settings.mMaxSeparationDistance = sMaxSeparationDist;
 
-	apEnv->apPhys->GetNarrowPhaseQuery().CollideShape(
-		shape->aShape,
-		JPH::Vec3::sReplicate( 1.0f ),
-		query_transform,
-		settings,
-		physCollector,
-		broadphase_layer_filter,
-		object_layer_filter,
-		body_filter
-	);
+	// apEnv->apPhys->GetNarrowPhaseQuery().CollideShape(
+	// 	shape->aShape,
+	// 	JPH::Vec3::sReplicate( 1.0f ),
+	// 	query_transform,
+	// 	settings,
+	// 	physCollector,
+	// 	broadphase_layer_filter,
+	// 	object_layer_filter,
+	// 	body_filter
+	// );
 }
 
 

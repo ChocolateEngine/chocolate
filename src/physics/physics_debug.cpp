@@ -61,19 +61,20 @@ void PhysDebugDraw::OnNewFrame()
 
 
 void PhysDebugDraw::DrawLine(
-	const JPH::Float3& inFrom,
-	const JPH::Float3& inTo,
-	JPH::ColorArg inColor )
+  JPH::RVec3Arg inFrom,
+  JPH::RVec3Arg inTo,
+  JPH::ColorArg inColor )
 {
 	gDebugFuncs.apDrawLine( fromJolt( inFrom ), fromJolt( inTo ), fromJolt( inColor ) );
 }
 
 
 void PhysDebugDraw::DrawTriangle(
-	JPH::Vec3Arg inV1,
-	JPH::Vec3Arg inV2,
-	JPH::Vec3Arg inV3,
-	JPH::ColorArg inColor )
+  JPH::RVec3Arg inV1,
+  JPH::RVec3Arg inV2,
+  JPH::RVec3Arg inV3,
+  JPH::ColorArg inColor,
+  ECastShadow   inCastShadow )
 {
 	gDebugFuncs.apDrawTriangle( fromJolt( inV1 ), fromJolt( inV2 ), fromJolt( inV3 ), fromJolt4( inColor ) );
 }

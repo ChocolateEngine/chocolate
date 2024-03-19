@@ -516,6 +516,19 @@ def post_sdl_extract():
 # =================================================================================================
 
 
+'''
+new idea?
+
+[
+    "https://github.com/mozilla/mozjpeg/archive/refs/tags/v4.1.1.zip",
+    "mozjpeg-4.1.1.zip",    # downloaded file
+    "mozjpeg",              # folder to check for if it exists already
+    ".",                    # extract into this folder (optional)
+    post_mozjpeg_extract,
+]
+'''
+
+
 FILE_LIST = {
     # NOTE: this kinda sucks because you can only put an item on one platform,
     # and would have to duplicate it for other platforms
@@ -550,10 +563,10 @@ FILE_LIST = {
             None,                   # function to run post extraction (optional)
         ],
         [
-            "https://github.com/jrouwe/JoltPhysics/archive/6406ceec5ec790a7bdda16d258d618d1ca95d7ae.zip",
+            "https://github.com/jrouwe/JoltPhysics/archive/refs/tags/v4.0.2.zip",
             "zip",                  # file extension it's stored as
             "JoltPhysics",          # folder to check for if it exists already
-            "JoltPhysics-6406ceec5ec790a7bdda16d258d618d1ca95d7ae",    # folder it extracts as to rename to the folder above (optional)
+            "JoltPhysics-4.0.2",    # folder it extracts as to rename to the folder above (optional)
             ".",                    # extract into this folder (optional)
             post_jolt_extract,
         ],
@@ -565,14 +578,6 @@ FILE_LIST = {
             "tracy-f1fea0331aa7222df5b0a8b0ffdf6610547fb336",         # folder it extracts as to rename to the folder above (optional)
             ".",                    # extract into this folder (optional)
             None,
-        ],
-        [
-            "https://github.com/kcat/openal-soft/archive/refs/tags/1.23.1.zip",
-            "zip",                   # file extension it's stored as
-            "openal-soft",              # folder to check for if it exists already
-            "openal-soft-1.23.1",         # folder it extracts as to rename to the folder above (optional)
-            ".",                    # extract into this folder (optional)
-            post_openal_extract,
         ],
     ],
 
@@ -629,7 +634,6 @@ FILE_LIST = {
 
 # just a list of functions to run, simple
 SUBMODULE_LIST = [
-    build_mimalloc,
     build_ktx,
 ]
 

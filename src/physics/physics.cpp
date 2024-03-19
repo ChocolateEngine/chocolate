@@ -15,15 +15,10 @@ extern ConVar phys_dbg;
 Phys_DebugFuncs_t gDebugFuncs;
 PhysDebugDraw*    gpDebugDraw = nullptr;
 
-CONVAR( phys_fast, 0 );
-
-// aw shit, how can make these a cheat if that's only available in the game
 CONVAR( phys_collisionsteps, 1,
 	"If you take larger steps than 1 / 60th of a second you need to do multiple collision steps in order to keep the simulation stable. "
 	"Do 1 collision step per 1 / 60th of a second(round up)." );
 
-CONVAR( phys_substeps, 1,
-	"If you want more accurate step results you can do multiple sub steps within a collision step. Usually you would set this to 1." );
 
 
 // Callback for traces
@@ -53,30 +48,33 @@ static bool AssertFailedCallback( const char *inExpression, const char *inMessag
 // layers if you want. E.g. you could have a layer for high detail collision (which is not used by the physics simulation
 // but only if you do collision testing).
 
-// Function that determines if two object layers can collide
-static bool MyObjectCanCollide( JPH::ObjectLayer inObject1, JPH::ObjectLayer inObject2 )
+
+class ChocolateObjectLayerPairFilter : public JPH::ObjectLayerPairFilter
 {
-	switch (inObject1)
+   public:
+	bool ShouldCollide( JPH::ObjectLayer inObject1, JPH::ObjectLayer inObject2 ) const override
 	{
-		case ObjLayer_Stationary:
-			return inObject2 == ObjLayer_Moving; // Non moving only collides with moving
+		switch ( inObject1 )
+		{
+			case ObjLayer_Stationary:
+				return inObject2 == ObjLayer_Moving;  // Non moving only collides with moving
 
-		case ObjLayer_Moving:
-			return true; // Moving collides with everything
+			case ObjLayer_Moving:
+				return true;  // Moving collides with everything
 
-		case ObjLayer_NoCollide:
-			return false; // Nothing collides with this
+			case ObjLayer_NoCollide:
+				return false;  // Nothing collides with this
 
-		default:
-			CH_ASSERT( false );
-			return false;
+			default:
+				CH_ASSERT( false );
+				return false;
+		}
 	}
 };
 
-
+ChocolateObjectLayerPairFilter gObjectLayerPairFilter;
 
 // ====================================================================================
-
 
 
 // Each broadphase layer results in a separate bounding volume tree in the broad phase. You at least want to have
@@ -90,25 +88,32 @@ JPH::BroadPhaseLayer BroadPhase_Moving(1);
 JPH::BroadPhaseLayer BroadPhase_NoCollide(2);
 
 
-// Function that determines if two broadphase layers can collide
-static bool MyBroadPhaseCanCollide( JPH::ObjectLayer inLayer1, JPH::BroadPhaseLayer inLayer2 )
+
+
+class ChocolateObjectVsBroadPhaseLayerFilter : public JPH::ObjectVsBroadPhaseLayerFilter
 {
-	switch (inLayer1)
+   public:
+	bool ShouldCollide( JPH::ObjectLayer inLayer1, JPH::BroadPhaseLayer inLayer2 ) const override
 	{
-		case ObjLayer_Stationary:
-			return inLayer2 == BroadPhase_Moving;
+		switch ( inLayer1 )
+		{
+			case ObjLayer_Stationary:
+				return inLayer2 == BroadPhase_Moving;
 
-		case ObjLayer_Moving:
-			return true;
+			case ObjLayer_Moving:
+				return true;
 
-		case ObjLayer_NoCollide:
-			return false; // Nothing collides with this
+			case ObjLayer_NoCollide:
+				return false;  // Nothing collides with this
 
-		default:
-			CH_ASSERT_MSG( false, "Invalid Physics Object Layer" );
-			return false;
+			default:
+				CH_ASSERT_MSG( false, "Invalid Physics Object Layer" );
+				return false;
+		}
 	}
-}
+};
+
+ChocolateObjectVsBroadPhaseLayerFilter gObjectVsBroadPhaseLayerFilter;
 
 
 // An example contact listener
@@ -116,7 +121,7 @@ class ContactListener : public JPH::ContactListener
 {
 public:
 	// See: ContactListener
-	virtual JPH::ValidateResult	OnContactValidate( const JPH::Body &inBody1, const JPH::Body &inBody2, const JPH::CollideShapeResult &inCollisionResult ) override
+	virtual JPH::ValidateResult	OnContactValidate( const JPH::Body &inBody1, const JPH::Body &inBody2, JPH::RVec3Arg inBaseOffset, const JPH::CollideShapeResult &inCollisionResult ) override
 	{
 		// LogDev( gPhysicsChannel, 1, "Contact validate callback\n" );
 
@@ -191,6 +196,11 @@ class Physics : public Ch_IPhysics
 public:
 	bool Init() override
 	{
+		//if ( !JPH::VerifyJoltVersionID() )
+		//{
+		//	return false;
+		//}
+
 		// Install callbacks
 		JPH::Trace = TraceCallback;
 
@@ -214,7 +224,7 @@ public:
 		apAllocator = new JPH::TempAllocatorImpl( 70 * 1024 * 1024 );
 
 		// We need a job system that will execute physics jobs on multiple threads. Typically
-		// you would implement the JobSystem interface yourself and let Jolt Physics run on top
+		// you would implement the JobSystem interface yourself and let Jolt Physics run on topbe
 		// of your own job scheduler. JobSystemThreadPool is an example implementation.
 		apJobSystem = new JPH::JobSystemThreadPool( JPH::cMaxPhysicsJobs, JPH::cMaxPhysicsBarriers, JPH::thread::hardware_concurrency() - 1 );
 
@@ -423,7 +433,7 @@ void PhysicsEnvironment::Init()
 {
 	// Now we can create the actual physics system.
 	apPhys = new JPH::PhysicsSystem;
-	apPhys->Init( gMaxBodies, gNumBodyMutexes, gMaxBodyPairs, gMaxContactConstraints, gObjectToBroadphase, MyBroadPhaseCanCollide, MyObjectCanCollide );
+	apPhys->Init( gMaxBodies, gNumBodyMutexes, gMaxBodyPairs, gMaxContactConstraints, gObjectToBroadphase, gObjectVsBroadPhaseLayerFilter, gObjectLayerPairFilter );
 
 	// A body activation listener gets notified when bodies activate and go to sleep
 	// Note that this is called from a job so whatever you do here needs to be thread safe.
@@ -453,7 +463,37 @@ void PhysicsEnvironment::Simulate( float sDT )
 	// We simulate the physics world in discrete time steps. 60 Hz is a good rate to update the physics system.
 	// const float cDeltaTime = 1.0f / 60.0f;
 
-	apPhys->Update( sDT, phys_collisionsteps, phys_substeps, phys.apAllocator, phys.apJobSystem );
+	JPH::CharacterVirtual::sDrawConstraints  = phys_dbg;  ///< Draw the current state of the constraints for iteration 0 when creating them
+	// JPH::CharacterVirtual::sDrawWalkStairs   = phys_dbg;  ///< Draw the state of the walk stairs algorithm
+	// JPH::CharacterVirtual::sDrawStickToFloor = phys_dbg;  ///< Draw the state of the stick to floor algorithm
+
+	// Required on Virtual Characters
+	for ( auto character : aVirtualChars )
+	{
+		JPH::CharacterVirtual::ExtendedUpdateSettings settings{};
+
+		// HACK HACK: change to Z axis
+		// TODO: expose these options
+		settings.mStickToFloorStepDown = JPH::Vec3( 0, 0, -25.f );
+		settings.mWalkStairsStepUp     = JPH::Vec3( 0, 0, 25.f );
+
+		u32 layer = ObjLayer_Moving;
+
+		if ( character->disableCollision )
+			layer = ObjLayer_NoCollide;
+
+		character->character->ExtendedUpdate(
+		  sDT,
+		  toJolt( GetGravity() ),
+		  settings,
+		  apPhys->GetDefaultBroadPhaseLayerFilter( layer ),
+		  apPhys->GetDefaultLayerFilter( layer ),
+		  {},
+		  {},
+		  *phys.apAllocator );
+	}
+
+	apPhys->Update( sDT, phys_collisionsteps, phys.apAllocator, phys.apJobSystem );
 
 	if ( !phys_dbg || !gpDebugDraw || !gpDebugDraw->aValid )
 		return;
@@ -464,20 +504,30 @@ void PhysicsEnvironment::Simulate( float sDT )
 			continue;
 
 		physObj->apShape->aShape->Draw(
-			gpDebugDraw,
-			JPH::Mat44::sRotationTranslation( physObj->GetRotationJolt(), physObj->GetPositionJolt() ),
-			// physObj->GetWorldTransformJolt(),
-			{1, 1, 1},
-			{1, 0, 0},
-			false,
-			phys_dbg_wireframe.GetBool()
-		);
+		  gpDebugDraw,
+		  // JPH::Mat44::sRotationTranslation( physObj->GetRotationJolt(), physObj->GetPositionJolt() ),
+		  physObj->apBody->GetCenterOfMassTransform(),
+		  // physObj->GetWorldTransformJolt(),
+		  { 1, 1, 1 },
+		  { 1, 0, 0 },
+		  false,
+		  phys_dbg_wireframe.GetBool() );
 	}
 
-	// if ( phys_fast )
-	// 	apWorld->stepSimulation( sDT );
-	// else
-	// 	apWorld->stepSimulation( sDT, 100, 1 / 240.0 );
+	for ( auto character : aVirtualChars )
+	{
+		// if ( !physObj->aAllowDebugDraw )
+		// 	continue;
+
+		character->character->GetShape()->Draw(
+		  gpDebugDraw,
+		  // JPH::Mat44::sRotationTranslation( character->character->GetRotation(), character->character->GetPosition() ),
+		  character->character->GetCenterOfMassTransform(),
+		  { 1, 1, 1 },
+		  { 0, 1, 0 },
+		  false,
+		  phys_dbg_wireframe.GetBool() );
+	}
 }
 
 
@@ -659,6 +709,93 @@ void PhysicsEnvironment::DestroyObject( IPhysicsObject *spPhysObj )
 	vec_remove( aPhysObjs, physObj );
 
 	delete physObj;
+}
+
+
+#define CH_CHAR_RADIUS_STANDING 13.f
+
+
+IPhysVirtualCharacter* PhysicsEnvironment::CreateVirtualCharacter( const PhysVirtualCharacterSettings& settings )
+{
+	if ( settings.shape == nullptr )
+	{
+		Log_ErrorF( "No Shape specified when creating virtual physics character\n" );
+		return nullptr;
+	}
+
+	JPH::CharacterVirtualSettings joltSettings{};
+
+	PhysicsShape*                 shape     = static_cast< PhysicsShape* >( settings.shape );
+
+	joltSettings.mShape                     = shape->aShape;
+	joltSettings.mUp                        = toJolt( settings.up );
+
+	joltSettings.mSupportingVolume          = JPH::Plane( toJolt( settings.up ), -CH_CHAR_RADIUS_STANDING );
+
+	/// Character mass (kg). Used to push down objects with gravity when the character is standing on top.
+	joltSettings.mMass                      = settings.mass;
+
+	/// Maximum force with which the character can push other bodies (N).
+	joltSettings.mMaxStrength               = settings.maxStrength;
+
+	///@name Movement settings
+	joltSettings.mPredictiveContactDistance = settings.predictiveContactDistance;  ///< How far to scan outside of the shape for predictive contacts
+	joltSettings.mMaxCollisionIterations    = settings.maxCollisionIterations;     ///< Max amount of collision loops
+	joltSettings.mMaxConstraintIterations   = settings.maxConstraintIterations;    ///< How often to try stepping in the constraint solving
+	joltSettings.mMinTimeRemaining          = settings.minTimeRemaining;           ///< Early out condition: If this much time is left to simulate we are done
+	joltSettings.mCollisionTolerance        = settings.collisionTolerance;         ///< How far we're willing to penetrate geometry
+	joltSettings.mCharacterPadding          = settings.characterPadding;           ///< How far we try to stay away from the geometry, this ensures that the sweep will hit as little as possible lowering the collision cost and reducing the risk of getting stuck
+	joltSettings.mMaxNumHits                = settings.maxNumHits;                 ///< Max num hits to collect in order to avoid excess of contact points collection
+	joltSettings.mPenetrationRecoverySpeed  = settings.penetrationRecoverySpeed;   ///< This value governs how fast a penetration will be resolved, 0 = nothing is resolved, 1 = everything in one update
+
+	JPH::CharacterVirtual* joltCharacter    = new JPH::CharacterVirtual( &joltSettings, JPH::Vec3::sZero(), JPH::Quat::sIdentity(), apPhys );
+
+	if ( joltCharacter == nullptr )
+	{
+		Log_ErrorF( "Failed to Create Virtual Physics Character\n" );
+		return nullptr;
+	}
+
+	PhysVirtualCharacter* character = new PhysVirtualCharacter;
+	character->character            = joltCharacter;
+
+	aVirtualChars.push_back( character );
+
+	return character;
+}
+
+
+void PhysicsEnvironment::DestroyVirtualCharacter( IPhysVirtualCharacter* character )
+{
+	if ( !character )
+		return;
+
+	PhysVirtualCharacter* physObj = static_cast< PhysVirtualCharacter* >( character );
+
+	aVirtualChars.erase( physObj );
+
+	delete physObj->character;
+	delete physObj;
+}
+
+
+// Change the shape of the virtual character
+bool PhysicsEnvironment::SetVirtualCharacterShape( IPhysVirtualCharacter* characterBase, IPhysicsShape* shapeBase, float maxPenetrationDepth )
+{
+	if ( shapeBase == nullptr || characterBase == nullptr )
+		return false;
+
+	PhysVirtualCharacter* character = static_cast< PhysVirtualCharacter* >( characterBase );
+	PhysicsShape* shape = static_cast< PhysicsShape* >( shapeBase );
+
+	return character->character->SetShape(
+	  shape->aShape,
+	  maxPenetrationDepth,
+	  apPhys->GetDefaultBroadPhaseLayerFilter( ObjLayer_Moving ),
+	  apPhys->GetDefaultLayerFilter( ObjLayer_Moving ),
+	  {},
+	  {},
+	  *phys.apAllocator );
 }
 
 

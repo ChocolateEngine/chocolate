@@ -96,6 +96,16 @@ enum class PhysMotionType
 	Dynamic,    // moved by forces
 };
 
+
+enum EPhysGroundState
+{
+	EPhysGroundState_OnGround,       // Character is on the ground and can move freely.
+	EPhysGroundState_OnSteepGround,  // Character is on a slope that is too steep and can't climb up any further. The caller should start applying downward velocity if sliding from the slope is desired.
+	EPhysGroundState_NotSupported,   // Character is touching an object, but is not supported by it and should fall. The GetGroundXXX functions will return information about the touched object.
+	EPhysGroundState_InAir,          // Character is in the air and is not touching anything.
+};
+
+
 // emum class PhysCollisionType
 
 struct PhysTriangle_t
@@ -376,14 +386,67 @@ public:
 };
 
 
+struct PhysVirtualCharacterSettings
+{
+	IPhysicsShape* shape                     = nullptr;
+	glm::vec3      up                        = {};       // World up direction
+	float          maxSlopeAngle             = 50.f;     // Max angle of a slope we can walk on
+
+	float          mass                      = 70.f;     // Character Mass
+	float          maxStrength               = 100.f;    // Max force with which the character can push other bodies
+
+	// Movement Settings
+	float          predictiveContactDistance = 0.1f;     // How far to scan outside of the shape for predictive contacts
+	u32            maxCollisionIterations    = 5;        // Max amount of collision loops
+	u32            maxConstraintIterations   = 15;       // How often to try stepping in the constraint solving
+	float          minTimeRemaining          = 1.0e-4f;  // Early out condition: If this much time is left to simulate we are done
+	float          collisionTolerance        = 1.0e-3f;  // How far we're willing to penetrate geometry
+	float          characterPadding          = 0.02f;    // How far we try to stay away from the geometry, this ensures that the sweep will hit as little as possible lowering the collision cost and reducing the risk of getting stuck
+	u32            maxNumHits                = 256;      // Max num hits to collect in order to avoid excess of contact points collection
+	float          penetrationRecoverySpeed  = 1.0f;     // This value governs how fast a penetration will be resolved, 0 = nothing is resolved, 1 = everything in one update
+};
+
+
+class IPhysVirtualCharacter
+{
+   public:
+	virtual glm::vec3        GetLinearVelocity()                                         = 0;
+
+	/// Set the linear velocity of the character (m / s)
+	virtual void             SetLinearVelocity( const glm::vec3& linearVelocity )        = 0;
+
+	/// Get the position of the character
+	virtual glm::vec3        GetPosition()                                               = 0;
+
+	/// Set the position of the character
+	virtual void             SetPosition( const glm::vec3& position )                    = 0;
+
+	/// Get the rotation of the character
+	virtual glm::quat        GetRotation()                                               = 0;
+
+	/// Set the rotation of the character
+	virtual void             SetRotation( const glm::quat& rotation )                    = 0;
+
+	// Enable or Disable Collision
+	virtual void             EnableCollision( bool enabled )                             = 0;
+
+	virtual EPhysGroundState GetGroundState()                                            = 0;
+
+	virtual glm::vec3        GetShapeOffset()                                            = 0;
+	virtual void             SetShapeOffset( const glm::vec3& offset )                   = 0;
+
+	virtual glm::mat4        GetCenterOfMassTransform()                                  = 0;
+};
+
+
 class IPhysicsEnvironment
 {
-public:
-	virtual ~IPhysicsEnvironment() = default;
+   public:
+	virtual ~IPhysicsEnvironment()                                                                                                               = default;
 
-	virtual void                            Init() = 0;
-	virtual void                            Shutdown() = 0;
-	virtual void                            Simulate( float sDT ) = 0;
+	virtual void                   Init()                                                                                                        = 0;
+	virtual void                   Shutdown()                                                                                                    = 0;
+	virtual void                   Simulate( float sDT )                                                                                         = 0;
 
 	// deprecated
 	// virtual IPhysicsObject*                 CreatePhysicsObject( PhysicsObjectInfo& physInfo ) = 0;
@@ -393,20 +456,29 @@ public:
 	// Physics Object/Shape Creation
 
 	// Create a shape that can be shared between bodies
-	virtual IPhysicsShape*                  CreateShape( const PhysicsShapeInfo& physInfo ) = 0;
-	virtual void                            DestroyShape( IPhysicsShape *body ) = 0;
+	virtual IPhysicsShape*         CreateShape( const PhysicsShapeInfo& physInfo )                                                               = 0;
+	virtual void                   DestroyShape( IPhysicsShape* body )                                                                           = 0;
 
 	// Create a Physics Object from a shape
-	virtual IPhysicsObject*                 CreateObject( IPhysicsShape* spShape, const PhysicsObjectInfo& physInfo ) = 0;
-	virtual void                            DestroyObject( IPhysicsObject* spObj ) = 0;
-	
+	virtual IPhysicsObject*        CreateObject( IPhysicsShape* spShape, const PhysicsObjectInfo& physInfo )                                     = 0;
+	virtual void                   DestroyObject( IPhysicsObject* spObj )                                                                        = 0;
+
+	// ----------------------------------------------------------------------------
+	// Virtual Character
+
+	virtual IPhysVirtualCharacter* CreateVirtualCharacter( const PhysVirtualCharacterSettings& settings )                                        = 0;
+	virtual void                   DestroyVirtualCharacter( IPhysVirtualCharacter* character )                                                   = 0;
+
+	// Change the shape of the virtual character
+	virtual bool                   SetVirtualCharacterShape( IPhysVirtualCharacter* character, IPhysicsShape* shape, float maxPenetrationDepth ) = 0;
+
 	// ----------------------------------------------------------------------------
 	// Environment Controls
 
-	virtual void                            SetGravity( const glm::vec3& gravity ) = 0;
-	virtual void                            SetGravityY( float gravity ) = 0;  // convenience functions
-	virtual void                            SetGravityZ( float gravity ) = 0;
-	virtual glm::vec3                       GetGravity() = 0;
+	virtual void                   SetGravity( const glm::vec3& gravity )                                                                        = 0;
+	virtual void                   SetGravityY( float gravity )                                                                                  = 0;  // convenience functions
+	virtual void                   SetGravityZ( float gravity )                                                                                  = 0;
+	virtual glm::vec3              GetGravity()                                                                                                  = 0;
 
 	// ----------------------------------------------------------------------------
 	// Tools
@@ -484,4 +556,4 @@ public:
 
 
 #define IPHYSICS_NAME "Physics"
-#define IPHYSICS_HASH 1
+#define IPHYSICS_HASH 2
