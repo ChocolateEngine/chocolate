@@ -244,8 +244,7 @@ std::string ConVar::GetPrintMessage()
 	// TODO: make a shared util function for some of this, smh
 	std::string msg = vstring( "%s%s %s", UNIX_CLR_DEFAULT, aName, GetValue().data() );
 
-	if ( ch_strcmplen( GetValue(), apData->aDefaultValueLen, apData->apDefaultValue ) )
-		msg += vstring( " " UNIX_CLR_YELLOW "(%s default)", apData->apDefaultValue );
+	msg += vstring( " " UNIX_CLR_YELLOW "(%s default)", apData->apDefaultValue );
 
 	if ( aFlags )
 	{
@@ -280,12 +279,17 @@ void ConVar::SetValue( std::string_view value )
 	//if ( apValue )
 	//	free( apValue );
 
-	apData->aValueFloat = ToDouble( value.data(), apData->aValueFloat );
 	apData->apValue     = ch_realloc_count< char >( apData->apValue, value.size() + 1 );
 	apData->aValueLen   = value.size();
 
 	memcpy( apData->apValue, value.data(), sizeof( char ) * apData->aValueLen );
 	apData->apValue[ apData->aValueLen ] = '\0';
+
+	float newValue = apData->aValueFloat;
+	if ( !ToFloat( apData->apValue, newValue ) )
+		return;
+
+	apData->aValueFloat = newValue;
 }
 
 
@@ -1029,8 +1033,8 @@ bool Con_RunCommandBase( ConVarBase* cvar, const std::vector< std::string >& arg
 		{
 			if ( convar->apData->apFunc )
 			{
-				std::string_view prevString = convar->GetValue();
-				float            prevFloat  = convar->apData->aValueFloat;
+				std::string prevString = convar->GetValue().data();
+				float       prevFloat  = convar->apData->aValueFloat;
 
 				convar->SetValue( args[ 0 ] );
 				convar->apData->apFunc( prevString.data(), prevFloat, args );

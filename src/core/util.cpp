@@ -243,7 +243,7 @@ double ToDouble( const char* value, double prev )
 	if ( value == nullptr )
 		return prev;
 
-	char* end;
+	char* end = nullptr;
 	double result = strtod( value, &end );
 
 	return end == value ? prev : result;
@@ -255,7 +255,7 @@ long ToLong( const std::string& value, int prev )
 	if ( value.empty() )
 		return prev;
 
-	char* end;
+	char* end = nullptr;
 	long result = strtol( value.c_str(), &end, 10 );
 
 	return end == value.c_str() ? prev : result;
@@ -267,7 +267,7 @@ bool ToDouble2( const std::string &value, double &out )
 	if ( value.empty() )
 		return false;
 
-	char *end;
+	char* end = nullptr;
 	out = strtod( value.c_str(), &end );
 
 	return end != value.c_str();
@@ -279,10 +279,22 @@ bool ToLong2( const std::string &value, long &out )
 	if ( value.empty() )
 		return false;
 
-	char *end;
+	char* end = nullptr;
 	out = strtol( value.c_str(), &end, 10 );
 
 	return end != value.c_str();
+}
+
+
+bool ToFloat( const char* spValue, float& srOut )
+{
+	if ( !spValue )
+		return false;
+
+	char* end = nullptr;
+	srOut = strtof( spValue, &end );
+	
+	return end != spValue;
 }
 
 
@@ -291,7 +303,7 @@ bool ToDouble3( const char* spValue, double& srOut )
 	if ( !spValue )
 		return false;
 
-	char* end;
+	char* end = nullptr;
 	srOut = strtod( spValue, &end );
 
 	return end != spValue;
@@ -303,7 +315,7 @@ bool ToLong3( const char* spValue, long &srOut )
 	if ( !spValue )
 		return false;
 
-	char *end;
+	char* end = nullptr;
 	srOut = strtol( spValue, &end, 10 );
 
 	return end != spValue;

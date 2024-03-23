@@ -312,6 +312,7 @@ long            CORE_API ToLong( const std::string& value, int prev );
 bool            CORE_API ToDouble2( const std::string &value, double &out );
 bool            CORE_API ToLong2( const std::string &value, long &out );
 
+bool CORE_API            ToFloat( const char* spValue, float& srOut );
 bool            CORE_API ToDouble3( const char* spValue, double &srOut );
 bool            CORE_API ToLong3( const char* spValue, long &srOut );
 
