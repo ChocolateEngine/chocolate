@@ -82,14 +82,14 @@ void Resource_Update()
 		if ( type->aPaused )
 			continue;
 
-		for ( u32 i = 0; i < resourceList.aHandles.size(); )
+		for ( u32 i = 0; i < resourceList.GetHandleCount(); )
 		{
-			ChHandle_t resourceHandle = resourceList.aHandles[ i ];
+			ChHandle_t      resourceHandle = resourceList.GetHandleByIndex( i );
 			ResourceData_t* data = nullptr;
 
 			if ( !resourceList.Get( resourceHandle, &data ) )
 			{
-				resourceList.aHandles.remove( i );
+				resourceList.Remove( resourceHandle );
 				Log_Error( gLC_ResourceSystem, "Invalid Resource found when updating!\n" );
 				continue;
 			}

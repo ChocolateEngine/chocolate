@@ -139,9 +139,9 @@ struct ResourceList
 	mempool_t*             apPool;
 	u32                    aSize;
 	u32                    aStepSize;
-
-	// TODO: this could just be `ChHandle_t* apHandles` and `u32 aHandlesAllocated`
-	ChVector< ChHandle_t > aHandles;
+	std::vector< ChHandle_t> aHandles;
+	// ChHandle_t*            apHandles;
+	// u32                    aHandlesAllocated;
 
 	/*
      *    Construct a resource manager.
@@ -465,7 +465,7 @@ struct ResourceList
 		// Free the chunk of memory.
 		mempool_free( apPool, pBuf );
 
-		aHandles.erase( sHandle );
+		vec_remove( aHandles, sHandle );
 
 		aSize--;
 

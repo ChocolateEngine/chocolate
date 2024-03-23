@@ -1296,7 +1296,7 @@ public:
 		}
 	}
 	
-	const ChVector< ChHandle_t >& GetTextureList() override
+	const std::vector< ChHandle_t >& GetTextureList() override
 	{
 		return gTextureHandles.aHandles;
 	}

@@ -829,7 +829,7 @@ class IRender : public ISystem
 	virtual GraphicsFmt GetTextureFormat( ChHandle_t shTexture )                                                                       = 0;
 	virtual glm::uvec2  GetTextureSize( ChHandle_t shTexture )                                                                         = 0;
 	virtual void        ReloadTextures()                                                                                               = 0;
-	virtual const ChVector< ChHandle_t >& GetTextureList()                                                                             = 0;
+	virtual const std::vector< ChHandle_t >& GetTextureList()                                                                             = 0;
 	virtual TextureInfo_t                 GetTextureInfo( ChHandle_t sTexture )                                                        = 0;
 
 	// TODO: very early rough functions, need to be improved greatly
