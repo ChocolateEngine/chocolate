@@ -475,6 +475,8 @@ std::vector< char > FileSys_ReadFile( const std::string& srFilePath )
     file.read( buffer.data(  ), fileSize );
     file.close(  );
 
+    buffer.push_back( '\0' );  // adding null terminator character
+
     return buffer;
 }
 

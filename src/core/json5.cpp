@@ -29,7 +29,12 @@ static EJsonError Json_SkipWhitespace( const char*& str )
 {
 StartOfSkip:
 	while ( *str == ' ' || *str == '\t' || *str == '\n' || *str == '\r' )
+	{
 		str++;
+
+		if ( *str == '\0' )
+			return EJsonError_None;
+	}
 
 	// check for comment character
 	if ( *str == '/' )
@@ -43,8 +48,14 @@ StartOfSkip:
 			while ( strncmp( str, "*/", 2 ) != 0 )
 				str++;
 
+			if ( *str == '\0' )
+				return EJsonError_None;
+
 			// advance past */ character
 			str++;
+
+			if ( *str == '\0' )
+				return EJsonError_None;
 
 			// continue checking whitespace
 			goto StartOfSkip;
@@ -55,6 +66,9 @@ StartOfSkip:
 			// read until end of line
 			while ( *str != '\n' && *str != '\r' )
 				str++;
+
+			if ( *str == '\0' )
+				return EJsonError_None;
 
 			// continue checking whitespace
 			goto StartOfSkip;
@@ -578,13 +592,58 @@ void Json_ToString( JsonObject_t* spRoot )
 }
 
 
-// TODO: IMPLEMENT ME !!!!!
 const char* Json_ErrorToStr( EJsonError sErr )
 {
 	switch ( sErr )
 	{
 		default:
+		case EJsonError_None:
 			return "None";
+
+		case EJsonError_RootIsNullptr:
+			return "Root is nullptr";
+
+		case EJsonError_DataIsNullptr:
+			return "Data is nullptr";
+
+		case EJsonError_InvalidCharacter:
+			return "Invalid Character";
+
+		case EJsonError_OutOfMemory:
+			return "Out of Memory";
+
+		case EJsonError_UnexpectedRootType:
+			return "Unexpected Root Type";
+
+		case EJsonError_ExpectedEndOfBlock:
+			return "Expected end of block";
+
+		case EJsonError_ExpectedEndOfArray:
+			return "Expected end of array";
+
+		case EJsonError_ExpectedEndOfQuote:
+			return "Expected end of quote";
+
+		case EJsonError_KeyStartsWithNumber:
+			return "Key starts with number";
+
+		case EJsonError_InvalidQuotelessKeyCharacter:
+			return "Invalid Quoteless Key Character";
+
+		case EJsonError_InvalidDouble:
+			return "Invalid Double";
+
+		case EJsonError_InvalidInt:
+			return "Invalid Integer";
+
+		case EJsonError_ExpectedColonCharacter:
+			return "Expected Colon Character";
+
+		case EJsonError_ExpectedCommaCharacter:
+			return "Expected Comma Character";
+
+		case EJsonError_NewLineInQuote:
+			return "New Line In Quote";
 	}
 }
 
