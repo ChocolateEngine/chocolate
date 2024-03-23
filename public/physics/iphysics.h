@@ -29,14 +29,14 @@ enum class PhysShapeType
 	Convex,             // A convex hull defined by a set of points.
 	Mesh,               // A shape consisting of triangles. Any body that uses this shape needs to be static.
 
-	// NOT IMPLEMENTED BELOW - ON TODO LIST !!!
-
+	// ONLY WORKS IN LoadShape()
 	StaticCompound,     // A shape containing other shapes. This shape is constructed once and cannot be changed afterwards.
 						// Child shapes are organized in a tree to speed up collision detection.
 
 	MutableCompound,    // A shape containing other shapes. This shape can be constructed/changed at runtime and trades construction time for runtime performance.
 						// Child shapes are organized in a list to make modification easy.
 
+	// NOT IMPLEMENTED
 	HeightField,        // A shape consisting of NxN points that define the height at each point, very suitable for representing hilly terrain.
 						// Any body that uses this shape needs to be static.
 
@@ -436,6 +436,9 @@ class IPhysVirtualCharacter
 	virtual void             SetShapeOffset( const glm::vec3& offset )                   = 0;
 
 	virtual glm::mat4        GetCenterOfMassTransform()                                  = 0;
+
+	virtual void             SetAllowDebugDraw( bool sAllow )                            = 0;
+	virtual bool             GetAllowDebugDraw()                                         = 0;
 };
 
 
@@ -457,6 +460,11 @@ class IPhysicsEnvironment
 
 	// Create a shape that can be shared between bodies
 	virtual IPhysicsShape*         CreateShape( const PhysicsShapeInfo& physInfo )                                                               = 0;
+
+	// Load a shape from a model file that can be shared between bodies
+	// NOTE: Only shape types Mesh, Convex, StaticCompound, and MutableCompound are supported here
+	virtual IPhysicsShape*         LoadShape( const std::string& path, PhysShapeType shapeType )                                                 = 0;
+
 	virtual void                   DestroyShape( IPhysicsShape* body )                                                                           = 0;
 
 	// Create a Physics Object from a shape
@@ -556,4 +564,4 @@ public:
 
 
 #define IPHYSICS_NAME "Physics"
-#define IPHYSICS_HASH 2
+#define IPHYSICS_HASH 3

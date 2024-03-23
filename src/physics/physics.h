@@ -131,6 +131,36 @@ const char* PhysShapeType2Str( PhysShapeType type );
 class PhysicsObject;
 
 
+// maybe split by faces for materials? idk
+struct PhysicsSubShape
+{
+	// JPH::Float3* vertices    = nullptr;
+	std::vector< JPH::Float3 > vertices;
+	//u32*         indices     = nullptr;
+	u32          vertexCount = 0;
+	//u32          indexCount  = 0;
+	// ChHandle_t material;
+
+	~PhysicsSubShape()
+	{
+		//if ( vertices )
+		//	free( vertices );
+
+		//if ( indices )
+		//	free( indices );
+
+		//vertices = nullptr;
+		//indices  = nullptr;
+	}
+};
+
+
+struct PhysicsModel
+{
+	std::vector< PhysicsSubShape > shapes;
+};
+
+
 struct ContactEvent
 {
 	struct Contact
@@ -174,6 +204,7 @@ class PhysVirtualCharacter : public IPhysVirtualCharacter
    public:
 	JPH::CharacterVirtual*   character;
 	bool                     disableCollision = false;
+	bool                     debugDraw        = true;
 
 	virtual glm::vec3        GetLinearVelocity() override;
 
@@ -201,6 +232,9 @@ class PhysVirtualCharacter : public IPhysVirtualCharacter
 	virtual void             SetShapeOffset( const glm::vec3& offset ) override;
 
 	glm::mat4                GetCenterOfMassTransform() override;
+
+	virtual void             SetAllowDebugDraw( bool sAllow ) override;
+	virtual bool             GetAllowDebugDraw()              override;
 };
 
 
@@ -210,9 +244,9 @@ public:
 	PhysicsEnvironment();
 	~PhysicsEnvironment() override;
 
-	void                            Init() override;
-	void                            Shutdown() override;
-	void                            Simulate( float sDT ) override;
+	void                              Init() override;
+	void                              Shutdown() override;
+	void                              Simulate( float sDT ) override;
 
 	// IPhysicsObject*                 CreatePhysicsObject( PhysicsObjectInfo& physInfo ) override;
 	// void                            DeletePhysicsObject( IPhysicsObject *body ) override;
@@ -220,12 +254,12 @@ public:
 	// ----------------------------------------------------------------------------
 	// Physics Object/Shape Creation
 
-	// hmm
-	IPhysicsShape*                  CreateShape( const PhysicsShapeInfo& physInfo ) override;
-	void                            DestroyShape( IPhysicsShape *body ) override;
+	IPhysicsShape*                    CreateShape( const PhysicsShapeInfo& physInfo ) override;
+	IPhysicsShape*                    LoadShape( const std::string& path, PhysShapeType shapeType ) override;
+	void                              DestroyShape( IPhysicsShape* body ) override;
 
-	IPhysicsObject*                 CreateObject( IPhysicsShape* spShape, const PhysicsObjectInfo& physInfo ) override;
-	void                            DestroyObject( IPhysicsObject* body ) override;
+	IPhysicsObject*                   CreateObject( IPhysicsShape* spShape, const PhysicsObjectInfo& physInfo ) override;
+	void                              DestroyObject( IPhysicsObject* body ) override;
 
 	// ----------------------------------------------------------------------------
 	// Virtual Character Creation
@@ -239,20 +273,20 @@ public:
 	// ----------------------------------------------------------------------------
 	// Environment Controls
 
-	void                            SetGravity( const glm::vec3& gravity ) override;
-	void                            SetGravityY( float gravity ) override; // convenience functions
-	void                            SetGravityZ( float gravity ) override;
-	glm::vec3                       GetGravity() override;
+	void                              SetGravity( const glm::vec3& gravity ) override;
+	void                              SetGravityY( float gravity ) override;  // convenience functions
+	void                              SetGravityZ( float gravity ) override;
+	glm::vec3                         GetGravity() override;
 
 	// void                            RayTest( const glm::vec3& from, const glm::vec3& to, std::vector< RayHit* >& hits );
 
 	std::vector< PhysicsObject* >     aPhysObjs;
 	ChVector< PhysVirtualCharacter* > aVirtualChars;
 
-public:
-	JPH::ShapeSettings*             LoadModel( const PhysicsShapeInfo& physInfo );
+   public:
+	JPH::ShapeSettings* LoadModel( const PhysicsShapeInfo& physInfo );
 
-	JPH::PhysicsSystem*             apPhys;
+	JPH::PhysicsSystem* apPhys;
 };
 
 

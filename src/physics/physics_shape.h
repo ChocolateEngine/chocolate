@@ -14,6 +14,7 @@ public:
 	PhysShapeType           aType;
 	JPH::Ref<JPH::Shape>    aShape;
 	JPH::ShapeSettings*     apShapeSettings = nullptr;  // useless?
+	u32                     aRefCount       = 1;
 
 	friend class PhysicsEnvironment;
 	friend class PhysicsObject;

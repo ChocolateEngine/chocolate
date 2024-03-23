@@ -12,6 +12,8 @@ LOG_REGISTER_CHANNEL( Physics, LogColor::DarkGreen );
 
 extern ConVar phys_dbg;
 
+CONVAR( phys_dbg_character_constraints, 1 );
+
 Phys_DebugFuncs_t gDebugFuncs;
 PhysDebugDraw*    gpDebugDraw = nullptr;
 
@@ -463,7 +465,7 @@ void PhysicsEnvironment::Simulate( float sDT )
 	// We simulate the physics world in discrete time steps. 60 Hz is a good rate to update the physics system.
 	// const float cDeltaTime = 1.0f / 60.0f;
 
-	JPH::CharacterVirtual::sDrawConstraints  = phys_dbg;  ///< Draw the current state of the constraints for iteration 0 when creating them
+	JPH::CharacterVirtual::sDrawConstraints = phys_dbg_character_constraints;  ///< Draw the current state of the constraints for iteration 0 when creating them
 	// JPH::CharacterVirtual::sDrawWalkStairs   = phys_dbg;  ///< Draw the state of the walk stairs algorithm
 	// JPH::CharacterVirtual::sDrawStickToFloor = phys_dbg;  ///< Draw the state of the stick to floor algorithm
 
@@ -474,8 +476,8 @@ void PhysicsEnvironment::Simulate( float sDT )
 
 		// HACK HACK: change to Z axis
 		// TODO: expose these options
-		settings.mStickToFloorStepDown = JPH::Vec3( 0, 0, -25.f );
-		settings.mWalkStairsStepUp     = JPH::Vec3( 0, 0, 25.f );
+		settings.mStickToFloorStepDown = JPH::Vec3( 0, 0, -0.59f );
+		settings.mWalkStairsStepUp     = JPH::Vec3( 0, 0, 0.59f );
 
 		u32 layer = ObjLayer_Moving;
 
@@ -516,8 +518,8 @@ void PhysicsEnvironment::Simulate( float sDT )
 
 	for ( auto character : aVirtualChars )
 	{
-		// if ( !physObj->aAllowDebugDraw )
-		// 	continue;
+		if ( !character->debugDraw )
+			continue;
 
 		character->character->GetShape()->Draw(
 		  gpDebugDraw,
@@ -609,6 +611,217 @@ IPhysicsShape* PhysicsEnvironment::CreateShape( const PhysicsShapeInfo& physInfo
 }
 
 
+extern bool    LoadObj_Fast( const std::string& srPath, PhysicsModel* spModel, bool singleShape );
+
+
+JPH::ConvexHullShapeSettings ConvexShapeSettingsFromSubShape( PhysicsSubShape& shape )
+{
+	JPH::Array< JPH::Vec3 > points( shape.vertexCount );
+
+	for ( u32 i = 0; i < shape.vertexCount; i++ )
+	{
+		points[ i ] = JPH::Vec3( shape.vertices[ i ] );
+	}
+
+	// TODO: replace this with an indexed triangle list
+	return JPH::ConvexHullShapeSettings( points );
+}
+
+
+JPH::Ref< JPH::Shape > ConvexShapeFromSubShape( PhysicsSubShape& shape )
+{
+	JPH::Array< JPH::Vec3 > points( shape.vertexCount );
+
+	for ( u32 i = 0; i < shape.vertexCount; i++ )
+	{
+		points[ i ] = JPH::Vec3( shape.vertices[ i ] );
+	}
+
+	// TODO: replace this with an indexed triangle list
+	JPH::ConvexHullShapeSettings shapeSettings( points );
+
+	// Create shape
+	JPH::Shape::ShapeResult      result = shapeSettings.Create();
+	if ( !result.IsValid() )
+	{
+		if ( result.HasError() )
+		{
+			Log_ErrorF( gPhysicsChannel, "Failed to create ConvexShape - %s\n", result.GetError().c_str() );
+		}
+		else
+		{
+			Log_Error( gPhysicsChannel, "Failed to create ConvexShape\n" );
+		}
+
+		return nullptr;
+	}
+
+	return result.Get();
+}
+
+
+static int     SHAPES_MADE = 0;
+
+
+IPhysicsShape* PhysicsEnvironment::LoadShape( const std::string& path, PhysShapeType shapeType )
+{
+	switch ( shapeType )
+	{
+		// if the shapeType is one of these, it's not supported
+		case PhysShapeType::Sphere:
+		case PhysShapeType::Box:
+		case PhysShapeType::Capsule:
+		case PhysShapeType::TaperedCapsule:
+		case PhysShapeType::Cylinder:
+		case PhysShapeType::HeightField:
+		{
+			Log_ErrorF( gPhysicsChannel,
+			            "Unsupported Shape Type for Loading a Model \"%s\"\n"
+			            "Only these are supported: Convex, Mesh, StaticCompound, MutableCompound\n",
+			            PhysShapeType2Str( shapeType ) );
+			return nullptr;
+		}
+		case PhysShapeType::MutableCompound:
+		{
+			Log_Error( gPhysicsChannel, "sorry MutableCompound will be supported soon lool\n" );
+			return nullptr;
+		}
+
+		default:
+			break;
+	}
+
+	std::string absPath = FileSys_FindFile( path );
+
+	if ( absPath.empty() && FileSys_IsRelative( path.data() ) )
+	{
+		absPath = "models";
+		absPath += CH_PATH_SEP_STR;
+		absPath += path;
+
+		absPath = FileSys_FindFile( absPath );
+	}
+	
+	if ( absPath.empty() )
+	{
+		Log_ErrorF( "Failed to find physics model: \"%s\"\n", path.data() );
+		return nullptr;
+	}
+
+	bool singleShape = false;
+
+	if ( shapeType == PhysShapeType::Mesh || shapeType == PhysShapeType::Convex )
+		singleShape = true;
+
+	PhysicsModel* model = new PhysicsModel;
+	if ( !LoadObj_Fast( absPath, model, singleShape ) )
+	{
+		Log_ErrorF( gPhysicsChannel, "Failed to Load Model for Physics Shape: \"%s\"\n", path.data() );
+		delete model;
+		return nullptr;
+	}
+
+	JPH::ShapeSettings* shapeSettings = nullptr;
+
+	switch ( shapeType )
+	{
+		case PhysShapeType::Convex:
+		{
+			// single shape mode
+			PhysicsSubShape&        shape = model->shapes[ 0 ];
+			JPH::Array< JPH::Vec3 > points( shape.vertexCount );
+
+			for ( u32 i = 0; i < shape.vertexCount; i++ )
+			{
+				points[ i ] = JPH::Vec3( shape.vertices[ i ] );
+			}
+
+			// TODO: replace this with an indexed triangle list
+			shapeSettings = new JPH::ConvexHullShapeSettings( points );
+			break;
+		}
+		case PhysShapeType::Mesh:
+		{
+#if 0
+			// single shape mode
+			PhysicsSubShape&  shape = model->shapes[ 0 ];
+			JPH::TriangleList tris( shape.vertexCount / 3 );
+
+			for ( u32 tri = 0, i = 0; i < shape.vertexCount; tri++ )
+			{
+				JPH::Float3 x = shape.vertices[ i++ ];
+				JPH::Float3 y = shape.vertices[ i++ ];
+				JPH::Float3 z = shape.vertices[ i++ ];
+
+				// tris[ tri ] = JPH::Triangle( shape.vertices[ i++ ], shape.vertices[ i++ ], shape.vertices[ i++ ] );
+				tris[ tri ] = JPH::Triangle( x, y, z );
+			}
+
+			// TODO: replace this with an indexed triangle list
+			shapeSettings = new JPH::MeshShapeSettings( tris );
+#endif
+			break;
+		}
+		case PhysShapeType::StaticCompound:
+		{
+			JPH::StaticCompoundShapeSettings* staticCompoundSettings = new JPH::StaticCompoundShapeSettings;
+
+			for ( PhysicsSubShape& shape : model->shapes )
+			{
+				// each shape here turns into a convex shape
+				JPH::Ref< JPH::Shape > convexShape = ConvexShapeFromSubShape( shape );
+				if ( !convexShape.GetPtr() )
+				{
+					delete staticCompoundSettings;
+					return nullptr;
+				}
+
+				staticCompoundSettings->AddShape( JPH::Vec3::sZero(), JPH::Quat::sIdentity(), convexShape.GetPtr() );
+			}
+
+			shapeSettings = staticCompoundSettings;
+			break;
+		}
+		// case PhysShapeType::MutableCompound:
+		// {
+		// 	break;
+		// }
+	}
+
+	delete model;
+
+	if ( !shapeSettings )
+		return nullptr;
+
+	// Create shape
+	JPH::Shape::ShapeResult result = shapeSettings->Create();
+	if ( !result.IsValid() )
+	{
+		if ( result.HasError() )
+		{
+			Log_ErrorF( gPhysicsChannel, "Failed to create \"%s\" Physics Shape - %s\n",
+			            PhysShapeType2Str( shapeType ),
+			            result.GetError().c_str() );
+		}
+		else
+		{
+			Log_ErrorF( gPhysicsChannel, "Failed to create \"%s\" Physics Shape\n", PhysShapeType2Str( shapeType ) );
+		}
+
+		delete shapeSettings;
+		return nullptr;
+	}
+
+	PhysicsShape* shape    = new PhysicsShape( shapeType );
+	shape->apShapeSettings = shapeSettings;
+	shape->aShape          = result.Get();
+
+	//Log_Msg( "a\n" );
+
+	return shape;
+}
+
+
 void PhysicsEnvironment::DestroyShape( IPhysicsShape *spShape )
 {
 	CH_ASSERT( spShape );
@@ -620,6 +833,8 @@ void PhysicsEnvironment::DestroyShape( IPhysicsShape *spShape )
 
 	if ( shape->apShapeSettings )
 		delete shape->apShapeSettings;
+
+	Log_Msg( "A\n" );
 
 	delete spShape;
 }
@@ -683,7 +898,6 @@ IPhysicsObject* PhysicsEnvironment::CreateObject( IPhysicsShape* spShape, const 
 	// Add it to the world
 	bodyInterface.AddBody( body->GetID(), physInfo.aStartActive ? JPH::EActivation::Activate : JPH::EActivation::DontActivate );
 
-	// REMOVE ME:
 	aPhysObjs.push_back( phys );
 
 	return phys;
@@ -946,6 +1160,7 @@ JPH::ShapeSettings* PhysicsEnvironment::LoadModel( const PhysicsShapeInfo& physI
 			// Create an array of vertices
 			JPH::Array< JPH::Vec3 > vertices( physInfo.aConvexData.aVertCount );
 
+#pragma message( "how did this work for so long" )
 			// same thing
 			memcpy( vertices.data(), physInfo.aConvexData.apVertices, physInfo.aConvexData.aVertCount * sizeof( glm::vec3 ) );
 
