@@ -21,7 +21,9 @@ endif()
 
 # set(CMAKE_CONFIGURATION_TYPES "Debug;Release;RelWithDebInfo;Profile")
 
-if (${CMAKE_CL_64})
+option( 32_BIT "Build the engine in 32-bit" OFF )
+
+if (NOT ${32_BIT})
 	set( 64_BIT 1 )
 	set( 32_BIT 0 )
 	
@@ -44,11 +46,6 @@ endif()
 set_property( GLOBAL PROPERTY CH_BIN            ${CH_BUILD}/bin/${PLAT_FOLDER} )
 get_property( CH_BIN GLOBAL PROPERTY CH_BIN )
 
-message( "CMAKE_GENERATOR: ${CMAKE_GENERATOR}" )
-message( "CMAKE_SIZE_OF_VOID_P: ${CMAKE_SIZE_OF_VOID_P}" )
-message( "CMAKE_GENERATOR_PLATFORM: ${CMAKE_GENERATOR_PLATFORM}" )
-message( "" )
-message( "CMAKE_CL_64:     ${CMAKE_CL_64}" )
 message( "Is 64-bit:       ${64_BIT}" )
 message( "Is 32-bit:       ${32_BIT}" )
 message( "Platform Folder: ${PLAT_FOLDER}" )
@@ -230,9 +227,9 @@ if( MSVC )
 
 	set( COMPILE_OPTIONS_DEBUG
 		"/Od"        # no optimizations
-		"/ZI"        # edit and continue
 		"/fp:except" # raise floating point exceptions
-		#"/fsanitize=address" # use address sanitizing in Debug (incompatible with /INCREMENTAL)
+		"/ZI"        # edit and continue
+		# "/fsanitize=address" # use address sanitizing in Debug (incompatible with /INCREMENTAL)
 	)
 	
 	set( COMPILE_OPTIONS_RELEASE
