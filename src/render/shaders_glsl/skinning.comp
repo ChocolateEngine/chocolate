@@ -1,0 +1,100 @@
+#version 450
+#extension GL_EXT_nonuniform_qualifier : enable
+
+
+#define CH_COMP_SHADER 1
+
+#include "core.glsl"
+#include "common_shadow.glsl"
+
+layout(local_size_x = 64, local_size_y = 1, local_size_z = 1) in;
+
+
+layout(push_constant) uniform SkinningParams {
+	// uint aRenderableCount;
+
+	uint aRenderable;
+	uint aSourceVertexBuffer;
+	uint aVertexCount;
+	uint aBlendShapeCount;
+	uint aBlendShapeWeightIndex;
+	uint aBlendShapeDataIndex;
+}
+push;
+
+
+struct RenderableData_t
+{
+	uint aRenderable;
+	uint aSourceVertexBuffer;
+	uint aVertexCount;
+	uint aBlendShapeCount;
+};
+
+
+// TODO: pack this for alignment
+struct BoneTransform_t
+{
+	vec3 aPos;
+	vec3 aRot;
+	vec3 aScale;
+};
+
+
+// POS|UV|NORM|POS|UV|NORM|POS|UV|NORM|POS|UV|NORM|POS|UV|NORM| |POS|UV|NORM|POS|UV|NORM|POS|UV|NORM|POS|UV|NORM|POS|UV|NORM|
+
+
+// -----------------------------------------------------------------------------------
+// Blend Shape Data
+
+
+layout(set = 1, binding = 0) buffer restrict readonly Buffer_BlendShapeWeights {
+	float data[];
+}
+gBlendShapeWeights[];
+
+
+layout(set = 1, binding = 1) buffer restrict readonly Buffer_BlendShapeData {
+	VertexData_t vertices[];
+}
+gBlendShapeData[];
+
+
+// -----------------------------------------------------------------------------------
+
+
+void main()
+{
+    // get current element shader is using
+    uint vertIndex = gl_GlobalInvocationID.x;
+
+	Renderable_t renderable = gRenderables[ push.aRenderable ];
+	VertexData_t vert = gVertexBuffers[ push.aSourceVertexBuffer ].aVert[ vertIndex ];
+
+	vec3 inPos  = vert.aPosNormX.xyz;
+	vec3 inNorm = vec3(vert.aPosNormX.w, vert.aNormYZ_UV.xy);
+	vec2 inUV   = vert.aNormYZ_UV.zw;
+
+	vec3 newPos  = inPos;
+	vec3 newNorm = inNorm;
+
+	uint morphVertIndex = 0;
+	for ( uint morphI = 0; morphI < push.aBlendShapeCount; morphI++ )
+	{
+		uint dataOffset = morphI * push.aVertexCount;
+		
+		vec3 morphPos   = gBlendShapeData[ push.aBlendShapeDataIndex ].vertices[ vertIndex + dataOffset ].aPosNormX.xyz;
+		vec3 morphNorm  = gBlendShapeData[ push.aBlendShapeDataIndex ].vertices[ vertIndex + dataOffset ].aPosNormX.xxx;
+		
+		morphNorm.y = gBlendShapeData[ push.aBlendShapeDataIndex ].vertices[ vertIndex + dataOffset ].aNormYZ_UV.y;
+		morphNorm.z = gBlendShapeData[ push.aBlendShapeDataIndex ].vertices[ vertIndex + dataOffset ].aNormYZ_UV.z;
+		
+		newPos          += gBlendShapeWeights[ push.aBlendShapeWeightIndex ].data[ morphI ]  * morphPos;
+		newNorm         += gBlendShapeWeights[ push.aBlendShapeWeightIndex ].data[ morphI ] * morphNorm;
+	}
+
+	gVertexBuffers[ renderable.aVertexBuffer ].aVert[ vertIndex ].aPosNormX.xyz = newPos;
+	gVertexBuffers[ renderable.aVertexBuffer ].aVert[ vertIndex ].aPosNormX.w   = newNorm.x;
+	gVertexBuffers[ renderable.aVertexBuffer ].aVert[ vertIndex ].aNormYZ_UV.xy = newNorm.yz;
+}
+
