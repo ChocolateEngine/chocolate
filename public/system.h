@@ -8,12 +8,12 @@ systems inherit.
 
 class ISystem
 {
-  public:
+   public:
 	// Main Update Function for this system (remove this? all systems usually have their own update function)
-	virtual void Update( float sDT ) = 0;
+	virtual void Update( float sDT ){};
 
 	// Initialize System
-	virtual bool Init()              = 0;
+	virtual bool Init() { return true; };
 
 	// Shutdown This System
 	virtual void Shutdown(){};
