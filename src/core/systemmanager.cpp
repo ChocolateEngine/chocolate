@@ -29,7 +29,6 @@ static std::vector< LoadedSystem_t >                    gLoadedSystems;
 // static std::unordered_map< ISystem*, Module >           gSystems;
 
 
-// TODO: double check this, this doesn't look right at all!!
 bool Mod_InitSystem( LoadedSystem_t& appModule )
 {
 	CH_ASSERT( appModule.apSystem );
@@ -37,12 +36,11 @@ bool Mod_InitSystem( LoadedSystem_t& appModule )
 	if ( !appModule.apSystem )
 		return false;
 
-	if ( !appModule.apSystem->Init() )
+	if ( appModule.apSystem->Init() )
 	{
 		// Register the convars that are declared.
 		Con_RegisterConVars();
-
-		return false;
+		return true;
 	}
 
 	if ( appModule.aRequired )
@@ -50,7 +48,7 @@ bool Mod_InitSystem( LoadedSystem_t& appModule )
 	else
 		Log_ErrorF( "Failed to Init Optional System: %s\n", appModule.apName );
 
-	return true;
+	return false;
 }
 
 
@@ -243,6 +241,22 @@ bool Mod_AddSystems( AppModule_t* spModules, size_t sCount )
 }
 
 
+bool Mod_InitSystem( AppModule_t& srModule )
+{
+	// Dumb, find the AppLoadedModule_t struct we made so can initialize it
+	for ( LoadedSystem_t& loadedSystem : gLoadedSystems )
+	{
+		if ( strcmp( loadedSystem.apName, srModule.apInterfaceName ) == 0 )
+		{
+			return Mod_InitSystem( loadedSystem );
+		}
+	}
+
+	Log_ErrorF( gLC_Module, "Failed to find system to init: \"%s\"", srModule.apInterfaceName );
+	return false;
+}
+
+
 EModLoadError Mod_LoadAndInitSystem( AppModule_t& srModule )
 {
 	EModLoadError err = Mod_LoadSystem( srModule );
@@ -251,14 +265,16 @@ EModLoadError Mod_LoadAndInitSystem( AppModule_t& srModule )
 		return err;
 
 	// Dumb, find the AppLoadedModule_t struct we made so can initialize it
-	for ( LoadedSystem_t& appModule : gLoadedSystems )
+	for ( LoadedSystem_t& loadedSystem : gLoadedSystems )
 	{
-		if ( strcmp( appModule.apName, srModule.apInterfaceName ) == 0 )
+		if ( strcmp( loadedSystem.apName, srModule.apInterfaceName ) == 0 )
 		{
-			Mod_InitSystem( appModule );
-			break;
+			Mod_InitSystem( loadedSystem );
+			return EModLoadError_Success;
 		}
 	}
+
+	return EModLoadError_InitInterface;
 }
 
 

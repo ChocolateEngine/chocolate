@@ -39,7 +39,7 @@ struct ModuleInterface_t
 struct AppModule_t
 {
 	// void**      apSystem;
-	ISystem**   apSystem;
+	ISystem**   apSystem;  // TODO: try ISystem*&
 	const char* apModuleName;
 	const char* apInterfaceName;
 	size_t      apInterfaceVer;
@@ -69,6 +69,7 @@ extern "C"
 
 	CORE_API bool          Mod_AddSystems( AppModule_t* spModules, size_t sCount );
 	CORE_API EModLoadError Mod_LoadSystem( AppModule_t& srModule );
+	CORE_API bool          Mod_InitSystem( AppModule_t& srModule );
 	CORE_API EModLoadError Mod_LoadAndInitSystem( AppModule_t& srModule );
 
 	// CORE_API void   Mod_AddLoadedSystem( Module spModule, ISystem* spSystem );
