@@ -6,8 +6,10 @@
 #include "render_vk.h"
 
 
-static VkRenderPass                                         gMainRenderPass = VK_NULL_HANDLE;
 static ResourceList< VkRenderPass >                         gRenderPasses;
+
+// Main Render Pass
+VkRenderPass                                                gRenderPass;
 
 static std::unordered_map< VkRenderPass, RenderPassInfoVK > gRenderPassInfo;
 
@@ -17,12 +19,6 @@ constexpr VkPipelineStageFlags                              gDefaultAccessMask =
                                                     VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT |
                                                     VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT |
                                                     VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-
-
-VkFormat VK_GetColorFormat()
-{
-	return VK_GetSwapFormat();
-}
 
 
 VkFormat VK_GetDepthFormat()
@@ -40,8 +36,8 @@ void VK_DestroyRenderPass( VkRenderPass& srRenderPass )
 
 VkRenderPass VK_CreateMainRenderPass()
 {
-	if ( gMainRenderPass != VK_NULL_HANDLE )
-		return gMainRenderPass;
+	if ( gRenderPass != VK_NULL_HANDLE )
+		return gRenderPass;
 
 	/*
      *    Create the default color and depth render pass.
@@ -61,9 +57,11 @@ VkRenderPass VK_CreateMainRenderPass()
 	if ( dependencies == nullptr )
 		Log_Fatal( gLC_Render, "Failed to Allocate Main RenderPass Subpass Dependencies!\n" );
 
+	auto surfaceFormat              = VK_ChooseSwapSurfaceFormat();
+
 	// Color Attachment
 	attachments[ 0 ].flags          = 0;
-	attachments[ 0 ].format         = VK_GetSwapFormat();
+	attachments[ 0 ].format         = surfaceFormat.format;
 	attachments[ 0 ].samples        = VK_GetMSAASamples();
 	attachments[ 0 ].loadOp         = VK_ATTACHMENT_LOAD_OP_CLEAR;
 	attachments[ 0 ].storeOp        = VK_ATTACHMENT_STORE_OP_STORE;
@@ -87,7 +85,7 @@ VkRenderPass VK_CreateMainRenderPass()
 	{
 		// Color Resolve Attachment
 		attachments[ 2 ].flags          = 0;
-		attachments[ 2 ].format         = VK_GetSwapFormat();
+		attachments[ 2 ].format         = surfaceFormat.format;
 		attachments[ 2 ].samples        = VK_SAMPLE_COUNT_1_BIT;
 		attachments[ 2 ].loadOp         = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
 		attachments[ 2 ].storeOp        = VK_ATTACHMENT_STORE_OP_STORE;
@@ -153,17 +151,17 @@ VkRenderPass VK_CreateMainRenderPass()
 	renderPassInfo.dependencyCount = 2;
 	renderPassInfo.pDependencies   = dependencies;
 
-	VK_CheckResult( vkCreateRenderPass( VK_GetDevice(), &renderPassInfo, nullptr, &gMainRenderPass ), "Failed to create main render pass!" );
+	VK_CheckResult( vkCreateRenderPass( VK_GetDevice(), &renderPassInfo, nullptr, &gRenderPass ), "Failed to create main render pass!" );
 
-	VK_SetObjectName( VK_OBJECT_TYPE_RENDER_PASS, (u64)gMainRenderPass, "Main Render Pass" );
+	VK_SetObjectName( VK_OBJECT_TYPE_RENDER_PASS, (u64)gRenderPass, "Main Render Pass" );
 
-	gRenderPassInfo[ gMainRenderPass ] = { VK_UseMSAA() };
+	gRenderPassInfo[ gRenderPass ] = { VK_UseMSAA() };
 
 	delete[] attachments;
 	delete[] attachRefs;
 	delete[] dependencies;
 
-	return gMainRenderPass;
+	return gRenderPass;
 }
 
 
@@ -289,8 +287,6 @@ void VK_DestroyRenderPass( Handle shHandle )
 
 void VK_DestroyRenderPasses()
 {
-	VK_DestroyMainRenderPass();
-
 	VkRenderPass renderPass = VK_NULL_HANDLE;
 	for ( size_t i = 0; i < gRenderPasses.size(); i++ )
 	{
@@ -308,19 +304,13 @@ void VK_DestroyRenderPasses()
 
 void VK_DestroyMainRenderPass()
 {
-	if ( gMainRenderPass != VK_NULL_HANDLE )
+	if ( gRenderPass != VK_NULL_HANDLE )
 	{
-		gRenderPassInfo.erase( gMainRenderPass );
-		vkDestroyRenderPass( VK_GetDevice(), gMainRenderPass, nullptr );
+		gRenderPassInfo.erase( gRenderPass );
+		vkDestroyRenderPass( VK_GetDevice(), gRenderPass, nullptr );
 	}
 
-	gMainRenderPass = VK_NULL_HANDLE;
-}
-
-
-VkRenderPass VK_GetRenderPass()
-{
-	return VK_CreateMainRenderPass();
+	gRenderPass = VK_NULL_HANDLE;
 }
 
 

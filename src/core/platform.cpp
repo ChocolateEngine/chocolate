@@ -18,7 +18,6 @@
 #include "core/log.h"
 
 
-static bool     gMaxWindow         = false;
 static bool     gExceptionDebugger = false;
 
 
@@ -26,6 +25,7 @@ bool            gIsWindows10       = false;
 OSVERSIONINFOEX gOSVer{};
 
 HMODULE         ghInst   = 0;
+ATOM            gWindowClass = 0;
 
 HANDLE          gConOut  = INVALID_HANDLE_VALUE;
 HANDLE          gConIn   = INVALID_HANDLE_VALUE;
@@ -321,6 +321,60 @@ void sys_debug_break()
 }
 
 
+static FResizeCallback* gResizeCallbackFunc = nullptr;
+
+LRESULT __stdcall Win32_WindowProc( HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam )
+{
+	// ImGui_ImplWin32_WndProcHandler( hwnd, uMsg, wParam, lParam );
+
+	#if 0
+	switch ( uMsg )
+	{
+		case WM_INPUT:
+		{
+			RAWINPUT  input;
+			UINT      szData = sizeof( input ), szHeader = sizeof( RAWINPUTHEADER );
+			HRAWINPUT handle = reinterpret_cast< HRAWINPUT >( lParam );
+
+			GetRawInputData( handle, RID_INPUT, &input, &szData, szHeader );
+			if ( input.header.dwType == RIM_TYPEMOUSE )
+			{
+				// Here input.data.mouse.ulRawButtons is 0 at all times.
+			}
+
+			printf( "WM_INPUT\n" );
+			break;
+		}
+		default:
+			break;
+	}
+	#endif
+
+	// resize events
+	switch ( uMsg )
+	{
+		case WM_DPICHANGED:
+		case WM_SIZE:
+		{
+			// hack
+			static bool firstTime = true;
+			if ( firstTime )
+			{
+				firstTime = false;
+				break;
+			}
+
+			if ( gResizeCallbackFunc )
+				gResizeCallbackFunc( hwnd );
+
+			break;
+		}
+	}
+
+	return DefWindowProc( hwnd, uMsg, wParam, lParam );
+}
+
+
 void sys_init()
 {
 	// detect windows version
@@ -410,7 +464,6 @@ void sys_init()
 		}
 	}
 
-	gMaxWindow         = Args_Register( "Maximize the main window", "-max" );
 	gExceptionDebugger = Args_Register( "Wait for debugger on catching a fatal exception", "-exception-debugger" );
 
 #if 0 //def _DEBUG
@@ -429,6 +482,31 @@ void sys_init()
 	// Set the new state for the flag
 	_CrtSetDbgFlag( tmpFlag );
 #endif
+
+	// Create Window Classs
+	WNDCLASSEX wc = { 0 };
+	ZeroMemory( &wc, sizeof( wc ) );
+
+	wc.cbClsExtra    = 0;
+	wc.cbSize        = sizeof( wc );
+	wc.cbWndExtra    = 0;
+	wc.hInstance     = GetModuleHandle( NULL );
+	wc.hCursor       = LoadCursor( NULL, IDC_ARROW );
+	wc.hIcon         = LoadIcon( NULL, IDI_APPLICATION );
+	wc.hIconSm       = LoadIcon( 0, IDI_APPLICATION );
+	wc.hbrBackground = (HBRUSH)GetStockObject( BLACK_BRUSH );  // does this affect perf? i hope not
+	wc.style         = CS_HREDRAW | CS_VREDRAW;                // redraw if size changes
+	wc.lpszClassName = "chocolate_engine";
+	wc.lpszMenuName  = 0;
+	wc.lpfnWndProc   = Win32_WindowProc;
+
+	gWindowClass = RegisterClassEx( &wc );
+
+	if ( gWindowClass == 0 )
+	{
+		// somehow not running on windows nt?
+		Log_FatalF(" Failed to create window class\n" );
+	}
 }
 
 
@@ -452,59 +530,6 @@ int Sys_GetCoreCount()
 }
 
 
-static FResizeCallback* gResizeCallbackFunc = nullptr;
-
-LRESULT __stdcall Win32_WindowProc( HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam )
-{
-	// ImGui_ImplWin32_WndProcHandler( hwnd, uMsg, wParam, lParam );
-
-  #if 0
-	switch ( uMsg )
-	{
-		case WM_INPUT:
-		{
-			RAWINPUT  input;
-			UINT      szData = sizeof( input ), szHeader = sizeof( RAWINPUTHEADER );
-			HRAWINPUT handle = reinterpret_cast< HRAWINPUT >( lParam );
-
-			GetRawInputData( handle, RID_INPUT, &input, &szData, szHeader );
-			if ( input.header.dwType == RIM_TYPEMOUSE )
-			{
-				// Here input.data.mouse.ulRawButtons is 0 at all times.
-			}
-
-			printf( "WM_INPUT\n" );
-			break;
-		}
-		default:
-			break;
-	}
-  #endif
-
-	// resize events
-	switch ( uMsg )
-	{
-		case WM_DPICHANGED:
-		case WM_SIZE:
-		{
-			// hack
-			static bool firstTime = true;
-			if ( firstTime )
-			{
-				firstTime = false;
-				break;
-			}
-
-			if ( gResizeCallbackFunc )
-				gResizeCallbackFunc();
-
-			break;
-		}
-	}
-
-	return DefWindowProc( hwnd, uMsg, wParam, lParam );
-}
-
 
 void Sys_SetResizeCallback( FResizeCallback callback )
 {
@@ -512,33 +537,9 @@ void Sys_SetResizeCallback( FResizeCallback callback )
 }
 
 
-void* Sys_CreateWindow( const char* spWindowName, int sWidth, int sHeight )
+void* Sys_CreateWindow( const char* spWindowName, int sWidth, int sHeight, bool sMaximize )
 {
-	WNDCLASSEX wc = { 0 };
-	ZeroMemory( &wc, sizeof( wc ) );
-
-	wc.cbClsExtra    = 0;
-	wc.cbSize        = sizeof( wc );
-	wc.cbWndExtra    = 0;
-	wc.hInstance     = GetModuleHandle( NULL );
-	wc.hCursor       = LoadCursor( NULL, IDC_ARROW );
-	wc.hIcon         = LoadIcon( NULL, IDI_APPLICATION );
-	wc.hIconSm       = LoadIcon( 0, IDI_APPLICATION );
-	wc.hbrBackground = (HBRUSH)GetStockObject( BLACK_BRUSH );  // does this affect perf? i hope not
-	wc.style         = CS_HREDRAW | CS_VREDRAW;                // redraw if size changes
-	wc.lpszClassName = "chocolate_engine";
-	wc.lpszMenuName  = 0;
-	wc.lpfnWndProc   = Win32_WindowProc;
-
-	ATOM _Atom( RegisterClassEx( &wc ) );
-
-	if ( _Atom == 0 )
-	{
-		// somehow not running on windows nt?
-		return nullptr;
-	}
-
-	const LPTSTR _ClassName( MAKEINTATOM( _Atom ) );
+	const LPTSTR _ClassName( MAKEINTATOM( gWindowClass ) );
 
 	DWORD        dwStyle   = WS_VISIBLE | WS_OVERLAPPEDWINDOW | WS_EX_CONTROLPARENT;
 	DWORD        dwExStyle = 0;
@@ -563,7 +564,7 @@ void* Sys_CreateWindow( const char* spWindowName, int sWidth, int sHeight )
 		return nullptr;
 	}
 
-	if ( gMaxWindow )
+	if ( sMaximize )
 	{
 		ShowWindow( window, SW_MAXIMIZE );
 	}
@@ -620,6 +621,41 @@ int Sys_ExecuteV( const char* spFile, const char* spArgs, ... )
 	va_end( args );
 
 	return Sys_Execute( spFile, argString.data() );
+}
+
+
+void Sys_CheckHeap()
+{
+	int result = _heapchk();
+
+	switch ( result )
+	{
+		case _HEAPEMPTY:
+			Log_Msg( "Heap Empty\n" );
+			break;
+
+		case _HEAPOK:
+			Log_Msg( "Heap OK\n" );
+			break;
+
+		case _HEAPBADBEGIN:
+			Log_Msg( "Heap Bad Begin\n" );
+			break;
+
+		case _HEAPBADNODE:
+			Log_Msg( "Heap Bad Node\n" );
+			break;
+
+		case _HEAPEND:
+			Log_Msg( "Heap End\n" );
+			break;
+
+		case _HEAPBADPTR:
+			Log_Msg( "Heap Bad Pointer\n" );
+			break;
+	}
+
+	CH_ASSERT( result == _HEAPOK );
 }
 
 

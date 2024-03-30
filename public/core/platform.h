@@ -22,7 +22,7 @@ typedef void* Module;
 #endif
 
 
-using FResizeCallback = void( void );
+using FResizeCallback = void( void* window );
 
 
 // why is msvc like this with this dllexport/dllimport stuff aaaa
@@ -50,9 +50,13 @@ int CORE_API                Sys_GetCoreCount();
 
 // window management
 #ifdef _WIN32
-void            CORE_API*   Sys_CreateWindow( const char* spWindowName, int sWidth, int sHeight );
+void            CORE_API*   Sys_CreateWindow( const char* spWindowName, int sWidth, int sHeight, bool maximize );
 void            CORE_API    Sys_SetResizeCallback( FResizeCallback callback );
 
 int             CORE_API    Sys_Execute( const char* spFile, const char* spArgs );
 int             CORE_API    Sys_ExecuteV( const char* spFile, const char* spArgs, ... );
+
+void CORE_API               Sys_CheckHeap();
+#else
+	#define Sys_CheckHeap()
 #endif

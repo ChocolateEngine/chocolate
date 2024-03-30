@@ -257,20 +257,16 @@ void Graphics_RenderView( Handle cmd, size_t sIndex, ViewportShader_t& srViewpor
 		return;
 	}
 
+	bool          hasSkybox = false;
+
 	// here we go again
 	static Handle skybox    = gGraphics.GetShader( "skybox" );
 	static Handle gizmo     = gGraphics.GetShader( "gizmo" );
 
-	bool          hasSkybox = false;
-
-	int width = 0, height = 0;
-	render->GetSurfaceSize( width, height );
-
 	Rect2D_t rect{};
 	rect.aOffset.x = 0;
 	rect.aOffset.y = 0;
-	rect.aExtent.x = width;
-	rect.aExtent.y = height;
+	rect.aExtent   = srViewport.aSize;
 
 	render->CmdSetScissor( cmd, 0, &rect, 1 );
 
@@ -334,40 +330,6 @@ void Graphics_RenderView( Handle cmd, size_t sIndex, ViewportShader_t& srViewpor
 		render->CmdSetViewport( cmd, 0, &viewPort, 1 );
 
 		Graphics_DrawShaderRenderables( cmd, sIndex, skybox, srViewList.aRenderLists[ skybox ] );
-	}
-}
-
-
-void Graphics_Render( Handle sCmd, size_t sIndex, ERenderPass sRenderPass )
-{
-	PROF_SCOPE();
-
-	// render->CmdBindDescriptorSets( sCmd, sIndex, EPipelineBindPoint_Graphics, PIPELINE_LAYOUT, SETS, SET_COUNT );
-
-	// TODO: add in some dependency thing here, when you add camera's in the game, you'll need to render those first before the final viewports (VR maybe)
-	for ( auto& [ viewHandle, viewRenderList ] : gGraphicsData.aViewRenderLists )
-	{
-		auto it = gGraphicsData.aViewports.find( viewHandle );
-
-		if ( it == gGraphicsData.aViewports.end() )
-		{
-			Log_ErrorF( gLC_ClientGraphics, "Failed to get viewport data for rendering\n" );
-			continue;
-		}
-
-		ViewportShader_t& viewport = it->second;
-
-		// blech
-		if ( !viewport.aActive )
-			continue;
-
-		// HACK HACK !!!!
-		// don't render views with shader overrides here, the only override is the shadow map shader and selection
-		// and that is rendered in a separate render pass
-		if ( viewport.aShaderOverride )
-			continue;
-
-		Graphics_RenderView( sCmd, sIndex, viewport, viewRenderList );
 	}
 }
 

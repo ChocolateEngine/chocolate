@@ -11,6 +11,7 @@ input.h
 
 #include <fstream>
 #include <iostream>
+#include <unordered_set>
 
 #if CH_USE_MIMALLOC
   #include "mimalloc-new-delete.h"
@@ -127,6 +128,99 @@ void InputSystem::ReleaseMouseButton( EButton sButton )
 }
 
 
+InputSysWindow* InputSystem::UpdateCurrentWindow( SDL_Event& sEvent )
+{
+	PROF_SCOPE();
+
+	SDL_Window* window = nullptr;
+
+	switch ( sEvent.type )
+	{
+		case SDL_WINDOWEVENT:
+		{
+			window = SDL_GetWindowFromID( sEvent.window.windowID );
+			break;
+		}
+
+		case SDL_KEYUP:
+		case SDL_KEYDOWN:
+		{
+			window = SDL_GetWindowFromID( sEvent.key.windowID );
+			break;
+		}
+		
+		case SDL_TEXTEDITING:
+		{
+			window = SDL_GetWindowFromID( sEvent.edit.windowID );
+			break;
+		}
+		
+		case SDL_TEXTEDITING_EXT:
+		{
+			window = SDL_GetWindowFromID( sEvent.editExt.windowID );
+			break;
+		}
+		
+		case SDL_TEXTINPUT:
+		{
+			window = SDL_GetWindowFromID( sEvent.text.windowID );
+			break;
+		}
+
+		case SDL_MOUSEMOTION:
+		{
+			window = SDL_GetWindowFromID( sEvent.motion.windowID );
+			break;
+		}
+
+		case SDL_MOUSEBUTTONUP:
+		case SDL_MOUSEBUTTONDOWN:
+		{
+			window = SDL_GetWindowFromID( sEvent.button.windowID );
+			break;
+		}
+
+		case SDL_MOUSEWHEEL:
+		{
+			window = SDL_GetWindowFromID( sEvent.wheel.windowID );
+			break;
+		}
+
+		case SDL_DROPBEGIN:
+		case SDL_DROPFILE:
+		case SDL_DROPTEXT:
+		case SDL_DROPCOMPLETE:
+		{
+			window = SDL_GetWindowFromID( sEvent.drop.windowID );
+			break;
+		}
+
+		case SDL_USEREVENT:
+		{
+			window = SDL_GetWindowFromID( sEvent.user.windowID );
+			break;
+		}
+	}
+
+	if ( window == nullptr )
+		return nullptr;
+
+	auto it = aWindows.find( window );
+
+	if ( it == aWindows.end() )
+	{
+		Log_ErrorF( "EVENT DOES NOT HAVE WINDOW CONTEXT\n" );
+		return nullptr;
+	}
+	else
+	{
+		ImGui::SetCurrentContext( it->second.context );
+	}
+
+	return &it->second;
+}
+
+
 void InputSystem::ParseInput()
 {
 	PROF_SCOPE();
@@ -151,46 +245,59 @@ void InputSystem::ParseInput()
 		SDL_PeepEvents( aEvents.data(), eventCount, SDL_GETEVENT, SDL_FIRSTEVENT, SDL_LASTEVENT );
 	}
 
+	ImGuiContext* origContext = ImGui::GetCurrentContext();
+
+	std::unordered_set< SDL_Window* > windowsToDelete;
+
 	for ( int i = 0; i < eventCount; i++ )
 	{
-		SDL_Event& aEvent = aEvents[i];
+		ImGui::SetCurrentContext( origContext );
+		SDL_Event& event = aEvents[ i ];
+
+		InputSysWindow* window = UpdateCurrentWindow( event );
 
 		{
 			PROF_SCOPE_NAMED( "ImGui_ImplSDL2_ProcessEvent" );
-			ImGui_ImplSDL2_ProcessEvent( &aEvent );
+			ImGui_ImplSDL2_ProcessEvent( &event );
 		}
 
-		switch (aEvent.type)
+		switch (event.type)
 		{
-			case SDL_QUIT:
-			{
-				// lazy way to tell engine to quit
-				Con_RunCommand( "quit" );
-				break;
-			}
-
 			case SDL_MOUSEMOTION:
 			{
-				aMousePos.x = aEvent.motion.x;
-				aMousePos.y = aEvent.motion.y;
-				aMouseDelta.x += aEvent.motion.xrel;
-				aMouseDelta.y += aEvent.motion.yrel;
+				if ( !window )
+					continue;
+
+				window->mousePos.x = event.motion.x;
+				window->mousePos.y = event.motion.y;
+				window->mouseDelta.x += event.motion.xrel;
+				window->mouseDelta.y += event.motion.yrel;
 				break;
 			}
 
 			case SDL_WINDOWEVENT:
 			{
-				switch (aEvent.window.event)
+				if ( !window )
+					continue;
+
+				switch ( event.window.event )
 				{
+					case SDL_WINDOWEVENT_CLOSE:
+					{
+						SDL_Window* sdlWindow = SDL_GetWindowFromID( event.window.windowID );
+						windowsToDelete.emplace( sdlWindow );
+						break;
+					}
+
 					case SDL_WINDOWEVENT_FOCUS_GAINED:
 					{
-						aHasFocus = true;
+						window->hasFocus = true;
 						break;
 					}
 
 					case SDL_WINDOWEVENT_FOCUS_LOST:
 					{
-						aHasFocus = false;
+						window->hasFocus = false;
 						break;
 					}
 				}
@@ -199,7 +306,10 @@ void InputSystem::ParseInput()
 
 			case SDL_MOUSEBUTTONDOWN:
 			{
-				switch ( aEvent.button.button )
+				if ( !window )
+					continue;
+
+				switch ( event.button.button )
 				{
 					case SDL_BUTTON_LEFT:
 						PressMouseButton( EButton_MouseLeft );
@@ -226,7 +336,10 @@ void InputSystem::ParseInput()
 
 			case SDL_MOUSEBUTTONUP:
 			{
-				switch ( aEvent.button.button )
+				if ( !window )
+					continue;
+
+				switch ( event.button.button )
 				{
 					case SDL_BUTTON_LEFT:
 						ReleaseMouseButton( EButton_MouseLeft );
@@ -253,22 +366,32 @@ void InputSystem::ParseInput()
 
 			case SDL_MOUSEWHEEL:
 			{
-				aScroll.x += aEvent.wheel.x;
-				aScroll.y += aEvent.wheel.y;
+				if ( !window )
+					continue;
 
-				if ( aEvent.wheel.x > 0 )
+				window->mouseScroll.x += event.wheel.x;
+				window->mouseScroll.y += event.wheel.y;
+
+				if ( event.wheel.x > 0 )
 					PressMouseButton( EButton_MouseWheelRight );
-				else if ( aEvent.wheel.x < 0 )
+				else if ( event.wheel.x < 0 )
 					PressMouseButton( EButton_MouseWheelLeft );
 
-				if ( aEvent.wheel.y > 0 )
+				if ( event.wheel.y > 0 )
 					PressMouseButton( EButton_MouseWheelUp );
-				else if ( aEvent.wheel.y < 0 )
+				else if ( event.wheel.y < 0 )
 					PressMouseButton( EButton_MouseWheelDown );
 
 				break;
 			}
 		}
+	}
+
+	ImGui::SetCurrentContext( origContext );
+
+	for ( SDL_Window* sdlWindow : windowsToDelete )
+	{
+		RemoveWindow( sdlWindow );
 	}
 }
 
@@ -293,12 +416,14 @@ void InputSystem::ResetInputs()
 {
 	PROF_SCOPE();
 
-	aMouseDelta = {0, 0};
+	for ( auto& [ sdlWindow, inputWindow ] : aWindows )
+	{
+		inputWindow.mouseDelta  = { 0, 0 };
+		inputWindow.mouseScroll = { 0, 0 };
+	}
 
 	aKeyboardState = SDL_GetKeyboardState( NULL );
 
-	aScroll = {0, 0};
-	
 	ReleaseMouseButton( EButton_MouseWheelUp );
 	ReleaseMouseButton( EButton_MouseWheelDown );
 	ReleaseMouseButton( EButton_MouseWheelLeft );
@@ -307,25 +432,37 @@ void InputSystem::ResetInputs()
 
 const glm::ivec2& InputSystem::GetMouseDelta()
 {
-	return aMouseDelta;
+	if ( !aActiveWindow )
+		return {};
+
+	return aActiveWindow->mouseDelta;
 }
 
 const glm::ivec2& InputSystem::GetMousePos()
 {
-	return aMousePos;
+	if ( !aActiveWindow )
+		return {};
+
+	return aActiveWindow->mousePos;
 }
 
 glm::ivec2 InputSystem::GetMouseScroll()
 {
-	return aScroll;
+	if ( !aActiveWindow )
+		return {};
+
+	return aActiveWindow->mouseScroll;
 }
 
-bool InputSystem::WindowHasFocus(  )
+bool InputSystem::WindowHasFocus()
 {
-	return aHasFocus;
+	if ( !aActiveWindow )
+		return false;
+
+	return aActiveWindow->hasFocus;
 }
 
-void InputSystem::UpdateKeyStates(  )
+void InputSystem::UpdateKeyStates()
 {
 	PROF_SCOPE();
 
@@ -525,4 +662,33 @@ KeyState InputSystem::GetKeyState( EButton key )
 	return state->second;
 }
 
+
+void InputSystem::AddWindow( SDL_Window* sWindow, void* sImGuiContext )
+{
+	aWindows[ sWindow ].context = (ImGuiContext*)sImGuiContext;
+}
+
+
+void InputSystem::RemoveWindow( SDL_Window* sWindow )
+{
+	aWindows.erase( sWindow );
+}
+
+
+bool InputSystem::SetCurrentWindow( SDL_Window* sWindow )
+{
+	auto it = aWindows.find( sWindow );
+
+	if ( it == aWindows.end() )
+	{
+		Log_ErrorF( "Could not find SDL Window\n" );
+		return false;
+	}
+	else
+	{
+		aActiveWindow = &it->second;
+		ImGui::SetCurrentContext( it->second.context );
+		return true;
+	}
+}
 

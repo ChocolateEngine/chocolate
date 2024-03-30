@@ -7,40 +7,34 @@
 #include <algorithm>
 
 
-static VkSurfaceFormatKHR         gSurfaceFormat;
-static VkPresentModeKHR           gPresentMode;
-static VkExtent2D                 gExtent;
-static VkSwapchainKHR             gSwapChain;
-static std::vector< VkImage >     gImages;
-static std::vector< VkImageView > gImageViews;
-
 VkFormat                          gColorFormat = VK_FORMAT_B8G8R8A8_SRGB;
 VkColorSpaceKHR                   gColorSpace  = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR;
 
 
-void VK_CreateSwapchain( VkSwapchainKHR spOldSwapchain )
+bool VK_CreateSwapchain( WindowVK* window, VkSwapchainKHR spOldSwapchain )
 {
-	auto swapCapabilities = VK_GetSwapCapabilities();
-	gSurfaceFormat        = VK_ChooseSwapSurfaceFormat();
-	gPresentMode          = VK_ChooseSwapPresentMode();
-	gExtent               = VK_ChooseSwapExtent();
+	if ( window == nullptr )
+		return false;
 
-	uint32_t imageCount   = swapCapabilities.minImageCount;
+	VkSurfaceCapabilitiesKHR surfaceCapabilities = VK_GetSurfaceCapabilities();
+	u32                      imageCount          = VK_GetSurfaceImageCount();
 
-	if ( swapCapabilities.maxImageCount > 0 && imageCount > swapCapabilities.maxImageCount )
-		imageCount = swapCapabilities.maxImageCount;
+	window->swapSurfaceFormat                    = VK_ChooseSwapSurfaceFormat();
+	window->swapPresentMode                      = VK_ChooseSwapPresentMode();
+	window->swapExtent                           = VK_ChooseSwapExtent( window );
+	window->swapImageCount                       = imageCount;
 
 	VkSwapchainCreateInfoKHR createInfo{ VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR };
-	createInfo.surface               = VK_GetSurface();
+	createInfo.surface               = window->surface;
 	createInfo.minImageCount         = imageCount;
-	createInfo.imageFormat           = gSurfaceFormat.format;
-	createInfo.imageColorSpace       = gSurfaceFormat.colorSpace;
-	createInfo.imageExtent           = gExtent;
+	createInfo.imageFormat           = window->swapSurfaceFormat.format;
+	createInfo.imageColorSpace       = window->swapSurfaceFormat.colorSpace;
+	createInfo.imageExtent           = window->swapExtent;
 	createInfo.imageArrayLayers      = 1;
 	createInfo.imageUsage            = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
-	createInfo.preTransform          = swapCapabilities.currentTransform;
+	createInfo.preTransform          = surfaceCapabilities.currentTransform;
 	createInfo.compositeAlpha        = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
-	createInfo.presentMode           = gPresentMode;
+	createInfo.presentMode           = window->swapPresentMode;
 	createInfo.clipped               = VK_TRUE;
 	createInfo.oldSwapchain          = spOldSwapchain;
 
@@ -62,22 +56,22 @@ void VK_CreateSwapchain( VkSwapchainKHR spOldSwapchain )
 		createInfo.pQueueFamilyIndices   = NULL;  // Optional
 	}
 
-	VK_CheckResult( vkCreateSwapchainKHR( VK_GetDevice(), &createInfo, NULL, &gSwapChain ), "Failed to create swapchain" );
+	VK_CheckResult( vkCreateSwapchainKHR( VK_GetDevice(), &createInfo, NULL, &window->swapchain ), "Failed to create swapchain" );
 
 	if ( spOldSwapchain )
 		vkDestroySwapchainKHR( VK_GetDevice(), spOldSwapchain, NULL );
 
-	//VK_CheckResult( vkGetSwapchainImagesKHR( VK_GetDevice(), gSwapChain, &imageCount, NULL ), "Failed to get swapchain images" );
-	gImages.resize( imageCount );
-	VK_CheckResult( vkGetSwapchainImagesKHR( VK_GetDevice(), gSwapChain, &imageCount, gImages.data() ), "Failed to get swapchain images" );
+	window->swapImages     = ch_malloc_count< VkImage >( imageCount );
+	window->swapImageViews = ch_malloc_count< VkImageView >( imageCount );
 
-	gImageViews.resize( gImages.size() );
-	for ( int i = 0; i < gImages.size(); ++i )
+	VK_CheckResult( vkGetSwapchainImagesKHR( VK_GetDevice(), window->swapchain, &imageCount, window->swapImages ), "Failed to get swapchain images" );
+
+	for ( int i = 0; i < imageCount; ++i )
 	{
 		VkImageViewCreateInfo aImageViewInfo{ VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO };
 		aImageViewInfo.pNext                           = nullptr;
 		aImageViewInfo.flags                           = 0;
-		aImageViewInfo.image                           = gImages[ i ];
+		aImageViewInfo.image                           = window->swapImages[ i ];
 		aImageViewInfo.viewType                        = VK_IMAGE_VIEW_TYPE_2D;
 		aImageViewInfo.format                          = gColorFormat;
 		aImageViewInfo.components.r                    = VK_COMPONENT_SWIZZLE_IDENTITY;
@@ -90,88 +84,62 @@ void VK_CreateSwapchain( VkSwapchainKHR spOldSwapchain )
 		aImageViewInfo.subresourceRange.baseArrayLayer = 0;
 		aImageViewInfo.subresourceRange.layerCount     = 1;
 
-		VK_CheckResult( vkCreateImageView( VK_GetDevice(), &aImageViewInfo, nullptr, &gImageViews[ i ] ), "Failed to create image view" );
+		VK_CheckResult( vkCreateImageView( VK_GetDevice(), &aImageViewInfo, nullptr, &window->swapImageViews[ i ] ), "Failed to create image view" );
 
-		VK_SetObjectName( VK_OBJECT_TYPE_IMAGE, (u64)gImages[ i ], "Swapchain Image" );
-		VK_SetObjectName( VK_OBJECT_TYPE_IMAGE_VIEW, (u64)gImageViews[ i ], "Swapchain Image View" );
+		VK_SetObjectName( VK_OBJECT_TYPE_IMAGE, (u64)window->swapImages[ i ], "Swapchain Image" );
+		VK_SetObjectName( VK_OBJECT_TYPE_IMAGE_VIEW, (u64)window->swapImageViews[ i ], "Swapchain Image View" );
 	}
+
+	return true;
 }
 
 
-void VK_DestroySwapchain()
+void VK_DestroySwapchain( WindowVK* window )
 {
 	VK_WaitForGraphicsQueue();
 	VK_WaitForTransferQueue();
 
-	for ( auto& imgView : gImageViews )
-		vkDestroyImageView( VK_GetDevice(), imgView, nullptr );
+	if ( window->swapImageViews )
+	{
+		for ( u32 i = 0; i < window->swapImageCount; i++ )
+		{
+			vkDestroyImageView( VK_GetDevice(), window->swapImageViews[ i ], nullptr );
+		}
 
-	vkDestroySwapchainKHR( VK_GetDevice(), gSwapChain, NULL );
+		free( window->swapImageViews );
+	}
 
-	gImageViews.clear();
-	gImages.clear();  // destroyed with vkDestroySwapchainKHR
+	// destroyed with vkDestroySwapchainKHR
+	if ( window->swapImages )
+	{
+		free( window->swapImages );
+	}
 
-	gSwapChain = VK_NULL_HANDLE;
+	if ( window->swapchain )
+		vkDestroySwapchainKHR( VK_GetDevice(), window->swapchain, NULL );
+
+	window->swapImageViews = nullptr;
+	window->swapImages     = nullptr;
+	window->swapchain      = VK_NULL_HANDLE;
 }
 
 
-void VK_RecreateSwapchain()
+void VK_RecreateSwapchain( WindowVK* window )
 {
 	VK_WaitForGraphicsQueue();
 	VK_WaitForTransferQueue();
 
-	for ( auto& imgView : gImageViews )
-		vkDestroyImageView( VK_GetDevice(), imgView, nullptr );
+	if ( window->swapImageViews )
+	{
+		for ( u32 i = 0; i < window->swapImageCount; i++ )
+		{
+			vkDestroyImageView( VK_GetDevice(), window->swapImageViews[ i ], nullptr );
+		}
 
-	VK_UpdateSwapchainInfo();
-	VK_CreateSwapchain( gSwapChain );
-}
+		free( window->swapImageViews );
+	}
 
-
-u32 VK_GetSwapImageCount()
-{
-	return (u32)gImages.size();
-}
-
-
-const std::vector< VkImage >& VK_GetSwapImages()
-{
-	return gImages;
-}
-
-
-const std::vector< VkImageView >& VK_GetSwapImageViews()
-{
-	return gImageViews;
-}
-
-
-const VkExtent2D& VK_GetSwapExtent()
-{
-	return gExtent;
-}
-
-
-VkSurfaceFormatKHR VK_GetSwapSurfaceFormat()
-{
-	return gSurfaceFormat;
-}
-
-
-VkFormat VK_GetSwapFormat()
-{
-	return gSurfaceFormat.format;
-}
-
-
-VkColorSpaceKHR VK_GetSwapColorSpace()
-{
-	return gSurfaceFormat.colorSpace;
-}
-
-
-VkSwapchainKHR VK_GetSwapchain()
-{
-	return gSwapChain;
+	VK_UpdateSwapchainInfo( window->surface );
+	VK_CreateSwapchain( window, window->swapchain );
 }
 

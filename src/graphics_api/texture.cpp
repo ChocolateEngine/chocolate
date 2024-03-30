@@ -12,7 +12,6 @@
 VkSampler                                          gSamplers[ 2 ][ 5 ][ 2 ];
 
 static std::vector< RenderTarget* >                gRenderTargets;
-static RenderTarget*                               gpBackBuffer = nullptr;
 
 static ResourceList< VkFramebuffer >               gFramebuffers;
 static std::unordered_map< Handle, glm::uvec2 >    gFramebufferSize;
@@ -1088,31 +1087,28 @@ void VK_DestroyRenderTarget( RenderTarget* spTarget )
 
 void VK_DestroyRenderTargets()
 {
-	for ( auto& target : gRenderTargets )
+	while ( gRenderTargets.size() )
 	{
-		VK_DestroyRenderTarget( target );
+		VK_DestroyRenderTarget( gRenderTargets[ 0 ] );
 	}
-
-	gRenderTargets.clear();
-	gpBackBuffer = nullptr;
 }
 
 
-static TextureVK* CreateBackBufferColor( ChHandle_t& srHandle )
+static TextureVK* CreateBackBufferColor( WindowVK* window, const char* title, ChHandle_t& srHandle )
 {
 	Log_Msg( "creating back buffer\n" );
 
 	TextureVK* colorTex     = VK_NewTexture( srHandle );
-	colorTex->apName        = "Backbuffer Color";
+	colorTex->apName        = Util_AllocStringF( "Backbuffer Color - %s", title );
 	colorTex->aRenderTarget = true;
 
 	VkImageCreateInfo color{ VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO };
 	color.pNext                 = nullptr;
 	color.flags                 = 0;
 	color.imageType             = VK_IMAGE_TYPE_2D;
-	color.format                = VK_GetSwapFormat();
-	color.extent.width          = VK_GetSwapExtent().width;
-	color.extent.height         = VK_GetSwapExtent().height;
+	color.format                = window->swapSurfaceFormat.format;
+	color.extent.width          = window->swapExtent.width;
+	color.extent.height         = window->swapExtent.height;
 	color.extent.depth          = 1;
 	color.mipLevels             = 1;
 	color.arrayLayers           = 1;
@@ -1158,20 +1154,23 @@ static TextureVK* CreateBackBufferColor( ChHandle_t& srHandle )
 
 	VK_CheckResult( vkCreateImageView( VK_GetDevice(), &colorView, nullptr, &colorTex->aImageView ), "Failed to create color image view!" );
 
-	VK_SetObjectName( VK_OBJECT_TYPE_IMAGE_VIEW, (u64)colorTex->aImageView, "Backbuffer Color" );
+	VK_SetObjectName( VK_OBJECT_TYPE_IMAGE_VIEW, (u64)colorTex->aImageView, Util_AllocStringF( "Backbuffer Color - %s", title ) );
 
 	return colorTex;
 }
 
 
-RenderTarget* CreateBackBuffer()
+void VK_CreateBackBuffer( WindowVK* window )
 {
-	const auto& swapTextures = VK_GetSwapImageViews();
-
 	/*
      *    Our backbuffer contains either 2 or 3 render operations depending on MSAA: Color, Depth, and Resolve,
      *    so we'll make those now.
      */
+
+	const char* title = SDL_GetWindowTitle( window->window );
+
+	if ( title == nullptr )
+		title = CH_DEFAULT_WINDOW_NAME;
 
 	ChHandle_t colorHandle = CH_INVALID_HANDLE;
 	ChHandle_t depthHandle = CH_INVALID_HANDLE;
@@ -1180,7 +1179,7 @@ RenderTarget* CreateBackBuffer()
 	// Create Depth Texture
 
 	TextureVK*  depthTex     = VK_NewTexture( depthHandle );
-	depthTex->apName         = "Backbuffer Depth";
+	depthTex->apName         = Util_AllocStringF( "Backbuffer Depth - %s", title );
 	depthTex->aRenderTarget = true;
 
 	VkImageCreateInfo depth;
@@ -1189,8 +1188,8 @@ RenderTarget* CreateBackBuffer()
 	depth.flags                 = 0;
 	depth.imageType             = VK_IMAGE_TYPE_2D;
 	depth.format                = VK_GetDepthFormat();
-	depth.extent.width          = VK_GetSwapExtent().width;
-	depth.extent.height         = VK_GetSwapExtent().height;
+	depth.extent.width          = window->swapExtent.width;
+	depth.extent.height         = window->swapExtent.height;
 	depth.extent.depth          = 1;
 	depth.mipLevels             = 1;
 	depth.arrayLayers           = 1;
@@ -1233,7 +1232,7 @@ RenderTarget* CreateBackBuffer()
 
 	VK_CheckResult( vkCreateImageView( VK_GetDevice(), &depthView, nullptr, &depthTex->aImageView ), "Failed to create depth image view!" );
 
-	VK_SetObjectName( VK_OBJECT_TYPE_IMAGE_VIEW, (u64)depthTex->aImageView, "Backbuffer Depth" );
+	VK_SetObjectName( VK_OBJECT_TYPE_IMAGE_VIEW, (u64)depthTex->aImageView, Util_AllocStringF( "Backbuffer Depth View - %s", title ) );
 
 	// TODO: wtf use colorView and depthView, i love memory leaks lol
 	// Log_Warn( gLC_Render, "why am i not using the colorView and depthView we created???!?!?!!?\n" );
@@ -1250,7 +1249,7 @@ RenderTarget* CreateBackBuffer()
 
 	if ( VK_UseMSAA() )
 	{
-		colorTex = CreateBackBufferColor( colorHandle );
+		colorTex = CreateBackBufferColor( window, title, colorHandle );
 		// gBackbufferHandles[ colorTex ] = colorHandle;
 
 		target->aColors.push_back( colorHandle );
@@ -1259,13 +1258,13 @@ RenderTarget* CreateBackBuffer()
 	{
 		ChHandle_t texHandle = CH_INVALID_HANDLE;
 		TextureVK* tex       = VK_NewTexture( texHandle );
-		tex->apName          = "Backbuffer Color";
+		tex->apName          = Util_AllocStringF( "Backbuffer Color - %s", title );
 		tex->aFormat         = gColorFormat;
 		tex->aFrames         = 1;
 		tex->aMemory         = VK_NULL_HANDLE;
 		tex->aMipLevels      = 1;
 		tex->aUsage          = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
-		tex->aImageView      = swapTextures[ 0 ];
+		tex->aImageView      = window->swapImageViews[ 0 ];
 		tex->aSwapChain      = true;
 
 		// uhh
@@ -1281,13 +1280,13 @@ RenderTarget* CreateBackBuffer()
 	{
 		ChHandle_t resolveHandle = CH_INVALID_HANDLE;
 		TextureVK* tex           = VK_NewTexture( resolveHandle );
-		tex->apName              = "Backbuffer Resolve";
+		tex->apName              = Util_AllocStringF( "Backbuffer Resolve - %s", title );
 		tex->aFormat             = gColorFormat;
 		tex->aFrames             = 1;
 		tex->aMemory             = VK_NULL_HANDLE;
 		tex->aMipLevels          = 1;
 		tex->aUsage              = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
-		tex->aImageView          = swapTextures[ 1 ];
+		tex->aImageView          = window->swapImageViews[ 1 ];
 		tex->aSwapChain          = true;
 
 		// target->aResolve.push_back( swapTextures[ 0 ] );
@@ -1297,35 +1296,35 @@ RenderTarget* CreateBackBuffer()
 	}
 
 	CreateFramebufferVK createBuffer{};
-	createBuffer.apName       = "Backbuffer Color";
+	createBuffer.apName       = Util_AllocStringF( "Backbuffer Color - %s", title );
 	createBuffer.aRenderPass  = VK_GetRenderPass();
-	createBuffer.aSize.x      = VK_GetSwapExtent().width;
-	createBuffer.aSize.y      = VK_GetSwapExtent().height;
+	createBuffer.aSize.x      = window->swapExtent.width;
+	createBuffer.aSize.y      = window->swapExtent.height;
 
 	createBuffer.aAttachDepth = depthTex->aImageView;
 
 	if ( VK_UseMSAA() )
 	{
 		createBuffer.aAttachColors.push_back( colorTex->aImageView );
-		createBuffer.aAttachResolve.push_back( swapTextures[ 0 ] );
+		createBuffer.aAttachResolve.push_back( window->swapImageViews[ 0 ] );
 	}
 	else
 	{
-		createBuffer.aAttachColors.push_back( swapTextures[ 0 ] );
+		createBuffer.aAttachColors.push_back( window->swapImageViews[ 0 ] );
 	}
 
 	Handle frameBufColorHandle = VK_CreateFramebufferVK( createBuffer );
 
 	if ( VK_UseMSAA() )
 	{
-		createBuffer.aAttachResolve[ 0 ] = swapTextures[ 1 ];
+		createBuffer.aAttachResolve[ 0 ] = window->swapImageViews[ 1 ];
 	}
 	else
 	{
-		createBuffer.aAttachColors[ 0 ] = swapTextures[ 1 ];
+		createBuffer.aAttachColors[ 0 ] = window->swapImageViews[ 1 ];
 	}
 
-	createBuffer.apName        = "Backbuffer Depth";
+	createBuffer.apName        = Util_AllocStringF( "Backbuffer Depth - %s", title );
 	Handle frameBufDepthHandle = VK_CreateFramebufferVK( createBuffer );
 
 	target->aFrameBuffers.resize( 2 );
@@ -1379,26 +1378,7 @@ RenderTarget* CreateBackBuffer()
 
 	// RenderTarget* rt = VK_CreateRenderTarget( { colorTex, depthTex }, VK_GetSwapExtent().width, VK_GetSwapExtent().height, VK_GetSwapImageViews() );
 
-	return target;
-}
-
-/*
- *    Returns the backbuffer.^
- *    The returned backbuffer contains framebuffers which
- *    are to be drawn to during command buffer recording.
- *    Previously, these were wrongly assumed to be the
- *    same as the swapchain images, but it turns out that
- *    this doesn't matter, it just needs something to draw to.
- * 
- *    @return RenderTarget *    The backbuffer.
- */
-RenderTarget* VK_GetBackBuffer()
-{
-	if ( !gpBackBuffer )
-	{
-		gpBackBuffer = CreateBackBuffer();
-	}
-	return gpBackBuffer;
+	window->backbuffer = target;
 }
 
 

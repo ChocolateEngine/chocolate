@@ -6,7 +6,7 @@
 RenderSystemOld gRenderOld;
 
 extern bool Graphics_ViewFrustumTest( Renderable_t* spModelDraw, ViewportShader_t& srViewport );
-extern void Graphics_Render( Handle sCmd, size_t sIndex, ERenderPass sRenderPass );
+extern void Graphics_RenderView( Handle cmd, size_t sIndex, ViewportShader_t& srViewport, ViewRenderList_t& srViewList );
 
 
 extern ConVar r_vis_lock;
@@ -23,9 +23,9 @@ void RenderSystemOld::NewFrame()
 }
 
 
-void RenderSystemOld::Reset()
+void RenderSystemOld::Reset( ChHandle_t window )
 {
-	render->Reset();
+	render->Reset( window );
 }
 
 
@@ -35,14 +35,11 @@ void Graphics_DrawSelectionTextureRenderables( Handle cmd, size_t sIndex )
 
 	ViewportShader_t* graphicsViewport = gGraphics.GetViewportData( gRenderOld.aSelectionViewport );
 
-	int               width = 0, height = 0;
-	render->GetSurfaceSize( width, height );
-
 	Rect2D_t rect{};
 	rect.aOffset.x = 0.f;
 	rect.aOffset.y = 0.f;
-	rect.aExtent.x = width;
-	rect.aExtent.y = height;
+	rect.aExtent.x = graphicsViewport->aSize.x;
+	rect.aExtent.y = graphicsViewport->aSize.y;
 
 	render->CmdSetScissor( cmd, 0, &rect, 1 );
 
@@ -811,18 +808,42 @@ void RenderSystemOld::PreRender()
 }
 
 
-void RenderSystemOld::Present()
+extern void Graphics_OnResetCallback( ChHandle_t window, ERenderResetFlags sFlags );
+
+
+void RenderSystemOld::Present( ChHandle_t window )
 {
 	PROF_SCOPE();
+
+	// YEAH THIS SUCKS !!!!!!!!!
+	render->SetResetCallback( window, Graphics_OnResetCallback );
 
 	// render->LockGraphicsMutex();
 
 	PreRender();
 
-	ChHandle_t* commandBuffers     = gGraphicsData.aCommandBuffers;
-	size_t      commandBufferCount = gGraphicsData.aCommandBufferCount;
+	ChHandle_t backBuffer[ 2 ];
+	backBuffer[ 0 ] = render->GetBackBufferColor( window );
+	backBuffer[ 1 ] = render->GetBackBufferDepth( window );
 
-	u32         imageIndex         = render->GetFlightImageIndex();
+	if ( backBuffer[ 0 ] == CH_INVALID_HANDLE || backBuffer[ 1 ] == CH_INVALID_HANDLE )
+	{
+		Log_Fatal( gLC_ClientGraphics, "Failed to get Back Buffer Handles!\n" );
+		return;
+	}
+
+	u32 commandBufferCount = render->GetCommandBufferHandles( window, nullptr );
+
+	if ( commandBufferCount < 1 )
+	{
+		Log_Fatal( gLC_ClientGraphics, "Failed to get render command buffers!\n" );
+		return;
+	}
+
+	ChHandle_t* commandBuffers = ch_stack_alloc< ChHandle_t >( commandBufferCount );
+	render->GetCommandBufferHandles( window, commandBuffers );
+
+	u32 imageIndex = render->GetFlightImageIndex( window );
 
 	// For each framebuffer, begin a primary
 	// command buffer, and record the commands.
@@ -853,7 +874,7 @@ void RenderSystemOld::Present()
 
 		RenderPassBegin_t renderPassBegin{};
 		renderPassBegin.aRenderPass  = gGraphicsData.aRenderPassGraphics;
-		renderPassBegin.aFrameBuffer = gGraphicsData.aBackBuffer[ cmdIndex ];
+		renderPassBegin.aFrameBuffer = backBuffer[ cmdIndex ];
 		renderPassBegin.aClear.resize( 2 );
 		renderPassBegin.aClear[ 0 ].aColor   = { 0.f, 0.f, 0.f, 0.f };
 		renderPassBegin.aClear[ 0 ].aIsDepth = false;
@@ -862,9 +883,34 @@ void RenderSystemOld::Present()
 
 		render->BeginRenderPass( c, renderPassBegin );  // VK_SUBPASS_CONTENTS_INLINE
 
-		Graphics_Render( c, cmdIndex, ERenderPass_Graphics );
+		// Render
+		// TODO: add in some dependency thing here, when you add camera's in the game, you'll need to render those first before the final viewports (VR maybe)
+		for ( auto& [ viewHandle, viewRenderList ] : gGraphicsData.aViewRenderLists )
+		{
+			PROF_SCOPE();
 
-		// Run Bloom Compute Shader
+			auto it = gGraphicsData.aViewports.find( viewHandle );
+
+			if ( it == gGraphicsData.aViewports.end() )
+			{
+				Log_ErrorF( gLC_ClientGraphics, "Failed to get viewport data for rendering\n" );
+				continue;
+			}
+
+			ViewportShader_t& viewport = it->second;
+
+			// TODO: add an active viewport render list to remove this if check
+			if ( !viewport.aActive )
+				continue;
+
+			// HACK HACK !!!!
+			// don't render views with shader overrides here, the only override is the shadow map shader and selection
+			// and that is rendered in a separate render pass
+			if ( viewport.aShaderOverride )
+				continue;
+
+			Graphics_RenderView( c, cmdIndex, viewport, viewRenderList );
+		}
 
 		render->DrawImGui( ImGui::GetDrawData(), c );
 
@@ -873,8 +919,10 @@ void RenderSystemOld::Present()
 		render->EndCommandBuffer( c );
 	}
 
-	render->Present( imageIndex );
+	render->Present( window, imageIndex );
 	// render->UnlockGraphicsMutex();
+
+	CH_STACK_FREE( commandBuffers );
 }
 
 

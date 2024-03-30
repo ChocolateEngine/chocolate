@@ -653,6 +653,20 @@ void Graphics_PrepareLights()
 }
 
 
+void Graphics_DestroyLights()
+{
+	// Destroy lights if needed
+	for ( Light_t* light : gDestroyLights )
+		Graphics_FreeLightSlot( light );
+	
+	for ( Light_t* light : gLights )
+		Graphics_FreeLightSlot( light );
+
+	gDestroyLights.clear();
+	gLights.clear();
+}
+
+
 bool Graphics_IsUsingShadowMaps()
 {
 	PROF_SCOPE();

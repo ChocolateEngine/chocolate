@@ -13,20 +13,10 @@
 #include "imgui_impl_vulkan.h"
 
 
-constexpr u32                  MAX_FRAMES_IN_FLIGHT = 2;
-
-// Primary Command Buffers
-std::vector< VkCommandBuffer >  gCommandBuffers;
-ResourceList< VkCommandBuffer > gCommandBufferHandles;  // wtf
 VkCommandBuffer                 gSingleCommandBuffer;
 VkCommandBuffer                 gSingleCommandBufferTransfer;
 
-std::vector< VkSemaphore >      gImageAvailableSemaphores;
-std::vector< VkSemaphore >      gRenderFinishedSemaphores;
-std::vector< VkFence >          gFences;
-std::vector< VkFence >          gInFlightFences;
-
-u8                              gFrameIndex      = 0;
+ResourceList< VkCommandBuffer > gCommandBuffers;
 
 bool                            gInTransferQueue = false;
 bool                            gInGraphicsQueue = false;
@@ -34,25 +24,25 @@ bool                            gInGraphicsQueue = false;
 std::mutex                      gGraphicsMutex;
 
 
-VkCommandBuffer VK_GetCommandBuffer( Handle cmd )
+VkCommandBuffer                 VK_GetCommandBuffer( Handle cmd )
 {
-	return *gCommandBufferHandles.Get( cmd );
+	return *gCommandBuffers.Get( cmd );
 }
 
 
-void VK_CheckFenceStatus()
+void VK_CheckFenceStatus( WindowVK* window )
 {
 	// VK_WaitForPresentQueue();
 
 	VkResult result = VK_SUCCESS;
 
-	result          = vkGetFenceStatus( VK_GetDevice(), gFences[ 0 ] );
+	result          = vkGetFenceStatus( VK_GetDevice(), window->fences[ 0 ] );
 	CH_ASSERT( result != VK_ERROR_DEVICE_LOST );
 
 	if ( result == VK_ERROR_DEVICE_LOST )
 		Log_Fatal( "fence 0 status device lost\n" );
 
-	result = vkGetFenceStatus( VK_GetDevice(), gFences[ 1 ] );
+	result = vkGetFenceStatus( VK_GetDevice(), window->fences[ 1 ] );
 	CH_ASSERT( result != VK_ERROR_DEVICE_LOST );
 
 	if ( result == VK_ERROR_DEVICE_LOST )
@@ -62,78 +52,134 @@ void VK_CheckFenceStatus()
 }
 
 
-void VK_CreateFences()
+bool VK_CreateFences( WindowVK* window )
 {
-	gFences.resize( MAX_FRAMES_IN_FLIGHT );
-	gInFlightFences.resize( VK_GetSwapImageCount() );
+	window->fences         = ch_malloc_count< VkFence >( window->swapImageCount );
+	window->fencesInFlight = ch_malloc_count< VkFence >( window->swapImageCount );
 
 	VkFenceCreateInfo info{ VK_STRUCTURE_TYPE_FENCE_CREATE_INFO };
 	info.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 
-	for ( u32 i = 0; i < MAX_FRAMES_IN_FLIGHT; i++ )
+	for ( u32 i = 0; i < window->swapImageCount; i++ )
 	{
-		VK_CheckResult( vkCreateFence( VK_GetDevice(), &info, nullptr, &gFences[ i ] ), "Failed to create fence!" );
+		if ( !VK_CheckResultE( vkCreateFence( VK_GetDevice(), &info, nullptr, &window->fences[ i ] ), "Failed to create fence!" ) )
+			return false;
 	}
+
+	return true;
 }
 
 
-void VK_DestroyFences()
+void VK_DestroyFences( WindowVK* window )
 {
-	for ( auto& fence : gFences )
+	if ( !window->fences )
+		return;
+
+	for ( u8 i = 0; i < window->swapImageCount; i++ )
 	{
-		vkDestroyFence( VK_GetDevice(), fence, nullptr );
+		vkDestroyFence( VK_GetDevice(), window->fences[ i ], nullptr );
 	}
 
-	gFences.clear();
-	gInFlightFences.clear();
+	free( window->fences );
+	free( window->fencesInFlight );
 }
 
 
-void VK_CreateSemaphores()
+bool VK_CreateSemaphores( WindowVK* window )
 {
-	gImageAvailableSemaphores.resize( MAX_FRAMES_IN_FLIGHT );
-	gRenderFinishedSemaphores.resize( MAX_FRAMES_IN_FLIGHT );
+	window->imageAvailableSemaphores = ch_calloc_count< VkSemaphore >( window->swapImageCount );
+	window->renderFinishedSemaphores = ch_calloc_count< VkSemaphore >( window->swapImageCount );
 
 	VkSemaphoreCreateInfo info{ VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO };
 
-	for ( u32 i = 0; i < MAX_FRAMES_IN_FLIGHT; i++ )
+	for ( u32 i = 0; i < window->swapImageCount; i++ )
 	{
-		VK_CheckResult( vkCreateSemaphore( VK_GetDevice(), &info, nullptr, &gImageAvailableSemaphores[ i ] ), "Failed to create semaphore!" );
-		VK_CheckResult( vkCreateSemaphore( VK_GetDevice(), &info, nullptr, &gRenderFinishedSemaphores[ i ] ), "Failed to create semaphore!" );
+		if ( !VK_CheckResultE( vkCreateSemaphore( VK_GetDevice(), &info, nullptr, &window->imageAvailableSemaphores[ i ] ), "Failed to create image semaphore!" ) )
+			return false;
+
+		if ( !VK_CheckResultE( vkCreateSemaphore( VK_GetDevice(), &info, nullptr, &window->renderFinishedSemaphores[ i ] ), "Failed to create render semaphore!" ) )
+			return false;
+	}
+
+	return true;
+}
+
+
+void VK_DestroySemaphores( WindowVK* window )
+{
+	if ( window->imageAvailableSemaphores )
+	{
+		for ( u8 i = 0; i < window->swapImageCount; i++ )
+		{
+			vkDestroySemaphore( VK_GetDevice(), window->imageAvailableSemaphores[ i ], nullptr );
+		}
+
+		free( window->imageAvailableSemaphores );
+	}
+
+	if ( window->renderFinishedSemaphores )
+	{
+		for ( u8 i = 0; i < window->swapImageCount; i++ )
+		{
+			vkDestroySemaphore( VK_GetDevice(), window->renderFinishedSemaphores[ i ], nullptr );
+		}
+
+		free( window->renderFinishedSemaphores );
 	}
 }
 
 
-void VK_DestroySemaphores()
+bool VK_AllocateCommands( WindowVK* window )
 {
-	for ( auto& semaphore : gImageAvailableSemaphores )
-	{
-		vkDestroySemaphore( VK_GetDevice(), semaphore, nullptr );
-	}
+	window->commandBuffers = ch_malloc_count< VkCommandBuffer >( window->swapImageCount );
 
-	for ( auto& semaphore : gRenderFinishedSemaphores )
-	{
-		vkDestroySemaphore( VK_GetDevice(), semaphore, nullptr );
-	}
+	if ( window->commandBuffers == nullptr )
+		return false;
 
-	gImageAvailableSemaphores.clear();
-	gRenderFinishedSemaphores.clear();
-}
+	window->commandBufferHandles = ch_malloc_count< ChHandle_t >( window->swapImageCount );
 
-
-void VK_AllocateCommands()
-{
-	gCommandBuffers.resize( VK_GetSwapImageCount() );
+	if ( window->commandBufferHandles == nullptr )
+		return false;
 
 	// Allocate primary command buffers
 	VkCommandBufferAllocateInfo primAlloc{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO };
 	primAlloc.pNext              = nullptr;
 	primAlloc.commandPool        = VK_GetPrimaryCommandPool();
 	primAlloc.level              = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-	primAlloc.commandBufferCount = gCommandBuffers.size();
+	primAlloc.commandBufferCount = window->swapImageCount;
 
-	VK_CheckResult( vkAllocateCommandBuffers( VK_GetDevice(), &primAlloc, gCommandBuffers.data() ), "Failed to allocate primary command buffers" );
+	if ( !VK_CheckResultE( vkAllocateCommandBuffers( VK_GetDevice(), &primAlloc, window->commandBuffers ), "Failed to allocate primary command buffers" ) )
+	{
+		return false;
+	}
 
+	// create handles for these, fun
+	for ( u32 i = 0; i < window->swapImageCount; i++ )
+	{
+		window->commandBufferHandles[ i ] = gCommandBuffers.Add( window->commandBuffers[ i ] );
+	}
+
+	return true;
+}
+
+
+void VK_FreeCommands( WindowVK* window )
+{
+	if ( !window->commandBuffers )
+		return;
+
+	for ( u32 i = 0; i < window->swapImageCount; i++ )
+	{
+		vkFreeCommandBuffers( VK_GetDevice(), VK_GetPrimaryCommandPool(), 1, &window->commandBuffers[ i ] );
+	}
+
+	free( window->commandBuffers );
+	free( window->commandBufferHandles );
+}
+
+
+void VK_AllocateOneTimeCommands()
+{
 	// Allocate one time command buffer
 	{
 		VkCommandBufferAllocateInfo aCommandBufferAllocateInfo{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO };
@@ -144,7 +190,7 @@ void VK_AllocateCommands()
 
 		VK_CheckResult( vkAllocateCommandBuffers( VK_GetDevice(), &aCommandBufferAllocateInfo, &gSingleCommandBuffer ), "Failed to allocate command buffer!" );
 	}
-	
+
 	// Allocate one time transfer command buffer
 	{
 		VkCommandBufferAllocateInfo aCommandBufferAllocateInfo{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO };
@@ -155,21 +201,11 @@ void VK_AllocateCommands()
 
 		VK_CheckResult( vkAllocateCommandBuffers( VK_GetDevice(), &aCommandBufferAllocateInfo, &gSingleCommandBufferTransfer ), "Failed to allocate command buffer!" );
 	}
-
-	for ( const auto& cmd : gCommandBuffers )
-		gCommandBufferHandles.Add( cmd );
 }
 
 
-void VK_FreeCommands()
+void VK_FreeOneTimeCommands()
 {
-	if ( !gCommandBuffers.empty() )
-	{
-		vkFreeCommandBuffers( VK_GetDevice(), VK_GetPrimaryCommandPool(), gCommandBuffers.size(), gCommandBuffers.data() );
-		gCommandBuffers.clear();
-		gCommandBufferHandles.clear();
-	}
-
 	if ( gSingleCommandBuffer )
 		vkFreeCommandBuffers( VK_GetDevice(), VK_GetSingleTimeCommandPool(), 1, &gSingleCommandBuffer );
 
@@ -350,22 +386,22 @@ void VK_RecordCommands()
 }
 
 
-u32 VK_GetNextImage()
+u32 VK_GetNextImage( ChHandle_t windowHandle, WindowVK* window )
 {
 	PROF_SCOPE();
 
-	VK_CheckResult( vkWaitForFences( VK_GetDevice(), 1, &gFences[ gFrameIndex ], VK_TRUE, UINT64_MAX ), "Failed waiting for fences" );
+	VK_CheckResult( vkWaitForFences( VK_GetDevice(), 1, &window->fences[ window->frameIndex ], VK_TRUE, UINT64_MAX ), "Failed waiting for fences" );
 
-	u32      imageIndex;
-	VkResult res = vkAcquireNextImageKHR( VK_GetDevice(), VK_GetSwapchain(), UINT64_MAX, gImageAvailableSemaphores[ gFrameIndex ], VK_NULL_HANDLE, &imageIndex );
+	u32      imageIndex = UINT32_MAX;
+	VkResult res = vkAcquireNextImageKHR( VK_GetDevice(), window->swapchain, UINT64_MAX, window->imageAvailableSemaphores[ window->frameIndex ], VK_NULL_HANDLE, &imageIndex );
 
 	if ( res == VK_ERROR_OUT_OF_DATE_KHR )
 	{
 		// Recreate all resources.
 		printf( "VK_Reset - vkAcquireNextImageKHR\n" );
-		VK_Reset();
+		VK_Reset( windowHandle, window );
 
-		return VK_GetNextImage();
+		return VK_GetNextImage( windowHandle, window );
 	}
 
 	else if ( res != VK_SUCCESS && res != VK_SUBOPTIMAL_KHR )
@@ -379,30 +415,32 @@ u32 VK_GetNextImage()
 }
 
 
-void VK_Present( u32 sImageIndex )
+void VK_Present( ChHandle_t windowHandle, WindowVK* window, u32 sImageIndex )
 {
 	PROF_SCOPE();
 
-	gInFlightFences[ sImageIndex ]          = gFences[ gFrameIndex ];
+	window->fencesInFlight[ sImageIndex ]   = window->fences[ window->frameIndex ];
 
-	VkSemaphore          waitSemaphores[]   = { gImageAvailableSemaphores[ gFrameIndex ] };
-	VkSemaphore          signalSemaphores[] = { gRenderFinishedSemaphores[ gFrameIndex ] };
+	VkSemaphore          waitSemaphores[]   = { window->imageAvailableSemaphores[ window->frameIndex ] };
+	VkSemaphore          signalSemaphores[] = { window->renderFinishedSemaphores[ window->frameIndex ] };
 	VkPipelineStageFlags waitStages[]       = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
 	VkSubmitInfo         submitInfo{ VK_STRUCTURE_TYPE_SUBMIT_INFO };
+
+	VkCommandBuffer      cmdBuffer  = window->commandBuffers[ sImageIndex ];
 
 	submitInfo.waitSemaphoreCount   = ARR_SIZE( waitSemaphores );
 	submitInfo.pWaitSemaphores      = waitSemaphores;
 	submitInfo.pWaitDstStageMask    = waitStages;
 	submitInfo.commandBufferCount   = 1;
-	submitInfo.pCommandBuffers      = &gCommandBuffers[ sImageIndex ];
+	submitInfo.pCommandBuffers      = &cmdBuffer;
 	submitInfo.signalSemaphoreCount = ARR_SIZE( signalSemaphores );
 	submitInfo.pSignalSemaphores    = signalSemaphores;
 
-	VK_CheckResult( vkResetFences( VK_GetDevice(), 1, &gFences[ gFrameIndex ] ), "Failed to Reset Fences" );
+	VK_CheckResult( vkResetFences( VK_GetDevice(), 1, &window->fences[ window->frameIndex ] ), "Failed to Reset Fences" );
 
-	VK_CheckResult( vkQueueSubmit( VK_GetGraphicsQueue(), 1, &submitInfo, gFences[ gFrameIndex ] ), "Failed to submit draw command buffer!" );
+	VK_CheckResult( vkQueueSubmit( VK_GetGraphicsQueue(), 1, &submitInfo, window->fences[ window->frameIndex ] ), "Failed to submit draw command buffer!" );
 
-	VkSwapchainKHR   swapChains[] = { VK_GetSwapchain() };
+	VkSwapchainKHR   swapChains[] = { window->swapchain };
 
 	VkPresentInfoKHR presentInfo{ VK_STRUCTURE_TYPE_PRESENT_INFO_KHR };
 	presentInfo.pNext              = nullptr;
@@ -419,7 +457,7 @@ void VK_Present( u32 sImageIndex )
 	{
 		printf( "VK_Reset - vkQueuePresentKHR\n" );
 		VK_CheckResult( vkDeviceWaitIdle( VK_GetDevice() ), "Failed to wait for device to be idle" );
-		VK_Reset();
+		VK_Reset( windowHandle, window );
 	}
 	else if ( res != VK_SUCCESS && res != VK_SUBOPTIMAL_KHR )
 	{
@@ -429,6 +467,6 @@ void VK_Present( u32 sImageIndex )
 	// gGraphicsMutex.unlock();
 
 	gInGraphicsQueue = true;
-	gFrameIndex      = ( gFrameIndex + 1 ) % MAX_FRAMES_IN_FLIGHT;
+	window->frameIndex = ( window->frameIndex + 1 ) % window->swapImageCount;
 }
 

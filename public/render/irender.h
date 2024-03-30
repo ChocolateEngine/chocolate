@@ -135,8 +135,9 @@ enum TextureType
 };
 
 
-enum TextureSamples : unsigned char
+enum TextureSamples : u8
 {
+	TextureSamples_Default,
 	TextureSamples_1,
 	TextureSamples_2,
 	TextureSamples_4,
@@ -440,13 +441,14 @@ enum ECommandBufferType
 // TODO: swap names with the struct below, the names are backwards lmao
 struct TextureCreateInfo_t
 {
-	const char*   apName    = nullptr;  // Only Used for debugging
-	void*         apData    = nullptr;
-	u32           aDataSize = 0;
-	glm::uvec2    aSize;
-	GraphicsFmt   aFormat;
-	EImageView    aViewType;
-	EBufferMemory aMemoryType = EBufferMemory_None;
+	const char*    apName    = nullptr;  // Only Used for debugging
+	void*          apData    = nullptr;
+	u32            aDataSize = 0;
+	glm::uvec2     aSize;
+	GraphicsFmt    aFormat;
+	EImageView     aViewType;
+	EBufferMemory  aMemoryType   = EBufferMemory_None;
+	TextureSamples msaa_override = TextureSamples_Default;
 };
 
 
@@ -766,7 +768,7 @@ struct ReadTexture
 
 
 // Function callback for game code for when renderer gets reset
-typedef void ( *Render_OnReset_t )( ERenderResetFlags sFlags );
+typedef void ( *Render_OnReset_t )( ChHandle_t window, ERenderResetFlags sFlags );
 
 // Callback Function for when Texture Indices in the descriptor is updated
 using Render_OnTextureIndexUpdate = void();
@@ -783,15 +785,24 @@ class IRender : public ISystem
 	virtual bool        InitImGui( Handle shRenderPass )                                                                               = 0;
 	virtual void        ShutdownImGui()                                                                                                = 0;
 	
-	// TODO: Remove this, the Graphics API should work with multiple windows/surfaces
-	virtual SDL_Window* GetWindow()                                                                                                    = 0;
-	virtual void        GetSurfaceSize( int& srWidth, int& srHeight )                                                                  = 0;
+	virtual void        GetSurfaceSize( ChHandle_t windowHandle, int& srWidth, int& srHeight )                                         = 0;
 	
 	virtual ImTextureID AddTextureToImGui( ChHandle_t sHandle )                                                                        = 0;
 	virtual void        FreeTextureFromImGui( ChHandle_t sHandle )                                                                     = 0;
 	virtual bool        BuildFonts()                                                                                                   = 0;
 
 	virtual int         GetMaxMSAASamples()                                                                                            = 0;
+
+	// Required to be called before Init(), blame vulkan
+	virtual void        SetMainSurface( SDL_Window* window, void* sysWindow = nullptr )                                                = 0;
+
+	// --------------------------------------------------------------------------------------------
+	// Windows
+	// EACH ONE SHOULD HAVE THEIR OWN IMGUI CONTEXT !!!!
+	// --------------------------------------------------------------------------------------------
+
+	virtual ChHandle_t  CreateWindow( SDL_Window* window, void* sysWindow = nullptr )                                                  = 0;
+	virtual void        DestroyWindow( ChHandle_t window )                                                                             = 0;
 
 	// --------------------------------------------------------------------------------------------
 	// Buffers
@@ -833,8 +844,8 @@ class IRender : public ISystem
 	virtual TextureInfo_t                 GetTextureInfo( ChHandle_t sTexture )                                                        = 0;
 
 	// TODO: very early rough functions, need to be improved greatly
-	virtual ReadTexture                   ReadTextureFromDevice( ChHandle_t textureHandle )                                            = 0;
-	virtual void                          FreeReadTexture( ReadTexture* pData )                                                        = 0;
+	virtual ReadTexture ReadTextureFromDevice( ChHandle_t textureHandle )                                            = 0;
+	virtual void        FreeReadTexture( ReadTexture* pData )                                                        = 0;
 	 
 	// Basically a hack function out of laziness, blech
 	// virtual void        CalcTextureIndices()                                                                                           = 0;
@@ -871,43 +882,41 @@ class IRender : public ISystem
 	// Back Buffer Info
 	// --------------------------------------------------------------------------------------------
 
-	virtual GraphicsFmt GetSwapFormatColor()                                                                                       = 0;
+	virtual GraphicsFmt GetSwapFormatColor( ChHandle_t window )                                                                    = 0;
 	virtual GraphicsFmt GetSwapFormatDepth()                                                                                       = 0;
 
-	virtual void        GetBackBufferTextures( Handle* spColor, Handle* spDepth, Handle* spResolve )                               = 0;
-	virtual Handle      GetBackBufferColor()                                                                                       = 0;
-	virtual Handle      GetBackBufferDepth()                                                                                       = 0;
+	virtual Handle      GetBackBufferColor( ChHandle_t window )                                                                    = 0;
+	virtual Handle      GetBackBufferDepth( ChHandle_t window )                                                                    = 0;
 
 	// --------------------------------------------------------------------------------------------
 	// Rendering
 	// --------------------------------------------------------------------------------------------
 
-	virtual void        SetResetCallback( Render_OnReset_t sFunc )                                                                     = 0;
-	virtual void        SetTextureIndexUpdateCallback( Render_OnTextureIndexUpdate* spFunc )                                           = 0;
+	virtual void        SetResetCallback( ChHandle_t window, Render_OnReset_t sFunc )                                              = 0;
+	virtual void        SetTextureIndexUpdateCallback( Render_OnTextureIndexUpdate* spFunc )                                       = 0;
 
-	virtual void        Reset()                                                                                                        = 0;
-	virtual void        NewFrame()                                                                                                     = 0;
-	virtual void        PreRenderPass()                                                                                                = 0;
-	virtual void        CopyQueuedBuffers()                                                                                            = 0;
-	virtual u32         GetFlightImageIndex()                                                                                          = 0;
-	virtual void        Present( u32 sImageIndex )                                                                                     = 0;
+	virtual void        Reset( ChHandle_t window )                                                                                 = 0;
+	virtual void        NewFrame()                                                                                                 = 0;
+	virtual void        PreRenderPass()                                                                                            = 0;
+	virtual void        CopyQueuedBuffers()                                                                                        = 0;
+	virtual u32         GetFlightImageIndex( ChHandle_t window )                                                                   = 0;
+	virtual void        Present( ChHandle_t window, u32 sImageIndex )                                                              = 0;
 
-	virtual void        WaitForQueues()                                                                                                = 0;
-	virtual void        ResetCommandPool()                                                                                             = 0;
-
-	// blech
-	virtual u32         GetCommandBufferHandles( Handle* spHandles )                                                                   = 0;
-
-	virtual void        BeginCommandBuffer( Handle cmd )                                                                               = 0;
-	virtual void        EndCommandBuffer( Handle cmd )                                                                                 = 0;
-
-	virtual Handle      CreateRenderPass( const RenderPassCreate_t& srCreate )                                                         = 0;
-	virtual void        DestroyRenderPass( Handle shPass )                                                                             = 0;
-	virtual void        BeginRenderPass( Handle cmd, const RenderPassBegin_t& srBegin )                                                = 0;
-	virtual void        EndRenderPass( Handle cmd )                                                                                    = 0;
+	virtual void        WaitForQueues()                                                                                            = 0;
+	virtual void        ResetCommandPool()                                                                                         = 0;
 
 	// blech
-	virtual void        DrawImGui( ImDrawData* spDrawData, Handle cmd )                                                                = 0;
+	virtual u32         GetCommandBufferHandles( ChHandle_t window, Handle* spHandles )                                            = 0;
+
+	virtual void        BeginCommandBuffer( Handle cmd )                                                                           = 0;
+	virtual void        EndCommandBuffer( Handle cmd )                                                                             = 0;
+
+	virtual Handle      CreateRenderPass( const RenderPassCreate_t& srCreate )                                                     = 0;
+	virtual void        DestroyRenderPass( Handle shPass )                                                                         = 0;
+	virtual void        BeginRenderPass( Handle cmd, const RenderPassBegin_t& srBegin )                                            = 0;
+	virtual void        EndRenderPass( Handle cmd )                                                                                = 0;
+
+	virtual void        DrawImGui( ImDrawData* spDrawData, Handle cmd )                                                            = 0;
 
 	// --------------------------------------------------------------------------------------------
 	// Vulkan Commands
@@ -970,6 +979,6 @@ class IRender : public ISystem
 };
 
 
-#define IRENDER_NAME "Render"
-#define IRENDER_VER 20
+#define IRENDER_NAME "GraphicsAPI"
+#define IRENDER_VER 21
 

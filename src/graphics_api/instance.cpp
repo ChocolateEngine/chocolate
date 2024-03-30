@@ -72,7 +72,6 @@ PFN_vkGetQueueCheckpointDataNV pfnGetQueueCheckpointDataNV = nullptr;
 
 static VkInstance                        gInstance;
 static VkDebugUtilsMessengerEXT          gLayers;
-static VkSurfaceKHR                      gSurface;
 static VkPhysicalDevice                  gPhysicalDevice;
 static VkDevice                          gDevice;
 static VkQueue                           gGraphicsQueue;
@@ -80,11 +79,9 @@ static VkQueue                           gTransferQueue;
 
 static VkPhysicalDeviceProperties        gPhysicalDeviceProperties{};
 
-static VkSurfaceCapabilitiesKHR          gSwapCapabilities{};
+static VkSurfaceCapabilitiesKHR          gSurfaceCapabilities{};
 static std::vector< VkSurfaceFormatKHR > gSwapFormats;
 static std::vector< VkPresentModeKHR >   gSwapPresentModes;
-
-extern SDL_Window*                       gpWindow;
 
 
 // lengths to chop off from warnings:
@@ -331,6 +328,7 @@ bool VK_CheckDeviceExtensionSupport( VkPhysicalDevice sDevice )
 }
 
 
+#if 0
 std::vector< const char* > VK_GetSDL2Extensions()
 {
 	uint32_t extensionCount = 0;
@@ -355,6 +353,7 @@ std::vector< const char* > VK_GetSDL2Extensions()
 
 	return extensions;
 }
+#endif
 
 
 bool VK_CreateInstance()
@@ -416,7 +415,8 @@ bool VK_CreateInstance()
 #ifdef _WIN32
 	std::vector< const char* > sdlExt = { "VK_KHR_surface", "VK_KHR_win32_surface" };
 #else
-	std::vector< const char* > sdlExt = VK_GetSDL2Extensions();
+	std::vector< const char* > sdlExt = { "VK_KHR_surface" };
+	// std::vector< const char* > sdlExt = VK_GetSDL2Extensions();
 #endif
 
 	// Add debug extension, we need this to relay debug messages
@@ -449,7 +449,6 @@ void VK_DestroyInstance()
 {
 	VK_DestroyDebugUtilsMessenger();
 	vkDestroyDevice( gDevice, NULL );
-	vkDestroySurfaceKHR( gInstance, gSurface, NULL );
 	vkDestroyInstance( gInstance, NULL );
 }
 
@@ -472,7 +471,7 @@ uint32_t VK_GetMemoryType( uint32_t sTypeFilter, VkMemoryPropertyFlags sProperti
 
 
 // TODO: rethink this and check for compute and transfer queues (there could be multiple of each)
-void VK_FindQueueFamilies( const VkPhysicalDeviceProperties& srDeviceProps, VkPhysicalDevice sDevice, u32& srGraphics, u32& srTransfer )
+void VK_FindQueueFamilies( VkSurfaceKHR surface, const VkPhysicalDeviceProperties& srDeviceProps, VkPhysicalDevice sDevice, u32& srGraphics, u32& srTransfer )
 {
 	uint32_t queueFamilyCount = 0;
 	vkGetPhysicalDeviceQueueFamilyProperties( sDevice, &queueFamilyCount, nullptr );
@@ -510,8 +509,11 @@ void VK_FindQueueFamilies( const VkPhysicalDeviceProperties& srDeviceProps, VkPh
 
 			queueDump += vstring( "Queue %zd:\n    Count: %zd\n    Supports Present: ", queueIndex, queueFamily.queueCount );
 
+			// TODO: Create the device upon the first window creation
+			// Then, use that same device for all new windows and make sure it's compatible
+
 			VkBool32 presentSupport = false;
-			VK_CheckResult( vkGetPhysicalDeviceSurfaceSupportKHR( sDevice, queueIndex, VK_GetSurface(), &presentSupport ),
+			VK_CheckResult( vkGetPhysicalDeviceSurfaceSupportKHR( sDevice, queueIndex, surface, &presentSupport ),
 			                "Failed to Get Physical Device Surface Support" );
 
 			queueDump += vstring( "%s\n    Flags:\n", presentSupport ? "Yes" : "No" );
@@ -545,7 +547,7 @@ void VK_FindQueueFamilies( const VkPhysicalDeviceProperties& srDeviceProps, VkPh
 			continue;
 
 		VkBool32 presentSupport = false;
-		VK_CheckResult( vkGetPhysicalDeviceSurfaceSupportKHR( sDevice, queueIndex, VK_GetSurface(), &presentSupport ),
+		VK_CheckResult( vkGetPhysicalDeviceSurfaceSupportKHR( sDevice, queueIndex, surface, &presentSupport ),
 		                "Failed to Get Physical Device Surface Support" );
 
 		if ( srGraphics == UINT32_MAX && queueFamily.queueFlags & ( VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_COMPUTE_BIT ) )
@@ -566,9 +568,20 @@ void VK_FindQueueFamilies( const VkPhysicalDeviceProperties& srDeviceProps, VkPh
 }
 
 
-VkSurfaceCapabilitiesKHR VK_GetSwapCapabilities()
+VkSurfaceCapabilitiesKHR VK_GetSurfaceCapabilities()
 {
-	return gSwapCapabilities;
+	return gSurfaceCapabilities;
+}
+
+
+u32 VK_GetSurfaceImageCount()
+{
+	u32 imageCount = gSurfaceCapabilities.minImageCount;
+
+	if ( gSurfaceCapabilities.maxImageCount > 0 && imageCount > gSurfaceCapabilities.maxImageCount )
+		imageCount = gSurfaceCapabilities.maxImageCount;
+
+	return imageCount;
 }
 
 
@@ -602,21 +615,21 @@ VkPresentModeKHR VK_ChooseSwapPresentMode()
 }
 
 
-VkExtent2D VK_ChooseSwapExtent()
+VkExtent2D VK_ChooseSwapExtent( WindowVK* window )
 {
 	int width = 0, height = 0;
-	SDL_GetWindowSize( gpWindow, &width, &height );
+	SDL_GetWindowSize( window->window, &width, &height );
 
 	VkExtent2D size{
-		std::max( gSwapCapabilities.minImageExtent.width, std::min( gSwapCapabilities.maxImageExtent.width, (u32)width ) ),
-		std::max( gSwapCapabilities.minImageExtent.height, std::min( gSwapCapabilities.maxImageExtent.height, (u32)height ) ),
+		std::max( gSurfaceCapabilities.minImageExtent.width, std::min( gSurfaceCapabilities.maxImageExtent.width, (u32)width ) ),
+		std::max( gSurfaceCapabilities.minImageExtent.height, std::min( gSurfaceCapabilities.maxImageExtent.height, (u32)height ) ),
 	};
 
 	return size;
 }
 
 
-void VK_UpdateSwapchainInfo()
+void VK_UpdateSwapchainInfo( VkSurfaceKHR surface )
 {
 	if ( !gPhysicalDevice )
 	{
@@ -624,15 +637,14 @@ void VK_UpdateSwapchainInfo()
 		return;
 	}
 
-	VK_CheckResult( vkGetPhysicalDeviceSurfaceCapabilitiesKHR( gPhysicalDevice, VK_GetSurface(), &gSwapCapabilities ),
+	VK_CheckResult( vkGetPhysicalDeviceSurfaceCapabilitiesKHR( gPhysicalDevice, surface, &gSurfaceCapabilities ),
 	                "Failed to Get Physical Device Surface Capabilities" );
 }
 
 
-bool VK_SetupSwapchainInfo( VkPhysicalDevice sDevice )
+bool VK_SetupSwapchainInfo( VkSurfaceKHR surf, VkPhysicalDevice sDevice )
 {
-	VkSurfaceKHR surf = VK_GetSurface();
-	VK_CheckResult( vkGetPhysicalDeviceSurfaceCapabilitiesKHR( sDevice, surf, &gSwapCapabilities ),
+	VK_CheckResult( vkGetPhysicalDeviceSurfaceCapabilitiesKHR( sDevice, surf, &gSurfaceCapabilities ),
 	                "Failed to Get Physical Device Surface Capabilities" );
 
 	uint32_t formatCount;
@@ -661,16 +673,16 @@ bool VK_SetupSwapchainInfo( VkPhysicalDevice sDevice )
 }
 
 
-bool VK_SuitableCard( const VkPhysicalDeviceProperties& srDeviceProps, VkPhysicalDevice sDevice )
+bool VK_SuitableCard( VkSurfaceKHR surface, const VkPhysicalDeviceProperties& srDeviceProps, VkPhysicalDevice sDevice )
 {
 	if ( !VK_CheckDeviceExtensionSupport( sDevice ) )
 		return false;
 
-	if ( !VK_SetupSwapchainInfo( sDevice ) )
+	if ( !VK_SetupSwapchainInfo( surface, sDevice ) )
 		return false;
 
 	u32 graphics = UINT32_MAX, transfer = UINT32_MAX;
-	VK_FindQueueFamilies( srDeviceProps, sDevice, graphics, transfer );
+	VK_FindQueueFamilies( surface, srDeviceProps, sDevice, graphics, transfer );
 
 	if ( graphics == UINT32_MAX || transfer == UINT32_MAX )
 		return false;
@@ -679,27 +691,33 @@ bool VK_SuitableCard( const VkPhysicalDeviceProperties& srDeviceProps, VkPhysica
 }
 
 
-void VK_CreateSurface( void* spWindow )
+VkSurfaceKHR VK_CreateSurface( void* sSysWindow, SDL_Window* sSDLWindow )
 {
+	VkSurfaceKHR surface = VK_NULL_HANDLE;
+
 #ifdef _WIN32
 	VkWin32SurfaceCreateInfoKHR surfCreateInfo{ VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR };
-	surfCreateInfo.hwnd      = (HWND)spWindow;
+	surfCreateInfo.hwnd      = (HWND)sSysWindow;
 	surfCreateInfo.hinstance = GetModuleHandle( NULL );
 	surfCreateInfo.flags     = 0;
 	surfCreateInfo.pNext     = NULL;
 
-	VK_CheckResult( vkCreateWin32SurfaceKHR( VK_GetInstance(), &surfCreateInfo, nullptr, &gSurface ), "Failed to create Surface" );
+	VK_CheckResultE( vkCreateWin32SurfaceKHR( VK_GetInstance(), &surfCreateInfo, nullptr, &surface ), "Failed to create Surface" );
 #else
-	if ( !SDL_Vulkan_CreateSurface( (SDL_Window*)spWindow, VK_GetInstance(), &gSurface ) )
+	if ( !SDL_Vulkan_CreateSurface( (SDL_Window*)spWindow, VK_GetInstance(), &surface ) )
 	{
-		Log_FatalF( gLC_Render, "Error: Failed to create SDL Vulkan Surface: %s\n", SDL_GetError() );
+		Log_ErrorF( gLC_GraphicsAPI, "Error: Failed to create SDL Vulkan Surface: %s\n", SDL_GetError() );
+		return VK_NULL_HANDLE;
 	}
 #endif
+
+	return surface;
 }
 
 
-void VK_DestroySurface()
+void VK_DestroySurface( VkSurfaceKHR surface )
 {
+	vkDestroySurfaceKHR( gInstance, surface, NULL );
 }
 
 
@@ -717,7 +735,7 @@ void VK_SelectDevice( const VkPhysicalDeviceProperties& srDeviceProps, const VkP
 }
 
 
-void VK_ShowDeviceListMessageBox( SDL_MessageBoxFlags type, const char* message, std::vector< VkPhysicalDevice >& devices )
+void VK_ShowDeviceListMessageBox( SDL_MessageBoxFlags type, const char* message, VkSurfaceKHR surface, std::vector< VkPhysicalDevice >& devices )
 {
 	// Build a string list of devices available to us
 	std::string deviceList = vstring( "%d Devices Found:\n\n", devices.size() );
@@ -727,7 +745,7 @@ void VK_ShowDeviceListMessageBox( SDL_MessageBoxFlags type, const char* message,
 		VkPhysicalDeviceProperties deviceProps;
 		vkGetPhysicalDeviceProperties( devices[ i ], &deviceProps );
 
-		bool suitable = VK_SuitableCard( deviceProps, devices[ i ] );
+		bool suitable = VK_SuitableCard( surface, deviceProps, devices[ i ] );
 
 		deviceList += vstring( "GPU %zd - %s%s\n", i, deviceProps.deviceName, suitable ? "" : " (Unsupported)" );
 	}
@@ -737,7 +755,7 @@ void VK_ShowDeviceListMessageBox( SDL_MessageBoxFlags type, const char* message,
 }
 
 
-bool VK_SetupPhysicalDevice()
+bool VK_SetupPhysicalDevice( VkSurfaceKHR surface )
 {
 	gPhysicalDevice      = VK_NULL_HANDLE;
 	uint32_t deviceCount = 0;
@@ -753,7 +771,7 @@ bool VK_SetupPhysicalDevice()
 
 	if ( gListDevices )
 	{
-		VK_ShowDeviceListMessageBox( SDL_MESSAGEBOX_INFORMATION, "GPU Device List", devices );
+		VK_ShowDeviceListMessageBox( SDL_MESSAGEBOX_INFORMATION, "GPU Device List", surface, devices );
 		return false;
 	}
 	
@@ -763,7 +781,7 @@ bool VK_SetupPhysicalDevice()
 		if ( gDeviceIndex >= devices.size() )
 		{
 			std::string message = vstring( "Only %zd GPU's Found, but user requested GPU index %d\n", devices.size(), gDeviceIndex );
-			VK_ShowDeviceListMessageBox( SDL_MESSAGEBOX_ERROR, message.c_str(), devices );
+			VK_ShowDeviceListMessageBox( SDL_MESSAGEBOX_ERROR, message.c_str(), surface, devices );
 			return false;
 		}
 		else
@@ -771,7 +789,7 @@ bool VK_SetupPhysicalDevice()
 			VkPhysicalDeviceProperties deviceProps;
 			vkGetPhysicalDeviceProperties( devices[ gDeviceIndex ], &deviceProps );
 
-			if ( VK_SuitableCard( deviceProps, devices[ gDeviceIndex ] ) )
+			if ( VK_SuitableCard( surface, deviceProps, devices[ gDeviceIndex ] ) )
 			{
 				VK_SelectDevice( deviceProps, devices[ gDeviceIndex ] );
 				return true;
@@ -786,7 +804,7 @@ bool VK_SetupPhysicalDevice()
 			VkPhysicalDeviceProperties deviceProps;
 			vkGetPhysicalDeviceProperties( device, &deviceProps );
 
-			if ( VK_SuitableCard( deviceProps, device ) )
+			if ( VK_SuitableCard( surface, deviceProps, device ) )
 			{
 				VK_SelectDevice( deviceProps, device );
 				break;
@@ -798,7 +816,7 @@ bool VK_SetupPhysicalDevice()
 }
 
 
-void VK_CreateDevice()
+void VK_CreateDevice( VkSurfaceKHR surface )
 {
 	if ( !gPhysicalDevice )
 	{
@@ -809,7 +827,7 @@ void VK_CreateDevice()
 	Log_Dev( gLC_Render, 1, "Creating VkDevice\n" );
 
 	float queuePriority = 1.0f;
-	VK_FindQueueFamilies( gPhysicalDeviceProperties, gPhysicalDevice, gGraphicsAPIData.aQueueFamilyGraphics, gGraphicsAPIData.aQueueFamilyTransfer );
+	VK_FindQueueFamilies( surface, gPhysicalDeviceProperties, gPhysicalDevice, gGraphicsAPIData.aQueueFamilyGraphics, gGraphicsAPIData.aQueueFamilyTransfer );
 
 	std::vector< VkDeviceQueueCreateInfo > queueCreateInfos;
 
@@ -903,12 +921,6 @@ void VK_CreateDevice()
 VkInstance VK_GetInstance()
 {
 	return gInstance;
-}
-
-
-VkSurfaceKHR VK_GetSurface()
-{
-	return gSurface;
 }
 
 

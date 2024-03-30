@@ -68,6 +68,10 @@ public:
 	virtual bool              KeyJustPressed( EButton key ) = 0;
 	virtual bool              KeyJustReleased( EButton key ) = 0;
 
+	virtual void              AddWindow( SDL_Window* sWindow, void* sImGuiContext ) = 0;
+	virtual void              RemoveWindow( SDL_Window* sWindow ) = 0;
+	virtual bool              SetCurrentWindow( SDL_Window* window )                = 0;
+
 
 	/* Accessors.  */
 	virtual Inputs *GetEvents() = 0;

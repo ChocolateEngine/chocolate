@@ -14,6 +14,7 @@ void   Graphics_FreeLightSlot( Light_t* spLight );
 void   Graphics_UpdateLightBuffer( Light_t* spLight );
 
 void   Graphics_PrepareLights();
+void   Graphics_DestroyLights();
 
 // Are we using any shadowmaps/are any shadowmaps enabled?
 bool   Graphics_IsUsingShadowMaps();

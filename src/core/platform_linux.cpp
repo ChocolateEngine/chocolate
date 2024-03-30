@@ -85,6 +85,21 @@ int Sys_GetCoreCount()
 }
 
 
+void* Sys_CreateWindow( const char* spWindowName, int sWidth, int sHeight, bool sMaximize )
+{
+    // lmao just pass in vulkan here
+	int flags = SDL_WINDOW_VULKAN | SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI;
+
+	if ( sMaximize )
+		flags |= SDL_WINDOW_MAXIMIZED;
+
+	SDL_Window      = SDL_CreateWindow( spWindowName, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
+	                                  sWidth, sHeight, flags );
+
+	return window;
+}
+
+
 // CONCMD_VA( sys_stack_info, "Print the current stack usage" )
 // {
 	// struct rlimit limit;

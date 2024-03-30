@@ -20,13 +20,14 @@
 #include <set>
 
 
+LOG_CHANNEL2( GraphicsAPI );
 LOG_CHANNEL2( Render );
 LOG_CHANNEL2( Vulkan );
 LOG_CHANNEL2( Validation );
 
 
-extern int             gWidth;
-extern int             gHeight;
+constexpr const char*  CH_DEFAULT_WINDOW_NAME = "App Window";
+
 
 extern VkFormat        gColorFormat;
 extern VkColorSpaceKHR gColorSpace;
@@ -212,6 +213,41 @@ struct SemaphoreGroup_t
 };
 
 
+// data for each window
+struct WindowVK
+{
+	SDL_Window*                     window    = nullptr;
+	VkSurfaceKHR                    surface   = VK_NULL_HANDLE;
+	VkSwapchainKHR                  swapchain = VK_NULL_HANDLE;
+
+	// amount allocated is swapImageCount
+	VkSemaphore*                    imageAvailableSemaphores;
+	VkSemaphore*                    renderFinishedSemaphores;
+
+	// only allocates to swapImageCount for the main window buffers
+	VkCommandBuffer*                commandBuffers;
+	ChHandle_t*                     commandBufferHandles;
+
+	// amount allocated is swapImageCount
+	VkFence*                        fences;
+	VkFence*                        fencesInFlight;
+	u8                              frameIndex = 0;
+
+	// swapchain info
+	VkSurfaceFormatKHR              swapSurfaceFormat;
+	VkPresentModeKHR                swapPresentMode;
+	VkExtent2D                      swapExtent;
+	VkImage*                        swapImages;
+	VkImageView*                    swapImageViews;
+	u8                              swapImageCount;
+
+	// Contains the framebuffers which are to be drawn to during command buffer recording.
+	RenderTarget*                   backbuffer;
+
+	Render_OnReset_t                onResetFunc = nullptr;
+};
+
+
 // TODO: migrate all the global data here
 struct GraphicsAPI_t
 {
@@ -225,6 +261,11 @@ struct GraphicsAPI_t
 	ChVector< QueuedBufferCopy_t >        aBufferCopies;
 
 	std::unordered_map< ChHandle_t, u32 > aTextureRefs;
+
+	// WindowVK*                             aWindows;
+	// u8                                    aWindowCount;
+
+	ResourceList< WindowVK >              windows;
 };
 
 
@@ -241,8 +282,9 @@ void                                  VK_CheckResult( VkResult sResult, char con
 void                                  VK_CheckResult( VkResult sResult );
 
 // Non Fatal Version of it, is just an error
-void                                  VK_CheckResultE( VkResult sResult, char const* spMsg );
-void                                  VK_CheckResultE( VkResult sResult );
+bool                                  VK_CheckResultEF( VkResult sResult, char const* spArgs, ... );
+bool                                  VK_CheckResultE( VkResult sResult, char const* spMsg );
+bool                                  VK_CheckResultE( VkResult sResult );
 
 // General Conversion Functions
 GraphicsFmt                           VK_ToGraphicsFmt( VkFormat colorFmt );
@@ -260,7 +302,8 @@ VkAccessFlags                         VK_ToAccessFlags( EGraphicsAccessFlags sFl
 void                                  VK_memcpy( VkDeviceMemory sBufferMemory, VkDeviceSize sSize, const void* spData );
 void                                  VK_memread( VkDeviceMemory sBufferMemory, VkDeviceSize sSize, void* spData );
 
-void                                  VK_Reset( ERenderResetFlags sFlags = ERenderResetFlags_None );
+void                                  VK_Reset( ChHandle_t windowHandle, WindowVK* window, ERenderResetFlags sFlags = ERenderResetFlags_None );
+void                                  VK_ResetAll( ERenderResetFlags sFlags = ERenderResetFlags_None );
 
 bool                                  VK_UseMSAA();
 VkSampleCountFlagBits                 VK_GetMSAASamples();
@@ -279,13 +322,13 @@ void                                  VK_SetObjectNameEx( VkObjectType type, u64
 bool                                  VK_CreateInstance();
 void                                  VK_DestroyInstance();
 
-void                                  VK_CreateSurface( void* spWindow );
+VkSurfaceKHR                          VK_CreateSurface( void* sSysWindow, SDL_Window* sSDLWindow );
+void                                  VK_DestroySurface( VkSurfaceKHR surface );
 
-bool                                  VK_SetupPhysicalDevice();
-void                                  VK_CreateDevice();
+bool                                  VK_SetupPhysicalDevice( VkSurfaceKHR surface );
+void                                  VK_CreateDevice( VkSurfaceKHR surface );
 
 VkInstance                            VK_GetInstance();
-VkSurfaceKHR                          VK_GetSurface();
 
 VkDevice                              VK_GetDevice();
 VkPhysicalDevice                      VK_GetPhysicalDevice();
@@ -298,13 +341,14 @@ VkSampleCountFlags                    VK_GetMaxMSAASamples();
 VkSampleCountFlagBits                 VK_FindMaxMSAASamples();
 
 uint32_t                              VK_GetMemoryType( uint32_t sTypeFilter, VkMemoryPropertyFlags sProperties );
-void                                  VK_FindQueueFamilies( const VkPhysicalDeviceProperties& srDeviceProps, VkPhysicalDevice sDevice, u32& srGraphics, u32& srTransfer );
+void                                  VK_FindQueueFamilies( VkSurfaceKHR surface, const VkPhysicalDeviceProperties& srDeviceProps, VkPhysicalDevice sDevice, u32& srGraphics, u32& srTransfer );
 
-void                                  VK_UpdateSwapchainInfo();
-VkSurfaceCapabilitiesKHR              VK_GetSwapCapabilities();
+void                                  VK_UpdateSwapchainInfo( VkSurfaceKHR surface );
+VkSurfaceCapabilitiesKHR              VK_GetSurfaceCapabilities();
+u32                                   VK_GetSurfaceImageCount();
 VkSurfaceFormatKHR                    VK_ChooseSwapSurfaceFormat();
 VkPresentModeKHR                      VK_ChooseSwapPresentMode();
-VkExtent2D                            VK_ChooseSwapExtent();
+VkExtent2D                            VK_ChooseSwapExtent( WindowVK* window );
 
 const VkPhysicalDeviceProperties&     VK_GetPhysicalDeviceProperties();
 const VkPhysicalDeviceLimits&         VK_GetPhysicalDeviceLimits();
@@ -312,19 +356,10 @@ const VkPhysicalDeviceLimits&         VK_GetPhysicalDeviceLimits();
 // --------------------------------------------------------------------------------------
 // Swapchain
 
-void                                  VK_CreateSwapchain( VkSwapchainKHR spOldSwapchain = VK_NULL_HANDLE );
-void                                  VK_DestroySwapchain();
-void                                  VK_RecreateSwapchain();
+bool                                  VK_CreateSwapchain( WindowVK* window, VkSwapchainKHR spOldSwapchain = VK_NULL_HANDLE );
+void                                  VK_DestroySwapchain( WindowVK* window );
+void                                  VK_RecreateSwapchain( WindowVK* window );
 
-u32                                   VK_GetSwapImageCount();
-// const std::vector< TextureVK* >&      VK_GetSwapImages();
-const std::vector< VkImage >&         VK_GetSwapImages();
-const std::vector< VkImageView >&     VK_GetSwapImageViews();
-const VkExtent2D&                     VK_GetSwapExtent();
-VkSurfaceFormatKHR                    VK_GetSwapSurfaceFormat();
-VkFormat                              VK_GetSwapFormat();
-VkColorSpaceKHR                       VK_GetSwapColorSpace();
-VkSwapchainKHR                        VK_GetSwapchain();
 VkFormat                              VK_GetDepthFormat();
 
 // --------------------------------------------------------------------------------------
@@ -382,24 +417,25 @@ Handle                                VK_CreateRenderPass( const RenderPassCreat
 void                                  VK_DestroyRenderPass( Handle shHandle );
 
 void                                  VK_DestroyRenderPasses();
-VkRenderPass                          VK_GetRenderPass();
-VkRenderPass                          VK_GetRenderPass( Handle shHandle );
+VkRenderPass                          VK_GetRenderPass( ChHandle_t shHandle = CH_INVALID_HANDLE );
 RenderPassInfoVK*                     VK_GetRenderPassInfo( VkRenderPass renderPass );
 
 // --------------------------------------------------------------------------------------
 // Present
 
 VkCommandBuffer                       VK_GetCommandBuffer( Handle cmd );
-u32                                   VK_GetCommandIndex();
 
-void                                  VK_CreateFences();
-void                                  VK_DestroyFences();
+bool                                  VK_CreateFences( WindowVK* window );
+void                                  VK_DestroyFences( WindowVK* window );
 
-void                                  VK_CreateSemaphores();
-void                                  VK_DestroySemaphores();
+bool                                  VK_CreateSemaphores( WindowVK* window );
+void                                  VK_DestroySemaphores( WindowVK* window );
 
-void                                  VK_AllocateCommands();
-void                                  VK_FreeCommands();
+bool                                  VK_AllocateCommands( WindowVK* window );
+void                                  VK_FreeCommands( WindowVK* window );
+
+void                                  VK_AllocateOneTimeCommands();
+void                                  VK_FreeOneTimeCommands();
 
 // kinda ugly
 VkCommandBuffer                       VK_BeginOneTimeTransferCommand();
@@ -412,11 +448,10 @@ void                                  VK_OneTimeCommand( std::function< void( Vk
 void                                  VK_WaitForTransferQueue();
 void                                  VK_WaitForGraphicsQueue();
 
-void                                  VK_RecordCommands();
-u32                                   VK_GetNextImage();
-void                                  VK_Present( u32 sImageIndex );
+u32                                   VK_GetNextImage( ChHandle_t windowHandle, WindowVK* window );
+void                                  VK_Present( ChHandle_t windowHandle, WindowVK* window, u32 sImageIndex );
 
-void                                  VK_CheckFenceStatus();
+void                                  VK_CheckFenceStatus( WindowVK* window );
 
 // --------------------------------------------------------------------------------------
 // Shader System
@@ -468,8 +503,7 @@ RenderTarget*                         VK_CreateRenderTarget( const std::vector< 
 void                                  VK_DestroyRenderTarget( RenderTarget* spTarget );
 void                                  VK_DestroyRenderTargets();
 
-RenderTarget*                         VK_GetBackBuffer();
-RenderTarget*                         VK_GetBackBufferHandles();
+void                                  VK_CreateBackBuffer( WindowVK* window );
 
 void                                  VK_SetImageLayout( VkImage sImage, VkImageLayout sOldLayout, VkImageLayout sNewLayout, VkImageSubresourceRange& sSubresourceRange );
 void                                  VK_SetImageLayout( VkImage sImage, VkImageLayout sOldLayout, VkImageLayout sNewLayout, u32 sMipLevels );

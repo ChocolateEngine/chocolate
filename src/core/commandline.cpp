@@ -30,6 +30,9 @@ extern "C"
 {
 	void DLL_EXPORT core_init( int argc, char* argv[], const char* workingDir )
 	{
+		if ( SDL_Init( SDL_INIT_VIDEO | SDL_INIT_EVENTS | SDL_INIT_AUDIO ) != 0 )
+			Log_Fatal( "Unable to initialize SDL2!" );
+
 		Args_Init( argc, argv );
 		Log_Init();
 		sys_init();

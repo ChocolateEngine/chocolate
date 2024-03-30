@@ -25,18 +25,11 @@
 
 #include "render_vk.h"
 
-LOG_REGISTER_CHANNEL2( Render, LogColor::Cyan );
+LOG_REGISTER_CHANNEL2( GraphicsAPI, LogColor::Cyan );
 LOG_REGISTER_CHANNEL2( Vulkan, LogColor::DarkYellow );
 LOG_REGISTER_CHANNEL2( Validation, LogColor::DarkYellow );
 
-int                                                      gWidth     = Args_RegisterF( 1280, "Width of the main window", 2, "-width", "-w" );
-int                                                      gHeight    = Args_RegisterF( 720, "Height of the main window", 2, "-height", "-h" );
-
-#ifndef _WIN32
-static bool                                              gMaxWindow = Args_Register( "Maximize the main window", "-max" );
-#endif
-
-SDL_Window*                                              gpWindow = nullptr;
+LogChannel                                               gLC_Render = gLC_GraphicsAPI;
 
 static VkCommandPool                                     gSingleTime;
 static VkCommandPool                                     gPrimary;
@@ -58,7 +51,6 @@ static std::unordered_map< Handle, TextureCreateData_t > gTextureInfo;
 static VkViewport*                                       gpViewports                = nullptr;
 static u32                                               gMaxViewports              = 0;
 
-static Render_OnReset_t                                  gpOnResetFunc              = nullptr;
 Render_OnTextureIndexUpdate*                             gpOnTextureIndexUpdateFunc = nullptr;
 
 bool                                                     gNeedTextureUpdate         = false;
@@ -67,6 +59,14 @@ GraphicsAPI_t                                            gGraphicsAPIData;
 
 // debug thing
 size_t                                                   gTotalBufferCopyPerFrame = 0;
+
+
+// HACK HACK HACK HACK
+// VULKAN NEEDS THE SURFACE BEFORE WE CREATE A DEVICE
+VkSurfaceKHR                                             gSurfaceHack = VK_NULL_HANDLE;
+SDL_Window*                                              gWindowHack  = nullptr;
+void*                                                    gWindowHackSys  = nullptr;
+
 
 // tracy contexts
 #if TRACY_ENABLE
@@ -79,7 +79,7 @@ CONVAR( r_dbg_show_buffer_copy, 0 );
 
 CONVAR_CMD_EX( r_msaa, 1, CVARF_ARCHIVE, "Enable/Disable MSAA Globally" )
 {
-	VK_Reset( ERenderResetFlags_MSAA );
+	VK_ResetAll( ERenderResetFlags_MSAA );
 }
 
 
@@ -88,7 +88,7 @@ CONVAR_CMD_EX( r_msaa_samples, 8, CVARF_ARCHIVE, "Set the Default Amount of MSAA
 	if ( !r_msaa )
 		return;
 
-	VK_Reset( ERenderResetFlags_MSAA );
+	VK_ResetAll( ERenderResetFlags_MSAA );
 }
 
 
@@ -137,7 +137,7 @@ void VK_CheckResultF( VkResult sResult, char const* spArgs, ... )
 	if ( len < 0 )
 	{
 		Log_Error( "\n *** Sys_ExecuteV: vsnprintf failed?\n\n" );
-		Log_FatalF( gLC_Render, "Vulkan Error: %s: %s", spArgs, VKString( sResult ) );
+		Log_FatalF( gLC_GraphicsAPI, "Vulkan Error: %s", VKString( sResult ) );
 		return;
 	}
 
@@ -149,6 +149,37 @@ void VK_CheckResultF( VkResult sResult, char const* spArgs, ... )
 	va_end( args );
 
 	VK_CheckResult( sResult, argString.data() );
+}
+
+
+bool VK_CheckResultEF( VkResult sResult, char const* spArgs, ... )
+{
+	if ( sResult == VK_SUCCESS )
+		return true;
+
+	va_list args;
+	va_start( args, spArgs );
+
+	va_list copy;
+	va_copy( copy, args );
+	int len = std::vsnprintf( nullptr, 0, spArgs, copy );
+	va_end( copy );
+
+	if ( len < 0 )
+	{
+		Log_Error( "\n *** Sys_ExecuteV: vsnprintf failed?\n\n" );
+		Log_ErrorF( gLC_GraphicsAPI, "Vulkan Error: %s", VKString( sResult ) );
+		return false;
+	}
+
+	std::string argString;
+	argString.resize( std::size_t( len ) + 1, '\0' );
+	std::vsnprintf( argString.data(), argString.size(), spArgs, args );
+	argString.resize( len );
+
+	va_end( args );
+
+	VK_CheckResultE( sResult, argString.data() );
 }
 
 
@@ -171,21 +202,23 @@ void VK_CheckResult( VkResult sResult )
 
 
 // Non-Fatal Version
-void VK_CheckResultE( VkResult sResult, char const* spMsg )
+bool VK_CheckResultE( VkResult sResult, char const* spMsg )
 {
 	if ( sResult == VK_SUCCESS )
-		return;
+		return true;
 
 	Log_ErrorF( gLC_Render, "Vulkan Error: %s: %s", spMsg, VKString( sResult ) );
+	return false;
 }
 
 
-void VK_CheckResultE( VkResult sResult )
+bool VK_CheckResultE( VkResult sResult )
 {
 	if ( sResult == VK_SUCCESS )
-		return;
+		return true;
 
 	Log_ErrorF( gLC_Render, "Vulkan Error: %s", VKString( sResult ) );
+	return false;
 }
 
 
@@ -420,8 +453,8 @@ bool VK_InitImGui( VkRenderPass sRenderPass )
 	initInfo.Device          = VK_GetDevice();
 	initInfo.Queue           = VK_GetGraphicsQueue();
 	initInfo.DescriptorPool  = VK_GetDescPool();
-	initInfo.MinImageCount   = VK_GetSwapImageCount();
-	initInfo.ImageCount      = VK_GetSwapImageCount();
+	initInfo.MinImageCount   = VK_GetSurfaceImageCount();
+	initInfo.ImageCount      = VK_GetSurfaceImageCount();
 	initInfo.CheckVkResultFn = VK_CheckResult;
 
 	RenderPassInfoVK* info   = VK_GetRenderPassInfo( sRenderPass );
@@ -443,9 +476,41 @@ bool VK_InitImGui( VkRenderPass sRenderPass )
 // ----------------------------------------------------------------------------------
 // Render Abstraction
 
+
 void Render_Shutdown();
 
-bool Render_Init( void* spWindow )
+bool Render_CreateDevice( VkSurfaceKHR surface )
+{
+	if ( VK_GetDevice() != VK_NULL_HANDLE )
+		return true;
+
+	if ( !VK_SetupPhysicalDevice( surface ) )
+	{
+		Log_Error( "Failed to setup physical device\n" );
+		return false;
+	}
+
+	VK_CreateDevice( surface );
+
+	VK_CreateCommandPool( VK_GetSingleTimeCommandPool(), gGraphicsAPIData.aQueueFamilyGraphics );
+	VK_CreateCommandPool( VK_GetPrimaryCommandPool(), gGraphicsAPIData.aQueueFamilyGraphics );
+	VK_CreateCommandPool( VK_GetTransferCommandPool(), gGraphicsAPIData.aQueueFamilyTransfer );
+
+	VK_CreateDescSets();
+	VK_AllocateOneTimeCommands();
+
+	const auto& deviceProps = VK_GetPhysicalDeviceProperties();
+
+	gpViewports             = new VkViewport[ deviceProps.limits.maxViewports ];
+	gMaxViewports           = deviceProps.limits.maxViewports;
+
+	VK_CreateTextureSamplers();
+	VK_CreateMissingTexture();
+
+	return true;
+}
+
+bool Render_Init()
 {
 	if ( !VK_CreateInstance() )
 	{
@@ -453,34 +518,22 @@ bool Render_Init( void* spWindow )
 		return false;
 	}
 
-	VK_CreateSurface( spWindow );
-
-	if ( !VK_SetupPhysicalDevice() )
+	// stupid ugly hack
+	if ( gWindowHack == nullptr )
 	{
-		Log_Error( "Failed to setup physical device\n" );
+		Log_FatalF( "Forgot to call SetMainSurface before GraphicsAPI Init with SDL_Window* because vulkan funny\n" );
 		return false;
 	}
 
-	VK_CreateDevice();
+	gSurfaceHack = VK_CreateSurface( gWindowHackSys, gWindowHack );
 
-	VK_CreateCommandPool( VK_GetSingleTimeCommandPool(), gGraphicsAPIData.aQueueFamilyGraphics );
-	VK_CreateCommandPool( VK_GetPrimaryCommandPool(), gGraphicsAPIData.aQueueFamilyGraphics );
-	VK_CreateCommandPool( VK_GetTransferCommandPool(), gGraphicsAPIData.aQueueFamilyTransfer );
+	if ( gSurfaceHack == VK_NULL_HANDLE )
+	{
+		Log_Error( gLC_GraphicsAPI, "Failed to create surface hack\n" );
+		return false;
+	}
 
-	VK_CreateSwapchain();
-	VK_CreateFences();
-	VK_CreateSemaphores();
-	VK_CreateDescSets();
-
-	VK_AllocateCommands();
-
-	const auto& deviceProps = VK_GetPhysicalDeviceProperties();
-
-	gpViewports             = new VkViewport[deviceProps.limits.maxViewports];
-	gMaxViewports           = deviceProps.limits.maxViewports;
-
-	VK_CreateTextureSamplers();
-	VK_CreateMissingTexture();
+	Render_CreateDevice( gSurfaceHack );
 
 	Log_Msg( gLC_Render, "Loaded Vulkan Renderer\n" );
 
@@ -495,52 +548,51 @@ void Render_Shutdown()
 
 	ImGui_ImplVulkan_Shutdown();
 
-	VK_DestroySwapchain();
 	VK_DestroyRenderTargets();
 	VK_DestroyRenderPasses();
 
 	VK_DestroyAllTextures();
 
-	// VK_DestroyFilterShader();
-	// VK_DestroyImageShader();
-
-	VK_FreeCommands();
-
-	VK_DestroyFences();
-	VK_DestroySemaphores();
 	VK_DestroyCommandPool( VK_GetSingleTimeCommandPool() );
 	VK_DestroyCommandPool( VK_GetPrimaryCommandPool() );
 	VK_DestroyCommandPool( VK_GetTransferCommandPool() );
+
 	VK_DestroyDescSets();
+	VK_FreeOneTimeCommands();
 
 	VK_DestroyInstance();
 }
 
 
-void VK_Reset( ERenderResetFlags sFlags )
+void VK_Reset( ChHandle_t windowHandle, WindowVK* window, ERenderResetFlags sFlags )
 {
-	VK_RecreateSwapchain();
+	VK_RecreateSwapchain( window );
 
 	// recreate backbuffer
-	VK_DestroyRenderTargets();
+	VK_DestroyRenderTarget( window->backbuffer );
 
+	VK_CreateBackBuffer( window );
+
+	if ( window->onResetFunc )
+		window->onResetFunc( windowHandle, sFlags );
+}
+
+
+void VK_ResetAll( ERenderResetFlags sFlags )
+{
 	if ( sFlags & ERenderResetFlags_MSAA )
 	{
 		VK_DestroyMainRenderPass();
 		VK_CreateMainRenderPass();
 	}
 
-	VK_GetBackBuffer();
+	for ( u32 i = 0; i < gGraphicsAPIData.windows.GetHandleCount(); i++ )
+	{
+		ChHandle_t handle = gGraphicsAPIData.windows.GetHandleByIndex( i );
+		WindowVK*  window = gGraphicsAPIData.windows.Get( handle );
 
-	if ( gpOnResetFunc )
-		gpOnResetFunc( sFlags );
-}
-
-
-void Render_SetResolution( int sWidth, int sHeight )
-{
-	gWidth  = sWidth;
-	gHeight = sHeight;
+		VK_Reset( handle, window, sFlags );
+	}
 }
 
 
@@ -626,55 +678,8 @@ public:
 
 	bool Init() override
 	{
-		// this really should not be here of all things
-		if ( SDL_Init( SDL_INIT_VIDEO | SDL_INIT_EVENTS | SDL_INIT_AUDIO ) != 0 )
-			Log_Fatal( "Unable to initialize SDL2!" );
-
-		std::string windowName;
-
-		windowName = ( Core_GetAppInfo().apWindowTitle ) ? Core_GetAppInfo().apWindowTitle : "Chocolate Engine";
-		windowName += vstring( " - Build %zd - Compiled On - %s %s", Core_GetBuildNumber(), Core_GetBuildDate(), Core_GetBuildTime() );
-
-#ifdef _WIN32
-		void* window = Sys_CreateWindow( windowName.c_str(), gWidth, gHeight );
-
-		if ( !window )
-		{
-			Log_Error( gLC_Render, "Failed to create window\n" );
+		if ( !Render_Init() )
 			return false;
-		}
-
-		gpWindow = SDL_CreateWindowFrom( window );
-#else
-		int flags = SDL_WINDOW_VULKAN | SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI;
-
-		if ( gMaxWindow )
-			flags |= SDL_WINDOW_MAXIMIZED;
-
-		gpWindow = SDL_CreateWindow( windowName.c_str(), SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
-		                             gWidth, gHeight, flags );
-#endif
-
-		if ( !gpWindow )
-		{
-			Log_Error( gLC_Render, "Failed to create SDL2 Window\n" );
-			return false;
-		}
-
-#ifdef _WIN32
-		if ( !Render_Init( window ) )
-			return false;
-#else
-		if ( !Render_Init( gpWindow ) )
-			return false;
-#endif
-
-		if ( !ImGui_ImplSDL2_InitForVulkan( gpWindow ) )
-		{
-			Log_Error( gLC_Render, "Failed to init ImGui SDL2 for Vulkan\n" );
-			Render_Shutdown();
-			return false;
-		}
 
 		return true;
 	}
@@ -696,6 +701,12 @@ public:
 
 	void Update( float sDT ) override
 	{
+	}
+
+	void SetMainSurface( SDL_Window* window, void* sysWindow ) override
+	{
+		gWindowHack    = window;
+		gWindowHackSys = sysWindow;
 	}
 
 	// --------------------------------------------------------------------------------------------
@@ -731,14 +742,19 @@ public:
 		ImGui_ImplVulkan_Shutdown();
 	}
 
-	SDL_Window* GetWindow() override
+	void GetSurfaceSize( ChHandle_t windowHandle, int& srWidth, int& srHeight ) override
 	{
-		return gpWindow;
-	}
+		WindowVK* window = nullptr;
+		if ( !gGraphicsAPIData.windows.Get( windowHandle, &window ) )
+		{
+			Log_ErrorF( gLC_GraphicsAPI, "Failed to find window!\n" );
+			return;
+		}
 
-	void GetSurfaceSize( int& srWidth, int& srHeight ) override
-	{
-		SDL_GetWindowSize( gpWindow, &srWidth, &srHeight );
+		srWidth  = window->swapExtent.width;
+		srHeight = window->swapExtent.height;
+
+		// SDL_GetWindowSize( window->window, &srWidth, &srHeight );
 	}
 
 	ImTextureID AddTextureToImGui( ChHandle_t sHandle ) override
@@ -829,6 +845,93 @@ public:
 			return 2;
 
 		return 1;
+	}
+
+	// --------------------------------------------------------------------------------------------
+	// Windows
+	// --------------------------------------------------------------------------------------------
+
+	virtual ChHandle_t CreateWindow( SDL_Window* window, void* sysWindow ) override
+	{
+		WindowVK*   windowVK     = nullptr;
+		ChHandle_t  windowHandle = gGraphicsAPIData.windows.Create( &windowVK );
+
+		const char* title        = SDL_GetWindowTitle( window ) == nullptr ? SDL_GetWindowTitle( window ) : CH_DEFAULT_WINDOW_NAME;
+
+		if ( !windowVK )
+		{
+			Log_ErrorF( gLC_GraphicsAPI, "Failed to allocate data for vulkan window: \"%s\"\n", title );
+			return CH_INVALID_HANDLE;
+		}
+
+		// fun
+		if ( window == gWindowHack )
+		{
+			windowVK->surface = gSurfaceHack;
+		}
+		else
+		{
+			windowVK->surface = VK_CreateSurface( sysWindow, window );
+
+			if ( windowVK->surface == VK_NULL_HANDLE )
+			{
+				Log_ErrorF( gLC_GraphicsAPI, "Failed to create surface for window: \"%s\"\n", title );
+				gGraphicsAPIData.windows.Remove( windowHandle );
+				return CH_INVALID_HANDLE;
+			}
+		}
+
+		if ( !VK_CreateSwapchain( windowVK ) )
+		{
+			Log_ErrorF( gLC_GraphicsAPI, "Failed to create swapchain for window: \"%s\"\n", title );
+			DestroyWindow( windowHandle );
+			return CH_INVALID_HANDLE;
+		}
+
+		VK_CreateBackBuffer( windowVK );
+		VK_CreateFences( windowVK );
+		VK_CreateSemaphores( windowVK );
+
+		VK_AllocateCommands( windowVK );
+
+		InitImGui( 0 );
+
+		if ( !ImGui_ImplSDL2_InitForVulkan( window ) )
+		{
+			Log_ErrorF( gLC_Render, "Failed to init ImGui SDL2 for Vulkan Window: \"%s\"\n", title );
+			DestroyWindow( windowHandle );
+			return false;
+		}
+
+		if ( !VK_CreateImGuiFonts() )
+		{
+			Log_ErrorF( gLC_Render, "Failed to create ImGui fonts for Window: \"%s\"\n", title );
+			DestroyWindow( windowHandle );
+			return false;
+		}
+
+		return windowHandle;
+	}
+
+	virtual void DestroyWindow( ChHandle_t windowHandle ) override
+	{
+		WindowVK* window = nullptr;
+		if ( !gGraphicsAPIData.windows.Get( windowHandle, &window ) )
+		{
+			Log_ErrorF( gLC_GraphicsAPI, "Failed to find window to destroy!\n" );
+			return;
+		}
+
+		if ( window->surface )
+			VK_DestroySurface( window->surface );
+
+		if ( window->swapchain )
+			VK_DestroySwapchain( window );
+
+		VK_DestroySemaphores( window );
+		VK_FreeCommands( window );
+
+		gGraphicsAPIData.windows.Remove( windowHandle );
 	}
 
 	// --------------------------------------------------------------------------------------------
@@ -1515,9 +1618,16 @@ public:
 	// Back Buffer Info
 	// --------------------------------------------------------------------------------------------
 
-	GraphicsFmt GetSwapFormatColor() override
+	GraphicsFmt GetSwapFormatColor( ChHandle_t windowHandle ) override
 	{
-		return VK_ToGraphicsFmt( VK_GetSwapFormat() );
+		WindowVK* window = nullptr;
+		if ( !gGraphicsAPIData.windows.Get( windowHandle, &window ) )
+		{
+			Log_ErrorF( gLC_GraphicsAPI, "Failed to find window!\n" );
+			return GraphicsFmt::INVALID;
+		}
+
+		return VK_ToGraphicsFmt( window->swapSurfaceFormat.format );
 	}
 
 	GraphicsFmt GetSwapFormatDepth() override
@@ -1525,66 +1635,56 @@ public:
 		return VK_ToGraphicsFmt( VK_FORMAT_D32_SFLOAT );
 	}
 
-	void GetBackBufferTextures( Handle* spColor, Handle* spDepth, Handle* spResolve ) override
+	Handle GetBackBufferColor( ChHandle_t windowHandle ) override
 	{
-#if 0
-		extern std::unordered_map< TextureVK*, Handle > gBackbufferHandles;
+		WindowVK* window = nullptr;
+		if ( !gGraphicsAPIData.windows.Get( windowHandle, &window ) )
+		{
+			Log_ErrorF( gLC_GraphicsAPI, "Failed to find window to destroy!\n" );
+			return CH_INVALID_HANDLE;
+		}
 
-		RenderTarget* backBuf = VK_GetBackBuffer();
-		if ( !backBuf )
+		if ( !window->backbuffer )
 		{
 			Log_Error( gLC_Render, "No Backbuffer????\n" );
-			return;
+			return CH_INVALID_HANDLE;
 		}
 
-		if ( spColor && backBuf->aColors.size() )
-		{
-			*spColor = gBackbufferHandles[ backBuf->aColors[ 0 ] ];
-		}
-
-		if ( spDepth && backBuf->apDepth )
-		{
-			*spDepth = gBackbufferHandles[ backBuf->apDepth ];
-		}
-
-		if ( spResolve && backBuf->aResolve.size() && VK_UseMSAA() )
-		{
-			*spResolve = gBackbufferHandles[ backBuf->aResolve[ 0 ] ];
-		}
-#endif
+		return VK_GetFramebufferHandle( window->backbuffer->aFrameBuffers[ 0 ].aBuffer );
 	}
 
-	Handle GetBackBufferColor() override
+	Handle GetBackBufferDepth( ChHandle_t windowHandle ) override
 	{
-		RenderTarget* backBuf = VK_GetBackBuffer();
-		if ( !backBuf )
+		WindowVK* window = nullptr;
+		if ( !gGraphicsAPIData.windows.Get( windowHandle, &window ) )
+		{
+			Log_ErrorF( gLC_GraphicsAPI, "Failed to find window!\n" );
+			return CH_INVALID_HANDLE;
+		}
+		
+		if ( !window->backbuffer )
 		{
 			Log_Error( gLC_Render, "No Backbuffer????\n" );
-			return InvalidHandle;
+			return CH_INVALID_HANDLE;
 		}
 
-		return VK_GetFramebufferHandle( backBuf->aFrameBuffers[ 0 ].aBuffer );
-	}
-
-	Handle GetBackBufferDepth() override
-	{
-		RenderTarget* backBuf = VK_GetBackBuffer();
-		if ( !backBuf )
-		{
-			Log_Error( gLC_Render, "No Backbuffer????\n" );
-			return InvalidHandle;
-		}
-
-		return VK_GetFramebufferHandle( backBuf->aFrameBuffers[ 1 ].aBuffer );
+		return VK_GetFramebufferHandle( window->backbuffer->aFrameBuffers[ 1 ].aBuffer );
 	}
 
 	// --------------------------------------------------------------------------------------------
 	// Rendering
 	// --------------------------------------------------------------------------------------------
 
-	void SetResetCallback( Render_OnReset_t sFunc ) override
+	void SetResetCallback( ChHandle_t windowHandle, Render_OnReset_t sFunc ) override
 	{
-		gpOnResetFunc = sFunc;
+		WindowVK* window = nullptr;
+		if ( !gGraphicsAPIData.windows.Get( windowHandle, &window ) )
+		{
+			Log_ErrorF( gLC_GraphicsAPI, "Failed to find window!\n" );
+			return;
+		}
+
+		window->onResetFunc = sFunc;
 	}
 
 	void SetTextureIndexUpdateCallback( Render_OnTextureIndexUpdate* spFunc ) override
@@ -1597,9 +1697,16 @@ public:
 		ImGui_ImplVulkan_NewFrame();
 	}
 
-	void Reset() override
+	void Reset( ChHandle_t windowHandle ) override
 	{
-		VK_Reset();
+		WindowVK* window = nullptr;
+		if ( !gGraphicsAPIData.windows.Get( windowHandle, &window ) )
+		{
+			Log_ErrorF( gLC_GraphicsAPI, "Failed to find window to reset!\n" );
+			return;
+		}
+
+		VK_Reset( windowHandle, window );
 	}
 
 	void PreRenderPass() override
@@ -1642,14 +1749,28 @@ public:
 		gGraphicsAPIData.aBufferCopies.clear();
 	}
 
-	u32 GetFlightImageIndex() override
+	u32 GetFlightImageIndex( ChHandle_t windowHandle ) override
 	{
-		return VK_GetNextImage();
+		WindowVK* window = nullptr;
+		if ( !gGraphicsAPIData.windows.Get( windowHandle, &window ) )
+		{
+			Log_ErrorF( gLC_GraphicsAPI, "Failed to find window!\n" );
+			return UINT32_MAX;
+		}
+
+		return VK_GetNextImage( windowHandle, window );
 	}
 
-	void Present( u32 sImageIndex ) override
+	void Present( ChHandle_t windowHandle, u32 sImageIndex ) override
 	{
-		VK_Present( sImageIndex );
+		WindowVK* window = nullptr;
+		if ( !gGraphicsAPIData.windows.Get( windowHandle, &window ) )
+		{
+			Log_ErrorF( gLC_GraphicsAPI, "Failed to find window!\n" );
+			return;
+		}
+
+		VK_Present( windowHandle, window, sImageIndex );
 
 		if ( r_dbg_show_buffer_copy )
 			Log_DevF( gLC_Render, 1, "Total Buffer Copy Per Frame: %.6f KB\n", Util_BytesToKB( gTotalBufferCopyPerFrame ) );
@@ -1673,19 +1794,24 @@ public:
 	}
 
 	// blech again
-	u32 GetCommandBufferHandles( Handle* spHandles ) override
+	u32 GetCommandBufferHandles( ChHandle_t windowHandle, Handle* spHandles ) override
 	{
-		extern ResourceList< VkCommandBuffer > gCommandBufferHandles;  // wtf
+		WindowVK* window = nullptr;
+		if ( !gGraphicsAPIData.windows.Get( windowHandle, &window ) )
+		{
+			Log_ErrorF( gLC_GraphicsAPI, "Failed to find window!\n" );
+			return 0;
+		}
 
 		if ( spHandles != nullptr )
 		{
-			for ( size_t i = 0; i < gCommandBufferHandles.size(); i++ )
+			for ( size_t i = 0; i < window->swapImageCount; i++ )
 			{
-				spHandles[ i ] = gCommandBufferHandles.GetHandleByIndex( i );
+				spHandles[ i ] = window->commandBufferHandles[ i ];
 			}
 		}
 
-		return gCommandBufferHandles.size();
+		return window->swapImageCount;
 	}
 
 #if 0

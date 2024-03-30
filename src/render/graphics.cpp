@@ -1360,21 +1360,8 @@ void Graphics_OnTextureIndexUpdate()
 }
 
 
-void Graphics_OnResetCallback( ERenderResetFlags sFlags )
+void Graphics_OnResetCallback( ChHandle_t window, ERenderResetFlags sFlags )
 {
-	gGraphicsData.aBackBuffer[ 0 ] = render->GetBackBufferColor();
-	gGraphicsData.aBackBuffer[ 1 ] = render->GetBackBufferDepth();
-
-	if ( gGraphicsData.aBackBuffer[ 0 ] == InvalidHandle || gGraphicsData.aBackBuffer[ 1 ] == InvalidHandle )
-	{
-		Log_Fatal( gLC_ClientGraphics, "Failed to get Back Buffer Handles!\n" );
-		return;
-	}
-
-	// actually stupid, they are HANDLES, YOU SHOULDN'T NEED NEW ONES
-	// only exception if we are in msaa now or not, blech
-	render->GetBackBufferTextures( &gGraphicsData.aBackBufferTex[ 0 ], &gGraphicsData.aBackBufferTex[ 1 ], &gGraphicsData.aBackBufferTex[ 2 ] );
-
 	// int width, height;
 	// render->GetSurfaceSize( width, height );
 	// 
@@ -1419,31 +1406,7 @@ bool Graphics::Init()
 		return false;
 	}
 
-	gGraphicsData.aCommandBufferCount = render->GetCommandBufferHandles( nullptr );
-
-	if ( gGraphicsData.aCommandBufferCount < 1 )
-	{
-		Log_Fatal( gLC_ClientGraphics, "Failed to get render command buffers!\n" );
-		return false;
-	}
-
-	gGraphicsData.aCommandBuffers = ch_malloc_count< Handle >( gGraphicsData.aCommandBufferCount );
-	render->GetCommandBufferHandles( gGraphicsData.aCommandBuffers );
-
-	render->SetResetCallback( Graphics_OnResetCallback );
 	render->SetTextureIndexUpdateCallback( Graphics_OnTextureIndexUpdate );
-
-	render->GetBackBufferTextures( &gGraphicsData.aBackBufferTex[ 0 ], &gGraphicsData.aBackBufferTex[ 1 ], &gGraphicsData.aBackBufferTex[ 2 ] );
-
-	// TODO: the backbuffer should probably be created in game code
-	gGraphicsData.aBackBuffer[ 0 ] = render->GetBackBufferColor();
-	gGraphicsData.aBackBuffer[ 1 ] = render->GetBackBufferDepth();
-
-	if ( gGraphicsData.aBackBuffer[ 0 ] == InvalidHandle || gGraphicsData.aBackBuffer[ 1 ] == InvalidHandle )
-	{
-		Log_Fatal( gLC_ClientGraphics, "Failed to get Back Buffer Handles!\n" );
-		return false;
-	}
 
 	if ( !Graphics_CreateRenderPasses() )
 	{
@@ -1474,18 +1437,16 @@ bool Graphics::Init()
 
 	// Rml::SetRenderInterface( &gRmlRender );
 
-	return render->InitImGui( gGraphicsData.aRenderPassGraphics );
+	// return render->InitImGui( gGraphicsData.aRenderPassGraphics );
+	return true;
 }
 
 
 void Graphics::Shutdown()
 {
 	// TODO: Free Descriptor Set allocations
-
-	if ( gGraphicsData.aCommandBuffers )
-		free( gGraphicsData.aCommandBuffers );
-
-	gGraphicsData.aCommandBuffers = nullptr;
+	
+	Graphics_DestroyLights();
 
 	for ( u32 i = 0; i < EShaderCoreArray_Count; i++ )
 	{

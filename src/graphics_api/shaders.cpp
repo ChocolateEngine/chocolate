@@ -23,7 +23,7 @@ CONVAR_CMD_EX( r_msaa_textures, 0, CVARF_ARCHIVE, "Enable/Disable MSAA on Textur
 	if ( !VK_UseMSAA() )
 		return;
 
-	VK_Reset( ERenderResetFlags_MSAA );
+	VK_ResetAll( ERenderResetFlags_MSAA );
 }
 
 
@@ -291,20 +291,20 @@ bool VK_CreateGraphicsPipeline( ChHandle_t& srHandle, GraphicsPipelineCreate_t& 
 			break;
 	}
 
-	const auto& swapExtent = VK_GetSwapExtent();
-
+	// TODO: AAAAAAAAAAAAAAAA WHY DO I NEED TO DO THIS
+	// placeholder for like 85 years, all shaders use dynamic viewport and scissor anyway
 	VkViewport  viewport{
 		 .x        = 0.0f,
 		 .y        = 0,
-		 .width    = (float)swapExtent.width,
-		 .height   = (float)swapExtent.height,
+		 .width    = 1280.f,
+		 .height   = 720.f,
 		 .minDepth = 0.0f,
 		 .maxDepth = 1.0f
 	};
 
 	VkRect2D scissor{
 		.offset = { 0, 0 },
-		.extent = swapExtent,
+		.extent = { 1280, 720 },
 	};
 
 	VkPipelineViewportStateCreateInfo viewportInfo{

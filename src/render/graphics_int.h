@@ -260,6 +260,8 @@ constexpr const char* CH_SHADER_NAME_SELECT_RESULT = "__select_result";
 // I don't like this at all
 struct GraphicsData_t
 {
+	ChHandle_t                                    aCurrentWindow;
+
 	ResourceList< Renderable_t >                  aRenderables;
 	std::unordered_map< ChHandle_t, ModelBBox_t > aRenderAABBUpdate;
 
@@ -269,16 +271,9 @@ struct GraphicsData_t
 	//ChVector< ChHandle_t >                        aSkinningRenderList;
 	std::unordered_set< ChHandle_t >              aSkinningRenderList;
 
-	ChHandle_t*                                   aCommandBuffers;
-	u32                                           aCommandBufferCount;
-
 	ChHandle_t                                    aRenderPassGraphics;
 	ChHandle_t                                    aRenderPassShadow;
 	ChHandle_t                                    aRenderPassSelect;
-
-	// stores backbuffer color and depth
-	ChHandle_t                                    aBackBuffer[ 2 ];
-	ChHandle_t                                    aBackBufferTex[ 3 ];
 
 	std::unordered_set< ChHandle_t >              aDirtyMaterials;
 
@@ -695,9 +690,9 @@ class RenderSystemOld : public IRenderSystemOld
 	virtual void                    Update( float sDT ) override{};
 
 	virtual void                    NewFrame() override;
-	virtual void                    Reset() override;
+	virtual void                    Reset( ChHandle_t window ) override;
 	virtual void                    PreRender() override;
-	virtual void                    Present() override;
+	virtual void                    Present( ChHandle_t window ) override;
 
 	virtual void                    EnableSelection( bool enabled, u32 viewport ) override;
 

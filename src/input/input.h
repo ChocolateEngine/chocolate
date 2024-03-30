@@ -3,6 +3,9 @@
 #include "system.h"
 #include "iinput.h"
 
+#include "imgui/imgui.h"
+#include "imgui/imgui_internal.h"
+
 #include <SDL2/SDL.h>
 
 class KeyAlias
@@ -20,19 +23,32 @@ public:
 };
 
 
+struct InputSysWindow
+{
+	ImGuiContext* context;
+	glm::ivec2    mouseDelta{};
+	glm::ivec2    mousePos{};
+	glm::ivec2    mouseScroll{};
+	bool          hasFocus;
+};
+
+
 class InputSystem : public IInputSystem
 {
 protected:
-	typedef std::vector< KeyAlias > KeyAliases;
-	typedef std::vector< KeyBind >	KeyBinds;
-	
-	KeyAliases 	aKeyAliases;
-	KeyBinds 	aKeyBinds;
+	typedef std::vector< KeyAlias >                   KeyAliases;
+	typedef std::vector< KeyBind >                    KeyBinds;
 
-	std::unordered_map< EButton, KeyState > aKeyStates;
+	KeyAliases                                        aKeyAliases;
+	KeyBinds                                          aKeyBinds;
 
-	const Uint8*                            aKeyboardState;
-	std::vector< SDL_Event >                aEvents;
+	std::unordered_map< EButton, KeyState >           aKeyStates;
+
+	const Uint8*                                      aKeyboardState;
+	std::vector< SDL_Event >                          aEvents;
+
+	std::unordered_map< SDL_Window*, InputSysWindow > aWindows;
+	InputSysWindow*                                   aActiveWindow = nullptr;
 
 	/* Parse the key aliases that can be bound to.  */
 	void 		MakeAliases();
@@ -56,22 +72,19 @@ protected:
 	void        PressMouseButton( EButton sButton );
 	void        ReleaseMouseButton( EButton sButton );
 
-	glm::ivec2  aMouseDelta = {0, 0};
-	glm::ivec2  aMousePos = {0, 0};
-	bool        aHasFocus = true;
-
-	glm::ivec2  aScroll;
-
 public:
 	/* Parses SDL inputs and if there is a valid input, execute the console command.  */
 	void 		ParseInput(  );
+
+	InputSysWindow*           UpdateCurrentWindow( SDL_Event& sEvent );
+
 
 	const glm::ivec2&         GetMouseDelta() override;
 	const glm::ivec2&         GetMousePos() override;
 	virtual glm::ivec2        GetMouseScroll() override;
 
 	/* Is the engine window in focus?.  */
-	bool        WindowHasFocus();
+	bool                      WindowHasFocus() override;
 
 	/* Add a Key to the key update list.  */
 	bool        RegisterKey( EButton key ) override;
@@ -89,6 +102,10 @@ public:
 	bool KeyReleased( EButton key ) { return GetKeyState(key) & KeyState_Released; }
 	bool KeyJustPressed( EButton key ) { return GetKeyState(key) & KeyState_JustPressed; }
 	bool KeyJustReleased( EButton key ) { return GetKeyState(key) & KeyState_JustReleased; }
+
+	virtual void              AddWindow( SDL_Window* sWindow, void* sImGuiContext ) override;
+	virtual void              RemoveWindow( SDL_Window* sWindow ) override;
+	virtual bool              SetCurrentWindow( SDL_Window* window ) override;
 
 	/* Accessors.  */
 	std::vector< SDL_Event > *GetEvents() { return &aEvents; }
