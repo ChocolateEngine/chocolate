@@ -266,7 +266,6 @@ bool GuiSystem::Init()
 {
 	render = Mod_GetInterfaceCast< IRender >( IRENDER_NAME, IRENDER_VER );
 
-	StyleImGui();
 	InitConsole();
 	InitConVarList();
 

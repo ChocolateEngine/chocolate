@@ -21,14 +21,14 @@ class GuiSystem : public IGuiSystem
 	/* Draw the gui.  */
 	void                       DrawGui();
 	/* Draw the console */
-	void                       DrawConsole( bool wasConsoleOpen );
+	void                       DrawConsole( bool wasConsoleOpen, bool isChild = false ) override;
 
 	/* ConVar List */
 	void                       DrawConVarList( bool wasOpen );
 	void                       InitConVarList();
 
 	/* Set to VGUI Style 😎 */
-	void    StyleImGui();
+	void    StyleImGui() override;
 
 	/* Compile an ImGui font.  */
 	ImFont* BuildFont( const char* spPath, float sSizePixels = 15.f, const ImFontConfig* spFontConfig = nullptr ) override;

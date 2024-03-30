@@ -693,7 +693,7 @@ void DrawConsoleOutput()
 }
 
 
-void GuiSystem::DrawConsole( bool wasConsoleOpen )
+void GuiSystem::DrawConsole( bool wasConsoleOpen, bool isChild )
 {
 	PROF_SCOPE();
 
@@ -706,10 +706,22 @@ void GuiSystem::DrawConsole( bool wasConsoleOpen )
 		  "Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum\n" );
 	}
 
-	if ( !ImGui::Begin( "Developer Console", 0, ImGuiWindowFlags_NoScrollbar ) )
+	if ( isChild )
 	{
-		ImGui::End();
-		return;
+		// if ( !ImGui::BeginChild( "Developer Console", {}, ImGuiChildFlags_AutoResizeY ) )
+		if ( !ImGui::BeginChild( "Developer Console", {} ) )
+		{
+			ImGui::EndChild();
+			return;
+		}
+	}
+	else
+	{
+		if ( !ImGui::Begin( "Developer Console", 0, ImGuiWindowFlags_NoScrollbar ) )
+		{
+			ImGui::End();
+			return;
+		}
 	}
 	
 	static char buf[ 256 ] = "";
@@ -818,7 +830,14 @@ void GuiSystem::DrawConsole( bool wasConsoleOpen )
 	// 	aConVarListShown = !aConVarListShown;
 	// }
 
-	ImGui::End();
+	if ( isChild )
+	{
+		ImGui::EndChild();
+	}
+	else
+	{
+		ImGui::End();
+	}
 
 	if ( !gCmdAutoComplete.empty() )
 	{
