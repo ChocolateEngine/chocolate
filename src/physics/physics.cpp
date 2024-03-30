@@ -742,7 +742,6 @@ IPhysicsShape* PhysicsEnvironment::LoadShape( const std::string& path, PhysShape
 		}
 		case PhysShapeType::Mesh:
 		{
-#if 0
 			// single shape mode
 			PhysicsSubShape&  shape = model->shapes[ 0 ];
 			JPH::TriangleList tris( shape.vertexCount / 3 );
@@ -759,7 +758,6 @@ IPhysicsShape* PhysicsEnvironment::LoadShape( const std::string& path, PhysShape
 
 			// TODO: replace this with an indexed triangle list
 			shapeSettings = new JPH::MeshShapeSettings( tris );
-#endif
 			break;
 		}
 		case PhysShapeType::StaticCompound:
