@@ -66,7 +66,7 @@ static ShaderMaterialVarDesc gBasic3D_MaterialVars[] = {
 	CH_SHADER_MATERIAL_VAR( Basic3D_Material, diffuse, "Diffuse Texture", "" ),
 	CH_SHADER_MATERIAL_VAR( Basic3D_Material, ao, "Ambient Occlusion Texture", gpFallbackAOPath ),
 	CH_SHADER_MATERIAL_VAR( Basic3D_Material, emissive, "Emission Texture", gpFallbackEmissivePath ),
-	CH_SHADER_MATERIAL_VAR( Basic3D_Material, normalMap, "Normal Map Texture", "materials/models/protogen_wip_25d/protogen25d_normal" ),
+	CH_SHADER_MATERIAL_VAR( Basic3D_Material, normalMap, "Normal Map Texture", "" ),
 
 	CH_SHADER_MATERIAL_VAR( Basic3D_Material, aoPower, "Ambient Occlusion Strength", 0.f ),
 	CH_SHADER_MATERIAL_VAR( Basic3D_Material, emissivePower, "Emission Strength", 0.f ),
