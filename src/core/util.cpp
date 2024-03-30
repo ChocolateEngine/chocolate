@@ -227,6 +227,43 @@ std::string vstringV( const char* format, va_list args )
 }
 
 
+// --------------------------------------------------------------------------
+
+
+char* Util_AllocStringF( const char* format, ... )
+{
+	char*   result = nullptr;
+	va_list args, args_copy;
+
+	va_start( args, format );
+	va_copy( args_copy, args );
+
+	int len = vsnprintf( nullptr, 0, format, args );
+	if ( len < 0 )
+	{
+		va_end( args_copy );
+		va_end( args );
+		Log_Error( "vstring va_args: vsnprintf failed\n" );
+		return nullptr;
+	}
+
+	if ( len > 0 )
+	{
+		result = ch_calloc_count< char >( len + 1 );
+		vsnprintf( result, len, format, args_copy );
+		result[ len ] = '\0';
+	}
+
+	va_end( args_copy );
+	va_end( args );
+
+	return result;
+}
+
+
+// --------------------------------------------------------------------------
+
+
 std::string Vec2Str( const glm::vec3& in )
 {
 	return vstring("(%.4f, %.4f, %.4f)", in.x, in.y, in.z);

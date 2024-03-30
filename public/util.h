@@ -141,6 +141,16 @@ inline To* ch_calloc_count( size_t sCount )
 }
 
 
+// Allocate X Amount of a specific type on the stack
+template< typename To >
+inline To* ch_stack_alloc( size_t sCount )
+{
+	To* data = static_cast< To* >( _malloca( CH_ALIGN_VALUE( sCount * sizeof( To ), 16 ) ) );
+	CH_ASSERT( data );
+	return data;
+}
+
+
 CORE_API bool ch_strcmplen( size_t sLenA, char* spA, size_t sLenB, char* spB );
 CORE_API bool ch_strcmplen( std::string_view sA, size_t sLenB, char* spB );
 
@@ -291,6 +301,8 @@ void           CORE_API vstringV( std::string& output, const char* format, va_li
 
 std::string    CORE_API vstring( const char* format, ... );
 std::string    CORE_API vstringV( const char* format, va_list args );
+
+CORE_API char*          Util_AllocStringF( const char* format, ... );
 
 
 #define VSTRING( out, format ) \
