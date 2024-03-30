@@ -1,4 +1,4 @@
-message( "Current Project: RenderVK" )
+message( "Current Project: Graphics API - Vulkan" )
 
 set(
 	RENDER_VK_FILES
@@ -39,37 +39,37 @@ file(
 
 include( ${CH_ROOT}/scripts/vulkan.cmake )
 
-add_library( RenderVK SHARED ${RENDER_VK_FILES} ${PUBLIC_FILES} ${THIRDPARTY_FILES} )
+add_library( GraphicsAPI_VK SHARED ${RENDER_VK_FILES} ${PUBLIC_FILES} ${THIRDPARTY_FILES} )
 
-add_dependencies( RenderVK "Core" "ImGui" )
+add_dependencies( GraphicsAPI_VK "Core" "ImGui" )
 
-target_precompile_headers( RenderVK PRIVATE "${CH_PUBLIC}/core/core.h" )
+target_precompile_headers( GraphicsAPI_VK PRIVATE "${CH_PUBLIC}/core/core.h" )
 
 set_target_properties(
-	RenderVK PROPERTIES
-	OUTPUT_NAME ch_render_vk
+	GraphicsAPI_VK PROPERTIES
+	OUTPUT_NAME ch_graphics_api_vk
 )
 
 target_include_directories(
-	RenderVK PRIVATE
+	GraphicsAPI_VK PRIVATE
 	${CH_PUBLIC}/imgui
 )
 
 target_link_libraries(
-	RenderVK PRIVATE
+	GraphicsAPI_VK PRIVATE
 	Core
 	ImGui
 	SDL2
 )
 
-add_vk_to_target( RenderVK )
+add_vk_to_target( GraphicsAPI_VK )
 
 if ( VULKAN_DEBUG )
-	target_compile_definitions( RenderVK PRIVATE
+	target_compile_definitions( GraphicsAPI_VK PRIVATE
 		-DVK_DEBUG=1
 	)
 else()
-	target_compile_definitions( RenderVK PRIVATE
+	target_compile_definitions( GraphicsAPI_VK PRIVATE
 		-DVK_DEBUG=0
 	)
 endif()

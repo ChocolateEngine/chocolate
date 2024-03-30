@@ -18,20 +18,14 @@ file(
 	${CH_PUBLIC}/core/*.h
 )
 
-set(
-	THIRDPARTY_FILES
-	${CH_THIRDPARTY}/speedykeyv/KeyValue.cpp
-	${CH_THIRDPARTY}/speedykeyv/KeyValue.h
-)
-
 # include( ${CH_ROOT}/scripts/rmlui.cmake )
 
 include_directories( ${CMAKE_CURRENT_LIST_DIR} )
 
-add_library( Graphics SHARED ${SRC_FILES} ${PUBLIC_FILES} ${THIRDPARTY_FILES} )
+add_library( Render SHARED ${SRC_FILES} ${PUBLIC_FILES} )
 
 target_link_libraries(
-	Graphics
+	Render
 	PRIVATE
 	Core
 	ImGui
@@ -40,7 +34,7 @@ target_link_libraries(
 
 if( WIN32 )
 	target_link_libraries(
-		Graphics
+		Render
 		PRIVATE
 		# Networking
 		wsock32
@@ -49,28 +43,15 @@ if( WIN32 )
 	)
 endif()
 
-add_dependencies( Graphics "Core" "ImGui" )
+add_dependencies( Render "Core" "ImGui" )
 
 set_target_properties(
-	Graphics PROPERTIES
-	RUNTIME_OUTPUT_NAME ch_graphics
-	LIBRARY_OUTPUT_NAME ch_graphics
-
-	RUNTIME_OUTPUT_DIRECTORY ${CH_BUILD}/sidury/bin/${PLAT_FOLDER}
-	LIBRARY_OUTPUT_DIRECTORY ${CH_BUILD}/sidury/bin/${PLAT_FOLDER}
+	Render PROPERTIES
+	RUNTIME_OUTPUT_NAME ch_render
+	LIBRARY_OUTPUT_NAME ch_render
 )
 
-# set output directories for all builds (Debug, Release, etc.)
-foreach( OUTPUTCONFIG ${CMAKE_CONFIGURATION_TYPES} )
-    string( TOUPPER ${OUTPUTCONFIG} OUTPUTCONFIG )
-    set_target_properties(
-    	Graphics PROPERTIES
-    	RUNTIME_OUTPUT_DIRECTORY_${OUTPUTCONFIG} ${CH_BUILD}/sidury/bin/${PLAT_FOLDER}
-    	LIBRARY_OUTPUT_DIRECTORY_${OUTPUTCONFIG} ${CH_BUILD}/sidury/bin/${PLAT_FOLDER}
-    )
-endforeach( OUTPUTCONFIG CMAKE_CONFIGURATION_TYPES )
-
-target_precompile_headers( Graphics PRIVATE "${CH_PUBLIC}/core/core.h" )
+target_precompile_headers( Render PRIVATE "${CH_PUBLIC}/core/core.h" )
 
 source_group(
 	TREE ${CMAKE_CURRENT_LIST_DIR}
@@ -82,11 +63,5 @@ source_group(
 	TREE ${CH_PUBLIC}
 	PREFIX "Public"
 	FILES ${PUBLIC_FILES}
-)
-
-source_group(
-	TREE ${CH_THIRDPARTY}
-	PREFIX "Thirdparty"
-	FILES ${THIRDPARTY_FILES}
 )
 
