@@ -5,6 +5,7 @@
 
 static AppInfo_t gAppInfo;
 
+std::vector< std::string > gAppInfoPaths;
 
 constexpr const char* gAppInfoFileName = PATH_SEP_STR "app_info.json5";
 
@@ -84,9 +85,14 @@ bool Core_ParseSearchPaths( JsonObject_t& root )
 }
 
 
-bool Core_GetAppInfoJson( JsonObject_t& srRoot )
+bool Core_GetAppInfoJson( JsonObject_t& srRoot, const std::string& appPath )
 {
-	std::string fullPath = FileSys_GetExePath() + PATH_SEP_STR + FileSys_GetWorkingDir() + gAppInfoFileName;
+	std::string fullPath;
+
+	if ( appPath.empty() )
+		fullPath = FileSys_GetExePath() + PATH_SEP_STR + FileSys_GetWorkingDir() + gAppInfoFileName;
+	else
+		fullPath = appPath + PATH_SEP_STR + gAppInfoFileName;
 
 	if ( !FileSys_IsFile( fullPath, true ) )
 	{
@@ -119,31 +125,9 @@ bool Core_GetAppInfoJson( JsonObject_t& srRoot )
 
 bool Core_LoadAppInfo()
 {
-	std::string fullPath = FileSys_GetExePath() + PATH_SEP_STR + FileSys_GetWorkingDir() + gAppInfoFileName;
-
-	if ( !FileSys_IsFile( fullPath, true ) )
-	{
-		// Log_Error( "Failed to Find app_info.json5 file, use -def-app-info to write a default one\n" );
-		Log_Error( "Failed to Find app_info.json5 file\n" );
-		SDL_ShowSimpleMessageBox( SDL_MESSAGEBOX_ERROR, "App Info Error", "No app_info.json5 file found!", NULL );
-		return false;
-	}
-
-	std::vector< char > data = FileSys_ReadFile( fullPath );
-
-	if ( data.empty() )
-	{
-		Log_Error( "app_info.json5 file is empty!\n" );
-		SDL_ShowSimpleMessageBox( SDL_MESSAGEBOX_ERROR, "App Info Error", "App Info file is empty!", NULL );
-		return false;
-	}
-
 	JsonObject_t root;
-	EJsonError   err = Json_Parse( &root, data.data() );
-
-	if ( err != EJsonError_None )
+	if ( !Core_GetAppInfoJson( root, "" ) )
 	{
-		Log_ErrorF( "Error Parsing App Info: %d\n", err );
 		return false;
 	}
 
@@ -243,7 +227,7 @@ bool Core_LoadAppInfo()
 		}
 	}
 
-	Log_Dev( 1, "Loaded App Info File\n" );
+	Log_Dev( 1, "Loaded Main App Info File\n" );
 	return true;
 }
 
@@ -261,15 +245,15 @@ void Core_DestroyAppInfo()
 }
 
 
-void Core_ReloadSearchPaths()
+bool Core_AddAppInfo( const std::string& appPath )
 {
-	FileSys_ClearSearchPaths();
-	FileSys_ClearBinPaths();
-	FileSys_ClearSourcePaths();
-
 	JsonObject_t root;
-	if ( !Core_GetAppInfoJson( root ) )
-		return;
+	if ( !Core_GetAppInfoJson( root, appPath ) )
+	{
+		return false;
+	}
+
+	FileSys_SetAppPathMacro( appPath );
 
 	for ( size_t i = 0; i < root.aObjects.size(); i++ )
 	{
@@ -287,12 +271,55 @@ void Core_ReloadSearchPaths()
 			{
 				Log_Error( "Failed to parse app info search paths\n" );
 				Json_Free( &root );
-				return;
+				FileSys_SetAppPathMacro( "" );
+				return false;
 			}
 		}
 	}
 
 	Json_Free( &root );
+	FileSys_SetAppPathMacro( "" );
+
+	Log_DevF( 1, "Loaded App Info File: %s\n", appPath.data() );
+	return true;
+}
+
+
+void Core_ReloadSearchPaths()
+{
+	FileSys_ClearSearchPaths();
+	FileSys_ClearBinPaths();
+	FileSys_ClearSourcePaths();
+
+	for ( const std::string& appPath : gAppInfoPaths )
+	{
+		JsonObject_t root;
+		if ( !Core_GetAppInfoJson( root, "" ) )
+			return;
+
+		for ( size_t i = 0; i < root.aObjects.size(); i++ )
+		{
+			JsonObject_t& cur = root.aObjects[ i ];
+
+			if ( strcmp( cur.apName, "searchPaths" ) == 0 )
+			{
+				if ( cur.aType != EJsonType_Object )
+				{
+					Log_WarnF( "Invalid Type for \"searchPaths\" value in app_info.json5: %s - needs to be Object {}\n", Json_TypeToStr( cur.aType ) );
+					continue;
+				}
+
+				if ( !Core_ParseSearchPaths( cur ) )
+				{
+					Log_Error( "Failed to parse app info search paths\n" );
+					Json_Free( &root );
+					return;
+				}
+			}
+		}
+
+		Json_Free( &root );
+	}
 }
 
 

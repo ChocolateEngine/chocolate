@@ -63,6 +63,10 @@ CORE_API void               FileSys_SetWorkingDir( const std::string& workingDir
 
 CORE_API const std::string& FileSys_GetExePath();
 
+// Override the $app_info$ macro, passing in an empty string resets it
+CORE_API void               FileSys_SetAppPathMacro( const std::string& path );
+CORE_API const std::string& FileSys_GetAppPathMacro();
+
 // ================================================================================
 // Modify Search Paths
 

@@ -40,6 +40,7 @@ LOG_REGISTER_CHANNEL( FileSystem, LogColor::DarkGray );
 
 static std::string                gWorkingDir;
 static std::string                gExePath;
+static std::string                gAppPathMacro;
 static std::vector< std::string > gSearchPaths;
 static std::vector< std::string > gBinPaths;
 static std::vector< std::string > gSourceAssetPaths;
@@ -62,8 +63,10 @@ int FileSys_Init( const char* workingDir )
 	gWorkingDir = workingDir;
 	gExePath = getcwd( 0, 0 );
 
-	// change to desired working directory
+	// change to desired working directory (TODO: make this happen later after modules are loaded)
 	chdir( workingDir );
+
+    gAppPathMacro = gExePath + PATH_SEP_STR + gWorkingDir;
 
     return 0;
 }
@@ -83,6 +86,24 @@ void FileSys_SetWorkingDir( const std::string& workingDir )
 const std::string& FileSys_GetExePath()
 {
     return gExePath;
+}
+
+
+// Override the $app_info$ macro
+void FileSys_SetAppPathMacro( const std::string& path )
+{
+	if ( path.empty() )
+		gAppPathMacro = gExePath + PATH_SEP_STR + gWorkingDir;
+	else if ( FileSys_IsAbsolute( path.data() ) )
+	    gAppPathMacro = path;
+	else
+		gAppPathMacro = gExePath + PATH_SEP_STR + path;
+}
+
+
+const std::string& FileSys_GetAppPathMacro()
+{
+	return gAppPathMacro;
 }
 
 
@@ -186,7 +207,7 @@ std::string FileSys_BuildSearchPath( std::string_view sPath )
 		}
         else if ( dist == 10 && strncmp( last, "$app_path$", dist ) == 0 )
 		{
-			output += gExePath + PATH_SEP_STR + gWorkingDir;
+			output += gAppPathMacro;
 		}
 		else
 		{
