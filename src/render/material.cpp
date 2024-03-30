@@ -556,7 +556,7 @@ static void ParseMaterialVarArray( VEC& value, JsonObject_t& cur )
 
 
 // Used in normal material loading, and eventually, live material reloading
-bool Graphics_ParseMaterial( const std::string& srPath, Handle& handle )
+bool Graphics_ParseMaterial( const std::string& srName, const std::string& srPath, Handle& handle )
 {
 	PROF_SCOPE();
 
@@ -623,9 +623,9 @@ bool Graphics_ParseMaterial( const std::string& srPath, Handle& handle )
 				matData->aRefCount = 1;
 				handle             = gMaterials.Add( matData );
 
-				char* name         = new char[ srPath.size() + 1 ];
-				strncpy( name, srPath.c_str(), srPath.size() );
-				name[ srPath.size() ]  = '\0';
+				char* name         = new char[ srName.size() + 1 ];
+				strncpy( name, srName.c_str(), srName.size() );
+				name[ srName.size() ]  = '\0';
 
 				gMaterialNames[ name ] = handle;
 			}
@@ -768,9 +768,29 @@ bool Graphics_ParseMaterial( const std::string& srPath, Handle& handle )
 }
 
 
+static std::string ParseMaterialNameFromPath( const std::string& path )
+{
+	std::string output;
+
+	// Remove .cmt from the extension, no need for this
+	if ( path.ends_with( ".cmt" ) )
+	{
+		output = path.substr( 0, path.size() - 4 );
+	}
+	else
+	{
+		output = path;
+	}
+
+	return output;
+}
+
+
 Handle Graphics::LoadMaterial( const std::string& srPath )
 {
-	auto nameIt = gMaterialNames.find( srPath.c_str() );
+	std::string name = ParseMaterialNameFromPath( srPath );
+
+	auto nameIt = gMaterialNames.find( name.c_str() );
 	if ( nameIt != gMaterialNames.end() )
 	{
 		Log_DevF( gLC_ClientGraphics, 2, "Incrementing Ref Count for Material \"%s\" - \"%zd\"\n", srPath.c_str(), nameIt->second );
@@ -779,7 +799,7 @@ Handle Graphics::LoadMaterial( const std::string& srPath )
 	}
 
 	Handle handle = InvalidHandle;
-	if ( !Graphics_ParseMaterial( srPath, handle ) )
+	if ( !Graphics_ParseMaterial( name, srPath, handle ) )
 		return InvalidHandle;
 
 	Log_DevF( gLC_ClientGraphics, 1, "Loaded Material \"%s\"\n", srPath.c_str() );
@@ -830,7 +850,9 @@ void Graphics::FreeMaterial( ChHandle_t shMaterial )
 // NAME: dev/grid01
 ChHandle_t Graphics::FindMaterial( const char* spName )
 {
-	auto nameIt = gMaterialNames.find( spName );
+	std::string name = ParseMaterialNameFromPath( spName );
+
+	auto nameIt = gMaterialNames.find( name );
 	if ( nameIt != gMaterialNames.end() )
 	{
 		// TODO: should this really add a reference to this?
