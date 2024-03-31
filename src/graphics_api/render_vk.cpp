@@ -35,7 +35,13 @@ static VkCommandPool                                     gSingleTime;
 static VkCommandPool                                     gPrimary;
 static VkCommandPool                                     gCmdPoolTransfer;
 
-static std::unordered_map< ChHandle_t, VkDescriptorSet > gImGuiTextures;
+struct ImGuiTexture
+{
+	VkDescriptorSet set;
+	u32             refCount = 1;
+};
+
+static std::unordered_map< ChHandle_t, ImGuiTexture >    gImGuiTextures;
 static std::vector< std::vector< char > >                gFontData;
 
 static std::vector< VkBuffer >                           gBuffers;
@@ -596,62 +602,6 @@ void VK_ResetAll( ERenderResetFlags sFlags )
 }
 
 
-#if 0
-ImTextureID Render_AddTextureToImGui( Handle texture )
-{
-	if ( spInfo == nullptr )
-	{
-		Log_Error( gLC_Render, "Render_AddTextureToImGui(): ImageInfo* is nullptr!\n" );
-		return nullptr;
-	}
-
-	TextureVK* tex = VK_GetTexture( spInfo );
-	if ( tex == nullptr )
-	{
-		Log_Error( gLC_Render, "Render_AddTextureToImGui(): No Vulkan Texture created for Image!\n" );
-		return nullptr;
-	}
-
-	VK_SetImageLayout( tex->aImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 1 );
-
-	auto desc = ImGui_ImplVulkan_AddTexture( VK_GetSampler( tex->aFilter ), tex->aImageView, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
-
-	if ( desc )
-	{
-		gImGuiTextures[ spInfo ] = desc;
-		return desc;
-	}
-
-	Log_Error( gLC_Render, "Render_AddTextureToImGui(): Failed to add texture to ImGui\n" );
-	return nullptr;
-}
-
-static ImWchar ranges[] = { 0x1, 0x1FFFF, 0 };
-
-ImFont* Render_AddFont( const std::filesystem::path& srPath, float sSizePixels, const ImFontConfig* spFontConfig )
-{
-	// if ( !FileSys_IsFile( srPath.c_str() ) )
-	// {
-	// 	wprintf( L"Render_BuildFont(): Font does not exist: %ws\n", srPath.c_str() );
-	// 	return nullptr;
-	// }
-	// 
-	// auto& fileData = gFontData.emplace_back();
-	// 
-	// if ( !fs_read_file( srPath, fileData ) )
-	// {
-	// 	wprintf( L"Render_BuildFont(): Font is empty file: %ws\n", srPath.c_str() );
-	// 	gFontData.pop_back();
-	// 	return nullptr;
-	// }
-	// 
-	// auto& io = ImGui::GetIO();
-	// return io.Fonts->AddFontFromMemoryTTF( fileData.data(), fileData.size(), sSizePixels, spFontConfig, ranges );
-	return nullptr;
-}
-#endif
-
-
 void VK_SetCheckpoint( VkCommandBuffer c, const char* spName )
 {
 #if NV_CHECKPOINTS
@@ -767,7 +717,8 @@ public:
 		auto it = gImGuiTextures.find( sHandle );
 		if ( it != gImGuiTextures.end() )
 		{
-			return it->second;
+			it->second.refCount++;
+			return it->second.set;
 		}
 
 		TextureVK* tex = VK_GetTexture( sHandle );
@@ -790,7 +741,7 @@ public:
 
 		if ( desc )
 		{
-			gImGuiTextures[ sHandle ] = desc;
+			gImGuiTextures[ sHandle ] = { desc, 1 };
 			return desc;
 		}
 
@@ -807,13 +758,16 @@ public:
 		}
 
 		auto it = gImGuiTextures.find( sHandle );
-		if ( it != gImGuiTextures.end() )
+		if ( it == gImGuiTextures.end() )
 		{
 			Log_Error( gLC_Render, "FreeTextureFromImGui(): Could not find ImGui TextureID!\n" );
 			return;
 		}
 
-		ImGui_ImplVulkan_RemoveTexture( it->second );
+		if ( --it->second.refCount != 0 )
+			return;
+
+		ImGui_ImplVulkan_RemoveTexture( it->second.set );
 		gImGuiTextures.erase( sHandle );
 	}
 
@@ -1319,6 +1273,9 @@ public:
 
 	void FreeTexture( ChHandle_t sTexture ) override
 	{
+		if ( sTexture == gMissingTexHandle )
+			return;
+
 		gGraphicsAPIData.aTextureRefs[ sTexture ]--;
 		if ( gGraphicsAPIData.aTextureRefs[ sTexture ] > 0 )
 			return;
