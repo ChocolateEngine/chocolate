@@ -84,3 +84,12 @@ inline T* Mod_GetInterfaceCast( const char* spName, size_t sVer )
 	return static_cast< T* >( Mod_GetInterface( spName, sVer ) );
 }
 
+
+#define CH_GET_INTERFACE( var, type, name, ver )     \
+	var = Mod_GetInterfaceCast< type >( name, ver ); \
+	if ( var == nullptr )                            \
+	{                                                \
+		Log_Error( "Failed to load " name "\n" );    \
+		return false;                                \
+	}
+
