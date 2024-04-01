@@ -261,6 +261,25 @@ char* Util_AllocStringF( const char* format, ... )
 }
 
 
+char* Util_AllocStringV( const char* format, va_list args )
+{
+	va_list copy;
+	va_copy( copy, args );
+	int len = std::vsnprintf( nullptr, 0, format, copy );
+	va_end( copy );
+
+	if ( len >= 0 )
+	{
+		char* result = ch_malloc_count< char >( len + 1 );
+		std::vsnprintf( result, len, format, args );
+		result[ len ] = '\0';
+		return result;
+	}
+
+	return nullptr;
+}
+
+
 // --------------------------------------------------------------------------
 
 

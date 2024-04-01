@@ -303,6 +303,7 @@ std::string    CORE_API vstring( const char* format, ... );
 std::string    CORE_API vstringV( const char* format, va_list args );
 
 CORE_API char*          Util_AllocStringF( const char* format, ... );
+CORE_API char*          Util_AllocStringV( const char* format, va_list args );
 
 
 #define VSTRING( out, format ) \
