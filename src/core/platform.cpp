@@ -544,19 +544,34 @@ void* Sys_CreateWindow( const char* spWindowName, int sWidth, int sHeight, bool 
 	DWORD        dwStyle   = WS_VISIBLE | WS_OVERLAPPEDWINDOW | WS_EX_CONTROLPARENT;
 	DWORD        dwExStyle = 0;
 
-	HWND         window    = CreateWindowEx(
-				 dwExStyle,
-				 _ClassName,
-				 spWindowName,
-				 dwStyle,
-				 CW_USEDEFAULT,
-				 CW_USEDEFAULT,
-				 sWidth, sHeight,
-				 NULL, NULL,
-				 GetModuleHandle( NULL ),
-				 nullptr );
+	RECT         rect;
+	rect.left   = 0;
+	rect.top    = 0;
+	rect.right  = sWidth;
+	rect.bottom = sHeight;
 
-	// UpdateWindow( gHWND );
+	// thanks win32
+	// According to the wiki, this function
+	// "Calculates the required size of the window rectangle, based on the desired size of the client rectangle.
+	// The window rectangle can then be passed to the CreateWindowEx function to create a window whose client area is the desired size."
+	// 
+	// Without that, the window ends up smaller than it actually should be
+	// ex. 1280x720 becomes 1266x713
+	// https://stackoverflow.com/questions/34583160/winapi-createwindow-function-creates-smaller-windows-than-set
+	// https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-adjustwindowrectex
+	AdjustWindowRectEx( &rect, dwStyle, 0, 0 );
+
+	HWND window = CreateWindowExA(
+	  dwExStyle,
+	  _ClassName,
+	  spWindowName,
+	  dwStyle,
+	  CW_USEDEFAULT,
+	  CW_USEDEFAULT,
+	  rect.right - rect.left, rect.bottom - rect.top,
+	  NULL, NULL,
+	  GetModuleHandle( NULL ),
+	  nullptr );
 
 	if ( !window )
 	{
@@ -586,12 +601,16 @@ int Sys_Execute( const char* spFile, const char* spArgs )
 	ShExecInfo.lpDirectory      = NULL;
 	ShExecInfo.nShow            = SW_SHOW;
 	ShExecInfo.hInstApp         = NULL;
-	ShellExecuteEx( &ShExecInfo );
+
+	BOOL ret = ShellExecuteExA( &ShExecInfo );
+
+	if ( ret == FALSE || ShExecInfo.hProcess == INVALID_HANDLE_VALUE )
+		return -1;
 
 	WaitForSingleObject( ShExecInfo.hProcess, INFINITE );
 
-	LPDWORD exitCode;
-	BOOL   ret = GetExitCodeProcess( ShExecInfo.hProcess, exitCode );
+	DWORD exitCode = 0;
+	ret            = GetExitCodeProcess( ShExecInfo.hProcess, &exitCode );
 
 	return (int)exitCode;
 }
@@ -601,26 +620,16 @@ int Sys_ExecuteV( const char* spFile, const char* spArgs, ... )
 {
 	va_list args;
 	va_start( args, spArgs );
-
-	va_list copy;
-	va_copy( copy, args );
-	int len = std::vsnprintf( nullptr, 0, spArgs, copy );
-	va_end( copy );
-
-	if ( len < 0 )
-	{
-		Log_Error( "\n *** Sys_ExecuteV: vsnprintf failed?\n\n" );
-		return -1;
-	}
-
-	std::string argString;
-	argString.resize( std::size_t( len ) + 1, '\0' );
-	std::vsnprintf( argString.data(), argString.size(), spArgs, args );
-	argString.resize( len );
-
+	char* string = Util_AllocStringV( spArgs, args );
 	va_end( args );
 
-	return Sys_Execute( spFile, argString.data() );
+	if ( string == nullptr )
+		return -1;
+
+	int ret = Sys_Execute( spFile, string );
+
+	free( string );
+	return ret;
 }
 
 
