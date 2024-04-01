@@ -483,7 +483,7 @@ void sys_init()
 	_CrtSetDbgFlag( tmpFlag );
 #endif
 
-	// Create Window Classs
+	// Create Window Class
 	WNDCLASSEX wc = { 0 };
 	ZeroMemory( &wc, sizeof( wc ) );
 
@@ -528,7 +528,6 @@ int Sys_GetCoreCount()
 	int numCPU = sysinfo.dwNumberOfProcessors;
 	return numCPU;
 }
-
 
 
 void Sys_SetResizeCallback( FResizeCallback callback )
