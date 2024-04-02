@@ -503,6 +503,7 @@ bool VK_LoadTexture( ChHandle_t& srHandle, TextureVK* tex, const std::string& sr
 	tex->aFilter         = VK_ToVkFilter( srCreateData.aFilter );
 	tex->aSamplerAddress = VK_ToVkSamplerAddress( srCreateData.aSamplerAddress );
 	tex->aDepthCompare   = srCreateData.aDepthCompare;	// Does this need a dedicated function?
+	tex->apName          = VK_AllocString( srPath.data(), srPath.size() );
 
 	// textures loaded through KTX are always sampled currently
 	if ( tex->aUsage & VK_IMAGE_USAGE_SAMPLED_BIT )
@@ -534,7 +535,7 @@ TextureVK* VK_CreateTexture( ChHandle_t& srHandle, const TextureCreateInfo_t& sr
 	tex->aSize           = srCreate.aSize;
 	tex->aFormat         = VK_ToVkFormat( srCreate.aFormat );
 	tex->aUsage          = VK_ToVkImageUsage( srCreateData.aUsage );
-	tex->apName          = srCreate.apName;
+	tex->apName          = Util_AllocString( srCreate.apName );
 	tex->aFilter         = VK_ToVkFilter( srCreateData.aFilter );
 	tex->aSamplerAddress = VK_ToVkSamplerAddress( srCreateData.aSamplerAddress );
 	tex->aDepthCompare   = srCreateData.aDepthCompare;
@@ -729,6 +730,9 @@ void VK_DestroyTexture( ChHandle_t sTexture )
 		Log_Error( "Failed to find texture to destroy\n" );
 		return;
 	}
+
+	if ( texture->apName )
+		VK_FreeString( texture->apName );
 
 	// big hack, blech
 	if ( !texture->aSwapChain )
@@ -1099,7 +1103,7 @@ static TextureVK* CreateBackBufferColor( WindowVK* window, const char* title, Ch
 	Log_Msg( "creating back buffer\n" );
 
 	TextureVK* colorTex     = VK_NewTexture( srHandle );
-	colorTex->apName        = Util_AllocStringF( "Backbuffer Color - %s", title );
+	colorTex->apName        = VK_AllocStringF( "Backbuffer Color - %s", title );
 	colorTex->aRenderTarget = true;
 
 	VkImageCreateInfo color{ VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO };
@@ -1154,7 +1158,7 @@ static TextureVK* CreateBackBufferColor( WindowVK* window, const char* title, Ch
 
 	VK_CheckResult( vkCreateImageView( VK_GetDevice(), &colorView, nullptr, &colorTex->aImageView ), "Failed to create color image view!" );
 
-	VK_SetObjectName( VK_OBJECT_TYPE_IMAGE_VIEW, (u64)colorTex->aImageView, Util_AllocStringF( "Backbuffer Color - %s", title ) );
+	VK_SetObjectName( VK_OBJECT_TYPE_IMAGE_VIEW, (u64)colorTex->aImageView, VK_AllocStringF( "Backbuffer Color - %s", title ) );
 
 	return colorTex;
 }
@@ -1179,7 +1183,7 @@ void VK_CreateBackBuffer( WindowVK* window )
 	// Create Depth Texture
 
 	TextureVK*  depthTex     = VK_NewTexture( depthHandle );
-	depthTex->apName         = Util_AllocStringF( "Backbuffer Depth - %s", title );
+	depthTex->apName         = VK_AllocStringF( "Backbuffer Depth - %s", title );
 	depthTex->aRenderTarget = true;
 
 	VkImageCreateInfo depth;
@@ -1232,7 +1236,7 @@ void VK_CreateBackBuffer( WindowVK* window )
 
 	VK_CheckResult( vkCreateImageView( VK_GetDevice(), &depthView, nullptr, &depthTex->aImageView ), "Failed to create depth image view!" );
 
-	VK_SetObjectName( VK_OBJECT_TYPE_IMAGE_VIEW, (u64)depthTex->aImageView, Util_AllocStringF( "Backbuffer Depth View - %s", title ) );
+	VK_SetObjectName( VK_OBJECT_TYPE_IMAGE_VIEW, (u64)depthTex->aImageView, VK_AllocStringF( "Backbuffer Depth View - %s", title ) );
 
 	// TODO: wtf use colorView and depthView, i love memory leaks lol
 	// Log_Warn( gLC_Render, "why am i not using the colorView and depthView we created???!?!?!!?\n" );
@@ -1258,7 +1262,7 @@ void VK_CreateBackBuffer( WindowVK* window )
 	{
 		ChHandle_t texHandle = CH_INVALID_HANDLE;
 		TextureVK* tex       = VK_NewTexture( texHandle );
-		tex->apName          = Util_AllocStringF( "Backbuffer Color - %s", title );
+		tex->apName          = VK_AllocStringF( "Backbuffer Color - %s", title );
 		tex->aFormat         = gColorFormat;
 		tex->aFrames         = 1;
 		tex->aMemory         = VK_NULL_HANDLE;
@@ -1280,7 +1284,7 @@ void VK_CreateBackBuffer( WindowVK* window )
 	{
 		ChHandle_t resolveHandle = CH_INVALID_HANDLE;
 		TextureVK* tex           = VK_NewTexture( resolveHandle );
-		tex->apName              = Util_AllocStringF( "Backbuffer Resolve - %s", title );
+		tex->apName              = VK_AllocStringF( "Backbuffer Resolve - %s", title );
 		tex->aFormat             = gColorFormat;
 		tex->aFrames             = 1;
 		tex->aMemory             = VK_NULL_HANDLE;
@@ -1296,7 +1300,7 @@ void VK_CreateBackBuffer( WindowVK* window )
 	}
 
 	CreateFramebufferVK createBuffer{};
-	createBuffer.apName       = Util_AllocStringF( "Backbuffer Color - %s", title );
+	createBuffer.apName       = VK_AllocStringF( "Backbuffer Color - %s", title );
 	createBuffer.aRenderPass  = VK_GetRenderPass();
 	createBuffer.aSize.x      = window->swapExtent.width;
 	createBuffer.aSize.y      = window->swapExtent.height;
@@ -1324,7 +1328,7 @@ void VK_CreateBackBuffer( WindowVK* window )
 		createBuffer.aAttachColors[ 0 ] = window->swapImageViews[ 1 ];
 	}
 
-	createBuffer.apName        = Util_AllocStringF( "Backbuffer Depth - %s", title );
+	createBuffer.apName        = VK_AllocStringF( "Backbuffer Depth - %s", title );
 	Handle frameBufDepthHandle = VK_CreateFramebufferVK( createBuffer );
 
 	target->aFrameBuffers.resize( 2 );

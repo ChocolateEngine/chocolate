@@ -561,6 +561,8 @@ private:
 // ----------------------------------------------------------------
 // Console Functions
 
+CORE_API void  Con_Shutdown();
+
 CORE_API void  Con_SetConVarRegisterFlags( ConVarFlag_t sFlags );
 
 // Register all the ConCommands and ConVars created from static initialization

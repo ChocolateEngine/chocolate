@@ -1442,9 +1442,39 @@ bool Graphics::Init()
 }
 
 
+void Graphics_FreeBufferList( ShaderBufferList_t& bufferList )
+{
+	for ( auto& [ magic, buffer ] : bufferList.aBuffers )
+	{
+		render->DestroyBuffer( buffer );
+	}
+
+	bufferList.aBuffers.clear();
+	bufferList.aDirty = true;
+}
+
+
+void Graphics_FreeBufferStaging( DeviceBufferStaging_t& bufferStaging )
+{
+	// The staging buffer and device buffer are right next to each other in memory here, so this works
+	render->DestroyBuffers( &bufferStaging.aStagingBuffer, 2 );
+}
+
+
 void Graphics::Shutdown()
 {
 	// TODO: Free Descriptor Set allocations
+
+	// Free Renderables
+	for ( u32 i = 0; i < gGraphicsData.aRenderables.GetHandleCount(); i++ )
+	{
+		Renderable_t* renderable = nullptr;
+		if ( !gGraphicsData.aRenderables.GetByIndex( i, &renderable ) )
+			continue;
+
+		if ( renderable->apDebugName )
+			Util_FreeString( renderable->apDebugName );
+	}
 	
 	Graphics_DestroyLights();
 
@@ -1463,6 +1493,17 @@ void Graphics::Shutdown()
 
 	if ( gGraphicsData.aViewportData )
 		free( gGraphicsData.aViewportData );
+
+	// Free Buffers
+	Graphics_FreeBufferList( gGraphicsData.aBlendShapeDataBuffers );
+	Graphics_FreeBufferList( gGraphicsData.aBlendShapeWeightBuffers );
+	Graphics_FreeBufferList( gGraphicsData.aIndexBuffers );
+	Graphics_FreeBufferList( gGraphicsData.aVertexBuffers );
+
+	Graphics_FreeBufferStaging( gGraphicsData.aCoreDataStaging );
+	Graphics_FreeBufferStaging( gGraphicsData.aModelMatrixStaging );
+	Graphics_FreeBufferStaging( gGraphicsData.aRenderableStaging );
+	Graphics_FreeBufferStaging( gGraphicsData.aViewportStaging );
 
 	// if ( gGraphicsData.aVertexBufferSlots.apFree )
 	// 	free( gGraphicsData.aVertexBufferSlots.apFree );
@@ -1855,9 +1896,7 @@ void Graphics::SetRenderableDebugName( ChHandle_t sRenderable, std::string_view 
 		if ( sName.empty() )
 			return;
 
-		renderable->apDebugName = ch_malloc_count< char >( sName.size() + 1 );
-		memcpy( renderable->apDebugName, sName.data(), sName.size() );
-		renderable->apDebugName[ sName.size() ] = '\0';
+		renderable->apDebugName = Util_AllocString( sName.data(), sName.size() );
 	}
 }
 

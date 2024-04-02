@@ -87,6 +87,17 @@ bool Mod_InitSystems()
 
 void Mod_Shutdown()
 {
+	// Go through the list in reverse, in order from what started up last to what started first
+	for ( size_t i = gLoadedSystems.size() - 1; i > 0; i-- )
+	{
+		LoadedSystem_t& appModule = gLoadedSystems[ i ];
+
+		if ( !appModule.apSystem )
+			continue;
+
+		appModule.apSystem->Shutdown();
+	}
+
 	for ( const auto& [ name, module ] : gModuleHandles )
 	{
 		sys_close_library( module );

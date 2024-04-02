@@ -47,7 +47,7 @@ struct PipelineLayoutCreate_t;
 struct GraphicsPipelineCreate_t;
 struct TextureCreateInfo_t;
 struct RenderPassCreate_t;
-
+class ImGuiContext;
 
 
 extern PFN_vkSetDebugUtilsObjectNameEXT    pfnSetDebugUtilsObjectName;
@@ -95,7 +95,7 @@ struct TextureVK
 	u32                  aDataSize       = 0;
 
 	// Texture Information
-	const char*          apName          = nullptr;
+	char*                apName          = nullptr;
 	int                  aIndex          = 0;  // texture sampler index (MOVE ELSEWHERE!!)
 	glm::uvec2           aSize{};
 	u8                   aMipLevels    = 0;
@@ -217,6 +217,7 @@ struct SemaphoreGroup_t
 struct WindowVK
 {
 	SDL_Window*                     window    = nullptr;
+	ImGuiContext*                   context   = nullptr; 
 	VkSurfaceKHR                    surface   = VK_NULL_HANDLE;
 	VkSwapchainKHR                  swapchain = VK_NULL_HANDLE;
 
@@ -309,6 +310,13 @@ bool                                  VK_UseMSAA();
 VkSampleCountFlagBits                 VK_GetMSAASamples();
 
 const char*                           VK_ObjectTypeStr( VkObjectType type );
+
+// mainly used for allocating names for vulkan objects
+char*                                 VK_AllocString( const char* format );
+char*                                 VK_AllocString( const char* format, size_t len );
+char*                                 VK_AllocStringF( const char* format, ... );
+void                                  VK_FreeString( char* string );
+void                                  VK_FreeStrings();
 
 // --------------------------------------------------------------------------------------
 // Debug Helpers
@@ -465,6 +473,7 @@ bool                                  VK_CreateComputePipeline( ChHandle_t& srHa
 
 void                                  VK_DestroyPipeline( Handle sPipeline );
 void                                  VK_DestroyPipelineLayout( Handle sPipeline );
+void                                  VK_DestroyShaders();
 
 bool                                  VK_BindShader( VkCommandBuffer c, Handle handle );
 VkPipelineLayout                      VK_GetPipelineLayout( Handle handle );

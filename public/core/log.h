@@ -103,7 +103,7 @@ struct LogColorBuf_t
 
 
 /*ReBuildConsoleOutput*/
-typedef std::function< void() > LogChannelShownCallbackF;
+typedef void ( *LogChannelShownCallbackF )();
 
 
 constexpr LogColor   LOG_COLOR_WARNING   = LogColor::Yellow;

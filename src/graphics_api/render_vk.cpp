@@ -66,6 +66,8 @@ GraphicsAPI_t                                            gGraphicsAPIData;
 // debug thing
 size_t                                                   gTotalBufferCopyPerFrame = 0;
 
+// allocated strings
+ChVector< char* >                                        gAllocatedStrings;
 
 // HACK HACK HACK HACK
 // VULKAN NEEDS THE SURFACE BEFORE WE CREATE A DEVICE
@@ -124,6 +126,73 @@ void VK_DumpCheckpoints()
 		Log_DevF( gLC_Render, 1, "NV CHECKPOINT: stage %08x name %s\n", cp.stage, cp.pCheckpointMarker ? static_cast< const char* >( cp.pCheckpointMarker ) : "??" );
 	}
 #endif
+}
+
+
+char* VK_AllocString( const char* format )
+{
+	char* string = Util_AllocString( format );
+
+	if ( string == nullptr )
+		return nullptr;
+
+	gAllocatedStrings.push_back( string );
+	return string;
+}
+
+
+char* VK_AllocString( const char* format, size_t len )
+{
+	char* string = Util_AllocString( format, len );
+
+	if ( string == nullptr )
+		return nullptr;
+
+	gAllocatedStrings.push_back( string );
+	return string;
+}
+
+
+char* VK_AllocStringF( const char* format, ... )
+{
+	va_list args;
+	va_start( args, format );
+	char* string = Util_AllocStringV( format, args );
+	va_end( args );
+
+	if ( string == nullptr )
+		return nullptr;
+
+	gAllocatedStrings.push_back( string );
+	return string;
+}
+
+
+void VK_FreeString( char* string )
+{
+	if ( string == nullptr )
+		return;
+
+	for ( u32 i = 0; i < gAllocatedStrings.size(); i++ )
+	{
+		if ( strcmp( gAllocatedStrings[ i ], string ) == 0 )
+		{
+			Util_FreeString( gAllocatedStrings[ i ] );
+			gAllocatedStrings.remove( i );
+			break;
+		}
+	}
+}
+
+
+void VK_FreeStrings()
+{
+	for ( u32 i = 0; i < gAllocatedStrings.size(); i++ )
+	{
+		Util_FreeString( gAllocatedStrings[ i ] );
+	}
+
+	gAllocatedStrings.clear();
 }
 
 
@@ -552,21 +621,23 @@ void Render_Shutdown()
 	if ( gpViewports )
 		delete gpViewports;
 
-	ImGui_ImplVulkan_Shutdown();
+	VK_DestroyShaders();
 
 	VK_DestroyRenderTargets();
 	VK_DestroyRenderPasses();
 
 	VK_DestroyAllTextures();
 
+	VK_FreeOneTimeCommands();
 	VK_DestroyCommandPool( VK_GetSingleTimeCommandPool() );
 	VK_DestroyCommandPool( VK_GetPrimaryCommandPool() );
 	VK_DestroyCommandPool( VK_GetTransferCommandPool() );
 
 	VK_DestroyDescSets();
-	VK_FreeOneTimeCommands();
 
 	VK_DestroyInstance();
+
+	VK_FreeStrings();
 }
 
 
@@ -645,6 +716,21 @@ public:
 
 			bufferCopy.apRegions = nullptr;
 		}
+
+		VK_WaitForGraphicsQueue();
+		VK_WaitForTransferQueue();
+
+		// shutdown all windows
+		for ( u32 i = 0; i < gGraphicsAPIData.windows.GetHandleCount(); i++ )
+		{
+			WindowVK* window = nullptr;
+			if ( !gGraphicsAPIData.windows.GetByIndex( i, &window ) )
+				continue;
+			
+			DestroyWindowInternal( window );
+		}
+
+		gGraphicsAPIData.windows.clear();
 
 		Render_Shutdown();
 	}
@@ -835,6 +921,8 @@ public:
 			}
 		}
 
+		windowVK->context = ImGui::GetCurrentContext();
+
 		if ( !VK_CreateSwapchain( windowVK ) )
 		{
 			Log_ErrorF( gLC_GraphicsAPI, "Failed to create swapchain for window: \"%s\"\n", title );
@@ -867,6 +955,29 @@ public:
 		return windowHandle;
 	}
 
+	void DestroyWindowInternal( WindowVK* window )
+	{
+		ImGuiContext* origContext = ImGui::GetCurrentContext();
+
+		if ( window->context )
+			ImGui::SetCurrentContext( window->context );
+
+		if ( window->swapchain )
+			VK_DestroySwapchain( window );
+
+		if ( window->surface )
+			VK_DestroySurface( window->surface );
+
+		VK_DestroyRenderTarget( window->backbuffer );
+		VK_DestroyFences( window );
+		VK_DestroySemaphores( window );
+		VK_FreeCommands( window );
+
+		ImGui_ImplVulkan_Shutdown();
+
+		ImGui::SetCurrentContext( origContext );
+	}
+
 	virtual void DestroyWindow( ChHandle_t windowHandle ) override
 	{
 		WindowVK* window = nullptr;
@@ -876,15 +987,7 @@ public:
 			return;
 		}
 
-		if ( window->surface )
-			VK_DestroySurface( window->surface );
-
-		if ( window->swapchain )
-			VK_DestroySwapchain( window );
-
-		VK_DestroySemaphores( window );
-		VK_FreeCommands( window );
-
+		DestroyWindowInternal( window );
 		gGraphicsAPIData.windows.Remove( windowHandle );
 	}
 

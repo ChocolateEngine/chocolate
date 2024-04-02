@@ -32,6 +32,26 @@
 LOG_REGISTER_CHANNEL( KeyValue, LogColor::DarkGray );
 
 
+// memory allocation stat tracking
+#ifdef _DEBUG
+
+#define CH_STRING_MEM_TRACKING 1
+
+#if CH_STRING_MEM_TRACKING
+static ChVector< char* >& GetAllocatedStrings()
+{
+	static ChVector< char* > allocatedStrings;
+	return allocatedStrings;
+}
+
+ChVector< void* > gAllocatedMemory;
+#endif
+
+#else
+	#define CH_STRING_MEM_TRACKING 0
+#endif
+
+
 bool ch_strcmplen( size_t sLenA, char* spA, size_t sLenB, char* spB )
 {
 	// is the pointer the same?
@@ -230,6 +250,118 @@ std::string vstringV( const char* format, va_list args )
 // --------------------------------------------------------------------------
 
 
+char* Util_AllocString( const char* string )
+{
+	if ( string == nullptr )
+	{
+		Log_ErrorF( "Attempted to copy nullptr string!\n" );
+		return nullptr;
+	}
+
+	size_t len = strlen( string );
+	char*  out = ch_malloc< char >( len + 1 );
+	memcpy( out, string, len );
+	out[ len ] = '\0';
+
+#if CH_STRING_MEM_TRACKING
+	GetAllocatedStrings().push_back( out );
+#endif
+
+	return out;
+}
+
+
+char* Util_AllocString( const char* string, size_t len )
+{
+	if ( string == nullptr )
+	{
+		Log_ErrorF( "Attempted to copy nullptr string!\n" );
+		return nullptr;
+	}
+
+	char* out = ch_malloc< char >( len + 1 );
+	memcpy( out, string, len );
+	out[ len ] = '\0';
+
+#if CH_STRING_MEM_TRACKING
+	GetAllocatedStrings().push_back( out );
+#endif
+
+	return out;
+}
+
+
+char* Util_ReallocString( char* data, const char* string )
+{
+	if ( string == nullptr )
+	{
+		Log_ErrorF( "Attempted to copy nullptr string!\n" );
+		return nullptr;
+	}
+
+#if CH_STRING_MEM_TRACKING
+	size_t index = GetAllocatedStrings().index( data );
+#endif
+
+	size_t len   = strlen( string );
+	char*  out   = ch_realloc< char >( data, len + 1 );
+
+	if ( out == nullptr )
+		return nullptr;
+
+	memcpy( out, string, len );
+	out[ len ] = '\0';
+
+#if CH_STRING_MEM_TRACKING
+	if ( index != UINT32_MAX )
+	{
+		GetAllocatedStrings()[ index ] = out;
+	}
+	else
+	{
+		GetAllocatedStrings().push_back( out );
+	}
+#endif
+
+	return out;
+}
+
+
+char* Util_ReallocString( char* data, const char* string, size_t len )
+{
+	if ( string == nullptr )
+	{
+		Log_ErrorF( "Attempted to copy nullptr string!\n" );
+		return nullptr;
+	}
+
+#if CH_STRING_MEM_TRACKING
+	size_t index = GetAllocatedStrings().index( data );
+#endif
+
+	char*  out   = ch_realloc< char >( data, len + 1 );
+
+	if ( out == nullptr )
+		return nullptr;
+
+	memcpy( out, string, len );
+	out[ len ] = '\0';
+
+#if CH_STRING_MEM_TRACKING
+	if ( index != UINT32_MAX )
+	{
+		GetAllocatedStrings()[ index ] = out;
+	}
+	else
+	{
+		GetAllocatedStrings().push_back( out );
+	}
+#endif
+
+	return out;
+}
+
+
 char* Util_AllocStringF( const char* format, ... )
 {
 	char*   result = nullptr;
@@ -249,9 +381,10 @@ char* Util_AllocStringF( const char* format, ... )
 
 	if ( len > 0 )
 	{
-		result = ch_calloc_count< char >( len + 1 );
+		result = ch_malloc< char >( len + 1 );
 		vsnprintf( result, len, format, args_copy );
 		result[ len ] = '\0';
+		GetAllocatedStrings().push_back( result );
 	}
 
 	va_end( args_copy );
@@ -270,14 +403,73 @@ char* Util_AllocStringV( const char* format, va_list args )
 
 	if ( len >= 0 )
 	{
-		char* result = ch_malloc_count< char >( len + 1 );
+		char* result = ch_malloc< char >( len + 1 );
 		std::vsnprintf( result, len, format, args );
 		result[ len ] = '\0';
+		GetAllocatedStrings().push_back( result );
 		return result;
 	}
 
 	return nullptr;
 }
+
+
+void Util_FreeString( char* string )
+{
+#if CH_STRING_MEM_TRACKING
+	bool found = false;
+	for ( u32 i = 0; i < GetAllocatedStrings().size(); i++ )
+	{
+		// must be the same pointer
+		if ( GetAllocatedStrings()[ i ] == string )
+		{
+			GetAllocatedStrings().remove( i );
+			found = true;
+			break;
+		}
+	}
+
+	CH_ASSERT( found );
+
+	if ( GetAllocatedStrings().empty() )
+	{
+		Log_ErrorF( "EXTRA FREE FOR STRING ALLOCATOR\n!" );
+	}
+#endif
+
+	free( string );
+}
+
+
+u32 Util_GetStringAllocCount()
+{
+#if CH_STRING_MEM_TRACKING
+	return GetAllocatedStrings().size();
+#else
+	return 0;
+#endif
+}
+
+
+void Util_FreeAllocStrings()
+{
+#if CH_STRING_MEM_TRACKING
+	size_t size = GetAllocatedStrings().size();
+
+	if ( size == 0 )
+		return;
+
+	printf( " *** WARNING: %d STRINGS NOT FREED ON SHUTDOWN!\n", size );
+	for ( u32 i = 0; i < GetAllocatedStrings().size(); i++ )
+	{
+		free( GetAllocatedStrings()[ i ] );
+	}
+#endif
+}
+
+
+// TODO: experiment with a special shared ptr type for strings, like ChStringAllocPtr,
+// to replace some std::string usage below and around the engine
 
 
 // --------------------------------------------------------------------------

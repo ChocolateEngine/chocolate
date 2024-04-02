@@ -627,7 +627,7 @@ int Sys_ExecuteV( const char* spFile, const char* spArgs, ... )
 
 	int ret = Sys_Execute( spFile, string );
 
-	free( string );
+	Util_FreeString( string );
 	return ret;
 }
 

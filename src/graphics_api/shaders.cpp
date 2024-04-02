@@ -508,3 +508,31 @@ void VK_DestroyPipelineLayout( Handle sPipeline )
 	gPipelineLayouts.Remove( sPipeline );
 }
 
+
+void VK_DestroyShaders()
+{
+	// destroy all shaders
+	for ( u32 i = 0; i < gShaders.GetHandleCount(); i++ )
+	{
+		ShaderVK* shader = nullptr;
+		if ( !gShaders.GetByIndex( i, &shader ) )
+			continue;
+
+		if ( shader->aPipeline )
+			vkDestroyPipeline( VK_GetDevice(), shader->aPipeline, nullptr );
+	}
+
+	// destroy all shaders
+	for ( u32 i = 0; i < gPipelineLayouts.GetHandleCount(); i++ )
+	{
+		VkPipelineLayout* layout = nullptr;
+		if ( !gPipelineLayouts.GetByIndex( i, &layout ) )
+			continue;
+
+		vkDestroyPipelineLayout( VK_GetDevice(), *layout, nullptr );
+	}
+
+	gShaders.clear();
+	gPipelineLayouts.clear();
+}
+

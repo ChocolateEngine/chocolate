@@ -17,6 +17,7 @@
 static ChVector< Arg_t > gArgList;
 
 extern void              Assert_Init();
+extern void              Util_FreeAllocStrings();
 
 static std::string_view* gArgV = nullptr;
 static int               gArgC = 0;
@@ -48,8 +49,18 @@ extern "C"
 	void DLL_EXPORT core_exit()
 	{
 		Con_Archive();
+
+		// Shutdown All Systems
+		Mod_Shutdown();
+		Con_Shutdown();
+
 		Core_DestroyAppInfo();
 		//Thread_Shutdown();
+
+		// Check if all memory is freed
+		u32 stringAllocCount = Util_GetStringAllocCount();
+		Util_FreeAllocStrings();
+
 		sys_shutdown();
 	}
 }

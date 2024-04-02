@@ -96,9 +96,29 @@ inline To* ch_pointer_cast( From* in )
 }
 
 
+// TODO: add in memory tracking here
+inline void ch_free( void* data )
+{
+	if ( !data )
+		return;
+
+	free( data );
+}
+
+
+template< typename Type >
+inline void ch_free( Type* data )
+{
+	if ( !data )
+		return;
+
+	free( data );
+}
+
+
 // Allocate X Amount of a specific type, could be named better
 template< typename To >
-inline To* ch_malloc_count( size_t sCount )
+inline To* ch_malloc( size_t sCount )
 {
 	To* data = static_cast< To* >( malloc( sizeof( To ) * sCount ) );
 	CH_ASSERT( data );
@@ -108,7 +128,7 @@ inline To* ch_malloc_count( size_t sCount )
 
 // Reallocate X Amount of a specific type, could be named better
 template< typename To >
-inline To* ch_realloc_count( To* spData, size_t sCount )
+inline To* ch_realloc( To* spData, size_t sCount )
 {
 	To* data = static_cast< To* >( realloc( spData, sizeof( To ) * sCount ) );
 	CH_ASSERT( data );
@@ -118,7 +138,7 @@ inline To* ch_realloc_count( To* spData, size_t sCount )
 
 // Reallocate X Amount of a specific type, could be named better
 template< typename To >
-inline bool ch_realloc_count2( To*& spData, size_t sCount )
+inline bool ch_realloc2( To*& spData, size_t sCount )
 {
 	To* data = static_cast< To* >( realloc( spData, sizeof( To ) * sCount ) );
 	
@@ -133,7 +153,7 @@ inline bool ch_realloc_count2( To*& spData, size_t sCount )
 
 // Allocate X Amount of a specific type and zero the memory, could be named better
 template< typename To >
-inline To* ch_calloc_count( size_t sCount )
+inline To* ch_calloc( size_t sCount )
 {
 	To* data = static_cast< To* >( calloc( sCount, sizeof( To ) ) );
 	CH_ASSERT( data );
@@ -149,6 +169,18 @@ inline To* ch_stack_alloc( size_t sCount )
 	CH_ASSERT( data );
 	return data;
 }
+
+
+// old names
+// TODO: replace this
+#define ch_malloc_count                 ch_malloc
+#define ch_calloc_count                 ch_calloc
+#define ch_realloc_count                ch_realloc
+#define ch_realloc_count2               ch_realloc2
+
+#define CH_MALLOC( type, count )        ch_malloc< type >( count )
+#define CH_CALLOC( type, count )        ch_calloc< type >( count )
+#define CH_REALLOC( type, data, count ) ch_realloc2< type >( data, count )
 
 
 CORE_API bool ch_strcmplen( size_t sLenA, char* spA, size_t sLenB, char* spB );
@@ -302,8 +334,22 @@ void           CORE_API vstringV( std::string& output, const char* format, va_li
 std::string    CORE_API vstring( const char* format, ... );
 std::string    CORE_API vstringV( const char* format, va_list args );
 
+// Copies a string, useful for if you're copying a string from reading a file and then going to free that string later
+CORE_API char*          Util_AllocString( const char* format );
+CORE_API char*          Util_AllocString( const char* format, size_t len );
+CORE_API char*          Util_ReallocString( char* data, const char* format );
+CORE_API char*          Util_ReallocString( char* data, const char* format, size_t len );
+
+// malloc a string with string formatting
 CORE_API char*          Util_AllocStringF( const char* format, ... );
 CORE_API char*          Util_AllocStringV( const char* format, va_list args );
+
+// USE THIS AS STRING ALLOCATIONS ARE TRACKED!
+// also so the string is freed in the same dll, would probably cause issues otherwise
+CORE_API void           Util_FreeString( char* string );
+
+// Get the total amount of strings allocated
+CORE_API u32            Util_GetStringAllocCount();
 
 
 #define VSTRING( out, format ) \

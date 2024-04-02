@@ -140,13 +140,10 @@ std::string ConCommand::GetPrintMessage(  )
 ConVarData::~ConVarData()
 {
 	if ( apDefaultValue )
-		free( apDefaultValue );
+		Util_FreeString( apDefaultValue );
 
 	if ( apValue )
-		free( apValue );
-
-	apDefaultValue = nullptr;
-	apValue        = nullptr;
+		Util_FreeString( apValue );
 }
 
 
@@ -182,14 +179,11 @@ void ConVar::Init( std::string_view defaultValue, ConVarFunc* callback )
 		Con_RegisterConVar1( this );
 	}
 
-	apData->aDefaultValueLen = defaultValue.size();
-	apData->apDefaultValue   = ch_malloc_count< char >( defaultValue.size() + 1 );
+	apData->aDefaultValueLen   = defaultValue.size();
+	apData->apDefaultValue     = Util_AllocString( defaultValue.data(), defaultValue.size() );
 
-	memcpy( apData->apDefaultValue, defaultValue.data(), sizeof( char ) * apData->aDefaultValueLen );
-	apData->apDefaultValue[ apData->aDefaultValueLen ] = '\0';
-
-	apData->aDefaultValueFloat                         = ToDouble( defaultValue.data(), 0.f );
-	apData->apFunc                                     = callback;
+	apData->aDefaultValueFloat = ToDouble( defaultValue.data(), 0.f );
+	apData->apFunc             = callback;
 
 	SetValue( defaultValue );
 }
@@ -224,10 +218,7 @@ void ConVar::Init( float defaultValue, ConVarFunc* callback )
 
 	std::string defaultValueStr = ToString( defaultValue );
 	apData->aDefaultValueLen    = defaultValueStr.size();
-	apData->apDefaultValue      = ch_malloc_count< char >( defaultValueStr.size() + 1 );
-
-	memcpy( apData->apDefaultValue, defaultValueStr.data(), sizeof( char ) * apData->aDefaultValueLen );
-	apData->apDefaultValue[ apData->aDefaultValueLen ] = '\0';
+	apData->apDefaultValue      = Util_AllocString( defaultValueStr.data(), defaultValueStr.size() );
 
 	apData->aDefaultValueFloat                         = defaultValue;
 	apData->apFunc                                     = callback;
@@ -276,14 +267,8 @@ std::string ConVar::GetPrintMessage()
 
 void ConVar::SetValue( std::string_view value )
 {
-	//if ( apValue )
-	//	free( apValue );
-
-	apData->apValue     = ch_realloc_count< char >( apData->apValue, value.size() + 1 );
-	apData->aValueLen   = value.size();
-
-	memcpy( apData->apValue, value.data(), sizeof( char ) * apData->aValueLen );
-	apData->apValue[ apData->aValueLen ] = '\0';
+	apData->apValue   = Util_ReallocString( apData->apValue, value.data(), value.size() );
+	apData->aValueLen = value.size();
 
 	float newValue = apData->aValueFloat;
 	if ( !ToFloat( apData->apValue, newValue ) )
@@ -300,11 +285,9 @@ void ConVar::SetValue( float value )
 
 	apData->aValueFloat     = value;
 	std::string valueStdStr = ToString( value );
-	apData->apValue         = ch_realloc_count< char >( apData->apValue, valueStdStr.size() + 1 );
-	apData->aValueLen       = valueStdStr.size();
 
-	memcpy( apData->apValue, valueStdStr.data(), sizeof( char ) * apData->aValueLen );
-	apData->apValue[ apData->aValueLen ] = '\0';
+	apData->apValue         = Util_ReallocString( apData->apValue, valueStdStr.data(), valueStdStr.size() );
+	apData->aValueLen       = valueStdStr.size();
 }
 
 
@@ -1316,6 +1299,30 @@ ConVarFlagChangeFunc* Con_GetCvarFlagCallback( ConVarFlag_t sFlag )
 	}
 
 	return {};
+}
+
+
+void Con_Shutdown()
+{
+	gArchiveCallbacks.clear();
+
+	// for ( ConVarBase* current : Con_GetConVars() )
+	// {
+	// 	if ( typeid( *current ) == typeid( ConVar ) )
+	// 	{
+	// 		// mark data as nullptr
+	// 		ConVar* cvar = static_cast< ConVar* >( current );
+	// 		cvar->apData = nullptr;
+	// 	}
+	// }
+
+	// free convar data
+	for ( u32 i = 0; i < gConVarData.size(); i++ )
+	{
+		delete gConVarData[ i ];
+	}
+
+	gConVarData.clear();
 }
 
 

@@ -198,6 +198,7 @@ struct ShaderArrayAllocator_t
 
 struct ShaderBufferList_t
 {
+	// Stores a magic number handle as the key, and buffer handle as the value
 	std::unordered_map< u32, ChHandle_t > aBuffers;
 	bool                                  aDirty = false;  // ew
 };
