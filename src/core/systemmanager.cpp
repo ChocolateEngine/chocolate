@@ -21,6 +21,7 @@ struct LoadedSystem_t
 	const char* apName = nullptr;
 	size_t      apVer;
 	bool        aRequired = true;
+	bool        aRunning  = false;
 };
 
 static std::unordered_map< const char*, Module >        gModuleHandles;
@@ -65,7 +66,10 @@ bool Mod_InitSystems()
 			continue;
 
 		if ( appModule.apSystem->Init() )
+		{
+			appModule.aRunning = true;
 			continue;
+		}
 
 		if ( appModule.aRequired )
 		{
@@ -87,6 +91,9 @@ bool Mod_InitSystems()
 
 void Mod_Shutdown()
 {
+	if ( gLoadedSystems.empty() )
+		return;
+
 	// Go through the list in reverse, in order from what started up last to what started first
 	for ( size_t i = gLoadedSystems.size() - 1; i > 0; i-- )
 	{
@@ -95,7 +102,11 @@ void Mod_Shutdown()
 		if ( !appModule.apSystem )
 			continue;
 
+		if ( !appModule.aRunning )
+			continue;
+
 		appModule.apSystem->Shutdown();
+		appModule.aRunning = false;
 	}
 
 	for ( const auto& [ name, module ] : gModuleHandles )
