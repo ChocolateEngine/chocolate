@@ -46,9 +46,11 @@ extern "C"
 		Args_RegisterEx( "Execute Scripts on Engine Start", "-exec" );
 	}
 
-	void DLL_EXPORT core_exit()
+	void DLL_EXPORT core_exit( bool writeArchive )
 	{
-		Con_Archive();
+		// should only do this on safe shutdown
+		if ( writeArchive )
+			Con_Archive();
 
 		// Shutdown All Systems
 		Mod_Shutdown();
@@ -431,7 +433,7 @@ std::string Args_GetRegisteredPrint( const Arg_t* spArg )
 
 		case EArgType_String:
 			msg += vstring( UNIX_CLR_GREEN " %s", spArg->apString );
-			if ( strcmp( spArg->apString, spArg->apDefaultString ) != 0 )
+			if ( spArg->apDefaultString && strcmp( spArg->apString, spArg->apDefaultString ) != 0 )
 				msg += vstring( UNIX_CLR_YELLOW " (%s default)", spArg->apDefaultString );
 			break;
 
