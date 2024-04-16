@@ -291,13 +291,15 @@ void InputSystem::ParseInput()
 
 					case SDL_WINDOWEVENT_FOCUS_GAINED:
 					{
-						window->hasFocus = true;
+						aFocusedWindow = window;
 						break;
 					}
 
 					case SDL_WINDOWEVENT_FOCUS_LOST:
 					{
-						window->hasFocus = false;
+						if ( aFocusedWindow == window )
+							aFocusedWindow = nullptr;
+
 						break;
 					}
 				}
@@ -456,10 +458,38 @@ glm::ivec2 InputSystem::GetMouseScroll()
 
 bool InputSystem::WindowHasFocus()
 {
-	if ( !aActiveWindow )
+	if ( !aActiveWindow || !aFocusedWindow )
 		return false;
 
-	return aActiveWindow->hasFocus;
+	return aFocusedWindow = aActiveWindow;
+}
+
+bool InputSystem::WindowHasFocus( SDL_Window* window )
+{
+	auto it = aWindows.find( window );
+
+	if ( it == aWindows.end() )
+	{
+		Log_ErrorF( "Could not find SDL Window\n" );
+		return false;
+	}
+
+	return aFocusedWindow == &it->second;
+}
+
+void InputSystem::SetWindowFocused( SDL_Window* window )
+{
+	auto it = aWindows.find( window );
+
+	if ( it == aWindows.end() )
+	{
+		Log_ErrorF( "Could not find SDL Window\n" );
+		return;
+	}
+
+	aFocusedWindow = &it->second;
+
+	SDL_RaiseWindow( it->second.window );
 }
 
 void InputSystem::UpdateKeyStates()
@@ -480,9 +510,9 @@ void InputSystem::UpdateKeyState( EButton key )
 		return;
 	}
 
-	bool pressed = false;
-	KeyState& state   = aKeyStates[ key ];
+	KeyState& state = aKeyStates[ key ];
 
+	// Mouse Buttons
 	if ( key > EButton_BeforeMouse )
 	{
 		if ( state & KeyState_Pressed )
@@ -503,35 +533,48 @@ void InputSystem::UpdateKeyState( EButton key )
 
 		return;
 	}
-	else
-	{
-		pressed = aKeyboardState[ key ];
-	}
 
+	bool pressed = aKeyboardState[ key ];
+
+	// TODO: change this to a signed char enum instead of flags
+	// -1 = JustReleased, 0 = Released, 1 = JustPressed, 2 = Pressed
+	// That way we can easily check if it's true for pressed and false for released
+
+	// Keyboard Buttons
 	if ( state & KeyState_Pressed )
 	{
+		// If the key state is just pressed, remove the just pressed flag
 		if ( state & KeyState_JustPressed )
 			state &= ~KeyState_JustPressed;
 
+		// If the key is no longer pressed, set it to released
 		if ( !pressed )
 		{
+			// Set the key to released and just released
+			// and remove the pressed and just pressed flags
 			state |= KeyState_Released | KeyState_JustReleased;
 			state &= ~(KeyState_Pressed | KeyState_JustPressed);
 		}
 	}
+	// If the key is released
 	else if ( state & KeyState_Released )
 	{
+		// If the key state is just released, remove the just released flag
 		if ( state & KeyState_JustReleased )
 			state &= ~KeyState_JustReleased;
 
+		// If the key is now pressed, set it to pressed
 		if ( pressed )
 		{
+			// Set the key to pressed and just pressed
+			// and remove the released and just released flags
 			state |= KeyState_Pressed | KeyState_JustPressed;
 			state &= ~(KeyState_Released | KeyState_JustReleased);
 		}
 	}
 	else
 	{
+		// No state set, set the key to released and just released
 		state |= KeyState_Released | KeyState_JustReleased;
 		state &= ~(KeyState_Pressed | KeyState_JustPressed);
 	}
@@ -690,5 +733,14 @@ bool InputSystem::SetCurrentWindow( SDL_Window* sWindow )
 		ImGui::SetCurrentContext( it->second.context );
 		return true;
 	}
+}
+
+
+SDL_Window* InputSystem::GetCurrentWindow()
+{
+	if ( !aActiveWindow )
+		return nullptr;
+
+	return aActiveWindow->window;
 }
 

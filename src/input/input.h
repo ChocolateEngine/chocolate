@@ -25,11 +25,11 @@ public:
 
 struct InputSysWindow
 {
+	SDL_Window*   window;
 	ImGuiContext* context;
 	glm::ivec2    mouseDelta{};
 	glm::ivec2    mousePos{};
 	glm::ivec2    mouseScroll{};
-	bool          hasFocus;
 };
 
 
@@ -48,7 +48,8 @@ protected:
 	std::vector< SDL_Event >                          aEvents;
 
 	std::unordered_map< SDL_Window*, InputSysWindow > aWindows;
-	InputSysWindow*                                   aActiveWindow = nullptr;
+	InputSysWindow*                                   aActiveWindow  = nullptr;
+	InputSysWindow*                                   aFocusedWindow = nullptr;
 
 	/* Parse the key aliases that can be bound to.  */
 	void 		MakeAliases();
@@ -56,11 +57,9 @@ protected:
 	void 		ParseBindings();
 	/* Binds the console command to the key.  */
 	void 		Bind( const std::string& srKey, const std::string& srCmd );
-	/* Initializes all console commands the system can respond to.  */
-	void 		InitConsoleCommands();
-	/*   */
+
 	bool 		Init();
-	/*   */
+
 	void 		Update( float frameTime );
 	/* Update all key states on this frame  */
 	void 		UpdateKeyStates();
@@ -85,6 +84,8 @@ public:
 
 	/* Is the engine window in focus?.  */
 	bool                      WindowHasFocus() override;
+	bool                      WindowHasFocus( SDL_Window* window ) override;
+	void                      SetWindowFocused( SDL_Window* window ) override;
 
 	/* Add a Key to the key update list.  */
 	bool        RegisterKey( EButton key ) override;
@@ -106,6 +107,7 @@ public:
 	virtual void              AddWindow( SDL_Window* sWindow, void* sImGuiContext ) override;
 	virtual void              RemoveWindow( SDL_Window* sWindow ) override;
 	virtual bool              SetCurrentWindow( SDL_Window* window ) override;
+	virtual SDL_Window*       GetCurrentWindow() override;
 
 	/* Accessors.  */
 	std::vector< SDL_Event > *GetEvents() { return &aEvents; }
