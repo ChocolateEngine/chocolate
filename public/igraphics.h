@@ -459,7 +459,6 @@ struct SurfaceDraw_t
 {
 	ChHandle_t aRenderable;
 	size_t     aSurface;
-	u32        aShaderSlot;  // index into core data shader draw
 };
 
 
@@ -921,61 +920,61 @@ class IGraphics : public ISystem
 	// ---------------------------------------------------------------------------------------
 	// Models
 
-	virtual Handle             LoadModel( const std::string& srPath )                                                                                                                         = 0;
-	virtual Handle             CreateModel( Model** spModel )                                                                                                                                 = 0;
-	virtual void               FreeModel( Handle hModel )                                                                                                                                     = 0;
-	virtual Model*             GetModelData( Handle hModel )                                                                                                                                  = 0;
-	virtual std::string_view   GetModelPath( Handle sModel )                                                                                                                                  = 0;
-	
+	virtual Handle                 LoadModel( const std::string& srPath )                                                                         = 0;
+	virtual Handle                 CreateModel( Model** spModel )                                                                                 = 0;
+	virtual void                   FreeModel( Handle hModel )                                                                                     = 0;
+	virtual Model*                 GetModelData( Handle hModel )                                                                                  = 0;
+	virtual std::string_view       GetModelPath( Handle sModel )                                                                                  = 0;
+
 	// maybe this can contain a struct pointer to data containing model path, blend shape names, or other stuff, etc.
 	//virtual std::string_view   GetModelInfo( Handle sModel )                                                                                                                                  = 0;
-	
-	virtual ModelBBox_t        CalcModelBBox( Handle sModel )                                                                                                                                 = 0;
-	virtual bool               GetModelBBox( Handle sModel, ModelBBox_t& srBBox )                                                                                                             = 0;
 
-	virtual void               Model_SetMaterial( Handle shModel, size_t sSurface, Handle shMat )                                                                                             = 0;
-	virtual Handle             Model_GetMaterial( Handle shModel, size_t sSurface )                                                                                                           = 0;
+	virtual ModelBBox_t            CalcModelBBox( Handle sModel )                                                                                 = 0;
+	virtual bool                   GetModelBBox( Handle sModel, ModelBBox_t& srBBox )                                                             = 0;
+
+	virtual void                   Model_SetMaterial( Handle shModel, size_t sSurface, Handle shMat )                                             = 0;
+	virtual Handle                 Model_GetMaterial( Handle shModel, size_t sSurface )                                                           = 0;
 
 	// ---------------------------------------------------------------------------------------
 	// Scenes (Currently unused and probably broken)
 
-	virtual Handle             LoadScene( const std::string& srPath )                                                                                                                         = 0;
-	virtual void               FreeScene( Handle sScene )                                                                                                                                     = 0;
+	virtual Handle                 LoadScene( const std::string& srPath )                                                                         = 0;
+	virtual void                   FreeScene( Handle sScene )                                                                                     = 0;
 
-	virtual SceneDraw_t*       AddSceneDraw( Handle sScene )                                                                                                                                  = 0;
-	virtual void               RemoveSceneDraw( SceneDraw_t* spScene )                                                                                                                        = 0;
+	virtual SceneDraw_t*           AddSceneDraw( Handle sScene )                                                                                  = 0;
+	virtual void                   RemoveSceneDraw( SceneDraw_t* spScene )                                                                        = 0;
 
-	virtual size_t             GetSceneModelCount( Handle sScene )                                                                                                                            = 0;
-	virtual Handle             GetSceneModel( Handle sScene, size_t sIndex )                                                                                                                  = 0;
+	virtual size_t                 GetSceneModelCount( Handle sScene )                                                                            = 0;
+	virtual Handle                 GetSceneModel( Handle sScene, size_t sIndex )                                                                  = 0;
 
 	// ---------------------------------------------------------------------------------------
 	// Render Lists
-	// 
+	//
 	// Render Lists are a Vector of Renderables to draw
 	// which contain viewport properties and material overrides
-	// 
+	//
 	// These can be used for skyboxes, viewmodels, reflections, cubemap generation, etc.
-	// 
+	//
 
 	// Create a RenderList
-	virtual RenderList*        RenderListCreate()                                                                                                                                              = 0;
+	virtual RenderList*            RenderListCreate()                                                                                             = 0;
 
 	// Free a RenderList
-	virtual void               RenderListFree( RenderList* pRenderList )                                                                                                                       = 0;
+	virtual void                   RenderListFree( RenderList* pRenderList )                                                                      = 0;
 
 	// Copy all data from one renderlist to another
 	// return true on success
-	virtual bool               RenderListCopy( RenderList* pSrc, RenderList* pDest )                                                                                                           = 0;
+	virtual bool                   RenderListCopy( RenderList* pSrc, RenderList* pDest )                                                          = 0;
 
 	// Draw a Render List to a Frame Buffer
 	// if CH_INVALID_HANDLE is passed in as the Frame Buffer, it defaults to the backbuffer
 	// TODO: what if we want to pass in a render list to a compute shader?
-	virtual void               RenderListDraw( RenderList* pRenderList, ChHandle_t framebuffer )                                                                                               = 0;
+	virtual void                   RenderListDraw( RenderList* pRenderList, ChHandle_t framebuffer )                                              = 0;
 
 	// Do Frustum Culling based on the projection/view matrix of a viewport
 	// This is exposed so you can do basic frustum culling, and then more advanced vis of your own, then draw it
 	// The result is stored in "RenderList.culledRenderables"
-	virtual void               RenderListDoFrustumCulling( RenderList* pRenderList, u32 viewportIndex )                                                                                        = 0;
+	virtual void                   RenderListDoFrustumCulling( RenderList* pRenderList, u32 viewportIndex )                                       = 0;
 
 	// ---------------------------------------------------------------------------------------
 	// Render Layers
@@ -1003,112 +1002,112 @@ class IGraphics : public ISystem
 
 	// virtual RenderContext*     CreateRenderContext()                                                                                                                                           = 0;
 	// virtual RenderContextHandle StartRenderContext()                                                                                                                                            = 0;
-	// 
+	//
 	// // virtual void               FreeRenderContext( RenderContext* pContext )                                                                                                                    = 0;
 	// virtual void                EndRenderContext( RenderContext* pContext )                                                                                                                     = 0;
-	// 
+	//
 	// virtual void                AddRenderContextCommand( RenderContext* pContext, ERenderContextCommand type, void* pData )                                                                     = 0;
 
 	// ---------------------------------------------------------------------------------------
 	// Textures
 
-	virtual ChHandle_t         LoadTexture( ChHandle_t& srHandle, const std::string& srTexturePath, const TextureCreateData_t& srCreateData )                                                 = 0;
+	virtual ChHandle_t             LoadTexture( ChHandle_t& srHandle, const std::string& srTexturePath, const TextureCreateData_t& srCreateData ) = 0;
 
-	virtual ChHandle_t         CreateTexture( const TextureCreateInfo_t& srTextureCreateInfo, const TextureCreateData_t& srCreateData )                                                       = 0;
+	virtual ChHandle_t             CreateTexture( const TextureCreateInfo_t& srTextureCreateInfo, const TextureCreateData_t& srCreateData )       = 0;
 
-	virtual void               FreeTexture( ChHandle_t shTexture )                                                                                                                            = 0;
+	virtual void                   FreeTexture( ChHandle_t shTexture )                                                                            = 0;
 
 	// ---------------------------------------------------------------------------------------
 	// Materials
 
 	// Load a cmt file from disk, increments ref count
-	virtual Handle             LoadMaterial( const std::string& srPath )                                                                                                                      = 0;
+	virtual Handle                 LoadMaterial( const std::string& srPath )                                                                      = 0;
 
 	// Create a new material with a name and a shader
-	virtual Handle             CreateMaterial( const std::string& srName, Handle shShader )                                                                                                   = 0;
+	virtual Handle                 CreateMaterial( const std::string& srName, Handle shShader )                                                   = 0;
 
 	// Free a material
-	virtual void               FreeMaterial( Handle sMaterial )                                                                                                                               = 0;
+	virtual void                   FreeMaterial( Handle sMaterial )                                                                               = 0;
 
 	// Find a material by name
 	// Name is a path to the cmt file if it was loaded on disk
 	// EXAMPLE: C:/chocolate/sidury/materials/dev/grid01.cmt
 	// NAME: materials/dev/grid01
-	virtual Handle             FindMaterial( const char* spName )                                                                                                                             = 0;
+	virtual Handle                 FindMaterial( const char* spName )                                                                             = 0;
 
 	// Get the total amount of materials created
-	virtual u32                GetMaterialCount()                                                                                                                                             = 0;
+	virtual u32                    GetMaterialCount()                                                                                             = 0;
 
 	// Get a material by index
-	virtual ChHandle_t         GetMaterialByIndex( u32 sIndex )                                                                                                                               = 0;
+	virtual ChHandle_t             GetMaterialByIndex( u32 sIndex )                                                                               = 0;
 
 	// Get the path to the material
-	virtual const std::string& GetMaterialPath( Handle sMaterial )                                                                                                                            = 0;
+	virtual const std::string&     GetMaterialPath( Handle sMaterial )                                                                            = 0;
 
 	// Tell all materials to rebuild
-	virtual void               SetAllMaterialsDirty()                                                                                                                                         = 0;
+	virtual void                   SetAllMaterialsDirty()                                                                                         = 0;
 
 	// Modifying Material Data
-	virtual const char*        Mat_GetName( Handle mat )                                                                                                                                      = 0;
-	virtual size_t             Mat_GetVarCount( Handle mat )                                                                                                                                  = 0;
-	virtual EMatVar            Mat_GetVarType( Handle mat, size_t sIndex )                                                                                                                    = 0;
-	virtual const char*        Mat_GetVarName( Handle mat, size_t sIndex )                                                                                                                    = 0;
+	virtual const char*            Mat_GetName( Handle mat )                                                                                      = 0;
+	virtual size_t                 Mat_GetVarCount( Handle mat )                                                                                  = 0;
+	virtual EMatVar                Mat_GetVarType( Handle mat, size_t sIndex )                                                                    = 0;
+	virtual const char*            Mat_GetVarName( Handle mat, size_t sIndex )                                                                    = 0;
 
-	virtual Handle             Mat_GetShader( Handle mat )                                                                                                                                    = 0;
-	virtual void               Mat_SetShader( Handle mat, Handle shShader )                                                                                                                   = 0;
+	virtual Handle                 Mat_GetShader( Handle mat )                                                                                    = 0;
+	virtual void                   Mat_SetShader( Handle mat, Handle shShader )                                                                   = 0;
 
-	virtual VertexFormat       Mat_GetVertexFormat( Handle mat )                                                                                                                              = 0;
+	virtual VertexFormat           Mat_GetVertexFormat( Handle mat )                                                                              = 0;
 
 	// Increments Reference Count for material
-	virtual void               Mat_AddRef( ChHandle_t sMat )                                                                                                                                  = 0;
+	virtual void                   Mat_AddRef( ChHandle_t sMat )                                                                                  = 0;
 
 	// Decrements Reference Count for material - returns true if the material is deleted
-	virtual bool               Mat_RemoveRef( ChHandle_t sMat )                                                                                                                               = 0;
+	virtual bool                   Mat_RemoveRef( ChHandle_t sMat )                                                                               = 0;
 
-	virtual void               Mat_SetVar( Handle mat, const std::string& name, Handle texture )                                                                                              = 0;
-	virtual void               Mat_SetVar( Handle mat, const std::string& name, float data )                                                                                                  = 0;
-	virtual void               Mat_SetVar( Handle mat, const std::string& name, int data )                                                                                                    = 0;
-	virtual void               Mat_SetVar( Handle mat, const std::string& name, bool data )                                                                                                   = 0;
-	virtual void               Mat_SetVar( Handle mat, const std::string& name, const glm::vec2& data )                                                                                       = 0;
-	virtual void               Mat_SetVar( Handle mat, const std::string& name, const glm::vec3& data )                                                                                       = 0;
-	virtual void               Mat_SetVar( Handle mat, const std::string& name, const glm::vec4& data )                                                                                       = 0;
+	virtual void                   Mat_SetVar( Handle mat, const std::string& name, Handle texture )                                              = 0;
+	virtual void                   Mat_SetVar( Handle mat, const std::string& name, float data )                                                  = 0;
+	virtual void                   Mat_SetVar( Handle mat, const std::string& name, int data )                                                    = 0;
+	virtual void                   Mat_SetVar( Handle mat, const std::string& name, bool data )                                                   = 0;
+	virtual void                   Mat_SetVar( Handle mat, const std::string& name, const glm::vec2& data )                                       = 0;
+	virtual void                   Mat_SetVar( Handle mat, const std::string& name, const glm::vec3& data )                                       = 0;
+	virtual void                   Mat_SetVar( Handle mat, const std::string& name, const glm::vec4& data )                                       = 0;
 
-	virtual int                Mat_GetTextureIndex( Handle mat, std::string_view name, Handle fallback = InvalidHandle )                                                                      = 0;
-	virtual Handle             Mat_GetTexture( Handle mat, std::string_view name, Handle fallback = InvalidHandle )                                                                           = 0;
-	virtual float              Mat_GetFloat( Handle mat, std::string_view name, float fallback = 0.f )                                                                                        = 0;
-	virtual int                Mat_GetInt( Handle mat, std::string_view name, int fallback = 0 )                                                                                              = 0;
-	virtual bool               Mat_GetBool( Handle mat, std::string_view name, bool fallback = false )                                                                                        = 0;
-	virtual const glm::vec2&   Mat_GetVec2( Handle mat, std::string_view name, const glm::vec2& fallback = {} )                                                                               = 0;
-	virtual const glm::vec3&   Mat_GetVec3( Handle mat, std::string_view name, const glm::vec3& fallback = {} )                                                                               = 0;
-	virtual const glm::vec4&   Mat_GetVec4( Handle mat, std::string_view name, const glm::vec4& fallback = {} )                                                                               = 0;
+	virtual int                    Mat_GetTextureIndex( Handle mat, std::string_view name, Handle fallback = InvalidHandle )                      = 0;
+	virtual Handle                 Mat_GetTexture( Handle mat, std::string_view name, Handle fallback = InvalidHandle )                           = 0;
+	virtual float                  Mat_GetFloat( Handle mat, std::string_view name, float fallback = 0.f )                                        = 0;
+	virtual int                    Mat_GetInt( Handle mat, std::string_view name, int fallback = 0 )                                              = 0;
+	virtual bool                   Mat_GetBool( Handle mat, std::string_view name, bool fallback = false )                                        = 0;
+	virtual const glm::vec2&       Mat_GetVec2( Handle mat, std::string_view name, const glm::vec2& fallback = {} )                               = 0;
+	virtual const glm::vec3&       Mat_GetVec3( Handle mat, std::string_view name, const glm::vec3& fallback = {} )                               = 0;
+	virtual const glm::vec4&       Mat_GetVec4( Handle mat, std::string_view name, const glm::vec4& fallback = {} )                               = 0;
 
-	virtual int                Mat_GetTextureIndex( Handle mat, u32 sIndex, Handle fallback = InvalidHandle )                                                                                 = 0;
-	virtual Handle             Mat_GetTexture( Handle mat, u32 sIndex, Handle fallback = InvalidHandle )                                                                                      = 0;
-	virtual float              Mat_GetFloat( Handle mat, u32 sIndex, float fallback = 0.f )                                                                                                   = 0;
-	virtual int                Mat_GetInt( Handle mat, u32 sIndex, int fallback = 0 )                                                                                                         = 0;
-	virtual bool               Mat_GetBool( Handle mat, u32 sIndex, bool fallback = false )                                                                                                   = 0;
-	virtual const glm::vec2&   Mat_GetVec2( Handle mat, u32 sIndex, const glm::vec2& fallback = {} )                                                                                          = 0;
-	virtual const glm::vec3&   Mat_GetVec3( Handle mat, u32 sIndex, const glm::vec3& fallback = {} )                                                                                          = 0;
-	virtual const glm::vec4&   Mat_GetVec4( Handle mat, u32 sIndex, const glm::vec4& fallback = {} )                                                                                          = 0;
+	virtual int                    Mat_GetTextureIndex( Handle mat, u32 sIndex, Handle fallback = InvalidHandle )                                 = 0;
+	virtual Handle                 Mat_GetTexture( Handle mat, u32 sIndex, Handle fallback = InvalidHandle )                                      = 0;
+	virtual float                  Mat_GetFloat( Handle mat, u32 sIndex, float fallback = 0.f )                                                   = 0;
+	virtual int                    Mat_GetInt( Handle mat, u32 sIndex, int fallback = 0 )                                                         = 0;
+	virtual bool                   Mat_GetBool( Handle mat, u32 sIndex, bool fallback = false )                                                   = 0;
+	virtual const glm::vec2&       Mat_GetVec2( Handle mat, u32 sIndex, const glm::vec2& fallback = {} )                                          = 0;
+	virtual const glm::vec3&       Mat_GetVec3( Handle mat, u32 sIndex, const glm::vec3& fallback = {} )                                          = 0;
+	virtual const glm::vec4&       Mat_GetVec4( Handle mat, u32 sIndex, const glm::vec4& fallback = {} )                                          = 0;
 
 	// ---------------------------------------------------------------------------------------
 	// Shaders
 
 	// virtual bool               Shader_Init( bool sRecreate )                                                                                                                                  = 0;
-	virtual ChHandle_t        GetShader( std::string_view sName )                                                                                                                             = 0;
-	virtual const char*       GetShaderName( Handle sShader )                                                                                                                                 = 0;
+	virtual ChHandle_t             GetShader( const char* sName )                                                                                 = 0;
+	virtual const char*            GetShaderName( Handle sShader )                                                                                = 0;
 
-	virtual u32               GetShaderCount()                                                                                                                                                = 0;
-	virtual ChHandle_t        GetShaderByIndex( u32 sIndex )                                                                                                                                  = 0;
+	virtual u32                    GetShaderCount()                                                                                               = 0;
+	virtual ChHandle_t             GetShaderByIndex( u32 sIndex )                                                                                 = 0;
 
-	virtual u32               GetGraphicsShaderCount()                                                                                                                                        = 0;
-	virtual ChHandle_t        GetGraphicsShaderByIndex( u32 sIndex )                                                                                                                          = 0;
+	virtual u32                    GetGraphicsShaderCount()                                                                                       = 0;
+	virtual ChHandle_t             GetGraphicsShaderByIndex( u32 sIndex )                                                                         = 0;
 
-	virtual u32               GetComputeShaderCount()                                                                                                                                         = 0;
-	virtual ChHandle_t        GetComputeShaderByIndex( u32 sIndex )                                                                                                                           = 0;
+	virtual u32                    GetComputeShaderCount()                                                                                        = 0;
+	virtual ChHandle_t             GetComputeShaderByIndex( u32 sIndex )                                                                          = 0;
 
-	virtual u32                GetShaderVarCount( ChHandle_t shader )                                                                                                                          = 0;
-	virtual ShaderMaterialVarDesc* GetShaderVars( ChHandle_t shader )                                                                                                                          = 0;
+	virtual u32                    GetShaderVarCount( ChHandle_t shader )                                                                         = 0;
+	virtual ShaderMaterialVarDesc* GetShaderVars( ChHandle_t shader )                                                                             = 0;
 
 	// Used to know if this material needs to be ordered and drawn after all opaque ones are drawn
 	// virtual bool               Shader_IsMaterialTransparent( Handle sMat ) = 0;
@@ -1119,80 +1118,86 @@ class IGraphics : public ISystem
 	// ---------------------------------------------------------------------------------------
 	// Buffers
 
-	virtual void               CreateVertexBuffers( ModelBuffers_t* spBuffer, VertexData_t* spVertexData, const char* spDebugName = nullptr )                                                 = 0;
-	virtual void               CreateIndexBuffer( ModelBuffers_t* spBuffer, VertexData_t* spVertexData, const char* spDebugName = nullptr )                                                   = 0;
+	virtual void                   CreateVertexBuffers( ModelBuffers_t* spBuffer, VertexData_t* spVertexData, const char* spDebugName = nullptr ) = 0;
+	virtual void                   CreateIndexBuffer( ModelBuffers_t* spBuffer, VertexData_t* spVertexData, const char* spDebugName = nullptr )   = 0;
 	// void               CreateModelBuffers( ModelBuffers_t* spBuffers, VertexData_t* spVertexData, bool sCreateIndex, const char* spDebugName ) = 0;
 
 	// ---------------------------------------------------------------------------------------
 	// Lighting
 
-	virtual Light_t*           CreateLight( ELightType sType )                                                                                                                                = 0;
-	virtual void               UpdateLight( Light_t* spLight )                                                                                                                                = 0;
-	virtual void               DestroyLight( Light_t* spLight )                                                                                                                               = 0;
+	virtual Light_t*               CreateLight( ELightType sType )                                                                                = 0;
+	virtual void                   UpdateLight( Light_t* spLight )                                                                                = 0;
+	virtual void                   DestroyLight( Light_t* spLight )                                                                               = 0;
+
+	virtual u32                    GetLightCount()                                                                                                = 0;
+	virtual Light_t*               GetLightByIndex( u32 index )                                                                                   = 0;
 
 	// ---------------------------------------------------------------------------------------
 	// Rendering
 
-	virtual bool               Init()                                                                                                                                                         = 0;
-	virtual void               Shutdown()                                                                                                                                                     = 0;
+	virtual bool                   Init()                                                                                                         = 0;
+	virtual void                   Shutdown()                                                                                                     = 0;
 
 	// ChHandle_t         CreateRenderPass() = 0;
 	// virtual void               UpdateRenderPass( ChHandle_t sRenderPass ) = 0;
 
 	// Returns the Viewport Index - input is the address of a pointer
-	virtual u32                CreateViewport( ViewportShader_t** spViewport = nullptr )                                                                                                      = 0;
-	virtual void               FreeViewport( u32 sViewportIndex )                                                                                                                             = 0;
+	virtual u32                    CreateViewport( ViewportShader_t** spViewport = nullptr )                                                      = 0;
+	virtual void                   FreeViewport( u32 sViewportIndex )                                                                             = 0;
 
-	virtual ViewportShader_t*  GetViewportData( u32 sViewportIndex )                                                                                                                          = 0;
-	virtual void               SetViewportUpdate( bool sUpdate )                                                                                                                              = 0;
+	virtual u32                    GetViewportCount()                                                                                             = 0;
+	virtual u32                    GetViewportHandleByIndex( u32 index )                                                                          = 0;
+	virtual ViewportShader_t*      GetViewportDataByIndex( u32 index )                                                                            = 0;
 
-	// virtual void               PushViewInfo( const ViewportShader_t& srViewInfo ) = 0;
-	// virtual void               PopViewInfo() = 0;
-	// virtual ViewportShader_t&  GetViewInfo() = 0;
+	virtual ViewportShader_t*      GetViewportData( u32 sViewportIndex )                                                                          = 0;
+	virtual void                   SetViewportUpdate( bool sUpdate )                                                                              = 0;
 
-	virtual ChHandle_t         CreateRenderable( ChHandle_t sModel )                                                                                                                          = 0;
-	virtual Renderable_t*      GetRenderableData( ChHandle_t sRenderable )                                                                                                                    = 0;
-	virtual void               SetRenderableModel( ChHandle_t sRenderable, ChHandle_t sModel )                                                                                                = 0;
-	virtual void               FreeRenderable( ChHandle_t sRenderable )                                                                                                                       = 0;
-	virtual void               UpdateRenderableAABB( ChHandle_t sRenderable )                                                                                                                 = 0;
-	virtual ModelBBox_t        GetRenderableAABB( ChHandle_t sRenderable )                                                                                                                    = 0;
-	// virtual void               ConsolidateRenderables()                                                                                                                                       = 0;
+	virtual void                   SetViewportRenderList( u32 sViewport, ChHandle_t* srRenderables, size_t sCount )                               = 0;
 
-	virtual u32                GetRenderableCount()                                                                                                                                           = 0;
-	virtual ChHandle_t         GetRenderableByIndex( u32 i )                                                                                                                                  = 0;
+	// virtual void                   DoViewportCulling( u32 sViewport, ChHandle_t* srInRenderables, size_t sInCount, ChHandle_t** srOutRenderables, size_t& sOutCount ) = 0;
 
-	virtual void               SetRenderableDebugName( ChHandle_t sRenderable, std::string_view sName )                                                                                       = 0;
+	virtual ChHandle_t             CreateRenderable( ChHandle_t sModel )                                                                          = 0;
+	virtual Renderable_t*          GetRenderableData( ChHandle_t sRenderable )                                                                    = 0;
+	virtual void                   SetRenderableModel( ChHandle_t sRenderable, ChHandle_t sModel )                                                = 0;
+	virtual void                   FreeRenderable( ChHandle_t sRenderable )                                                                       = 0;
+	virtual void                   UpdateRenderableAABB( ChHandle_t sRenderable )                                                                 = 0;
+	virtual ModelBBox_t            GetRenderableAABB( ChHandle_t sRenderable )                                                                    = 0;
 
-	virtual void               CreateFrustum( Frustum_t& srFrustum, const glm::mat4& srViewMat )                                                                                               = 0;
-	virtual Frustum_t          CreateFrustum( const glm::mat4& srViewMat )                                                                                                                     = 0;
+	virtual u32                    GetRenderableCount()                                                                                           = 0;
+	virtual ChHandle_t             GetRenderableByIndex( u32 i )                                                                                  = 0;
 
-	virtual ModelBBox_t        CreateWorldAABB( glm::mat4& srMatrix, const ModelBBox_t& srBBox )                                                                                              = 0;
+	virtual void                   SetRenderableDebugName( ChHandle_t sRenderable, std::string_view sName )                                       = 0;
+
+	virtual void                   CreateFrustum( Frustum_t& srFrustum, const glm::mat4& srViewMat )                                              = 0;
+	virtual Frustum_t              CreateFrustum( const glm::mat4& srViewMat )                                                                    = 0;
+
+	virtual ModelBBox_t            CreateWorldAABB( glm::mat4& srMatrix, const ModelBBox_t& srBBox )                                              = 0;
 
 	// ---------------------------------------------------------------------------------------
 	// Debug Rendering
 	// TODO: maybe make a line thickness option, which uses a material var?
 
-	virtual void               DrawLine( const glm::vec3& sX, const glm::vec3& sY, const glm::vec3& sColor )                                                                                  = 0;
-	virtual void               DrawLine( const glm::vec3& sX, const glm::vec3& sY, const glm::vec4& sColor )                                                                                  = 0;
-	virtual void               DrawLine( const glm::vec3& sX, const glm::vec3& sY, const glm::vec3& sColorX, const glm::vec3& sColorY )                                                       = 0;
-	virtual void               DrawAxis( const glm::vec3& sPos, const glm::vec3& sAng, const glm::vec3& sScale )                                                                              = 0;
-	virtual void               DrawAxis( const glm::mat4& sMat, const glm::vec3& sScale )                                                                                                     = 0;
-	virtual void               DrawAxis( const glm::mat4& sMat )                                                                                                                              = 0;
-	virtual void               DrawBBox( const glm::vec3& sX, const glm::vec3& sY, const glm::vec3& sColor )                                                                                  = 0;
-	virtual void               DrawProjView( const glm::mat4& srProjView )                                                                                                                    = 0;
-	virtual void               DrawFrustum( const Frustum_t& srFrustum )                                                                                                                      = 0;
-	virtual void               DrawNormals( ChHandle_t sModel, const glm::mat4& srMatrix )                                                                                                    = 0;
+	virtual void                   DrawLine( const glm::vec3& sX, const glm::vec3& sY, const glm::vec3& sColor )                                  = 0;
+	virtual void                   DrawLine( const glm::vec3& sX, const glm::vec3& sY, const glm::vec4& sColor )                                  = 0;
+	virtual void                   DrawLine( const glm::vec3& sX, const glm::vec3& sY, const glm::vec3& sColorX, const glm::vec3& sColorY )       = 0;
+	virtual void                   DrawAxis( const glm::vec3& sPos, const glm::vec3& sAng, const glm::vec3& sScale )                              = 0;
+	virtual void                   DrawAxis( const glm::mat4& sMat, const glm::vec3& sScale )                                                     = 0;
+	virtual void                   DrawAxis( const glm::mat4& sMat )                                                                              = 0;
+	virtual void                   DrawBBox( const glm::vec3& sX, const glm::vec3& sY, const glm::vec3& sColor )                                  = 0;
+	virtual void                   DrawProjView( const glm::mat4& srProjView )                                                                    = 0;
+	virtual void                   DrawFrustum( const Frustum_t& srFrustum )                                                                      = 0;
+	virtual void                   DrawNormals( ChHandle_t sModel, const glm::mat4& srMatrix )                                                    = 0;
 
 	// ---------------------------------------------------------------------------------------
 	// Vertex Format/Attributes
 
-	virtual GraphicsFmt        GetVertexAttributeFormat( VertexAttribute attrib )                                                                                                             = 0;
-	virtual size_t             GetVertexAttributeTypeSize( VertexAttribute attrib )                                                                                                           = 0;
-	virtual size_t             GetVertexAttributeSize( VertexAttribute attrib )                                                                                                               = 0;
-	virtual size_t             GetVertexFormatSize( VertexFormat format )                                                                                                                     = 0;
+	virtual GraphicsFmt            GetVertexAttributeFormat( VertexAttribute attrib )                                                             = 0;
+	virtual size_t                 GetVertexAttributeTypeSize( VertexAttribute attrib )                                                           = 0;
+	virtual size_t                 GetVertexAttributeSize( VertexAttribute attrib )                                                               = 0;
+	virtual size_t                 GetVertexFormatSize( VertexFormat format )                                                                     = 0;
 
-	virtual void               GetVertexBindingDesc( VertexFormat format, std::vector< VertexInputBinding_t >& srAttrib )                                                                     = 0;
-	virtual void               GetVertexAttributeDesc( VertexFormat format, std::vector< VertexInputAttribute_t >& srAttrib )                                                                 = 0;
+	virtual void                   GetVertexBindingDesc( VertexFormat format, std::vector< VertexInputBinding_t >& srAttrib )                     = 0;
+	virtual void                   GetVertexAttributeDesc( VertexFormat format, std::vector< VertexInputAttribute_t >& srAttrib )                 = 0;
 };
 
 
@@ -1210,7 +1215,7 @@ class IRenderSystemOld : public ISystem
 	virtual void NewFrame()                                                                                                      = 0;
 	virtual void Reset( ChHandle_t window )                                                                                      = 0;
 	virtual void PreRender()                                                                                                     = 0;
-	virtual void Present( ChHandle_t window )                                                                                    = 0;
+	virtual void Present( ChHandle_t window, u32* sViewports, u32 viewportCount )                                                = 0;
 
 	// ---------------------------------------------------------------------------------------
 
@@ -1268,7 +1273,7 @@ class IRenderSystem : public ISystem
 
 
 #define IGRAPHICS_NAME "Graphics"
-#define IGRAPHICS_VER  7
+#define IGRAPHICS_VER  8
 
 #define IRENDERSYSTEMOLD_NAME "IRenderSystemOld"
 #define IRENDERSYSTEMOLD_VER  1

@@ -229,14 +229,14 @@ void Graphics_PrepareDrawData()
 	Graphics_PrepareLights();
 
 	// update view frustums (CHANGE THIS, SHOULD NOT UPDATE EVERY SINGLE ONE PER FRAME  !!!!)
-	if ( !r_vis_lock.GetBool() )
-	{
-		for ( auto& [ handle, viewport ] : gGraphicsData.aViewports )
-		{
-			gGraphics.CreateFrustum( viewport.aFrustum, viewport.aProjView );
-			gGraphics.DrawFrustum( viewport.aFrustum );
-		}
-	}
+	// if ( !r_vis_lock.GetBool() )
+	// {
+	// 	for ( auto& [ handle, viewport ] : gGraphicsData.aViewports )
+	// 	{
+	// 		gGraphics.CreateFrustum( viewport.aFrustum, viewport.aProjView );
+	// 		gGraphics.DrawFrustum( viewport.aFrustum );
+	// 	}
+	// }
 
 	// --------------------------------------------------------------------
 
@@ -261,17 +261,17 @@ void Graphics_PrepareDrawData()
 	// --------------------------------------------------------------------
 	// Prepare View Render Lists
 
-	bool visLocked   = r_vis_lock.GetBool();
-
-	if ( !visLocked )
-	{
-		// Reset Render Lists
-		for ( auto& [ viewHandle, viewList ] : gGraphicsData.aViewRenderLists )
-		{
-			for ( auto& [ shader, vec ] : viewList.aRenderLists )
-				vec.clear();
-		}
-	}
+	// bool visLocked   = r_vis_lock.GetBool();
+	// 
+	// if ( !visLocked )
+	// {
+	// 	// Reset Render Lists
+	// 	for ( auto& [ viewHandle, viewList ] : gGraphicsData.aViewRenderLists )
+	// 	{
+	// 		for ( auto& [ shader, vec ] : viewList.aRenderLists )
+	// 			vec.clear();
+	// 	}
+	// }
 
 #if 1
 	ChHandle_t    shaderSkinning     = gGraphics.GetShader( "__skinning" );
@@ -281,6 +281,9 @@ void Graphics_PrepareDrawData()
 	// if ( ImGui::Button( "Reset Blend Shapes" ) )
 	// 	r_reset_blend_shapes.SetValue( 1 );
 
+	Graphics_PrepareShadowRenderLists();
+
+#if 0
 	u32 surfDrawIndex = 0;
 
 	u32 imguiIndex    = 0;
@@ -437,6 +440,7 @@ void Graphics_PrepareDrawData()
 
 		i++;
 	}
+#endif
 
 	if ( r_reset_blend_shapes )
 		r_reset_blend_shapes.SetValue( 0 );
@@ -811,15 +815,19 @@ void RenderSystemOld::PreRender()
 extern void Graphics_OnResetCallback( ChHandle_t window, ERenderResetFlags sFlags );
 
 
-void RenderSystemOld::Present( ChHandle_t window )
+void RenderSystemOld::Present( ChHandle_t window, u32* viewports, u32 viewportCount )
 {
 	PROF_SCOPE();
+
+	if ( viewports == nullptr || viewportCount == 0 )
+		return;
 
 	// YEAH THIS SUCKS !!!!!!!!!
 	render->SetResetCallback( window, Graphics_OnResetCallback );
 
 	// render->LockGraphicsMutex();
 
+	// TODO: should call this once
 	PreRender();
 
 	ChHandle_t backBuffer[ 2 ];
@@ -832,7 +840,7 @@ void RenderSystemOld::Present( ChHandle_t window )
 		return;
 	}
 
-	u32 commandBufferCount = render->GetCommandBufferHandles( window, nullptr );
+	static u32 commandBufferCount = render->GetCommandBufferHandles( window, nullptr );
 
 	if ( commandBufferCount < 1 )
 	{
@@ -840,15 +848,16 @@ void RenderSystemOld::Present( ChHandle_t window )
 		return;
 	}
 
-	ChHandle_t* commandBuffers = ch_stack_alloc< ChHandle_t >( commandBufferCount );
+	// cool memory leak
+	static ChHandle_t* commandBuffers = ch_malloc< ChHandle_t >( commandBufferCount );
 	render->GetCommandBufferHandles( window, commandBuffers );
 
-	u32 imageIndex = render->GetFlightImageIndex( window );
+	u32        imageIndex = render->GetFlightImageIndex( window );
 
 	// For each framebuffer, begin a primary
 	// command buffer, and record the commands.
 	// for ( size_t cmdIndex = 0; cmdIndex < commandBufferCount; cmdIndex++ )
-	{
+	// {
 		size_t cmdIndex = imageIndex;
 		PROF_SCOPE_NAMED( "Primary Command Buffer" );
 
@@ -885,11 +894,11 @@ void RenderSystemOld::Present( ChHandle_t window )
 
 		// Render
 		// TODO: add in some dependency thing here, when you add camera's in the game, you'll need to render those first before the final viewports (VR maybe)
-		for ( auto& [ viewHandle, viewRenderList ] : gGraphicsData.aViewRenderLists )
+		for ( u32 i = 0; i < viewportCount; i++ )
 		{
 			PROF_SCOPE();
 
-			auto it = gGraphicsData.aViewports.find( viewHandle );
+			auto it = gGraphicsData.aViewports.find( viewports[ i ] );
 
 			if ( it == gGraphicsData.aViewports.end() )
 			{
@@ -899,9 +908,19 @@ void RenderSystemOld::Present( ChHandle_t window )
 
 			ViewportShader_t& viewport = it->second;
 
-			// TODO: add an active viewport render list to remove this if check
+			// this should probably be moved to app code
 			if ( !viewport.aActive )
 				continue;
+
+			auto itList = gGraphicsData.aViewRenderLists.find( viewports[ i ] );
+
+			if ( itList == gGraphicsData.aViewRenderLists.end() )
+			{
+				Log_ErrorF( gLC_ClientGraphics, "Failed to get viewport render list\n" );
+				continue;
+			}
+
+			ViewRenderList_t& viewRenderList = itList->second;
 
 			// HACK HACK !!!!
 			// don't render views with shader overrides here, the only override is the shadow map shader and selection
@@ -917,12 +936,12 @@ void RenderSystemOld::Present( ChHandle_t window )
 		render->EndRenderPass( c );
 
 		render->EndCommandBuffer( c );
-	}
+	// }
 
 	render->Present( window, imageIndex );
 	// render->UnlockGraphicsMutex();
 
-	CH_STACK_FREE( commandBuffers );
+	// ch_free( commandBuffers );
 }
 
 
@@ -1181,6 +1200,8 @@ void RenderSystemOld::SetSelectionRenderablesAndCursorPos( const ChVector< Selec
 // Returns the color the cursor landed on
 bool RenderSystemOld::GetSelectionResult( u8& red, u8& green, u8& blue )
 {
+	return false;
+
 	if ( !aSelectionEnabled || aSelectionTexture == CH_INVALID_HANDLE )
 		return false;
 

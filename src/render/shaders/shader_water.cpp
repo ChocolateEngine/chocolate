@@ -35,7 +35,7 @@ struct Water_Material_t
 };
 
 
-static std::unordered_map< u32, Water_Push_t > gPushData;
+static std::unordered_map< SurfaceDraw_t*, Water_Push_t > gPushData;
 
 
 static void Shader_Water_GetPipelineLayoutCreate( PipelineLayoutCreate_t& srPipeline )
@@ -71,7 +71,7 @@ static void Shader_Water_SetupPushData( u32 sRenderableIndex, u32 sViewportIndex
 {
 	PROF_SCOPE();
 
-	Water_Push_t& push = gPushData[ srDrawInfo.aShaderSlot ];
+	Water_Push_t& push = gPushData[ &srDrawInfo ];
 	// push.aModelMatrix  = spRenderable->aModelMatrix;
 	push.aRenderable   = spRenderable->aIndex;
 	push.aViewport     = sViewportIndex;
@@ -83,7 +83,7 @@ static void Shader_Water_PushConstants( Handle cmd, Handle sLayout, SurfaceDraw_
 {
 	PROF_SCOPE();
 
-	Water_Push_t& push = gPushData.at( srDrawInfo.aShaderSlot );
+	Water_Push_t& push = gPushData.at( &srDrawInfo );
 	render->CmdPushConstants( cmd, sLayout, ShaderStage_Vertex | ShaderStage_Fragment, 0, sizeof( Water_Push_t ), &push );
 }
 

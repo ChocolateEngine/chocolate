@@ -94,7 +94,7 @@ enum : u32
 };
 
 
-static std::unordered_map< u32, Basic3D_Push > gPushData;
+static std::unordered_map< SurfaceDraw_t*, Basic3D_Push > gPushData;
 
 CONVAR( r_basic3d_dbg_mode, 0 );
 
@@ -132,7 +132,7 @@ static void Shader_Basic3D_SetupPushData( u32 sRenderableIndex, u32 sViewportInd
 {
 	PROF_SCOPE();
 
-	Basic3D_Push& push = gPushData[ srDrawInfo.aShaderSlot ];
+	Basic3D_Push& push = gPushData[ &srDrawInfo ];
 	// push.aModelMatrix  = spModelDraw->aModelMatrix;
 	// push.aRenderable   = CH_GET_HANDLE_INDEX( srDrawInfo.aRenderable );
 	push.aRenderable   = spRenderable->aIndex;  // or sRenderableIndex, huh
@@ -164,7 +164,7 @@ static void Shader_Basic3D_PushConstants( Handle cmd, Handle sLayout, SurfaceDra
 {
 	PROF_SCOPE();
 
-	Basic3D_Push& push = gPushData.at( srDrawInfo.aShaderSlot );
+	Basic3D_Push& push = gPushData.at( &srDrawInfo );
 	render->CmdPushConstants( cmd, sLayout, ShaderStage_Vertex | ShaderStage_Fragment, 0, sizeof( Basic3D_Push ), &push );
 }
 

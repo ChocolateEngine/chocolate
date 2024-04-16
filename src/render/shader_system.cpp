@@ -85,13 +85,15 @@ std::vector< ShaderCreate_t* >& Shader_GetCreateList()
 }
 
 
-Handle Graphics::GetShader( std::string_view sName )
+Handle Graphics::GetShader( const char* sName )
 {
-	auto it = gShaderNames.find( sName );
+	// address sanitizer crashes when you have the input be std::string_view for some reason
+	std::string_view temp = sName;
+	auto it = gShaderNames.find( temp );
 	if ( it != gShaderNames.end() )
 		return it->second;
 
-	Log_ErrorF( gLC_ClientGraphics, "Graphics_GetShader: Shader not found: %s\n", sName.data() );
+	Log_ErrorF( gLC_ClientGraphics, "Graphics_GetShader: Shader not found: %s\n", sName );
 	return InvalidHandle;
 }
 
@@ -754,14 +756,10 @@ void Shader_RemoveMaterial( ChHandle_t sMat )
 		return;
 	}
 
-	ShaderData_t* shaderData = Shader_GetData( shader );
-	if ( shaderData->aUseMaterialBuffer )
-	{
-		
-	}
+	ShaderData_t*                      shaderData = Shader_GetData( shader );
+	std::vector< ShaderMaterialData >& matData    = shaderIt->second;
+	bool                               failed     = true;
 
-	std::vector< ShaderMaterialData > & matData = shaderIt->second;
-	bool                            failed  = true;
 	for ( u32 i = 0; i < matData.size(); i++ )
 	{
 		if ( matData[ i ].material == sMat )

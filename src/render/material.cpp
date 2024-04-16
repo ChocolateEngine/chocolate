@@ -24,8 +24,10 @@ using MaterialVar2 = std::variant<
 struct MaterialVar
 {
 	MaterialVar( const std::string_view name, EMatVar type ) :
-		apName( name.data() ), aNameLen( name.size() ), aType( type )
-	{}
+		aNameLen( name.size() ), aType( type )
+	{
+		apName = Util_AllocString( name.data(), name.size() );
+	}
 
 	MaterialVar( const std::string_view name, Handle data ) :
 		MaterialVar( name, EMatVar_Texture )
@@ -54,12 +56,12 @@ struct MaterialVar
 	~MaterialVar()
 	{
 		if ( apName )
-			delete[] apName;
+			Util_FreeString( apName );
 	}
 
-	const char* apName;
-	u32         aNameLen;
-	EMatVar     aType;
+	char*   apName;
+	u32     aNameLen;
+	EMatVar aType;
 	
 	// TODO: can this be smaller somehow? this takes up 16 bytes due to the vec4
 	// which will only be used very, very rarely!!
@@ -294,7 +296,9 @@ bool Graphics::Mat_RemoveRef( ChHandle_t sMat )
 	{
 		// Log_DevF( gLC_ClientGraphics, 1, "Freeing Material \"%s\" - Handle \"%zd\"\n", matName.data(), sMat );
 		Log_DevF( gLC_ClientGraphics, 1, "Freeing Material \"%s\"\n", matName.data() );
+		char* matNameChar = (char*)matName.data();
 		gMaterialNames.erase( matName );
+		Util_FreeString( matNameChar );
 	}
 	else
 	{
@@ -339,10 +343,7 @@ void Mat_SetVarInternal( Handle mat, const std::string& name, const T& value )
 	MaterialVar& var = data->aVars.emplace_back( true );
 
 	var.aNameLen     = name.size();
-	char* varName    = new char[ name.size() + 1 ];
-	strncpy( varName, name.data(), name.size() );
-	varName[ name.size() ] = '\0';
-	var.apName             = varName;
+	var.apName       = Util_AllocString( name.data(), name.size() );
 
 	var.SetVar( value );
 }
@@ -593,7 +594,7 @@ bool Graphics_ParseMaterial( const std::string& srName, const std::string& srPat
 	{
 		JsonObject_t& cur = root.aObjects[ i ];
 
-		if ( strcmp( cur.apName, "shader" ) == 0 )
+		if ( cur.apName && strcmp( cur.apName, "shader" ) == 0 )
 		{
 			if ( shader != InvalidHandle )
 			{
@@ -623,10 +624,7 @@ bool Graphics_ParseMaterial( const std::string& srName, const std::string& srPat
 				matData->aRefCount = 1;
 				handle             = gMaterials.Add( matData );
 
-				char* name         = new char[ srName.size() + 1 ];
-				strncpy( name, srName.c_str(), srName.size() );
-				name[ srName.size() ]  = '\0';
-
+				char* name         = Util_AllocString( srName.data(), srName.size() );
 				gMaterialNames[ name ] = handle;
 			}
 			else
@@ -823,10 +821,7 @@ Handle Graphics::CreateMaterial( const std::string& srName, Handle shShader )
 	matData->aRefCount = 1;
 
 	Handle handle      = gMaterials.Add( matData );
-
-	char*  name   = new char[ srName.size() + 1 ];
-	strncpy( name, srName.c_str(), srName.size() );
-	name[ srName.size() ]      = '\0';
+	char*  name        = Util_AllocString( srName.data(), srName.size() );
 
 	gMaterialNames[ name ]     = handle;
 	gMaterialShaders[ handle ] = shShader;

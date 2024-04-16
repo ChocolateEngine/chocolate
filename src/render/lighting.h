@@ -13,6 +13,7 @@ u32    Graphics_AllocateLightSlot( Light_t* spLight );
 void   Graphics_FreeLightSlot( Light_t* spLight );
 void   Graphics_UpdateLightBuffer( Light_t* spLight );
 
+void   Graphics_PrepareShadowRenderLists();
 void   Graphics_PrepareLights();
 void   Graphics_DestroyLights();
 

@@ -608,7 +608,11 @@ bool Render_Init()
 		return false;
 	}
 
-	Render_CreateDevice( gSurfaceHack );
+	if ( !Render_CreateDevice( gSurfaceHack ) )
+	{
+		Log_Error( gLC_GraphicsAPI, "Failed to create device\n" );
+		return false;
+	}
 
 	Log_Msg( gLC_Render, "Loaded Vulkan Renderer\n" );
 
@@ -2237,7 +2241,7 @@ public:
 			return;
 		}
 
-		VkBuffer* vkBuffers = (VkBuffer*)CH_STACK_ALLOC( sizeof( VkBuffer ) * sCount );
+		VkBuffer* vkBuffers = CH_MALLOC( VkBuffer, sCount );
 
 		for ( u32 i = 0; i < sCount; i++ )
 		{
@@ -2246,7 +2250,7 @@ public:
 			if ( !bufVK )
 			{
 				Log_Error( gLC_Render, "CmdBindVertexBuffers: Failed to find Buffer\n" );
-				CH_STACK_FREE( vkBuffers );
+				ch_free( vkBuffers );
 				return;
 			}
 
@@ -2254,7 +2258,7 @@ public:
 		}
 
 		vkCmdBindVertexBuffers( c, sFirstBinding, sCount, vkBuffers, spOffsets );
-		CH_STACK_FREE( vkBuffers );
+		ch_free( vkBuffers );
 	}
 
 	void CmdBindIndexBuffer( Handle cmd, Handle shBuffer, size_t offset, EIndexType indexType ) override

@@ -864,11 +864,12 @@ Handle VK_CreateFramebuffer( const CreateFramebuffer_t& srCreate )
 	if ( srCreate.aPass.aAttachDepth )
 		count++;
 
-	VkImageView* attachments = (VkImageView*)CH_STACK_ALLOC( sizeof( VkImageView ) * count );
+	VkImageView* attachments = CH_MALLOC( VkImageView, count );
 
 	if ( attachments == nullptr )
 	{
 		Log_ErrorF( gLC_Render, "STACK OVERFLOW: Failed to allocate stack for Framebuffer attachments (%zu bytes)\n", sizeof( VkImageView ) * count );
+		ch_free( attachments );
 		return InvalidHandle;
 	}
 
@@ -879,6 +880,7 @@ Handle VK_CreateFramebuffer( const CreateFramebuffer_t& srCreate )
 		if ( !gTextureHandles.Get( srCreate.aPass.aAttachColors[ i ], &tex ) )
 		{
 			Log_ErrorF( gLC_Render, "Failed to find color texture %u while creating Framebuffer\n", i );
+			ch_free( attachments );
 			return InvalidHandle;
 		}
 
@@ -891,6 +893,7 @@ Handle VK_CreateFramebuffer( const CreateFramebuffer_t& srCreate )
 		if ( !gTextureHandles.Get( srCreate.aPass.aAttachDepth, &tex ) )
 		{
 			Log_Error( gLC_Render, "Failed to find depth texture while creating Framebuffer\n" );
+			ch_free( attachments );
 			return InvalidHandle;
 		}
 
@@ -903,6 +906,7 @@ Handle VK_CreateFramebuffer( const CreateFramebuffer_t& srCreate )
 		if ( !gTextureHandles.Get( srCreate.aPass.aAttachResolve[ i ], &tex ) )
 		{
 			Log_ErrorF( gLC_Render, "Failed to find resolve texture %u while creating Framebuffer\n", i );
+			ch_free( attachments );
 			return InvalidHandle;
 		}
 
@@ -916,7 +920,7 @@ Handle VK_CreateFramebuffer( const CreateFramebuffer_t& srCreate )
 		gFramebufferSize[ handle ] = srCreate.aSize;
 	}
 
-	CH_STACK_FREE( attachments );
+	ch_free( attachments );
 	return handle;
 }
 
@@ -929,11 +933,12 @@ Handle VK_CreateFramebufferVK( const CreateFramebufferVK& srCreate )
 	if ( srCreate.aAttachDepth )
 		count++;
 
-	VkImageView* attachments = (VkImageView*)CH_STACK_ALLOC( sizeof( VkImageView ) * count );
+	VkImageView* attachments = CH_MALLOC( VkImageView, count );
 
 	if ( attachments == nullptr )
 	{
 		Log_ErrorF( gLC_Render, "STACK OVERFLOW: Failed to allocate stack for Framebuffer attachments (%zu bytes)\n", sizeof( VkImageView ) * count );
+		ch_free( attachments );
 		return InvalidHandle;
 	}
 
@@ -960,7 +965,7 @@ Handle VK_CreateFramebufferVK( const CreateFramebufferVK& srCreate )
 		gFramebufferSize[ handle ] = srCreate.aSize;
 	}
 
-	CH_STACK_FREE( attachments );
+	ch_free( attachments );
 	return handle;
 }
 
@@ -1100,8 +1105,6 @@ void VK_DestroyRenderTargets()
 
 static TextureVK* CreateBackBufferColor( WindowVK* window, const char* title, ChHandle_t& srHandle )
 {
-	Log_Msg( "creating back buffer\n" );
-
 	TextureVK* colorTex     = VK_NewTexture( srHandle );
 	colorTex->apName        = VK_AllocStringF( "Backbuffer Color - %s", title );
 	colorTex->aRenderTarget = true;

@@ -18,8 +18,8 @@ extern void                                 Shader_ShadowMap_SetViewInfo( u32 sV
 CONVAR( r_shadowmap_size, 2048 );
 
 CONVAR( r_shadowmap_fov_hack, 90.f );
-CONVAR( r_shadowmap_nearz, 1.f );
-CONVAR( r_shadowmap_farz, 2000.f );
+CONVAR( r_shadowmap_nearz, 0.01f );
+CONVAR( r_shadowmap_farz, 400.f );
 
 CONVAR( r_shadowmap_othro_left, -1000.f );
 CONVAR( r_shadowmap_othro_right, 1000.f );
@@ -633,6 +633,70 @@ void Graphics::DestroyLight( Light_t* spLight )
 	Log_Dev( gLC_ClientGraphics, 1, "Queued Light For Deletion\n" );
 
 	vec_remove_if( gDirtyLights, spLight );
+}
+
+
+u32 Graphics::GetLightCount()
+{
+	return gLights.size();
+}
+
+
+Light_t* Graphics::GetLightByIndex( u32 index )
+{
+	if ( index > gLights.size() )
+	{
+		Log_ErrorF( "Invalid Light Index: %d, only %d lights exist!\n", index, gLights.size() );
+		return nullptr;
+	}
+
+	return gLights[ index ];
+}
+
+
+void Graphics_PrepareShadowRenderLists()
+{
+	ChVector< ChVector< ChHandle_t > > shadowRenderables;
+	ChVector< u32 >                    shadowViewports;
+	shadowViewports.reserve( gLights.size() );
+
+	u32 viewportCount = 0;
+	for ( Light_t* light : gLights )
+	{
+		if ( !light->apShadowMap )
+			continue;
+
+		shadowViewports.push_back( light->apShadowMap->aViewportHandle );
+		viewportCount++;
+	}
+
+	for ( size_t v = 0; v < viewportCount; v++ )
+	{
+		static ChVector< ChHandle_t > shadowRenderables;
+		shadowRenderables.clear();
+		shadowRenderables.reserve( gGraphicsData.aRenderables.size() );
+
+		for ( size_t i = 0; i < gGraphicsData.aRenderables.size(); i++ )
+		{
+			Renderable_t* renderable = nullptr;
+			if ( !gGraphicsData.aRenderables.Get( gGraphicsData.aRenderables.aHandles[ i ], &renderable ) )
+			{
+				Log_Warn( gLC_ClientGraphics, "Renderable handle is invalid!\n" );
+				gGraphicsData.aRenderables.Remove( gGraphicsData.aRenderables.aHandles[ i ] );
+				continue;
+			}
+
+			if ( !renderable->aVisible )
+				continue;
+
+			if ( !renderable->aCastShadow )
+				continue;
+
+			shadowRenderables.push_back( gGraphicsData.aRenderables.aHandles[ i ] );
+		}
+
+		gGraphics.SetViewportRenderList( shadowViewports[ v ], shadowRenderables.data(), shadowRenderables.size() );
+	}
 }
 
 

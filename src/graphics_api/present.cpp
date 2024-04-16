@@ -131,12 +131,12 @@ void VK_DestroySemaphores( WindowVK* window )
 
 bool VK_AllocateCommands( WindowVK* window )
 {
-	window->commandBuffers = ch_malloc_count< VkCommandBuffer >( window->swapImageCount );
+	window->commandBuffers = CH_MALLOC( VkCommandBuffer, window->swapImageCount );
 
 	if ( window->commandBuffers == nullptr )
 		return false;
 
-	window->commandBufferHandles = ch_malloc_count< ChHandle_t >( window->swapImageCount );
+	window->commandBufferHandles = CH_MALLOC( ChHandle_t, window->swapImageCount );
 
 	if ( window->commandBufferHandles == nullptr )
 		return false;
@@ -170,6 +170,7 @@ void VK_FreeCommands( WindowVK* window )
 
 	for ( u32 i = 0; i < window->swapImageCount; i++ )
 	{
+		gCommandBuffers.Remove( window->commandBufferHandles[ i ] );
 		vkFreeCommandBuffers( VK_GetDevice(), VK_GetPrimaryCommandPool(), 1, &window->commandBuffers[ i ] );
 	}
 

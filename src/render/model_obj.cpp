@@ -77,7 +77,7 @@ void LoadObj_Fast( const std::string &srBasePath, const std::string &srPath, Mod
 		// fallback if there is no cmt file
 		if ( material == InvalidHandle )
 		{
-			material = gGraphics.CreateMaterial( objMat.name, gGraphics.GetShader( gDefaultShader ) );
+			material = gGraphics.CreateMaterial( objMat.name, gGraphics.GetShader( gDefaultShader.data() ) );
 
 			TextureCreateData_t createData{};
 			createData.aUsage  = EImageUsage_Sampled;
@@ -108,7 +108,7 @@ void LoadObj_Fast( const std::string &srBasePath, const std::string &srPath, Mod
 
 	if ( obj->material_count == 0 )
 	{
-		Handle material = gGraphics.CreateMaterial( srPath, gGraphics.GetShader( gDefaultShader ) );
+		Handle material = gGraphics.CreateMaterial( srPath, gGraphics.GetShader( gDefaultShader.data() ) );
 		meshBuilder.SetCurrentSurface( 0 );
 		meshBuilder.SetMaterial( material );
 	}
@@ -242,7 +242,7 @@ void Graphics_LoadSceneObj( const std::string& srBasePath, const std::string& sr
 		// fallback if there is no cmt file
 		if ( material == InvalidHandle )
 		{
-			material = gGraphics.CreateMaterial( matName, gGraphics.GetShader( gDefaultShader ) );
+			material = gGraphics.CreateMaterial( matName, gGraphics.GetShader( gDefaultShader.data() ) );
 
 			TextureCreateData_t createData{};
 			createData.aUsage  = EImageUsage_Sampled;
