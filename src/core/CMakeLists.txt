@@ -16,6 +16,7 @@ set(
 	"json5.cpp"
 	"log.cpp"
 	"mempool.cpp"
+	"platform_shared.cpp"
 	"platform.cpp"
 	"platform_linux.cpp"
 	"profiler.cpp"
