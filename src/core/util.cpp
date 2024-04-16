@@ -118,23 +118,24 @@ char* strcasestr( const char* s, const char* find )
 {
 	char c, sc;
 
-	if ( ( c = *find++ ) != 0 )
+	if ( ( c = *find++ ) == 0 )
+		return ( (char*)s );
+
+	// convert to lower case character
+	c          = tolower( (unsigned char)c );
+	size_t len = strlen( find );
+	do
 	{
-		// convert to lower case character
-		c          = tolower( (unsigned char)c );
-		size_t len = strlen( find );
+		// compare lower case character
 		do
 		{
-			// compare lower case character
-			do
-			{
-				if ( ( sc = *s++ ) == 0 )
-					return nullptr;
+			if ( ( sc = *s++ ) == 0 )
+				return nullptr;
 
-			} while ( (char)tolower( (unsigned char)sc ) != c );
-		} while ( _strnicmp( s, find, len ) != 0 );
-		s--;
-	}
+		} while ( (char)tolower( (unsigned char)sc ) != c );
+	} while ( _strnicmp( s, find, len ) != 0 );
+	s--;
+
 	return ( (char*)s );
 }
 #endif
@@ -384,7 +385,10 @@ char* Util_AllocStringF( const char* format, ... )
 		result = ch_malloc< char >( len + 1 );
 		vsnprintf( result, len, format, args_copy );
 		result[ len ] = '\0';
+
+#if CH_STRING_MEM_TRACKING
 		GetAllocatedStrings().push_back( result );
+#endif
 	}
 
 	va_end( args_copy );
@@ -406,11 +410,41 @@ char* Util_AllocStringV( const char* format, va_list args )
 		char* result = ch_malloc< char >( len + 1 );
 		std::vsnprintf( result, len, format, args );
 		result[ len ] = '\0';
+
+#if CH_STRING_MEM_TRACKING
 		GetAllocatedStrings().push_back( result );
+#endif
+
 		return result;
 	}
 
 	return nullptr;
+}
+
+
+char* Util_AllocStringConcat( size_t count, char** strings, size_t* lengths )
+{
+	size_t totalLen = 0;
+
+	for ( size_t i = 0; i < count; i++ )
+		totalLen += lengths[ i ];
+
+	char* out = CH_MALLOC( char, totalLen + 1 );
+
+	size_t offset = 0;
+	for ( size_t i = 0; i < count; i++ )
+	{
+		memcpy( out + offset, strings[ i ], lengths[ i ] );
+		offset += lengths[ i ];
+	}
+
+	out[ totalLen ] = '\0';
+
+#if CH_STRING_MEM_TRACKING
+	GetAllocatedStrings().push_back( out );
+#endif
+
+	return out;
 }
 
 
@@ -437,7 +471,7 @@ void Util_FreeString( char* string )
 	}
 #endif
 
-	free( string );
+	ch_free( string );
 }
 
 
@@ -462,7 +496,7 @@ void Util_FreeAllocStrings()
 	printf( " *** WARNING: %d STRINGS NOT FREED ON SHUTDOWN!\n", size );
 	for ( u32 i = 0; i < GetAllocatedStrings().size(); i++ )
 	{
-		free( GetAllocatedStrings()[ i ] );
+		ch_free( GetAllocatedStrings()[ i ] );
 	}
 #endif
 }

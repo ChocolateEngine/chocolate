@@ -165,7 +165,8 @@ inline To* ch_calloc( size_t sCount )
 template< typename To >
 inline To* ch_stack_alloc( size_t sCount )
 {
-	To* data = static_cast< To* >( _malloca( CH_ALIGN_VALUE( sCount * sizeof( To ), 16 ) ) );
+	// To* data = static_cast< To* >( _malloca( CH_ALIGN_VALUE( sCount * sizeof( To ), 16 ) ) );
+	To* data = static_cast< To* >( _malloca( sCount * sizeof( To ) ) );
 	CH_ASSERT( data );
 	return data;
 }
@@ -181,6 +182,8 @@ inline To* ch_stack_alloc( size_t sCount )
 #define CH_MALLOC( type, count )        ch_malloc< type >( count )
 #define CH_CALLOC( type, count )        ch_calloc< type >( count )
 #define CH_REALLOC( type, data, count ) ch_realloc2< type >( data, count )
+
+#define CH_MALLOC2( type, count )       static_cast< Type* >( malloc( count * sizeof( type ) )
 
 
 CORE_API bool ch_strcmplen( size_t sLenA, char* spA, size_t sLenB, char* spB );
@@ -339,6 +342,9 @@ CORE_API char*          Util_AllocString( const char* format );
 CORE_API char*          Util_AllocString( const char* format, size_t len );
 CORE_API char*          Util_ReallocString( char* data, const char* format );
 CORE_API char*          Util_ReallocString( char* data, const char* format, size_t len );
+
+// Concatinates a string together
+CORE_API char*          Util_AllocStringConcat( size_t count, char** strings, size_t* lengths );
 
 // malloc a string with string formatting
 CORE_API char*          Util_AllocStringF( const char* format, ... );
