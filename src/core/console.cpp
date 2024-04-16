@@ -59,6 +59,12 @@ static ChVector< ConVarBase* >& Con_GetConVars()
 }
 
 
+inline bool Con_IsConVarRef( ConVarBase* cvar )
+{
+	return typeid( *cvar ) == typeid( ConVarRef );
+}
+
+
 static void Con_RegisterConVar1( ConVarBase* spCvar )
 {
 	Con_GetConVars().push_back( spCvar );
@@ -408,25 +414,94 @@ bool ConVarRef::GetBool(  )
 // ================================================================================
 
 
-CONVAR( con_search_behavior, 0, "0 - must start with this string, 1 - must contain this string" );
+CONVAR( con_search_behavior, 1, "0 - must start with this string, 1 - must contain this string" );
 
 
-static bool ConVarNameCheck( const char* name, const char* search, size_t size )
+static bool ConVarNameCheck( const char* name, const char* search, size_t size, bool* spStartsWith )
 {
+	// Must start with string
+	bool startsWith = ( ch_strncasecmp( name, search, size ) == 0 );
+
+	if ( startsWith )
+	{
+		if ( spStartsWith )
+			*spStartsWith = true;
+
+		return true;
+	}
+
 	if ( con_search_behavior == 0.f )
-	{
-		// Must start with string
-		if ( ch_strncasecmp( name, search, size ) == 0 )
-			return true;
-	}
-	else
-	{
-		// Must contain string
-		if ( strcasestr( name, search ) )
-			return true;
-	}
+		return false;
+
+	// See if it contains the string
+	if ( strcasestr( name, search ) )
+		return true;
 
 	return false;
+}
+
+
+static void SearchConVars( std::vector< std::string >& results, const char* search, size_t size )
+{
+	std::vector< std::string > resultsStartWith;  // results that the convar name starts with the search
+	std::vector< std::string > resultsContain;    // results that contain the string somewhere in in a convar name
+
+	for ( ConVarBase* cvar : Con_GetConVars() )
+	{
+		if ( Con_IsConVarRef( cvar ) )
+			continue;
+
+		bool startsWith = false;
+		if ( !ConVarNameCheck( cvar->aName, search, size, &startsWith ) )
+			continue;
+
+		if ( startsWith )
+			resultsStartWith.push_back( cvar->GetName() );
+		else
+			resultsContain.push_back( cvar->GetName() );
+	}
+
+	if ( resultsStartWith.size() )
+	{
+		results.insert( results.end(), resultsStartWith.begin(), resultsStartWith.end() );
+	}
+
+	if ( resultsContain.size() )
+	{
+		results.insert( results.end(), resultsContain.begin(), resultsContain.end() );
+	}
+}
+
+
+static void SearchConVars( std::vector< ConVarBase* >& results, const char* search, size_t size )
+{
+	std::vector< ConVarBase* > resultsStartWith;  // results that the convar name starts with the search
+	std::vector< ConVarBase* > resultsContain;    // results that contain the string somewhere in in a convar name
+
+	for ( ConVarBase* cvar : Con_GetConVars() )
+	{
+		if ( Con_IsConVarRef( cvar ) )
+			continue;
+
+		bool startsWith = false;
+		if ( !ConVarNameCheck( cvar->aName, search, size, &startsWith ) )
+			continue;
+
+		if ( startsWith )
+			resultsStartWith.push_back( cvar );
+		else
+			resultsContain.push_back( cvar );
+	}
+
+	if ( resultsStartWith.size() )
+	{
+		results.insert( results.end(), resultsStartWith.begin(), resultsStartWith.end() );
+	}
+
+	if ( resultsContain.size() )
+	{
+		results.insert( results.end(), resultsContain.begin(), resultsContain.end() );
+	}
 }
 
 
@@ -852,12 +927,6 @@ void Con_PrintAllConVars()
 }
 
 
-inline bool Con_IsConVarRef( ConVarBase* cvar )
-{
-	return typeid( *cvar ) == typeid( ConVarRef );
-}
-
-
 // ConVarBase* Con_CheckForConVarRef( ConVarBase* cvar )
 // {
 // 	if ( typeid(*cvar) == typeid(ConVarRef) )
@@ -890,15 +959,81 @@ void Con_BuildAutoCompleteList( const std::string& srSearch, std::vector< std::s
 
 	str_lower( commandName );
 
+#if 0
+	std::vector< std::string > resultsStartWith;  // results that the convar name starts with the search
+	std::vector< std::string > resultsContain;    // results that contain the string somewhere in in a convar name
+
 	for ( ConVarBase* cvar : Con_GetConVars() )
 	{
 		if ( Con_IsConVarRef( cvar ) )
 			continue;
 
+		bool startsWithString = false;
+
 		// this SHOULD be fine, if the convar doesn't exist in here, something is very wrong
-		if ( !ConVarNameCheck( cvar->aName, commandName.c_str(), commandName.size() ) )
+		if ( !ConVarNameCheck( cvar->aName, commandName.c_str(), commandName.size(), &startsWithString ) )
 			continue;
 
+		size_t cvarNameLen = strlen( cvar->aName );
+		
+		// if ( args.empty() )
+		if ( cvarNameLen >= srSearch.size() && commandName.size() >= srSearch.size() )
+		{
+			if ( startsWithString )
+				resultsStartWith.push_back( cvar->aName );
+			else
+				resultsContain.push_back( cvar->aName );
+
+			continue;
+		}
+
+		// make sure this actually matches
+		if ( cvarNameLen != commandName.size() || !ConVarNameCheck( cvar->aName, commandName.c_str(), cvarNameLen, nullptr ) )
+			continue;
+
+		// is this a concommand with a drop down function?
+		if ( typeid(*cvar) == typeid(ConCommand) )
+		{
+			auto cmd = static_cast<ConCommand*>(cvar);
+
+			if ( cmd->apDropDownFunc )
+			{
+				std::vector< std::string > dropDownArgs;
+				cmd->apDropDownFunc( args, dropDownArgs );
+
+				for ( auto dropArg: dropDownArgs )
+				{
+					resultsStartWith.push_back( vstring( "%s %s", cvar->aName, dropArg.c_str() ) );
+				}
+
+				break;
+			}
+		}
+
+		resultsStartWith.push_back( cvar->aName );
+		break;
+	}
+
+	if ( resultsStartWith.size() )
+	{
+		srResults.insert( srResults.end(), resultsStartWith.begin(), resultsStartWith.end() );
+	}
+
+	if ( resultsContain.size() )
+	{
+		srResults.insert( srResults.end(), resultsContain.begin(), resultsContain.end() );
+	}
+
+#else
+
+	std::vector< ConVarBase* > results;
+	SearchConVars( results, commandName.data(), commandName.size() );
+
+	if ( results.empty() )
+		return;
+
+	for ( ConVarBase* cvar : results )
+	{
 		size_t cvarNameLen = strlen( cvar->aName );
 		
 		// if ( args.empty() )
@@ -909,7 +1044,7 @@ void Con_BuildAutoCompleteList( const std::string& srSearch, std::vector< std::s
 		}
 
 		// make sure this actually matches
-		if ( cvarNameLen != commandName.size() || !ConVarNameCheck( cvar->aName, commandName.c_str(), cvarNameLen ) )
+		if ( cvarNameLen != commandName.size() || !ConVarNameCheck( cvar->aName, commandName.c_str(), cvarNameLen, nullptr ) )
 			continue;
 
 		// is this a concommand with a drop down function?
@@ -934,6 +1069,8 @@ void Con_BuildAutoCompleteList( const std::string& srSearch, std::vector< std::s
 		srResults.push_back( cvar->aName );
 		break;
 	}
+
+#endif
 }
 
 
@@ -1590,17 +1727,7 @@ void help_dropdown(
 	std::vector< std::string >& results )      // results to populate the dropdown list with
 {
 	std::string name = args.empty() ? "" : str_lower2(args[0]);
-
-	for ( ConVarBase* cvar : Con_GetConVars() )
-	{
-		if ( Con_IsConVarRef( cvar ) )
-			continue;
-
-		if ( !ConVarNameCheck( cvar->aName, name.c_str(), name.size() ) )
-			continue;
-
-		results.push_back( cvar->GetName() );
-	}
+	SearchConVars( results, name.data(), name.size() );
 }
 
 
@@ -1763,15 +1890,13 @@ void reset_cvar_dropdown(
 {
 	std::string name = args.empty() ? "" : str_lower2(args[0]);
 
-	for ( ConVarBase* cvar : Con_GetConVars() )
+	std::vector< ConVarBase* > searchResults;
+	SearchConVars( searchResults, name.data(), name.size() );
+
+	for ( ConVarBase* cvar : searchResults )
 	{
-		if ( Con_IsConVarRef( cvar ) )
-			continue;
-
-		if ( IS_NOT_TYPE( *cvar, ConVar ) || !ConVarNameCheck( cvar->aName, name.c_str(), name.size() ) )
-			continue;
-
-		results.push_back( cvar->GetName() );
+		if ( IS_TYPE( *cvar, ConVar ) )
+			results.push_back( cvar->GetName() );
 	}
 }
 
