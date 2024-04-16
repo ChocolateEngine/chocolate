@@ -1,6 +1,7 @@
 message( "Current Project: Physics" )
 
-include( ${CH_ROOT}/scripts/joltphysics.cmake )
+set( JOLTPHYSICS_DIR ${CH_THIRDPARTY}/JoltPhysics )
+message( "JoltPhysics = " ${JOLTPHYSICS_DIR} )
 
 file(
 	GLOB_RECURSE SRC_FILES CONFIGURE_DEPENDS
@@ -34,32 +35,83 @@ include_directories(
 	"${CH_THIRDPARTY}/"
 )
 
-add_library( JoltPhysics STATIC IMPORTED )
+# MIN is jolt physics compiled with the least cpu features we want
+# add_library( JoltPhysics_MIN STATIC IMPORTED )
+
+# AVX2 is compiled with all cpu features
+# add_library( JoltPhysics_AVX2 STATIC IMPORTED )
 
 # Provide the full path to the library, so CMake knows where to find it.
 # ${CMAKE_BUILD_TYPE}
-set_target_properties( JoltPhysics PROPERTIES IMPORTED_LOCATION ${JOLTPHYSICS_DIR}/Build/build/Release/libjolt.a )
+# set_target_properties( JoltPhysics_MIN PROPERTIES IMPORTED_LOCATION ${JOLTPHYSICS_DIR}/Build/min/Release/libjolt.a )
+# set_target_properties( JoltPhysics_AVX2 PROPERTIES IMPORTED_LOCATION ${JOLTPHYSICS_DIR}/Build/avx2/Release/libjolt.a )
 
 add_library(
-	Physics SHARED
+	Physics_MIN SHARED
 	${SRC_FILES}
 	${PUBLIC_FILES}
 )
 
-target_link_libraries(
-	Physics PRIVATE
-	SDL2
+add_library(
+	Physics_AVX2 SHARED
+	${SRC_FILES}
+	${PUBLIC_FILES}
 )
 
-add_dependencies( Physics "Core" )
+set( JOLT_MIN_PATH_DEBUG "${JOLTPHYSICS_DIR}/Build/min/Debug" )
+set( JOLT_MIN_PATH_RELEASE "${JOLTPHYSICS_DIR}/Build/min/Release" )
+
+set( JOLT_AVX2_PATH_DEBUG "${JOLTPHYSICS_DIR}/Build/avx2/Debug" )
+set( JOLT_AVX2_PATH_RELEASE "${JOLTPHYSICS_DIR}/Build/avx2/Release" )
+
+target_link_libraries(
+	Physics_MIN PRIVATE
+	SDL2
+	Jolt
+)
+
+target_link_libraries(
+	Physics_AVX2 PRIVATE
+	SDL2
+	Jolt
+)
+
+target_link_directories(
+	Physics_MIN PRIVATE
+	"$<$<CONFIG:Debug>:${JOLT_MIN_PATH_DEBUG}>"
+	"$<$<CONFIG:Release>:${JOLT_MIN_PATH_RELEASE}>"
+	"$<$<CONFIG:RelWithDebInfo>:${JOLT_MIN_PATH_RELEASE}>"
+	"$<$<CONFIG:Profile>:${JOLT_MIN_PATH_RELEASE}>"
+)
+
+target_link_directories(
+	Physics_AVX2 PRIVATE
+	"$<$<CONFIG:Debug>:${JOLT_AVX2_PATH_DEBUG}>"
+	"$<$<CONFIG:Release>:${JOLT_AVX2_PATH_RELEASE}>"
+	"$<$<CONFIG:RelWithDebInfo>:${JOLT_AVX2_PATH_RELEASE}>"
+	"$<$<CONFIG:Profile>:${JOLT_AVX2_PATH_RELEASE}>"
+)
+
+
+
+add_dependencies( Physics_MIN "Core" )
+add_dependencies( Physics_AVX2 "Core" )
 
 set_target_properties(
-	Physics PROPERTIES
-	OUTPUT_NAME ch_physics
+	Physics_MIN PROPERTIES
+	OUTPUT_NAME ch_physics_min
 	PREFIX ""
 )
 
-target_precompile_headers( Physics PRIVATE "${CH_PUBLIC}/core/core.h" )
+set_target_properties(
+	Physics_AVX2 PROPERTIES
+	OUTPUT_NAME ch_physics_avx2
+	PREFIX ""
+)
+
+target_precompile_headers( Physics_MIN PRIVATE "${CH_PUBLIC}/core/core.h" )
+target_precompile_headers( Physics_AVX2 PRIVATE "${CH_PUBLIC}/core/core.h" )
+
 # target_link_libraries( Physics PRIVATE JoltPhysics )
 include_directories( ${JOLTPHYSICS_DIR} ${JOLTPHYSICS_DIR}/Jolt )
 

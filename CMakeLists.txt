@@ -30,6 +30,7 @@ add_subdirectory( ${CH_SRC}/graphics_api )
 add_subdirectory( ${CH_SRC}/gui )
 add_subdirectory( ${CH_SRC}/input )
 add_subdirectory( ${CH_SRC}/physics )
+add_subdirectory( ${CH_SRC}/physics_wrapper )
 # add_subdirectory( ${CH_SRC}/asset_system )
 
 # Public Files

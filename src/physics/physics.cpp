@@ -832,8 +832,6 @@ void PhysicsEnvironment::DestroyShape( IPhysicsShape *spShape )
 	if ( shape->apShapeSettings )
 		delete shape->apShapeSettings;
 
-	Log_Msg( "A\n" );
-
 	delete spShape;
 }
 

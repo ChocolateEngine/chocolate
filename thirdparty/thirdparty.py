@@ -200,36 +200,21 @@ def build_ktx():
 # =================================================================================================
 
 
-def post_jolt_extract():
-    if ARGS.no_build:
-        return
-
-    set_project("JoltPhysics")
-
-    os.chdir("JoltPhysics/Build")
-    
-    # TODO: build jolt with and without these options for old pc's
-    # I would like to have 2 physics dlls, one with avx2 and stuff, one without and without f16c and fmadd
-    # no need to gimp physics perf for newer pc's that can use this
-    
-    build_options = "-DUSE_AVX2=OFF -DUSE_F16C=OFF -DUSE_FMADD=OFF -DTARGET_UNIT_TESTS=OFF -DTARGET_HELLO_WORLD=OFF -DTARGET_PERFORMANCE_TEST=OFF -DTARGET_SAMPLES=OFF -DTARGET_VIEWER=OFF"
-
+def build_jolt(build_dir, build_options):
     if SYS_OS == OS.Windows:
-        build_dir = "build"
         if not syscmd(f"cmake -S . -B {build_dir} -A x64 {build_options}", "Failed to run cmake"):
             return
 
-        print("Building JoltPhysics - Release\n")
+        print(f"Building JoltPhysics - Release - {build_dir}\n")
         if not syscmd(f"cmake --build {build_dir} --config Release", "Failed to build in Release"):
             return
 
-        print("Building JoltPhysics - Debug\n")
+        print(f"Building JoltPhysics - Debug - {build_dir}\n")
         if not syscmd(f"cmake --build {build_dir} --config Debug", "Failed to build in Debug"):
             return
 
     else:
-        build_dir = "build"
-        print("Building JoltPhysics - Release\n")
+        print(f"Building JoltPhysics - Release - {build_dir}\n")
         if not syscmd(f"cmake -S . -B {build_dir}/Release -DCMAKE_CXX_COMPILER=g++ -DCMAKE_POSITION_INDEPENDENT_CODE=ON {build_options}",
                "Failed to run cmake for Release build"):
             return
@@ -237,13 +222,31 @@ def post_jolt_extract():
         if not syscmd(f"cmake --build {build_dir}/Release --config Release", "Failed to build in Release"):
             return
 
-        print("Building JoltPhysics - Debug\n")
+        print(f"Building JoltPhysics - Debug - {build_dir}\n")
         if not syscmd(f"cmake -S . -B {build_dir}/Debug -DCMAKE_CXX_COMPILER=g++ -DCMAKE_POSITION_INDEPENDENT_CODE=ON {build_options}",
                "Failed to run cmake for Debug build"):
             return
 
         if not syscmd(f"cmake --build {build_dir}/Debug --config Debug", "Failed to build in Debug"):
             return
+
+
+def post_jolt_extract():
+    if ARGS.no_build:
+        return
+
+    set_project("JoltPhysics")
+
+    os.chdir("JoltPhysics/Build")
+    shared_build_options = "-DTARGET_UNIT_TESTS=OFF -DTARGET_HELLO_WORLD=OFF -DTARGET_PERFORMANCE_TEST=OFF -DTARGET_SAMPLES=OFF -DTARGET_VIEWER=OFF"
+
+    # Build Jolt without any modern CPU features first
+    build_options = "-DUSE_AVX2=OFF -DUSE_F16C=OFF -DUSE_FMADD=OFF " + shared_build_options
+    build_jolt("min", build_options)
+
+    # Build Jolt with all modern CPU features (maybe make more inbetween options?)
+    build_options = "-DUSE_AVX2=ON -DUSE_F16C=ON -DUSE_FMADD=ON " + shared_build_options
+    build_jolt("avx2", build_options)
 
 
 # =================================================================================================
@@ -520,6 +523,7 @@ def post_sdl_extract():
 new idea?
 
 [
+    "mozjpeg"               # dependency name
     "https://github.com/mozilla/mozjpeg/archive/refs/tags/v4.1.1.zip",
     "mozjpeg-4.1.1.zip",    # downloaded file
     "mozjpeg",              # folder to check for if it exists already
