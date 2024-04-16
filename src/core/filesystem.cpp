@@ -58,6 +58,56 @@ CONCMD( fs_reload_paths )
 }
 
 
+void FileSys_WhereIsCmd( const std::string& path, ESearchPathType type )
+{
+	std::string fullPath = FileSys_FindFileEx( path, type );
+
+    if ( fullPath.empty() )
+	{
+		Log_Error( "File not found!\n" );
+		return;
+    }
+
+	Log_MsgF( "%s\n", fullPath.data() );
+}
+
+
+CONCMD( fs_where )
+{
+	if ( args.empty() )
+	{
+		Log_Error( "No path Specified\n" );
+		return;
+	}
+
+	FileSys_WhereIsCmd( args[ 0 ], ESearchPathType_Path );
+}
+
+
+CONCMD( fs_where_binary )
+{
+	if ( args.empty() )
+	{
+		Log_Error( "No path Specified\n" );
+		return;
+	}
+
+	FileSys_WhereIsCmd( args[ 0 ], ESearchPathType_Binary );
+}
+
+
+CONCMD( where )
+{
+	if ( args.empty() )
+	{
+		Log_Error( "No path Specified\n" );
+		return;
+	}
+
+	FileSys_WhereIsCmd( args[ 0 ], ESearchPathType_Path );
+}
+
+
 int FileSys_Init( const char* workingDir )
 {
 	gWorkingDir = workingDir;
