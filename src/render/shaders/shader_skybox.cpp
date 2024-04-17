@@ -5,10 +5,10 @@
 
 struct Skybox_Push
 {
-	alignas( 16 ) glm::mat4 aModelMatrix{};  // model matrix
-	alignas( 16 ) int aSky = 0;              // sky texture index
-	alignas( 16 ) u32 aRenderable = 0;       // renderable index
-	alignas( 16 ) u32 aViewport = 0;         // viewport index
+	glm::mat4 aModelMatrix{};   // model matrix
+	int       aSky        = 0;  // sky texture index
+	u32       aRenderable = 0;  // renderable index
+	u32       aViewport   = 0;  // viewport index
 };
 
 

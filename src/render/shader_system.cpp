@@ -740,6 +740,8 @@ void Shader_UpdateMaterialDescriptorSets( ChHandle_t shader, ShaderData_t* shade
 
 void Shader_RemoveMaterial( ChHandle_t sMat )
 {
+	// TODO: queue this
+
 	ChHandle_t shader = gGraphics.Mat_GetShader( sMat );
 
 	if ( shader == CH_INVALID_HANDLE )
@@ -756,24 +758,26 @@ void Shader_RemoveMaterial( ChHandle_t sMat )
 		return;
 	}
 
-	ShaderData_t*                      shaderData = Shader_GetData( shader );
-	std::vector< ShaderMaterialData >& matData    = shaderIt->second;
-	bool                               failed     = true;
+	ShaderData_t*                      shaderData   = Shader_GetData( shader );
+	std::vector< ShaderMaterialData >& matData      = shaderIt->second;
+	bool                               foundMatData = false;
 
+	// TODO: make this faster
 	for ( u32 i = 0; i < matData.size(); i++ )
 	{
 		if ( matData[ i ].material == sMat )
 		{
 			//matData.remove( i );
 			vec_remove_index( matData, i );
-			failed = false;
+			foundMatData = true;
 			break;
 		}
 	}
 
 	// Update Descriptor Sets after removing the material data
-	if ( !failed && shaderData->aUseMaterialBuffer )
-	{auto it = gMaterialBuffers.find( sMat );
+	if ( foundMatData && shaderData->aUseMaterialBuffer )
+	{
+		auto it = gMaterialBuffers.find( sMat );
 
 		if ( it == gMaterialBuffers.end() )
 		{
@@ -789,14 +793,15 @@ void Shader_RemoveMaterial( ChHandle_t sMat )
 		Shader_UpdateMaterialDescriptorSets( shader, shaderData, matData );
 	}
 
-	if ( failed )
+	if ( !foundMatData )
 		Log_Error( gLC_ClientGraphics, "Failed to find material in use by shader\n" );
 }
 
 
 void Shader_AddMaterial( ChHandle_t sMat )
 {
-	// Check Material List - SLOW
+	// TODO: queue this
+
 	ChHandle_t shader = gGraphics.Mat_GetShader( sMat );
 
 	if ( shader == CH_INVALID_HANDLE )
@@ -817,7 +822,8 @@ void Shader_AddMaterial( ChHandle_t sMat )
 	
 	// TODO: find shader data, and write vars
 	ShaderData_t*      shaderData = Shader_GetData( shader );
-	
+
+	// Shaders might use this material data in push constants, so add it even if the shader doesn't use material buffers
 	shaderIt->second.push_back( data );
 
 	if ( shaderData->aUseMaterialBuffer )
@@ -844,6 +850,12 @@ void Shader_WriteMaterialBuffer( ChHandle_t mat, ChHandle_t shader, ShaderData_t
 
 	// Prepare New Data
 	char* writeData = (char*)calloc( 1, shaderData->aMaterialSize );
+
+	if ( writeData == nullptr )
+	{
+		Log_Error( "Failed to allocate memory for material buffer write\n" );
+		return;
+	}
 
 	for ( u32 varI = 0; varI < shaderData->aMaterialVarCount; varI++ )
 	{
@@ -1000,8 +1012,11 @@ ShaderMaterialData* Shader_GetMaterialData( ChHandle_t sShader, ChHandle_t sMat 
 		return nullptr;
 	}
 
+//	#error "improve this ShaderMaterialData NOW"
+
+	// TODO: MAKE THIS FASTER
 	std::vector< ShaderMaterialData >& matData = shaderIt->second;
-	void*                           data    = nullptr;
+	void*                              data    = nullptr;
 	for ( u32 i = 0; i < matData.size(); i++ )
 	{
 		if ( matData[ i ].material == sMat )

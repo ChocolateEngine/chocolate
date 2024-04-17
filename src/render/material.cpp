@@ -205,7 +205,6 @@ void Graphics::Mat_SetShader( Handle mat, Handle shShader )
 		Shader_RemoveMaterial( mat );
 
 		it->second = shShader;
-		gGraphicsData.aDirtyMaterials.emplace( mat );
 
 		// Tell Shader System we changed shader
 		Shader_AddMaterial( mat );

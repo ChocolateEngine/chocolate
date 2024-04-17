@@ -12,8 +12,8 @@ struct Debug_Push
 {
 	alignas( 16 ) glm::mat4 aModelMatrix;
 	alignas( 16 ) glm::vec4 aColor;
-	alignas( 16 ) u32 aRenderable = 0;  // renderable index
-	alignas( 16 ) u32 aViewport   = 0;  // viewport index
+	u32 aRenderable = 0;  // renderable index
+	u32 aViewport   = 0;  // viewport index
 };
 
 

@@ -50,18 +50,6 @@ struct Basic3D_Material
 };
 
 
-// static ShaderMaterialVarDesc gBasic3D_MaterialVars[] = {
-// 	{ "diffuse", "Diffuse Texture", "", offsetof( Basic3D_Material, diffuse ), sizeof( Basic3D_Material::diffuse ) },
-// 	{ "ao", "Ambient Occlusion Texture", gpFallbackAOPath, offsetof( Basic3D_Material, ao ) },
-// 	{ "emissive", "Emission Texture", gpFallbackEmissivePath, offsetof( Basic3D_Material, emissive ) },
-// 
-// 	{ "aoPower", "Ambient Occlusion Strength", 0.f, offsetof( Basic3D_Material, aoPower ) },
-// 	{ "emissivePower", "Emission Strength", 0.f, offsetof( Basic3D_Material, emissivePower ) },
-// 
-// 	{ "alphaTest", "Alpha Testing", false, offsetof( Basic3D_Material, alphaTest ) },
-// };
-
-
 static ShaderMaterialVarDesc gBasic3D_MaterialVars[] = {
 	CH_SHADER_MATERIAL_VAR( Basic3D_Material, diffuse, "Diffuse Texture", "" ),
 	CH_SHADER_MATERIAL_VAR( Basic3D_Material, ao, "Ambient Occlusion Texture", gpFallbackAOPath ),
@@ -144,22 +132,6 @@ static void Shader_Basic3D_SetupPushData( u32 sRenderableIndex, u32 sViewportInd
 }
 
 
-//static void Shader_Basic3D_SetupPushData2( u32 sSurfaceIndex, u32 sViewportIndex, Renderable_t* spModelDraw, SurfaceDraw_t& srDrawInfo, void* spData )
-//{
-//	PROF_SCOPE();
-//
-//	Basic3D_Push* push = static_cast< Basic3D_Push* >( spData );
-//
-//	// push->aModelMatrix  = spModelDraw->aModelMatrix;
-//	push->aRenderable  = CH_GET_HANDLE_INDEX( srDrawInfo.aRenderable );
-//	push->aMaterial    = Shader_Basic3D_GetMaterialIndex( sSurfaceIndex, spModelDraw, srDrawInfo );
-//	push->aViewport    = sViewportIndex;
-//
-//	push->aDebugDraw   = r_basic3d_dbg_mode;
-//	// push->aPCF          = gArgPCF;
-//}
-
-
 static void Shader_Basic3D_PushConstants( Handle cmd, Handle sLayout, SurfaceDraw_t& srDrawInfo )
 {
 	PROF_SCOPE();
@@ -200,7 +172,7 @@ ShaderCreate_t gShaderCreate_Basic3D = {
 	.aMaterialVarCount    = CH_ARR_SIZE( gBasic3D_MaterialVars ),
 	.aMaterialSize        = sizeof( Basic3D_Material ),
 	.aUseMaterialBuffer   = true,
-	.aMaterialBufferIndex = 0,
+	.aMaterialBufferIndex = 0,  // TODO: Change this to aMaterialBufferBinding
 };
 
 

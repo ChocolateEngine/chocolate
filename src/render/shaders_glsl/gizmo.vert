@@ -17,9 +17,8 @@ layout(push_constant) uniform Push
 {
     mat4 aModelMatrix;
     vec4 aColor;
-	uint aRenderable;
 	uint aViewport;
-	uint aColorMode;
+	uint aRenderable;
 } push;
 
 // layout(location = 0) in vec3 inPosition;
@@ -55,20 +54,4 @@ void main()
 
 	gl_Position = gViewports[ push.aViewport ].aProjView * push.aModelMatrix * vec4(inPos, 1.0);
     fragColor   = push.aColor;
-
-	vec4 baseMultColor = vec4( 0.1, 0.1, 0.1, 1.0 );
-
-	// uint hovered = push.aColorMode & GIZMO_COLOR_MODE_HOVERED;
-	// 
-	// if ( hovered > 0 )
-	// {
-	// 	fragColor *= baseMultColor;
-	// }
-
-	uint selected = push.aColorMode & GIZMO_COLOR_MODE_SELECTED;
-	
-	if ( selected > 0 )
-	{
-		fragColor *= baseMultColor;
-	}
 }

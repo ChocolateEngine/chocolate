@@ -389,8 +389,8 @@ u32 Graphics::CreateViewport( ViewportShader_t** spViewport )
 
 	if ( spViewport )
 	{
-		( *spViewport )             = &viewport;
-		( *spViewport )->aActive    = true;
+		( *spViewport )          = &viewport;
+		( *spViewport )->aActive = true;
 	}
 
 	return handle;
