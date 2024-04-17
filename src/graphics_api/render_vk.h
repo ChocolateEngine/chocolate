@@ -464,9 +464,6 @@ void                                  VK_CheckFenceStatus( WindowVK* window );
 // --------------------------------------------------------------------------------------
 // Shader System
 
-VkShaderModule                        VK_CreateShaderModule( u32* spByteCode, u32 sSize );
-void                                  VK_DestroyShaderModule( VkShaderModule shaderModule );
-
 bool                                  VK_CreatePipelineLayout( ChHandle_t& sHandle, PipelineLayoutCreate_t& srPipelineCreate );
 bool                                  VK_CreateGraphicsPipeline( ChHandle_t& sHandle, GraphicsPipelineCreate_t& srGraphicsCreate );
 bool                                  VK_CreateComputePipeline( ChHandle_t& srHandle, ComputePipelineCreate_t& srPipelineCreate );

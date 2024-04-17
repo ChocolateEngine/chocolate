@@ -11,6 +11,10 @@ struct ShaderVK
 	VkPipeline          aPipeline = VK_NULL_HANDLE;
 	// VkPipelineLayout    aPipelineLayout = nullptr;
 	VkPipelineBindPoint aBindPoint;
+
+	// TODO: move this elsewhere, this is loaded in cache whenever we bind a shader, but is never used
+	VkShaderModule*     apShaderModules = nullptr;
+	u32                 aShaderModuleCount;
 };
 
 
@@ -61,26 +65,6 @@ VkPipelineLayout VK_GetPipelineLayout( Handle handle )
 }
 
 
-VkShaderModule VK_CreateShaderModule( u32* spByteCode, u32 sSize )
-{
-	VkShaderModuleCreateInfo createInfo{ VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO };
-	createInfo.codeSize = sSize;
-	createInfo.pCode    = spByteCode;
-
-	VkShaderModule shaderModule;
-	VK_CheckResult( vkCreateShaderModule( VK_GetDevice(), &createInfo, NULL, &shaderModule ), "Failed to create shader module!" );
-
-	return shaderModule;
-}
-
-
-void VK_DestroyShaderModule( VkShaderModule shaderModule )
-{
-	if ( shaderModule )
-		vkDestroyShaderModule( VK_GetDevice(), shaderModule, nullptr );
-}
-
-
 bool VK_CreatePipelineLayout( ChHandle_t& srHandle, PipelineLayoutCreate_t& srPipelineCreate )
 {
 	std::vector< VkDescriptorSetLayout > layouts;
@@ -125,8 +109,10 @@ bool VK_CreatePipelineLayout( ChHandle_t& srHandle, PipelineLayoutCreate_t& srPi
 }
 
 
-bool VK_GetShaderStageCreateInfo( VkPipelineShaderStageCreateInfo* spStageCreate, ShaderModule_t* spShaderModules, u32 sStageCount )
+bool VK_GetShaderStageCreateInfo( VkPipelineShaderStageCreateInfo* spStageCreate, ShaderModule_t* spShaderModules, u32 sStageCount, VkShaderModule* vkShaderModules )
 {
+	vkShaderModules = ch_malloc< VkShaderModule >( sStageCount );
+
 	for ( u32 i = 0; i < sStageCount; i++ )
 	{
 		ShaderModule_t& stage   = spShaderModules[ i ];
@@ -135,6 +121,7 @@ bool VK_GetShaderStageCreateInfo( VkPipelineShaderStageCreateInfo* spStageCreate
 		if ( absPath.empty() )
 		{
 			Log_ErrorF( gLC_Render, "Failed to find shader: \"%s\"\n", stage.aModulePath );
+			ch_free( vkShaderModules );
 			return false;
 		}
 
@@ -143,13 +130,25 @@ bool VK_GetShaderStageCreateInfo( VkPipelineShaderStageCreateInfo* spStageCreate
 		if ( fileData.empty() )
 		{
 			Log_ErrorF( gLC_Render, "Shader file is empty: \"%s\"\n", stage.aModulePath );
+			ch_free( vkShaderModules );
 			return false;
 		}
 
 		auto& stageInfo  = spStageCreate[ i ];
 		stageInfo.sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
 		stageInfo.pName  = stage.apEntry;
-		stageInfo.module = VK_CreateShaderModule( (u32*)fileData.data(), fileData.size() );
+
+		VkShaderModuleCreateInfo createInfo{ VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO };
+		createInfo.codeSize = fileData.size();
+		createInfo.pCode    = (u32*)fileData.data();
+
+		if ( !VK_CheckResultE( vkCreateShaderModule( VK_GetDevice(), &createInfo, NULL, &stageInfo.module ), "Failed to create shader module!" ) )
+		{
+			ch_free( vkShaderModules );
+			return false;
+		}
+
+		vkShaderModules[ i ] = stageInfo.module;
 
 		if ( stage.aStage & ShaderStage_Vertex )
 			stageInfo.stage = VK_SHADER_STAGE_VERTEX_BIT;
@@ -175,7 +174,8 @@ bool VK_CreateComputePipeline( ChHandle_t& srHandle, ComputePipelineCreate_t& sr
 	}
 
 	VkPipelineShaderStageCreateInfo shaderStageCreate{};
-	if ( !VK_GetShaderStageCreateInfo( &shaderStageCreate, &srPipelineCreate.aShaderModule, 1 ) )
+	VkShaderModule*                 shaderModules = nullptr;
+	if ( !VK_GetShaderStageCreateInfo( &shaderStageCreate, &srPipelineCreate.aShaderModule, 1, shaderModules ) )
 	{
 		Log_ErrorF( gLC_Render, "VK_CreateGraphicsPipeline(): Failed to create shader stage info: \"%s\"\n", srPipelineCreate.apName );
 		return false;
@@ -199,13 +199,26 @@ bool VK_CreateComputePipeline( ChHandle_t& srHandle, ComputePipelineCreate_t& sr
 			Log_ErrorF( gLC_Render, "VK_CreateGraphicsPipeline(): Shader not found for recreation: \"%s\"\n", srPipelineCreate.apName );
 			return false;
 		}
+
+		if ( shader->aShaderModuleCount )
+		{
+			// was this already destroyed?
+			// for ( u32 i = 0; i < shader->aShaderModuleCount; i++ )
+			// 	vkDestroyShaderModule( VK_GetDevice(), shader->apShaderModules[ i ], nullptr );
+
+			ch_free( shader->apShaderModules );
+			shader->apShaderModules    = nullptr;
+			shader->aShaderModuleCount = 0;
+		}
 	}
 	else
 	{
 		srHandle = gShaders.Create( &shader );
 	}
 
-	shader->aBindPoint = VK_PIPELINE_BIND_POINT_COMPUTE;
+	shader->aBindPoint         = VK_PIPELINE_BIND_POINT_COMPUTE;
+	shader->apShaderModules    = shaderModules;
+	shader->aShaderModuleCount = 1;
 
 	// TODO: look into trying to make multiple pipelines at once
 	VK_CheckResultF(
@@ -236,7 +249,8 @@ bool VK_CreateGraphicsPipeline( ChHandle_t& srHandle, GraphicsPipelineCreate_t& 
 
 	std::vector< VkPipelineShaderStageCreateInfo > shaderStages;
 	shaderStages.resize( srGraphicsCreate.aShaderModules.size() );
-	if ( !VK_GetShaderStageCreateInfo( shaderStages.data(), srGraphicsCreate.aShaderModules.data(), srGraphicsCreate.aShaderModules.size() ) )
+	VkShaderModule* vkShaderModules = nullptr;
+	if ( !VK_GetShaderStageCreateInfo( shaderStages.data(), srGraphicsCreate.aShaderModules.data(), srGraphicsCreate.aShaderModules.size(), vkShaderModules ) )
 	{
 		Log_ErrorF( gLC_Render, "VK_CreateGraphicsPipeline(): Failed to create shader stage info: \"%s\"\n", srGraphicsCreate.apName );
 		return false;
@@ -462,13 +476,26 @@ bool VK_CreateGraphicsPipeline( ChHandle_t& srHandle, GraphicsPipelineCreate_t& 
 			Log_ErrorF( gLC_Render, "VK_CreateGraphicsPipeline(): Shader not found for recreation: \"%s\"\n", srGraphicsCreate.apName );
 			return false;
 		}
+
+		if ( shader->aShaderModuleCount )
+		{
+			// was this already destroyed?
+			// for ( u32 i = 0; i < shader->aShaderModuleCount; i++ )
+			// 	vkDestroyShaderModule( VK_GetDevice(), shader->apShaderModules[ i ], nullptr );
+
+			ch_free( shader->apShaderModules );
+			shader->apShaderModules    = nullptr;
+			shader->aShaderModuleCount = 0;
+		}
 	}
 	else
 	{
 		srHandle = gShaders.Create( &shader );
 	}
 
-	shader->aBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+	shader->aBindPoint         = VK_PIPELINE_BIND_POINT_GRAPHICS;
+	shader->apShaderModules    = vkShaderModules;
+	shader->aShaderModuleCount = srGraphicsCreate.aShaderModules.size();
 
 	// TODO: look into trying to make multiple pipelines at once
 	VK_CheckResultF(
@@ -490,7 +517,18 @@ void VK_DestroyPipeline( Handle sPipeline )
 		return;
 	}
 
+	if ( shader->aShaderModuleCount )
+	{
+		for ( u32 i = 0; i < shader->aShaderModuleCount; i++ )
+			vkDestroyShaderModule( VK_GetDevice(), shader->apShaderModules[ i ], nullptr );
+
+		ch_free( shader->apShaderModules );
+		shader->apShaderModules    = nullptr;
+		shader->aShaderModuleCount = 0;
+	}
+	
 	vkDestroyPipeline( VK_GetDevice(), shader->aPipeline, nullptr );
+
 	gShaders.Remove( sPipeline );
 }
 
