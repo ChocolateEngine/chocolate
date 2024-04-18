@@ -29,6 +29,8 @@ class ConCommand;
 class ConVar;
 class ConVarRef;
 
+struct ConVarData_t;
+
 
 enum ECVarFlagChange
 {
@@ -42,12 +44,22 @@ enum ECVarFlagChange
 // If it returns true, we can proceed normally.
 // If it returns false, don't change the ConVar value or run the ConCommand.
 using ConVarFlagChangeFunc = bool( ConVarBase* spBase, const std::vector< std::string >& args );
+using ConVarFlagChangeFunc2 = bool( ConVarData_t* spBase, const std::vector< std::string >& args );
 
 // Function to call for a Console Command
 using ConCommandFunc = void( const std::vector< std::string >& args );
 
 // Callback Function for when a ConVar Value Changes
 using ConVarFunc = void( const std::string& prevString, float prevFloat, const std::vector< std::string >& args );
+
+// Callback Function for when a ConVar Value Changes
+using ConVarFunc_Bool = void( bool sPrevValue, bool& newValue );
+using ConVarFunc_Int = void( int sPrevValue, int& newValue );
+using ConVarFunc_Float = void( float sPrevValue, float& newValue );
+using ConVarFunc_String = void( const char* sPrevValue, const char*& newValue );
+using ConVarFunc_Vec2 = void( const glm::vec2& sPrevValue, glm::vec2& newValue );
+using ConVarFunc_Vec3 = void( const glm::vec3& sPrevValue, glm::vec3& newValue );
+using ConVarFunc_Vec4 = void( const glm::vec4& sPrevValue, glm::vec4& newValue );
 
 // Callback Function for populating an autocomplete list for a ConCommand
 // TODO: Support ConVar dropdowns
@@ -64,77 +76,108 @@ using FArchive = void( std::string& srOutput );
 using ConVarFlag_t = size_t;
 
 
-enum EChConfigOption
+// maybe change to config option?
+enum EConVarType : u8
 {
-	EChConfigOption_None,
+	EConVarType_Invalid,     // Invalid
 
-	EChConfigOption_Bool,      // Boolean
-	EChConfigOption_Int,       // Integer
-	EChConfigOption_Float,     // Float
-	EChConfigOption_String,    // String Value
-	EChConfigOption_DropDown,  // Drop-Down of String Values
+	EConVarType_Bool,        // Boolean
+	EConVarType_Int,         // Integer
+	EConVarType_Float,       // Float
+	EConVarType_String,      // String Value
+	EConVarType_RangeInt,    // Clamped Integer Value
+	EConVarType_RangeFloat,  // Clamped Float Value
+	EConVarType_Vec2,        // 2 Float Values
+	EConVarType_Vec3,        // 3 Float Values
+	EConVarType_Vec4,        // 4 Float Values
 
-	// not a good type
-	EChConfigOption_Slider,    // Float Slider
+	// List of Values to Select From
+	// Generally static multiple option choice, though maybe we could set it in an init function
+	// A "type" or "mode" convar would be perfect for this, like log_dev_level, wireframe mode
+	// The returned type for registering it is an integer, for an index into the list
+	//EConVarType_SelectionInt,
+	//EConVarType_SelectionFloat,  // would there ever be a use case for this?
+	//EConVarType_SelectionString,
+
+	EConVarType_Count,
 };
 
 
-enum EConVar2Type
+struct ConVarData_t
 {
-	EConVar2Type_None,
-
-	EConVar2Type_Bool,      // Boolean
-	EConVar2Type_Int,       // Integer
-	EConVar2Type_Float,     // Float
-	EConVar2Type_String,    // String Value
-	EConVar2Type_Ranged,    // Clamped Float Value
-	EConVar2Type_Vec2,      // 2 Float Values
-	EConVar2Type_Vec3,      // 3 Float Values
-	EConVar2Type_Vec4,      // 4 Float Values
-	EConVar2Type_DropDown,  // Drop-Down of String Values
-};
-
-
-class CORE_API ChConfigOption
-{
-  public:
-
-	  EChConfigOption aType;
-};
-
-
-// name is stored elsewhere
-struct ConVarBase2Data_t
-{
-	const char*  apDesc;
-};
-
-
-struct ConVar2Data_t
-{
+	// idk type  aTags;
 	ConVarFlag_t aFlags;
-	ConVarFunc*  apFunc;
-	EConVar2Type aType;
-	void*        apData;
-	void*        apDefaultData;
-};
+	EConVarType  aType;
 
+	union
+	{
+		struct
+		{
+			ConVarFunc_Bool* apFunc;
+			bool*            apData;
+			bool             aDefaultData;
+		} aBool;
 
-using ConVarFlagChangeFunc2 = bool( ConVar2Data_t* spBase, const std::vector< std::string >& args );
+		struct
+		{
+			ConVarFunc_Int* apFunc;
+			int*            apData;
+			int             aDefaultData;
+		} aInt;
 
+		struct
+		{
+			ConVarFunc_Float* apFunc;
+			float*            apData;
+			float             aDefaultData;
+		} aFloat;
 
-// data not used very often, this is only used for ui for the drop down function
-struct ConCommand2LocalData_t
-{
-	ConCommandDropdownFunc* apDropDownFunc;
-};
+		struct
+		{
+			ConVarFunc_String* apFunc;
+			char*              apData;
+			const char*        aDefaultData;
+		} aString;
 
+		struct
+		{
+			ConVarFunc_Vec2* apFunc;
+			glm::vec2*       apData;
+			glm::vec2        aDefaultData;
+		} aVec2;
 
-// data used in the console update function
-struct ConCommand2Data_t
-{
-	ConVarFlag_t    aFlags;
-	ConCommandFunc* apFunc;
+		struct
+		{
+			ConVarFunc_Vec3* apFunc;
+			glm::vec3*       apData;
+			glm::vec3        aDefaultData;
+		} aVec3;
+
+		struct
+		{
+			ConVarFunc_Vec4* apFunc;
+			glm::vec4*       apData;
+			glm::vec4        aDefaultData;
+		} aVec4;
+
+		struct
+		{
+			ConVarFunc_Int* apFunc;
+			int*            apData;
+			int             aDefaultData;
+			int             aMin;
+			int             aMax;
+		} aRangeInt;
+
+		struct
+		{
+			ConVarFunc_Float* apFunc;
+			float*            apData;
+			float             aDefaultData;
+			float             aMin;
+			float             aMax;
+		} aRangeFloat;
+	};
 };
 
 
@@ -143,35 +186,6 @@ struct ChConfigOptionDropDown_t
 	char* apData;
 	u32   aLen;
 };
-
-
-// what if instead of returning a reference, it takes in an existing variable to use and copies that for the default value?
-// this way it can easily stay on the stack, unless these variables are allocated on the stack already for speed
-
-
-CORE_API bool&              Con_RegisterConVar_Bool( const char* spName, const char* spDesc, bool sDefault, ConVarFlag_t sFlags = 0, ConVarFunc* spCallbackFunc = nullptr );
-CORE_API int&               Con_RegisterConVar_Int( const char* spName, const char* spDesc, int sDefault, ConVarFlag_t sFlags = 0, ConVarFunc* spCallbackFunc = nullptr );
-CORE_API float&             Con_RegisterConVar_Float( const char* spName, const char* spDesc, float sDefault, ConVarFlag_t sFlags = 0, ConVarFunc* spCallbackFunc = nullptr );
-CORE_API const char*&       Con_RegisterConVar_Str( const char* spName, const char* spDesc, const char* spDefault, ConVarFlag_t sFlags = 0, ConVarFunc* spCallbackFunc = nullptr );
-CORE_API glm::vec2&         Con_RegisterConVar_Vec2( const char* spName, const char* spDesc, const glm::vec2& srDefault, ConVarFlag_t sFlags = 0, ConVarFunc* spCallbackFunc = nullptr );
-CORE_API glm::vec3&         Con_RegisterConVar_Vec3( const char* spName, const char* spDesc, const glm::vec3& srDefault, ConVarFlag_t sFlags = 0, ConVarFunc* spCallbackFunc = nullptr );
-CORE_API glm::vec4&         Con_RegisterConVar_Vec4( const char* spName, const char* spDesc, const glm::vec4& srDefault, ConVarFlag_t sFlags = 0, ConVarFunc* spCallbackFunc = nullptr );
-CORE_API float&             Con_RegisterConVar_Range( const char* spName, const char* spDesc, float sDefault, float sMin = FLT_MIN, float sMax = FLT_MAX, ConVarFlag_t sFlags = 0, ConVarFunc* spCallbackFunc = nullptr );
-
-CORE_API bool&              Con_RegisterConVarRef_Bool( const char* spName, bool sFallback );
-CORE_API int&               Con_RegisterConVarRef_Int( const char* spName, int sFallback );
-CORE_API float&             Con_RegisterConVarRef_Float( const char* spName, float sFallback );
-CORE_API const char*&       Con_RegisterConVarRef_Str( const char* spName, const char* spFallback );
-CORE_API float&             Con_RegisterConVarRef_Range( const char* spName, float sFallback );
-
-CORE_API void               Con_SetConVarValue( const char* spName, bool sValue );
-CORE_API void               Con_SetConVarValue( const char* spName, int sValue );
-CORE_API void               Con_SetConVarValue( const char* spName, float sValue );
-CORE_API void               Con_SetConVarValue( const char* spName, const char* spValue );
-
-CORE_API ConVarBase2Data_t* Con_GetConVarBase2Data( const char* spName );
-CORE_API ConVar2Data_t*     Con_GetConVar2Data( const char* spName );
-CORE_API ConCommand2Data_t* Con_GetConCommand2Data( const char* spName );
 
 
 class CORE_API ConVarBase
@@ -556,6 +570,48 @@ private:
 
 #define CON_COMMAND_LAMBDA( name ) \
 	ConCommand* name = new ConCommand( #name, [ & ]( const std::vector< std::string >& sArgs )
+
+
+// ----------------------------------------------------------------
+// ConVar Functions
+
+
+// Register a Console/Config Variable
+CORE_API bool&         Con_RegisterConVar_Bool( const char* spName, const char* spDesc, bool sDefault, ConVarFlag_t sFlags = 0, ConVarFunc_Bool* spCallbackFunc = nullptr );
+CORE_API int&          Con_RegisterConVar_Int( const char* spName, const char* spDesc, int sDefault, ConVarFlag_t sFlags = 0, ConVarFunc_Int* spCallbackFunc = nullptr );
+CORE_API float&        Con_RegisterConVar_Float( const char* spName, const char* spDesc, float sDefault, ConVarFlag_t sFlags = 0, ConVarFunc_Float* spCallbackFunc = nullptr );
+CORE_API char*&        Con_RegisterConVar_String( const char* spName, const char* spDesc, const char* spDefault, ConVarFlag_t sFlags = 0, ConVarFunc_String* spCallbackFunc = nullptr );
+CORE_API glm::vec2&    Con_RegisterConVar_Vec2( const char* spName, const char* spDesc, const glm::vec2& srDefault, ConVarFlag_t sFlags = 0, ConVarFunc_Vec2* spCallbackFunc = nullptr );
+CORE_API glm::vec3&    Con_RegisterConVar_Vec3( const char* spName, const char* spDesc, const glm::vec3& srDefault, ConVarFlag_t sFlags = 0, ConVarFunc_Vec3* spCallbackFunc = nullptr );
+CORE_API glm::vec4&    Con_RegisterConVar_Vec4( const char* spName, const char* spDesc, const glm::vec4& srDefault, ConVarFlag_t sFlags = 0, ConVarFunc_Vec4* spCallbackFunc = nullptr );
+CORE_API int&          Con_RegisterConVar_RangeInt( const char* spName, const char* spDesc, int sDefault, int sMin = INT_MIN, int sMax = INT_MAX, ConVarFlag_t sFlags = 0, ConVarFunc_Int* spCallbackFunc = nullptr );
+CORE_API float&        Con_RegisterConVar_RangeFloat( const char* spName, const char* spDesc, float sDefault, float sMin = FLT_MIN, float sMax = FLT_MAX, ConVarFlag_t sFlags = 0, ConVarFunc_Float* spCallbackFunc = nullptr );
+
+// Set the value of a ConVar
+// Returns:
+// -1 - The ConVar type is incorrect
+// 0  - The ConVar doesn't exist
+// 1  - The ConVar was set
+CORE_API int           Con_SetConVarValue( const char* spName, bool sValue );
+CORE_API int           Con_SetConVarValue( const char* spName, int sValue );
+CORE_API int           Con_SetConVarValue( const char* spName, float sValue );
+CORE_API int           Con_SetConVarValue( const char* spName, const char* spValue );
+CORE_API int           Con_SetConVarValue( const char* spName, std::string_view sValue );
+CORE_API int           Con_SetConVarValue( const char* spName, const glm::vec2& sValue );
+CORE_API int           Con_SetConVarValue( const char* spName, const glm::vec3& sValue );
+CORE_API int           Con_SetConVarValue( const char* spName, const glm::vec4& sValue );
+
+CORE_API const char*   Con_GetConVarDesc( const char* spName );  // Get the description of the ConVar
+CORE_API ConVarData_t* Con_GetConVarData( const char* spName );  // Get the data of the ConVar
+
+CORE_API const char*   Con_ConVarTypeStr( EConVarType type );    // Get the string of the ConVar Type
+CORE_API EConVarType   Con_ConVarType( const char* spType );     // Get the ConVar Type from the string
+
+CORE_API std::string   Con_GetConVarValueStr( ConVarData_t* cvarData );
+CORE_API std::string   Con_GetConVarValueStr( const char* name );
+
+// CORE_API std::string   Con_GetConVarFormatted( const char* spName );  // Get a formatted string for the convar name, value, and default value
+CORE_API std::string   Con_GetConVarHelp( const char* spName );  // Get a formatted string for the help message of this convar
 
 
 // ----------------------------------------------------------------
