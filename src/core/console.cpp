@@ -551,7 +551,7 @@ bool Con_RegisterConVar_Base( ConVarData_t** conVarDataIn, const char* spName, c
 			if ( conVarDataIn )
 				*conVarDataIn = conVarData;
 
-			return true;
+			return false;
 		}
 	}
 
@@ -656,7 +656,7 @@ char*& Con_RegisterConVar_String( const char* spName, const char* spDesc, const 
 	if ( !ret )
 	{
 		if ( cvarData )
-			return cvarData->aString.apData;
+			return *cvarData->aString.apData;
 
 		char* temp = Util_AllocString( spDefault );
 		return temp;
@@ -665,9 +665,12 @@ char*& Con_RegisterConVar_String( const char* spName, const char* spDesc, const 
 	cvarData->aString.apFunc       = spCallbackFunc;
 	cvarData->aString.aDefaultData = Util_AllocString( spDefault );
 
-	cvarData->aString.apData       = Util_AllocString( spDefault );
+	char* value                    = Util_AllocString( spDefault );
 
-	return cvarData->aString.apData;
+	cvarData->aString.apData       = ch_malloc< char* >( 1 );
+	memcpy( cvarData->aString.apData, &value, sizeof( char* ) );
+
+	return *cvarData->aString.apData;
 }
 
 
@@ -892,7 +895,7 @@ std::string Con_GetConVarValueStr( ConVarData_t* cvarData )
 	switch ( cvarData->aType )
 	{
 		case EConVarType_Bool:
-			return vstring( "%s", cvarData->aBool.apData ? "true" : "false" );
+			return cvarData->aBool.apData ? "true" : "false";
 
 		case EConVarType_Int:
 			return vstring( "%d", *cvarData->aInt.apData );
@@ -901,7 +904,7 @@ std::string Con_GetConVarValueStr( ConVarData_t* cvarData )
 			return vstring( "%.6f", *cvarData->aFloat.apData );
 
 		case EConVarType_String:
-			return vstring( "%s", cvarData->aString.apData );
+			return vstring( "\"%s\"", *cvarData->aString.apData );
 
 		case EConVarType_Vec2:
 			return vstring( "%.6f %.6f", cvarData->aVec2.apData->x, cvarData->aVec2.apData->y );
@@ -963,8 +966,8 @@ std::string Con_GetConVarHelp( const char* spName )
 			break;
 
 		case EConVarType_String:
-			if ( ch_strcasecmp( cvarData->aString.apData, cvarData->aString.aDefaultData ) != 0 )
-				msg += vstring( " " UNIX_CLR_YELLOW "(%s default)", cvarData->aString.aDefaultData );
+			if ( ch_strcasecmp( *cvarData->aString.apData, cvarData->aString.aDefaultData ) != 0 )
+				msg += vstring( " " UNIX_CLR_YELLOW "(\"%s\" default)", cvarData->aString.aDefaultData );
 			break;
 
 		case EConVarType_Vec2:
@@ -1068,7 +1071,7 @@ std::string Con_GetConVarHelp( const char* spName )
 // ------------------------------------------------------------------------------
 
 
-int Con_SetConVarValueInternal( ConVarData_t* cvarData, const char* spName, bool sValue )
+int Con_SetConVarValueInternal_Bool( ConVarData_t* cvarData, const char* spName, bool sValue )
 {
 	if ( cvarData->aType != EConVarType_Bool )
 	{
@@ -1082,7 +1085,7 @@ int Con_SetConVarValueInternal( ConVarData_t* cvarData, const char* spName, bool
 }
 
 
-int Con_SetConVarValueInternal( ConVarData_t* cvarData, const char* spName, int sValue )
+int Con_SetConVarValueInternal_Int( ConVarData_t* cvarData, const char* spName, int sValue )
 {
 	if ( cvarData->aType != EConVarType_Int || cvarData->aType != EConVarType_RangeInt )
 	{
@@ -1105,7 +1108,7 @@ int Con_SetConVarValueInternal( ConVarData_t* cvarData, const char* spName, int 
 }
 
 
-int Con_SetConVarValueInternal( ConVarData_t* cvarData, const char* spName, float sValue )
+int Con_SetConVarValueInternal_Float( ConVarData_t* cvarData, const char* spName, float sValue )
 {
 	// check if the convar type is float or ranged
 	if ( cvarData->aType != EConVarType_Float || cvarData->aType != EConVarType_RangeFloat )
@@ -1129,7 +1132,7 @@ int Con_SetConVarValueInternal( ConVarData_t* cvarData, const char* spName, floa
 }
 
 
-int Con_SetConVarValueInternal( ConVarData_t* cvarData, const char* spName, char* spValue )
+int Con_SetConVarValueInternal_String( ConVarData_t* cvarData, const char* spName, char* spValue )
 {
 	if ( cvarData->aType != EConVarType_String )
 	{
@@ -1137,14 +1140,21 @@ int Con_SetConVarValueInternal( ConVarData_t* cvarData, const char* spName, char
 		return 0;
 	}
 
-	// char** value = cvarData->aString.apData;
-	// *value = Util_ReallocString( *value, spValue ? spValue : "" );
-	// return 1;
-	return 0;
+	char** value = cvarData->aString.apData;
+	char*  newValue = Util_ReallocString( *value, spValue );
+
+	if ( newValue == nullptr )
+	{
+		Log_ErrorF( gConsoleChannel, "Failed to set ConVar Value for %s\n", spName );
+		return 0;
+	}
+
+	*value = newValue;
+	return 1;
 }
 
 
-int Con_SetConVarValueInternal( ConVarData_t* cvarData, const char* spName, std::string_view sValue )
+int Con_SetConVarValueInternal_String( ConVarData_t* cvarData, const char* spName, std::string_view sValue )
 {
 	if ( cvarData->aType != EConVarType_String )
 	{
@@ -1152,14 +1162,21 @@ int Con_SetConVarValueInternal( ConVarData_t* cvarData, const char* spName, std:
 		return 0;
 	}
 
-	// char** value = cvarData->aString.apData;
-	// *value       = Util_ReallocString( *value, sValue.size() ? sValue.data() : "", sValue.size() ? sValue.size() : 0 );
-	// return 1;
-	return 0;
+	char** value = cvarData->aString.apData;
+	char* newValue = Util_ReallocString( *value, sValue.data(), sValue.size() );
+
+	if ( newValue == nullptr )
+	{
+		Log_ErrorF( gConsoleChannel, "Failed to set ConVar Value for %s\n", spName );
+		return 0;
+	}
+
+	*value = newValue;
+	return 1;
 }
 
 
-int Con_SetConVarValueInternal( ConVarData_t* cvarData, const char* spName, const glm::vec2& srValue )
+int Con_SetConVarValueInternal_Vec( ConVarData_t* cvarData, const char* spName, const glm::vec2& srValue )
 {
 	if ( cvarData->aType != EConVarType_Vec2 )
 	{
@@ -1174,7 +1191,7 @@ int Con_SetConVarValueInternal( ConVarData_t* cvarData, const char* spName, cons
 }
 
 
-int Con_SetConVarValueInternal( ConVarData_t* cvarData, const char* spName, const glm::vec3& srValue )
+int Con_SetConVarValueInternal_Vec( ConVarData_t* cvarData, const char* spName, const glm::vec3& srValue )
 {
 	if ( cvarData->aType != EConVarType_Vec3 )
 	{
@@ -1190,7 +1207,7 @@ int Con_SetConVarValueInternal( ConVarData_t* cvarData, const char* spName, cons
 }
 
 
-int Con_SetConVarValueInternal( ConVarData_t* cvarData, const char* spName, const glm::vec4& srValue )
+int Con_SetConVarValueInternal_Vec( ConVarData_t* cvarData, const char* spName, const glm::vec4& srValue )
 {
 	if ( cvarData->aType != EConVarType_Vec4 )
 	{
@@ -1219,7 +1236,7 @@ int Con_SetConVarValue( const char* spName, bool sValue )
 
 	bool prevValue = *cvarData->aBool.apData;
 
-	int ret = Con_SetConVarValueInternal( cvarData, spName, sValue );
+	int ret = Con_SetConVarValueInternal_Bool( cvarData, spName, sValue );
 
 	if ( ret == 1 )
 	{
@@ -1240,7 +1257,7 @@ int Con_SetConVarValue( const char* spName, int sValue )
 
 	int prevValue = *cvarData->aInt.apData;
 
-	int ret = Con_SetConVarValueInternal( cvarData, spName, sValue );
+	int ret = Con_SetConVarValueInternal_Int( cvarData, spName, sValue );
 
 	if ( ret == 1 )
 	{
@@ -1259,7 +1276,7 @@ int Con_SetConVarValue( const char* spName, float sValue )
 	if ( !cvarData )
 		return -1;
 
-	return Con_SetConVarValueInternal( cvarData, spName, sValue );
+	return Con_SetConVarValueInternal_Float( cvarData, spName, sValue );
 }
 
 
@@ -1270,7 +1287,7 @@ int Con_SetConVarValue( const char* spName, const char* spValue )
 	if ( !cvarData )
 		return -1;
 
-	return Con_SetConVarValueInternal( cvarData, spName, spValue );
+	return Con_SetConVarValueInternal_String( cvarData, spName, spValue );
 }
 
 
@@ -1281,7 +1298,7 @@ int Con_SetConVarValue( const char* spName, std::string_view sValue )
 	if ( !cvarData )
 		return -1;
 
-	return Con_SetConVarValueInternal( cvarData, spName, sValue );
+	return Con_SetConVarValueInternal_String( cvarData, spName, sValue );
 }
 
 
@@ -1292,7 +1309,7 @@ int Con_SetConVarValue( const char* spName, const glm::vec2& srValue )
 	if ( !cvarData )
 		return -1;
 
-	return Con_SetConVarValueInternal( cvarData, spName, srValue );
+	return Con_SetConVarValueInternal_Vec( cvarData, spName, srValue );
 }
 
 
@@ -1303,7 +1320,7 @@ int Con_SetConVarValue( const char* spName, const glm::vec3& srValue )
 	if ( !cvarData )
 		return -1;
 
-	return Con_SetConVarValueInternal( cvarData, spName, srValue );
+	return Con_SetConVarValueInternal_Vec( cvarData, spName, srValue );
 }
 
 
@@ -1314,7 +1331,7 @@ int Con_SetConVarValue( const char* spName, const glm::vec4& srValue )
 	if ( !cvarData )
 		return -1;
 
-	return Con_SetConVarValueInternal( cvarData, spName, srValue );
+	return Con_SetConVarValueInternal_Vec( cvarData, spName, srValue );
 }
 
 
@@ -1583,8 +1600,9 @@ void Con_BuildAutoCompleteList( const std::string& srSearch, std::vector< std::s
 		return;
 
 	std::string commandName;
+	std::string fullCommand;
 	std::vector< std::string > args;
-	Con_ParseCommandLine( srSearch, commandName, args );
+	Con_ParseCommandLine( srSearch, commandName, args, fullCommand );
 
 	str_lower( commandName );
 
@@ -1738,6 +1756,7 @@ void Con_RunCommand( std::string_view command )
 	PROF_SCOPE();
 
 	std::string commandName;
+	std::string fullCommand;
 	std::vector< std::string > args;
 
 	for ( size_t i = 0; i < command.size(); i++ )
@@ -1745,10 +1764,10 @@ void Con_RunCommand( std::string_view command )
 		commandName.clear();
 		args.clear();
 
-		Con_ParseCommandLineEx( command, commandName, args, i );
+		Con_ParseCommandLineEx( command, commandName, args, fullCommand, i );
 		str_lower( commandName );
 
-		Con_RunCommandArgs( commandName, args );
+		Con_RunCommandArgs( commandName, args, fullCommand );
 	}
 }
 
@@ -1831,7 +1850,7 @@ bool ParseVector( const char* spName, const std::vector< std::string >& args, VE
 }
 
 
-bool Con_RunCommandBaseV2( ConVarData_t* cvar, const char* name, const std::vector< std::string >& args )
+bool Con_RunCommandBaseV2( ConVarData_t* cvar, const char* name, const std::vector< std::string >& args, std::string_view fullCommand )
 {
 	bool commandCalled = false;
 
@@ -1859,49 +1878,57 @@ bool Con_RunCommandBaseV2( ConVarData_t* cvar, const char* name, const std::vect
 		{
 			case EConVarType_Bool:
 			{
-				// check for true, false, yes, no, yeah, nah, y, or n
+				// check for true, false, t, f, yes, no, yeah, nah, y, or n
 				if ( args[ 0 ].size() == 4 && ch_strncasecmp( args[ 0 ].data(), "true", 4 ) == 0 )
 				{
-					Con_SetConVarValueInternal( cvar, name, true );
+					Con_SetConVarValueInternal_Bool( cvar, name, true );
 				}
 				else if ( args[ 0 ].size() == 5 && ch_strncasecmp( args[ 0 ].data(), "false", 5 ) == 0 )
 				{
-					Con_SetConVarValueInternal( cvar, name, false );
+					Con_SetConVarValueInternal_Bool( cvar, name, false );
 				}
 				else if ( args[ 0 ].size() == 3 && ch_strncasecmp( args[ 0 ].data(), "yes", 3 ) == 0 )
 				{
-					Con_SetConVarValueInternal( cvar, name, true );
+					Con_SetConVarValueInternal_Bool( cvar, name, true );
 				}
 				else if ( args[ 0 ].size() == 2 && ch_strncasecmp( args[ 0 ].data(), "no", 2 ) == 0 )
 				{
-					Con_SetConVarValueInternal( cvar, name, false );
+					Con_SetConVarValueInternal_Bool( cvar, name, false );
 				}
 				else if ( args[ 0 ].size() == 4 && ch_strncasecmp( args[ 0 ].data(), "yeah", 4 ) == 0 )
 				{
-					Con_SetConVarValueInternal( cvar, name, true );
+					Con_SetConVarValueInternal_Bool( cvar, name, true );
 				}
 				else if ( args[ 0 ].size() == 3 && ch_strncasecmp( args[ 0 ].data(), "nah", 3 ) == 0 )
 				{
-					Con_SetConVarValueInternal( cvar, name, false );
+					Con_SetConVarValueInternal_Bool( cvar, name, false );
+				}
+				else if ( args[ 0 ].size() == 1 && ch_strncasecmp( args[ 0 ].data(), "t", 1 ) == 0 )
+				{
+					Con_SetConVarValueInternal_Bool( cvar, name, true );
+				}
+				else if ( args[ 0 ].size() == 1 && ch_strncasecmp( args[ 0 ].data(), "f", 1 ) == 0 )
+				{
+					Con_SetConVarValueInternal_Bool( cvar, name, false );
 				}
 				else if ( args[ 0 ].size() == 1 && ch_strncasecmp( args[ 0 ].data(), "y", 1 ) == 0 )
 				{
-					Con_SetConVarValueInternal( cvar, name, true );
+					Con_SetConVarValueInternal_Bool( cvar, name, true );
 				}
 				else if ( args[ 0 ].size() == 1 && ch_strncasecmp( args[ 0 ].data(), "n", 1 ) == 0 )
 				{
-					Con_SetConVarValueInternal( cvar, name, false );
+					Con_SetConVarValueInternal_Bool( cvar, name, false );
 				}
 				else
 				{
 					long value = 0;
 					if ( !ToLong3( args[ 0 ].data(), value ) )
 					{
-						Log_ErrorF( gConsoleChannel, "ConVar \"%s\", Invalid argument \"%s\" for Bool type, expected a number, true, false, yes, no, yeah, nah, y, or n\n", name, args[ 0 ].data() );
+						Log_ErrorF( gConsoleChannel, "ConVar \"%s\", Invalid argument \"%s\" for Bool type, expected a number, true, false, yes, no, yeah, nah, t, f, y, or n\n", name, args[ 0 ].data() );
 						break;
 					}
 
-					Con_SetConVarValueInternal( cvar, name, value > 0 );
+					Con_SetConVarValueInternal_Bool( cvar, name, value > 0 );
 				}
 				break;
 			}
@@ -1915,7 +1942,7 @@ bool Con_RunCommandBaseV2( ConVarData_t* cvar, const char* name, const std::vect
 					break;
 				}
 
-				Con_SetConVarValueInternal( cvar, name, (int)value );
+				Con_SetConVarValueInternal_Int( cvar, name, (int)value );
 				break;
 			}
 			case EConVarType_Float:
@@ -1928,12 +1955,12 @@ bool Con_RunCommandBaseV2( ConVarData_t* cvar, const char* name, const std::vect
 					break;
 				}
 
-				Con_SetConVarValueInternal( cvar, name, value );
+				Con_SetConVarValueInternal_Float( cvar, name, value );
 				break;
 			}
 			case EConVarType_String:
 			{
-				Con_SetConVarValueInternal( cvar, name, args[ 0 ].c_str() );
+				Con_SetConVarValueInternal_String( cvar, name, fullCommand );
 				break;
 			}
 			case EConVarType_Vec2:
@@ -1941,7 +1968,7 @@ bool Con_RunCommandBaseV2( ConVarData_t* cvar, const char* name, const std::vect
 				glm::vec2 value;
 				if ( ParseVector( name, args, value ) )
 				{
-					Con_SetConVarValueInternal( cvar, name, value );
+					Con_SetConVarValueInternal_Vec( cvar, name, value );
 				}
 
 				break;
@@ -1951,7 +1978,7 @@ bool Con_RunCommandBaseV2( ConVarData_t* cvar, const char* name, const std::vect
 				glm::vec3 value;
 				if ( ParseVector( name, args, value ) )
 				{
-					Con_SetConVarValueInternal( cvar, name, value );
+					Con_SetConVarValueInternal_Vec( cvar, name, value );
 				}
 
 				break;
@@ -1961,7 +1988,7 @@ bool Con_RunCommandBaseV2( ConVarData_t* cvar, const char* name, const std::vect
 				glm::vec4 value;
 				if ( ParseVector( name, args, value ) )
 				{
-					Con_SetConVarValueInternal( cvar, name, value );
+					Con_SetConVarValueInternal_Vec( cvar, name, value );
 				}
 
 				break;
@@ -1980,7 +2007,7 @@ bool Con_RunCommandBaseV2( ConVarData_t* cvar, const char* name, const std::vect
 }
 
 
-bool Con_RunCommandArgs( const std::string& name, const std::vector< std::string >& args )
+bool Con_RunCommandArgs( const std::string& name, const std::vector< std::string >& args, std::string_view fullCommand )
 {
 	PROF_SCOPE();
 
@@ -2012,7 +2039,7 @@ bool Con_RunCommandArgs( const std::string& name, const std::vector< std::string
 		if ( ch_strncasecmp( cvarName.data(), name.c_str(), cvarName.size() ) != 0 )
 			continue;
 
-		commandCalled = Con_RunCommandBaseV2( cvarData, name.data(), args );
+		commandCalled = Con_RunCommandBaseV2( cvarData, name.data(), args, fullCommand );
 		break;
 	}
 
@@ -2024,14 +2051,31 @@ bool Con_RunCommandArgs( const std::string& name, const std::vector< std::string
 }
 
 
-void Con_ParseCommandLine( std::string_view command, std::string& name, std::vector< std::string >& args )
+bool Con_RunCommandArgs( const std::string& name, const std::vector< std::string >& args )
 {
-	size_t i = 0;
-	Con_ParseCommandLineEx( command, name, args, i );
+	// Join args together as one string with spaces
+	std::string fullCommand;
+
+	for ( size_t i = 0; i < args.size(); i++ )
+	{
+		fullCommand += args[ i ];
+
+		if ( i + 1 < args.size() )
+			fullCommand += " ";
+	}
+
+	return Con_RunCommandArgs( name, args, fullCommand );
 }
 
 
-void Con_ParseCommandLineEx( std::string_view command, std::string& name, std::vector< std::string >& args, size_t& i )
+void Con_ParseCommandLine( std::string_view command, std::string& name, std::vector< std::string >& args, std::string& fullCommand )
+{
+	size_t i = 0;
+	Con_ParseCommandLineEx( command, name, args, fullCommand, i );
+}
+
+
+void Con_ParseCommandLineEx( std::string_view command, std::string& name, std::vector< std::string >& args, std::string& fullCommand, size_t& i )
 {
 	PROF_SCOPE();
 
@@ -2066,6 +2110,8 @@ void Con_ParseCommandLineEx( std::string_view command, std::string& name, std::v
 		if ( ch == '\r' )
 			continue;
 #endif
+
+		fullCommand += ch;
 
 		if ( ch == '\n' || ch == ';' )
 			break;

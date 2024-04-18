@@ -135,7 +135,7 @@ struct ConVarData_t
 		struct
 		{
 			ConVarFunc_String* apFunc;
-			char*              apData;
+			char**             apData;
 			const char*        aDefaultData;
 		} aString;
 
@@ -587,6 +587,18 @@ CORE_API glm::vec4&    Con_RegisterConVar_Vec4( const char* spName, const char* 
 CORE_API int&          Con_RegisterConVar_RangeInt( const char* spName, const char* spDesc, int sDefault, int sMin = INT_MIN, int sMax = INT_MAX, ConVarFlag_t sFlags = 0, ConVarFunc_Int* spCallbackFunc = nullptr );
 CORE_API float&        Con_RegisterConVar_RangeFloat( const char* spName, const char* spDesc, float sDefault, float sMin = FLT_MIN, float sMax = FLT_MAX, ConVarFlag_t sFlags = 0, ConVarFunc_Float* spCallbackFunc = nullptr );
 
+// Helper Macros for registering ConVars
+#define CONVAR_BOOL( name, desc, defaultVal, ... )                  bool& name = Con_RegisterConVar_Bool( #name, desc, defaultVal, __VA_ARGS__ )
+#define CONVAR_INT( name, desc, defaultVal, ... )                   int& name = Con_RegisterConVar_Int( #name, desc, defaultVal, __VA_ARGS__ )
+#define CONVAR_FLOAT( name, desc, defaultVal, ... )                 float& name = Con_RegisterConVar_Float( #name, desc, defaultVal, __VA_ARGS__ )
+#define CONVAR_STRING( name, desc, defaultVal, ... )                char*& name = Con_RegisterConVar_String( #name, desc, defaultVal, __VA_ARGS__ )
+#define CONVAR_VEC2( name, desc, defaultVal, ... )                  glm::vec2& name = Con_RegisterConVar_Vec2( #name, desc, defaultVal, __VA_ARGS__ )
+#define CONVAR_VEC3( name, desc, defaultVal, ... )                  glm::vec3& name = Con_RegisterConVar_Vec3( #name, desc, defaultVal, __VA_ARGS__ )
+#define CONVAR_VEC4( name, desc, defaultVal, ... )                  glm::vec4& name = Con_RegisterConVar_Vec4( #name, desc, defaultVal, __VA_ARGS__ )
+#define CONVAR_RANGE_INT( name, desc, defaultVal, min, max, ... )   int& name = Con_RegisterConVar_RangeInt( #name, desc, defaultVal, min, max, __VA_ARGS__ )
+#define CONVAR_RANGE_FLOAT( name, desc, defaultVal, min, max, ... ) float& name = Con_RegisterConVar_RangeFloat( #name, desc, defaultVal, min, max, __VA_ARGS__ )
+
+
 // Set the value of a ConVar
 // Returns:
 // -1 - The ConVar type is incorrect
@@ -663,9 +675,10 @@ CORE_API void                  Con_RunCommand( std::string_view command );
 
 // Find and run a parsed command instantly
 CORE_API bool                  Con_RunCommandArgs( const std::string& name, const std::vector< std::string >& args );
+CORE_API bool                  Con_RunCommandArgs( const std::string& name, const std::vector< std::string >& args, std::string_view fullCommand );
 
-CORE_API void                  Con_ParseCommandLine( std::string_view command, std::string& name, std::vector< std::string >& args );
-CORE_API void                  Con_ParseCommandLineEx( std::string_view command, std::string& name, std::vector< std::string >& args, size_t& i );
+CORE_API void                  Con_ParseCommandLine( std::string_view command, std::string& name, std::vector< std::string >& args, std::string& fullCommand );
+CORE_API void                  Con_ParseCommandLineEx( std::string_view command, std::string& name, std::vector< std::string >& args, std::string& fullCommand, size_t& i );
 
 CORE_API ConVarFlag_t          Con_CreateCvarFlag( const char* name );
 CORE_API const char*           Con_GetCvarFlagName( ConVarFlag_t flag );
