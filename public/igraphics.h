@@ -452,13 +452,14 @@ struct Renderable_t
 };
 
 
-// Surface Draw contains drawing information on how to draw a surface of a renderable
+// Surface Draw contains drawing information on how to draw a material of a renderable
 // It contains draw data and a mesh surface index
 // Unique for each viewport
+// TODO: Rename this to MaterialDraw_t
 struct SurfaceDraw_t
 {
 	ChHandle_t aRenderable;
-	size_t     aSurface;
+	size_t     aSurface;  // index into the renderable/model's material list
 };
 
 
@@ -810,7 +811,7 @@ struct ShaderCreate_t
 	u32                                aMaterialVarCount    = 0;
 	u32                                aMaterialSize        = 0;
 	bool                               aUseMaterialBuffer   = false;
-	u32                                aMaterialBufferIndex = 0;
+	u32                                aMaterialBufferBinding = 0;
 };
 
 
@@ -834,7 +835,7 @@ struct ShaderData_t
 	u32                     aMaterialVarCount    = 0;
 	u32                     aMaterialSize        = 0;
 	bool                    aUseMaterialBuffer   = false;
-	u32                     aMaterialBufferIndex = 0;
+	u32                     aMaterialBufferBinding = 0;
 };
 
 

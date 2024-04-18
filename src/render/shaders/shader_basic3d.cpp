@@ -150,29 +150,29 @@ static IShaderPush gShaderPush_Basic3D = {
 
 // TODO: some binding list saying which ones are materials? or only have one option for saying which binding is a material
 ShaderCreate_t gShaderCreate_Basic3D = {
-	.apName               = "basic_3d",
-	.aStages              = ShaderStage_Vertex | ShaderStage_Fragment,
-	.aBindPoint           = EPipelineBindPoint_Graphics,
-	.aFlags               = EShaderFlags_PushConstant,
-	.aDynamicState        = EDynamicState_Viewport | EDynamicState_Scissor,
-	.aVertexFormat        = VertexFormat_Position | VertexFormat_Normal | VertexFormat_TexCoord,
+	.apName                 = "basic_3d",
+	.aStages                = ShaderStage_Vertex | ShaderStage_Fragment,
+	.aBindPoint             = EPipelineBindPoint_Graphics,
+	.aFlags                 = EShaderFlags_PushConstant,
+	.aDynamicState          = EDynamicState_Viewport | EDynamicState_Scissor,
+	.aVertexFormat          = VertexFormat_Position | VertexFormat_Normal | VertexFormat_TexCoord,
 
-	.apLayoutCreate       = Shader_Basic3D_GetPipelineLayoutCreate,
-	.apGraphicsCreate     = Shader_Basic3D_GetGraphicsPipelineCreate,
+	.apLayoutCreate         = Shader_Basic3D_GetPipelineLayoutCreate,
+	.apGraphicsCreate       = Shader_Basic3D_GetGraphicsPipelineCreate,
 
 	// .aPushSize         = sizeof( Basic3D_Push ),
 	// .apPushSetup       = Shader_Basic3D_SetupPushData2,
 
-	.apShaderPush         = &gShaderPush_Basic3D,
+	.apShaderPush           = &gShaderPush_Basic3D,
 
-	.apBindings           = gBasic3D_Bindings,
-	.aBindingCount        = CH_ARR_SIZE( gBasic3D_Bindings ),
+	.apBindings             = gBasic3D_Bindings,
+	.aBindingCount          = CH_ARR_SIZE( gBasic3D_Bindings ),
 
-	.apMaterialVars       = gBasic3D_MaterialVars,
-	.aMaterialVarCount    = CH_ARR_SIZE( gBasic3D_MaterialVars ),
-	.aMaterialSize        = sizeof( Basic3D_Material ),
-	.aUseMaterialBuffer   = true,
-	.aMaterialBufferIndex = 0,  // TODO: Change this to aMaterialBufferBinding
+	.apMaterialVars         = gBasic3D_MaterialVars,
+	.aMaterialVarCount      = CH_ARR_SIZE( gBasic3D_MaterialVars ),
+	.aMaterialSize          = sizeof( Basic3D_Material ),
+	.aUseMaterialBuffer     = true,
+	.aMaterialBufferBinding = 0,
 };
 
 

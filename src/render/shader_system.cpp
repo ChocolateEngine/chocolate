@@ -345,7 +345,7 @@ bool Graphics_CreateShader( bool sRecreate, Handle sRenderPass, ShaderCreate_t& 
 	// shaderData.aPushSize            = srCreate.aPushSize;
 	// shaderData.apPushSetup          = srCreate.apPushSetup;
 
-	shaderData.aMaterialBufferIndex = srCreate.aMaterialBufferIndex;
+	shaderData.aMaterialBufferBinding = srCreate.aMaterialBufferBinding;
 	shaderData.aMaterialSize        = srCreate.aMaterialSize;
 	shaderData.aMaterialVarCount    = srCreate.aMaterialVarCount;
 	shaderData.apMaterialVars       = srCreate.apMaterialVars;
@@ -702,15 +702,15 @@ void Shader_UpdateMaterialDescriptorSets( ChHandle_t shader, ShaderData_t* shade
 		shaderMat.matIndex = matIndex++;
 	}
 
-	// update.apBindings[ shaderData->aMaterialBufferIndex ].apData = ch_calloc_count< ChHandle_t >( CH_BASIC3D_MAX_MATERIALS );
-	update.apBindings[ shaderData->aMaterialBufferIndex ].apData = ch_calloc_count< ChHandle_t >( shaderMatDataList.size() );
-	update.apBindings[ shaderData->aMaterialBufferIndex ].aCount = shaderMatDataList.size();
+	// update.apBindings[ shaderData->aMaterialBufferBinding ].apData = ch_calloc_count< ChHandle_t >( CH_BASIC3D_MAX_MATERIALS );
+	update.apBindings[ shaderData->aMaterialBufferBinding ].apData = ch_calloc_count< ChHandle_t >( shaderMatDataList.size() );
+	update.apBindings[ shaderData->aMaterialBufferBinding ].aCount = shaderMatDataList.size();
 
 	i                                                            = 0;
 
 	// for ( ChHandle_t buffer : bufferList )
 	// {
-	// 	update.apBindings[ shaderData->aMaterialBufferIndex ].apData[ i++ ] = buffer;
+	// 	update.apBindings[ shaderData->aMaterialBufferBinding ].apData[ i++ ] = buffer;
 	// }
 
 	for ( const auto& [ mat, matBuffer ] : gMaterialBuffers )
@@ -723,17 +723,17 @@ void Shader_UpdateMaterialDescriptorSets( ChHandle_t shader, ShaderData_t* shade
 		{
 			if ( shaderMat.material == mat )
 			{
-				update.apBindings[ shaderData->aMaterialBufferIndex ].apData[ shaderMat.matIndex ] = matBuffer.aBuffer;
+				update.apBindings[ shaderData->aMaterialBufferBinding ].apData[ shaderMat.matIndex ] = matBuffer.aBuffer;
 			}
 		}
 
-		// update.apBindings[ shaderData->aMaterialBufferIndex ].apData[ i++ ] = matBuffer.aBuffer;
+		// update.apBindings[ shaderData->aMaterialBufferBinding ].apData[ i++ ] = matBuffer.aBuffer;
 	}
 
 	// update.aImages = gViewportBuffers;
 	render->UpdateDescSets( &update, 1 );
 
-	free( update.apBindings[ shaderData->aMaterialBufferIndex ].apData );
+	free( update.apBindings[ shaderData->aMaterialBufferBinding ].apData );
 	free( update.apBindings );
 }
 

@@ -8,6 +8,10 @@ constexpr const char*       gpVertShader    = "shaders/debug.vert.spv";
 constexpr const char*       gpFragShader    = "shaders/debug.frag.spv";
 
 
+// CONVAR( r_wireframe_color_mode, 0 );
+constexpr glm::vec4         gWireframeColor = { 0.f, 221.f / 255.f, 1.f, 1.f };
+
+
 struct Debug_Push
 {
 	alignas( 16 ) glm::mat4 aModelMatrix;
@@ -15,6 +19,26 @@ struct Debug_Push
 	u32 aRenderable = 0;  // renderable index
 	u32 aViewport   = 0;  // viewport index
 };
+
+
+struct Debug_Material
+{
+	glm::vec4 color;
+};
+
+
+static ShaderMaterialVarDesc gDebug_MaterialVars[] = {
+	CH_SHADER_MATERIAL_VAR( Debug_Material, color, "Color", glm::vec4( 1.f, 1.f, 1.f, 1.f ) ),
+};
+
+
+static ShaderMaterialVarDesc gWireframe_MaterialVars[] = {
+	CH_SHADER_MATERIAL_VAR( Debug_Material, color, "Color", gWireframeColor ),
+};
+
+
+constexpr int COLOR_MAT_INDEX = 0;
+
 
 
 static std::unordered_map< SurfaceDraw_t*, Debug_Push > gDebugPushData;
@@ -56,8 +80,7 @@ static void Shader_Debug_SetupPushData( u32 sRenderableIndex, u32 sViewportIndex
 {
 	Debug_Push& push  = gDebugPushData[ &srDrawInfo ];
 	push.aModelMatrix = spDrawData->aModelMatrix;
-	Handle mat        = gGraphics.Model_GetMaterial( spDrawData->aModel, srDrawInfo.aSurface );
-	push.aColor       = gGraphics.Mat_GetVec4( mat, "color", { 1.f, 1.f, 1.f, 1.f } );
+	push.aColor       = spMaterialData->vars[ COLOR_MAT_INDEX ].aVec4;
 	push.aRenderable  = sRenderableIndex;
 	push.aViewport    = sViewportIndex;
 }
@@ -78,17 +101,22 @@ static IShaderPush gShaderPush_Debug = {
 
 
 ShaderCreate_t gShaderCreate_Debug = {
-	.apName           = "debug",
-	.aStages          = ShaderStage_Vertex | ShaderStage_Fragment,
-	.aBindPoint       = EPipelineBindPoint_Graphics,
-	.aFlags           = EShaderFlags_PushConstant,
-	.aDynamicState    = EDynamicState_Viewport | EDynamicState_Scissor | EDynamicState_LineWidth,
-	.aVertexFormat    = VertexFormat_Position,
-	.apInit           = nullptr,
-	.apDestroy        = nullptr,
-	.apLayoutCreate   = Shader_Debug_GetPipelineLayoutCreate,
-	.apGraphicsCreate = Shader_Debug_GetGraphicsPipelineCreate,
-	.apShaderPush     = &gShaderPush_Debug,
+	.apName               = "debug",
+	.aStages              = ShaderStage_Vertex | ShaderStage_Fragment,
+	.aBindPoint           = EPipelineBindPoint_Graphics,
+	.aFlags               = EShaderFlags_PushConstant,
+	.aDynamicState        = EDynamicState_Viewport | EDynamicState_Scissor | EDynamicState_LineWidth,
+	.aVertexFormat        = VertexFormat_Position,
+	.apInit               = nullptr,
+	.apDestroy            = nullptr,
+	.apLayoutCreate       = Shader_Debug_GetPipelineLayoutCreate,
+	.apGraphicsCreate     = Shader_Debug_GetGraphicsPipelineCreate,
+	.apShaderPush         = &gShaderPush_Debug,
+
+	.apMaterialVars       = gDebug_MaterialVars,
+	.aMaterialVarCount    = CH_ARR_SIZE( gDebug_MaterialVars ),
+	.aMaterialSize        = sizeof( Debug_Material ),
+	.aUseMaterialBuffer   = false,
 };
 
 
@@ -109,8 +137,7 @@ static void Shader_DebugLine_SetupPushData( u32 sRenderableIndex, u32 sViewportI
 {
 	Debug_Push& push  = gDebugLinePushData[ &srDrawInfo ];
 	push.aModelMatrix = spDrawData->aModelMatrix;
-	Handle mat        = gGraphics.Model_GetMaterial( spDrawData->aModel, srDrawInfo.aSurface );
-	push.aColor       = gGraphics.Mat_GetVec4( mat, "color", { 1.f, 1.f, 1.f, 1.f } );
+	push.aColor       = spMaterialData->vars[ COLOR_MAT_INDEX ].aVec4;
 	push.aRenderable  = sRenderableIndex;
 	push.aViewport    = sViewportIndex;
 }
@@ -144,16 +171,21 @@ static IShaderPush gShaderPush_DebugLine = {
 
 
 ShaderCreate_t gShaderCreate_DebugLine = {
-	.apName           = "debug_line",
-	.aBindPoint       = EPipelineBindPoint_Graphics,
-	.aFlags           = EShaderFlags_PushConstant,
-	.aDynamicState    = EDynamicState_Viewport | EDynamicState_Scissor | EDynamicState_LineWidth,
-	.aVertexFormat    = VertexFormat_Position | VertexFormat_Color,
-	.apInit           = nullptr,
-	.apDestroy        = nullptr,
-	.apLayoutCreate   = Shader_Debug_GetPipelineLayoutCreate,
-	.apGraphicsCreate = Shader_DebugLine_GetGraphicsPipelineCreate,
-	.apShaderPush     = &gShaderPush_DebugLine,
+	.apName             = "debug_line",
+	.aBindPoint         = EPipelineBindPoint_Graphics,
+	.aFlags             = EShaderFlags_PushConstant,
+	.aDynamicState      = EDynamicState_Viewport | EDynamicState_Scissor | EDynamicState_LineWidth,
+	.aVertexFormat      = VertexFormat_Position | VertexFormat_Color,
+	.apInit             = nullptr,
+	.apDestroy          = nullptr,
+	.apLayoutCreate     = Shader_Debug_GetPipelineLayoutCreate,
+	.apGraphicsCreate   = Shader_DebugLine_GetGraphicsPipelineCreate,
+	.apShaderPush       = &gShaderPush_DebugLine,
+
+	.apMaterialVars     = gDebug_MaterialVars,
+	.aMaterialVarCount  = CH_ARR_SIZE( gDebug_MaterialVars ),
+	.aMaterialSize      = sizeof( Debug_Material ),
+	.aUseMaterialBuffer = false,
 };
 
 
@@ -162,10 +194,6 @@ CH_REGISTER_SHADER( gShaderCreate_DebugLine );
 
 // -----------------------------------------------------------------------------------------------
 // Wireframe Shader is just the debug shader with a different push constant lol
-
-
-// CONVAR( r_wireframe_color_mode, 0 );
-constexpr glm::vec4 gWireframeColor = { 0.f, 221.f / 255.f, 1.f, 1.f };
 
 
 static void Shader_Wireframe_ResetPushData()
@@ -178,8 +206,7 @@ static void Shader_Wireframe_SetupPushData( u32 sRenderableIndex, u32 sViewportI
 {
 	Debug_Push& push  = gWireframePushData[ &srDrawInfo ];
 	push.aModelMatrix = spDrawData->aModelMatrix;
-	Handle mat        = gGraphics.Model_GetMaterial( spDrawData->aModel, srDrawInfo.aSurface );
-	push.aColor       = gGraphics.Mat_GetVec4( mat, "color", gWireframeColor );
+	push.aColor       = spMaterialData->vars[ COLOR_MAT_INDEX ].aVec4;
 	push.aRenderable  = sRenderableIndex;
 	push.aViewport    = sViewportIndex;
 }
@@ -200,17 +227,22 @@ static IShaderPush gShaderPush_Wireframe = {
 
 
 ShaderCreate_t gShaderCreate_Wireframe = {
-	.apName           = "wireframe",
-	.aStages          = ShaderStage_Vertex | ShaderStage_Fragment,
-	.aBindPoint       = EPipelineBindPoint_Graphics,
-	.aFlags           = EShaderFlags_PushConstant,
-	.aDynamicState    = EDynamicState_Viewport | EDynamicState_Scissor | EDynamicState_LineWidth,
-	.aVertexFormat    = VertexFormat_Position,
-	.apInit           = nullptr,
-	.apDestroy        = nullptr,
-	.apLayoutCreate   = Shader_Debug_GetPipelineLayoutCreate,
-	.apGraphicsCreate = Shader_Debug_GetGraphicsPipelineCreate,
-	.apShaderPush     = &gShaderPush_Wireframe,
+	.apName             = "wireframe",
+	.aStages            = ShaderStage_Vertex | ShaderStage_Fragment,
+	.aBindPoint         = EPipelineBindPoint_Graphics,
+	.aFlags             = EShaderFlags_PushConstant,
+	.aDynamicState      = EDynamicState_Viewport | EDynamicState_Scissor | EDynamicState_LineWidth,
+	.aVertexFormat      = VertexFormat_Position,
+	.apInit             = nullptr,
+	.apDestroy          = nullptr,
+	.apLayoutCreate     = Shader_Debug_GetPipelineLayoutCreate,
+	.apGraphicsCreate   = Shader_Debug_GetGraphicsPipelineCreate,
+	.apShaderPush       = &gShaderPush_Wireframe,
+
+	.apMaterialVars     = gWireframe_MaterialVars,
+	.aMaterialVarCount  = CH_ARR_SIZE( gWireframe_MaterialVars ),
+	.aMaterialSize      = sizeof( Debug_Material ),
+	.aUseMaterialBuffer = false,
 };
 
 
