@@ -49,6 +49,10 @@ struct ChVector
 	// Resizes the buffer
 	void     resize( uint32_t sSize, bool sZero = true )
 	{
+#ifdef _DEBUG
+		// CH_ASSERT()
+#endif
+
 		if ( sSize > 0 && sSize > aCapacity )
 		{
 			void* newData = realloc( apData, sSize * sizeof( T ) );
@@ -288,17 +292,31 @@ struct ChVector
 	// copying
 	void assign( const ChVector& other )
 	{
+		if ( !other.aSize )
+			return;
+
 		resize( other.aSize );
-		std::move( other.begin(), other.end(), apData );
+
+		CH_ASSERT( apData );
+		memcpy( apData, other.apData, other.aSize * sizeof( T ) );
+
+		// std::move( other.begin(), other.end(), apData );
 	}
 
 	// moving
 	void assign( ChVector&& other )
 	{
+		if ( !other.aSize )
+			return;
+
+		resize( other.aSize );
+		CH_ASSERT( apData );
+		memcpy( apData, other.apData, other.aSize * sizeof( T ) );
+
 		// swap the values of this one with that one
-		std::swap( aSize, other.aSize );
-		std::swap( aCapacity, other.aCapacity );
-		std::swap( apData, other.apData );
+		// std::swap( aSize, other.aSize );
+		// std::swap( aCapacity, other.aCapacity );
+		// std::swap( apData, other.apData );
 	}
 
 	ChVector& operator=( const ChVector& other )
@@ -321,7 +339,8 @@ struct ChVector
 			consolidate();
 		}
 
-		assign( std::move( other ) );
+		// assign( std::move( other ) );
+		assign( other );
 		return *this;
 	}
 
@@ -334,7 +353,8 @@ struct ChVector
 	// moving
 	ChVector( ChVector&& other )
 	{
-		assign( std::move( other ) );
+		// assign( std::move( other ) );
+		assign( other );
 	}
 };
 
