@@ -32,8 +32,8 @@ constexpr const char*  CH_DEFAULT_WINDOW_NAME = "App Window";
 extern VkFormat        gColorFormat;
 extern VkColorSpaceKHR gColorSpace;
 
-extern ConVar          r_msaa;
-extern ConVar          r_msaa_samples;
+CONVAR_BOOL_EXT( r_msaa );
+CONVAR_INT_EXT( r_msaa_samples );
 
 extern ChHandle_t      gMissingTexHandle;
 

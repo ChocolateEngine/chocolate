@@ -9,13 +9,12 @@
 
 #include <SDL.h>
 
-// CONVAR( developer, 1 );
-CONVAR( log_dev_global, 1 );
+CONVAR_INT( log_dev_global, 1, "Base Developer Logging Level for all Log Channels", 0 );
 
 LogColor                                       gCurrentColor       = LogColor::Default;
 LogChannel                                     gLC_General         = INVALID_LOG_CHANNEL;
 LogChannel                                     gLC_Logging         = INVALID_LOG_CHANNEL;
-static std::string                             gDefaultChannelName = "[General]";
+static std::string                             gDefaultChannelName = "General";
 static std::mutex                              gLogMutex;
 
 // apparently you could of added stuff to this before static initialization got to this, and then you lose some log channels as a result
@@ -90,7 +89,7 @@ constexpr int Win32GetColor( LogColor color )
 void Win32SetColor( LogColor color )
 {
 	// um
-	static HANDLE handle = sys_get_console_window();
+	HANDLE handle = sys_get_console_window();
 
 	if ( !handle )
 	{
@@ -374,7 +373,7 @@ static std::string FormatLog( LogChannel_t* channel, LogType sType, const char* 
 		return spMessage;
 
 	// Split by New Line characters
-	std::string output;
+	std::string output = "";
 
 	size_t      len  = strlen( spMessage );
 
@@ -699,7 +698,7 @@ inline bool Log_DevLevelVisible( const Log& log )
 			return true;
 	}
 
-	if ( log_dev_global.GetInt() < (int)log.aType && Log_IsDevType( log.aType ) )
+	if ( log_dev_global < (int)log.aType && Log_IsDevType( log.aType ) )
 		return false;
 
 	return true;
@@ -1083,15 +1082,15 @@ int Log_GetChannelDevLevel( LogChannel handle )
 {
 	LogChannel_t* channel = Log_GetChannelData( handle );
 	if ( !channel )
-		return log_dev_global.GetFloat();
+		return log_dev_global;
 
-	return std::max( (int)log_dev_global.GetFloat(), channel->aDevLevel );
+	return std::max( log_dev_global, channel->aDevLevel );
 }
 
 
 int Log_GetDevLevel()
 {
-	return log_dev_global.GetFloat();
+	return log_dev_global;
 }
 
 
@@ -1239,7 +1238,7 @@ bool Log_ShouldAddLog( LogChannel sChannel, LogType sLevel )
 		return true;
 
 	// Is the global dev level less than the log's developer level?
-	if ( log_dev_global.GetInt() < static_cast< int >( sLevel ) )
+	if ( log_dev_global < static_cast< int >( sLevel ) )
 	{
 		// Check if the channel dev level is less than the log's developer level
 		LogChannel_t* channel = Log_GetChannelData( sChannel );
@@ -1250,7 +1249,7 @@ bool Log_ShouldAddLog( LogChannel sChannel, LogType sLevel )
 		}
 
 		// log_dev_global is the base value for every channel
-		if ( channel->aDevLevel <= log_dev_global.GetInt() )
+		if ( channel->aDevLevel <= log_dev_global )
 			return false;
 
 		// Don't even save this log, it's probably flooding the log history
@@ -1465,8 +1464,9 @@ void CORE_API Log_DevF( u8 sLvl, const char* spFmt, ... )
 
 
 void log_channel_dropdown(
-	const std::vector< std::string >& args,  // arguments currently typed in by the user
-	std::vector< std::string >& results )      // results to populate the dropdown list with
+  const std::vector< std::string >& args,         // arguments currently typed in by the user
+  const std::string&                fullCommand,  // the full command line the user has typed in
+  std::vector< std::string >&       results )     // results to populate the dropdown list with
 {
 	for ( const auto& channel : GetLogChannels() )
 	{
@@ -1656,8 +1656,9 @@ CONCMD_VA( log_dump, "Dump Logging History to file" )
 
 
 static void log_dev_dropdown(
-  const std::vector< std::string >& args,  // arguments currently typed in by the user
-  std::vector< std::string >&       results )    // results to populate the dropdown list with
+  const std::vector< std::string >& args,         // arguments currently typed in by the user
+  const std::string&                fullCommand,  // the full command line the user has typed in
+  std::vector< std::string >&       results )     // results to populate the dropdown list with
 {
 	for ( const LogChannel_t& channel : GetLogChannels() )
 	{

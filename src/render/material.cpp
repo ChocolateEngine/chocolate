@@ -725,7 +725,7 @@ bool Graphics_ParseMaterial( const std::string& srName, const std::string& srPat
 				{
 					default:
 					{
-						Log_ErrorF( "Invalid Material Array Type: Has %d elements, only accepts 2, 3, or 4 elements\n", cur.aObjects.size() );
+						Log_ErrorF( "Invalid Material Vector Type: Has %d elements, only accepts 2, 3, or 4 elements\n", cur.aObjects.size() );
 						break;
 					}
 

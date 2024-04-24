@@ -21,8 +21,6 @@ InputSystem* input = new InputSystem;
 
 LOG_REGISTER_CHANNEL( InputSystem, LogColor::Default );
 
-CONVAR( in_show_mouse_events, 0 );
-
 
 static ModuleInterface_t gInterfaces[] = {
 	{ input, IINPUTSYSTEM_NAME, IINPUTSYSTEM_HASH }

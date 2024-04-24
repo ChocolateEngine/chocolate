@@ -17,8 +17,8 @@ ImFont*                  gBuiltInFont  = nullptr;
 double                   gRealTime     = 0.0;
 // Rml::Context*            gRmlContext   = nullptr;
 
-CONVAR( ui_show_fps, 1, CVARF_ARCHIVE, "Show a Framerate Counter Window" );
-CONVAR( ui_show_messages, 1, CVARF_ARCHIVE, "Show Debug Messages in a Window" );
+CONVAR_BOOL( ui_show_fps, 1, CVARF_ARCHIVE, "Show a Framerate Counter Window" );
+CONVAR_BOOL( ui_show_messages, 1, CVARF_ARCHIVE, "Show Debug Messages in a Window" );
 
 static ModuleInterface_t gInterfaces[] = {
 	{ gui, IGUI_NAME, IGUI_HASH }
@@ -61,7 +61,7 @@ void GuiSystem::DrawGui()
 
 	wasConsoleOpen = aConsoleShown;
 
-	if ( !ui_show_fps.GetBool() && !ui_show_messages.GetBool() )
+	if ( !ui_show_fps && !ui_show_messages )
 	{
 		prevtick = SDL_GetTicks();
 		return;

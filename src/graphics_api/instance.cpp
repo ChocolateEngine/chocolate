@@ -19,9 +19,9 @@ static int  gDebugUtils  = Args_Register( true, "Vulkan Debug Tools", "-vk-no-de
 
 
 #if _DEBUG
-CONVAR( vk_debug_messages, 1 );
+CONVAR_BOOL( vk_debug_messages, 1, "" );
 #else
-CONVAR( vk_debug_messages, 0 );
+CONVAR_BOOL( vk_debug_messages, 0, "" );
 #endif
 
 
@@ -34,8 +34,8 @@ CONVAR( vk_debug_messages, 0 );
 	bool                  gEnableValidationLayers = Args_Register( false, "Enable Vulkan Validation Layers Extensions", "-vk-valid" );
 	constexpr char const* gpValidationLayers[]    = { "VK_LAYER_KHRONOS_validation" };
 
-	CONVAR( vk_verbose, 0 );
-	CONVAR( vk_formatted, 1 );
+	CONVAR_BOOL( vk_verbose, 0, "" );
+	CONVAR_BOOL( vk_formatted, 1, "" );
 #endif
 
 
@@ -96,7 +96,7 @@ int gVkStripError = 18;
 VKAPI_ATTR VkBool32 VKAPI_CALL VK_DebugCallback( VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, VkDebugUtilsMessageTypeFlagsEXT messageType,
                                               const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData )
 {
-	if ( !gEnableValidationLayers || !vk_debug_messages.GetBool() )
+	if ( !gEnableValidationLayers || !vk_debug_messages )
 		return VK_FALSE;
 
 	const Log* log = Log_GetLastLog();

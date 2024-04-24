@@ -24,19 +24,20 @@ u32                                    Shader_Basic3D_UpdateMaterialData( Handle
 size_t                                 gModelDrawCalls = 0;
 size_t                                 gVertsDrawn     = 0;
 
+// TODO: we need one per viewport
 extern ChVector< Shader_VertexData_t > gDebugLineVerts;
 
-CONVAR( r_vis, 1 );
-CONVAR( r_vis_lock, 0 );
+CONVAR_BOOL( r_vis, 1, "Enable or Disable Visibility Testing" );
+CONVAR_BOOL( r_vis_lock, 0, "Pause Visibility Testing" );
 
-CONVAR( r_line_thickness, 2 );
+CONVAR_FLOAT( r_line_thickness, 2, "Debug Line Thickness" );
 
-CONVAR( r_show_draw_calls, 0 );
+CONVAR_BOOL( r_show_draw_calls, 0, "" );
 
-CONVAR( r_random_blend_shapes, 1 );
-CONVAR( r_reset_blend_shapes, 0 );
+CONVAR_BOOL( r_random_blend_shapes, 0, "" );
+CONVAR_BOOL( r_reset_blend_shapes, 0, "" );
 
-extern ConVar r_wireframe;
+CONVAR_BOOL_EXT( r_wireframe );
 
 
 bool Graphics_ViewFrustumTest( Renderable_t* spModelDraw, ViewportShader_t& srViewport )

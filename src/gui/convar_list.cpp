@@ -132,35 +132,32 @@ void GuiSystem::DrawConVarList( bool wasOpen )
 
 	if ( ImGui::BeginTable( "table1", 5, ImGuiTableFlags_RowBg | ImGuiTableFlags_Borders | ImGuiTableFlags_Resizable ) )
 	{
-		for ( uint32_t i = 0, row = 0; i < Con_GetConVarCount(); i++ )
+		// Only ConVars here, no ConCommands, that will be in another tab
+		u32 i = 0, row = 0;
+		for ( const auto& [ cvarName, cvarData ] : Con_GetConVarMap() )
 		{
-			ConVarBase* cvarBase = Con_GetConVar( i );
-			if ( !cvarBase )
-				continue;
-
-			// Only ConVars here, no ConCommands, that will be in another tab
-			if ( typeid( *cvarBase ) != typeid( ConVar ) )
-				continue;
-
-			ConVar* cvar = static_cast< ConVar* >( cvarBase );
+			const char* cvarDesc = Con_GetConVarDesc( cvarName.data() );
 
 			ImGui::TableNextRow();
 
 			ImGui::TableSetColumnIndex( 0 );
-			ImGui::TextUnformatted( cvar->aName );
+			ImGui::TextUnformatted( cvarName.data() );
 
 			// ImGui::TableSetColumnIndex( 1 );
 			// if ( cvar->aDesc )
 			{
 				ImGui::PushStyleColor( ImGuiCol_Text, ToImCol( LogColor::Cyan ) );
-				ImGui::TextWrapped( cvar->aDesc ? cvar->aDesc : "" );
+				ImGui::TextWrapped( cvarDesc ? cvarDesc : "" );
 				ImGui::PopStyleColor();
 			}
 
 			ImGui::TableSetColumnIndex( 1 );
-			ImGui::TextUnformatted( cvar->GetChar() );
+			ImGui::TextUnformatted( cvarName.data() );
 
 			ImGui::TableSetColumnIndex( 2 );
+
+			// TODO: update this for new convar system
+#if 0
 			if ( !ch_strcmplen( cvar->apData->aDefaultValueLen, cvar->apData->apDefaultValue, cvar->GetValueLen(), cvar->apData->apValue ) )
 			{
 				ImGui::PushStyleColor( ImGuiCol_Text, ToImCol( LogColor::Yellow ) );
@@ -178,8 +175,11 @@ void GuiSystem::DrawConVarList( bool wasOpen )
 			{
 				ImGui::TextUnformatted( "default" );
 			}
+#endif
 
 			ImGui::TableSetColumnIndex( 3 );
+
+#if 0
 			if ( cvar->apData->apFunc )
 			{
 				ImGui::PushStyleColor( ImGuiCol_Text, ToImCol( LogColor::Yellow ) );
@@ -190,6 +190,7 @@ void GuiSystem::DrawConVarList( bool wasOpen )
 			{
 				ImGui::TextUnformatted( "No Callback" );
 			}
+#endif
 
 			ImGui::TableSetColumnIndex( 4 );
 
@@ -198,7 +199,7 @@ void GuiSystem::DrawConVarList( bool wasOpen )
 			for ( size_t fi = 0; fi < Con_GetCvarFlagCount(); fi++ )
 			{
 				ConVarFlag_t flag = ( 1 << fi );
-				if ( cvar->aFlags & flag )
+				if ( cvarData->aFlags & flag )
 				{
 					if ( !cvarFlags.empty() )
 					{

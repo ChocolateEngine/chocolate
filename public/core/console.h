@@ -24,10 +24,7 @@ Declares the sdfhuosdfhuiosdfhusdfhuisfhu
 #endif /* __unix__  */
 
 
-class ConVarBase;
 class ConCommand;
-class ConVar;
-class ConVarRef;
 
 struct ConVarData_t;
 
@@ -43,20 +40,16 @@ enum ECVarFlagChange
 // If the flag has a registered callback function, then we have to check that first before we can change the cvar value, or run the command.
 // If it returns true, we can proceed normally.
 // If it returns false, don't change the ConVar value or run the ConCommand.
-using ConVarFlagChangeFunc = bool( ConVarBase* spBase, const std::vector< std::string >& args );
-using ConVarFlagChangeFunc2 = bool( ConVarData_t* spBase, const std::vector< std::string >& args );
+using ConVarFlagChangeFunc = bool( const std::string& sName, const std::vector< std::string >& args, const std::string& fullCommand );
 
 // Function to call for a Console Command
-using ConCommandFunc = void( const std::vector< std::string >& args );
-
-// Callback Function for when a ConVar Value Changes
-using ConVarFunc = void( const std::string& prevString, float prevFloat, const std::vector< std::string >& args );
+using ConCommandFunc = void( const std::vector< std::string >& args, const std::string& fullCommand );
 
 // Callback Function for when a ConVar Value Changes
 using ConVarFunc_Bool = void( bool sPrevValue, bool& newValue );
 using ConVarFunc_Int = void( int sPrevValue, int& newValue );
 using ConVarFunc_Float = void( float sPrevValue, float& newValue );
-using ConVarFunc_String = void( const char* sPrevValue, const char*& newValue );
+using ConVarFunc_String = void( const char* sPrevValue, char*& newValue );
 using ConVarFunc_Vec2 = void( const glm::vec2& sPrevValue, glm::vec2& newValue );
 using ConVarFunc_Vec3 = void( const glm::vec3& sPrevValue, glm::vec3& newValue );
 using ConVarFunc_Vec4 = void( const glm::vec4& sPrevValue, glm::vec4& newValue );
@@ -64,9 +57,10 @@ using ConVarFunc_Vec4 = void( const glm::vec4& sPrevValue, glm::vec4& newValue )
 // Callback Function for populating an autocomplete list for a ConCommand
 // TODO: Support ConVar dropdowns
 using ConCommandDropdownFunc = void(
-  const std::vector< std::string >& args,    // arguments currently typed in by the user
-  std::vector< std::string >&       results  // results to populate the dropdown list with
-  );
+  const std::vector< std::string >& args,         // arguments currently typed in by the user
+  const std::string&                fullCommand,  // the full command string
+  std::vector< std::string >&       results       // results to populate the dropdown list with
+);
 
 // Callback function to add data to the config.cfg file written from CVARF_ARCHIVE
 using FArchive = void( std::string& srOutput );
@@ -74,6 +68,15 @@ using FArchive = void( std::string& srOutput );
 // ConCommand console dropdown list function
 
 using ConVarFlag_t = size_t;
+
+
+struct ConVarFlagData_t
+{
+	ConVarFlag_t          flag;
+	const char*           name;
+	size_t                nameLen;
+	ConVarFlagChangeFunc* apCallback = nullptr;
+};
 
 
 // maybe change to config option?
@@ -188,83 +191,53 @@ struct ChConfigOptionDropDown_t
 };
 
 
-class CORE_API ConVarBase
+class CORE_API ConCommand
 {
 public:
-	ConVarBase( const char* name, ConVarFlag_t flags = 0 );
-	ConVarBase( const char* name, const char* desc );
-	ConVarBase( const char* name, ConVarFlag_t flags, const char* desc );
 
-	virtual std::string		GetPrintMessage() = 0;
+	ConCommand( const char* name, ConCommandFunc* func, ConVarFlag_t flags = 0 )
+	{
+		Init( name, nullptr, flags, func, nullptr );
+	}
 
-	const char*             GetName();
-	const char*             GetDesc();
-	ConVarFlag_t            GetFlags();
+	ConCommand( const char* name, ConCommandFunc* func, const char* desc )
+	{
+		Init( name, desc, 0, func, nullptr );
+	}
 
-	friend class ConCommand;
-	friend class ConVar;
-	friend class ConVarRef;
-	friend class Console;
+	ConCommand( const char* name, ConCommandFunc* func, ConCommandDropdownFunc* dropDownFunc )
+	{
+		Init( name, nullptr, 0, func, dropDownFunc );
+	}
 
+	ConCommand( const char* name, ConCommandFunc* func, ConVarFlag_t flags, ConCommandDropdownFunc* dropDownFunc )
+	{
+		Init( name, nullptr, flags, func, dropDownFunc );
+	}
+	
+	ConCommand( const char* name, ConCommandFunc* func, ConVarFlag_t flags, const char* desc )
+	{
+		Init( name, desc, flags, func, nullptr );
+	}
+
+	ConCommand( const char* name, ConCommandFunc* func, ConVarFlag_t flags, const char* desc, ConCommandDropdownFunc* dropDownFunc )
+	{
+		Init( name, desc, flags, func, dropDownFunc );
+	}
+
+	void                    Init( const char* name, const char* desc, ConVarFlag_t flags, ConCommandFunc* func, ConCommandDropdownFunc* dropDownFunc );
+
+	std::string             GetPrintMessage();
+
+	ConCommandFunc*         apFunc;
+	ConCommandDropdownFunc* apDropDownFunc;
 	const char*             aName;
 	const char*             aDesc;
 	ConVarFlag_t            aFlags;
 
-private:
-	// NO COPYING!!
-	ConVarBase( const ConVarBase& );
-};
-
-
-// TODO: make a command argument tokenizer, so you can get individial arguments, or the raw command string
-class CORE_API ConCommand : public ConVarBase
-{
-public:
-
-	ConCommand( const char* name, ConCommandFunc* func, ConVarFlag_t flags = 0 ):
-		ConVarBase( name, flags )
-	{
-		Init( func, nullptr );
-	}
-
-	ConCommand( const char* name, ConCommandFunc* func, const char* desc ) :
-		ConVarBase( name, desc )
-	{
-		Init( func, nullptr );
-	}
-
-	ConCommand( const char* name, ConCommandFunc* func, ConCommandDropdownFunc* dropDownFunc ):
-		ConVarBase( name )
-	{
-		Init( func, dropDownFunc );
-	}
-
-	ConCommand( const char* name, ConCommandFunc* func, ConVarFlag_t flags, ConCommandDropdownFunc* dropDownFunc ):
-		ConVarBase( name, flags )
-	{
-		Init( func, dropDownFunc );
-	}
-	
-	ConCommand( const char* name, ConCommandFunc* func, ConVarFlag_t flags, const char* desc ) :
-		ConVarBase( name, flags, desc )
-	{
-		Init( func, nullptr );
-	}
-
-	ConCommand( const char* name, ConCommandFunc* func, ConVarFlag_t flags, const char* desc, ConCommandDropdownFunc* dropDownFunc ) :
-		ConVarBase( name, flags, desc )
-	{
-		Init( func, dropDownFunc );
-	}
-
-	void Init( ConCommandFunc* func, ConCommandDropdownFunc* dropDownFunc );
-
-	std::string GetPrintMessage(  ) override;
-
-	ConCommandFunc*         apFunc;
-	ConCommandDropdownFunc* apDropDownFunc;
-
-	friend class Console;
+	const char*  GetName();
+	const char*  GetDesc();
+	ConVarFlag_t GetFlags();
 
 private:
 
@@ -273,298 +246,25 @@ private:
 };
 
 
-struct ConVarData
-{
-	ConVarData()
-	{
-	}
-
-	~ConVarData();
-
-	u32         aDefaultValueLen;
-	u32         aValueLen;
-
-	char*       apDefaultValue = nullptr;
-	char*       apValue        = nullptr;
-
-	float       aDefaultValueFloat;
-	float       aValueFloat;
-	ConVarFunc* apFunc;
-
-   private:
-	// NO COPYING!!
-	ConVarData( const ConVarData& );
-};
-
-
-#define CVAR_OP_EQ_SELF( otherType, leftValue, otherValue ) \
-	void    operator*=( otherType& other )    { return SetValue( leftValue * otherValue ); } \
-	void    operator/=( otherType& other )    { return SetValue( leftValue / otherValue ); } \
-	void    operator+=( otherType& other )    { return SetValue( leftValue + otherValue ); } \
-	void    operator-=( otherType& other )    { return SetValue( leftValue - otherValue ); }
-
-#define CVAR_OP( outType, otherType, leftValue, otherValue ) \
-	bool    operator<=( otherType& other )    { return leftValue <= otherValue; } \
-	bool    operator>=( otherType& other )    { return leftValue >= otherValue; } \
-	bool    operator!=( otherType& other )    { return leftValue != otherValue; } \
-	bool    operator==( otherType& other )    { return leftValue == otherValue; } \
-                                                                                         \
-	outType operator*( otherType& other )     { return leftValue * otherValue;  } \
-	outType operator/( otherType& other )     { return leftValue / otherValue;  } \
-	outType operator+( otherType& other )     { return leftValue + otherValue;  } \
-	outType operator-( otherType& other )     { return leftValue - otherValue;  }
-
-
-// TODO: allow convars to be able to be linked
-class CORE_API ConVar : public ConVarBase
-{
-public:
-
-	ConVar( const char* name, std::string_view defaultValue, ConVarFlag_t flags = 0 ) :
-		ConVarBase( name, flags )
-	{
-		Init( defaultValue, nullptr );
-	}
-
-	ConVar( const char* name, std::string_view defaultValue, const char* desc ) :
-		ConVarBase( name, desc )
-	{
-		Init( defaultValue, nullptr );
-	}
-
-	ConVar( const char* name, std::string_view defaultValue, ConVarFlag_t flags, const char* desc ) :
-		ConVarBase( name, flags, desc )
-	{
-		Init( defaultValue, nullptr );
-	}
-
-	ConVar( const char* name, std::string_view defaultValue, ConVarFlag_t flags, const char* desc, ConVarFunc callback ) :
-		ConVarBase( name, flags, desc )
-	{
-		Init( defaultValue, callback );
-	}
-
-
-	ConVar( const char* name, float defaultValue, ConVarFlag_t flags = 0 ):
-		ConVarBase( name, flags )
-	{
-		Init( defaultValue, nullptr );
-	}
-
-	ConVar( const char* name, float defaultValue, const char* desc ) :
-		ConVarBase( name, desc )
-	{
-		Init( defaultValue, nullptr );
-	}
-
-	ConVar( const char* name, float defaultValue, ConVarFlag_t flags, const char* desc ) :
-		ConVarBase( name, flags, desc )
-	{
-		Init( defaultValue, nullptr );
-	}
-
-	ConVar( const char* name, float defaultValue, ConVarFlag_t flags, const char* desc, ConVarFunc* callback ) :
-		ConVarBase( name, flags, desc )
-	{
-		Init( defaultValue, callback );
-	}
-
-
-	ConVar( const char* name, std::string_view defaultValue, ConVarFunc* callback ) :
-		ConVarBase( name )
-	{
-		Init( defaultValue, callback );
-	}
-
-	ConVar( const char* name, float defaultValue, ConVarFunc* callback ):
-		ConVarBase( name )
-	{
-		Init( defaultValue, callback );
-	}
-
-	~ConVar();
-	
-	void               Init( std::string_view defaultValue, ConVarFunc* func );
-	void               Init( float defaultValue, ConVarFunc* func );
-
-	std::string        GetPrintMessage() override;
-
-	void               SetValue( std::string_view value );
-	void               SetValue( float value );
-
-	void               Reset();
-
-	const char*        GetChar() const;
-	u32                GetValueLen() const;
-	std::string_view   GetValue() const;
-	float              GetFloat() const;
-	int                GetInt() const;
-	bool               GetBool() const;  // is aValueFloat equal to 1.f?
-
-	// operators !!!!!!
-
-	operator const float&() { return apData->aValueFloat; }
-	//operator double()                                   { return aValueFloat; }
-	//operator bool()                                     { return GetBool(); }
-	// operator const std::string&()                       { return aValue.data(); }
-	operator std::string_view()                         { return apData->apValue; }
-	operator const char*()                              { return apData->apValue; }
-
-	bool    operator==( const bool& other )             { return other == GetBool(); }
-	bool    operator==( const float& other )            { return other == apData->aValueFloat; }
-	bool    operator==( const double& other )           { return other == apData->aValueFloat; }
-	bool    operator==( const std::string& other )      { return ch_strcmplen( other, apData->aValueLen, apData->apValue ); }
-	bool    operator==( const char* other )             { return ch_strcmplen( other, apData->aValueLen, apData->apValue ); }
-
-	bool    operator!=( const bool& other )             { return other != GetBool(); }
-	bool    operator!=( const float& other )            { return other != apData->aValueFloat; }
-	bool    operator!=( const double& other )           { return other != apData->aValueFloat; }
-	bool    operator!=( const std::string& other )      { return !ch_strcmplen( other, apData->aValueLen, apData->apValue ); }
-	bool    operator!=( const char* other )             { return !ch_strcmplen( other, apData->aValueLen, apData->apValue ); }
-
-	void    operator=( const bool& other )              { SetValue( other ? 1.f : 0.f ); }
-	void    operator=( const float& other )             { SetValue( other ); }
-//	void    operator=( const double& other )            { SetValue( other ); }
-	void    operator=( const std::string& other )       { SetValue( other ); }
-	void    operator=( const char* other )              { SetValue( other ); }
-
-	CVAR_OP_EQ_SELF(    const float,    GetFloat(), other );
-	CVAR_OP_EQ_SELF(    const double,   GetFloat(), other );
-
-	CVAR_OP_EQ_SELF(    const ConVar,   GetFloat(), other.GetFloat() );
-	CVAR_OP( float,     const ConVar,   GetFloat(), other.GetFloat() );
-
-	bool    operator<=( ConVarRef& other );
-	bool    operator>=( ConVarRef& other );
-	bool    operator==( ConVarRef& other );
-	bool    operator!=( ConVarRef& other );
-
-	float   operator*( ConVarRef& other );
-	float   operator/( ConVarRef& other );
-	float   operator+( ConVarRef& other );
-	float   operator-( ConVarRef& other );
-
-	friend class Console;
-	friend class ConVarRef;
-
-	ConVarData* apData;
-
-private:
-	// NO COPYING!!
-	ConVar( const ConVar& );
-};
-
-
-class CORE_API ConVarRef : public ConVarBase
-{
-public:
-
-	ConVarRef( const char* name ): ConVarBase( name )
-	{
-		Init(  );
-	}
-
-	void                Init();
-	void                SetReference( ConVar* ref );
-	bool                Valid();  // do we have a pointer to another cvar or not?
-
-	std::string         GetPrintMessage(  ) override;
-
-	void                SetValue( const std::string& value );
-	void                SetValue( float value );
-
-	std::string_view    GetValue();
-	float               GetFloat();
-	bool                GetBool();  // is aValueFloat equal to 1.f?
-
-	bool aValid = false;
-	ConVar* apRef = nullptr;
-
-	// less operators !!!!!!
-
-	operator float()                                    { return GetFloat(); }
-	//operator double()                                   { return GetFloat(); }
-	//operator bool()                                     { return GetBool(); }
-	operator std::string_view()                         { return GetValue(); }
-	operator const char*()                              { return GetValue().data(); }
-
-	bool    operator==( const bool& other )             { return other == GetBool(); }
-	float   operator==( const float& other )            { return other == GetFloat(); }
-	double  operator==( const double& other )           { return other == GetFloat(); }
-	bool    operator==( const std::string& other )      { return other == GetValue(); }
-	bool    operator==( const char* other )             { return other == GetValue(); }
-
-	bool    operator!=( const bool& other )             { return other != GetBool(); }
-	float   operator!=( const float& other )            { return other != GetFloat(); }
-	double  operator!=( const double& other )           { return other != GetFloat(); }
-	bool    operator!=( const std::string& other )      { return other != GetValue(); }
-	bool    operator!=( const char* other )             { return other != GetValue(); }
-
-	void    operator=( const bool& other )              { SetValue( other ? 1.f : 0.f ); }
-	void    operator=( const float& other )             { SetValue( other ); }
-	void    operator=( const double& other )            { SetValue( other ); }
-	void    operator=( const std::string& other )       { SetValue( other ); }
-	void    operator=( const char* other )              { SetValue( other ); }
-
-	CVAR_OP_EQ_SELF(    const float,    GetFloat(), other );
-	CVAR_OP_EQ_SELF(    const double,   GetFloat(), other );
-
-	CVAR_OP_EQ_SELF(    const ConVar,   GetFloat(), other.GetFloat() );
-	CVAR_OP( float,     const ConVar,   GetFloat(), other.GetFloat() );
-
-	CVAR_OP_EQ_SELF(    ConVarRef,      GetFloat(), other.GetFloat() );
-	CVAR_OP( float,     ConVarRef,      GetFloat(), other.GetFloat() );
-
-	friend class Console;
-
-private:
-
-	// NO COPYING!!
-	ConVarRef( const ConVarRef& );
-};
-
-
-#define CONVAR( name, ... ) \
-	ConVar name( #name, __VA_ARGS__ )
-
-#define CONVAR_CMD( name, value ) \
-	void cvarfunc_##name( const std::string& prevString, float prevFloat, const std::vector< std::string >& args ); \
-	ConVar name( #name, value, cvarfunc_##name ); \
-	void cvarfunc_##name( const std::string& prevString, float prevFloat, const std::vector< std::string >& args )
-
-#define CONVAR_CMD_EX( name, ... ) \
-	void cvarfunc_##name( const std::string& prevString, float prevFloat, const std::vector< std::string >& args ); \
-	ConVar name( #name, __VA_ARGS__, cvarfunc_##name ); \
-	void cvarfunc_##name( const std::string& prevString, float prevFloat, const std::vector< std::string >& args )
-
-#define CONVARREF( name ) \
-	ConVarRef name( #name )
-
-
-//#define CON_COMMAND( name ) \
-//	void CC_#name( std::vector< std::string > args ); \
-//	ConCommand2 name( #name, CC_#name );              \
-//	void CC_#name( std::vector< std::string > args )
-
-#define CONCMD( name ) \
-	void       name##_func( const std::vector< std::string >& args ); \
-	ConCommand name##_cmd( #name, name##_func );              \
-	void       name##_func( const std::vector< std::string >& args )
-
-#define CONCMD_VA( name, ... ) \
-	void name( const std::vector< std::string >& args ); \
-	ConCommand name##_cmd( #name, name, __VA_ARGS__ );              \
-	void       name( const std::vector< std::string >& args )
-
-#define CONCMD_DROP( name, func ) \
-	void       name( const std::vector< std::string >& args ); \
-	ConCommand name##_cmd( #name, name, func );              \
-	void       name( const std::vector< std::string >& args )
-
-#define CONCMD_DROP_VA( name, func, ... ) \
-	void       name( const std::vector< std::string >& args ); \
-	ConCommand name##_cmd( #name, name, __VA_ARGS__, func );              \
-	void       name( const std::vector< std::string >& args )
+#define CONCMD( name )                                                                                \
+	void       name##_func( const std::vector< std::string >& args, const std::string& fullCommand ); \
+	ConCommand name##_cmd( #name, name##_func );                                                      \
+	void       name##_func( const std::vector< std::string >& args, const std::string& fullCommand )
+
+#define CONCMD_VA( name, ... )                                                                 \
+	void       name( const std::vector< std::string >& args, const std::string& fullCommand ); \
+	ConCommand name##_cmd( #name, name, __VA_ARGS__ );                                         \
+	void       name( const std::vector< std::string >& args, const std::string& fullCommand )
+
+#define CONCMD_DROP( name, func )                                                              \
+	void       name( const std::vector< std::string >& args, const std::string& fullCommand ); \
+	ConCommand name##_cmd( #name, name, func );                                                \
+	void       name( const std::vector< std::string >& args, const std::string& fullCommand )
+
+#define CONCMD_DROP_VA( name, func, ... )                                                      \
+	void       name( const std::vector< std::string >& args, const std::string& fullCommand ); \
+	ConCommand name##_cmd( #name, name, __VA_ARGS__, func );                                   \
+	void       name( const std::vector< std::string >& args, const std::string& fullCommand )
 
 #define CON_COMMAND( name ) CONCMD( name )
 
@@ -572,31 +272,139 @@ private:
 	ConCommand* name = new ConCommand( #name, [ & ]( const std::vector< std::string >& sArgs )
 
 
+struct ConVarDescriptor_t
+{
+	std::string_view aName;
+	bool             aIsConVar = false;
+	void*            apData    = nullptr;
+};
+
+
 // ----------------------------------------------------------------
 // ConVar Functions
 
 
+// Internal Lists of ConVars and ConCommands
+CORE_API ChVector< ConCommand* >&                      Con_GetConCommands();
+CORE_API std::vector< std::string_view >&              Con_GetConVarNames();
+CORE_API std::vector< ConVarDescriptor_t >&            Con_GetConVarList();
+CORE_API std::unordered_map< std::string_view, ConVarData_t* >& Con_GetConVarMap();
+CORE_API std::unordered_map< std::string_view, const char* >& Con_GetConVarDesc();  // ConVar Descriptions
+
+
 // Register a Console/Config Variable
-CORE_API bool&         Con_RegisterConVar_Bool( const char* spName, const char* spDesc, bool sDefault, ConVarFlag_t sFlags = 0, ConVarFunc_Bool* spCallbackFunc = nullptr );
-CORE_API int&          Con_RegisterConVar_Int( const char* spName, const char* spDesc, int sDefault, ConVarFlag_t sFlags = 0, ConVarFunc_Int* spCallbackFunc = nullptr );
-CORE_API float&        Con_RegisterConVar_Float( const char* spName, const char* spDesc, float sDefault, ConVarFlag_t sFlags = 0, ConVarFunc_Float* spCallbackFunc = nullptr );
-CORE_API char*&        Con_RegisterConVar_String( const char* spName, const char* spDesc, const char* spDefault, ConVarFlag_t sFlags = 0, ConVarFunc_String* spCallbackFunc = nullptr );
-CORE_API glm::vec2&    Con_RegisterConVar_Vec2( const char* spName, const char* spDesc, const glm::vec2& srDefault, ConVarFlag_t sFlags = 0, ConVarFunc_Vec2* spCallbackFunc = nullptr );
-CORE_API glm::vec3&    Con_RegisterConVar_Vec3( const char* spName, const char* spDesc, const glm::vec3& srDefault, ConVarFlag_t sFlags = 0, ConVarFunc_Vec3* spCallbackFunc = nullptr );
-CORE_API glm::vec4&    Con_RegisterConVar_Vec4( const char* spName, const char* spDesc, const glm::vec4& srDefault, ConVarFlag_t sFlags = 0, ConVarFunc_Vec4* spCallbackFunc = nullptr );
-CORE_API int&          Con_RegisterConVar_RangeInt( const char* spName, const char* spDesc, int sDefault, int sMin = INT_MIN, int sMax = INT_MAX, ConVarFlag_t sFlags = 0, ConVarFunc_Int* spCallbackFunc = nullptr );
-CORE_API float&        Con_RegisterConVar_RangeFloat( const char* spName, const char* spDesc, float sDefault, float sMin = FLT_MIN, float sMax = FLT_MAX, ConVarFlag_t sFlags = 0, ConVarFunc_Float* spCallbackFunc = nullptr );
+CORE_API const bool&         Con_RegisterConVar_Bool( const char* spName, bool sDefault, ConVarFlag_t sFlags, const char* spDesc = nullptr, ConVarFunc_Bool* spCallbackFunc = nullptr );
+CORE_API const int&          Con_RegisterConVar_Int( const char* spName, int sDefault, ConVarFlag_t sFlags, const char* spDesc = nullptr, ConVarFunc_Int* spCallbackFunc = nullptr );
+CORE_API const float&        Con_RegisterConVar_Float( const char* spName, float sDefault, ConVarFlag_t sFlags, const char* spDesc = nullptr, ConVarFunc_Float* spCallbackFunc = nullptr );
+CORE_API char*& const        Con_RegisterConVar_String( const char* spName, const char* spDefault, ConVarFlag_t sFlags, const char* spDesc = nullptr, ConVarFunc_String* spCallbackFunc = nullptr );
+
+CORE_API const glm::vec2&    Con_RegisterConVar_Vec2( const char* spName, const glm::vec2& srDefault, ConVarFlag_t sFlags, const char* spDesc = nullptr, ConVarFunc_Vec2* spCallbackFunc = nullptr );
+CORE_API const glm::vec3&    Con_RegisterConVar_Vec3( const char* spName, const glm::vec3& srDefault, ConVarFlag_t sFlags, const char* spDesc = nullptr, ConVarFunc_Vec3* spCallbackFunc = nullptr );
+CORE_API const glm::vec4&    Con_RegisterConVar_Vec4( const char* spName, const glm::vec4& srDefault, ConVarFlag_t sFlags, const char* spDesc = nullptr, ConVarFunc_Vec4* spCallbackFunc = nullptr );
+
+CORE_API const glm::vec2&    Con_RegisterConVar_Vec2( const char* spName, float sX, float sY, ConVarFlag_t sFlags, const char* spDesc = nullptr, ConVarFunc_Vec2* spCallbackFunc = nullptr );
+CORE_API const glm::vec3&    Con_RegisterConVar_Vec3( const char* spName, float sX, float sY, float sZ, ConVarFlag_t sFlags, const char* spDesc = nullptr, ConVarFunc_Vec3* spCallbackFunc = nullptr );
+CORE_API const glm::vec4&    Con_RegisterConVar_Vec4( const char* spName, float sX, float sY, float sZ, float sW, ConVarFlag_t sFlags, const char* spDesc = nullptr, ConVarFunc_Vec4* spCallbackFunc = nullptr );
+
+CORE_API const int&          Con_RegisterConVar_RangeInt( const char* spName, int sDefault, int sMin, int sMax, ConVarFlag_t sFlags, const char* spDesc = nullptr, ConVarFunc_Int* spCallbackFunc = nullptr );
+CORE_API const float&        Con_RegisterConVar_RangeFloat( const char* spName, float sDefault, float sMin, float sMax, ConVarFlag_t sFlags, const char* spDesc = nullptr, ConVarFunc_Float* spCallbackFunc = nullptr );
+
+// Register ConVar Functions, but without flags
+
+CORE_API const bool&         Con_RegisterConVar_Bool( const char* spName, bool sDefault, const char* spDesc = nullptr, ConVarFunc_Bool* spCallbackFunc = nullptr );
+CORE_API const int&          Con_RegisterConVar_Int( const char* spName, int sDefault, const char* spDesc = nullptr, ConVarFunc_Int* spCallbackFunc = nullptr );
+CORE_API const float&        Con_RegisterConVar_Float( const char* spName, float sDefault, const char* spDesc = nullptr, ConVarFunc_Float* spCallbackFunc = nullptr );
+CORE_API char*& const        Con_RegisterConVar_String( const char* spName, const char* spDefault, const char* spDesc = nullptr, ConVarFunc_String* spCallbackFunc = nullptr );
+
+CORE_API const glm::vec2&    Con_RegisterConVar_Vec2( const char* spName, const glm::vec2& srDefault, const char* spDesc = nullptr, ConVarFunc_Vec2* spCallbackFunc = nullptr );
+CORE_API const glm::vec3&    Con_RegisterConVar_Vec3( const char* spName, const glm::vec3& srDefault, const char* spDesc = nullptr, ConVarFunc_Vec3* spCallbackFunc = nullptr );
+CORE_API const glm::vec4&    Con_RegisterConVar_Vec4( const char* spName, const glm::vec4& srDefault, const char* spDesc = nullptr, ConVarFunc_Vec4* spCallbackFunc = nullptr );
+
+CORE_API const glm::vec2&    Con_RegisterConVar_Vec2( const char* spName, float sX, float sY, const char* spDesc = nullptr, ConVarFunc_Vec2* spCallbackFunc = nullptr );
+CORE_API const glm::vec3&    Con_RegisterConVar_Vec3( const char* spName, float sX, float sY, float sZ, const char* spDesc = nullptr, ConVarFunc_Vec3* spCallbackFunc = nullptr );
+CORE_API const glm::vec4&    Con_RegisterConVar_Vec4( const char* spName, float sX, float sY, float sZ, float sW, const char* spDesc = nullptr, ConVarFunc_Vec4* spCallbackFunc = nullptr );
+
+CORE_API const int&          Con_RegisterConVar_RangeInt( const char* spName, int sDefault, int sMin = INT_MIN, int sMax = INT_MAX, const char* spDesc = nullptr, ConVarFunc_Int* spCallbackFunc = nullptr );
+CORE_API const float&        Con_RegisterConVar_RangeFloat( const char* spName, float sDefault, float sMin = FLT_MIN, float sMax = FLT_MAX, const char* spDesc = nullptr, ConVarFunc_Float* spCallbackFunc = nullptr );
 
 // Helper Macros for registering ConVars
-#define CONVAR_BOOL( name, desc, defaultVal, ... )                  bool& name = Con_RegisterConVar_Bool( #name, desc, defaultVal, __VA_ARGS__ )
-#define CONVAR_INT( name, desc, defaultVal, ... )                   int& name = Con_RegisterConVar_Int( #name, desc, defaultVal, __VA_ARGS__ )
-#define CONVAR_FLOAT( name, desc, defaultVal, ... )                 float& name = Con_RegisterConVar_Float( #name, desc, defaultVal, __VA_ARGS__ )
-#define CONVAR_STRING( name, desc, defaultVal, ... )                char*& name = Con_RegisterConVar_String( #name, desc, defaultVal, __VA_ARGS__ )
-#define CONVAR_VEC2( name, desc, defaultVal, ... )                  glm::vec2& name = Con_RegisterConVar_Vec2( #name, desc, defaultVal, __VA_ARGS__ )
-#define CONVAR_VEC3( name, desc, defaultVal, ... )                  glm::vec3& name = Con_RegisterConVar_Vec3( #name, desc, defaultVal, __VA_ARGS__ )
-#define CONVAR_VEC4( name, desc, defaultVal, ... )                  glm::vec4& name = Con_RegisterConVar_Vec4( #name, desc, defaultVal, __VA_ARGS__ )
-#define CONVAR_RANGE_INT( name, desc, defaultVal, min, max, ... )   int& name = Con_RegisterConVar_RangeInt( #name, desc, defaultVal, min, max, __VA_ARGS__ )
-#define CONVAR_RANGE_FLOAT( name, desc, defaultVal, min, max, ... ) float& name = Con_RegisterConVar_RangeFloat( #name, desc, defaultVal, min, max, __VA_ARGS__ )
+// will the va args here be an issue on gcc or clang?
+#define CONVAR_BOOL( name, defaultVal, ... )                             const bool& name = Con_RegisterConVar_Bool( #name, defaultVal, __VA_ARGS__ )
+#define CONVAR_INT( name, defaultVal, ... )                              const int& name = Con_RegisterConVar_Int( #name, defaultVal, __VA_ARGS__ )
+#define CONVAR_FLOAT( name, defaultVal, ... )                            const float& name = Con_RegisterConVar_Float( #name, defaultVal, __VA_ARGS__ )
+#define CONVAR_STRING( name, defaultVal, ... )                           char*& const name = Con_RegisterConVar_String( #name, defaultVal, __VA_ARGS__ )
+#define CONVAR_VEC2( name, defaultX, defaultY, ... )                     const glm::vec2& name = Con_RegisterConVar_Vec2( #name, defaultX, defaultY, __VA_ARGS__ )
+#define CONVAR_VEC3( name, defaultX, defaultY, defaultZ, ... )           const glm::vec3& name = Con_RegisterConVar_Vec3( #name, defaultX, defaultY, defaultZ, __VA_ARGS__ )
+#define CONVAR_VEC4( name, defaultX, defaultY, defaultZ, defaultW, ... ) const glm::vec4& name = Con_RegisterConVar_Vec4( #name, defaultX, defaultY, defaultZ, defaultW, __VA_ARGS__ )
+#define CONVAR_RANGE_INT( name, defaultVal, min, max, ... )              const int& name = Con_RegisterConVar_RangeInt( #name, defaultVal, min, max, __VA_ARGS__ )
+#define CONVAR_RANGE_FLOAT( name, defaultVal, min, max, ... )            const float& name = Con_RegisterConVar_RangeFloat( #name, defaultVal, min, max, __VA_ARGS__ )
+
+// Extern convars
+#define CONVAR_BOOL_EXT( name )                                          extern const bool& name
+#define CONVAR_INT_EXT( name )                                           extern const int& name
+#define CONVAR_FLOAT_EXT( name )                                         extern const float& name
+#define CONVAR_STRING_EXT( name )                                        extern char*& const name
+#define CONVAR_VEC2_EXT( name )                                          extern const glm::vec2& name
+#define CONVAR_VEC3_EXT( name )                                          extern const glm::vec3& name
+#define CONVAR_VEC4_EXT( name )                                          extern const glm::vec4& name
+#define CONVAR_RANGE_INT_EXT( name )                                     extern const int& name
+#define CONVAR_RANGE_FLOAT_EXT( name )                                   extern const float& name
+
+// Helper Macros for registering ConVars with a callback
+#define CONVAR_BOOL_CMD( name, defaultVal, flags, desc )                                           \
+	void        cvarfunc_##name( bool prevValue, bool& newValue );                                 \
+	const bool& name = Con_RegisterConVar_Bool( #name, defaultVal, flags, desc, cvarfunc_##name ); \
+	void        cvarfunc_##name( bool prevValue, bool& newValue )
+
+#define CONVAR_INT_CMD( name, defaultVal, flags, desc )                                          \
+	void       cvarfunc_##name( int prevValue, int& newValue );                                  \
+	const int& name = Con_RegisterConVar_Int( #name, defaultVal, flags, desc, cvarfunc_##name ); \
+	void       cvarfunc_##name( int prevValue, int& newValue )
+
+#define CONVAR_FLOAT_CMD( name, defaultVal, flags, desc )                                            \
+	void         cvarfunc_##name( float prevValue, float& newValue );                                \
+	const float& name = Con_RegisterConVar_Float( #name, defaultVal, flags, desc, cvarfunc_##name ); \
+	void         cvarfunc_##name( float prevValue, float& newValue )
+
+#define CONVAR_STRING_CMD( name, defaultVal, flags, desc )                                            \
+	void         cvarfunc_##name( const char* prevValue, char*& newValue );                           \
+	char*& const name = Con_RegisterConVar_String( #name, defaultVal, flags, desc, cvarfunc_##name ); \
+	void         cvarfunc_##name( const char* prevValue, char*& newValue )
+
+#define CONVAR_VEC2_CMD( name, defaultX, defaultY, flags, desc )                                                \
+	void             cvarfunc_##name( const glm::vec2& prevValue, glm::vec2& newValue );                        \
+	const glm::vec2& name = Con_RegisterConVar_Vec2( #name, defaultX, defaultY, flags, desc, cvarfunc_##name ); \
+	void             cvarfunc_##name( const glm::vec2& prevValue, glm::vec2& newValue )
+
+#define CONVAR_VEC3_CMD( name, defaultX, defaultY, defaultZ, flags, desc )                                                \
+	void             cvarfunc_##name( const glm::vec3& prevValue, glm::vec3& newValue );                                  \
+	const glm::vec3& name = Con_RegisterConVar_Vec3( #name, defaultX, defaultY, defaultZ, flags, desc, cvarfunc_##name ); \
+	void             cvarfunc_##name( const glm::vec3& prevValue, glm::vec3& newValue )
+
+#define CONVAR_VEC4_CMD( name, defaultX, defaultY, defaultZ, defaultW, flags, desc )                                      \
+	void             cvarfunc_##name( const glm::vec4& prevValue, glm::vec4& newValue );                                  \
+	const glm::vec4& name = Con_RegisterConVar_Vec4( #name, defaultX, defaultY, defaultZ, flags, desc, cvarfunc_##name ); \
+	void             cvarfunc_##name( const glm::vec4& prevValue, glm::vec4& newValue )
+
+#define CONVAR_RANGE_INT_CMD( name, defaultVal, min, max, flags, desc )                                         \
+	void       cvarfunc_##name( int prevValue, int& newValue );                                                 \
+	const int& name = Con_RegisterConVar_RangeInt( #name, defaultVal, min, max, flags, desc, cvarfunc_##name ); \
+	void       cvarfunc_##name( int prevValue, int& newValue )
+
+#define CONVAR_RANGE_FLOAT_CMD( name, defaultVal, min, max, flags, desc )                                           \
+	void         cvarfunc_##name( float prevValue, float& newValue );                                               \
+	const float& name = Con_RegisterConVar_RangeFloat( #name, defaultVal, min, max, flags, desc, cvarfunc_##name ); \
+	void         cvarfunc_##name( float prevValue, float& newValue )
+
+
+// Get the data pointer reference of a ConVar
+CORE_API bool&         Con_GetConVarData_Bool( const char* spName, bool fallback );
+CORE_API int&          Con_GetConVarData_Int( const char* spName, int fallback );    // also works for RangeInt
+CORE_API float&        Con_GetConVarData_Float( const char* spName, float fallback );  // also works for RangeFloat
+CORE_API char*&        Con_GetConVarData_String( const char* spName, const char* fallback );
+CORE_API glm::vec2&    Con_GetConVarData_Vec2( const char* spName, const glm::vec2& fallback );
+CORE_API glm::vec3&    Con_GetConVarData_Vec3( const char* spName, const glm::vec3& fallback );
+CORE_API glm::vec4&    Con_GetConVarData_Vec4( const char* spName, const glm::vec4& fallback );
 
 
 // Set the value of a ConVar
@@ -614,7 +422,7 @@ CORE_API int           Con_SetConVarValue( const char* spName, const glm::vec3& 
 CORE_API int           Con_SetConVarValue( const char* spName, const glm::vec4& sValue );
 
 CORE_API const char*   Con_GetConVarDesc( const char* spName );  // Get the description of the ConVar
-CORE_API ConVarData_t* Con_GetConVarData( const char* spName );  // Get the data of the ConVar
+CORE_API ConVarData_t* Con_GetConVarData( std::string_view sName );  // Get the data of the ConVar
 
 CORE_API const char*   Con_ConVarTypeStr( EConVarType type );    // Get the string of the ConVar Type
 CORE_API EConVarType   Con_ConVarType( const char* spType );     // Get the ConVar Type from the string
@@ -623,18 +431,26 @@ CORE_API std::string   Con_GetConVarValueStr( ConVarData_t* cvarData );
 CORE_API std::string   Con_GetConVarValueStr( const char* name );
 
 // CORE_API std::string   Con_GetConVarFormatted( const char* spName );  // Get a formatted string for the convar name, value, and default value
-CORE_API std::string   Con_GetConVarHelp( const char* spName );  // Get a formatted string for the help message of this convar
+CORE_API std::string   Con_GetConVarHelp( std::string_view sName );  // Get a formatted string for the help message of this convar
 
+CORE_API u32           Con_GetConVarCount();            // Get the number of ConVars registered
+// CORE_API const char*   Con_GetConVarName( u32 index );  // Get the name of the ConVar at the index
+// CORE_API ConVarData_t* Con_GetConVarData( u32 index );  // Get the data of the ConVar at the index
+
+CORE_API void          Con_ResetConVar( std::string_view name );  // Reset the ConVar to its default value
+
+CORE_API void          Con_SearchConVars( std::vector< std::string >& results, const char* search, size_t size );
+CORE_API void          Con_SearchConVars( std::vector< ConVarDescriptor_t >& results, const char* search, size_t size );
+
+// Search for a ConVar by name, Returns a ConVarDescriptor_t with a nullptr data if not found
+CORE_API ConVarDescriptor_t Con_SearchConVarCmd( const char* search, size_t size );
 
 // ----------------------------------------------------------------
 // Console Functions
 
-CORE_API void  Con_Shutdown();
+CORE_API void               Con_Shutdown();
 
-CORE_API void  Con_SetConVarRegisterFlags( ConVarFlag_t sFlags );
-
-// Register all the ConCommands and ConVars created from static initialization
-CORE_API void  Con_RegisterConVars();
+CORE_API void               Con_SetConVarRegisterFlags( ConVarFlag_t sFlags );
 
 CORE_API const std::vector< std::string >& Con_GetCommandHistory();
 
@@ -648,54 +464,45 @@ CORE_API void                              Con_BuildAutoCompleteList( const std:
 // Get all ConVars
 // CORE_API const ChVector< ConVarBase* >&      Con_GetConVars();
 
-CORE_API uint32_t                          Con_GetConVarCount();
-CORE_API ConVarBase*                       Con_GetConVar( uint32_t sIndex );
 
-CORE_API ConVar*                           Con_GetConVar( std::string_view name );
-CORE_API ConVarBase*                       Con_GetConVarBase( std::string_view name );
+CORE_API ConCommand*                       Con_GetConCommand( std::string_view name );
 
-CORE_API ConVarData*                       Con_CreateConVarData();
-CORE_API void                              Con_FreeConVarData( ConVarData* spData );
-
-CORE_API std::string_view      Con_GetConVarValue( std::string_view name );
-CORE_API float                 Con_GetConVarFloat( std::string_view name );
-
-CORE_API void                  Con_PrintAllConVars();
+CORE_API void                              Con_PrintAllConVars();
 
 // Add a command to the queue
-CORE_API void                  Con_QueueCommand( const std::string& srCmd );
-CORE_API void                  Con_QueueCommandSilent( const std::string& srCmd, bool sAddToHistory = true );
+CORE_API void                              Con_QueueCommand( const std::string& srCmd );
+CORE_API void                              Con_QueueCommandSilent( const std::string& srCmd, bool sAddToHistory = true );
 
 // Go through and run every command in the queue
-CORE_API void                  Con_Update();
+CORE_API void                              Con_Update();
 
 // Find and run a command instantly
-CORE_API void                  Con_RunCommand( std::string_view command );
+CORE_API void                              Con_RunCommand( std::string_view command );
 // CORE_API void                                Con_RunCommandF( const char* command, ... );
 
 // Find and run a parsed command instantly
-CORE_API bool                  Con_RunCommandArgs( const std::string& name, const std::vector< std::string >& args );
-CORE_API bool                  Con_RunCommandArgs( const std::string& name, const std::vector< std::string >& args, std::string_view fullCommand );
+CORE_API bool                              Con_RunCommandArgs( const std::string& name, const std::vector< std::string >& args );
+CORE_API bool                              Con_RunCommandArgs( const std::string& name, const std::vector< std::string >& args, const std::string& fullCommand );
 
-CORE_API void                  Con_ParseCommandLine( std::string_view command, std::string& name, std::vector< std::string >& args, std::string& fullCommand );
-CORE_API void                  Con_ParseCommandLineEx( std::string_view command, std::string& name, std::vector< std::string >& args, std::string& fullCommand, size_t& i );
+CORE_API void                              Con_ParseCommandLine( std::string_view command, std::string& name, std::vector< std::string >& args, std::string& fullCommand );
+CORE_API void                              Con_ParseCommandLineEx( std::string_view command, std::string& name, std::vector< std::string >& args, std::string& fullCommand, size_t& i );
 
-CORE_API ConVarFlag_t          Con_CreateCvarFlag( const char* name );
-CORE_API const char*           Con_GetCvarFlagName( ConVarFlag_t flag );
-CORE_API ConVarFlag_t          Con_GetCvarFlag( const char* name );
-CORE_API size_t                Con_GetCvarFlagCount();
+CORE_API ConVarFlag_t                      Con_CreateCvarFlag( const char* name );
+CORE_API const char*                       Con_GetCvarFlagName( ConVarFlag_t flag );
+CORE_API ConVarFlag_t                      Con_GetCvarFlag( const char* name );
+CORE_API size_t                            Con_GetCvarFlagCount();
 
-CORE_API void                  Con_SetCvarFlagCallback( ConVarFlag_t sFlag, ConVarFlagChangeFunc* spCallback );
-CORE_API ConVarFlagChangeFunc* Con_GetCvarFlagCallback( ConVarFlag_t flag );
+CORE_API void                              Con_SetCvarFlagCallback( ConVarFlag_t sFlag, ConVarFlagChangeFunc* spCallback );
+CORE_API ConVarFlagChangeFunc*             Con_GetCvarFlagCallback( ConVarFlag_t flag );
 
 // Add a callback function to add data to the config.cfg file written from CVARF_ARCHIVE
-CORE_API void                  Con_AddArchiveCallback( FArchive* spFunc );
+CORE_API void                              Con_AddArchiveCallback( FArchive* spFunc );
 
 // Write a config of all stuff we want saved
-CORE_API void                  Con_Archive( const char* spFile = nullptr );
+CORE_API void                              Con_Archive( const char* spFile = nullptr );
 
 // Set Default Console Archive File, nullptr to reset to default
-CORE_API void                  Con_SetDefaultArchive( const char* spFile, const char* spDefaultFile );
+CORE_API void                              Con_SetDefaultArchive( const char* spFile, const char* spDefaultFile );
 
 // make sure the convar flag is created when doing static initilization
 // CORE_API ConVarFlag_t                        Con_StaticGetCvarFlag( const char* spFile = nullptr );
@@ -712,7 +519,6 @@ CORE_API void                  Con_SetDefaultArchive( const char* spFile, const 
 
 CORE_API EXT_CVAR_FLAG( CVARF_NONE );
 CORE_API EXT_CVAR_FLAG( CVARF_ARCHIVE );  // save this convar value in a config.cfg file
-CORE_API EXT_CVAR_FLAG( CVARF_INSTANT );  // instantly call this command (only works with ConCommand)
 
 
 #ifdef _MSC_VER

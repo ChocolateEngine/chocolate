@@ -7,22 +7,22 @@
 #include "imgui/imgui_impl_sdl2.h"
 
 
-CONVAR( conui_spam_test, 0 );
+CONVAR_BOOL( conui_spam_test, 0, "Spams a test string in console" );
 
-CONVAR( conui_max_history, -1 );  // idk
-CONVAR( conui_color_test, 0 );
-CONVAR( conui_max_buffer_size, 8192, "Maximum amount of characters in a string in the console output, it can go over the limit, but only to fit the remaining log message" );
+CONVAR_INT( conui_max_history, -1, "Max History the Console can store, -1 for unlimited" );  // idk
+CONVAR_INT( conui_color_test, 0, "color test" );
+CONVAR_INT( conui_max_buffer_size, 8192, "Maximum amount of characters in a string in the console output, it can go over the limit, but only to fit the remaining log message" );
 
-CONVAR_CMD( conui_show_convar_list, 0 )
+CONVAR_BOOL_CMD( conui_show_convar_list, 0, 0, "Huge ConVar List Window" )
 {
-	gui->aConVarListShown = conui_show_convar_list.GetBool();
+	gui->aConVarListShown = newValue;
 }
 
 void ReBuildConsoleOutput();
 void UpdateConsoleOutput();
 
 
-CONVAR_CMD_EX( conui_colors, 2, CVARF_ARCHIVE, "2 is all colors, 1 is errors and warnings, only, 0 is no colors" )
+CONVAR_INT_CMD( conui_colors, 2, CVARF_ARCHIVE, "2 is all colors, 1 is errors and warnings, only, 0 is no colors" )
 {
 	ReBuildConsoleOutput();
 }
@@ -183,13 +183,10 @@ bool CheckAddDropDownCommand( ImGuiInputTextCallbackData* data )
 			// For ConCommand dropdowns, if we add a space, we need to press backspace and space in order to show the dropdown, kinda weird
 			// but for convars, i basically never press space, and just start typing
 
-			ConVarBase* cvarBase = Con_GetConVarBase( gCmdAutoComplete[ gCmdDropDownIndex ].c_str() );
-			if ( cvarBase )
+			ConVarData_t* cvarData = Con_GetConVarData( gCmdAutoComplete[ gCmdDropDownIndex ].c_str() );
+			if ( cvarData )
 			{
-				if ( typeid( *cvarBase ) == typeid( ConVar ) )
-					snprintf( data->Buf, data->BufSize, ( gCmdAutoComplete[ gCmdDropDownIndex ] + " " ).c_str() );
-				else
-					snprintf( data->Buf, data->BufSize, gCmdAutoComplete[ gCmdDropDownIndex ].c_str() );
+				snprintf( data->Buf, data->BufSize, ( gCmdAutoComplete[ gCmdDropDownIndex ] + " " ).c_str() );
 			}
 			else
 			{
@@ -416,7 +413,7 @@ void DrawInputDropDownBox( const std::vector< std::string >& cvarAutoComplete, I
 	for ( size_t i = 0; i < cvarAutoComplete.size(); i++ )
 	{
 		std::string item  = cvarAutoComplete[ i ];
-		std::string value = Con_GetConVarValue( item ).data();
+		std::string value = Con_GetConVarValueStr( item.data() );
 
 		if ( value.size() )
 			item += " " + value;
@@ -454,7 +451,7 @@ void DrawInputDropDownBox( const std::vector< std::string >& cvarAutoComplete, I
 				std::string item = cvarAutoComplete[ i ];
 
 				item += " ";
-				item += Con_GetConVarValue( cvarAutoComplete[ i ] );
+				item += Con_GetConVarValueStr( cvarAutoComplete[ i ].data() );
 
 				if ( ImGui::Selectable( item.c_str(), gCmdDropDownIndex == i ) )
 				{
@@ -697,7 +694,7 @@ void GuiSystem::DrawConsole( bool wasConsoleOpen, bool isChild )
 {
 	PROF_SCOPE();
 
-	if ( conui_spam_test.GetBool() )
+	if ( conui_spam_test )
 	{
 		Log_Msg(
 		  "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.\n"

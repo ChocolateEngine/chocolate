@@ -35,31 +35,37 @@ static int                                         gTextureSamplers = 0;
 
 void VK_RecreateTextureSamplers();
 
-CONVAR_CMD( r_miplod_min, 0 )
+
+ // a few gpu's out there have a max of 255 mipmap levels
+// https://vulkan.gpuinfo.org/displaydevicelimit.php?name=maxSamplerLodBias
+#define MAX_LOD_BIAS 255 
+
+
+CONVAR_RANGE_INT_CMD( r_miplod_min, 0, 0, MAX_LOD_BIAS, 0, "Minimum Mipmap Level" )
 {
 	VK_RecreateTextureSamplers();
 }
 
 
-CONVAR_CMD( r_miplod_max, 1000 )
+CONVAR_RANGE_INT_CMD( r_miplod_max, MAX_LOD_BIAS, 0, MAX_LOD_BIAS, 0, "Maximum Mipmap Level" )
 {
 	VK_RecreateTextureSamplers();
 }
 
 
-CONVAR_CMD_EX( r_anisotropy, 16, CVARF_ARCHIVE, "Ansiotropic Filtering Setting" )
+CONVAR_RANGE_INT_CMD( r_anisotropy, 16, 0, 16, CVARF_ARCHIVE, "Ansiotropic Filtering Setting" )
 {
 	VK_RecreateTextureSamplers();
 }
 
 
-CONVAR_CMD_EX( r_texture_filtering, 1, CVARF_ARCHIVE, "Enable or Disable Linear Texture Filtering" )
+CONVAR_RANGE_INT_CMD( r_texture_filtering, 1, 0, 2, CVARF_ARCHIVE, "Enable or Disable Linear Texture Filtering, 0 for off, 1 for default settings, 2 for forced on" )
 {
 	VK_RecreateTextureSamplers();
 }
 
 
-CONVAR_CMD_EX( r_linear_mipmaps, 1, CVARF_ARCHIVE, "Enable or Disable Linear Mipmaps" )
+CONVAR_BOOL_CMD( r_linear_mipmaps, 1, CVARF_ARCHIVE, "Enable or Disable Linear Mipmaps" )
 {
 	VK_RecreateTextureSamplers();
 }
@@ -94,7 +100,7 @@ void VK_SetImageLayout( VkCommandBuffer c, VkImage sImage, VkImageLayout sOldLay
 
 		default:
 			Log_Fatal( "Unsupported old layout transition!\n" );
-			break;
+			return;
 	}
 
 	switch ( sNewLayout )
@@ -116,7 +122,7 @@ void VK_SetImageLayout( VkCommandBuffer c, VkImage sImage, VkImageLayout sOldLay
 
 		default:
 			Log_Fatal( "Unsupported new layout transition!\n" );
-			break;
+			return;
 	}
 
 #else
@@ -232,7 +238,7 @@ void VK_DestroyTextureSamplers()
 int VK_GetAnisotropicFilteringLevel()
 {
 	const auto& deviceProps = VK_GetPhysicalDeviceProperties();
-	return glm::min( r_anisotropy.GetFloat(), deviceProps.limits.maxSamplerAnisotropy );
+	return glm::min( (float)r_anisotropy, deviceProps.limits.maxSamplerAnisotropy );
 }
 
 
@@ -244,12 +250,12 @@ VkSampler VK_GetSampler( VkFilter sFilter, VkSamplerAddressMode addressMode, VkB
 	int index = 0;
 	int addressIndex = 0;
 
-	if ( r_texture_filtering.GetInt() == 2 )
+	if ( r_texture_filtering == 2 )
 	{
 		// Force Linear Filtering
 		index = 1;
 	}
-	else if ( r_texture_filtering.GetBool() )
+	else if ( r_texture_filtering )
 	{
 		switch ( sFilter )
 		{
@@ -321,7 +327,7 @@ VkSampler VK_GetSampler( VkFilter sFilter, VkSamplerAddressMode addressMode, VkB
 	samplerInfo.addressModeW = addressMode;
 
 	// make sure this device has anisotropic filtering and the user requests it
-	if ( r_anisotropy.GetInt() > 1 && deviceProps.limits.maxSamplerAnisotropy > 1 )
+	if ( r_anisotropy > 1 && deviceProps.limits.maxSamplerAnisotropy > 1 )
 	{
 		samplerInfo.anisotropyEnable = VK_TRUE;
 		samplerInfo.maxAnisotropy    = VK_GetAnisotropicFilteringLevel();
@@ -332,13 +338,13 @@ VkSampler VK_GetSampler( VkFilter sFilter, VkSamplerAddressMode addressMode, VkB
 		samplerInfo.maxAnisotropy    = 0;
 	}
 
-	if ( r_texture_filtering.GetInt() == 2 )
+	if ( r_texture_filtering == 2 )
 	{
 		// Force Linear Filtering
 		samplerInfo.magFilter = VK_FILTER_LINEAR;
 		samplerInfo.minFilter = VK_FILTER_LINEAR;
 	}
-	else if ( r_texture_filtering.GetBool() )
+	else if ( r_texture_filtering )
 	{
 		samplerInfo.magFilter = sFilter;
 		samplerInfo.minFilter = sFilter;
@@ -349,7 +355,7 @@ VkSampler VK_GetSampler( VkFilter sFilter, VkSamplerAddressMode addressMode, VkB
 		samplerInfo.minFilter = VK_FILTER_NEAREST;
 	}
 
-	if ( r_linear_mipmaps.GetBool() )
+	if ( r_linear_mipmaps )
 	{
 		samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
 	}
@@ -363,8 +369,8 @@ VkSampler VK_GetSampler( VkFilter sFilter, VkSamplerAddressMode addressMode, VkB
 	samplerInfo.compareEnable           = sDepthCompare;
 	samplerInfo.compareOp               = VK_COMPARE_OP_LESS;
 	samplerInfo.mipLodBias              = 0.f;
-	samplerInfo.maxLod                  = std::max( 0.f, r_miplod_max.GetFloat() );
-	samplerInfo.minLod                  = std::min( std::max( 0.f, r_miplod_min.GetFloat() ), samplerInfo.maxLod );
+	samplerInfo.maxLod                  = std::max( 0, r_miplod_max );
+	samplerInfo.minLod                  = std::min( (float)std::max( 0, r_miplod_min ), samplerInfo.maxLod );
 
 	VK_CheckResult( vkCreateSampler( VK_GetDevice(), &samplerInfo, NULL, &gSamplers[ index ][ addressIndex ][ sDepthCompare ] ), "Failed to create sampler!" );
 

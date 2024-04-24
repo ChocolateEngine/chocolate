@@ -15,20 +15,20 @@ extern void                                 Shader_ShadowMap_SetViewInfo( u32 sV
 
 // --------------------------------------------------------------------------------------
 
-CONVAR( r_shadowmap_size, 2048 );
+CONVAR_INT( r_shadowmap_size, 2048 );
 
-CONVAR( r_shadowmap_fov_hack, 90.f );
-CONVAR( r_shadowmap_nearz, 0.01f );
-CONVAR( r_shadowmap_farz, 400.f );
+CONVAR_FLOAT( r_shadowmap_fov_hack, 90.f );
+CONVAR_FLOAT( r_shadowmap_nearz, 0.01f );
+CONVAR_FLOAT( r_shadowmap_farz, 400.f );
 
-CONVAR( r_shadowmap_othro_left, -1000.f );
-CONVAR( r_shadowmap_othro_right, 1000.f );
-CONVAR( r_shadowmap_othro_bottom, -1000.f );
-CONVAR( r_shadowmap_othro_top, 1000.f );
+CONVAR_FLOAT( r_shadowmap_othro_left, -1000.f );
+CONVAR_FLOAT( r_shadowmap_othro_right, 1000.f );
+CONVAR_FLOAT( r_shadowmap_othro_bottom, -1000.f );
+CONVAR_FLOAT( r_shadowmap_othro_top, 1000.f );
 
-CONVAR( r_shadowmap_constant, 16.f );  // 1.25f
-CONVAR( r_shadowmap_clamp, 0.f );
-CONVAR( r_shadowmap_slope, 1.75f );
+CONVAR_FLOAT( r_shadowmap_constant, 16.f );  // 1.25f
+CONVAR_FLOAT( r_shadowmap_clamp, 0.f );
+CONVAR_FLOAT( r_shadowmap_slope, 1.75f );
 
 // --------------------------------------------------------------------------------------
 
@@ -86,7 +86,7 @@ void Graphics_AddShadowMap( Light_t* spLight )
 	}
 
 	ShadowMap_t* shadowMap    = new ShadowMap_t;
-	shadowMap->aSize          = { r_shadowmap_size.GetFloat(), r_shadowmap_size.GetFloat() };
+	shadowMap->aSize          = { r_shadowmap_size, r_shadowmap_size };
 	shadowMap->aViewportHandle = viewportIndex;
 
 	viewport->aShaderOverride = gGraphics.GetShader( "__shadow_map" );

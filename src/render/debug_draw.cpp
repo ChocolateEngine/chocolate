@@ -16,15 +16,15 @@ static size_t                   gDebugLineBufferSize = 0;
 
 // --------------------------------------------------------------------------------------
 
-CONVAR( r_debug_draw, 0 );
-CONVAR( r_debug_aabb, 0 );
-CONVAR( r_debug_frustums, 0 );
-CONVAR( r_debug_normals, 0 );
-CONVAR( r_debug_normals_len, 8 );
-CONVAR( r_debug_normals_len_face, 8 );
+// CONVAR_BOOL( r_debug_draw, 0 );
+CONVAR_BOOL( r_debug_aabb, 0, "", 0 );
+CONVAR_BOOL( r_debug_frustums, 0, "", 0 );
+CONVAR_BOOL( r_debug_normals, 0, "", 0 );
+CONVAR_FLOAT( r_debug_normals_len, 8, "", 0 );
+CONVAR_FLOAT( r_debug_normals_len_face, 8, "", 0 );
 
 
-// bool& r_debug_draw = Con_RegisterConVar_Bool( "r_debug_draw", "Enable or Disable All Debug Drawing", true );
+const bool& r_debug_draw   = Con_RegisterConVar_Bool( "r_debug_draw", "Enable or Disable All Debug Drawing", true );
 
 
 // --------------------------------------------------------------------------------------
@@ -354,7 +354,7 @@ void Graphics::DrawLine( const glm::vec3& sX, const glm::vec3& sY, const glm::ve
 }
 
 
-CONVAR( r_debug_axis_scale, 1 );
+CONVAR_FLOAT( r_debug_axis_scale, 1, "", 0 );
 
 
 void Graphics::DrawAxis( const glm::vec3& sPos, const glm::vec3& sAng, const glm::vec3& sScale )
@@ -367,9 +367,9 @@ void Graphics::DrawAxis( const glm::vec3& sPos, const glm::vec3& sAng, const glm
 	glm::mat4 mat = Util_ToMatrix( &sPos, &sAng, &sScale );
 	Util_GetMatrixDirection( mat, &forward, &right, &up );
 
-	gGraphics.DrawLine( sPos, sPos + ( forward * sScale.x * r_debug_axis_scale.GetFloat() ), { 1.f, 0.f, 0.f } );
-	gGraphics.DrawLine( sPos, sPos + ( right * sScale.y * r_debug_axis_scale.GetFloat() ), { 0.f, 1.f, 0.f } );
-	gGraphics.DrawLine( sPos, sPos + ( up * sScale.z * r_debug_axis_scale.GetFloat() ), { 0.f, 0.f, 1.f } );
+	gGraphics.DrawLine( sPos, sPos + ( forward * sScale.x * r_debug_axis_scale ), { 1.f, 0.f, 0.f } );
+	gGraphics.DrawLine( sPos, sPos + ( right * sScale.y * r_debug_axis_scale ), { 0.f, 1.f, 0.f } );
+	gGraphics.DrawLine( sPos, sPos + ( up * sScale.z * r_debug_axis_scale ), { 0.f, 0.f, 1.f } );
 }
 
 
@@ -382,9 +382,9 @@ void Graphics::DrawAxis( const glm::mat4& sMat, const glm::vec3& sScale )
 	Util_GetMatrixDirection( sMat, &forward, &right, &up );
 	glm::vec3 pos = Util_GetMatrixPosition( sMat );
 
-	gGraphics.DrawLine( pos, pos + ( forward * sScale.x * r_debug_axis_scale.GetFloat() ), { 1.f, 0.f, 0.f } );
-	gGraphics.DrawLine( pos, pos + ( right * sScale.y * r_debug_axis_scale.GetFloat() ), { 0.f, 1.f, 0.f } );
-	gGraphics.DrawLine( pos, pos + ( up * sScale.z * r_debug_axis_scale.GetFloat() ), { 0.f, 0.f, 1.f } );
+	gGraphics.DrawLine( pos, pos + ( forward * sScale.x * r_debug_axis_scale ), { 1.f, 0.f, 0.f } );
+	gGraphics.DrawLine( pos, pos + ( right * sScale.y * r_debug_axis_scale ), { 0.f, 1.f, 0.f } );
+	gGraphics.DrawLine( pos, pos + ( up * sScale.z * r_debug_axis_scale ), { 0.f, 0.f, 1.f } );
 }
 
 
@@ -398,9 +398,9 @@ void Graphics::DrawAxis( const glm::mat4& sMat )
 	glm::vec3 pos   = Util_GetMatrixPosition( sMat );
 	glm::vec3 scale = Util_GetMatrixScale( sMat );
 
-	gGraphics.DrawLine( pos, pos + ( forward * scale.x * r_debug_axis_scale.GetFloat() ), { 1.f, 0.f, 0.f } );
-	gGraphics.DrawLine( pos, pos + ( right * scale.y * r_debug_axis_scale.GetFloat() ), { 0.f, 1.f, 0.f } );
-	gGraphics.DrawLine( pos, pos + ( up * scale.z * r_debug_axis_scale.GetFloat() ), { 0.f, 0.f, 1.f } );
+	gGraphics.DrawLine( pos, pos + ( forward * scale.x * r_debug_axis_scale ), { 1.f, 0.f, 0.f } );
+	gGraphics.DrawLine( pos, pos + ( right * scale.y * r_debug_axis_scale ), { 0.f, 1.f, 0.f } );
+	gGraphics.DrawLine( pos, pos + ( up * scale.z * r_debug_axis_scale ), { 0.f, 0.f, 1.f } );
 }
 
 
@@ -584,9 +584,9 @@ void Graphics::DrawNormals( Handle sModel, const glm::mat4& srMatrix )
 				// glm::vec3 forward;
 				// Util_GetDirectionVectors( )
 
-				glm::vec3 posY = posX + ( normMat * r_debug_normals_len.GetFloat() );
+				glm::vec3 posY = posX + ( normMat * r_debug_normals_len );
 
-				// protoTransform.aPos, protoTransform.aPos + ( forward * r_proto_line_dist2.GetFloat() )
+				// protoTransform.aPos, protoTransform.aPos + ( forward * r_proto_line_dist2 )
 
 				gGraphics.DrawLine( posX, posY, {0.9, 0.1, 0.1, 1.f} );
 			}
@@ -594,7 +594,7 @@ void Graphics::DrawNormals( Handle sModel, const glm::mat4& srMatrix )
 			// Draw Face Normal
 			// glm::vec4 normal4( normal, 1 );
 			// glm::vec3 posX = normal4 * srMatrix;
-			// glm::vec3 posY = posX * r_debug_normals_len_face.GetFloat();
+			// glm::vec3 posY = posX * r_debug_normals_len_face;
 			// 
 			// gGraphics.DrawLine( posX, posY, normal );
 			j++;

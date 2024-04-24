@@ -9,10 +9,10 @@ extern bool Graphics_ViewFrustumTest( Renderable_t* spModelDraw, ViewportShader_
 extern void Graphics_RenderView( Handle cmd, size_t sIndex, ViewportShader_t& srViewport, ViewRenderList_t& srViewList );
 
 
-extern ConVar r_vis_lock;
-extern ConVar r_reset_blend_shapes;
+CONVAR_BOOL_EXT( r_vis_lock );
+CONVAR_BOOL_EXT( r_reset_blend_shapes );
 
-CONVAR( r_wireframe, 0 );
+CONVAR_BOOL( r_wireframe, 0 );
 
 
 void RenderSystemOld::NewFrame()
@@ -443,7 +443,7 @@ void Graphics_PrepareDrawData()
 #endif
 
 	if ( r_reset_blend_shapes )
-		r_reset_blend_shapes.SetValue( 0 );
+		Con_SetConVarValue( "r_reset_blend_shapes", false );
 
 		// --------------------------------------------------------------------
 		// Prepare Skinning Compute Shader Buffers

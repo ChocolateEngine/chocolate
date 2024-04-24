@@ -84,7 +84,7 @@ enum : u32
 
 static std::unordered_map< SurfaceDraw_t*, Basic3D_Push > gPushData;
 
-CONVAR( r_basic3d_dbg_mode, 0 );
+CONVAR_RANGE_INT( r_basic3d_dbg_mode, 0, 0, 4 );
 
 
 static void Shader_Basic3D_GetPipelineLayoutCreate( PipelineLayoutCreate_t& srPipeline )

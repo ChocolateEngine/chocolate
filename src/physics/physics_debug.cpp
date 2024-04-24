@@ -10,7 +10,7 @@ LOG_CHANNEL( Physics );
 
 extern Phys_DebugFuncs_t gDebugFuncs;
 
-CONVAR( phys_dbg, 0 );
+CONVAR_BOOL( phys_dbg, 0, "" );
 
 // constexpr glm::vec3 vec3_default( 255, 255, 255 );
 // constexpr glm::vec4 vec4_default( 255, 255, 255, 255 );

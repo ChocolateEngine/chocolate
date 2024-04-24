@@ -38,11 +38,7 @@ bool Mod_InitSystem( LoadedSystem_t& appModule )
 		return false;
 
 	if ( appModule.apSystem->Init() )
-	{
-		// Register the convars that are declared.
-		Con_RegisterConVars();
 		return true;
-	}
 
 	if ( appModule.aRequired )
 		Log_ErrorF( "Failed to Init Required System: %s\n", appModule.apName );
@@ -81,9 +77,6 @@ bool Mod_InitSystems()
 			Log_ErrorF( "Failed to Init Optional System: %s\n", appModule.apName );
 		}
 	}
-
-	// Register the convars that are declared.
-	Con_RegisterConVars();
 
 	return true;
 }

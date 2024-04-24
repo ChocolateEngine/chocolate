@@ -19,18 +19,18 @@ LOG_REGISTER_CHANNEL2( Aduio, LogColor::Green );
 
 AudioSystem* audio = new AudioSystem;
 
-CONVAR( snd_volume, 0.5, CVARF_ARCHIVE );
-CONVAR( snd_volume_3d, 1, CVARF_ARCHIVE );
-CONVAR( snd_volume_2d, 1, CVARF_ARCHIVE );
+CONVAR_FLOAT( snd_volume, 0.5, CVARF_ARCHIVE, "Global Volume" );
+CONVAR_FLOAT( snd_volume_3d, 1, CVARF_ARCHIVE, "Volume for 3D Audio" );
+CONVAR_FLOAT( snd_volume_2d, 1, CVARF_ARCHIVE, "Volume for 2D Audio (No Spatial Audio Effects)" );
 
-CONVAR( snd_buffer_size, 4096 );
-CONVAR( snd_read_mult, 4 );  // 4
-CONVAR( snd_read_chunk_size, 1024 );
-CONVAR( snd_audio_stream_available, FRAME_SIZE * 2 );
+CONVAR_INT( snd_buffer_size, 4096, "" );
+CONVAR_FLOAT( snd_read_mult, 4, "" );  // 4
+CONVAR_INT( snd_read_chunk_size, 1024, "" );
+CONVAR_INT( snd_audio_stream_available, FRAME_SIZE * 2, "" );
 
-CONVAR( snd_phonon_spatial_blend, 1.f );
-CONVAR( snd_phonon_lerp_type, 0 );
-CONVAR( snd_phonon_directivity, 1.f );
+CONVAR_FLOAT( snd_phonon_spatial_blend, 1.f, "" );
+CONVAR_INT( snd_phonon_lerp_type, 0, "" );
+CONVAR_FLOAT( snd_phonon_directivity, 1.f, "" );
 
 //IPLAudioFormat g_formatMono = {};
 //IPLAudioFormat g_formatStereo = {};
@@ -233,7 +233,7 @@ bool AudioSystem::Init()
 			  int        remainingAudio = SDL_GetQueuedAudioSize( aOutputDeviceID );
 			  static int read           = remainingAudio;
 
-			  if ( remainingAudio < snd_buffer_size.GetFloat() )
+			  if ( remainingAudio < snd_buffer_size )
 			  {
 				  // this might work well for multithreading
 				  for ( int i = 0; i < aStreamsPlaying.size(); i++ )
@@ -488,7 +488,7 @@ bool AudioSystem::ApplyEffects( AudioStream* stream )
 		{
 			for ( uint32_t ch = 0; ch < 2; ch++ )
 			{
-				stream->outBuffer.data[ ch ][ i ] = outAudio[ j++ ] * snd_volume_2d.GetFloat();
+				stream->outBuffer.data[ ch ][ i ] = outAudio[ j++ ] * snd_volume_2d;
 			}
 		}
 	}
@@ -532,8 +532,8 @@ bool AudioSystem::QueueAudio()
 	{
 		for ( uint32_t ch = 0; ch < 2; ch++ )
 		{
-			// apMixBufferAudio[j++] = unmixedBuffers[0].data[ch][i] * snd_volume.GetFloat();
-			apMixBufferAudio[ j++ ] = aMixBuffer.data[ ch ][ i ] * snd_volume.GetFloat();
+			// apMixBufferAudio[j++] = unmixedBuffers[0].data[ch][i] * snd_volume;
+			apMixBufferAudio[ j++ ] = aMixBuffer.data[ ch ][ i ] * snd_volume;
 		}
 	}
 
@@ -652,7 +652,7 @@ int AudioSystem::ApplySpatialEffects( AudioStream* stream, float* data, size_t f
 	{
 		for ( uint32_t ch = 0; ch < 2; ch++ )
 		{
-			stream->outBuffer.data[ ch ][ i ] = tempOutBuffer.data[ ch ][ i ] * snd_volume_3d.GetFloat();
+			stream->outBuffer.data[ ch ][ i ] = tempOutBuffer.data[ ch ][ i ] * snd_volume_3d;
 		}
 	}
 

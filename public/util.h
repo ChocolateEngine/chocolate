@@ -340,11 +340,13 @@ std::string    CORE_API vstringV( const char* format, va_list args );
 // Copies a string, useful for if you're copying a string from reading a file and then going to free that string later
 CORE_API char*          Util_AllocString( const char* format );
 CORE_API char*          Util_AllocString( const char* format, size_t len );
+
 CORE_API char*          Util_ReallocString( char* data, const char* format );
 CORE_API char*          Util_ReallocString( char* data, const char* format, size_t len );
 
 // Concatinates a string together
 CORE_API char*          Util_AllocStringConcat( size_t count, char** strings, size_t* lengths );
+CORE_API char*          Util_AllocStringJoin( size_t count, char** strings, size_t* lengths, const char* space = " " );
 
 // malloc a string with string formatting
 CORE_API char*          Util_AllocStringF( const char* format, ... );

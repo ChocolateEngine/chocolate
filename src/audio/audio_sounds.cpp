@@ -1,9 +1,9 @@
 #include "audio.h"
 
 
-extern ConVar snd_audio_stream_available;
-extern ConVar snd_read_chunk_size;
-extern ConVar snd_read_mult;
+CONVAR_INT_EXT( snd_audio_stream_available );
+CONVAR_INT_EXT( snd_read_chunk_size );
+CONVAR_FLOAT_EXT( snd_read_mult );
 
 
 bool AudioSystem::LoadSoundInternal( AudioStream* stream )

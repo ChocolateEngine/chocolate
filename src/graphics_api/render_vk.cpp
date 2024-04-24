@@ -82,16 +82,16 @@ static std::unordered_map< VkCommandBuffer, TracyVkCtx > gTracyCtx;
 #endif
 
 
-CONVAR( r_dbg_show_buffer_copy, 0 );
+CONVAR_BOOL( r_dbg_show_buffer_copy, 0, "Show all copies of the buffer" );
 
 
-CONVAR_CMD_EX( r_msaa, 1, CVARF_ARCHIVE, "Enable/Disable MSAA Globally" )
+CONVAR_BOOL_CMD( r_msaa, 1, CVARF_ARCHIVE, "Enable/Disable MSAA Globally" )
 {
 	VK_ResetAll( ERenderResetFlags_MSAA );
 }
 
 
-CONVAR_CMD_EX( r_msaa_samples, 8, CVARF_ARCHIVE, "Set the Default Amount of MSAA Samples Globally" )
+CONVAR_INT_CMD( r_msaa_samples, 8, CVARF_ARCHIVE, "Set the Default Amount of MSAA Samples Globally" )
 {
 	if ( !r_msaa )
 		return;

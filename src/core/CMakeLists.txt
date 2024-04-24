@@ -12,6 +12,7 @@ set(
 	"build_number.cpp"
 	"commandline.cpp"
 	"console.cpp"
+	"convar.cpp"
 	"filesystem.cpp"
 	"json5.cpp"
 	"log.cpp"

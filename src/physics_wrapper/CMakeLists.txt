@@ -3,7 +3,6 @@ message( "Current Project: Physics Wrapper" )
 set(
 	SRC_FILES
 	physics_wrapper.cpp
-	physics_wrapper.h
 )
 
 file(

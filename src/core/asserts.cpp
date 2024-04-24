@@ -6,12 +6,12 @@ static bool gNoAsserts = false;
 static bool gNoAssertBox = false;
 
 
-CONVAR_CMD( assert_show, !gNoAsserts )
+CONVAR_BOOL_CMD( assert_show, !gNoAsserts, 0, "Enable/Disable Assertions" )
 {
     gNoAsserts = !assert_show;
 }
 
-CONVAR_CMD( assert_show_box, !gNoAssertBox )
+CONVAR_BOOL_CMD( assert_show_box, !gNoAssertBox, 0, "Enable/Disable the Assertions Window" )
 {
     gNoAssertBox = !assert_show_box;
 }
@@ -23,10 +23,10 @@ void Assert_Init()
 	gNoAssertBox = Args_Register( false, "Disable The Assert Window", "-no-assert-window" );
 
     if ( gNoAsserts )
-        assert_show.SetValue( 0 );
+		Con_SetConVarValue( "assert_show", false );
 
     if ( gNoAssertBox )
-		assert_show_box.SetValue( 0 );
+		Con_SetConVarValue( "assert_show_box", false );
 }
 
 

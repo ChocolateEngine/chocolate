@@ -448,6 +448,44 @@ char* Util_AllocStringConcat( size_t count, char** strings, size_t* lengths )
 }
 
 
+char* Util_AllocStringJoin( size_t count, char** strings, size_t* lengths, const char* space )
+{
+	if ( !space )
+		space = " ";
+
+	size_t totalLen = 0;
+
+	for ( size_t i = 0; i < count; i++ )
+		totalLen += lengths[ i ];
+
+	size_t spaceLen = strlen( space );
+	totalLen += ( count - 1 ) * spaceLen;
+
+	char* out = CH_MALLOC( char, totalLen + 1 );
+
+	size_t offset = 0;
+	for ( size_t i = 0; i < count; i++ )
+	{
+		memcpy( out + offset, strings[ i ], lengths[ i ] );
+		offset += lengths[ i ];
+
+		if ( i < count - 1 )
+		{
+			memcpy( out + offset, space, spaceLen );
+			offset += spaceLen;
+		}
+	}
+
+	out[ totalLen ] = '\0';
+
+#if CH_STRING_MEM_TRACKING
+	GetAllocatedStrings().push_back( out );
+#endif
+
+	return out;
+}
+
+
 void Util_FreeString( char* string )
 {
 #if CH_STRING_MEM_TRACKING

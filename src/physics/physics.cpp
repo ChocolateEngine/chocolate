@@ -10,14 +10,14 @@
 LOG_REGISTER_CHANNEL( Physics, LogColor::DarkGreen );
 
 
-extern ConVar phys_dbg;
+CONVAR_BOOL_EXT( phys_dbg );
 
-CONVAR( phys_dbg_character_constraints, 1 );
+CONVAR_BOOL( phys_dbg_character_constraints, 1 );
 
 Phys_DebugFuncs_t gDebugFuncs;
 PhysDebugDraw*    gpDebugDraw = nullptr;
 
-CONVAR( phys_collisionsteps, 1,
+CONVAR_INT( phys_collisionsteps, 1,
 	"If you take larger steps than 1 / 60th of a second you need to do multiple collision steps in order to keep the simulation stable. "
 	"Do 1 collision step per 1 / 60th of a second(round up)." );
 
@@ -454,7 +454,7 @@ void PhysicsEnvironment::Shutdown(  )
 }
 
 
-CONVAR( phys_dbg_wireframe, 1 );
+CONVAR_BOOL( phys_dbg_wireframe, 1, "" );
 
 
 void PhysicsEnvironment::Simulate( float sDT )
@@ -513,7 +513,7 @@ void PhysicsEnvironment::Simulate( float sDT )
 		  { 1, 1, 1 },
 		  { 1, 0, 0 },
 		  false,
-		  phys_dbg_wireframe.GetBool() );
+		  phys_dbg_wireframe );
 	}
 
 	for ( auto character : aVirtualChars )
@@ -528,7 +528,7 @@ void PhysicsEnvironment::Simulate( float sDT )
 		  { 1, 1, 1 },
 		  { 0, 1, 0 },
 		  false,
-		  phys_dbg_wireframe.GetBool() );
+		  phys_dbg_wireframe );
 	}
 }
 
