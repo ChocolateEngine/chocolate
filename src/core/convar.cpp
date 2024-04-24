@@ -578,13 +578,14 @@ std::string Con_GetConVarValueStr( ConVarData_t* cvarData )
 	}
 }
 
+static std::string gStrEmpty;
 
 std::string Con_GetConVarValueStr( const char* name )
 {
 	ConVarData_t* cvarData = Con_GetConVarData( name );
 
 	if ( !cvarData )
-		return vstring( "ConVar not found: %s\n", name );
+		return gStrEmpty;
 
 	return Con_GetConVarValueStr( cvarData );
 }
