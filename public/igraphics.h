@@ -909,6 +909,15 @@ struct RenderContext
 };
 
 
+struct GraphicsStats_t
+{
+	size_t aDrawCalls;
+	size_t aVerticesDrawn;
+	size_t aMaterialsDrawn;
+	size_t aRenderablesDrawn;
+};
+
+
 using RenderContextHandle = u64;
 
 
@@ -1139,6 +1148,9 @@ class IGraphics : public ISystem
 	virtual bool                   Init()                                                                                                         = 0;
 	virtual void                   Shutdown()                                                                                                     = 0;
 
+	// Per-Frame stats
+	virtual GraphicsStats_t        GetStats()                                                                                                     = 0;
+
 	// ChHandle_t         CreateRenderPass() = 0;
 	// virtual void               UpdateRenderPass( ChHandle_t sRenderPass ) = 0;
 
@@ -1274,7 +1286,7 @@ class IRenderSystem : public ISystem
 
 
 #define IGRAPHICS_NAME "Graphics"
-#define IGRAPHICS_VER  8
+#define IGRAPHICS_VER  9
 
 #define IRENDERSYSTEMOLD_NAME "IRenderSystemOld"
 #define IRENDERSYSTEMOLD_VER  1

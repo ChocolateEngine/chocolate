@@ -69,11 +69,12 @@ Handle                 CreateModelBuffer( const char* spName, void* spData, size
 // General Rendering
 // TODO: group these globals together by data commonly used together
 
-GraphicsData_t         gGraphicsData;
-ShaderDescriptorData_t gShaderDescriptorData;
+GraphicsData_t           gGraphicsData;
+ShaderDescriptorData_t   gShaderDescriptorData;
+GraphicsStats_t          gStats;
 
-IRender*               render;
-Graphics               gGraphics;
+IRender*                 render;
+Graphics                 gGraphics;
 
 static ModuleInterface_t gInterfaces[] = {
 	{ &gGraphics, IGRAPHICS_NAME, IGRAPHICS_VER },
@@ -93,14 +94,14 @@ extern "C"
 // --------------------------------------------------------------------------------------
 // Other
 
-const char*            gShaderCoreArrayStr[]       = {
-					 "Viewport",
-					 // "Renderable",
+const char* gShaderCoreArrayStr[] = {
+	"Viewport",
+	// "Renderable",
 
-					 "LightWorld",
-					 "LightPoint",
-					 "LightCone",
-					 "LightCapsule",
+	"LightWorld",
+	"LightPoint",
+	"LightCone",
+	"LightCapsule",
 };
 
 
@@ -1523,6 +1524,12 @@ void Graphics::Shutdown()
 	// 
 	// if ( gGraphicsData.aBlendShapeWeightBuffers )
 	// 	free( gGraphicsData.aBlendShapeWeightBuffers );
+}
+
+
+GraphicsStats_t Graphics::GetStats()
+{
+	return gStats;
 }
 
 

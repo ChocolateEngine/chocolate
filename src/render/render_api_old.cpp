@@ -17,6 +17,11 @@ CONVAR_BOOL( r_wireframe, 0 );
 
 void RenderSystemOld::NewFrame()
 {
+	gStats.aDrawCalls        = 0;
+	gStats.aMaterialsDrawn   = 0;
+	gStats.aRenderablesDrawn = 0;
+	gStats.aVerticesDrawn    = 0;
+
 	render->NewFrame();
 
 	Graphics_DebugDrawNewFrame();

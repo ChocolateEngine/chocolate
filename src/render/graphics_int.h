@@ -362,7 +362,8 @@ constexpr const char* gIndexBufferStr       = "Vertex Buffer";
 constexpr const char* gBlendShapeWeightsStr = "Blend Shape Weights Buffer";
 
 
-extern GraphicsData_t gGraphicsData;
+extern GraphicsData_t  gGraphicsData;
+extern GraphicsStats_t gStats;
 
 
 bool                  Graphics_CreateVariableUniformLayout( ShaderDescriptor_t& srBuffer, const char* spLayoutName, const char* spSetName, int sCount );
@@ -639,6 +640,8 @@ class Graphics : public IGraphics
 
 	virtual bool                   Init() override;
 	virtual void                   Shutdown() override;
+
+	virtual GraphicsStats_t        GetStats() override;
 
 	// ChHandle_t         CreateRenderPass() override;
 	// virtual void               UpdateRenderPass( ChHandle_t sRenderPass ) override;

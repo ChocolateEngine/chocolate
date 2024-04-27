@@ -21,9 +21,6 @@ u32                                    Shader_Basic3D_UpdateMaterialData( Handle
 // --------------------------------------------------------------------------------------
 // Other
 
-size_t                                 gModelDrawCalls = 0;
-size_t                                 gVertsDrawn     = 0;
-
 // TODO: we need one per viewport
 extern ChVector< Shader_VertexData_t > gDebugLineVerts;
 
@@ -94,8 +91,8 @@ void Graphics_CmdDrawSurface( Handle cmd, Model* spModel, size_t sSurface )
 		  mesh.aVertexOffset,
 		  0 );
 
-	gModelDrawCalls++;
-	gVertsDrawn += mesh.aVertexCount;
+	gStats.aDrawCalls++;
+	gStats.aVerticesDrawn += mesh.aVertexCount;
 }
 
 
