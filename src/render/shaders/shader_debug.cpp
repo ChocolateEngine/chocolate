@@ -206,7 +206,13 @@ static void Shader_Wireframe_SetupPushData( u32 sRenderableIndex, u32 sViewportI
 {
 	Debug_Push& push  = gWireframePushData[ &srDrawInfo ];
 	push.aModelMatrix = spDrawData->aModelMatrix;
-	push.aColor       = spMaterialData->vars[ COLOR_MAT_INDEX ].aVec4;
+
+	// this should never happen, but it is, need to fix
+	if ( spMaterialData )
+		push.aColor = spMaterialData->vars[ COLOR_MAT_INDEX ].aVec4;
+	else
+		push.aColor = gWireframeColor;
+
 	push.aRenderable  = sRenderableIndex;
 	push.aViewport    = sViewportIndex;
 }
