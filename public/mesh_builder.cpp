@@ -107,6 +107,7 @@ void MeshBuilder::End( bool sCreateBuffers )
 		apMesh->apVertexData = vertData;
 	}
 
+	apMesh->aMeshes.reserve( aSurfaces.size() );
 	for ( size_t i = 0; i < aSurfaces.size(); i++ )
 	{
 		Surface& surf = aSurfaces[ i ];
