@@ -71,7 +71,7 @@ Handle                 CreateModelBuffer( const char* spName, void* spData, size
 
 GraphicsData_t           gGraphicsData;
 ShaderDescriptorData_t   gShaderDescriptorData;
-GraphicsStats_t          gStats;
+RenderStats_t          gStats;
 
 IRender*                 render;
 Graphics                 gGraphics;
@@ -1527,7 +1527,7 @@ void Graphics::Shutdown()
 }
 
 
-GraphicsStats_t Graphics::GetStats()
+RenderStats_t Graphics::GetStats()
 {
 	return gStats;
 }
@@ -1619,6 +1619,12 @@ void FreeRenderableModel( Renderable_t* renderable )
 	if ( !renderable->aModel )
 		return;
 
+	for ( u32 i = 0; i < renderable->aMaterialCount; i++ )
+	{
+		// Decrement the ref count
+		gGraphics.Mat_RemoveRef( renderable->apMaterials[ i ] );
+	}
+
 	if ( renderable->aBlendShapeWeightsBuffer )
 	{
 		if ( renderable->aVertexIndex != UINT32_MAX )
@@ -1665,6 +1671,8 @@ void SetRenderableModel( ChHandle_t modelHandle, Model* model, Renderable_t* ren
 
 		for ( u32 i = 0; i < renderable->aMaterialCount; i++ )
 		{
+			// Increase the ref count
+			gGraphics.Mat_AddRef( model->aMeshes[ i ].aMaterial );
 			renderable->apMaterials[ i ] = model->aMeshes[ i ].aMaterial;
 		}
 	}
@@ -1763,7 +1771,7 @@ ChHandle_t Graphics::CreateRenderable( ChHandle_t sModel )
 		return InvalidHandle;
 	}
 
-	Log_Dev( gLC_ClientGraphics, 1, "Created Renderable\n" );
+	// Log_Dev( gLC_ClientGraphics, 2, "Created Renderable\n" );
 
 	Renderable_t* renderable  = nullptr;
 	ChHandle_t    drawHandle = InvalidHandle;
@@ -1858,6 +1866,34 @@ void Graphics::FreeRenderable( Handle sRenderable )
 	gGraphicsData.aRenderableStaging.aDirty = true;
 
 	Log_Dev( gLC_ClientGraphics, 1, "Freed Renderable\n" );
+}
+
+
+void Graphics::ResetRenderableMaterials( ChHandle_t sRenderable )
+{
+	Renderable_t* renderable = nullptr;
+	if ( !gGraphicsData.aRenderables.Get( sRenderable, &renderable ) )
+	{
+		Log_Warn( gLC_ClientGraphics, "Failed to find Renderable to reset materials on!\n" );
+		return;
+	}
+
+	Model* model = nullptr;
+	if ( !gGraphicsData.aModels.Get( renderable->aModel, &model ) )
+	{
+		Log_Warn( gLC_ClientGraphics, "Renderable has no model!\n" );
+		return;
+	}
+
+	for ( u32 i = 0; i < renderable->aMaterialCount; i++ )
+	{
+		// Decrement the ref count
+		gGraphics.Mat_RemoveRef( renderable->apMaterials[ i ] );
+
+		// Increase the ref count
+		gGraphics.Mat_AddRef( model->aMeshes[ i ].aMaterial );
+		renderable->apMaterials[ i ] = model->aMeshes[ i ].aMaterial;
+	}
 }
 
 

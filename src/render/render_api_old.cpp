@@ -6,7 +6,7 @@
 RenderSystemOld gRenderOld;
 
 extern bool Graphics_ViewFrustumTest( Renderable_t* spModelDraw, ViewportShader_t& srViewport );
-extern void Graphics_RenderView( Handle cmd, size_t sIndex, ViewportShader_t& srViewport, ViewRenderList_t& srViewList );
+extern void Graphics_RenderView( Handle cmd, size_t sIndex, u32 sViewportIndex, ViewportShader_t& srViewport, ViewRenderList_t& srViewList );
 
 
 CONVAR_BOOL_EXT( r_vis_lock );
@@ -110,7 +110,9 @@ void Graphics_DrawSelectionTextureRenderables( Handle cmd, size_t sIndex )
 	viewPort.maxDepth = 1.f;
 	render->CmdSetViewport( cmd, 0, &viewPort, 1 );
 
-	Graphics_DrawShaderRenderables( cmd, sIndex, select, otherRenderables );
+	u32 viewIndex = Graphics_GetShaderSlot( gGraphicsData.aViewportSlots, gRenderOld.aSelectionViewport );
+
+	Graphics_DrawShaderRenderables( cmd, sIndex, select, viewIndex, otherRenderables );
 
 	// for ( auto& [ shader, renderList ] : viewList.aRenderLists )
 	// {
@@ -258,8 +260,6 @@ void Graphics_PrepareDrawData()
 		Graphics_UpdateShaderBufferDescriptors( gGraphicsData.aIndexBuffers, CH_BINDING_INDEX_BUFFERS );
 
 	// --------------------------------------------------------------------
-
-	Shader_ResetPushData();
 
 	bool usingShadow = Graphics_IsUsingShadowMaps();
 
@@ -473,7 +473,7 @@ void Graphics_PrepareDrawData()
 	// Update Shader Draw Data
 	// TODO: can this be merged into the above for loop for viewports and renderables?
 
-#if 01
+#if 0
 	// for ( size_t viewIndex = 0; viewIndex < gGraphicsData.aViewData.aViewports.size(); viewIndex++ )
 	for ( auto& [ viewHandle, viewport ] : gGraphicsData.aViewports )
 	{
@@ -638,7 +638,6 @@ void Graphics_DoSkinning( ChHandle_t sCmd, u32 sCmdIndex )
 	}
 
 	ShaderData_t*                             shaderSkinningData = Shader_GetData( shaderSkinning );
-	IShaderPushComp*                          skinningPush       = shaderSkinningData->apPushComp;
 
 	ChVector< GraphicsBufferMemoryBarrier_t > buffers;
 
@@ -933,7 +932,9 @@ void RenderSystemOld::Present( ChHandle_t window, u32* viewports, u32 viewportCo
 			if ( viewport.aShaderOverride )
 				continue;
 
-			Graphics_RenderView( c, cmdIndex, viewport, viewRenderList );
+			u32 viewIndex = Graphics_GetShaderSlot( gGraphicsData.aViewportSlots, viewports[ i ] );
+
+			Graphics_RenderView( c, cmdIndex, viewIndex, viewport, viewRenderList );
 		}
 
 		render->DrawImGui( ImGui::GetDrawData(), c );

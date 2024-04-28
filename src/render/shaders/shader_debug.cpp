@@ -40,12 +40,6 @@ static ShaderMaterialVarDesc gWireframe_MaterialVars[] = {
 constexpr int COLOR_MAT_INDEX = 0;
 
 
-
-static std::unordered_map< SurfaceDraw_t*, Debug_Push > gDebugPushData;
-static std::unordered_map< SurfaceDraw_t*, Debug_Push > gWireframePushData;
-static std::unordered_map< SurfaceDraw_t*, Debug_Push > gDebugLinePushData;
-
-
 // -----------------------------------------------------------------------------------------------
 // Debug Shader
 
@@ -70,53 +64,35 @@ static void Shader_Debug_GetGraphicsPipelineCreate( GraphicsPipelineCreate_t& sr
 }
 
 
-static void Shader_Debug_ResetPushData()
+static void Shader_Debug_PushConstants( Handle cmd, Handle sLayout, const ShaderPushData_t& sPushData )
 {
-	gDebugPushData.clear();
-}
+	Debug_Push push{};
+	push.aModelMatrix = sPushData.apRenderable->aModelMatrix;
+	push.aColor       = sPushData.apMaterialData->vars[ COLOR_MAT_INDEX ].aVec4;
+	push.aRenderable  = sPushData.aRenderableIndex;
+	push.aViewport    = sPushData.aViewportIndex;
 
-
-static void Shader_Debug_SetupPushData( u32 sRenderableIndex, u32 sViewportIndex, Renderable_t* spDrawData, SurfaceDraw_t& srDrawInfo, ShaderMaterialData* spMaterialData )
-{
-	Debug_Push& push  = gDebugPushData[ &srDrawInfo ];
-	push.aModelMatrix = spDrawData->aModelMatrix;
-	push.aColor       = spMaterialData->vars[ COLOR_MAT_INDEX ].aVec4;
-	push.aRenderable  = sRenderableIndex;
-	push.aViewport    = sViewportIndex;
-}
-
-
-static void Shader_Debug_PushConstants( Handle cmd, Handle sLayout, SurfaceDraw_t& srDrawInfo )
-{
-	Debug_Push& push = gDebugPushData.at( &srDrawInfo );
 	render->CmdPushConstants( cmd, sLayout, ShaderStage_Vertex | ShaderStage_Fragment, 0, sizeof( Debug_Push ), &push );
 }
 
 
-static IShaderPush gShaderPush_Debug = {
-	.apReset = Shader_Debug_ResetPushData,
-	.apSetup = Shader_Debug_SetupPushData,
-	.apPush  = Shader_Debug_PushConstants,
-};
-
-
 ShaderCreate_t gShaderCreate_Debug = {
-	.apName               = "debug",
-	.aStages              = ShaderStage_Vertex | ShaderStage_Fragment,
-	.aBindPoint           = EPipelineBindPoint_Graphics,
-	.aFlags               = EShaderFlags_PushConstant,
-	.aDynamicState        = EDynamicState_Viewport | EDynamicState_Scissor | EDynamicState_LineWidth,
-	.aVertexFormat        = VertexFormat_Position,
-	.apInit               = nullptr,
-	.apDestroy            = nullptr,
-	.apLayoutCreate       = Shader_Debug_GetPipelineLayoutCreate,
-	.apGraphicsCreate     = Shader_Debug_GetGraphicsPipelineCreate,
-	.apShaderPush         = &gShaderPush_Debug,
+	.apName             = "debug",
+	.aStages            = ShaderStage_Vertex | ShaderStage_Fragment,
+	.aBindPoint         = EPipelineBindPoint_Graphics,
+	.aDynamicState      = EDynamicState_Viewport | EDynamicState_Scissor | EDynamicState_LineWidth,
+	.aVertexFormat      = VertexFormat_Position,
 
-	.apMaterialVars       = gDebug_MaterialVars,
-	.aMaterialVarCount    = CH_ARR_SIZE( gDebug_MaterialVars ),
-	.aMaterialSize        = sizeof( Debug_Material ),
-	.aUseMaterialBuffer   = false,
+	.apInit             = nullptr,
+	.apDestroy          = nullptr,
+	.apLayoutCreate     = Shader_Debug_GetPipelineLayoutCreate,
+	.apGraphicsCreate   = Shader_Debug_GetGraphicsPipelineCreate,
+	.apShaderPush       = Shader_Debug_PushConstants,
+
+	.apMaterialVars     = gDebug_MaterialVars,
+	.aMaterialVarCount  = CH_ARR_SIZE( gDebug_MaterialVars ),
+	.aMaterialSize      = sizeof( Debug_Material ),
+	.aUseMaterialBuffer = false,
 };
 
 
@@ -125,29 +101,6 @@ CH_REGISTER_SHADER( gShaderCreate_Debug );
 
 // -----------------------------------------------------------------------------------------------
 // Debug Line Shader
-
-
-static void Shader_DebugLine_ResetPushData()
-{
-	gDebugLinePushData.clear();
-}
-
-
-static void Shader_DebugLine_SetupPushData( u32 sRenderableIndex, u32 sViewportIndex, Renderable_t* spDrawData, SurfaceDraw_t& srDrawInfo, ShaderMaterialData* spMaterialData )
-{
-	Debug_Push& push  = gDebugLinePushData[ &srDrawInfo ];
-	push.aModelMatrix = spDrawData->aModelMatrix;
-	push.aColor       = spMaterialData->vars[ COLOR_MAT_INDEX ].aVec4;
-	push.aRenderable  = sRenderableIndex;
-	push.aViewport    = sViewportIndex;
-}
-
-
-static void Shader_DebugLine_PushConstants( Handle cmd, Handle sLayout, SurfaceDraw_t& srDrawInfo )
-{
-	Debug_Push& push = gDebugLinePushData.at( &srDrawInfo );
-	render->CmdPushConstants( cmd, sLayout, ShaderStage_Vertex | ShaderStage_Fragment, 0, sizeof( Debug_Push ), &push );
-}
 
 
 static void Shader_DebugLine_GetGraphicsPipelineCreate( GraphicsPipelineCreate_t& srGraphics )
@@ -163,24 +116,16 @@ static void Shader_DebugLine_GetGraphicsPipelineCreate( GraphicsPipelineCreate_t
 }
 
 
-static IShaderPush gShaderPush_DebugLine = {
-	.apReset = Shader_DebugLine_ResetPushData,
-	.apSetup = Shader_DebugLine_SetupPushData,
-	.apPush  = Shader_DebugLine_PushConstants,
-};
-
-
 ShaderCreate_t gShaderCreate_DebugLine = {
 	.apName             = "debug_line",
 	.aBindPoint         = EPipelineBindPoint_Graphics,
-	.aFlags             = EShaderFlags_PushConstant,
 	.aDynamicState      = EDynamicState_Viewport | EDynamicState_Scissor | EDynamicState_LineWidth,
 	.aVertexFormat      = VertexFormat_Position | VertexFormat_Color,
 	.apInit             = nullptr,
 	.apDestroy          = nullptr,
 	.apLayoutCreate     = Shader_Debug_GetPipelineLayoutCreate,
 	.apGraphicsCreate   = Shader_DebugLine_GetGraphicsPipelineCreate,
-	.apShaderPush       = &gShaderPush_DebugLine,
+	.apShaderPush       = Shader_Debug_PushConstants,
 
 	.apMaterialVars     = gDebug_MaterialVars,
 	.aMaterialVarCount  = CH_ARR_SIZE( gDebug_MaterialVars ),
@@ -196,54 +141,32 @@ CH_REGISTER_SHADER( gShaderCreate_DebugLine );
 // Wireframe Shader is just the debug shader with a different push constant lol
 
 
-static void Shader_Wireframe_ResetPushData()
+static void Shader_Wireframe_PushConstants( Handle cmd, Handle sLayout, const ShaderPushData_t& sPushData )
 {
-	gWireframePushData.clear();
-}
-
-
-static void Shader_Wireframe_SetupPushData( u32 sRenderableIndex, u32 sViewportIndex, Renderable_t* spDrawData, SurfaceDraw_t& srDrawInfo, ShaderMaterialData* spMaterialData )
-{
-	Debug_Push& push  = gWireframePushData[ &srDrawInfo ];
-	push.aModelMatrix = spDrawData->aModelMatrix;
+	Debug_Push push{};
+	push.aModelMatrix = sPushData.apRenderable->aModelMatrix;
 
 	// this should never happen, but it is, need to fix
-	if ( spMaterialData )
-		push.aColor = spMaterialData->vars[ COLOR_MAT_INDEX ].aVec4;
+	if ( sPushData.apMaterialData )
+		push.aColor = sPushData.apMaterialData->vars[ COLOR_MAT_INDEX ].aVec4;
 	else
 		push.aColor = gWireframeColor;
 
-	push.aRenderable  = sRenderableIndex;
-	push.aViewport    = sViewportIndex;
-}
-
-
-static void Shader_Wireframe_PushConstants( Handle cmd, Handle sLayout, SurfaceDraw_t& srDrawInfo )
-{
-	Debug_Push& push = gWireframePushData.at( &srDrawInfo );
 	render->CmdPushConstants( cmd, sLayout, ShaderStage_Vertex | ShaderStage_Fragment, 0, sizeof( Debug_Push ), &push );
 }
-
-
-static IShaderPush gShaderPush_Wireframe = {
-	.apReset = Shader_Wireframe_ResetPushData,
-	.apSetup = Shader_Wireframe_SetupPushData,
-	.apPush  = Shader_Wireframe_PushConstants,
-};
 
 
 ShaderCreate_t gShaderCreate_Wireframe = {
 	.apName             = "wireframe",
 	.aStages            = ShaderStage_Vertex | ShaderStage_Fragment,
 	.aBindPoint         = EPipelineBindPoint_Graphics,
-	.aFlags             = EShaderFlags_PushConstant,
 	.aDynamicState      = EDynamicState_Viewport | EDynamicState_Scissor | EDynamicState_LineWidth,
 	.aVertexFormat      = VertexFormat_Position,
 	.apInit             = nullptr,
 	.apDestroy          = nullptr,
 	.apLayoutCreate     = Shader_Debug_GetPipelineLayoutCreate,
 	.apGraphicsCreate   = Shader_Debug_GetGraphicsPipelineCreate,
-	.apShaderPush       = &gShaderPush_Wireframe,
+	.apShaderPush       = Shader_Wireframe_PushConstants,
 
 	.apMaterialVars     = gWireframe_MaterialVars,
 	.aMaterialVarCount  = CH_ARR_SIZE( gWireframe_MaterialVars ),

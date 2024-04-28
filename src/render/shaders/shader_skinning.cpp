@@ -9,15 +9,6 @@ static CreateDescBinding_t gSkinning_Bindings[] = {
 };
 
 
-// static std::unordered_map< u32, ShaderSkinning_Push > gPushData;
-
-
-constexpr EShaderFlags Shader_ShaderSkinning_Flags()
-{
-	return EShaderFlags_PushConstant;
-}
-
-
 static void Shader_ShaderSkinning_GetPipelineLayoutCreate( PipelineLayoutCreate_t& srPipeline )
 {
 	srPipeline.aPushConstants.push_back( { ShaderStage_Compute, 0, sizeof( ShaderSkinning_Push ) } );
@@ -33,12 +24,6 @@ static void Shader_ShaderSkinning_GetComputePipelineCreate( ComputePipelineCreat
 
 
 #if 0
-static void Shader_ShaderSkinning_ResetPushData()
-{
-	gPushData.clear();
-}
-
-
 // this system does not work for compute shaders, all of them need unique data
 static void Shader_ShaderSkinning_SetupPushData( ChHandle_t srRenderableHandle, Renderable_t* spDrawData )
 {
@@ -63,13 +48,6 @@ static void Shader_ShaderSkinning_PushConstants( Handle cmd, Handle sLayout, ChH
 	ShaderSkinning_Push& push = gPushData.at( CH_GET_HANDLE_INDEX( srRenderableHandle ) );
 	render->CmdPushConstants( cmd, sLayout, ShaderStage_Compute, 0, sizeof( ShaderSkinning_Push ), &push );
 }
-
-
-static IShaderPushComp gShaderPush_Skinning = {
-	.apReset = Shader_ShaderSkinning_ResetPushData,
-	.apSetup = Shader_ShaderSkinning_SetupPushData,
-	.apPush  = Shader_ShaderSkinning_PushConstants,
-};
 #endif
 
 
@@ -77,7 +55,6 @@ ShaderCreate_t gShaderCreate_Skinning = {
 	.apName           = "__skinning",
 	.aStages          = ShaderStage_Compute,
 	.aBindPoint       = EPipelineBindPoint_Compute,
-	.aFlags           = Shader_ShaderSkinning_Flags(),
 	.apInit           = nullptr,
 	.apDestroy        = nullptr,
 	.apLayoutCreate   = Shader_ShaderSkinning_GetPipelineLayoutCreate,

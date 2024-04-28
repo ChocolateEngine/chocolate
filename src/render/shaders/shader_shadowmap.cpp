@@ -12,8 +12,7 @@ struct ShadowMap_Push
 };
 
 
-static std::unordered_map< SurfaceDraw_t*, ShadowMap_Push > gPushData;
-static int                                                  gShadowViewInfoIndex = 0;
+static int  gShadowViewInfoIndex = 0;
 
 
 static void Shader_ShadowMap_GetPipelineLayoutCreate( PipelineLayoutCreate_t& srPipeline )
@@ -41,23 +40,17 @@ void Shader_ShadowMap_SetViewInfo( u32 sViewInfo )
 }
 
 
-static void Shader_ShadowMap_ResetPushData()
-{
-	gPushData.clear();
-}
-
-
-static void Shader_ShadowMap_SetupPushData( u32 sRenderableIndex, u32 sViewportIndex, Renderable_t* spModelDraw, SurfaceDraw_t& srDrawInfo, ShaderMaterialData* spMaterialData )
+static void Shader_ShadowMap_PushConstants( Handle cmd, Handle sLayout, const ShaderPushData_t& sPushData )
 {
 	PROF_SCOPE();
 
-	ShadowMap_Push& push = gPushData[ &srDrawInfo ];
-	push.aModelMatrix    = spModelDraw->aModelMatrix;
+	ShadowMap_Push push;
+	push.aModelMatrix    = sPushData.apRenderable->aModelMatrix;
+	push.aRenderable     = sPushData.apRenderable->aIndex;
 	push.aViewport       = gShadowViewInfoIndex;
-	push.aRenderable     = spModelDraw->aIndex;
 	push.aAlbedo         = -1;
 
-	Handle mat           = gGraphics.Model_GetMaterial( spModelDraw->aModel, srDrawInfo.aSurface );
+	Handle mat           = sPushData.apRenderable->apMaterials[ sPushData.aSurfaceDraw.aSurface ];
 	if ( mat == InvalidHandle )
 		return;
 
@@ -86,31 +79,15 @@ static void Shader_ShadowMap_SetupPushData( u32 sRenderableIndex, u32 sViewportI
 
 	if ( alphaTest )
 		push.aAlbedo = render->GetTextureIndex( texture );
-}
 
-
-static void Shader_ShadowMap_PushConstants( Handle cmd, Handle sLayout, SurfaceDraw_t& srDrawInfo )
-{
-	PROF_SCOPE();
-
-	ShadowMap_Push& push = gPushData.at( &srDrawInfo );
-	push.aViewport       = gShadowViewInfoIndex;
 	render->CmdPushConstants( cmd, sLayout, ShaderStage_Vertex | ShaderStage_Fragment, 0, sizeof( ShadowMap_Push ), &push );
 }
-
-
-static IShaderPush gShaderPush_ShadowMap = {
-	.apReset = Shader_ShadowMap_ResetPushData,
-	.apSetup = Shader_ShadowMap_SetupPushData,
-	.apPush  = Shader_ShadowMap_PushConstants,
-};
 
 
 ShaderCreate_t gShaderCreate_ShadowMap = {
 	.apName           = "__shadow_map",
 	.aStages          = ShaderStage_Vertex | ShaderStage_Fragment,
 	.aBindPoint       = EPipelineBindPoint_Graphics,
-	.aFlags           = EShaderFlags_PushConstant,
 	.aDynamicState    = EDynamicState_Viewport | EDynamicState_Scissor,
 	.aVertexFormat    = VertexFormat_Position | VertexFormat_TexCoord,
 	.aRenderPass      = ERenderPass_Shadow,
@@ -118,7 +95,7 @@ ShaderCreate_t gShaderCreate_ShadowMap = {
 	.apDestroy        = nullptr,
 	.apLayoutCreate   = Shader_ShadowMap_GetPipelineLayoutCreate,
 	.apGraphicsCreate = Shader_ShadowMap_GetGraphicsPipelineCreate,
-	.apShaderPush     = &gShaderPush_ShadowMap,
+	.apShaderPush     = Shader_ShadowMap_PushConstants,
 };
 
 

@@ -82,8 +82,6 @@ enum : u32
 };
 
 
-static std::unordered_map< SurfaceDraw_t*, Basic3D_Push > gPushData;
-
 CONVAR_RANGE_INT( r_basic3d_dbg_mode, 0, 0, 4 );
 
 
@@ -108,44 +106,19 @@ static void Shader_Basic3D_GetGraphicsPipelineCreate( GraphicsPipelineCreate_t& 
 }
 
 
-// TODO: Move this push constant management into the shader system
-// we should only need the SetupPushData function
-static void Shader_Basic3D_ResetPushData()
-{
-	gPushData.clear();
-}
-
-
-static void Shader_Basic3D_SetupPushData( u32 sRenderableIndex, u32 sViewportIndex, Renderable_t* spRenderable, SurfaceDraw_t& srDrawInfo, ShaderMaterialData* spMaterialData )
+static void Shader_Basic3D_PushConstants( Handle cmd, Handle sLayout, const ShaderPushData_t& sPushData )
 {
 	PROF_SCOPE();
 
-	Basic3D_Push& push = gPushData[ &srDrawInfo ];
-	// push.aModelMatrix  = spModelDraw->aModelMatrix;
-	// push.aRenderable   = CH_GET_HANDLE_INDEX( srDrawInfo.aRenderable );
-	push.aRenderable   = spRenderable->aIndex;  // or sRenderableIndex, huh
-	push.aMaterial     = spMaterialData->matIndex;
-	push.aViewport     = sViewportIndex;
+	Basic3D_Push push;
+	push.aRenderable   = sPushData.apRenderable->aIndex;  // or sRenderableIndex, huh
+	push.aMaterial     = sPushData.apMaterialData->matIndex;
+	push.aViewport     = sPushData.aViewportIndex;
 
 	push.aDebugDraw    = r_basic3d_dbg_mode;
-	// push.aPCF          = gArgPCF;
-}
 
-
-static void Shader_Basic3D_PushConstants( Handle cmd, Handle sLayout, SurfaceDraw_t& srDrawInfo )
-{
-	PROF_SCOPE();
-
-	Basic3D_Push& push = gPushData.at( &srDrawInfo );
 	render->CmdPushConstants( cmd, sLayout, ShaderStage_Vertex | ShaderStage_Fragment, 0, sizeof( Basic3D_Push ), &push );
 }
-
-
-static IShaderPush gShaderPush_Basic3D = {
-	.apReset = Shader_Basic3D_ResetPushData,
-	.apSetup = Shader_Basic3D_SetupPushData,
-	.apPush  = Shader_Basic3D_PushConstants,
-};
 
 
 // TODO: some binding list saying which ones are materials? or only have one option for saying which binding is a material
@@ -153,17 +126,12 @@ ShaderCreate_t gShaderCreate_Basic3D = {
 	.apName                 = "basic_3d",
 	.aStages                = ShaderStage_Vertex | ShaderStage_Fragment,
 	.aBindPoint             = EPipelineBindPoint_Graphics,
-	.aFlags                 = EShaderFlags_PushConstant,
 	.aDynamicState          = EDynamicState_Viewport | EDynamicState_Scissor,
 	.aVertexFormat          = VertexFormat_Position | VertexFormat_Normal | VertexFormat_TexCoord,
 
 	.apLayoutCreate         = Shader_Basic3D_GetPipelineLayoutCreate,
 	.apGraphicsCreate       = Shader_Basic3D_GetGraphicsPipelineCreate,
-
-	// .aPushSize         = sizeof( Basic3D_Push ),
-	// .apPushSetup       = Shader_Basic3D_SetupPushData2,
-
-	.apShaderPush           = &gShaderPush_Basic3D,
+	.apShaderPush           = Shader_Basic3D_PushConstants,
 
 	.apBindings             = gBasic3D_Bindings,
 	.aBindingCount          = CH_ARR_SIZE( gBasic3D_Bindings ),

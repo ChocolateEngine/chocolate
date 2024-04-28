@@ -81,8 +81,8 @@ using EShaderFlags = int;
 enum : EShaderFlags
 {
 	EShaderFlags_None             = 0,
-	EShaderFlags_VertexAttributes = ( 1 << 0 ),  // Shader Uses Vertex Attributes
-	EShaderFlags_PushConstant     = ( 1 << 1 ),  // Shader Uses a Push Constant
+	// EShaderFlags_VertexAttributes = ( 1 << 0 ),  // Shader Uses Vertex Attributes
+	// EShaderFlags_PushConstant     = ( 1 << 1 ),  // Shader Uses a Push Constant
 };
 
 
@@ -661,15 +661,21 @@ struct ShaderMaterialData
 };
 
 
+// well, this is a mess lol
+struct ShaderPushData_t
+{
+	u32                 aRenderableIndex;
+	u32                 aViewportIndex;
+	ChHandle_t          aRenderableHandle;
+	Renderable_t*       apRenderable;
+	SurfaceDraw_t       aSurfaceDraw;
+	ChHandle_t          aMaterial;
+	ShaderMaterialData* apMaterialData;
+};
+
+
 // Push Constant Function Pointers
-using FShader_ResetPushData             = void();
-using FShader_SetupPushData             = void( u32 sSurfaceIndex, u32 sViewportIndex, Renderable_t* spDrawData, SurfaceDraw_t& srDrawInfo, ShaderMaterialData* spMaterialData );
-using FShader_PushConstants             = void( ChHandle_t cmd, ChHandle_t sLayout, SurfaceDraw_t& srDrawInfo );
-
-using FShader_SetupPushData2            = void( u32 sSurfaceIndex, u32 sViewportIndex, Renderable_t* spDrawData, SurfaceDraw_t& srDrawInfo, void* spData );
-
-// blech
-using FShader_SetupPushDataComp         = void( ChHandle_t srRenderableHandle, Renderable_t* spDrawData );
+using FShader_PushConstants             = void( ChHandle_t cmd, ChHandle_t sLayout, const ShaderPushData_t& sPushData );
 using FShader_PushConstantsComp         = void( ChHandle_t cmd, ChHandle_t sLayout, ChHandle_t srRenderableHandle, Renderable_t* spDrawData );
 
 using FShader_Init                      = bool();
@@ -680,23 +686,6 @@ using FShader_GetGraphicsPipelineCreate = void( GraphicsPipelineCreate_t& srCrea
 using FShader_GetComputePipelineCreate  = void( ComputePipelineCreate_t& srCreate );
 
 using FShader_DescriptorData            = void();
-
-
-struct IShaderPush
-{
-	FShader_ResetPushData* apReset = nullptr;
-	FShader_SetupPushData* apSetup = nullptr;
-	FShader_PushConstants* apPush  = nullptr;
-};
-
-
-// awful hacky push interface for compute shaders, need to rethink it
-struct IShaderPushComp
-{
-	FShader_ResetPushData*     apReset = nullptr;
-	FShader_SetupPushDataComp* apSetup = nullptr;
-	FShader_PushConstantsComp* apPush  = nullptr;
-};
 
 
 struct ShaderMaterialVarDesc
@@ -783,34 +772,31 @@ struct ShaderMaterialVarDesc
 
 struct ShaderCreate_t
 {
-	const char*                        apName               = nullptr;
-	ShaderStage                        aStages              = ShaderStage_None;
-	EPipelineBindPoint                 aBindPoint           = EPipelineBindPoint_Graphics;
-	EShaderFlags                       aFlags               = EShaderFlags_None;
-	EDynamicState                      aDynamicState        = EDynamicState_None;
-	VertexFormat                       aVertexFormat        = VertexFormat_None;
-	ERenderPass                        aRenderPass          = ERenderPass_Graphics;
+	const char*                        apName                 = nullptr;
+	ShaderStage                        aStages                = ShaderStage_None;
+	EPipelineBindPoint                 aBindPoint             = EPipelineBindPoint_Graphics;
+	EShaderFlags                       aFlags                 = EShaderFlags_None;
+	EDynamicState                      aDynamicState          = EDynamicState_None;
+	VertexFormat                       aVertexFormat          = VertexFormat_None;
+	ERenderPass                        aRenderPass            = ERenderPass_Graphics;
 
-	FShader_Init*                      apInit               = nullptr;
-	FShader_Destroy*                   apDestroy            = nullptr;
+	FShader_Init*                      apInit                 = nullptr;
+	FShader_Destroy*                   apDestroy              = nullptr;
 
-	FShader_GetPipelineLayoutCreate*   apLayoutCreate       = nullptr;
-	FShader_GetGraphicsPipelineCreate* apGraphicsCreate     = nullptr;
-	FShader_GetComputePipelineCreate*  apComputeCreate      = nullptr;
+	FShader_GetPipelineLayoutCreate*   apLayoutCreate         = nullptr;
+	FShader_GetGraphicsPipelineCreate* apGraphicsCreate       = nullptr;
+	FShader_GetComputePipelineCreate*  apComputeCreate        = nullptr;
 
-	// u16                                aPushSize            = 0;
-	// FShader_SetupPushData2*            apPushSetup          = nullptr;
+	FShader_PushConstants*             apShaderPush           = nullptr;
+	FShader_PushConstantsComp*         apShaderPushComp       = nullptr;
 
-	IShaderPush*                       apShaderPush         = nullptr;
-	IShaderPushComp*                   apShaderPushComp     = nullptr;
+	CreateDescBinding_t*               apBindings             = nullptr;
+	u32                                aBindingCount          = 0;
 
-	CreateDescBinding_t*               apBindings           = nullptr;
-	u32                                aBindingCount        = 0;
-
-	ShaderMaterialVarDesc*             apMaterialVars       = nullptr;
-	u32                                aMaterialVarCount    = 0;
-	u32                                aMaterialSize        = 0;
-	bool                               aUseMaterialBuffer   = false;
+	ShaderMaterialVarDesc*             apMaterialVars         = nullptr;
+	u32                                aMaterialVarCount      = 0;
+	u32                                aMaterialSize          = 0;
+	bool                               aUseMaterialBuffer     = false;
 	u32                                aMaterialBufferBinding = 0;
 };
 
@@ -818,24 +804,25 @@ struct ShaderCreate_t
 // stored data internally
 struct ShaderData_t
 {
-	EShaderFlags            aFlags               = EShaderFlags_None;
-	ShaderStage             aStages              = ShaderStage_None;
-	EDynamicState           aDynamicState        = EDynamicState_None;
-	ChHandle_t              aLayout              = CH_INVALID_HANDLE;
-	IShaderPush*            apPush               = nullptr;
-	IShaderPushComp*        apPushComp           = nullptr;
+	EShaderFlags               aFlags                 = EShaderFlags_None;
+	ShaderStage                aStages                = ShaderStage_None;
+	EDynamicState              aDynamicState          = EDynamicState_None;
+	ChHandle_t                 aLayout                = CH_INVALID_HANDLE;
+
+	FShader_PushConstants*     apPush                 = nullptr;
+	FShader_PushConstantsComp* apPushComp             = nullptr;
 
 	// u16                     aPushSize            = 0;
 	// FShader_SetupPushData2* apPushSetup          = nullptr;
 
-	CreateDescBinding_t*    apBindings           = nullptr;
-	u32                     aBindingCount        = 0;
+	CreateDescBinding_t*       apBindings             = nullptr;
+	u32                        aBindingCount          = 0;
 
-	ShaderMaterialVarDesc*  apMaterialVars       = nullptr;
-	u32                     aMaterialVarCount    = 0;
-	u32                     aMaterialSize        = 0;
-	bool                    aUseMaterialBuffer   = false;
-	u32                     aMaterialBufferBinding = 0;
+	ShaderMaterialVarDesc*     apMaterialVars         = nullptr;
+	u32                        aMaterialVarCount      = 0;
+	u32                        aMaterialSize          = 0;
+	bool                       aUseMaterialBuffer     = false;
+	u32                        aMaterialBufferBinding = 0;
 };
 
 
@@ -909,7 +896,7 @@ struct RenderContext
 };
 
 
-struct GraphicsStats_t
+struct RenderStats_t
 {
 	size_t aDrawCalls;
 	size_t aVerticesDrawn;
@@ -1149,7 +1136,7 @@ class IGraphics : public ISystem
 	virtual void                   Shutdown()                                                                                                     = 0;
 
 	// Per-Frame stats
-	virtual GraphicsStats_t        GetStats()                                                                                                     = 0;
+	virtual RenderStats_t        GetStats()                                                                                                     = 0;
 
 	// ChHandle_t         CreateRenderPass() = 0;
 	// virtual void               UpdateRenderPass( ChHandle_t sRenderPass ) = 0;
@@ -1173,6 +1160,10 @@ class IGraphics : public ISystem
 	virtual Renderable_t*          GetRenderableData( ChHandle_t sRenderable )                                                                    = 0;
 	virtual void                   SetRenderableModel( ChHandle_t sRenderable, ChHandle_t sModel )                                                = 0;
 	virtual void                   FreeRenderable( ChHandle_t sRenderable )                                                                       = 0;
+
+	// Reset's the materials back to what they originally were on the model
+	virtual void                   ResetRenderableMaterials( ChHandle_t sRenderable )                                                             = 0;
+
 	virtual void                   UpdateRenderableAABB( ChHandle_t sRenderable )                                                                 = 0;
 	virtual ModelBBox_t            GetRenderableAABB( ChHandle_t sRenderable )                                                                    = 0;
 

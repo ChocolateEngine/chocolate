@@ -562,71 +562,20 @@ bool Shader_Bind( Handle sCmd, u32 sIndex, Handle sShader )
 }
 
 
-void Shader_ResetPushData()
+bool Shader_PreMaterialDraw( Handle sCmd, u32 sIndex, ChHandle_t sShader, ShaderData_t* spShaderData, ShaderPushData_t& sPushData )
 {
 	PROF_SCOPE();
 
-	// this is where data oriented would be better, but the way i did it was slow
-	for ( auto& [ shader, data ] : gShaderData )
-	{
-		if ( data.apPush )
-			data.apPush->apReset();
-		
-		// if ( data.aPushSize == 0 )
-		// 	continue;
-
-
-	}
-
-	
-	// for ( auto& [ renderable, data ] : gShaderPushData )
-	// {
-	// 	delete data;
-	// }
-	// 
-	// gShaderPushData.clear();
-}
-
-
-bool Shader_SetupRenderableDrawData( ChHandle_t sShader, ChHandle_t sMat, u32 sRenderableIndex, u32 sViewportIndex, Renderable_t* spModelDraw, ShaderData_t* spShaderData, SurfaceDraw_t& srRenderable )
-{
-	PROF_SCOPE();
-
-	if ( !spShaderData )
+	if ( !sPushData.apRenderable )
 		return false;
 
-	if ( spShaderData->aFlags & EShaderFlags_PushConstant )
+	if ( sPushData.aViewportIndex == UINT32_MAX )
+		return false;
+
+	if ( spShaderData->apPush )
 	{
-		// if ( spShaderData->apPushSetup )
-		// {
-		// 
-		// }
-
-		if ( !spShaderData->apPush )
-			return false;
-
-		// this can be nullptr, as some shaders don't use materials
-		ShaderMaterialData* matData = Shader_GetMaterialData( sShader, sMat );
-		spShaderData->apPush->apSetup( sRenderableIndex, sViewportIndex, spModelDraw, srRenderable, matData );
-	}
-
-	return true;
-}
-
-
-bool Shader_PreRenderableDraw( Handle sCmd, u32 sIndex, ShaderData_t* spShaderData, SurfaceDraw_t& srRenderable )
-{
-	PROF_SCOPE();
-
-	if ( spShaderData->aFlags & EShaderFlags_PushConstant )
-	{
-		if ( !spShaderData->apPush )
-			return false;
-
-		spShaderData->apPush->apPush( sCmd, spShaderData->aLayout, srRenderable );
-
-		// void* data = gShaderPushData.at( &srRenderable );
-		// render->CmdPushConstants( sCmd, layout, spShaderData->aStages, 0, spShaderData->aPushSize, data );
+		sPushData.apMaterialData = Shader_GetMaterialData( sShader, sPushData.apRenderable->apMaterials[ sPushData.aSurfaceDraw.aSurface ] );
+		spShaderData->apPush( sCmd, spShaderData->aLayout, sPushData );
 	}
 
 	return true;

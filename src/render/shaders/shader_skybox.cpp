@@ -12,9 +12,6 @@ struct Skybox_Push
 };
 
 
-static std::unordered_map< SurfaceDraw_t*, Skybox_Push > gSkyboxPushData;
-
-
 static void Shader_Skybox_GetPipelineLayoutCreate( PipelineLayoutCreate_t& srPipeline )
 {
 	srPipeline.aPushConstants.push_back( { ShaderStage_Vertex | ShaderStage_Fragment, 0, sizeof( Skybox_Push ) } );
@@ -34,54 +31,33 @@ static void Shader_Skybox_GetGraphicsPipelineCreate( GraphicsPipelineCreate_t& s
 }
 
 
-static void Shader_Skybox_ResetPushData()
-{
-	gSkyboxPushData.clear();
-}
-
-
-static void Shader_Skybox_SetupPushData( u32 sRenderableIndex, u32 sViewportIndex, Renderable_t* spModelDraw, SurfaceDraw_t& srDrawInfo, ShaderMaterialData* spMaterialData )
+static void Shader_Skybox_PushConstants( Handle cmd, Handle sLayout, const ShaderPushData_t& sPushData )
 {
 	PROF_SCOPE();
 
-	Skybox_Push& push = gSkyboxPushData[ &srDrawInfo ];
-	push.aModelMatrix = spModelDraw->aModelMatrix;
+	Skybox_Push push;
 
-	Handle mat        = gGraphics.Model_GetMaterial( spModelDraw->aModel, srDrawInfo.aSurface );
+	push.aModelMatrix = sPushData.apRenderable->aModelMatrix;
+	Handle mat        = sPushData.apRenderable->apMaterials[ sPushData.aSurfaceDraw.aSurface ];
 	push.aSky         = gGraphics.Mat_GetTextureIndex( mat, "sky" );
-	push.aRenderable  = sRenderableIndex;
-	push.aViewport    = sViewportIndex;
-}
+	push.aRenderable  = sPushData.aRenderableIndex;
+	push.aViewport    = sPushData.aViewportIndex;
 
-
-static void Shader_Skybox_PushConstants( Handle cmd, Handle sLayout, SurfaceDraw_t& srDrawInfo )
-{
-	PROF_SCOPE();
-
-	Skybox_Push& push = gSkyboxPushData.at( &srDrawInfo );
 	render->CmdPushConstants( cmd, sLayout, ShaderStage_Vertex | ShaderStage_Fragment, 0, sizeof( Skybox_Push ), &push );
 }
-
-
-static IShaderPush gShaderPush_Skybox = {
-	.apReset = Shader_Skybox_ResetPushData,
-	.apSetup = Shader_Skybox_SetupPushData,
-	.apPush  = Shader_Skybox_PushConstants,
-};
 
 
 ShaderCreate_t gShaderCreate_Skybox = {
 	.apName           = "skybox",
 	.aStages          = ShaderStage_Vertex | ShaderStage_Fragment,
 	.aBindPoint       = EPipelineBindPoint_Graphics,
-	.aFlags           = EShaderFlags_PushConstant,
 	.aDynamicState    = EDynamicState_Viewport | EDynamicState_Scissor,
 	.aVertexFormat    = VertexFormat_Position,
 	.apInit           = nullptr,
 	.apDestroy        = nullptr,
 	.apLayoutCreate   = Shader_Skybox_GetPipelineLayoutCreate,
 	.apGraphicsCreate = Shader_Skybox_GetGraphicsPipelineCreate,
-	.apShaderPush     = &gShaderPush_Skybox,
+	.apShaderPush     = Shader_Skybox_PushConstants,
 };
 
 

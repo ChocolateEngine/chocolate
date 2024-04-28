@@ -40,17 +40,7 @@ static void Shader_SelectResult_GetComputePipelineCreate( ComputePipelineCreate_
 }
 
 
-static void Shader_Select_ResetPushData()
-{
-}
-
-
-static void Shader_Select_SetupPushData( u32 sRenderableIndex, u32 sViewportIndex, Renderable_t* spRenderable, SurfaceDraw_t& srDrawInfo, ShaderMaterialData* spMaterialData )
-{
-}
-
-
-static void Shader_Select_PushConstants( Handle cmd, Handle sLayout, SurfaceDraw_t& srSurfaceDraw )
+static void Shader_Select_PushConstants( Handle cmd, Handle sLayout, const ShaderPushData_t& sPushData )
 {
 	PROF_SCOPE();
 
@@ -58,16 +48,16 @@ static void Shader_Select_PushConstants( Handle cmd, Handle sLayout, SurfaceDraw
 	u8 color[ 3 ];
 	for ( SelectionRenderable& selectRenderable : gRenderOld.aSelectionRenderables )
 	{
-		if ( selectRenderable.renderable != srSurfaceDraw.aRenderable )
+		if ( selectRenderable.renderable != sPushData.aSurfaceDraw.aRenderable )
 			continue;
 
-		if ( selectRenderable.colors.size() < srSurfaceDraw.aSurface )
+		if ( selectRenderable.colors.size() < sPushData.aSurfaceDraw.aSurface )
 		{
-			Log_ErrorF( "No Material Color for material %d!\n", srSurfaceDraw.aSurface );
+			Log_ErrorF( "No Material Color for material %d!\n", sPushData.aSurfaceDraw.aSurface );
 		}
 		else
 		{
-			u32 colorSelect = selectRenderable.colors[ srSurfaceDraw.aSurface ];
+			u32 colorSelect = selectRenderable.colors[ sPushData.aSurfaceDraw.aSurface ];
 
 			color[ 0 ]      = ( colorSelect >> 16 ) & 0xFF;
 			color[ 1 ]      = ( colorSelect >> 8 ) & 0xFF;
@@ -79,14 +69,13 @@ static void Shader_Select_PushConstants( Handle cmd, Handle sLayout, SurfaceDraw
 
 	ShaderSelect_Push push;
 	push.aViewport           = Graphics_GetShaderSlot( gGraphicsData.aViewportSlots, gRenderOld.aSelectionViewport );
-	push.aRenderable         = CH_GET_HANDLE_INDEX( srSurfaceDraw.aRenderable );
+	push.aRenderable         = sPushData.apRenderable->aIndex;
 	push.aColor.x            = color[ 0 ] / 255.f;
 	push.aColor.y            = color[ 1 ] / 255.f;
 	push.aColor.z            = color[ 2 ] / 255.f;
 	push.aDiffuse            = -1;
 
-	Renderable_t* renderable = gGraphics.GetRenderableData( srSurfaceDraw.aRenderable );
-	ChHandle_t    mat        = gGraphics.Model_GetMaterial( renderable->aModel, srSurfaceDraw.aSurface );
+	ChHandle_t mat           = sPushData.apRenderable->apMaterials[ sPushData.aSurfaceDraw.aSurface ];
 
 	if ( mat != CH_INVALID_HANDLE )
 	{
@@ -105,23 +94,15 @@ static void Shader_Select_PushConstants( Handle cmd, Handle sLayout, SurfaceDraw
 }
 
 
-static IShaderPush gShaderPush_Select = {
-	.apReset = Shader_Select_ResetPushData,
-	.apSetup = Shader_Select_SetupPushData,
-	.apPush  = Shader_Select_PushConstants,
-};
-
-
 ShaderCreate_t gShaderCreate_Select = {
 	.apName           = CH_SHADER_NAME_SELECT,
 	.aStages          = gSelectShaderStage,
 	.aBindPoint       = EPipelineBindPoint_Graphics,
-	.aFlags           = EShaderFlags_PushConstant,
 	.aDynamicState    = EDynamicState_Viewport | EDynamicState_Scissor,
 	.aRenderPass      = ERenderPass_Select,
 	.apLayoutCreate   = Shader_Select_GetPipelineLayoutCreate,
 	.apGraphicsCreate = Shader_Select_GetGraphicsPipelineCreate,
-	.apShaderPush     = &gShaderPush_Select,
+	.apShaderPush     = Shader_Select_PushConstants,
 };
 
 
@@ -129,7 +110,6 @@ ShaderCreate_t gShaderCreate_SelectResult = {
 	.apName          = CH_SHADER_NAME_SELECT_RESULT,
 	.aStages         = gSelectShaderStage,
 	.aBindPoint      = EPipelineBindPoint_Graphics,
-	.aFlags          = EShaderFlags_PushConstant,
 	.apLayoutCreate  = Shader_SelectResult_GetPipelineLayoutCreate,
 	.apComputeCreate = Shader_SelectResult_GetComputePipelineCreate,
 	.apBindings      = gSelect_Bindings,

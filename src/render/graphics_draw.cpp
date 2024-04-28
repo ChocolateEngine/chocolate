@@ -145,7 +145,7 @@ bool Graphics_BindModel( ChHandle_t cmd, VertexFormat sVertexFormat, Model* spMo
 }
 
 
-void Graphics_DrawShaderRenderables( Handle cmd, size_t sIndex, Handle shader, ChVector< SurfaceDraw_t >& srRenderList )
+void Graphics_DrawShaderRenderables( Handle cmd, size_t sIndex, Handle shader, u32 sViewportIndex, ChVector< SurfaceDraw_t >& srRenderList )
 {
 	PROF_SCOPE();
 
@@ -233,9 +233,16 @@ void Graphics_DrawShaderRenderables( Handle cmd, size_t sIndex, Handle shader, C
 				continue;
 		}
 #endif
+		
+		ShaderPushData_t pushData{};
+		pushData.apRenderable      = renderable;
+		pushData.aRenderableIndex  = renderable->aIndex;  // dumb
+		pushData.aRenderableHandle = surfaceDraw.aRenderable;
+		pushData.aViewportIndex    = sViewportIndex;
+		pushData.aSurfaceDraw      = surfaceDraw;
 
 		// NOTE: not needed if the material is the same i think
-		if ( !Shader_PreRenderableDraw( cmd, sIndex, shaderData, surfaceDraw ) )
+		if ( !Shader_PreMaterialDraw( cmd, sIndex, shader, shaderData, pushData ) )
 			continue;
 
 		Graphics_CmdDrawSurface( cmd, model, surfaceDraw.aSurface );
@@ -243,7 +250,7 @@ void Graphics_DrawShaderRenderables( Handle cmd, size_t sIndex, Handle shader, C
 }
 
 
-void Graphics_RenderView( Handle cmd, size_t sIndex, ViewportShader_t& srViewport, ViewRenderList_t& srViewList )
+void Graphics_RenderView( Handle cmd, size_t sIndex, u32 sViewportIndex, ViewportShader_t& srViewport, ViewRenderList_t& srViewList )
 {
 	PROF_SCOPE();
 
@@ -294,7 +301,7 @@ void Graphics_RenderView( Handle cmd, size_t sIndex, ViewportShader_t& srViewpor
 
 		render->CmdSetViewport( cmd, 0, &viewPort, 1 );
 
-		Graphics_DrawShaderRenderables( cmd, sIndex, gizmo, srViewList.aRenderLists[ gizmo ] );
+		Graphics_DrawShaderRenderables( cmd, sIndex, gizmo, sViewportIndex, srViewList.aRenderLists[ gizmo ] );
 	}
 
 	viewPort.minDepth = 0.f;
@@ -319,7 +326,7 @@ void Graphics_RenderView( Handle cmd, size_t sIndex, ViewportShader_t& srViewpor
 		if ( shader == gizmo )
 			continue;
 
-		Graphics_DrawShaderRenderables( cmd, sIndex, shader, renderList );
+		Graphics_DrawShaderRenderables( cmd, sIndex, shader, sViewportIndex, renderList );
 	}
 
 	// Draw Skybox - and set depth for skybox
@@ -330,7 +337,7 @@ void Graphics_RenderView( Handle cmd, size_t sIndex, ViewportShader_t& srViewpor
 
 		render->CmdSetViewport( cmd, 0, &viewPort, 1 );
 
-		Graphics_DrawShaderRenderables( cmd, sIndex, skybox, srViewList.aRenderLists[ skybox ] );
+		Graphics_DrawShaderRenderables( cmd, sIndex, skybox, sViewportIndex, srViewList.aRenderLists[ skybox ] );
 	}
 }
 
@@ -390,6 +397,9 @@ u32 Graphics::CreateViewport( ViewportShader_t** spViewport )
 		( *spViewport )          = &viewport;
 		( *spViewport )->aActive = true;
 	}
+
+	// Create Viewport Render List
+	ViewRenderList_t& viewRenderList = gGraphicsData.aViewRenderLists[ handle ];
 
 	return handle;
 }

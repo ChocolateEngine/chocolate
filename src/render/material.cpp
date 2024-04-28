@@ -237,7 +237,7 @@ void Graphics::Mat_AddRef( ChHandle_t sMat )
 		return;
 	}
 
-	Log_DevF( gLC_ClientGraphics, 2, "Incremented Ref Count for Material \"%zd\" from %u to %u\n", data->aRefCount, data->aRefCount + 1 );
+	Log_DevF( gLC_ClientGraphics, 2, "Incremented Ref Count for Material \"%d\" from %d to %d\n", sMat, data->aRefCount, data->aRefCount + 1 );
 	data->aRefCount++;
 }
 

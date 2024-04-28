@@ -362,13 +362,13 @@ constexpr const char* gIndexBufferStr       = "Vertex Buffer";
 constexpr const char* gBlendShapeWeightsStr = "Blend Shape Weights Buffer";
 
 
-extern GraphicsData_t  gGraphicsData;
-extern GraphicsStats_t gStats;
+extern GraphicsData_t gGraphicsData;
+extern RenderStats_t  gStats;
 
 
 bool                  Graphics_CreateVariableUniformLayout( ShaderDescriptor_t& srBuffer, const char* spLayoutName, const char* spSetName, int sCount );
 
-void                  Graphics_DrawShaderRenderables( ChHandle_t cmd, size_t sIndex, ChHandle_t shader, ChVector< SurfaceDraw_t >& srRenderList );
+void                  Graphics_DrawShaderRenderables( ChHandle_t cmd, size_t sIndex, ChHandle_t shader, u32 sViewportIndex, ChVector< SurfaceDraw_t >& srRenderList );
 
 u32                   Graphics_AllocateShaderSlot( ShaderArrayAllocator_t& srAllocator );
 void                  Graphics_FreeShaderSlot( ShaderArrayAllocator_t& srAllocator, u32 sIndex );
@@ -397,9 +397,7 @@ bool                  Graphics_CreateSelectRenderPass();
 void                  Graphics_SelectionTexturePass( Handle sCmd, size_t sIndex );
 
 bool                  Shader_Bind( Handle sCmd, u32 sIndex, Handle sShader );
-void                  Shader_ResetPushData();
-bool                  Shader_SetupRenderableDrawData( ChHandle_t sShader, ChHandle_t sMat, u32 sRenderableIndex, u32 sViewportIndex, Renderable_t* spModelDraw, ShaderData_t* spShaderData, SurfaceDraw_t& srRenderable );
-bool                  Shader_PreRenderableDraw( Handle sCmd, u32 sIndex, ShaderData_t* spShaderData, SurfaceDraw_t& srRenderable );
+bool                  Shader_PreMaterialDraw( Handle sCmd, u32 sIndex, ChHandle_t sShader, ShaderData_t* spShaderData, ShaderPushData_t& sPushData );
 bool                  Shader_ParseRequirements( ShaderRequirmentsList_t& srOutput );
 
 VertexFormat          Shader_GetVertexFormat( Handle sShader );
@@ -641,7 +639,7 @@ class Graphics : public IGraphics
 	virtual bool                   Init() override;
 	virtual void                   Shutdown() override;
 
-	virtual GraphicsStats_t        GetStats() override;
+	virtual RenderStats_t        GetStats() override;
 
 	// ChHandle_t         CreateRenderPass() override;
 	// virtual void               UpdateRenderPass( ChHandle_t sRenderPass ) override;
@@ -667,6 +665,7 @@ class Graphics : public IGraphics
 	virtual Renderable_t*          GetRenderableData( ChHandle_t sRenderable ) override;
 	virtual void                   SetRenderableModel( ChHandle_t sRenderable, ChHandle_t sModel ) override;
 	virtual void                   FreeRenderable( ChHandle_t sRenderable ) override;
+	virtual void                   ResetRenderableMaterials( ChHandle_t sRenderable ) override;
 	virtual void                   UpdateRenderableAABB( ChHandle_t sRenderable ) override;
 	virtual ModelBBox_t            GetRenderableAABB( ChHandle_t sRenderable ) override;
 

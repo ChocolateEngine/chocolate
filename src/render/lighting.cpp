@@ -783,9 +783,11 @@ void Graphics_RenderShadowMap( Handle cmd, size_t sIndex, Light_t* spLight, Shad
 
 	ViewRenderList_t& viewList = it->second;
 
+	u32               viewIndex = Graphics_GetShaderSlot( gGraphicsData.aViewportSlots, shadowMap->aViewportHandle );
+
 	for ( auto& [ shader, renderList ] : viewList.aRenderLists )
 	{
-		Graphics_DrawShaderRenderables( cmd, sIndex, shader, renderList );
+		Graphics_DrawShaderRenderables( cmd, sIndex, shader, viewIndex, renderList );
 	}
 }
 
