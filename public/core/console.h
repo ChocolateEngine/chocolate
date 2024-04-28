@@ -65,8 +65,6 @@ using ConCommandDropdownFunc = void(
 // Callback function to add data to the config.cfg file written from CVARF_ARCHIVE
 using FArchive = void( std::string& srOutput );
 
-// ConCommand console dropdown list function
-
 using ConVarFlag_t = size_t;
 
 

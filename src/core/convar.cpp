@@ -547,7 +547,7 @@ std::string Con_GetConVarValueStr( ConVarData_t* cvarData )
 	switch ( cvarData->aType )
 	{
 		case EConVarType_Bool:
-			return cvarData->aBool.apData ? "true" : "false";
+			return *cvarData->aBool.apData ? "true" : "false";
 
 		case EConVarType_Int:
 			return vstring( "%d", *cvarData->aInt.apData );
