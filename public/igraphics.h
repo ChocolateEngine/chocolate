@@ -206,7 +206,7 @@ enum EFrustum
 struct Frustum_t
 {
 	glm::vec4 aPlanes[ EFrustum_Count ];
-	glm::vec3 aPoints[ 8 ];
+	glm::vec3 aPoints[ 8 ];  // 4 Positions for the near plane corners, last 4 are the far plane corner positions
 
 	// https://iquilezles.org/articles/frustumcorrect/
 	bool      IsBoxVisible( const glm::vec3& sMin, const glm::vec3& sMax ) const
@@ -254,6 +254,29 @@ struct Frustum_t
 		}
 
 		return true;
+	}
+
+	void GetAABB( glm::vec3& srMin, glm::vec3& srMax ) const
+	{
+		srMin = aPoints[ 0 ];
+		srMax = aPoints[ 0 ];
+
+		for ( int i = 1; i < 8; i++ )
+		{
+			srMin = glm::min( srMin, aPoints[ i ] );
+			srMax = glm::max( srMax, aPoints[ i ] );
+		}
+	}
+
+	bool IsFrustumVisible( const Frustum_t& other )
+	{
+		// Just do a aabb test
+		glm::vec3 min;
+		glm::vec3 max;
+
+		other.GetAABB( min, max );
+
+		return IsBoxVisible( min, max );
 	}
 };
 
