@@ -612,11 +612,6 @@ void Graphics_PrepareDrawData()
 	// }
 
 	render->CopyQueuedBuffers();
-
-	{
-		PROF_SCOPE_NAMED( "Imgui Render" );
-		ImGui::Render();
-	}
 }
 
 
@@ -829,10 +824,12 @@ void RenderSystemOld::Present( ChHandle_t window, u32* viewports, u32 viewportCo
 	// YEAH THIS SUCKS !!!!!!!!!
 	render->SetResetCallback( window, Graphics_OnResetCallback );
 
-	// render->LockGraphicsMutex();
+	{
+		PROF_SCOPE_NAMED( "Imgui Render" );
+		ImGui::Render();
+	}
 
-	// TODO: should call this once
-	PreRender();
+	// render->LockGraphicsMutex();
 
 	ChHandle_t backBuffer[ 2 ];
 	backBuffer[ 0 ] = render->GetBackBufferColor( window );
@@ -880,7 +877,7 @@ void RenderSystemOld::Present( ChHandle_t window, u32* viewports, u32 viewportCo
 		aSelectionThisFrame = false;
 
 		// Draw Shadow Maps
-		Graphics_DrawShadowMaps( c, cmdIndex );
+		Graphics_DrawShadowMaps( c, cmdIndex, viewports, viewportCount );
 
 		// ----------------------------------------------------------
 		// Main RenderPass

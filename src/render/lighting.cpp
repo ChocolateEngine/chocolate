@@ -11,6 +11,8 @@ std::vector< Light_t* >                     gLights;
 static std::vector< Light_t* >              gDirtyLights;
 static std::vector< Light_t* >              gDestroyLights;
 
+static std::vector< Light_t* >              gShadowMapsToRender;
+
 extern void                                 Shader_ShadowMap_SetViewInfo( u32 sViewInfo );
 
 // --------------------------------------------------------------------------------------
@@ -697,6 +699,15 @@ void Graphics_PrepareShadowRenderLists()
 
 		gGraphics.SetViewportRenderList( shadowViewports[ v ], shadowRenderables.data(), shadowRenderables.size() );
 	}
+
+	gShadowMapsToRender.clear();
+
+	// Add all lights that have shadow maps
+	for ( Light_t* light : gLights )
+	{
+		if ( light->apShadowMap )
+			gShadowMapsToRender.push_back( light );
+	}
 }
 
 
@@ -792,19 +803,80 @@ void Graphics_RenderShadowMap( Handle cmd, size_t sIndex, Light_t* spLight, Shad
 }
 
 
-void Graphics_DrawShadowMaps( Handle sCmd, size_t sIndex )
+void Graphics_ResetShadowMapsRenderList()
+{
+}
+
+
+void Graphics_DrawShadowMaps( Handle sCmd, size_t sIndex, u32* viewports, u32 viewportCount )
 {
 	PROF_SCOPE();
+
+	if ( viewportCount == 0 || gShadowMapsToRender.empty() )
+		return;
 
 	RenderPassBegin_t renderPassBegin{};
 	renderPassBegin.aClear.resize( 1 );
 	renderPassBegin.aClear[ 0 ].aColor   = { 0.f, 0.f, 0.f, 1.f };
 	renderPassBegin.aClear[ 0 ].aIsDepth = true;
+	
+	ViewportShader_t** viewportList = ch_malloc< ViewportShader_t* >( viewportCount );
 
-	for ( Light_t* light : gLights )
+	// Get all viewports
+	for ( u32 i = 0; i < viewportCount; i++ )
 	{
+		auto it = gGraphicsData.aViewports.find( viewports[ i ] );
+
+		if ( it == gGraphicsData.aViewports.end() )
+		{
+			Log_ErrorF( gLC_ClientGraphics, "Failed to Find Viewport Render List Data\n" );
+			return;
+		}
+
+		viewportList[ i ] = &it->second;
+	}
+
+	for ( size_t i = 0; i < gShadowMapsToRender.size(); )
+	{
+		Light_t* light = gShadowMapsToRender[ i ]; 
 		if ( !light->aEnabled || !light->aShadow || !light->apShadowMap )
+		{
+			vec_remove_index( gShadowMapsToRender, i );
 			continue;
+		}
+
+		auto it = gGraphicsData.aViewports.find( light->apShadowMap->aViewportHandle );
+
+		if ( it == gGraphicsData.aViewports.end() )
+		{
+			Log_ErrorF( gLC_ClientGraphics, "Failed to Find Viewport Render List Data\n" );
+			continue;
+		}
+
+		ViewportShader_t* shadowViewport = &it->second;
+
+		// Check if the shadowmap view frustum is in view of the current viewport view frustum
+		bool              found          = false;
+		for ( u32 v = 0; v < viewportCount; v++ )
+		{
+			if ( !viewportList[ v ]->aActive )
+				continue;
+
+			if ( viewportList[ v ]->aFrustum.IsFrustumVisible( shadowViewport->aFrustum ) )
+			{
+				found = true;
+				break;
+			}
+		}
+
+		if ( !found )
+		{
+			i++;
+			continue;
+		}
+		
+		// Time to render it
+		vec_remove_index( gShadowMapsToRender, i );
 
 		renderPassBegin.aRenderPass  = gGraphicsData.aRenderPassShadow;
 		renderPassBegin.aFrameBuffer = light->apShadowMap->aFramebuffer;
@@ -816,5 +888,7 @@ void Graphics_DrawShadowMaps( Handle sCmd, size_t sIndex )
 		Graphics_RenderShadowMap( sCmd, sIndex, light, light->apShadowMap );
 		render->EndRenderPass( sCmd );
 	}
+
+	free( viewportList );
 }
 

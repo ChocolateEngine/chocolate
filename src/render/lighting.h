@@ -20,5 +20,6 @@ void   Graphics_DestroyLights();
 // Are we using any shadowmaps/are any shadowmaps enabled?
 bool   Graphics_IsUsingShadowMaps();
 
-void   Graphics_DrawShadowMaps( Handle sCmd, size_t sIndex );
+void   Graphics_DrawShadowMaps( Handle sCmd, size_t sIndex, u32* viewports, u32 viewportCount );
 
+void   Graphics_ResetShadowMapsRenderList();
