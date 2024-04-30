@@ -33,6 +33,23 @@ static std::string MatVar_Diffuse = "diffuse";
 static std::string MatVar_Emissive = "emissive";
 
 
+static ChHandle_t LoadMaterial( const std::string& path )
+{
+	std::string matPath = path;
+
+	if ( !matPath.ends_with( ".cmt" ) )
+		matPath += ".cmt";
+
+	if ( FileSys_IsFile( matPath ) )
+		return gGraphics.LoadMaterial( matPath );
+
+	else if ( FileSys_IsFile( "models/" + matPath ) )
+		return gGraphics.LoadMaterial( "models/" + matPath );
+
+	return CH_INVALID_HANDLE;
+}
+
+
 void LoadObj_Fast( const std::string &srBasePath, const std::string &srPath, Model* spModel )
 {
 	PROF_SCOPE();
@@ -66,12 +83,15 @@ void LoadObj_Fast( const std::string &srBasePath, const std::string &srPath, Mod
 
 		if ( material == InvalidHandle )
 		{
-			std::string matPath = matName + ".cmt";
-			if ( FileSys_IsFile( matPath ) )
-				material = gGraphics.LoadMaterial( matPath );
+			// kinda strange this setup
+			
+			// Search without "baseDir2"
+			material = LoadMaterial( objMat.name );
 
-			else if ( FileSys_IsFile( "models/" + matPath ) )
-				material = gGraphics.LoadMaterial( "models/" + matPath );
+			if ( material == CH_INVALID_HANDLE )
+			{
+				material = LoadMaterial( matName );
+			}
 		}
 
 		// fallback if there is no cmt file
