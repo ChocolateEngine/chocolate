@@ -267,6 +267,7 @@ struct GraphicsAPI_t
 	// u8                                    aWindowCount;
 
 	ResourceList< WindowVK >              windows;
+	ChHandle_t                            mainWindow;
 };
 
 

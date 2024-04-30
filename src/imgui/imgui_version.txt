@@ -1,3 +1,3 @@
-https://github.com/ocornut/imgui/tree/e3d7cd665d9b8cf7c78166ed774bf47e502dd6be
+https://github.com/ocornut/imgui/releases/tag/v1.90.5-docking
 
-Docking Branch ImGui 1.90
+Docking Branch ImGui 1.90.5

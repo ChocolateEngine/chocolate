@@ -42,7 +42,6 @@ struct ImGuiTexture
 };
 
 static std::unordered_map< ChHandle_t, ImGuiTexture >    gImGuiTextures;
-static std::vector< std::vector< char > >                gFontData;
 
 static std::vector< VkBuffer >                           gBuffers;
 
@@ -528,6 +527,7 @@ bool VK_InitImGui( VkRenderPass sRenderPass )
 	initInfo.Device          = VK_GetDevice();
 	initInfo.Queue           = VK_GetGraphicsQueue();
 	initInfo.DescriptorPool  = VK_GetDescPool();
+	initInfo.RenderPass      = sRenderPass;
 	initInfo.MinImageCount   = VK_GetSurfaceImageCount();
 	initInfo.ImageCount      = VK_GetSurfaceImageCount();
 	initInfo.CheckVkResultFn = VK_CheckResult;
@@ -541,7 +541,7 @@ bool VK_InitImGui( VkRenderPass sRenderPass )
 
 	initInfo.MSAASamples = info->aUsesMSAA ? VK_GetMSAASamples() : VK_SAMPLE_COUNT_1_BIT;
 
-	if ( !ImGui_ImplVulkan_Init( &initInfo, sRenderPass ) )
+	if ( !ImGui_ImplVulkan_Init( &initInfo ) )
 		return false;
 
 	return true;
@@ -665,6 +665,11 @@ void VK_ResetAll( ERenderResetFlags sFlags )
 	{
 		VK_DestroyMainRenderPass();
 		VK_CreateMainRenderPass();
+
+		// Recreate ImGui's Vulkan Backend for this context
+		ImGui_ImplVulkan_Shutdown();
+		VK_InitImGui( VK_GetRenderPass() );
+		VK_CreateImGuiFonts();
 	}
 
 	for ( u32 i = 0; i < gGraphicsAPIData.windows.GetHandleCount(); i++ )
@@ -772,9 +777,7 @@ public:
 			return false;
 		}
 
-		bool ret = VK_CreateImGuiFonts();
-		gFontData.clear();
-		return ret;
+		return VK_CreateImGuiFonts();
 	}
 
 	void ShutdownImGui() override
@@ -911,7 +914,8 @@ public:
 		// fun
 		if ( window == gWindowHack )
 		{
-			windowVK->surface = gSurfaceHack;
+			windowVK->surface           = gSurfaceHack;
+			gGraphicsAPIData.mainWindow = windowHandle;
 		}
 		else
 		{

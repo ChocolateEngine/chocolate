@@ -135,7 +135,7 @@ void VK_CreateDescriptorPool()
 	aDescriptorPoolInfo.maxSets       = gDescriptorSetCount;
 
 	// Allows you to update descriptors after they have been bound in a command buffer
-	aDescriptorPoolInfo.flags         = VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT;
+	aDescriptorPoolInfo.flags         = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT | VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT;
 
 	VK_CheckResult( vkCreateDescriptorPool( VK_GetDevice(), &aDescriptorPoolInfo, nullptr, &gVkDescriptorPool ), "Failed to create descriptor pool!" );
 

@@ -139,7 +139,8 @@ bool VK_GetShaderStageCreateInfo( VkPipelineShaderStageCreateInfo* spStageCreate
 		stageInfo.pName  = stage.apEntry;
 
 		VkShaderModuleCreateInfo createInfo{ VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO };
-		createInfo.codeSize = fileData.size();
+		// FileSys_ReadFile adds a null terminator at the end
+		createInfo.codeSize = fileData.size() - 1;
 		createInfo.pCode    = (u32*)fileData.data();
 
 		if ( !VK_CheckResultE( vkCreateShaderModule( VK_GetDevice(), &createInfo, NULL, &stageInfo.module ), "Failed to create shader module!" ) )
