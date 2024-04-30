@@ -112,7 +112,7 @@ void main()
 		return;
 	}
 
-	outColor = vec4(0, 0, 0, albedo.a);
+	outColor = vec4(0, 0, 0, 1);
 	
 	outColor += AddLighting( albedo, inPositionWorld, normalWorld );
 
