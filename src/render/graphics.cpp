@@ -233,7 +233,7 @@ Handle Graphics::LoadModel( const std::string& srPath )
 
 	if ( fullPath.empty() )
 	{
-		Log_DevF( gLC_ClientGraphics, 1, "LoadModel: Failed to Find Model: %s\n", srPath.c_str() );
+		Log_ErrorF( gLC_ClientGraphics, "LoadModel: Failed to Find Model: %s\n", srPath.c_str() );
 		return InvalidHandle;
 	}
 
