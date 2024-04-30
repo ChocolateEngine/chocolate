@@ -237,7 +237,7 @@ void Graphics::Mat_AddRef( ChHandle_t sMat )
 		return;
 	}
 
-	Log_DevF( gLC_ClientGraphics, 2, "Incremented Ref Count for Material \"%d\" from %d to %d\n", sMat, data->aRefCount, data->aRefCount + 1 );
+	Log_DevF( gLC_ClientGraphics, 3, "Incremented Ref Count for Material \"%d\" from %d to %d\n", sMat, data->aRefCount, data->aRefCount + 1 );
 	data->aRefCount++;
 }
 
@@ -268,9 +268,9 @@ bool Graphics::Mat_RemoveRef( ChHandle_t sMat )
 	}
 
 	if ( matName.size() )
-		Log_DevF( gLC_ClientGraphics, 2, "Decremented Ref Count for Material \"%s\" from %u to %u\n", matName.data(), data->aRefCount, data->aRefCount - 1 );
+		Log_DevF( gLC_ClientGraphics, 3, "Decremented Ref Count for Material \"%s\" from %u to %u\n", matName.data(), data->aRefCount, data->aRefCount - 1 );
 	else
-		Log_DevF( gLC_ClientGraphics, 2, "Decremented Ref Count for Material \"%zd\" from %u to %u\n", sMat, data->aRefCount, data->aRefCount - 1 );
+		Log_DevF( gLC_ClientGraphics, 3, "Decremented Ref Count for Material \"%zd\" from %u to %u\n", sMat, data->aRefCount, data->aRefCount - 1 );
 
 	data->aRefCount--;
 
@@ -420,24 +420,49 @@ Handle Graphics::Mat_GetTexture( Handle mat, std::string_view name, Handle fallb
 }
 
 
+// kinda dumb, but oh well
+template <typename T>
+T Mat_GetNumberValue( MaterialVar* var, T fallback )
+{
+	if ( !var )
+		return fallback;
+
+	switch ( var->aType )
+	{
+		case EMatVar_Float:
+			return static_cast< T >( var->GetFloat( fallback ) );
+
+		case EMatVar_Int:
+			return static_cast< T >( var->GetInt( fallback ) );
+
+		case EMatVar_Bool:
+			return static_cast< T >( var->GetBool( fallback ) );
+
+		default:
+			Log_ErrorF( gLC_ClientGraphics, "Material Var \"%s\" Type is \"%d\", not Float, Int, or Bool\n", var->apName, var->aType );
+			return fallback;
+	}
+}
+
+
 float Graphics::Mat_GetFloat( Handle mat, std::string_view name, float fallback )
 {
 	MaterialVar* var = Mat_GetVarInternal( mat, name );
-	return var ? var->GetFloat( fallback ) : fallback;
+	return Mat_GetNumberValue( var, fallback );
 }
 
 
 int Graphics::Mat_GetInt( Handle mat, std::string_view name, int fallback )
 {
 	MaterialVar* var = Mat_GetVarInternal( mat, name );
-	return var ? var->GetInt( fallback ) : fallback;
+	return Mat_GetNumberValue( var, fallback );
 }
 
 
 bool Graphics::Mat_GetBool( Handle mat, std::string_view name, bool fallback )
 {
 	MaterialVar* var = Mat_GetVarInternal( mat, name );
-	return var ? var->GetBool( fallback ) : fallback;
+	return Mat_GetNumberValue( var, fallback );
 }
 
 
@@ -655,6 +680,48 @@ bool Graphics_ParseMaterial( const std::string& srName, const std::string& srPat
 			// Texture Path
 			case EJsonType_String:
 			{
+				// Sometimes the user can put numbers or bools in the texture path
+				// so we need to check if it's a number or bool
+
+				// Check if it's a number
+				if ( cur.apString[0] >= '0' && cur.apString[0] <= '9' )
+				{
+					// Check if it's a float
+					if ( strchr( cur.apString, '.' ) )
+					{
+						float value = 0.f;
+						if ( ToFloat( cur.apString, value ) )
+						{
+							float value = static_cast< float >( atof( cur.apString ) );
+							gGraphics.Mat_SetVar( handle, cur.apName, value );
+							break;
+						}
+					}
+
+					// Check if it's an int
+					long value = 0;
+					if ( ToLong3( cur.apString, value ) )
+					{
+						gGraphics.Mat_SetVar( handle, cur.apName, (int)value );
+						break;
+					}
+				}
+
+				// Check if it's a bool
+				// TODO: use the convar bool alias list
+				if ( strcmp( cur.apString, "true" ) == 0 )
+				{
+					gGraphics.Mat_SetVar( handle, cur.apName, true );
+					break;
+				}
+
+				if ( strcmp( cur.apString, "false" ) == 0 )
+				{
+					gGraphics.Mat_SetVar( handle, cur.apName, false );
+					break;
+				}
+
+				// This is indeed a texture
 				TextureCreateData_t createData{};
 				createData.aUsage  = EImageUsage_Sampled;
 				createData.aFilter = EImageFilter_Linear;
@@ -790,7 +857,7 @@ Handle Graphics::LoadMaterial( const std::string& srPath )
 	auto nameIt = gMaterialNames.find( name.c_str() );
 	if ( nameIt != gMaterialNames.end() )
 	{
-		Log_DevF( gLC_ClientGraphics, 2, "Incrementing Ref Count for Material \"%s\" - \"%zd\"\n", srPath.c_str(), nameIt->second );
+		Log_DevF( gLC_ClientGraphics, 3, "Incrementing Ref Count for Material \"%s\" - \"%zd\"\n", srPath.c_str(), nameIt->second );
 		Mat_AddRef( nameIt->second );
 		return nameIt->second;
 	}
@@ -811,7 +878,7 @@ Handle Graphics::CreateMaterial( const std::string& srName, Handle shShader )
 	auto nameIt = gMaterialNames.find( srName.c_str() );
 	if ( nameIt != gMaterialNames.end() )
 	{
-		Log_DevF( gLC_ClientGraphics, 2, "Incrementing Ref Count for Material \"%s\" - \"%zd\"\n", srName.c_str(), nameIt->second );
+		Log_DevF( gLC_ClientGraphics, 3, "Incrementing Ref Count for Material \"%s\" - \"%zd\"\n", srName.c_str(), nameIt->second );
 		Mat_AddRef( nameIt->second );
 		return nameIt->second;
 	}
