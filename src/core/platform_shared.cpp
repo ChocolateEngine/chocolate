@@ -464,18 +464,18 @@ class CpuInfo
 
 int test_other_cpu_info()
 {
-	CpuInfo cpuInfo;
-
-	std::cout << cpuInfo.getVendorID() << std::endl;
-	std::cout << cpuInfo.getBrand() << std::endl;
-	std::cout << "Avx2 : " << ( cpuInfo.isAvx2() ? "True" : "False" ) << std::endl;
-	std::cout << "Avx512f : " << ( cpuInfo.isAvx512f() ? "True" : "False" ) << std::endl;
-
-
-	std::cout << "Number Logical Proccesor : " << cpuInfo.getNumberLogicalProccesor() << std::endl;
-	std::cout << "Number Core : " << cpuInfo.getNumberCore() << std::endl;
-
-	std::cout << "Frequency : " << cpuInfo.getFrequency() << std::endl;
+	//CpuInfo cpuInfo;
+	//
+	//std::cout << cpuInfo.getVendorID() << std::endl;
+	//std::cout << cpuInfo.getBrand() << std::endl;
+	//std::cout << "Avx2 : " << ( cpuInfo.isAvx2() ? "True" : "False" ) << std::endl;
+	//std::cout << "Avx512f : " << ( cpuInfo.isAvx512f() ? "True" : "False" ) << std::endl;
+	//
+	//
+	//std::cout << "Number Logical Proccesor : " << cpuInfo.getNumberLogicalProccesor() << std::endl;
+	//std::cout << "Number Core : " << cpuInfo.getNumberCore() << std::endl;
+	//
+	//std::cout << "Frequency : " << cpuInfo.getFrequency() << std::endl;
 
 	return 0;
 }

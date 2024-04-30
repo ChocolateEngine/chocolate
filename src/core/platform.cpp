@@ -406,6 +406,13 @@ void sys_init()
 	if ( !win32_init_console( gConOut, gConIn ) )
 		sys_print_last_error( "Failed to Init System Console\n" );
 
+
+	// List CPU Version
+	cpu_info_t cpu_info = Sys_GetCpuInfo();
+
+	Log_DevF( 1, "CPU Vendor ID: %s\n", cpu_info.vendor_id );
+	Log_DevF( 1, "CPU Model Name: %s\n", cpu_info.model_name );
+
 	
 	// Init Theme Context (why windows???)
 	ZeroMemory( &gActCtx, sizeof( gActCtx ) );
