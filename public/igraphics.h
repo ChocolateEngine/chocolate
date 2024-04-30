@@ -668,7 +668,7 @@ struct ShaderMaterialVar
 		ChHandle_t aTexture;
 		float      aFloat;
 		int        aInt;
-		bool       aBool;
+		// bool       aBool;
 		glm::vec2  aVec2;
 		glm::vec3  aVec3;
 		glm::vec4  aVec4;
@@ -722,7 +722,7 @@ struct ShaderMaterialVarDesc
 		const char* defaultTexture;  // Path To Default Texture
 		float       defaultFloat;
 		int         defaultInt;
-		bool        defaultBool;
+		// bool        defaultBool;
 		glm::vec2   defaultVec2;
 		glm::vec3   defaultVec3;
 		glm::vec4   defaultVec4;
@@ -761,11 +761,11 @@ struct ShaderMaterialVarDesc
 		defaultInt = sDefault;
 	}
 
-	ShaderMaterialVarDesc( const char* spName, const char* spDesc, bool sDefault, u32 sDataOffset, u32 sDataSize ) :
-		ShaderMaterialVarDesc( EMatVar_Bool, spName, spDesc, sDataOffset, sDataSize )
-	{
-		defaultBool = sDefault;
-	}
+	// ShaderMaterialVarDesc( const char* spName, const char* spDesc, bool sDefault, u32 sDataOffset, u32 sDataSize ) :
+	// 	ShaderMaterialVarDesc( EMatVar_Bool, spName, spDesc, sDataOffset, sDataSize )
+	// {
+	// 	defaultBool = sDefault;
+	// }
 
 	ShaderMaterialVarDesc( const char* spName, const char* spDesc, glm::vec2 sDefault, u32 sDataOffset, u32 sDataSize ) :
 		ShaderMaterialVarDesc( EMatVar_Vec2, spName, spDesc, sDataOffset, sDataSize )

@@ -828,11 +828,12 @@ void Shader_WriteMaterialBuffer( ChHandle_t mat, ChHandle_t shader, ShaderData_t
 				memcpy( writeData + desc.dataOffset, &materialData->vars[ varI ].aInt, desc.dataSize );
 				break;
 			}
-			case EMatVar_Bool:
-			{
-				memcpy( writeData + desc.dataOffset, &materialData->vars[ varI ].aBool, desc.dataSize );
-				break;
-			}
+			//case EMatVar_Bool:
+			//{
+			//	bool* b = (bool*)( writeData + desc.dataOffset );
+			//	*b = materialData->vars[ varI ].aBool;
+			//	break;
+			//}
 			case EMatVar_Vec2:
 			{
 				memcpy( writeData + desc.dataOffset, &materialData->vars[ varI ].aVec2, desc.dataSize );
@@ -913,11 +914,11 @@ void Shader_UpdateMaterialVars()
 					data->vars[ varI ].aInt = gGraphics.Mat_GetInt( mat, desc.name, desc.defaultInt );
 					break;
 				}
-				case EMatVar_Bool:
-				{
-					data->vars[ varI ].aBool = gGraphics.Mat_GetBool( mat, desc.name, desc.defaultBool );
-					break;
-				}
+				//case EMatVar_Bool:
+				//{
+				//	data->vars[ varI ].aBool = gGraphics.Mat_GetBool( mat, desc.name, desc.defaultBool );
+				//	break;
+				//}
 				case EMatVar_Vec2:
 				{
 					data->vars[ varI ].aVec2 = gGraphics.Mat_GetVec2( mat, desc.name, desc.defaultVec2 );

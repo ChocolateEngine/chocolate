@@ -45,8 +45,9 @@ struct Basic3D_Material
 	float aoPower;
 	float emissivePower;
 
-	bool  alphaTest;
-	bool  useNormalMap;  // TODO: have an option to detect if a texture is in the normal map option or not
+	// do not use bools, as glsl bools get compiled to u32s
+	u32   alphaTest;
+	u32   useNormalMap;  // TODO: have an option to detect if a texture is in the normal map option or not
 };
 
 
@@ -59,26 +60,11 @@ static ShaderMaterialVarDesc gBasic3D_MaterialVars[] = {
 	CH_SHADER_MATERIAL_VAR( Basic3D_Material, aoPower, "Ambient Occlusion Strength", 0.f ),
 	CH_SHADER_MATERIAL_VAR( Basic3D_Material, emissivePower, "Emission Strength", 0.f ),
 
-	CH_SHADER_MATERIAL_VAR( Basic3D_Material, alphaTest, "Alpha Testing", false ),
-	CH_SHADER_MATERIAL_VAR( Basic3D_Material, useNormalMap, "Use Normal Map", true ),
+	CH_SHADER_MATERIAL_VAR( Basic3D_Material, alphaTest, "Alpha Testing", 0 ),
+	CH_SHADER_MATERIAL_VAR( Basic3D_Material, useNormalMap, "Use Normal Map", 1 ),
 
 	// bullet list option
 	// CH_SHADER_MATERIAL_VAR_COMBO();
-};
-
-
-// KEEP IN THE SAME ORDER AS THE MATERIAL VARS ABOVE
-enum : u32
-{
-	EBasic3D_Diffuse,
-	EBasic3D_AmbientOcclusion,
-	EBasic3D_Emissive,
-	EBasic3D_NormalMap,
-
-	EBasic3D_AmbientOcclusionPower,
-	EBasic3D_EmissivePower,
-
-	EBasic3D_AlphaTest,
 };
 
 
