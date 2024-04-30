@@ -1241,7 +1241,10 @@ class IRenderSystemOld : public ISystem
    public:
 	virtual void NewFrame()                                                                                                      = 0;
 	virtual void Reset( ChHandle_t window )                                                                                      = 0;
-	virtual void PreRender()                                                                                                     = 0;
+
+	// Call this function before presenting all your windows/viewports
+	virtual void PrePresent()                                                                                                    = 0;
+
 	virtual void Present( ChHandle_t window, u32* sViewports, u32 viewportCount )                                                = 0;
 
 	// ---------------------------------------------------------------------------------------
@@ -1278,7 +1281,7 @@ class IRenderSystem : public ISystem
    public:
 	virtual void NewFrame()                                             = 0;
 	virtual void Reset()                                                = 0;
-	virtual void PreRender()                                            = 0;
+	virtual void PrePresent()                                            = 0;
 	virtual void Present()                                              = 0;
 
 	virtual u64  StartRenderPass()                                      = 0;

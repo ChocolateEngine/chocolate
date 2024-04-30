@@ -720,7 +720,7 @@ class RenderSystemOld : public IRenderSystemOld
 
 	virtual void                    NewFrame() override;
 	virtual void                    Reset( ChHandle_t window ) override;
-	virtual void                    PreRender() override;
+	virtual void                    PrePresent() override;
 	virtual void                    Present( ChHandle_t window, u32* sViewports, u32 viewportCount ) override;
 
 	virtual void                    EnableSelection( bool enabled, u32 viewport ) override;

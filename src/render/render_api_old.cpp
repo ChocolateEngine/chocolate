@@ -800,7 +800,7 @@ void RenderSystemOld::DoSelectionCompute( ChHandle_t cmd, u32 cmdIndex )
 }
 
 
-void RenderSystemOld::PreRender()
+void RenderSystemOld::PrePresent()
 {
 	render->WaitForQueues();
 	render->ResetCommandPool();
