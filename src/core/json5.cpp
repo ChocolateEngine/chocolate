@@ -57,6 +57,11 @@ StartOfSkip:
 			if ( *str == '\0' )
 				return EJsonError_None;
 
+			str++;
+
+			if ( *str == '\0' )
+				return EJsonError_None;
+
 			// continue checking whitespace
 			goto StartOfSkip;
 		}
