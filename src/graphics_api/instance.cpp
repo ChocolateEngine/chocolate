@@ -900,10 +900,10 @@ void VK_CreateDevice( VkSurfaceKHR surface )
 	pfnCmdInsertDebugUtilsLabel   = (PFN_vkCmdInsertDebugUtilsLabelEXT)vkGetInstanceProcAddr( VK_GetInstance(), "vkCmdInsertDebugUtilsLabelEXT" );
 
 	if ( pfnSetDebugUtilsObjectName )
-		Log_Dev( gLC_Vulkan, 1, "Loaded PFN_vkSetDebugUtilsObjectNameEXT\n" );
+		Log_Dev( gLC_Vulkan, 2, "Loaded PFN_vkSetDebugUtilsObjectNameEXT\n" );
 
 	if ( pfnSetDebugUtilsObjectTag )
-		Log_Dev( gLC_Vulkan, 1, "Loaded PFN_vkSetDebugUtilsObjectTagEXT\n" );
+		Log_Dev( gLC_Vulkan, 2, "Loaded PFN_vkSetDebugUtilsObjectTagEXT\n" );
 	
 #if _DEBUG && NV_CHECKPOINTS
 	pfnCmdSetCheckpointNV       = (PFN_vkCmdSetCheckpointNV)vkGetInstanceProcAddr( VK_GetInstance(), "vkCmdSetCheckpointNV" );

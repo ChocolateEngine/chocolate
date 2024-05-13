@@ -225,7 +225,7 @@ void Graphics_LoadObj( const std::string& srBasePath, const std::string& srPath,
 	auto currentTime = std::chrono::high_resolution_clock::now();
 	time = std::chrono::duration< float, std::chrono::seconds::period >( currentTime - startTime ).count();
 
-	Log_DevF( gLC_ClientGraphics, 1, "Obj Load Time: %.6f sec: %s\n", time, srBasePath.c_str() );
+	Log_DevF( gLC_ClientGraphics, 3, "Obj Load Time: %.6f sec: %s\n", time, srBasePath.c_str() );
 }
 
 
