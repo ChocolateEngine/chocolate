@@ -1372,17 +1372,69 @@ CONCMD_VA( host_writeconfig, "Write a config (can optionally specify a path) con
 }
 
 
-#if 0
+#if 1
 CONCMD_VA( con_cvar_mem_usage, "Print the memory usage usage of all convars" )
 {
 	size_t      size    = 0;
 
-	Log_DevF( gConsoleChannel, 1, "sizeof( ConVarData_t ): %zu\n", sizeof( ConVarData_t ) );
-	Log_DevF( gConsoleChannel, 1, "sizeof( ConCommand ):   %zu\n", sizeof( ConCommand ) );
-
-	Log_Dev( gConsoleChannel, 1, "todo: finish\n" );
+	Log_MsgF( gConsoleChannel, "sizeof( ConVarData_t ): %zu\n", sizeof( ConVarData_t ) );
+	Log_MsgF( gConsoleChannel, "sizeof( ConCommand ):   %zu\n", sizeof( ConCommand ) );
 
 	// Calculate the Amount of memory each value take up in the ConVarData_t
+	size_t cvarHeapMemory   = 0;
+	size_t cvarStringMemory = 0;
+
+	size_t cmdHeapMemory    = 0;
+	size_t cmdStackMemory   = 0;
+	size_t cmdStringMemory  = 0;
+
+	for ( auto& [ cvarName, cvarData ] : Con_GetConVarMap() )
+	{
+		cvarHeapMemory   += sizeof( ConVarData_t );
+		cvarStringMemory += cvarName.size() * sizeof( std::string_view::value_type );
+
+		// the value is stored on the heap
+		switch ( cvarData->aType )
+		{
+			case EConVarType_Bool:
+				cvarHeapMemory += sizeof( bool );  // value + default value
+				break;
+
+			case EConVarType_Int:
+			case EConVarType_RangeInt:
+				cvarHeapMemory += sizeof( int );
+				break;
+
+			case EConVarType_Float:
+			case EConVarType_RangeFloat:
+				cvarHeapMemory += sizeof( float );
+				break;
+
+			case EConVarType_String:
+				// cvarHeapMemory += sizeof( char* ) * 2;
+				cvarStringMemory += strlen( *cvarData->aString.apData ) * sizeof( char );
+				cvarStringMemory += cvarData->aString.aDefaultData ? strlen( cvarData->aString.aDefaultData ) * sizeof( char ) : 0;
+				break;
+
+			case EConVarType_Vec2:
+				cvarHeapMemory += sizeof( glm::vec2 );
+				break;
+
+			case EConVarType_Vec3:
+				cvarHeapMemory += sizeof( glm::vec3 );
+				break;
+
+			case EConVarType_Vec4:
+				cvarHeapMemory += sizeof( glm::vec4 );
+				break;
+
+			default:
+				break;
+		}
+	}
+
+	Log_MsgF( gConsoleChannel, "ConVar Count: %zu\n", Con_GetConVarMap().size() );
+	Log_MsgF( gConsoleChannel, "ConVar Memory Usage: %.6f KB\n", Util_BytesToKB( cvarHeapMemory + cvarStringMemory ) );
 
 	// for ( ConVarBase* current : Con_GetConVars() )
 	// {
