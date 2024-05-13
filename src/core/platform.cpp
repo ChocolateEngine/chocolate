@@ -21,7 +21,7 @@
 static bool     gExceptionDebugger = false;
 
 
-bool            gIsWindows10       = false;
+bool            g_win_10_or_later  = false;
 OSVERSIONINFOEX gOSVer{};
 
 HMODULE         ghInst   = 0;
@@ -91,21 +91,21 @@ BOOL win32_get_version( OSVERSIONINFOEX* os )
 
 static const char* Win32_GetExceptionName( DWORD code )
 {
-	static char buf[ 32 ];
+	static char buf[ 26 ];
 
 	switch ( code )
 	{
-		case EXCEPTION_ACCESS_VIOLATION: return "ACCESS_VIOLATION";
-		case EXCEPTION_DATATYPE_MISALIGNMENT: return "DATATYPE_MISALIGNMENT";
-		case EXCEPTION_ARRAY_BOUNDS_EXCEEDED: return "ARRAY_BOUNDS_EXCEEDED";
-		case EXCEPTION_PRIV_INSTRUCTION: return "PRIV_INSTRUCTION";
-		case EXCEPTION_IN_PAGE_ERROR: return "IN_PAGE_ERROR";
-		case EXCEPTION_ILLEGAL_INSTRUCTION: return "ILLEGAL_INSTRUCTION";
+		case EXCEPTION_ACCESS_VIOLATION:         return "ACCESS_VIOLATION";
+		case EXCEPTION_DATATYPE_MISALIGNMENT:    return "DATATYPE_MISALIGNMENT";
+		case EXCEPTION_ARRAY_BOUNDS_EXCEEDED:    return "ARRAY_BOUNDS_EXCEEDED";
+		case EXCEPTION_PRIV_INSTRUCTION:         return "PRIV_INSTRUCTION";
+		case EXCEPTION_IN_PAGE_ERROR:            return "IN_PAGE_ERROR";
+		case EXCEPTION_ILLEGAL_INSTRUCTION:      return "ILLEGAL_INSTRUCTION";
 		case EXCEPTION_NONCONTINUABLE_EXCEPTION: return "NONCONTINUABLE_EXCEPTION";
-		case EXCEPTION_STACK_OVERFLOW: return "STACK_OVERFLOW";
-		case EXCEPTION_INVALID_DISPOSITION: return "INVALID_DISPOSITION";
-		case EXCEPTION_GUARD_PAGE: return "GUARD_PAGE";
-		case EXCEPTION_INVALID_HANDLE: return "INVALID_HANDLE";
+		case EXCEPTION_STACK_OVERFLOW:           return "STACK_OVERFLOW";
+		case EXCEPTION_INVALID_DISPOSITION:      return "INVALID_DISPOSITION";
+		case EXCEPTION_GUARD_PAGE:               return "GUARD_PAGE";
+		case EXCEPTION_INVALID_HANDLE:           return "INVALID_HANDLE";
 		default: break;
 	}
 
@@ -228,7 +228,7 @@ bool win32_init_console( HANDLE conOut, HANDLE conIn )
 {
 	// DOESN'T WORK YET
 #if 0
-	if ( !gIsWindows10 )
+	if ( !g_win_10_or_later )
 		return false;
 
 	DWORD dwOriginalOutMode = 0;
@@ -245,7 +245,7 @@ bool win32_init_console( HANDLE conOut, HANDLE conIn )
 	DWORD dwRequestedOutModes = 0;
 	DWORD dwRequestedInModes = ENABLE_WINDOW_INPUT | ENABLE_QUICK_EDIT_MODE | ENABLE_LINE_INPUT | ENABLE_ECHO_INPUT;
 
-	if ( gIsWindows10 )
+	if ( g_win_10_or_later )
 	{
 		dwRequestedOutModes |= ENABLE_VIRTUAL_TERMINAL_PROCESSING;
 		dwRequestedInModes |= ENABLE_VIRTUAL_TERMINAL_INPUT;
@@ -377,10 +377,13 @@ LRESULT __stdcall Win32_WindowProc( HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM 
 
 void sys_init()
 {
+	// allow for wchar_t to be printed in console
+	setlocale( LC_ALL, "" );
+
 	// detect windows version
 	BOOL ret = win32_get_version( &gOSVer );
 
-	gIsWindows10 = gOSVer.dwMajorVersion >= 10;
+	g_win_10_or_later = gOSVer.dwMajorVersion >= 10;
 
 	// Get Module Handle because we don't use WinMain at the moment (probably should tbh, idk)
 	// ghInst = GetModuleHandle( 0 );
@@ -406,6 +409,13 @@ void sys_init()
 	if ( !win32_init_console( gConOut, gConIn ) )
 		sys_print_last_error( "Failed to Init System Console\n" );
 
+	// very, very early windows 10
+	if ( gOSVer.dwMajorVersion == 6 && gOSVer.dwMinorVersion == 4 )
+	{
+		Log_DevF( 1, "runnig windows 9 :D\n" );
+	}
+
+	Log_DevF( 1, "Windows Version: %d.%d.%d\n", gOSVer.dwMajorVersion, gOSVer.dwMinorVersion, gOSVer.dwBuildNumber );
 
 	// List CPU Version
 	cpu_info_t cpu_info = Sys_GetCpuInfo();
@@ -413,7 +423,6 @@ void sys_init()
 	Log_DevF( 1, "CPU Vendor ID: %s\n", cpu_info.vendor_id );
 	Log_DevF( 1, "CPU Model Name: %s\n", cpu_info.model_name );
 
-	
 	// Init Theme Context (why windows???)
 	ZeroMemory( &gActCtx, sizeof( gActCtx ) );
 
