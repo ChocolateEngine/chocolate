@@ -846,6 +846,9 @@ static std::string ParseMaterialNameFromPath( const std::string& path )
 		output = path;
 	}
 
+	// Normalize Path Separators
+	std::replace( output.begin(), output.end(), '\\', '/' );
+
 	return output;
 }
 
