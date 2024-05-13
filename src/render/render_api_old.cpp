@@ -185,33 +185,7 @@ void Graphics_PrepareDrawData()
 {
 	PROF_SCOPE();
 
-	// fun
-	static Handle        shadow_map       = gGraphics.GetShader( "__shadow_map" );
-	static ShaderData_t* shadowShaderData = Shader_GetData( shadow_map );
-	static ChHandle_t    debugShader      = gGraphics.GetShader( "wireframe" );
-
-	// shaders to exclude from wireframe
-	static ChHandle_t    shaderSkybox     = gGraphics.GetShader( "skybox" );
-	static ChHandle_t    shaderGizmo      = gGraphics.GetShader( "gizmo" );
-	static ChHandle_t    shaderDebug      = gGraphics.GetShader( "debug" );
-	static ChHandle_t    shaderDebugLine  = gGraphics.GetShader( "debug_line" );
-
 	render->PreRenderPass();
-
-	// if ( r_show_draw_calls )
-	// {
-	// 	gui->DebugMessage( "Model Draw Calls: %zd", gModelDrawCalls );
-	// 	gui->DebugMessage( "Verts Drawn: %zd", gVertsDrawn );
-	// 	gui->DebugMessage( "Debug Line Verts: %zd", gDebugLineVerts.size() );
-	// }
-
-	// {
-	// 	PROF_SCOPE_NAMED( "Imgui Render" );
-	// 	ImGui::Render();
-	// }
-
-	// gModelDrawCalls = 0;
-	// gVertsDrawn     = 0;
 
 	Shader_UpdateMaterialVars();
 
@@ -235,16 +209,6 @@ void Graphics_PrepareDrawData()
 	// Update Light Data
 	Graphics_PrepareLights();
 
-	// update view frustums (CHANGE THIS, SHOULD NOT UPDATE EVERY SINGLE ONE PER FRAME  !!!!)
-	// if ( !r_vis_lock.GetBool() )
-	// {
-	// 	for ( auto& [ handle, viewport ] : gGraphicsData.aViewports )
-	// 	{
-	// 		gGraphics.CreateFrustum( viewport.aFrustum, viewport.aProjView );
-	// 		gGraphics.DrawFrustum( viewport.aFrustum );
-	// 	}
-	// }
-
 	// --------------------------------------------------------------------
 
 	Graphics_UpdateDebugDraw();
@@ -261,199 +225,14 @@ void Graphics_PrepareDrawData()
 
 	// --------------------------------------------------------------------
 
-	bool usingShadow = Graphics_IsUsingShadowMaps();
-
-	// --------------------------------------------------------------------
-	// Prepare View Render Lists
-
-	// bool visLocked   = r_vis_lock.GetBool();
-	// 
-	// if ( !visLocked )
-	// {
-	// 	// Reset Render Lists
-	// 	for ( auto& [ viewHandle, viewList ] : gGraphicsData.aViewRenderLists )
-	// 	{
-	// 		for ( auto& [ shader, vec ] : viewList.aRenderLists )
-	// 			vec.clear();
-	// 	}
-	// }
-
-#if 1
-	ChHandle_t    shaderSkinning     = gGraphics.GetShader( "__skinning" );
-	ShaderData_t* shaderSkinningData = Shader_GetData( shaderSkinning );
-#endif
-
-	// if ( ImGui::Button( "Reset Blend Shapes" ) )
-	// 	r_reset_blend_shapes.SetValue( 1 );
-
 	Graphics_PrepareShadowRenderLists();
-
-#if 0
-	u32 surfDrawIndex = 0;
-
-	u32 imguiIndex    = 0;
-	for ( uint32_t i = 0; i < gGraphicsData.aRenderables.size(); )
-	{
-		PROF_SCOPE_NAMED( "Update Renderables" );
-
-		Renderable_t* renderable = nullptr;
-		if ( !gGraphicsData.aRenderables.Get( gGraphicsData.aRenderables.aHandles[ i ], &renderable ) )
-		{
-			Log_Warn( gLC_ClientGraphics, "Renderable handle is invalid!\n" );
-			gGraphicsData.aRenderables.Remove( gGraphicsData.aRenderables.aHandles[ i ] );
-			continue;
-		}
-
-		// update data on gpu
-		// NOTE: we actually use the handle index for this and not the allocator
-		// if this works well, we could just get rid of the allocator entirely and use handle indexes
-		// u32 renderIndex = CH_GET_HANDLE_INDEX( gGraphicsData.aRenderables.aHandles[ i ] );
-		u32 renderIndex    = i;
-		renderable->aIndex = renderIndex;
-
-		if ( renderIndex >= CH_R_MAX_RENDERABLES )
-		{
-			Log_WarnF( gLC_ClientGraphics, "Renderable Index %zd is greater than max shader renderable count of %zd\n", renderIndex, CH_R_MAX_RENDERABLES );
-			i++;
-			continue;
-		}
-
-		if ( !renderable->aVisible )
-		{
-			i++;
-			continue;
-		}
-
-		Model* model = gGraphics.GetModelData( renderable->aModel );
-		if ( !model )
-		{
-			Log_Warn( gLC_ClientGraphics, "Renderable has no model!\n" );
-			gGraphicsData.aRenderables.Remove( gGraphicsData.aRenderables.aHandles[ i ] );
-			continue;
-		}
-
-		// Check if blend shapes are dirty
-		if ( renderable->aBlendShapesDirty )
-		{
-			gGraphicsData.aSkinningRenderList.emplace( gGraphicsData.aRenderables.aHandles[ i ] );
-			renderable->aBlendShapesDirty = false;
-		}
-
-		Shader_Renderable_t& shaderRenderable         = gGraphicsData.aRenderableData[ renderIndex ];
-
-		// write model matrix, and vertex/index buffer indexes
-		gGraphicsData.aModelMatrixData[ renderIndex ] = renderable->aModelMatrix;
-
-		// update light lists
-
-		if ( visLocked )
-		{
-			i++;
-			continue;
-		}
-
-		// check if we need this in any views
-		bool   isVisible = false;
-		// size_t viewIndex = 0;
-		for ( auto& [ viewHandle, viewport ] : gGraphicsData.aViewports )
-		{
-			PROF_SCOPE_NAMED( "Viewport Testing" );
-
-			// HACK: kind of of hack with the shader override check
-			// If we don't want to cast a shadow and are in a shadowmap view, don't add to the view's render list
-			if ( !renderable->aCastShadow && viewport.aShaderOverride )
-				continue;
-
-			// Is this model visible in this view?
-			if ( !Graphics_ViewFrustumTest( renderable, viewport ) )
-				continue;
-
-			isVisible                  = true;
-			ViewRenderList_t& viewList = gGraphicsData.aViewRenderLists[ viewHandle ];
-
-			// Add each surface to the shader draw list
-			for ( uint32_t surf = 0; surf < model->aMeshes.size(); surf++ )
-			{
-				Handle mat = model->aMeshes[ surf ].aMaterial;
-
-				// TODO: add Mat_IsValid()
-				if ( mat == InvalidHandle )
-				{
-					Log_ErrorF( gLC_ClientGraphics, "Model part \"%d\" has no material!\n", surf );
-					// gModelDrawList.remove( i );
-					continue;
-				}
-
-				Handle shader = gGraphics.Mat_GetShader( mat );
-
-				if ( viewport.aShaderOverride )
-					shader = viewport.aShaderOverride;
-
-				// lol this looks great
-				else if ( r_wireframe && shader != shaderSkybox && shader != shaderGizmo && shader != shaderDebug && shader != shaderDebugLine )
-					shader = debugShader;
-
-				ShaderData_t* shaderData = Shader_GetData( shader );
-				if ( !shaderData )
-					continue;
-
-				// add a SurfaceDraw_t to this render list
-				SurfaceDraw_t& surfDraw = viewList.aRenderLists[ shader ].emplace_back();
-				surfDraw.aRenderable    = gGraphicsData.aRenderables.aHandles[ i ];
-				surfDraw.aSurface       = surf;
-				surfDraw.aShaderSlot    = surfDrawIndex++;
-
-				// Shader_SetupRenderableDrawData( shader, mat, renderIndex, viewIndex, renderable, shaderData, surfDraw );
-
-				if ( !renderable->aCastShadow )
-					continue;
-
-				// if ( shaderData->aFlags & EShaderFlags_Lights && usingShadow && shadowShaderData )
-				if ( usingShadow && shadowShaderData )
-				{
-					// Shader_SetupRenderableDrawData( renderIndex, 0, renderable, shadowShaderData, surfDraw );
-
-
-					// add a SurfaceDraw_t to each render list
-					// SurfaceDraw_t& surfDraw = gGraphicsData.aViewRenderLists[ viewIndex ].aRenderLists[ shader ].emplace_back();
-					// surfDraw.aRenderable    = gGraphicsData.aRenderables.aHandles[ i ];
-					// surfDraw.aSurface       = surf;
-					// surfDraw.aShaderSlot    = surfDrawIndex;
-				}
-
-				// shaderSurfDraw.aMaterial = shaderData->apMaterialIndex( surfIndex, renderable, surfDraw );
-			}
-		}
-
-		//if ( isVisible && r_random_blend_shapes && renderable->aBlendShapeWeights.size() )
-		//{
-		//	gGraphicsData.aSkinningRenderList.emplace( gGraphicsData.aRenderables.aHandles[ i ] );
-		//
-		//	// Graphics_RenderableBlendShapesDirty;
-		//	for ( u32 blendI = 0; blendI < renderable->aBlendShapeWeights.size(); blendI++ )
-		//	{
-		//		if ( r_reset_blend_shapes.GetBool() )
-		//			renderable->aBlendShapeWeights[ blendI ] = 0.f;
-		//
-		//		// renderable->aBlendShapeWeights[ blendI ] = RandomFloat( 0.f, 1.f );
-		//		ImGui::PushID( imguiIndex++ );
-		//		ImGui::SliderFloat( "##blend_shape", &renderable->aBlendShapeWeights[ blendI ], -1.f, 4.f, "%.4f", 1.f );
-		//		ImGui::PopID();
-		//		//renderable->aBlendShapeWeights[ blendI ] = RandomFloat( 0.f, 1.f );
-		//	}
-		//}
-
-		i++;
-	}
-#endif
 
 	if ( r_reset_blend_shapes )
 		Con_SetConVarValue( "r_reset_blend_shapes", false );
 
-		// --------------------------------------------------------------------
-		// Prepare Skinning Compute Shader Buffers
+	// --------------------------------------------------------------------
+	// Prepare Skinning Compute Shader Buffers
 
-#if 1
 	u32 r = 0;
 	for ( ChHandle_t renderHandle : gGraphicsData.aSkinningRenderList )
 	{
@@ -467,54 +246,9 @@ void Graphics_PrepareDrawData()
 		r++;
 		render->BufferWrite( renderable->aBlendShapeWeightsBuffer, renderable->aBlendShapeWeights.size_bytes(), renderable->aBlendShapeWeights.data() );
 	}
-#endif
-
-	// --------------------------------------------------------------------
-	// Update Shader Draw Data
-	// TODO: can this be merged into the above for loop for viewports and renderables?
-
-#if 0
-	// for ( size_t viewIndex = 0; viewIndex < gGraphicsData.aViewData.aViewports.size(); viewIndex++ )
-	for ( auto& [ viewHandle, viewport ] : gGraphicsData.aViewports )
-	{
-		PROF_SCOPE_NAMED( "Update Shader Draw Data" );
-
-		ViewRenderList_t& viewList = gGraphicsData.aViewRenderLists[ viewHandle ];
-
-		for ( auto& [ shader, modelList ] : viewList.aRenderLists )
-		{
-			ShaderData_t* shaderData = Shader_GetData( shader );
-			if ( !shaderData )
-				continue;
-
-			for ( SurfaceDraw_t& surfaceDraw : modelList )
-			{
-				Renderable_t* renderable = nullptr;
-				if ( !gGraphicsData.aRenderables.Get( surfaceDraw.aRenderable, &renderable ) )
-				{
-					Log_Warn( gLC_ClientGraphics, "Draw Data does not exist for renderable!\n" );
-					continue;
-				}
-
-				ChHandle_t mat = gGraphics.Model_GetMaterial( renderable->aModel, surfaceDraw.aSurface );
-
-				u32        viewIndex = Graphics_GetShaderSlot( gGraphicsData.aViewportSlots, viewHandle );
-
-				Shader_SetupRenderableDrawData( shader, mat, renderable->aIndex, viewIndex, renderable, shaderData, surfaceDraw );
-				// Shader_SetupRenderableDrawData( renderableIndex, viewIndex, renderable, shaderData, renderable );
-
-				if ( !renderable->aCastShadow )
-					continue;
-
-				// if ( shaderData->aFlags & EShaderFlags_Lights && usingShadow && shadowShaderData )
-				// 	Shader_SetupRenderableDrawData( renderable, shadowShaderData, renderable );
-			}
-		}
-	}
-#endif
 
 	// Update Core Data SSBO
-#if 01
+
 	if ( gGraphicsData.aCoreDataStaging.aDirty )
 	{
 		gGraphicsData.aCoreDataStaging.aDirty = false;
@@ -527,7 +261,6 @@ void Graphics_PrepareDrawData()
 
 		render->BufferCopyQueued( gGraphicsData.aCoreDataStaging.aStagingBuffer, gGraphicsData.aCoreDataStaging.aBuffer, &copy, 1 );
 	}
-#endif
 
 	// Update Viewport SSBO
 	{
@@ -806,7 +539,6 @@ void RenderSystemOld::PrePresent()
 	render->ResetCommandPool();
 
 	Graphics_FreeQueuedResources();
-
 	Graphics_PrepareDrawData();
 }
 

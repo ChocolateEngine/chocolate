@@ -687,13 +687,13 @@ struct ShaderMaterialData
 // well, this is a mess lol
 struct ShaderPushData_t
 {
-	u32                 aRenderableIndex;
-	u32                 aViewportIndex;
-	ChHandle_t          aRenderableHandle;
-	Renderable_t*       apRenderable;
-	SurfaceDraw_t       aSurfaceDraw;
-	ChHandle_t          aMaterial;
-	ShaderMaterialData* apMaterialData;
+	u32                       aRenderableIndex;
+	u32                       aViewportIndex;
+	ChHandle_t                aRenderableHandle;
+	Renderable_t*             apRenderable;
+	SurfaceDraw_t             aSurfaceDraw;
+	ChHandle_t                aMaterial;
+	const ShaderMaterialData* apMaterialData;
 };
 
 
@@ -921,6 +921,7 @@ struct RenderContext
 
 struct RenderStats_t
 {
+	size_t aViewportsDrawn;
 	size_t aDrawCalls;
 	size_t aVerticesDrawn;
 	size_t aMaterialsDrawn;

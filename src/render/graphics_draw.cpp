@@ -174,7 +174,7 @@ void Graphics_DrawShaderRenderables( Handle cmd, size_t sIndex, Handle shader, u
 	if ( shaderData->aDynamicState & EDynamicState_LineWidth )
 		render->CmdSetLineWidth( cmd, r_line_thickness );
 
-	VertexFormat vertexFormat = Shader_GetVertexFormat( shader );
+	const std::unordered_map< ChHandle_t, ShaderMaterialData >* matDataMap = Shader_GetMaterialDataMap( shader );
 
 	for ( uint32_t i = 0; i < srRenderList.size(); i++ )
 	{
@@ -240,9 +240,20 @@ void Graphics_DrawShaderRenderables( Handle cmd, size_t sIndex, Handle shader, u
 		pushData.aRenderableHandle = surfaceDraw.aRenderable;
 		pushData.aViewportIndex    = sViewportIndex;
 		pushData.aSurfaceDraw      = surfaceDraw;
+		// pushData.apMaterialData    = Shader_GetMaterialData( shader, renderable->apMaterials[ surfaceDraw.aSurface ] );
+
+		if ( matDataMap )
+		{
+			auto findMatData = matDataMap->find( renderable->apMaterials[ surfaceDraw.aSurface ] );
+		
+			if ( findMatData != matDataMap->end() )
+			{
+				pushData.apMaterialData = &findMatData->second;
+			}
+		}
 
 		// NOTE: not needed if the material is the same i think
-		if ( !Shader_PreMaterialDraw( cmd, sIndex, shader, shaderData, pushData ) )
+		if ( !Shader_PreMaterialDraw( cmd, sIndex, shaderData, pushData ) )
 			continue;
 
 		Graphics_CmdDrawSurface( cmd, model, surfaceDraw.aSurface );

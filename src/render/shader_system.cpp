@@ -25,7 +25,10 @@ static ChVector< ChHandle_t >                                          gShaderCo
 
 // Shader = List of Materials using that shader
 // static std::unordered_map< ChHandle_t, ChVector< ShaderMaterialData > > gShaderMaterials;
-static std::unordered_map< ChHandle_t, std::vector< ShaderMaterialData > > gShaderMaterials;
+// static std::unordered_map< ChHandle_t, std::vector< ShaderMaterialData > > gShaderMaterials;
+
+// Shader = [Materials = Shader Material Data]
+static std::unordered_map< ChHandle_t, std::unordered_map< ChHandle_t, ShaderMaterialData > > gShaderMaterials;
 
 // Material = Storage Buffer
 static std::unordered_map< ChHandle_t, DeviceBufferStaging_t >          gMaterialBuffers;
@@ -562,7 +565,7 @@ bool Shader_Bind( Handle sCmd, u32 sIndex, Handle sShader )
 }
 
 
-bool Shader_PreMaterialDraw( Handle sCmd, u32 sIndex, ChHandle_t sShader, ShaderData_t* spShaderData, ShaderPushData_t& sPushData )
+bool Shader_PreMaterialDraw( Handle sCmd, u32 sIndex, ShaderData_t* spShaderData, ShaderPushData_t& sPushData )
 {
 	PROF_SCOPE();
 
@@ -574,7 +577,6 @@ bool Shader_PreMaterialDraw( Handle sCmd, u32 sIndex, ChHandle_t sShader, Shader
 
 	if ( spShaderData->apPush )
 	{
-		sPushData.apMaterialData = Shader_GetMaterialData( sShader, sPushData.apRenderable->apMaterials[ sPushData.aSurfaceDraw.aSurface ] );
 		spShaderData->apPush( sCmd, spShaderData->aLayout, sPushData );
 	}
 
@@ -615,7 +617,7 @@ VertexFormat Shader_GetVertexFormat( Handle sShader )
 //}
 
 
-void Shader_UpdateMaterialDescriptorSets( ChHandle_t shader, ShaderData_t* shaderData, std::vector< ShaderMaterialData >& shaderMatDataList )
+void Shader_UpdateMaterialDescriptorSets( ChHandle_t shader, ShaderData_t* shaderData, std::unordered_map< ChHandle_t, ShaderMaterialData >& shaderMatDataList )
 {
 	// can't update without any material buffers
 	if ( shaderMatDataList.size() == 0 )
@@ -646,7 +648,7 @@ void Shader_UpdateMaterialDescriptorSets( ChHandle_t shader, ShaderData_t* shade
 
 	// GOD - update material indexes
 	u32 matIndex = 0;
-	for ( ShaderMaterialData& shaderMat : shaderMatDataList )
+	for ( auto& [ material, shaderMat ] : shaderMatDataList )
 	{
 		shaderMat.matIndex = matIndex++;
 	}
@@ -667,14 +669,14 @@ void Shader_UpdateMaterialDescriptorSets( ChHandle_t shader, ShaderData_t* shade
 		if ( gGraphics.Mat_GetShader( mat ) != shader )
 			continue;
 
-		// ew
-		for ( ShaderMaterialData& shaderMat : shaderMatDataList )
+		auto it = shaderMatDataList.find( mat );
+		if ( it == shaderMatDataList.end() )
 		{
-			if ( shaderMat.material == mat )
-			{
-				update.apBindings[ shaderData->aMaterialBufferBinding ].apData[ shaderMat.matIndex ] = matBuffer.aBuffer;
-			}
+			Log_Error( "Failed to find material in use by shader\n" );
+			continue;
 		}
+
+		update.apBindings[ shaderData->aMaterialBufferBinding ].apData[ it->second.matIndex ] = matBuffer.aBuffer;
 
 		// update.apBindings[ shaderData->aMaterialBufferBinding ].apData[ i++ ] = matBuffer.aBuffer;
 	}
@@ -707,20 +709,16 @@ void Shader_RemoveMaterial( ChHandle_t sMat )
 		return;
 	}
 
-	ShaderData_t*                      shaderData   = Shader_GetData( shader );
-	std::vector< ShaderMaterialData >& matData      = shaderIt->second;
-	bool                               foundMatData = false;
+	ShaderData_t*                                         shaderData   = Shader_GetData( shader );
+	std::unordered_map< ChHandle_t, ShaderMaterialData >& matData      = shaderIt->second;
+	bool                                                  foundMatData = false;
 
-	// TODO: make this faster
-	for ( u32 i = 0; i < matData.size(); i++ )
+	auto matIt = matData.find( sMat );
+
+	if ( matIt != matData.end() )
 	{
-		if ( matData[ i ].material == sMat )
-		{
-			//matData.remove( i );
-			vec_remove_index( matData, i );
-			foundMatData = true;
-			break;
-		}
+		matData.erase( matIt );
+		foundMatData = true;
 	}
 
 	// Update Descriptor Sets after removing the material data
@@ -773,7 +771,7 @@ void Shader_AddMaterial( ChHandle_t sMat )
 	ShaderData_t*      shaderData = Shader_GetData( shader );
 
 	// Shaders might use this material data in push constants, so add it even if the shader doesn't use material buffers
-	shaderIt->second.push_back( data );
+	shaderIt->second[ sMat ] = data;
 
 	if ( shaderData->aUseMaterialBuffer )
 	{
@@ -962,20 +960,29 @@ ShaderMaterialData* Shader_GetMaterialData( ChHandle_t sShader, ChHandle_t sMat 
 		return nullptr;
 	}
 
-//	#error "improve this ShaderMaterialData NOW"
+	auto matIt = shaderIt->second.find( sMat );
 
-	// TODO: MAKE THIS FASTER
-	std::vector< ShaderMaterialData >& matData = shaderIt->second;
-	void*                              data    = nullptr;
-	for ( u32 i = 0; i < matData.size(); i++ )
+	if ( matIt == shaderIt->second.end() )
 	{
-		if ( matData[ i ].material == sMat )
-		{
-			return &matData[ i ];
-		}
+		// material not found
+		return nullptr;
 	}
 
-	return nullptr;
+	return &matIt->second;
+}
+
+
+const std::unordered_map< ChHandle_t, ShaderMaterialData >* Shader_GetMaterialDataMap( ChHandle_t sShader )
+{
+	auto shaderIt = gShaderMaterials.find( sShader );
+
+	if ( shaderIt == gShaderMaterials.end() )
+	{
+		// shader does not use materials probably
+		return nullptr;
+	}
+
+	return &shaderIt->second;
 }
 
 

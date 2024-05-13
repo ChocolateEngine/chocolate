@@ -37,10 +37,17 @@ constexpr u32 CH_BINDING_INDEX_BUFFERS            = 6;
 // Contains a built list of renderable surfaces to draw this frame, grouped by shader
 struct ViewRenderList_t
 {
+	// Viewport Handle
 	u32                                                         aHandle;
+
 	// TODO: needs improvement and further sorting
 	// [ Shader ] = vector of surfaces to draw
 	std::unordered_map< ChHandle_t, ChVector< SurfaceDraw_t > > aRenderLists;
+
+	// Lights in the scene
+	//ChVector< Light_t* >                                        aLights;
+
+	//ChHandle_t                                                  aDebugDrawRenderable = CH_INVALID_HANDLE;
 };
 
 
@@ -51,13 +58,15 @@ struct GraphicsSceneViewport_t
 };
 
 
-struct GraphicsScene_t
+struct RenderScene_t
 {
 	// list of lights in a scene
 	ChVector< Light_t* >                lights;
 
 	// multiple viewports in a scene
-	ChVector< GraphicsSceneViewport_t > viewports;
+	// ChVector< GraphicsSceneViewport_t > viewports;
+
+	ChVector< ViewRenderList_t >        renderLists;
 };
 
 
@@ -397,7 +406,7 @@ bool                  Graphics_CreateSelectRenderPass();
 void                  Graphics_SelectionTexturePass( Handle sCmd, size_t sIndex );
 
 bool                  Shader_Bind( Handle sCmd, u32 sIndex, Handle sShader );
-bool                  Shader_PreMaterialDraw( Handle sCmd, u32 sIndex, ChHandle_t sShader, ShaderData_t* spShaderData, ShaderPushData_t& sPushData );
+bool                  Shader_PreMaterialDraw( Handle sCmd, u32 sIndex, ShaderData_t* spShaderData, ShaderPushData_t& sPushData );
 bool                  Shader_ParseRequirements( ShaderRequirmentsList_t& srOutput );
 
 VertexFormat          Shader_GetVertexFormat( Handle sShader );
@@ -411,6 +420,9 @@ void                  Shader_RemoveMaterial( ChHandle_t sMat );
 void                  Shader_AddMaterial( ChHandle_t sMat );
 void                  Shader_UpdateMaterialVars();
 ShaderMaterialData*   Shader_GetMaterialData( ChHandle_t sShader, ChHandle_t sMat );
+
+// Material = Shader Material Data
+const std::unordered_map< ChHandle_t, ShaderMaterialData >* Shader_GetMaterialDataMap( ChHandle_t sShader );
 
 
 // interface
