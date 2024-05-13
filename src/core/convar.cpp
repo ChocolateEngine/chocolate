@@ -1317,7 +1317,7 @@ bool ParseVector( const char* spName, const std::vector< std::string >& args, VE
 
 
 // Alias List of options for booleans because it's funny
-std::string_view gConVarBoolList_True[] = {
+const std::string_view gConVarBoolList_True[] = {
 	"true",
 	"t",
 	"yes",
@@ -1330,10 +1330,11 @@ std::string_view gConVarBoolList_True[] = {
 	"sure",
 	"i guess",
 	"probably",
+	"eeffoc",
 };
 
 
-std::string_view gConVarBoolList_False[] = {
+const std::string_view gConVarBoolList_False[] = {
 	"false",
 	"f",
 	"no",
@@ -1352,7 +1353,7 @@ std::string_view gConVarBoolList_False[] = {
 };
 
 
-std::string_view gConVarBoolList_CoinFlip[] = {
+const std::string_view gConVarBoolList_CoinFlip[] = {
 	"maybe",
 	"idk",
 	"?",
@@ -1360,7 +1361,7 @@ std::string_view gConVarBoolList_CoinFlip[] = {
 	"random",
 	"coinflip",
 	"coin",
-	"flip",
+	"flip",  // this would indicate flipping the current boolean value, so maybe remove this
 	"rng",
 	"roll",
 	"dice",
@@ -1368,13 +1369,14 @@ std::string_view gConVarBoolList_CoinFlip[] = {
 	"!rtv",
 	"rtd",
 	"rtv",
+	"username",
 	"dQw4w9WgXcQ",
 	// "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
 };
 
 
 // returns true if it found a match
-bool CheckBoolConVarInput( std::string_view arg, std::string_view* aliasList, size_t aliasListSize )
+bool CheckBoolConVarInput( std::string_view arg, const std::string_view* aliasList, size_t aliasListSize )
 {
 	for ( u32 i = 0; i < aliasListSize; i++ )
 	{
