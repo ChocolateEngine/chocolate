@@ -95,18 +95,18 @@ void main()
     //	normalWorld = normalize( inNormalWorld );
 	//}
 
-	if ( push.aDebugDraw == 1 )
+	if ( push.aDebugDraw == 2 )
 		albedo = vec4(1, 1, 1, 1);
 
-	if ( push.aDebugDraw > 1 && push.aDebugDraw < 5 )
+	if ( push.aDebugDraw > 2 && push.aDebugDraw < 6 )
 	{
-		if ( push.aDebugDraw == 2 )
+		if ( push.aDebugDraw == 3 )
 			outColor = vec4(inNormalWorld, 1);
 
-		if ( push.aDebugDraw == 3 )
+		if ( push.aDebugDraw == 4 )
 			outColor = vec4(inNormal, 1);
 
-		if ( push.aDebugDraw == 4 )
+		if ( push.aDebugDraw == 5 )
 			outColor = vec4(inTangent, 1);
 
 		return;
@@ -114,7 +114,10 @@ void main()
 
 	outColor = vec4(0, 0, 0, 1);
 	
-	outColor += AddLighting( albedo, inPositionWorld, normalWorld );
+	if ( push.aDebugDraw == 1 )
+		outColor.rgb  += albedo.rgb;
+	else
+		outColor += AddLighting( albedo, inPositionWorld, normalWorld );
 
 	// ----------------------------------------------------------------------------
 

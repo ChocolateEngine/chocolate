@@ -68,7 +68,7 @@ static ShaderMaterialVarDesc gBasic3D_MaterialVars[] = {
 };
 
 
-CONVAR_RANGE_INT( r_basic3d_dbg_mode, 0, 0, 4 );
+CONVAR_RANGE_INT( r_basic3d_dbg_mode, 0, 0, 5, "0 - Default, 1 - No Lighting, 2 - Diffuse Lighting Only, 3 - Draw World Normals, 4 - Draw Local Normals, 5 - Draw Tangents" );
 
 
 static void Shader_Basic3D_GetPipelineLayoutCreate( PipelineLayoutCreate_t& srPipeline )
