@@ -15,17 +15,19 @@
 LOG_REGISTER_CHANNEL( Console, LogColor::Gray );
 
 
-std::vector< std::string >                     gQueue;
-std::vector< std::string >                     gCommandHistory;
-std::vector< ConVarFlagData_t >                gConVarFlags;
-ConVarFlag_t                                   gConVarRegisterFlags;
+std::vector< std::string >      gQueue;
+std::vector< std::string >      gCommandHistory;
+std::vector< ConVarFlagData_t > gConVarFlags;
+ConVarFlag_t                    gConVarRegisterFlags;
 
-std::vector< FArchive* >                       gArchiveCallbacks;
+std::vector< FArchive* >        gArchiveCallbacks;
 
-constexpr const char*                          CON_ARCHIVE_FILE    = "cfg/config.cfg";
-constexpr const char*                          CON_ARCHIVE_DEFAULT = "cfg/config_default.cfg";
-std::string                                    gConArchiveFile     = CON_ARCHIVE_FILE;
-std::string                                    gConArchiveDefault  = CON_ARCHIVE_DEFAULT;
+constexpr const char*           CON_ARCHIVE_FILE    = "cfg/config.cfg";
+constexpr const char*           CON_ARCHIVE_DEFAULT = "cfg/config_default.cfg";
+ch_string                       gConArchiveFile     = ch_str_create( CON_ARCHIVE_FILE );
+ch_string                       gConArchiveDefault  = ch_str_create( CON_ARCHIVE_DEFAULT );
+
+constexpr const char*           CFG_DIR    = "cfg" CH_PATH_SEP_STR;
 
 
 CONVAR_BOOL( con_remove_dup_input_history, true, "Remove duplicate user inputs from the history" );
@@ -72,9 +74,9 @@ std::unordered_map< std::string_view, ConVarData_t* >& Con_GetConVarMap()
 }
 
 
-std::unordered_map< std::string_view, const char* >& Con_GetConVarDesc()
+std::unordered_map< std::string_view, ch_string >& Con_GetConVarDesc()
 {
-	static std::unordered_map< std::string_view, const char* > convars;
+	static std::unordered_map< std::string_view, ch_string > convars;
 	return convars;
 }
 
@@ -332,25 +334,34 @@ void Con_AddToCommandHistory( const std::string &srCmd )
 }
 
 
-void Con_QueueCommand( const std::string &srCmd )
+void Con_QueueCommand( const char* cmd, int len )
 {
-	gQueue.push_back( srCmd );
+	if ( len == -1 )
+		len = strlen( cmd );
 
-	Con_AddToCommandHistory( srCmd );
+	if ( len == 0 )
+		return;
 
-	Log_Ex( gConsoleChannel, LogType::Input, srCmd.c_str() );
+	std::string& cmdStr = gQueue.emplace_back( cmd, len );
+
+	Con_AddToCommandHistory( cmdStr );
+
+	Log_Ex( gConsoleChannel, LogType::Input, cmd );
 }
 
 
-void Con_QueueCommandSilent( const std::string &srCmd, bool sAddToHistory )
+void Con_QueueCommandSilent( const char* cmd, int len, bool sAddToHistory )
 {
-	if ( srCmd.empty() )
+	if ( len == -1 )
+		len = strlen( cmd );
+
+	if ( len == 0 )
 		return;
 
-	gQueue.push_back( srCmd );
+	std::string& cmdStr = gQueue.emplace_back( cmd, len );
 
 	if ( sAddToHistory )
-		Con_AddToCommandHistory( srCmd );
+		Con_AddToCommandHistory( cmdStr );
 }
 
 
@@ -554,7 +565,7 @@ void Con_Update()
 	size_t queueSize = gQueue.size();
 	for ( size_t i = 0; i < queueSize; i++ )
 	{
-		Con_RunCommand( gQueue[ 0 ] );
+		Con_RunCommand( gQueue[ 0 ].data(), gQueue[ 0 ].size() );
 		vec_remove_index( gQueue, 0 );
 	}
 
@@ -566,20 +577,26 @@ void Con_Update()
 }
 
 
-void Con_RunCommand( std::string_view command )
+void Con_RunCommand( const char* cmd, int len )
 {
 	PROF_SCOPE();
+
+	if ( len == -1 )
+		len = strlen( cmd );
+
+	if ( len == 0 )
+		return;
 
 	std::string commandName;
 	std::string fullCommand;
 	std::vector< std::string > args;
 
-	for ( size_t i = 0; i < command.size(); i++ )
+	for ( size_t i = 0; i < len; i++ )
 	{
 		commandName.clear();
 		args.clear();
 
-		Con_ParseCommandLineEx( command, commandName, args, fullCommand, i );
+		Con_ParseCommandLineEx( cmd, commandName, args, fullCommand, i );
 		str_lower( commandName );
 
 		Con_RunCommandArgs( commandName, args, fullCommand );
@@ -889,7 +906,8 @@ void Con_Archive( const char* spFile )
 	if ( spFile )
 	{
 		filename = spFile;
-		if ( FileSys_GetFileExt( filename ) != "cfg" )
+		ch_string filenameExt = FileSys_GetFileExt( filename.data(), filename.size() );
+		if ( ch_str_equals( filenameExt.data, filenameExt.size, "cfg" ) )
 		{
 			filename += ".cfg";
 		}
@@ -897,7 +915,7 @@ void Con_Archive( const char* spFile )
 	}
 	else
 	{
-		filename = gConArchiveFile;
+		filename = gConArchiveFile.data;
 	}
 
 	// TODO: have a better way to check for a parent path
@@ -907,7 +925,8 @@ void Con_Archive( const char* spFile )
 
 	if ( !parentPath.empty() )
 	{
-		FileSys_CreateDirectory( parentPath.string() );
+		const std::string& parentPathStr = parentPath.string();
+		FileSys_CreateDirectory( parentPathStr.data() );
 	}
 
 	// Write the data
@@ -929,39 +948,90 @@ void Con_Archive( const char* spFile )
 // Set Default Console Archive File
 void Con_SetDefaultArchive( const char* spFile, const char* spDefaultFile )
 {
+	// Set the default file
+
 	if ( !spFile )
 	{
-		gConArchiveFile = CON_ARCHIVE_FILE;
+		ch_string new_data = ch_str_realloc( gConArchiveFile.data, CON_ARCHIVE_FILE );
+
+		if ( !new_data.data )
+		{
+			Log_Error( gConsoleChannel, "Failed to allocate memory for default console config file path\n" );
+			return;
+		}
+
+		gConArchiveFile = new_data;
 	}
 	else
 	{
-		gConArchiveFile = spFile;
+		if ( ch_str_starts_with( spFile, "cfg/" ) || ch_str_starts_with( spFile, "cfg\\" ) )
+		{
+			ch_string new_data = ch_str_realloc( gConArchiveFile.data, spFile );
 
-		if ( !gConArchiveFile.starts_with( "cfg/" )
-#ifdef _WIN32
-		     && !gConArchiveFile.starts_with( "cfg\\" )
-#endif
-		)
-			gConArchiveFile = "cfg" PATH_SEP_STR + gConArchiveFile;
+			if ( !new_data.data )
+			{
+				Log_Error( gConsoleChannel, "Failed to allocate memory for console config file path\n" );
+				return;
+			}
+
+			gConArchiveFile = new_data;
+		}
+		else
+		{
+			ch_string new_data = ch_str_concat( gConArchiveFile.data, 2, CFG_DIR, spFile );
+
+			if ( !new_data.data )
+			{
+				Log_Error( gConsoleChannel, "Failed to allocate memory for console config file path\n" );
+				return;
+			}
+
+			gConArchiveFile = new_data;
+		}
 	}
+
+	// -----------------------------------------------------
+	// Set Default Console Archive File
 
 	if ( !spDefaultFile )
 	{
-		gConArchiveDefault = CON_ARCHIVE_DEFAULT;
+		ch_string new_data = ch_str_realloc( gConArchiveDefault.data, CON_ARCHIVE_DEFAULT );
+
+		if ( !new_data.data )
+		{
+			Log_Error( gConsoleChannel, "Failed to allocate memory for default console config file path\n" );
+			return;
+		}
+
+		gConArchiveDefault = new_data;
 	}
 	else
 	{
-		gConArchiveDefault = spDefaultFile;
+		if ( ch_str_starts_with( spDefaultFile, "cfg/" ) || ch_str_starts_with( spDefaultFile, "cfg\\" ) )
+		{
+			ch_string new_data = ch_str_realloc( gConArchiveDefault.data, spDefaultFile );
 
-		if ( !gConArchiveDefault.starts_with( "cfg/" )
-#ifdef _WIN32
-		     && !gConArchiveDefault.starts_with( "cfg\\" )
-#endif
-		)
-			gConArchiveDefault = "cfg" PATH_SEP_STR + gConArchiveDefault;
+			if ( !new_data.data )
+			{
+				Log_Error( gConsoleChannel, "Failed to allocate memory for default console config file path\n" );
+				return;
+			}
+
+			gConArchiveDefault = new_data;
+		}
+		else
+		{
+			ch_string new_data = ch_str_concat( gConArchiveDefault.data, 2, CFG_DIR, spDefaultFile );
+
+			if ( !new_data.data )
+			{
+				Log_Error( gConsoleChannel, "Failed to allocate memory for default console config file path\n" );
+				return;
+			}
+
+			gConArchiveDefault = new_data;
+		}
 	}
-
-
 }
 
 
@@ -974,18 +1044,22 @@ void exec_dropdown(
   const std::string&                fullCommand,  // the full command line the user has typed in
   std::vector< std::string >&       results )           // results to populate the dropdown list with
 {
-	for ( const auto& file : FileSys_ScanDir( "cfg", ReadDir_AllPaths | ReadDir_Recursive ) )
+	std::vector< ch_string > files = FileSys_ScanDir( "cfg", ReadDir_AllPaths | ReadDir_Recursive );
+
+	for ( const auto& file : files )
 	{
-		if ( file.ends_with( ".." ) )
+		if ( ch_str_ends_with( file, "..", 2 ) )
 			continue;
 
-		std::string execName = FileSys_GetFileName( file );
+		ch_string execName = FileSys_GetFileName( file.data, file.size );
 
-		if ( args.size() && !execName.starts_with( args[0] ) )
+		if ( args.size() && !ch_str_starts_with( execName.data, execName.size, args[ 0 ].data(), args[ 0 ].size() ) )
 			continue;
 
-		results.push_back( execName );
+		results.emplace_back( execName.data, execName.size );
 	}
+
+	ch_str_free( files );
 }
 
 
@@ -997,7 +1071,7 @@ CONCMD_DROP_VA( exec, exec_dropdown, 0, "Execute a script full of console comman
 		return;
 	}
 
-	std::string path;
+	ch_string path;
 
 	if ( args[ 0 ].starts_with( "cfg/" )
 #ifdef _WIN32
@@ -1005,30 +1079,46 @@ CONCMD_DROP_VA( exec, exec_dropdown, 0, "Execute a script full of console comman
 #endif
 	|| FileSys_IsAbsolute( args[ 0 ].c_str() ) )
 	{
-		path = args[ 0 ];
+		path = ch_str_copy( args[ 0 ].data(), args[ 0 ].size() );
 	}
 	else
 	{
-		path = "cfg" CH_PATH_SEP_STR + args[ 0 ];
+		const char* strings[] = { "cfg" CH_PATH_SEP_STR, args[ 0 ].data() };
+		const u64   lengths[] = { 4, args[ 0 ].size() };
+
+		path = ch_str_concat( 2, strings, lengths );
 	}
 
-	if ( !FileSys_IsFile( path ) )
+	if ( !FileSys_IsFile( path.data, path.size ) )
 	{
-		if ( !path.ends_with( ".cfg" ) )
-			path += ".cfg";
+		if ( !ch_str_ends_with( path.data, path.size, ".cfg", 4 ) )
+		{
+			ch_string new_data = ch_str_concat( path.data, path.size, ".cfg", 4 );
+
+			if ( !new_data.data )
+			{
+				Log_Error( gConsoleChannel, "Failed to allocate memory for console config file path\n" );
+				ch_str_free( path.data );
+				return;
+			}
+
+			path = new_data;
+		}
 	}
 
-	if ( !FileSys_IsFile( path ) )
+	if ( !FileSys_IsFile( path.data, path.size ) )
 	{
-		Log_WarnF( gConsoleChannel, "File does not exist: \"%s\"\n", path.c_str() );
+		Log_WarnF( gConsoleChannel, "File does not exist: \"%s\"\n", path.data );
+		ch_str_free( path.data );
 		return;
 	}
 
-	std::ifstream fileStream = std::ifstream(path, std::ios::in | std::ios::binary | std::ios::ate);
+	std::ifstream fileStream = std::ifstream( path.data, std::ios::in | std::ios::binary | std::ios::ate );
 
 	if ( !fileStream.is_open() )
 	{
-		Log_ErrorF( gConsoleChannel, "Failed to open file for exec: \"%s\"\n", path.c_str() );
+		Log_ErrorF( gConsoleChannel, "Failed to open file for exec: \"%s\"\n", path.data );
+		ch_str_free( path.data );
 		return;
 	}
 
@@ -1061,7 +1151,7 @@ CONCMD_DROP_VA( exec, exec_dropdown, 0, "Execute a script full of console comman
 				if ( line == "exec " + args[0] )
 					Log_Warn( gConsoleChannel, "cfg file trying to exec itself and cause infinite recursion\n" );
 				else
-					Con_RunCommand( line );
+					Con_RunCommand( line.data(), line.size() );
 
 				line = "";
 			}
@@ -1083,9 +1173,11 @@ CONCMD_DROP_VA( exec, exec_dropdown, 0, "Execute a script full of console comman
 	}
 
 	if ( line != "" )
-		Con_RunCommand( line );
+		Con_RunCommand( line.data(), line.size() );
 
 	delete[] buf;
+
+	ch_str_free( path.data );
 }
 
 
@@ -1155,7 +1247,7 @@ CONCMD_DROP_VA( help, help_dropdown, 0, "If no args specified, Print all Registe
 			{
 				if ( arg->aNames[ n ] == args[ 0 ] )
 				{
-					Log_Msg( gConsoleChannel, Args_GetRegisteredPrint( arg ).c_str() );
+					Log_Msg( gConsoleChannel, Args_GetRegisteredPrint( arg ).data );
 					return;
 				}
 			}
@@ -1195,7 +1287,7 @@ static void FindStrArg( bool andSearch, const Arg_t* spArg, const std::vector< s
 		{
 			if ( strstr( spArg->aNames[ n ], arg.c_str() ) )
 			{
-				results.push_back( Args_GetRegisteredPrint( spArg ) );
+				results.push_back( Args_GetRegisteredPrint( spArg ).data );
 
 				if ( !andSearch )
 					return;

@@ -14,8 +14,7 @@
 #pragma comment(linker,"\"/manifestdependency:type='win32' name='Microsoft.Windows.Common-Controls' version='6.0.0.0' processorArchitecture='*'    publicKeyToken='6595b64144ccf1df' language='*'\"")
 
 
-#include "core/platform.h"
-#include "core/log.h"
+#include "core/core.h"
 
 
 static bool     gExceptionDebugger = false;
@@ -33,6 +32,8 @@ HANDLE          gConIn   = INVALID_HANDLE_VALUE;
 HANDLE          ghActCtx = INVALID_HANDLE_VALUE;
 ACTCTX          gActCtx;
 ULONG_PTR       gActCookie;
+
+#define CH_MEM_DEBUG 0
 
 
 // super based
@@ -377,8 +378,7 @@ LRESULT __stdcall Win32_WindowProc( HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM 
 
 void sys_init()
 {
-	// allow for wchar_t to be printed in console
-	setlocale( LC_ALL, "" );
+	setlocale( LC_ALL, "en_US.UTF-8" );
 
 	// detect windows version
 	BOOL ret = win32_get_version( &gOSVer );
@@ -482,7 +482,7 @@ void sys_init()
 
 	gExceptionDebugger = Args_Register( "Wait for debugger on catching a fatal exception", "-exception-debugger" );
 
-#if 0 //def _DEBUG
+#if CH_MEM_DEBUG
 	// Get the current state of the flag
 	// and store it in a temporary variable
 	int tmpFlag = _CrtSetDbgFlag( _CRTDBG_REPORT_FLAG );
@@ -635,17 +635,88 @@ int Sys_ExecuteV( const char* spFile, const char* spArgs, ... )
 {
 	va_list args;
 	va_start( args, spArgs );
-	char* string = Util_AllocStringV( spArgs, args );
+	ch_string string = ch_str_copy_v( spArgs, args );
 	va_end( args );
 
-	if ( string == nullptr )
+	if ( string.data == nullptr )
 		return -1;
 
-	int ret = Sys_Execute( spFile, string );
+	int ret = Sys_Execute( spFile, string.data );
 
-	Util_FreeString( string );
+	ch_str_free( string.data );
 	return ret;
 }
+
+
+#if 0
+uchar* Sys_ToWideChar( const char* spStr, int sSize )
+{
+	if ( spStr == nullptr )
+		return nullptr;
+
+	// check if the string is null-terminated
+	if ( sSize == -1 )
+		sSize = (int)strlen( spStr );
+
+	bool     nullTerm = spStr[ sSize - 1 ] == '\0';
+	size_t   len      = nullTerm ? sSize : sSize + 1;
+	size_t   memSize  = len * sizeof( wchar_t );
+
+	wchar_t* out      = ch_malloc< wchar_t >( memSize );
+
+	// the following function converts the UTF-8 filename to UTF-16 (WCHAR) nameW
+	int      outLen   = MultiByteToWideChar( CP_UTF8, 0, spStr, -1, out, len );
+
+	if ( outLen > 0 )
+		return out;
+
+	ch_free( out );
+	return nullptr;
+}
+
+
+char* Sys_ToMultiByte( const uchar* spStr, int sSize )
+{
+	if ( spStr == nullptr )
+		return nullptr;
+
+	// check if the string is null-terminated
+	if ( sSize == -1 )
+		sSize = (int)wcslen( spStr );
+
+	bool     nullTerm = spStr[ sSize - 1 ] == L'\0';
+	size_t   len      = nullTerm ? sSize : sSize + 1;
+	size_t   memSize  = len * sizeof( char );
+
+	char*    out      = ch_malloc< char >( memSize );
+
+	// the following function converts the UTF-16 (WCHAR) filename to UTF-8 name
+	int      outLen   = WideCharToMultiByte( CP_UTF8, 0, spStr, -1, out, len, NULL, NULL );
+
+	if ( outLen > 0 )
+	{
+		ch_str_add( out );
+		return out;
+	}
+
+	ch_free( out );
+	return nullptr;
+}
+
+
+void Sys_FreeConvertedString( const uchar* spStr )
+{
+	ch_str_remove( spStr );
+	ch_free( (void*)spStr );
+}
+
+
+void Sys_FreeConvertedString( const char* spStr )
+{
+	ch_str_remove( spStr );
+	ch_free( (void*)spStr );
+}
+#endif
 
 
 void Sys_CheckHeap()

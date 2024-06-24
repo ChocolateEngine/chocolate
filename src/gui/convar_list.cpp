@@ -136,7 +136,7 @@ void GuiSystem::DrawConVarList( bool wasOpen )
 		u32 i = 0, row = 0;
 		for ( const auto& [ cvarName, cvarData ] : Con_GetConVarMap() )
 		{
-			const char* cvarDesc = Con_GetConVarDesc( cvarName.data() );
+			ch_string cvarDesc = Con_GetConVarDesc( cvarName.data() );
 
 			ImGui::TableNextRow();
 
@@ -147,7 +147,7 @@ void GuiSystem::DrawConVarList( bool wasOpen )
 			// if ( cvar->aDesc )
 			{
 				ImGui::PushStyleColor( ImGuiCol_Text, ToImCol( LogColor::Cyan ) );
-				ImGui::TextWrapped( cvarDesc ? cvarDesc : "" );
+				ImGui::TextWrapped( cvarDesc.data ? cvarDesc.data : "" );
 				ImGui::PopStyleColor();
 			}
 

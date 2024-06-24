@@ -283,11 +283,11 @@ struct ConVarDescriptor_t
 
 
 // Internal Lists of ConVars and ConCommands
-CORE_API ChVector< ConCommand* >&                      Con_GetConCommands();
-CORE_API std::vector< std::string_view >&              Con_GetConVarNames();
-CORE_API std::vector< ConVarDescriptor_t >&            Con_GetConVarList();
+CORE_API ChVector< ConCommand* >&                               Con_GetConCommands();
+CORE_API std::vector< std::string_view >&                       Con_GetConVarNames();
+CORE_API std::vector< ConVarDescriptor_t >&                     Con_GetConVarList();
 CORE_API std::unordered_map< std::string_view, ConVarData_t* >& Con_GetConVarMap();
-CORE_API std::unordered_map< std::string_view, const char* >& Con_GetConVarDesc();  // ConVar Descriptions
+CORE_API std::unordered_map< std::string_view, ch_string >&     Con_GetConVarDesc();  // ConVar Descriptions
 
 
 // Register a Console/Config Variable
@@ -419,7 +419,7 @@ CORE_API int           Con_SetConVarValue( const char* spName, const glm::vec2& 
 CORE_API int           Con_SetConVarValue( const char* spName, const glm::vec3& sValue );
 CORE_API int           Con_SetConVarValue( const char* spName, const glm::vec4& sValue );
 
-CORE_API const char*   Con_GetConVarDesc( const char* spName );  // Get the description of the ConVar
+CORE_API ch_string     Con_GetConVarDesc( const char* spName );  // Get the description of the ConVar
 CORE_API ConVarData_t* Con_GetConVarData( std::string_view sName );  // Get the data of the ConVar
 
 CORE_API const char*   Con_ConVarTypeStr( EConVarType type );    // Get the string of the ConVar Type
@@ -468,14 +468,14 @@ CORE_API ConCommand*                       Con_GetConCommand( std::string_view n
 CORE_API void                              Con_PrintAllConVars();
 
 // Add a command to the queue
-CORE_API void                              Con_QueueCommand( const std::string& srCmd );
-CORE_API void                              Con_QueueCommandSilent( const std::string& srCmd, bool sAddToHistory = true );
+CORE_API void                              Con_QueueCommand( const char* cmd, int len = -1 );
+CORE_API void                              Con_QueueCommandSilent( const char* cmd, int len = -1, bool sAddToHistory = true );
 
 // Go through and run every command in the queue
 CORE_API void                              Con_Update();
 
 // Find and run a command instantly
-CORE_API void                              Con_RunCommand( std::string_view command );
+CORE_API void                              Con_RunCommand( const char* cmd, int len = -1 );
 // CORE_API void                                Con_RunCommandF( const char* command, ... );
 
 // Find and run a parsed command instantly

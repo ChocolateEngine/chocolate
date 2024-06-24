@@ -220,30 +220,31 @@ Handle Graphics::LoadModel( const std::string& srPath )
 	}
 
 	// We have not, so try to load this model in
-	std::string fullPath = FileSys_FindFile( srPath );
+	ch_string_auto fullPath = FileSys_FindFile( srPath.data(), srPath.size() );
 
-	if ( fullPath.empty() )
+	if ( !fullPath.data )
 	{
 		if ( FileSys_IsRelative( srPath.data() ) )
 		{
-			std::string newPath = vstring( "models" CH_PATH_SEP_STR "%s", srPath.data() );
-			fullPath            = FileSys_FindFile( newPath );
+			const ch_string strings[] = { { (char*)( "models" CH_PATH_SEP_STR ), 7 }, { (char*)srPath.data(), srPath.size() } };
+			ch_string_auto  newPath   = ch_str_concat( 2, strings );
+			fullPath                  = FileSys_FindFile( newPath.data, newPath.size );
 		}
 	}
 
-	if ( fullPath.empty() )
+	if ( !fullPath.data )
 	{
 		Log_ErrorF( gLC_ClientGraphics, "LoadModel: Failed to Find Model: %s\n", srPath.c_str() );
 		return InvalidHandle;
 	}
 
-	std::string fileExt = FileSys_GetFileExt( srPath );
+	ch_string_auto fileExt = FileSys_GetFileExt( srPath.data(), srPath.size() );
 
 	Model*      model   = nullptr;
 	Handle      handle  = InvalidHandle;
 
 	// TODO: try to do file header checking
-	if ( fileExt == "obj" )
+	if ( ch_str_equals( fileExt, "obj", 3 ) )
 	{
 		handle = gGraphicsData.aModels.Create( &model );
 
@@ -253,9 +254,11 @@ Handle Graphics::LoadModel( const std::string& srPath )
 			return InvalidHandle;
 		}
 
-		Graphics_LoadObj( srPath, fullPath, model );
+		// fuck
+		std::string temp( fullPath.data, fullPath.size );
+		Graphics_LoadObj( srPath, temp, model );
 	}
-	else if ( fileExt == "glb" || fileExt == "gltf" )
+	else if ( ch_str_equals( fileExt, "glb", 3 ) || ch_str_equals( fileExt, "gltf", 4 ) )
 	{
 		handle = gGraphicsData.aModels.Create( &model );
 
@@ -265,11 +268,14 @@ Handle Graphics::LoadModel( const std::string& srPath )
 			return InvalidHandle;
 		}
 
-		Graphics_LoadGltfNew( srPath, fullPath, fileExt, model );
+		// fuck
+		std::string fullPathStd( fullPath.data, fullPath.size );
+		std::string fileExtStd( fileExt.data, fileExt.size );
+		Graphics_LoadGltfNew( srPath, fullPathStd, fileExtStd, model );
 	}
 	else
 	{
-		Log_DevF( gLC_ClientGraphics, 1, "Unknown Model File Extension: %s\n", fileExt.c_str() );
+		Log_DevF( gLC_ClientGraphics, 1, "Unknown Model File Extension: %s\n", fileExt.data );
 		return InvalidHandle;
 	}
 
@@ -493,6 +499,7 @@ Handle Graphics::Model_GetMaterial( Handle shModel, size_t sSurface )
 
 Handle Graphics::LoadScene( const std::string& srPath )
 {
+#if 0
 	// Have we loaded this scene already?
 	auto it = gGraphicsData.aScenePaths.find( srPath );
 
@@ -560,6 +567,9 @@ Handle Graphics::LoadScene( const std::string& srPath )
 
 	gGraphicsData.aScenePaths[ srPath ] = handle;
 	return handle;
+#else
+	return CH_INVALID_HANDLE;
+#endif
 }
 
 
@@ -1474,7 +1484,7 @@ void Graphics::Shutdown()
 			continue;
 
 		if ( renderable->apDebugName )
-			Util_FreeString( renderable->apDebugName );
+			ch_str_free( renderable->apDebugName );
 	}
 	
 	Graphics_DestroyLights();
@@ -1939,7 +1949,7 @@ void Graphics::SetRenderableDebugName( ChHandle_t sRenderable, std::string_view 
 		if ( sName.empty() )
 			return;
 
-		renderable->apDebugName = Util_AllocString( sName.data(), sName.size() );
+		renderable->apDebugName = ch_str_copy( sName.data(), sName.size() ).data;
 	}
 }
 

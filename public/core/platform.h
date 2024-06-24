@@ -5,10 +5,12 @@ typedef void* Module;
 
 #ifdef _WIN32
 	#define EXT_DLL ".dll"
+	#define EXT_DLL_LEN 4
 	#define DLL_EXPORT __declspec(dllexport)
 	#define DLL_IMPORT __declspec(dllimport)
 #elif __linux__
 	#define EXT_DLL ".so"
+	#define EXT_DLL_LEN 3
 	#define DLL_EXPORT __attribute__((__visibility__("default")))
 	#define DLL_IMPORT
 #else
@@ -19,6 +21,69 @@ typedef void* Module;
 	#define CORE_API DLL_IMPORT
 #else
 	#define CORE_API DLL_EXPORT
+#endif
+
+
+#define CH_PLAT_FOLDER_SEP CH_PLAT_FOLDER CH_PATH_SEP_STR
+//#define CH_PLAT_FOLDER_SEP_LEN ( strlen( CH_PLAT_FOLDER_SEP ) - 1 )
+
+
+#ifdef _WIN32
+
+// platform specific unicode character type
+//using uchar = wchar_t;
+
+	// Make this widechar on windows
+	//#define USTR( str )     L##str
+
+	// Make this widechar on windows
+	//#define _U( str )       L##str
+
+	#define ch_stat         _stat
+//	#define ch_ustat        _wstat
+//	#define ch_unprintf     _snwprintf
+//	#define ch_urename 	    _wrename
+//
+//	#define ch_ustrcasecmp  _wcsicmp
+//	#define ch_ustrncasecmp _wcsnicmp
+//	#define ch_ustrcmp      wcscmp
+//	#define ch_ustrncmp     wcsncmp
+//	#define ch_ustrlen      wcslen
+//	#define ch_ustrcat      wcscat
+//	#define ch_ustrchr      wcschr
+//
+//	#define ch_uopen 	    _wopen
+//
+//	#define ch_ufopen( path, mode ) _wfopen( path, L##mode )
+
+#else
+
+// platform specific unicode character type
+//using uchar = char;
+
+	// Make this widechar on windows
+	//#define USTR( str )  L##str
+
+	// Make this widechar on windows
+	//#define _U( str )    L##str
+
+	#define ch_stat      stat
+//	#define ch_ustat     stat
+//	#define ch_unprintf  snprintf
+//	#define ch_urename   rename
+//
+//	#define ch_ustricmp  strcasecmp
+//	#define ch_ustrnicmp strncasecmp
+//	#define ch_ustrcmp   strcmp
+//	#define ch_ustrncmp  strncmp
+//	#define ch_ustrlen   strlen
+//	#define ch_ustrcat   strcat
+//	#define ch_ustrchr   strchr
+//
+//	#define ch_uopen     open
+//
+//	#define ch_ufopen( path, mode ) fopen( path, mode )
+
 #endif
 
 
@@ -101,8 +166,18 @@ int CORE_API                Sys_GetCoreCount();
 
 cpu_info_t CORE_API         Sys_GetCpuInfo();
 
+//uchar*                      Sys_ToWideChar( const char* spStr, int sSize );
+//char*                       Sys_ToMultiByte( const uchar* spStr, int sSize );
+
+//void                        Sys_FreeConvertedString( const uchar* spStr );
+//void                        Sys_FreeConvertedString( const char* spStr );
+
 // window management
 #ifdef _WIN32
+	#define CH_SYS_TO_UNICODE( str, len ) Sys_ToWideChar( str, len )
+	#define CH_SYS_TO_ANSI( str, len )    Sys_ToMultiByte( str, len )
+
+// TODO: use a struct for this probably
 void            CORE_API*   Sys_CreateWindow( const char* spWindowName, int sWidth, int sHeight, bool maximize );
 void            CORE_API    Sys_SetResizeCallback( FResizeCallback callback );
 
@@ -111,5 +186,8 @@ int             CORE_API    Sys_ExecuteV( const char* spFile, const char* spArgs
 
 void CORE_API               Sys_CheckHeap();
 #else
+	#define CH_SYS_TO_UNICODE( str, len ) str
+	#define CH_SYS_TO_ANSI( str, len )    str
+
 	#define Sys_CheckHeap()
 #endif

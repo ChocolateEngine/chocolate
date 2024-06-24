@@ -29,6 +29,7 @@ static std::unordered_map< ModuleInterface_t*, Module > gInterfaces;
 static std::vector< LoadedSystem_t >                    gLoadedSystems;
 // static std::unordered_map< ISystem*, Module >           gSystems;
 
+const u64 CH_PLAT_FOLDER_SEP_LEN = strlen( CH_PLAT_FOLDER_SEP );
 
 bool Mod_InitSystem( LoadedSystem_t& appModule )
 {
@@ -116,21 +117,22 @@ Module Mod_Load( const char* spPath )
 		return it->second;  // already loaded
 
 	// TODO: improve this, what if it has a path before it
-	std::string pathExt = spPath;
-	pathExt = CH_PLAT_FOLDER "/" + pathExt + EXT_DLL;
+	const char*    strings[] = { CH_PLAT_FOLDER_SEP, spPath, EXT_DLL };
+	const u64      lengths[] = { CH_PLAT_FOLDER_SEP_LEN, strlen( spPath ), EXT_DLL_LEN };
+	ch_string_auto pathExt   = ch_str_concat( 3, strings, lengths );
 
-	std::string path = FileSys_FindFileEx( pathExt, ESearchPathType_Binary );
+	ch_string_auto path      = FileSys_FindFileEx( pathExt.data, pathExt.size, ESearchPathType_Binary );
 
-	if ( path.empty() )
+	if ( !path.data )
 	{
-		Log_WarnF( gLC_Module, "No module named %s found in search paths\n", pathExt.c_str() );
+		Log_WarnF( gLC_Module, "No module named %s found in search paths\n", pathExt.data );
 		return nullptr;
 	}
 
-	Module handle = sys_load_library( path.c_str() );
+	Module handle = sys_load_library( path.data );
 	if ( !handle )
 	{
-		Log_ErrorF( gLC_Module, "Unable to load library: %s - %s\n", pathExt.c_str(), sys_get_error() );
+		Log_ErrorF( gLC_Module, "Unable to load library: %s - %s\n", pathExt.data, sys_get_error() );
 		return nullptr;
 	}
 
@@ -139,7 +141,7 @@ Module Mod_Load( const char* spPath )
 	ModuleInterface_t* ( *getInterfacesF )( size_t & srCount ) = nullptr;
 	if ( !( *(void**)( &getInterfacesF ) = sys_load_func( handle, "cframework_GetInterfaces" ) ) )
 	{
-		Log_ErrorF( gLC_Module, "Unable to load \"cframework_GetInterfaces\" function from library: %s - %s\n", pathExt.c_str(), sys_get_error() );
+		Log_ErrorF( gLC_Module, "Unable to load \"cframework_GetInterfaces\" function from library: %s - %s\n", pathExt.data, sys_get_error() );
 		return nullptr;
 	}
 
@@ -148,11 +150,11 @@ Module Mod_Load( const char* spPath )
 
 	if ( interfaces == nullptr || count == 0 )
 	{
-		Log_ErrorF( "Failed to Load Interfaces From Library: %s\n", pathExt.c_str() );
+		Log_ErrorF( "Failed to Load Interfaces From Library: %s\n", pathExt.data );
 		return nullptr;
 	}
 
-	Log_DevF( gLC_Module, 1, "Loading Module: %s\n", pathExt.c_str() );
+	Log_DevF( gLC_Module, 1, "Loading Module: %s\n", pathExt.data );
 	for ( size_t i = 0; i < count; i++ )
 	{
 		gInterfaces[ &interfaces[ i ] ] = handle;

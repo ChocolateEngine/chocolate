@@ -109,4 +109,30 @@ void* Sys_CreateWindow( const char* spWindowName, int sWidth, int sHeight, bool 
 // }
 
 
+
+
+uchar* Sys_ToWideChar( const char* spStr, int sSize )
+{
+    // uchar is equal to char on linux
+	return spStr;
+}
+
+char* Sys_ToMultiByte( const uchar* spStr, int sSize )
+{
+	// uchar is equal to char on linux
+	return spStr;
+}
+
+
+// these do nothing on linux lol
+void Sys_FreeConvertedString( const uchar* spStr )
+{
+}
+
+
+void Sys_FreeConvertedString( const char* spStr )
+{
+}
+
+
 #endif /* __unix__  */

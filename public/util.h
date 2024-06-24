@@ -69,9 +69,34 @@
   #define ch_strncasecmp              strncasecmp
   #define ch_strcasecmp               strcasecmp
 #endif
+ 
 
 // #define CH_STACK_NEW( type, count ) ( type* ) CH_STACK_ALLOC( sizeof( type ) * count )
 #define CH_STACK_NEW( type, count ) static_cast< type* >( CH_STACK_ALLOC( sizeof( type ) * count ) )
+
+
+// ==============================================================================
+// Short Types
+
+
+using u8  = unsigned char;
+using u16 = unsigned short;
+using u32 = unsigned int;
+using u64 = unsigned long long;
+
+using s8  = char;
+using s16 = short;
+using s32 = int;
+using s64 = long long;
+
+using f32 = float;
+using f64 = double;
+
+using bolean = bool;  // funny
+
+
+// ==============================================================================
+
 
 // dynamic_cast with a check for if it returns a nullptr
 template< typename To, typename From >
@@ -118,7 +143,7 @@ inline void ch_free( Type* data )
 
 // Allocate X Amount of a specific type, could be named better
 template< typename To >
-inline To* ch_malloc( size_t sCount )
+inline To* ch_malloc( u64 sCount )
 {
 	To* data = static_cast< To* >( malloc( sizeof( To ) * sCount ) );
 	CH_ASSERT( data );
@@ -128,7 +153,7 @@ inline To* ch_malloc( size_t sCount )
 
 // Reallocate X Amount of a specific type, could be named better
 template< typename To >
-inline To* ch_realloc( To* spData, size_t sCount )
+inline To* ch_realloc( To* spData, u64 sCount )
 {
 	To* data = static_cast< To* >( realloc( spData, sizeof( To ) * sCount ) );
 	CH_ASSERT( data );
@@ -138,7 +163,7 @@ inline To* ch_realloc( To* spData, size_t sCount )
 
 // Reallocate X Amount of a specific type, could be named better
 template< typename To >
-inline bool ch_realloc2( To*& spData, size_t sCount )
+inline bool ch_realloc2( To*& spData, u64 sCount )
 {
 	To* data = static_cast< To* >( realloc( spData, sizeof( To ) * sCount ) );
 	
@@ -153,7 +178,7 @@ inline bool ch_realloc2( To*& spData, size_t sCount )
 
 // Allocate X Amount of a specific type and zero the memory, could be named better
 template< typename To >
-inline To* ch_calloc( size_t sCount )
+inline To* ch_calloc( u64 sCount )
 {
 	To* data = static_cast< To* >( calloc( sCount, sizeof( To ) ) );
 	CH_ASSERT( data );
@@ -163,7 +188,7 @@ inline To* ch_calloc( size_t sCount )
 
 // Allocate X Amount of a specific type on the stack
 template< typename To >
-inline To* ch_stack_alloc( size_t sCount )
+inline To* ch_stack_alloc( u64 sCount )
 {
 	// To* data = static_cast< To* >( _malloca( CH_ALIGN_VALUE( sCount * sizeof( To ), 16 ) ) );
 	To* data = static_cast< To* >( _malloca( sCount * sizeof( To ) ) );
@@ -186,8 +211,8 @@ inline To* ch_stack_alloc( size_t sCount )
 #define CH_MALLOC2( type, count )       static_cast< Type* >( malloc( count * sizeof( type ) )
 
 
-CORE_API bool ch_strcmplen( size_t sLenA, char* spA, size_t sLenB, char* spB );
-CORE_API bool ch_strcmplen( std::string_view sA, size_t sLenB, char* spB );
+CORE_API bool ch_strcmplen( u64 sLenA, char* spA, u64 sLenB, char* spB );
+CORE_API bool ch_strcmplen( std::string_view sA, u64 sLenB, char* spB );
 
 
 // inline int ch_strcasecmp( const char* spStr1, const char* spStr2 )
@@ -200,7 +225,7 @@ CORE_API bool ch_strcmplen( std::string_view sA, size_t sLenB, char* spB );
 // }
 
 
-//inline int ch_strncasecmp( const char* spStr1, const char* spStr2, size_t sCount )
+//inline int ch_strncasecmp( const char* spStr1, const char* spStr2, u64 sCount )
 //{
 //#ifdef _MSC_VER
 //	return _strnicmp( spStr1, spStr1, sCount );
@@ -209,29 +234,119 @@ CORE_API bool ch_strcmplen( std::string_view sA, size_t sLenB, char* spB );
 //#endif
 //}
 
-#ifdef _MSC_VER
-#else
-  
-#endif
-
 
 // ==============================================================================
-// Short Types
+// String Types
+// These ideally are never used in function arguments, but are used for return values
+// There is no reason to have these as arguments anyway, as they are just pointers and sizes
+// this way we don't have to construct an entire object just to pass it to a function
 
-using u8  = unsigned char;
-using u16 = unsigned short;
-using u32 = unsigned int;
-using u64 = unsigned long long;
 
-using s8  = char;
-using s16 = short;
-using s32 = int;
-using s64 = long long;
+CORE_API void ch_str_free( char* string );
+CORE_API bool ch_str_equals( const char* str1, u64 str1Len, const char* str2, u64 str2Len );
+CORE_API bool ch_str_equals( const char* str1, u64 str1Len, const char* str2 );
 
-using f32 = float;
-using f64 = double;
 
-using bolean = bool;  // funny
+struct ch_string
+{
+	char* data = nullptr;
+	u64   size = 0;
+
+	// annoying
+	// bool operator==( const ch_string& other )
+	// {
+	// 	return ( ch_str_equals( data, size, other.data, other.size ) );
+	// }
+};
+
+
+// inline bool operator==( const ch_string& srString, const char* spString )
+// {
+// 	return ( ch_str_equals( srString.data, srString.size, spString ) );
+// }
+
+
+inline bool operator==( const ch_string& srString, const ch_string& other )
+{
+	return ( ch_str_equals( srString.data, srString.size, other.data, other.size ) );
+}
+
+
+// this one automatically frees the memory upon destruction
+struct ch_string_auto
+{
+	char* data = nullptr;
+	u64   size = 0;
+
+	ch_string_auto()
+	{
+	}
+
+	ch_string_auto( char* spData, u64 sSize )
+		: data( spData ), size( sSize )
+	{
+	}
+
+	ch_string_auto( const ch_string& srString )
+		: data( srString.data ), size( srString.size )
+	{
+	}
+
+	~ch_string_auto()
+	{
+		if ( data )
+			ch_str_free( data );
+	}
+
+	// if i don't have this here, then sometimes it will call the deconstructor, and sometimes it won't
+	void operator=( const ch_string& srString )
+	{
+		data = srString.data;
+		size = srString.size;
+	}
+};
+
+
+// Hashing Support for ch_string and ch_string_auto
+namespace std
+{
+template<>
+struct hash< ch_string >
+{
+	size_t operator()( ch_string const& string ) const
+	{
+		size_t value = ( hash< u64 >()( string.size ) );
+
+		for ( u64 i = 0; i < string.size; i++ )
+			value ^= ( hash< char >()( string.data[ i ] ) );
+
+		return value;
+	}
+};
+
+template<>
+struct hash< ch_string_auto >
+{
+	size_t operator()( ch_string_auto const& string ) const
+	{
+		size_t value = ( hash< u64 >()( string.size ) );
+
+		for ( u64 i = 0; i < string.size; i++ )
+			value ^= ( hash< char >()( string.data[ i ] ) );
+
+		return value;
+	}
+};
+}
+
+
+// uchar is used for unicode strings
+// uchar is wchar_t on windows, and char on linux
+// struct ch_ustring
+// {
+// 	uchar* data = nullptr;
+// 	u32    size = 0;
+// };
 
 
 // ==============================================================================
@@ -240,14 +355,14 @@ using bolean = bool;  // funny
 #define NEW_VEC_INDEX 1
 
 template <class T>
-constexpr size_t vec_index( std::vector<T> &vec, T item, size_t fallback = SIZE_MAX )
+constexpr u64 vec_index( std::vector<T> &vec, T item, u64 fallback = SIZE_MAX )
 {
 #if NEW_VEC_INDEX
 	auto it = std::find( vec.begin(), vec.end(), item );
 	if ( it != vec.end() )
 		return it - vec.begin();
 #else
-	for (size_t i = 0; i < vec.size(); i++)
+	for (u64 i = 0; i < vec.size(); i++)
 	{
 		if (vec[i] == item)
 			return i;
@@ -259,14 +374,14 @@ constexpr size_t vec_index( std::vector<T> &vec, T item, size_t fallback = SIZE_
 
 
 template <class T>
-constexpr size_t vec_index( const std::vector<T> &vec, T item, size_t fallback = SIZE_MAX )
+constexpr u64 vec_index( const std::vector<T> &vec, T item, u64 fallback = SIZE_MAX )
 {
 #if NEW_VEC_INDEX
 	auto it = std::find( vec.begin(), vec.end(), item );
 	if ( it != vec.end() )
 		return it - vec.begin();
 #else
-	for (size_t i = 0; i < vec.size(); i++)
+	for (u64 i = 0; i < vec.size(); i++)
 	{
 		if (vec[i] == item)
 			return i;
@@ -288,14 +403,14 @@ constexpr void vec_remove( std::vector<T> &vec, T item )
 template <class T>
 constexpr void vec_remove_if( std::vector<T> &vec, T item )
 {
-	size_t index = vec_index( vec, item );
+	u64 index = vec_index( vec, item );
 	if ( index != SIZE_MAX )
 		vec.erase( vec.begin() + index );
 }
 
 
 template <class T>
-constexpr void vec_remove_index( std::vector<T> &vec, size_t index )
+constexpr void vec_remove_index( std::vector<T> &vec, u64 index )
 {
 	vec.erase( vec.begin() + index );
 }
@@ -318,53 +433,35 @@ constexpr bool vec_contains(const std::vector<T> &vec, T item)
 // ==============================================================================
 // String Tools
 
-void           CORE_API str_upper( std::string &string );
-void           CORE_API str_lower( std::string &string );
+void CORE_API        str_upper( std::string& string );
+void CORE_API        str_lower( std::string& string );
 
 // would like better names for this, but oh well
-std::string    CORE_API str_upper2( const std::string &in );
-std::string    CORE_API str_lower2( const std::string &in );
+std::string CORE_API str_upper2( const std::string& in );
+std::string CORE_API str_lower2( const std::string& in );
 
 #ifdef _WIN32
 // Find the first occurrence of find in s while ignoring case
-char          CORE_API *strcasestr( const char* s, const char* find );
+char CORE_API* strcasestr( const char* s, const char* find );
 #endif
 
 // don't need to worry about any resizing with these, but is a little slower
-void           CORE_API vstring( std::string& output, const char* format, ... );
-void           CORE_API vstringV( std::string& output, const char* format, va_list args );
+void CORE_API        vstring( std::string& output, const char* format, ... );
+void CORE_API        vstringV( std::string& output, const char* format, va_list args );
 
-std::string    CORE_API vstring( const char* format, ... );
-std::string    CORE_API vstringV( const char* format, va_list args );
-
-// Copies a string, useful for if you're copying a string from reading a file and then going to free that string later
-CORE_API char*          Util_AllocString( const char* format );
-CORE_API char*          Util_AllocString( const char* format, size_t len );
-
-CORE_API char*          Util_ReallocString( char* data, const char* format );
-CORE_API char*          Util_ReallocString( char* data, const char* format, size_t len );
-
-// Concatinates a string together
-CORE_API char*          Util_AllocStringConcat( size_t count, char** strings, size_t* lengths );
-CORE_API char*          Util_AllocStringJoin( size_t count, char** strings, size_t* lengths, const char* space = " " );
-
-// malloc a string with string formatting
-CORE_API char*          Util_AllocStringF( const char* format, ... );
-CORE_API char*          Util_AllocStringV( const char* format, va_list args );
-
-// USE THIS AS STRING ALLOCATIONS ARE TRACKED!
-// also so the string is freed in the same dll, would probably cause issues otherwise
-CORE_API void           Util_FreeString( char* string );
-
-// Get the total amount of strings allocated
-CORE_API u32            Util_GetStringAllocCount();
+std::string CORE_API vstring( const char* format, ... );
+std::string CORE_API vstringV( const char* format, va_list args );
 
 
-#define VSTRING( out, format ) \
-	va_list args; \
-	va_start( args, format ); \
+#define VSTRING( out, format )     \
+	va_list args;                  \
+	va_start( args, format );      \
 	vstringV( out, format, args ); \
 	va_end( args )
+
+
+// ==============================================================================
+// String Allocation System
 
 
 // ==============================================================================
@@ -385,8 +482,10 @@ bool            CORE_API ToLong3( const char* spValue, long &srOut );
 
 std::string     CORE_API ToString( float value );
 
+std::string     CORE_API ch_to_string( float value );
 
-inline float Round( float val, size_t precision = 100 )
+
+inline float Round( float val, u64 precision = 100 )
 {
 	return roundf( val * precision ) / precision;
 }
@@ -422,11 +521,13 @@ inline float RandomFloat( float sMin, float sMax )
 }
 
 template< typename KEY, typename VALUE >
-inline size_t Util_SizeOfUnordredMap( const std::unordered_map< KEY, VALUE >& srMap )
+inline u64 Util_SizeOfUnordredMap( const std::unordered_map< KEY, VALUE >& srMap )
 {
-	return ( srMap.size() * ( sizeof( std::unordered_map< KEY, VALUE >::value_type ) + sizeof( void* ) ) +  // data list
-	         srMap.bucket_count() * ( sizeof( void* ) + sizeof( size_t ) ) )                                // bucket index
-	       * 1.5;                                                                                           // estimated allocation overheads
+	return 0;
+
+	// return ( srMap.size() * ( sizeof( std::unordered_map< KEY, VALUE >::value_type ) + sizeof( void* ) ) +  // data list
+	//          srMap.bucket_count() * ( sizeof( void* ) + sizeof( u64 ) ) )                                // bucket index
+	//        * 1.5;                                                                                           // estimated allocation overheads
 }
 
 

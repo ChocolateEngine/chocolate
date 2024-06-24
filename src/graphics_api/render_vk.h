@@ -95,7 +95,7 @@ struct TextureVK
 	u32                  aDataSize       = 0;
 
 	// Texture Information
-	char*                apName          = nullptr;
+	ch_string            aName;
 	int                  aIndex          = 0;  // texture sampler index (MOVE ELSEWHERE!!)
 	glm::uvec2           aSize{};
 	u8                   aMipLevels    = 0;
@@ -313,10 +313,17 @@ VkSampleCountFlagBits                 VK_GetMSAASamples();
 const char*                           VK_ObjectTypeStr( VkObjectType type );
 
 // mainly used for allocating names for vulkan objects
-char*                                 VK_AllocString( const char* format );
-char*                                 VK_AllocString( const char* format, size_t len );
-char*                                 VK_AllocStringF( const char* format, ... );
+// char*                                 VK_AllocString( const char* format );
+// char*                                 VK_AllocString( const char* format, size_t len );
+// char*                                 VK_AllocStringF( const char* format, ... );
+
+ch_string                             VK_AllocString( const char* format );
+ch_string                             VK_AllocString( const char* format, u64 len );
+ch_string                             VK_AllocStringF( const char* format, ... );
+
 void                                  VK_FreeString( char* string );
+// void                                  VK_FreeString( char* string, u64 len );
+void                                  VK_FreeString( ch_string& string );
 void                                  VK_FreeStrings();
 
 // --------------------------------------------------------------------------------------
@@ -491,7 +498,7 @@ void                                  VK_DestroyTextureSamplers();
 VkSampler                             VK_GetSampler( VkFilter sFilter, VkSamplerAddressMode addressMode, VkBool32 sDepthCompare );
 
 TextureVK*                            VK_NewTexture( ChHandle_t& srHandle );
-bool                                  VK_LoadTexture( ChHandle_t& srHandle, TextureVK* spTexture, const std::string& srPath, const TextureCreateData_t& srCreateData );
+bool                                  VK_LoadTexture( ChHandle_t& srHandle, TextureVK* spTexture, const ch_string& srPath, const TextureCreateData_t& srCreateData );
 TextureVK*                            VK_CreateTexture( ChHandle_t& srHandle, const TextureCreateInfo_t& srTextureCreateInfo, const TextureCreateData_t& srCreateData );
 void                                  VK_DestroyTexture( ChHandle_t sTexture );
 void                                  VK_DestroyAllTextures();

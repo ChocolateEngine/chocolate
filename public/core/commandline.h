@@ -73,9 +73,11 @@ CORE_API const char* Args_RegisterF( const char* sDefault, const char* spDesc, i
 CORE_API int         Args_RegisterF( int sDefault, const char* spDesc, int sCount, const char* spName, ... );
 CORE_API float       Args_RegisterF( float sDefault, const char* spDesc, int sCount, const char* spName, ... );
 
+#define CH_ARG_REGISTER_BOOL( varName, defaultValue, desc, name ) bool varName = Args_Register( defaultValue, desc, name )
+
 CORE_API u32         Args_GetRegisteredCount();
 CORE_API Arg_t*      Args_GetRegisteredData( u32 sIndex );
-CORE_API std::string Args_GetRegisteredPrint( const Arg_t* spArg );
+CORE_API ch_string_auto Args_GetRegisteredPrint( const Arg_t* spArg );
 
 // CORE_API std::string Args_GetRegisteredPrint( int sIndex );
 // CORE_API std::string Args_GetRegisteredPrint( std::string_view sString );
@@ -90,16 +92,16 @@ extern "C"
 	CORE_API void             Args_PrintRegistered();
 
 	// Classic Argument Parsing
-	CORE_API int              Args_GetIndex( std::string_view search );
-	CORE_API bool             Args_Find( std::string_view search );
+	//CORE_API int              Args_GetIndex( std::string_view search );
+	CORE_API bool             Args_Find( const char* search, s32 len = -1 );
 
-	CORE_API std::string_view Args_GetString( std::string_view search, std::string_view fallback = "" );
-	CORE_API int              Args_GetInt( std::string_view search, int fallback );
-	CORE_API float            Args_GetFloat( std::string_view search, float fallback );
-	CORE_API double           Args_GetDouble( std::string_view search, double fallback );
+	//CORE_API std::string_view Args_GetString( std::string_view search, std::string_view fallback = "" );
+	//CORE_API int              Args_GetInt( std::string_view search, int fallback );
+	//CORE_API float            Args_GetFloat( std::string_view search, float fallback );
+	//CORE_API double           Args_GetDouble( std::string_view search, double fallback );
 
 	// function to be able to find all values like this
 	// returns true if it finds a value, false if it fails to
-	CORE_API bool             Args_GetValueNext( int& index, std::string_view search, std::string_view& ret );
+	CORE_API bool             Args_GetValueNext( int& index, const char* search, ch_string& ret );
 };
 

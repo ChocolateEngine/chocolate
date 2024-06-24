@@ -7,7 +7,8 @@ static AppInfo_t gAppInfo;
 
 std::vector< std::string > gAppInfoPaths;
 
-constexpr const char* gAppInfoFileName = PATH_SEP_STR "app_info.json5";
+constexpr const char* gAppInfoFileName    = CH_PATH_SEP_STR "app_info.json5";
+const u64             gAppInfoFileNameLen = strlen( gAppInfoFileName );
 
 
 void Core_WriteDefaultAppInfo()
@@ -51,7 +52,7 @@ void Core_HandleSearchPathType( JsonObject_t& cur, ESearchPathType sType )
 			continue;
 		}
 
-		FileSys_AddSearchPath( cur.aObjects[ j ].apString, sType );
+		FileSys_AddSearchPath( cur.aObjects[ j ].apString, -1, sType );
 	}
 }
 
@@ -87,14 +88,22 @@ bool Core_ParseSearchPaths( JsonObject_t& root )
 
 bool Core_GetAppInfoJson( JsonObject_t& srRoot, const std::string& appPath )
 {
-	std::string fullPath;
+	ch_string fullPath;
 
 	if ( appPath.empty() )
-		fullPath = FileSys_GetExePath() + PATH_SEP_STR + FileSys_GetWorkingDir() + gAppInfoFileName;
+	{
+		const char* strings[] = { FileSys_GetExePath().data, PATH_SEP_STR, FileSys_GetWorkingDir().data, gAppInfoFileName };
+		const u64   lengths[] = { FileSys_GetExePath().size, 1, FileSys_GetWorkingDir().size, gAppInfoFileNameLen };
+		fullPath              = ch_str_concat( 4, strings, lengths );
+	}
 	else
-		fullPath = appPath + PATH_SEP_STR + gAppInfoFileName;
+	{
+		const char* strings[] = { appPath.data(), PATH_SEP_STR, gAppInfoFileName };
+		const u64   lengths[] = { appPath.size(), 1, gAppInfoFileNameLen };
+		fullPath              = ch_str_concat( 3, strings, lengths );
+	}
 
-	if ( !FileSys_IsFile( fullPath, true ) )
+	if ( !FileSys_IsFile( fullPath.data, fullPath.size, true ) )
 	{
 		// Log_Error( "Failed to Find app_info.json5 file, use -def-app-info to write a default one\n" );
 		Log_Error( "Failed to Find app_info.json5 file\n" );
@@ -102,7 +111,7 @@ bool Core_GetAppInfoJson( JsonObject_t& srRoot, const std::string& appPath )
 		return false;
 	}
 
-	std::vector< char > data = FileSys_ReadFile( fullPath );
+	std::vector< char > data = FileSys_ReadFile( fullPath.data, fullPath.size );
 
 	if ( data.empty() )
 	{
@@ -207,10 +216,10 @@ bool Core_LoadAppInfo()
 
 	if ( gAppInfo.apName == nullptr )
 	{
-		std::string name = FileSys_GetWorkingDir();
-		Log_WarnF( "\"name\" value is undefined in app_info.json5, defaulting to %s\n", name.c_str() );
+		ch_string name = FileSys_GetWorkingDir();
+		Log_WarnF( "\"name\" value is undefined in app_info.json5, defaulting to %s\n", name.data );
 
-		if ( !Core_SetAppInfoString( gAppInfo.apName, name.c_str() ) )
+		if ( !Core_SetAppInfoString( gAppInfo.apName, name.data ) )
 		{
 			return false;
 		}
@@ -218,10 +227,10 @@ bool Core_LoadAppInfo()
 
 	if ( gAppInfo.apWindowTitle == nullptr )
 	{
-		std::string name = FileSys_GetWorkingDir();
-		Log_WarnF( "\"windowTitle\" value is undefined in app_info.json5, defaulting to %s\n", name.c_str() );
+		ch_string name = FileSys_GetWorkingDir();
+		Log_WarnF( "\"windowTitle\" value is undefined in app_info.json5, defaulting to %s\n", name.data );
 
-		if ( !Core_SetAppInfoString( gAppInfo.apWindowTitle, name.c_str() ) )
+		if ( !Core_SetAppInfoString( gAppInfo.apWindowTitle, name.data ) )
 		{
 			return false;
 		}
@@ -253,7 +262,7 @@ bool Core_AddAppInfo( const std::string& appPath )
 		return false;
 	}
 
-	FileSys_SetAppPathMacro( appPath );
+	FileSys_SetAppPathMacro( appPath.data(), appPath.size() );
 
 	for ( size_t i = 0; i < root.aObjects.size(); i++ )
 	{

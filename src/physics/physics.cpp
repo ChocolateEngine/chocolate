@@ -691,18 +691,18 @@ IPhysicsShape* PhysicsEnvironment::LoadShape( const std::string& path, PhysShape
 			break;
 	}
 
-	std::string absPath = FileSys_FindFile( path );
+	ch_string_auto absPath = FileSys_FindFile( path.data(), path.size() );
 
-	if ( absPath.empty() && FileSys_IsRelative( path.data() ) )
+	if ( !absPath.data && FileSys_IsRelative( path.data(), path.size() ) )
 	{
-		absPath = "models";
-		absPath += CH_PATH_SEP_STR;
-		absPath += path;
+		const char*    strings[] = { "models" CH_PATH_SEP_STR, path.data() };
+		const u64      lengths[] = { 7, path.size() };
+		ch_string_auto pathSearch = ch_str_concat( 2, strings, lengths );
 
-		absPath = FileSys_FindFile( absPath );
+		absPath                   = FileSys_FindFile( pathSearch.data, pathSearch.size );
 	}
 	
-	if ( absPath.empty() )
+	if ( !absPath.data )
 	{
 		Log_ErrorF( "Failed to find physics model: \"%s\"\n", path.data() );
 		return nullptr;
@@ -714,7 +714,7 @@ IPhysicsShape* PhysicsEnvironment::LoadShape( const std::string& path, PhysShape
 		singleShape = true;
 
 	PhysicsModel* model = new PhysicsModel;
-	if ( !LoadObj_Fast( absPath, model, singleShape ) )
+	if ( !LoadObj_Fast( absPath.data, model, singleShape ) )
 	{
 		Log_ErrorF( gPhysicsChannel, "Failed to Load Model for Physics Shape: \"%s\"\n", path.data() );
 		delete model;

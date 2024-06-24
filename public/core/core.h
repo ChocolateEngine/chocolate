@@ -15,4 +15,5 @@
 #include "asserts.h"
 #include "profiler.h"
 #include "vector.hpp"
+#include "string.h"
 

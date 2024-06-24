@@ -189,11 +189,11 @@ ImFont* GuiSystem::BuildFont( const char* spPath, float sSizePixels, const ImFon
 	if ( Args_Find( "-no-imgui-font" ) )
 		return nullptr;
 
-	auto fontPath = FileSys_FindFile( spPath );
-	if ( fontPath == "" )
+	ch_string_auto fontPath = FileSys_FindFile( spPath );
+	if ( !fontPath.data )
 		return nullptr;
 
-	ImFont* font = ImGui::GetIO().Fonts->AddFontFromFileTTF( fontPath.c_str(), sSizePixels, spFontConfig );
+	ImFont* font = ImGui::GetIO().Fonts->AddFontFromFileTTF( fontPath.data, sSizePixels, spFontConfig );
 
 	render->BuildFonts();
 

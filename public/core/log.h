@@ -36,7 +36,7 @@ enum class LogColor: unsigned char
 };
 
 
-// Unix Color Macros
+// Unix Color Macros (TODO: REMOVE THIS AND RENAME TO ANSI) 
 #define UNIX_CLR_DEFAULT     "\033[0m"
 #define UNIX_CLR_BLACK       "\033[0;30m"
 #define UNIX_CLR_WHITE       "\033[1;37m"
@@ -56,6 +56,49 @@ enum class LogColor: unsigned char
 #define UNIX_CLR_PURPLE      "\033[1;35m"
 #define UNIX_CLR_YELLOW      "\033[1;33m"
 #define UNIX_CLR_GRAY        "\033[1;30m"
+
+
+#define ANSI_CLR_DEFAULT     "\033[0m"
+#define ANSI_CLR_BLACK       "\033[0;30m"
+#define ANSI_CLR_WHITE       "\033[1;37m"
+
+#define ANSI_CLR_DARK_BLUE   "\033[0;34m"
+#define ANSI_CLR_DARK_GREEN  "\033[0;32m"
+#define ANSI_CLR_DARK_CYAN   "\033[0;36m"
+#define ANSI_CLR_DARK_RED    "\033[0;31m"
+#define ANSI_CLR_DARK_PURPLE "\033[0;35m"
+#define ANSI_CLR_DARK_YELLOW "\033[0;33m"
+#define ANSI_CLR_DARK_GRAY   "\033[0;30m"
+
+#define ANSI_CLR_BLUE        "\033[1;34m"
+#define ANSI_CLR_GREEN       "\033[1;32m"
+#define ANSI_CLR_CYAN        "\033[1;36m"
+#define ANSI_CLR_RED         "\033[1;31m"
+#define ANSI_CLR_PURPLE      "\033[1;35m"
+#define ANSI_CLR_YELLOW      "\033[1;33m"
+#define ANSI_CLR_GRAY        "\033[1;30m"
+
+
+// Unicode Variant for Windows
+//#define UANSI_CLR_DEFAULT     USTR( "\033[0m" )
+//#define UANSI_CLR_BLACK       USTR( "\033[0;30m" )
+//#define UANSI_CLR_WHITE       USTR( "\033[1;37m" )
+//
+//#define UANSI_CLR_DARK_BLUE   USTR( "\033[0;34m" )
+//#define UANSI_CLR_DARK_GREEN  USTR( "\033[0;32m" )
+//#define UANSI_CLR_DARK_CYAN   USTR( "\033[0;36m" )
+//#define UANSI_CLR_DARK_RED    USTR( "\033[0;31m" )
+//#define UANSI_CLR_DARK_PURPLE USTR( "\033[0;35m" )
+//#define UANSI_CLR_DARK_YELLOW USTR( "\033[0;33m" )
+//#define UANSI_CLR_DARK_GRAY   USTR( "\033[0;30m" )
+//
+//#define UANSI_CLR_BLUE        USTR( "\033[1;34m" )
+//#define UANSI_CLR_GREEN       USTR( "\033[1;32m" )
+//#define UANSI_CLR_CYAN        USTR( "\033[1;36m" )
+//#define UANSI_CLR_RED         USTR( "\033[1;31m" )
+//#define UANSI_CLR_PURPLE      USTR( "\033[1;35m" )
+//#define UANSI_CLR_YELLOW      USTR( "\033[1;33m" )
+//#define UANSI_CLR_GRAY        USTR( "\033[1;30m" )
 
 
 enum class LogType: unsigned char

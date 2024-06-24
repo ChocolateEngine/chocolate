@@ -2,7 +2,7 @@
 #include "render/irender.h"
 
 #include "core/json5.h"
-#include "core/string.hpp"
+#include "core/string.h"
 
 #include <unordered_set>
 #include <variant>
@@ -26,7 +26,10 @@ struct MaterialVar
 	MaterialVar( const std::string_view name, EMatVar type ) :
 		aNameLen( name.size() ), aType( type )
 	{
-		apName = Util_AllocString( name.data(), name.size() );
+		ch_string name_alloc = ch_str_copy( name.data(), name.size() );
+		apName               = name_alloc.data;
+		aNameLen             = name_alloc.size;
+
 	}
 
 	MaterialVar( const std::string_view name, Handle data ) :
@@ -56,7 +59,7 @@ struct MaterialVar
 	~MaterialVar()
 	{
 		if ( apName )
-			Util_FreeString( apName );
+			ch_str_free( apName );
 	}
 
 	char*   apName;
@@ -109,13 +112,13 @@ struct MaterialData_t
 };
 
 
-static ResourceList< MaterialData_t* >                gMaterials;
-static std::unordered_map< std::string, Handle >      gMaterialPaths;
-static std::unordered_map< std::string_view, Handle > gMaterialNames;  // TODO: use string hashing for this?
-static std::unordered_map< Handle, Handle >           gMaterialShaders;
+static ResourceList< MaterialData_t* >         gMaterials;
+static std::unordered_map< ch_string, Handle > gMaterialPaths;
+static std::unordered_map< ch_string, Handle > gMaterialNames;  // TODO: use string hashing for this?
+static std::unordered_map< Handle, Handle >    gMaterialShaders;
 
-static Handle                                         gInvalidMaterial;
-static std::string                                    gStrEmpty;
+static Handle                                  gInvalidMaterial;
+static std::string                             gStrEmpty;
 
 
 const char* Graphics::Mat_GetName( Handle shMat )
@@ -125,10 +128,10 @@ const char* Graphics::Mat_GetName( Handle shMat )
 		if ( mat != shMat )
 			continue;
 
-		if ( name.data() == nullptr )
+		if ( name.data == nullptr )
 			Log_Error( gLC_ClientGraphics, "Material Name is nullptr???\n" );
 
-		return name.data();
+		return name.data;
 	}
 
 	return nullptr;
@@ -256,7 +259,7 @@ bool Graphics::Mat_RemoveRef( ChHandle_t sMat )
 	// have that implement reference counting itself
 	CH_ASSERT( data->aRefCount != 0 );
 
-	std::string_view matName;
+	ch_string matName;
 
 	for ( auto& [ name, mat ] : gMaterialNames )
 	{
@@ -267,8 +270,8 @@ bool Graphics::Mat_RemoveRef( ChHandle_t sMat )
 		}
 	}
 
-	if ( matName.size() )
-		Log_DevF( gLC_ClientGraphics, 3, "Decremented Ref Count for Material \"%s\" from %u to %u\n", matName.data(), data->aRefCount, data->aRefCount - 1 );
+	if ( matName.size )
+		Log_DevF( gLC_ClientGraphics, 3, "Decremented Ref Count for Material \"%s\" from %u to %u\n", matName.data, data->aRefCount, data->aRefCount - 1 );
 	else
 		Log_DevF( gLC_ClientGraphics, 3, "Decremented Ref Count for Material \"%zd\" from %u to %u\n", sMat, data->aRefCount, data->aRefCount - 1 );
 
@@ -291,13 +294,13 @@ bool Graphics::Mat_RemoveRef( ChHandle_t sMat )
 	delete data;
 	gMaterials.Remove( sMat );
 
-	if ( matName.size() )
+	if ( matName.size )
 	{
 		// Log_DevF( gLC_ClientGraphics, 1, "Freeing Material \"%s\" - Handle \"%zd\"\n", matName.data(), sMat );
-		Log_DevF( gLC_ClientGraphics, 1, "Freeing Material \"%s\"\n", matName.data() );
-		char* matNameChar = (char*)matName.data();
+		Log_DevF( gLC_ClientGraphics, 1, "Freeing Material \"%s\"\n", matName.data );
+		char* matNameChar = matName.data;
 		gMaterialNames.erase( matName );
-		Util_FreeString( matNameChar );
+		ch_str_free( matNameChar );
 	}
 	else
 	{
@@ -342,7 +345,7 @@ void Mat_SetVarInternal( Handle mat, const std::string& name, const T& value )
 	MaterialVar& var = data->aVars.emplace_back( true );
 
 	var.aNameLen     = name.size();
-	var.apName       = Util_AllocString( name.data(), name.size() );
+	var.apName       = ch_str_copy( name.data(), name.size() ).data;
 
 	var.SetVar( value );
 }
@@ -581,24 +584,31 @@ static void ParseMaterialVarArray( VEC& value, JsonObject_t& cur )
 
 
 // Used in normal material loading, and eventually, live material reloading
-bool Graphics_ParseMaterial( const std::string& srName, const std::string& srPath, Handle& handle )
+bool Graphics_ParseMaterial( const ch_string& srName, const std::string& srPath, Handle& handle )
 {
 	PROF_SCOPE();
 
-	std::string fullPath;
+	ch_string fullPath;
 
 	if ( srPath.ends_with( ".cmt" ) )
-		fullPath = FileSys_FindFile( srPath );
+	{
+		fullPath = FileSys_FindFile( srPath.data(), srPath.size() );
+	}
 	else
-		fullPath = FileSys_FindFile( srPath + ".cmt" );
+	{
+		const char*    strings[]     = { srPath.data(), ".cmt" };
+		const u64      lengths[]     = { srPath.size(), 4 };
+		ch_string_auto path_with_ext = ch_str_concat( 2, strings, lengths );
+		fullPath                     = FileSys_FindFile( path_with_ext.data, path_with_ext.size );
+	}
 
-	if ( fullPath.empty() )
+	if ( !fullPath.data )
 	{
 		Log_ErrorF( gLC_ClientGraphics, "Failed to Find Material: \"%s\"", srPath.c_str() );
 		return false;
 	}
 
-	std::vector< char > data = FileSys_ReadFile( fullPath );
+	std::vector< char > data = FileSys_ReadFile( fullPath.data, fullPath.size );
 
 	if ( data.empty() )
 		return false;
@@ -644,11 +654,11 @@ bool Graphics_ParseMaterial( const std::string& srName, const std::string& srPat
 			MaterialData_t* matData = nullptr;
 			if ( handle == InvalidHandle )
 			{
-				matData            = new MaterialData_t;
-				matData->aRefCount = 1;
-				handle             = gMaterials.Add( matData );
+				matData                = new MaterialData_t;
+				matData->aRefCount     = 1;
+				handle                 = gMaterials.Add( matData );
 
-				char* name         = Util_AllocString( srName.data(), srName.size() );
+				ch_string name         = ch_str_copy( srName.data, srName.size );
 				gMaterialNames[ name ] = handle;
 			}
 			else
@@ -735,10 +745,10 @@ bool Graphics_ParseMaterial( const std::string& srName, const std::string& srPat
 
 					std::string basePath = texturePath;
 
-					if ( !FileSys_IsFile( texturePath ) )
+					if ( !FileSys_IsFile( texturePath.data(), texturePath.size() ) )
 						texturePath = "models/" + basePath;
 
-					if ( !FileSys_IsFile( texturePath ) )
+					if ( !FileSys_IsFile( texturePath.data(), texturePath.size() ) )
 						texturePath = "materials/" + basePath;
 				}
 
@@ -832,45 +842,93 @@ bool Graphics_ParseMaterial( const std::string& srName, const std::string& srPat
 }
 
 
-static std::string ParseMaterialNameFromPath( const std::string& path )
+// static ch_string ParseMaterialNameFromPath( const std::string& path )
+// {
+// 	std::string output;
+// 
+// 	// Remove .cmt from the extension, no need for this
+// 	if ( path.ends_with( ".cmt" ) )
+// 	{
+// 		output = path.substr( 0, path.size() - 4 );
+// 	}
+// 	else
+// 	{
+// 		output = path;
+// 	}
+// 
+// 	// Normalize Path Separators
+// 	std::replace( output.begin(), output.end(), '\\', '/' );
+// 
+// 	// lazy
+// 	ch_string output_ch = ch_str_copy( output.data(), output.size() );
+// 	return output_ch;
+// }
+
+
+static ch_string ParseMaterialNameFromPath( const char* path, s32 len )
 {
-	std::string output;
+	ch_string path_no_ext;
+
+	if ( len < 0 )
+		len = strlen( path );
+
+	if ( len == 0 )
+		return path_no_ext;
+
+	bool alloc = false;
 
 	// Remove .cmt from the extension, no need for this
-	if ( path.ends_with( ".cmt" ) )
+	if ( ch_str_ends_with( path, len, ".cmt", 4 ) )
 	{
-		output = path.substr( 0, path.size() - 4 );
+		alloc       = true;
+		path_no_ext = ch_str_copy( path, len - 4 );
 	}
 	else
 	{
-		output = path;
+		path_no_ext.data = (char*)path;
+		path_no_ext.size = len;
 	}
 
 	// Normalize Path Separators
-	std::replace( output.begin(), output.end(), '\\', '/' );
+	ch_string output = FileSys_CleanPath( path_no_ext.data, path_no_ext.size );
+
+	if ( alloc )
+		ch_str_free( path_no_ext.data );
 
 	return output;
 }
 
 
-Handle Graphics::LoadMaterial( const std::string& srPath )
+Handle Graphics::LoadMaterial( const char* spPath, s32 sLen )
 {
-	std::string name = ParseMaterialNameFromPath( srPath );
+	ch_string name = ParseMaterialNameFromPath( spPath, sLen );
 
-	auto nameIt = gMaterialNames.find( name.c_str() );
+	auto nameIt = gMaterialNames.find( name );
 	if ( nameIt != gMaterialNames.end() )
 	{
-		Log_DevF( gLC_ClientGraphics, 3, "Incrementing Ref Count for Material \"%s\" - \"%zd\"\n", srPath.c_str(), nameIt->second );
+		Log_DevF( gLC_ClientGraphics, 3, "Incrementing Ref Count for Material \"%s\" - \"%zd\"\n", spPath, nameIt->second );
 		Mat_AddRef( nameIt->second );
+		ch_str_free( name.data );
 		return nameIt->second;
 	}
 
 	Handle handle = InvalidHandle;
-	if ( !Graphics_ParseMaterial( name, srPath, handle ) )
-		return InvalidHandle;
 
-	Log_DevF( gLC_ClientGraphics, 1, "Loaded Material \"%s\"\n", srPath.c_str() );
-	gMaterialPaths[ srPath ] = handle;
+	// lazy
+	std::string tempPath( spPath, sLen );
+
+	if ( !Graphics_ParseMaterial( name, tempPath, handle ) )
+	{
+		ch_str_free( name.data );
+		return CH_INVALID_HANDLE;
+	}
+
+	Log_DevF( gLC_ClientGraphics, 1, "Loaded Material \"%s\"\n", name.data );
+
+	ch_string path = ch_str_copy( spPath, sLen );
+
+	gMaterialPaths[ path ] = handle;
+	ch_str_free( name.data );
 	return handle;
 }
 
@@ -878,19 +936,21 @@ Handle Graphics::LoadMaterial( const std::string& srPath )
 // Create a new material with a name and a shader
 Handle Graphics::CreateMaterial( const std::string& srName, Handle shShader )
 {
-	auto nameIt = gMaterialNames.find( srName.c_str() );
+	ch_string name   = ParseMaterialNameFromPath( srName.data(), srName.size() );
+	auto      nameIt = gMaterialNames.find( name );
+
 	if ( nameIt != gMaterialNames.end() )
 	{
-		Log_DevF( gLC_ClientGraphics, 3, "Incrementing Ref Count for Material \"%s\" - \"%zd\"\n", srName.c_str(), nameIt->second );
+		Log_DevF( gLC_ClientGraphics, 3, "Incrementing Ref Count for Material \"%s\" - \"%zd\"\n", srName.data(), nameIt->second );
 		Mat_AddRef( nameIt->second );
+		ch_str_free( name.data );
 		return nameIt->second;
 	}
 
-	auto matData       = new MaterialData_t;
-	matData->aRefCount = 1;
+	auto matData               = new MaterialData_t;
+	matData->aRefCount         = 1;
 
-	Handle handle      = gMaterials.Add( matData );
-	char*  name        = Util_AllocString( srName.data(), srName.size() );
+	Handle handle              = gMaterials.Add( matData );
 
 	gMaterialNames[ name ]     = handle;
 	gMaterialShaders[ handle ] = shShader;
@@ -914,9 +974,11 @@ void Graphics::FreeMaterial( ChHandle_t shMaterial )
 // NAME: dev/grid01
 ChHandle_t Graphics::FindMaterial( const char* spName )
 {
-	std::string name = ParseMaterialNameFromPath( spName );
-
+	ch_string name = ParseMaterialNameFromPath( spName, -1 );
 	auto nameIt = gMaterialNames.find( name );
+
+	ch_str_free( name.data );
+
 	if ( nameIt != gMaterialNames.end() )
 	{
 		// TODO: should this really add a reference to this?
@@ -958,7 +1020,10 @@ const std::string& Graphics::GetMaterialPath( Handle sMaterial )
 	for ( auto& [ path, handle ] : gMaterialPaths )
 	{
 		if ( sMaterial == handle )
-			return path;
+		{
+			std::string path_str( path.data, path.size );
+			return path_str;
+		}
 	}
 
 	return "";
@@ -989,7 +1054,7 @@ CONCMD( r_dump_materials )
 	u32 i = 0;
 	for ( auto& [ name, mat ] : gMaterialNames )
 	{
-		Log_MsgF( gLC_ClientGraphics, "%zd - \"%s\"\n", i++, name.data() );
+		Log_MsgF( gLC_ClientGraphics, "%zd - \"%s\"\n", i++, name.data );
 	}
 }
 

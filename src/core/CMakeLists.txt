@@ -23,6 +23,7 @@ set(
 	"profiler.cpp"
 	"resource.cpp"
 	"systemmanager.cpp"
+	"string.cpp"
 	"util.cpp"
 )
 

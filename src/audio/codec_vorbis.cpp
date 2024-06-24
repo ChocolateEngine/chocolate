@@ -30,7 +30,7 @@ bool CodecVorbis::Init()
 
 bool CodecVorbis::CheckExt( std::string_view sExt )
 {
-	return sExt == "ogg";
+	return ch_str_equals( sExt.data(), sExt.size(), "ogg", 3 );
 }
 
 

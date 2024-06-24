@@ -17,6 +17,12 @@ constexpr size_t                       one = 1;
 // return true if the ConVar was created
 bool Con_RegisterConVar_Base( ConVarData_t** conVarDataIn, const char* spName, const char* spDesc, ConVarFlag_t sFlags, EConVarType sType )
 {
+	if ( !spName )
+	{
+		Log_Error( gConsoleChannel, "ConVar Name is NULL\n" );
+		return false;
+	}
+
 	auto it = Con_GetConVarMap().find( spName );
 
 	if ( it != Con_GetConVarMap().end() )
@@ -49,7 +55,28 @@ bool Con_RegisterConVar_Base( ConVarData_t** conVarDataIn, const char* spName, c
 	conVarData->aType             = sType;
 
 	Con_GetConVarMap()[ spName ]  = conVarData;
-	Con_GetConVarDesc()[ spName ] = spDesc;
+
+	if ( spDesc )
+	{
+		// Check if this is null-terminated
+		size_t descLen = strlen( spDesc );
+		if ( descLen > 0 && spDesc[ descLen - 1 ] != '\0' )
+		{
+			// Log_WarnF( gConsoleChannel, "ConVar Description not null-terminated: %s\n", spName );
+			const char* strings[] = { spDesc, "\0" };
+			size_t      strLens[] = { descLen, 1 };
+			Con_GetConVarDesc()[ spName ] = ch_str_concat( 2, strings, strLens );
+		}
+		else
+		{
+			Con_GetConVarDesc()[ spName ] = ch_str_copy( spDesc );
+		}
+	}
+	else
+	{
+		Con_GetConVarDesc()[ spName ] = {};
+	}
+
 	Con_GetConVarNames().push_back( spName );
 	Con_GetConVarList().emplace_back( spName, true, conVarData );
 
@@ -147,14 +174,14 @@ char*& const Con_RegisterConVar_String( const char* spName, const char* spDefaul
 		if ( cvarData )
 			return *cvarData->aString.apData;
 
-		char* temp = Util_AllocString( spDefault );
+		char* temp = ch_str_copy( spDefault ).data;
 		return temp;
 	}
 
 	cvarData->aString.apFunc       = spCallbackFunc;
-	cvarData->aString.aDefaultData = Util_AllocString( spDefault );
+	cvarData->aString.aDefaultData = ch_str_copy( spDefault ).data;
 
-	char* value                    = Util_AllocString( spDefault );
+	char* value                    = ch_str_copy( spDefault ).data;
 
 	cvarData->aString.apData       = ch_malloc< char* >( 1 );
 	memcpy( cvarData->aString.apData, &value, sizeof( char* ) );
@@ -465,7 +492,7 @@ const float& Con_RegisterConVar_RangeFloat( const char* spName, float sDefault, 
 // ------------------------------------------------------------------------------
 
 
-const char* Con_GetConVarDesc( const char* spName )
+ch_string Con_GetConVarDesc( const char* spName )
 {
 	auto it = Con_GetConVarDesc().find( spName );
 
@@ -473,7 +500,7 @@ const char* Con_GetConVarDesc( const char* spName )
 		return it->second;
 
 	Log_ErrorF( gConsoleChannel, "ConVar Description not found: %s\n", spName );
-	return nullptr;
+	return {};
 }
 
 
@@ -713,7 +740,7 @@ std::string Con_GetConVarHelp( std::string_view spName )
 	}
 
 	// Get the Console Variable Description
-	const char* desc = Con_GetConVarDesc( spName.data() );
+	const char* desc = Con_GetConVarDesc( spName.data() ).data;
 
 	if ( desc )
 	{
@@ -750,7 +777,7 @@ void Con_ResetConVar( std::string_view name )
 			break;
 
 		case EConVarType_String:
-			*cvarData->aString.apData = Util_ReallocString( *cvarData->aString.apData, cvarData->aString.aDefaultData );
+			*cvarData->aString.apData = ch_str_realloc( *cvarData->aString.apData, cvarData->aString.aDefaultData ).data;
 			break;
 
 		case EConVarType_Vec2:
@@ -890,9 +917,9 @@ int Con_SetConVarValueInternal_String( ConVarData_t* cvarData, const char* spNam
 
 	// If there's a callback function, back up the old value
 	if ( cvarData->aString.apFunc )
-		oldValue = Util_AllocString( *value );
+		oldValue = ch_str_copy( *value ).data;
 
-	char*  newValue = Util_ReallocString( *value, spValue );
+	char*  newValue = ch_str_realloc( *value, spValue ).data;
 
 	if ( newValue == nullptr )
 	{
@@ -905,7 +932,7 @@ int Con_SetConVarValueInternal_String( ConVarData_t* cvarData, const char* spNam
 	if ( cvarData->aString.apFunc )
 	{
 		cvarData->aString.apFunc( oldValue, newValue );
-		Util_FreeString( oldValue );
+		ch_str_free( oldValue );
 	}
 
 	return 1;
@@ -925,9 +952,9 @@ int Con_SetConVarValueInternal_String( ConVarData_t* cvarData, const char* spNam
 
 	// If there's a callback function, back up the old value
 	if ( cvarData->aString.apFunc )
-		oldValue = Util_AllocString( *value );
+		oldValue = ch_str_copy( *value ).data;
 
-	char* newValue = Util_ReallocString( *value, sValue.data(), sValue.size() );
+	char* newValue = ch_str_realloc( *value, sValue.data(), sValue.size() ).data;
 
 	if ( newValue == nullptr )
 	{
@@ -940,7 +967,7 @@ int Con_SetConVarValueInternal_String( ConVarData_t* cvarData, const char* spNam
 	if ( cvarData->aString.apFunc )
 	{
 		cvarData->aString.apFunc( oldValue, newValue );
-		Util_FreeString( oldValue );
+		ch_str_free( oldValue );
 	}
 
 	return 1;
@@ -1104,7 +1131,7 @@ char*& Con_GetConVarData_String( const char* spName, const char* fallback )
 
 	if ( !cvarData )
 	{
-		char* temp = Util_AllocString( fallback );
+		char* temp = ch_str_copy( fallback ).data;
 		return temp;
 	}
 
@@ -1112,7 +1139,7 @@ char*& Con_GetConVarData_String( const char* spName, const char* fallback )
 	{
 		Log_ErrorF( gConsoleChannel, "ConVar Type Mismatch for %s, got \"%s\", expected \"String\"\n", spName, Con_ConVarTypeStr( cvarData->aType ) );
 
-		char* temp = Util_AllocString( fallback );
+		char* temp = ch_str_copy( fallback ).data;
 		return temp;
 	}
 

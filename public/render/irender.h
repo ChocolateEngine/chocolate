@@ -467,8 +467,8 @@ struct TextureCreateData_t
 
 struct TextureInfo_t
 {
-	std::string aName;
-	std::string aPath;
+	ch_string   aName;
+	ch_string   aPath;
 	glm::uvec2  aSize;
 	GraphicsFmt aFormat;
 	u32         aMemoryUsage;

@@ -1624,13 +1624,13 @@ CONCMD_VA( log_dump, "Dump Logging History to file" )
 		vstring( outputPath, LOG_DUMP_FILENAME "_%s.txt", time );
 	}
 
-	if ( FileSys_IsDir( outputPath, true ) )
+	if ( FileSys_IsDir( outputPath.data(), outputPath.size(), true ) )
 	{
 		Log_ErrorF( gLC_Logging, "Output file for log_dump already exists as a directory: \"%s\"\n", outputPath.c_str() );
 		return;
 	}
 
-	if ( FileSys_IsFile( outputPath, true ) )
+	if ( FileSys_IsFile( outputPath.data(), outputPath.size(), true ) )
 	{
 		Log_ErrorF( gLC_Logging, "Output file for log_dump already exists: \"%s\"\n", outputPath.c_str() );
 		return;

@@ -356,26 +356,26 @@ Handle AudioSystem::OpenSound( std::string_view sSoundPath )
 		return nullptr;
 	}*/
 
-	std::string soundPathAbs = FileSys_FindFile( sSoundPath.data() );
+	ch_string_auto soundPathAbs = FileSys_FindFile( sSoundPath.data(), sSoundPath.size() );
 
-	if ( soundPathAbs.empty() )
+	if ( !soundPathAbs.data )
 	{
 		Log_ErrorF( gLC_Aduio, "Sound does not exist: \"%s\"\n", sSoundPath.data() );
 		return CH_INVALID_HANDLE;
 	}
 
-	std::string  ext    = FileSys_GetFileExt( sSoundPath );
+	ch_string_auto ext    = FileSys_GetFileExt( sSoundPath.data(), sSoundPath.size() );
 
 	// TODO: probably allocate streams in a memory pool, and be game controlled
-	AudioStream* stream = new AudioStream;
-	stream->name        = soundPathAbs;
+	AudioStream*   stream = new AudioStream;
+	stream->name          = soundPathAbs.data;
 
 	for ( IAudioCodec* codec : aCodecs )
 	{
-		if ( !codec->CheckExt( ext ) )
+		if ( !codec->CheckExt( ext.data ) )
 			continue;
 
-		if ( !codec->Open( soundPathAbs.c_str(), stream ) )
+		if ( !codec->Open( soundPathAbs.data, stream ) )
 			continue;
 
 		stream->codec = codec;
@@ -397,7 +397,6 @@ Handle AudioSystem::OpenSound( std::string_view sSoundPath )
 	delete stream;
 	return CH_INVALID_HANDLE;
 }
-
 
 
 void AudioSystem::SetListenerTransform( const glm::vec3& pos, const glm::vec3& ang )

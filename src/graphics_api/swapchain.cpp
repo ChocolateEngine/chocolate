@@ -87,7 +87,7 @@ bool VK_CreateSwapchain( WindowVK* window, VkSwapchainKHR spOldSwapchain )
 		VK_CheckResult( vkCreateImageView( VK_GetDevice(), &aImageViewInfo, nullptr, &window->swapImageViews[ i ] ), "Failed to create image view" );
 
 		VK_SetObjectName( VK_OBJECT_TYPE_IMAGE, (u64)window->swapImages[ i ], "Swapchain Image" );
-		VK_SetObjectName( VK_OBJECT_TYPE_IMAGE_VIEW, (u64)window->swapImageViews[ i ], "Swapchain Image View" );
+		VK_SetObjectName( VK_OBJECT_TYPE_IMAGE_VIEW, (u64)window->swapImageViews[ i ], "Swapcha^in Image View" );
 	}
 
 	return true;

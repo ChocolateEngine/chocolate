@@ -128,41 +128,41 @@ void VK_DumpCheckpoints()
 }
 
 
-char* VK_AllocString( const char* format )
+ch_string VK_AllocString( const char* format )
 {
-	char* string = Util_AllocString( format );
+	ch_string string = ch_str_copy( format );
 
-	if ( string == nullptr )
-		return nullptr;
+	if ( string.data == nullptr )
+		return string;
 
-	gAllocatedStrings.push_back( string );
+	gAllocatedStrings.push_back( string.data );
 	return string;
 }
 
 
-char* VK_AllocString( const char* format, size_t len )
+ch_string VK_AllocString( const char* format, size_t len )
 {
-	char* string = Util_AllocString( format, len );
+	ch_string string = ch_str_copy( format, len );
 
-	if ( string == nullptr )
-		return nullptr;
+	if ( string.data == nullptr )
+		return string;
 
-	gAllocatedStrings.push_back( string );
+	gAllocatedStrings.push_back( string.data );
 	return string;
 }
 
 
-char* VK_AllocStringF( const char* format, ... )
+ch_string VK_AllocStringF( const char* format, ... )
 {
 	va_list args;
 	va_start( args, format );
-	char* string = Util_AllocStringV( format, args );
+	ch_string string = ch_str_copy_v( format, args );
 	va_end( args );
 
-	if ( string == nullptr )
-		return nullptr;
+	if ( string.data == nullptr )
+		return string;
 
-	gAllocatedStrings.push_back( string );
+	gAllocatedStrings.push_back( string.data );
 	return string;
 }
 
@@ -174,9 +174,11 @@ void VK_FreeString( char* string )
 
 	for ( u32 i = 0; i < gAllocatedStrings.size(); i++ )
 	{
-		if ( strcmp( gAllocatedStrings[ i ], string ) == 0 )
+		// pointer comparison
+		if ( gAllocatedStrings[ i ] == string )
+		// if ( ch_str_equals( gAllocatedStrings[ i ], string ) )
 		{
-			Util_FreeString( gAllocatedStrings[ i ] );
+			ch_str_free( gAllocatedStrings[ i ] );
 			gAllocatedStrings.remove( i );
 			break;
 		}
@@ -184,11 +186,36 @@ void VK_FreeString( char* string )
 }
 
 
+void VK_FreeString( char* string, u64 size )
+{
+	if ( string == nullptr )
+		return;
+
+	for ( u32 i = 0; i < gAllocatedStrings.size(); i++ )
+	{
+		// pointer comparison
+		if ( gAllocatedStrings[ i ] == string )
+		// if ( ch_str_equals( gAllocatedStrings[ i ], string, size ) )
+		{
+			ch_str_free( gAllocatedStrings[ i ] );
+			gAllocatedStrings.remove( i );
+			break;
+		}
+	}
+}
+
+
+void VK_FreeString( ch_string& string )
+{
+	VK_FreeString( string.data/*, string.size*/ );
+}
+
+
 void VK_FreeStrings()
 {
 	for ( u32 i = 0; i < gAllocatedStrings.size(); i++ )
 	{
-		Util_FreeString( gAllocatedStrings[ i ] );
+		ch_str_free( gAllocatedStrings[ i ] );
 	}
 
 	gAllocatedStrings.clear();
@@ -1294,19 +1321,23 @@ public:
 			}
 		}
 
-		std::string fullPath;
+		ch_string fullPath;
 
 		// we only support ktx right now
 		if ( srTexturePath.ends_with( ".ktx" ) )
 		{
-			fullPath = FileSys_FindFile( srTexturePath );
+			fullPath = FileSys_FindFile( srTexturePath.data(), srTexturePath.size() );
 		}
 		else
 		{
-			fullPath = FileSys_FindFile( srTexturePath + ".ktx" );
+			const char*    strings[] = { srTexturePath.data(), ".ktx" };
+			const u64      lengths[] = { srTexturePath.size(), 4 };
+			ch_string_auto path      = ch_str_concat( 2, strings, lengths );
+
+			fullPath                 = FileSys_FindFile( path.data, path.size );
 		}
 
-		if ( fullPath.empty() )
+		if ( !fullPath.data )
 		{
 			// add it to the paths anyway, if you do a texture reload, then maybe the texture will have been added
 			// TODO: We should probably allocate a handle and a new texture anyway,
@@ -1325,6 +1356,7 @@ public:
 			if ( !gTextureHandles.Get( srHandle, &tex ) )
 			{
 				Log_Error( gLC_Render, "Failed to find old texture\n" );
+				ch_str_free( fullPath.data );
 				return InvalidHandle;
 			}
 
@@ -1342,6 +1374,7 @@ public:
 			if ( !VK_LoadTexture( srHandle, tex, fullPath, srCreateData ) )
 			{
 				VK_DestroyTexture( srHandle );
+				ch_str_free( fullPath.data );
 				return InvalidHandle;
 			}
 
@@ -1350,6 +1383,7 @@ public:
 			{
 				Log_ErrorF( gLC_Render, "Failed to Update Texture Handle: \"%s\"\n", srTexturePath.c_str() );
 				gGraphicsAPIData.aTextureRefs.erase( srHandle );
+				ch_str_free( fullPath.data );
 				return InvalidHandle;
 			}
 		}
@@ -1359,6 +1393,7 @@ public:
 			if ( !VK_LoadTexture( srHandle, tex, fullPath, srCreateData ) )
 			{
 				VK_DestroyTexture( srHandle );
+				ch_str_free( fullPath.data );
 				return InvalidHandle;
 			}
 
@@ -1367,6 +1402,7 @@ public:
 			gGraphicsAPIData.aTextureRefs[ srHandle ] = 1;
 		}
 
+		ch_str_free( fullPath.data );
 		return srHandle;
 	}
 
@@ -1490,8 +1526,8 @@ public:
 
 		info.aFormat   = VK_ToGraphicsFmt( tex->aFormat );
 
-		if ( tex->apName )
-			info.aName = tex->apName;
+		if ( tex->aName.data )
+			info.aName = ch_str_copy( tex->aName.data, tex->aName.size );
 
 		info.aSize         = tex->aSize;
 		info.aGpuIndex     = tex->aIndex;
@@ -1505,10 +1541,12 @@ public:
 		{
 			if ( handle == sTexture )
 			{
-				info.aPath = path;
+				info.aPath = ch_str_copy( path.data(), path.size() );
 
-				if ( info.aName.empty() )
-					info.aName = FileSys_GetFileName( path );
+				if ( !info.aName.data )
+				{
+					info.aName = FileSys_GetFileName( path.data(), path.size() );
+				}
 
 				break;
 			}

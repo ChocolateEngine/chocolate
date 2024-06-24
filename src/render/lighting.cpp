@@ -495,7 +495,6 @@ void Graphics_UpdateLightBuffer( Light_t* spLight )
 
 			glm::vec3 angTest = Util_GetMatrixAngles( matrix );
 
-#if 1
 			// update shadow map view info
 			// if ( spLight->apShadowMap )
 			if ( spLight->apShadowMap )
@@ -517,21 +516,27 @@ void Graphics_UpdateLightBuffer( Light_t* spLight )
 				Util_ToViewMatrixY( view.aViewMat, spLight->aPos, rot );
 				view.ComputeProjection( shadowMap->aSize.x, shadowMap->aSize.y );
 
-				gGraphicsData.aViewportData[ shadowMap->aViewportHandle ].aProjection        = view.aProjMat;
-				gGraphicsData.aViewportData[ shadowMap->aViewportHandle ].aView              = view.aViewMat;
-				gGraphicsData.aViewportData[ shadowMap->aViewportHandle ].aProjView          = view.aProjViewMat;
-				gGraphicsData.aViewportData[ shadowMap->aViewportHandle ].aNearZ             = view.aNearZ;
-				gGraphicsData.aViewportData[ shadowMap->aViewportHandle ].aFarZ              = view.aFarZ;
+				u32                viewIndex          = Graphics_GetShaderSlot( gGraphicsData.aViewportSlots, shadowMap->aViewportHandle );
+
+				// stupid struct names
+				Shader_Viewport_t& viewData           = gGraphicsData.aViewportData[ viewIndex ];
+				ViewportShader_t&  viewportData       = gGraphicsData.aViewports[ shadowMap->aViewportHandle ];
+
+				viewData.aProjection                  = view.aProjMat;
+				viewData.aView                        = view.aViewMat;
+				viewData.aProjView                    = view.aProjViewMat;
+				viewData.aNearZ                       = view.aNearZ;
+				viewData.aFarZ                        = view.aFarZ;
 				// gGraphicsData.aViewportData[ shadowMap->aViewInfoIndex ].aSize       = shadowMap->aSize;
 
-				gGraphicsData.aViewports[ shadowMap->aViewportHandle ].aProjection = view.aProjMat;
-				gGraphicsData.aViewports[ shadowMap->aViewportHandle ].aView       = view.aViewMat;
-				gGraphicsData.aViewports[ shadowMap->aViewportHandle ].aProjView   = view.aProjViewMat;
-				gGraphicsData.aViewports[ shadowMap->aViewportHandle ].aNearZ      = view.aNearZ;
-				gGraphicsData.aViewports[ shadowMap->aViewportHandle ].aFarZ       = view.aFarZ;
-				gGraphicsData.aViewports[ shadowMap->aViewportHandle ].aSize       = shadowMap->aSize;
+				viewportData.aProjection              = view.aProjMat;
+				viewportData.aView                    = view.aViewMat;
+				viewportData.aProjView                = view.aProjViewMat;
+				viewportData.aNearZ                   = view.aNearZ;
+				viewportData.aFarZ                    = view.aFarZ;
+				viewportData.aSize                    = shadowMap->aSize;
 
-				gGraphicsData.aViewportStaging.aDirty                                       = true;
+				gGraphicsData.aViewportStaging.aDirty = true;
 				// Handle shadowBuffer                               = gViewportBuffers[ shadowMap->aViewInfoIndex ];
 				// render->BufferWrite( shadowBuffer, sizeof( Shader_Viewport_t ), &gViewport[ shadowMap->aViewInfoIndex ] );
 
@@ -541,12 +546,11 @@ void Graphics_UpdateLightBuffer( Light_t* spLight )
 				// USE THE ProjViewMat FROM THE ACTUAL VIEW IN THE VIEWPORT BUFFER
 				// see for more info: https://vkguide.dev/docs/chapter-4/descriptors_code_more/
 				// is there also a performance cost to doing this though? since we have to read memory elsewhere not in the cache?
-				light.aProjView                                                             = view.aProjViewMat;
-				light.aShadow                                                               = render->GetTextureIndex( shadowMap->aTexture );
+				light.aProjView                       = view.aProjViewMat;
+				light.aShadow                         = render->GetTextureIndex( shadowMap->aTexture );
 
-				gGraphicsData.aViewports[ shadowMap->aViewportHandle ].aActive     = spLight->aShadow && spLight->aEnabled;
+				viewportData.aActive                  = spLight->aShadow && spLight->aEnabled;
 			}
-	#endif
 
 			break;
 		}

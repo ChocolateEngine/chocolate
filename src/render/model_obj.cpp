@@ -40,11 +40,12 @@ static ChHandle_t LoadMaterial( const std::string& path )
 	if ( !matPath.ends_with( ".cmt" ) )
 		matPath += ".cmt";
 
-	if ( FileSys_IsFile( matPath ) )
-		return gGraphics.LoadMaterial( matPath );
+	if ( FileSys_IsFile( matPath.data(), matPath.size() ) )
+		return gGraphics.LoadMaterial( matPath.data(), matPath.size() );
 
-	else if ( FileSys_IsFile( "models/" + matPath ) )
-		return gGraphics.LoadMaterial( "models/" + matPath );
+	std::string modelPath = "models/" + path;
+	if ( FileSys_IsFile( modelPath.data(), modelPath.size() ) )
+		return gGraphics.LoadMaterial( modelPath.data(), modelPath.size() );
 
 	return CH_INVALID_HANDLE;
 }
@@ -74,6 +75,8 @@ void LoadObj_Fast( const std::string &srBasePath, const std::string &srPath, Mod
 	meshBuilder.Start( spModel );
   #endif
 	meshBuilder.SetSurfaceCount( matCount );
+
+	static ChHandle_t defaultShader = gGraphics.GetShader( gDefaultShader.data() );
 	
 	for ( unsigned int i = 0; i < obj->material_count; i++ )
 	{
@@ -97,29 +100,41 @@ void LoadObj_Fast( const std::string &srBasePath, const std::string &srPath, Mod
 		// fallback if there is no cmt file
 		if ( material == InvalidHandle )
 		{
-			material = gGraphics.CreateMaterial( objMat.name, gGraphics.GetShader( gDefaultShader.data() ) );
+			material = gGraphics.CreateMaterial( objMat.name, defaultShader );
 
 			TextureCreateData_t createData{};
 			createData.aUsage  = EImageUsage_Sampled;
 			createData.aFilter = EImageFilter_Linear;
 
-			auto SetTexture    = [ & ]( const std::string& param, const char* texname )
+			auto SetTexture    = [ & ]( const std::string& param, fastObjTexture& fastTexture )
 			{
-				if ( texname == nullptr )
+				if ( fastTexture.path == nullptr )
 					return;
 
-				Handle texture = InvalidHandle;
+				ChHandle_t texture = CH_INVALID_HANDLE;
 
-				if ( FileSys_IsRelative( texname ) )
-					gGraphics.LoadTexture( texture, baseDir2 + "/" + texname, createData );
+				// check if the name is an absolute path
+				const char* texName = nullptr;
+				
+				//if ( FileSys_IsAbsolute( fastTexture.name ) )
+				//{
+				//	texName = fastTexture.name;
+				//}
+				//else
+				//{
+					texName = fastTexture.path;
+				//}
+
+				if ( FileSys_IsRelative( texName ) )
+					gGraphics.LoadTexture( texture, baseDir2 + "/" + texName, createData );
 				else
-					gGraphics.LoadTexture( texture, texname, createData );
+					gGraphics.LoadTexture( texture, texName, createData );
 
 				gGraphics.Mat_SetVar( material, param, texture );
 			};
 
-			SetTexture( MatVar_Diffuse, objMat.map_Kd.path );
-			SetTexture( MatVar_Emissive, objMat.map_Ke.path );
+			SetTexture( MatVar_Diffuse, objMat.map_Kd );
+			SetTexture( MatVar_Emissive, objMat.map_Ke );
 		}
 
 		meshBuilder.SetCurrentSurface( i );
@@ -254,9 +269,11 @@ void Graphics_LoadSceneObj( const std::string& srBasePath, const std::string& sr
 
 		if ( material == InvalidHandle )
 		{
-			std::string matPath = matName + ".cmt";
-			if ( FileSys_IsFile( matPath ) )
-				material = gGraphics.LoadMaterial( matPath );
+			const ch_string strings[] = { { matName.data(), matName.size() }, { (char*)".cmt", 4 } };
+			ch_string       matPath   = ch_str_concat( 2, strings );
+
+			if ( FileSys_IsFile( matPath.data, matPath.size ) )
+				material = gGraphics.LoadMaterial( matPath.data, matPath.size );
 		}
 
 		// fallback if there is no cmt file

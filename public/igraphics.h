@@ -1042,7 +1042,7 @@ class IGraphics : public ISystem
 	// Materials
 
 	// Load a cmt file from disk, increments ref count
-	virtual Handle                 LoadMaterial( const std::string& srPath )                                                                      = 0;
+	virtual Handle                 LoadMaterial( const char* srPath, s32 sLen )                                                                   = 0;
 
 	// Create a new material with a name and a shader
 	virtual Handle                 CreateMaterial( const std::string& srName, Handle shShader )                                                   = 0;

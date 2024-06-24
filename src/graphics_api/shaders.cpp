@@ -117,15 +117,15 @@ bool VK_GetShaderStageCreateInfo( VkPipelineShaderStageCreateInfo* spStageCreate
 	{
 		ShaderModule_t& stage   = spShaderModules[ i ];
 
-		std::string     absPath = FileSys_FindFile( stage.aModulePath );
-		if ( absPath.empty() )
+		ch_string_auto  absPath = FileSys_FindFile( stage.aModulePath );
+		if ( !absPath.data )
 		{
 			Log_ErrorF( gLC_Render, "Failed to find shader: \"%s\"\n", stage.aModulePath );
 			ch_free( vkShaderModules );
 			return false;
 		}
 
-		std::vector< char > fileData = FileSys_ReadFile( stage.aModulePath );
+		std::vector< char > fileData = FileSys_ReadFile( absPath.data, absPath.size );
 
 		if ( fileData.empty() )
 		{

@@ -550,9 +550,9 @@ cpu_info_t Sys_GetCpuInfo()
 	const uint32_t HFS      = cpu_id_0.eax;
 
 	// Reinterpret bytes as ASCII characters
-	char*          vendor_id_name[ 3 ] = { (char*)&cpu_id_0.ebx, (char*)&cpu_id_0.edx, (char*)&cpu_id_0.ecx };
+	const char*    vendor_id_name[ 3 ] = { (char*)&cpu_id_0.ebx, (char*)&cpu_id_0.edx, (char*)&cpu_id_0.ecx };
 	size_t         vendor_id_len[ 3 ]  = { 4, 4, 4 };
-	cpu_info.vendor_id                 = Util_AllocStringConcat( 3, vendor_id_name, vendor_id_len );
+	cpu_info.vendor_id                 = ch_str_concat( 3, vendor_id_name, vendor_id_len ).data;
 
 	// Get SSE instructions availability
 	cpu_id_t cpu_id_1                  = Sys_GetCpuID( 1, 0 );
@@ -689,7 +689,7 @@ cpu_info_t Sys_GetCpuInfo()
 	}
 
 	if ( modelName.size() )
-		cpu_info.model_name = Util_AllocString( modelName.data(), modelName.size() );
+		cpu_info.model_name = ch_str_copy( modelName.data(), modelName.size() ).data;
 
 	return cpu_info;
 

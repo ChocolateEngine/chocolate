@@ -17,15 +17,16 @@
 static ChVector< Arg_t > gArgList;
 
 extern void              Assert_Init();
+extern void              Args_Shutdown();
 extern void              Util_FreeAllocStrings();
 
-static std::string_view* gArgV = nullptr;
+static ch_string*        gArgV = nullptr;
 static int               gArgC = 0;
 
 extern LogChannel        gConsoleChannel;
 
-extern std::string       gConArchiveFile;
-extern std::string       gConArchiveDefault;
+extern ch_string         gConArchiveFile;
+extern ch_string         gConArchiveDefault;
 
 extern "C"
 {
@@ -59,6 +60,8 @@ extern "C"
 		Core_DestroyAppInfo();
 		//Thread_Shutdown();
 
+		Args_Shutdown();
+
 		// Check if all memory is freed
 		u32 stringAllocCount = Util_GetStringAllocCount();
 		Util_FreeAllocStrings();
@@ -71,22 +74,37 @@ extern "C"
 // it runs all startup config files, like config.cfg to store saved cvar values
 void DLL_EXPORT core_post_load()
 {
-	if ( FileSys_Exists( gConArchiveFile ) )
-		Con_QueueCommandSilent( "exec " + gConArchiveFile, false );
+	if ( FileSys_Exists( gConArchiveFile.data, gConArchiveFile.size ) )
+	{
+		const char*    strings[] = { "exec ", gConArchiveFile.data };
+		const u64      lengths[] = { 5, gConArchiveFile.size };
+		ch_string_auto command   = ch_str_concat( 2, strings, lengths );
 
-	else if ( FileSys_Exists( gConArchiveDefault ) )
-		Con_QueueCommandSilent( "exec " + gConArchiveDefault, false );
+		Con_QueueCommandSilent( command.data, command.size, false );
+	}
+	else if ( FileSys_Exists( gConArchiveDefault.data, gConArchiveDefault.size ) )
+	{
+		const char*    strings[] = { "exec ", gConArchiveDefault.data };
+		const u64      lengths[] = { 5, gConArchiveFile.size };
+		ch_string_auto command   = ch_str_concat( 2, strings, lengths );
+		//ch_string_auto command = ch_str_concat( 2, { "exec ", gConArchiveDefault.data }, { 5, gConArchiveFile.size } );
+
+		Con_QueueCommandSilent( command.data, command.size, false );
+	}
 
 	// if ( FileSys_Exists( "cfg/autoexec.cfg" ) )
 	// 	Con_QueueCommandSilent( "exec autoexec", false );
 
-	std::string      exec = "exec ";
-	std::string_view execCfg;
-	int              arg = 0;
+	ch_string exec = ch_str_copy( "exec " );
+	ch_string execCfg;
+	int       arg = 0;
 
 	while ( Args_GetValueNext( arg, "-exec", execCfg ) )
 	{
-		Con_QueueCommandSilent( exec + execCfg.data(), false );
+		const char*    strings[] = { exec.data, execCfg.data };
+		const u64      lengths[] = { exec.size, execCfg.size };
+		ch_string_auto command   = ch_str_concat( 2, strings, lengths );
+		Con_QueueCommandSilent( command.data, command.size, false );
 	}
 }
 
@@ -138,7 +156,7 @@ static const char* Args_RegisterString( Arg_t& srArg, const char* sDefault )
 	{
 		for ( auto& name : srArg.aNames )
 		{
-			if ( gArgV[ i ] == name )
+			if ( ch_str_equals( gArgV[ i ].data, gArgV[ i ].size, name ) )
 			{
 				if ( i + 1 >= gArgC )
 				{
@@ -146,7 +164,7 @@ static const char* Args_RegisterString( Arg_t& srArg, const char* sDefault )
 					break;
 				}
 
-				value = gArgV[ i + 1 ].data();
+				value = gArgV[ i + 1 ].data;
 				break;
 			}
 		}
@@ -166,7 +184,7 @@ static int Args_RegisterInt( Arg_t& srArg, int sDefault )
 	{
 		for ( auto& name : srArg.aNames )
 		{
-			if ( gArgV[ i ] == name )
+			if ( ch_str_equals( gArgV[ i ].data, gArgV[ i ].size, name ) )
 			{
 				if ( i + 1 >= gArgC )
 				{
@@ -175,7 +193,7 @@ static int Args_RegisterInt( Arg_t& srArg, int sDefault )
 				}
 
 				long out;
-				if ( ToLong3( gArgV[ i + 1 ].data(), out ) )
+				if ( ToLong3( gArgV[ i + 1 ].data, out ) )
 					value = out;
 				break;
 			}
@@ -195,7 +213,7 @@ static float Args_RegisterFloat( Arg_t& srArg, float sDefault )
 	{
 		for ( auto& name : srArg.aNames )
 		{
-			if ( gArgV[ i ] == name )
+			if ( ch_str_equals( gArgV[ i ].data, gArgV[ i ].size, name ) )
 			{
 				if ( i + 1 >= gArgC )
 				{
@@ -204,7 +222,7 @@ static float Args_RegisterFloat( Arg_t& srArg, float sDefault )
 				}
 
 				double out;
-				if ( ToDouble3( gArgV[ i + 1 ].data(), out ) )
+				if ( ToDouble3( gArgV[ i + 1 ].data, out ) )
 					value = out;
 				break;
 			}
@@ -316,7 +334,9 @@ const char* Args_RegisterF( const char* sDefault, const char* spDesc, int sCount
 
 	arg.aNames.push_back( spName );
 	for ( int i = 1; i < sCount; i++ )
+	{
 		arg.aNames.push_back( va_arg( args, const char* ) );
+	}
 
 	va_end( args );
 
@@ -377,40 +397,40 @@ Arg_t* Args_GetRegisteredData( u32 sIndex )
 }
 
 
-u32 Args_FindRegisteredIndex( std::string_view sString )
-{
-	for ( u32 i = 0; i < gArgList.size(); i++ )
-	{
-		for ( u32 n = 0; n < gArgList[ i ].aNames.size(); n++ )
-		{
-			if ( gArgList[ i ].aNames[ n ] == sString )
-				return i;
-		}
-	}
+// u32 Args_FindRegisteredIndex( std::string_view sString )
+// {
+// 	for ( u32 i = 0; i < gArgList.size(); i++ )
+// 	{
+// 		for ( u32 n = 0; n < gArgList[ i ].aNames.size(); n++ )
+// 		{
+// 			if ( gArgList[ i ].aNames[ n ] == sString )
+// 				return i;
+// 		}
+// 	}
+// 
+// 	return UINT32_MAX;
+// }
 
-	return UINT32_MAX;
-}
 
-
-std::string Args_GetRegisteredPrint( const Arg_t* spArg )
+ch_string_auto Args_GetRegisteredPrint( const Arg_t* spArg )
 {
 	if ( !spArg )
-		return "";
+		return {};
 
 	if ( spArg->aNames.empty() )
 	{
 		Log_Warn( gConsoleChannel, "No names for argument!\n" );
-		return "";
+		return {};
 	}
 
-	std::string msg = UNIX_CLR_DEFAULT;
+	ch_string msg = ch_str_copy( ANSI_CLR_DEFAULT );
 
 	for ( u32 i = 0; i < spArg->aNames.size(); i++ )
 	{
-		msg += spArg->aNames[ i ];
+		msg = ch_str_concat( msg.data, 1, spArg->aNames[ i ] );
 
 		if ( i + 1 != spArg->aNames.size() )
-			msg += " ";
+			msg = ch_str_concat( msg.data, 1, " " );
 	}
 
 	switch ( spArg->aType )
@@ -422,38 +442,43 @@ std::string Args_GetRegisteredPrint( const Arg_t* spArg )
 			break;
 
 		case EArgType_Custom:
-			msg += UNIX_CLR_BLUE " Custom Type";
+			msg = ch_str_concat( msg.data, 1, ANSI_CLR_BLUE " Custom Type" );
 			break;
 
 		case EArgType_Bool:
-			msg += vstring( UNIX_CLR_BLUE " %s", spArg->aBool ? "true" : "false" );
+			msg = ch_str_concat( msg.data, 3, msg.data, ANSI_CLR_BLUE " ", spArg->aBool ? "true" : "false" );
 			if ( spArg->aBool != spArg->aDefaultBool )
-				msg += vstring( UNIX_CLR_YELLOW " (%s default)", spArg->aDefaultBool ? "true" : "false" );
+				msg = ch_str_concat( msg.data, 4, msg.data, ANSI_CLR_YELLOW " (", spArg->aDefaultBool ? "true" : "false", " default)" );
 			break;
 
 		case EArgType_String:
-			msg += vstring( UNIX_CLR_GREEN " %s", spArg->apString );
+			msg = ch_str_concat( msg.data, 3, msg.data, ANSI_CLR_GREEN " ", spArg->apString );
 			if ( spArg->apDefaultString && strcmp( spArg->apString, spArg->apDefaultString ) != 0 )
-				msg += vstring( UNIX_CLR_YELLOW " (%s default)", spArg->apDefaultString );
+				msg = ch_str_concat( msg.data, 4, msg.data, ANSI_CLR_YELLOW " (", spArg->apDefaultString, " default)" );
 			break;
 
 		case EArgType_Int:
-			msg += vstring( UNIX_CLR_GREEN " %d", spArg->aInt );
+			msg = ch_str_realloc_f( msg.data, "%s" ANSI_CLR_GREEN " %d", msg.data, spArg->aInt );
 			if ( spArg->aInt != spArg->aDefaultInt )
-				msg += vstring( UNIX_CLR_YELLOW " (%d default)", spArg->aDefaultInt );
+				msg = ch_str_realloc_f( msg.data, "%s" ANSI_CLR_YELLOW " (%d default)", msg.data, spArg->aDefaultInt );
 			break;
 
 		case EArgType_Float:
-			msg += vstring( UNIX_CLR_GREEN " %.f", spArg->aFloat );
+			msg = ch_str_realloc_f( msg.data, "%s" ANSI_CLR_GREEN " %.f", msg.data, spArg->aFloat );
 			if ( spArg->aFloat != spArg->aDefaultFloat )
-				msg += vstring( UNIX_CLR_YELLOW " (%d default)", spArg->aDefaultFloat );
+				msg = ch_str_realloc_f( msg.data, "%s" ANSI_CLR_YELLOW " (%.f default)", msg.data, spArg->aDefaultFloat );
 			break;
 	}
 
 	if ( spArg->apDesc )
-		msg += vstring( "\n\t" UNIX_CLR_CYAN "%s", spArg->apDesc );
+		msg = ch_str_concat( msg.data, 1, "\n\t" ANSI_CLR_CYAN, spArg->apDesc );
 
-	return msg + "\n";
+	msg = ch_str_concat( msg.data, 1, "\n" );
+
+	ch_string_auto msg_auto;
+	msg_auto.data = msg.data;
+	msg_auto.size = msg.size;
+	return msg_auto;
 }
 
 
@@ -470,23 +495,42 @@ void Args_PrintRegistered()
 			continue;
 		}
 
-		std::string msg = Args_GetRegisteredPrint( &arg );
+		ch_string_auto msg = Args_GetRegisteredPrint( &arg );
 
-		if ( msg.empty() )
+		if ( !msg.data )
 			continue;
 
-		Log_Msg( gConsoleChannel, msg.c_str() );
+		Log_Msg( gConsoleChannel, msg.data );
 	}
 }
 
 
 void Args_Init( int argc, char* argv[] )
 {
-	gArgV = new std::string_view[ argc ];
+	gArgV = new ch_string[ argc ];
 	gArgC = argc;
 
 	for ( int i = 0; i < argc; i++ )
-		gArgV[ i ] = argv[ i ];
+	{
+		if ( !argv[ i ] )
+			break;
+
+		gArgV[ i ] = ch_str_create( argv[ i ] );
+
+		if ( !gArgV[ i ].data )
+		{
+			Log_Fatal( "Failed to convert command line arguments to multi-byte!" );
+			break;
+		}
+	}
+}
+
+
+void Args_Shutdown()
+{
+	delete[] gArgV;
+	gArgV = nullptr;
+	gArgC = 0;
 }
 
 
@@ -496,6 +540,26 @@ int Args_GetCount()
 }
 
 
+bool Args_Find( const char* search, s32 len )
+{
+	if ( !search )
+		return false;
+	
+	if ( len == -1 )
+		len = strlen( search );
+
+	if ( len == 0 )
+		return false;
+
+	for ( int i = 0; i < gArgC; i++ )
+		if ( ch_str_equals( gArgV[ i ].data, gArgV[ i ].size, search, len ) )
+			return true;
+
+	return false;
+}
+
+
+#if 0
 int Args_GetIndex( std::string_view search )
 {
 	for ( int i = 0; i < gArgC; i++ )
@@ -503,16 +567,6 @@ int Args_GetIndex( std::string_view search )
 			return i;
 
 	return -1;
-}
-
-
-bool Args_Find( std::string_view search )
-{
-	for ( int i = 0; i < gArgC; i++ )
-		if ( gArgV[ i ] == search )
-			return true;
-
-	return false;
 }
 
 
@@ -560,6 +614,7 @@ double Args_GetDouble( std::string_view search, double fallback )
 
 	return ToDouble( gArgV[ i + 1 ].data(), fallback );
 }
+#endif
 
 
 // ------------------------------------------------------------------------------------
@@ -567,11 +622,16 @@ double Args_GetDouble( std::string_view search, double fallback )
 
 // function to be able to find all values like this
 // returns true if it finds a value, false if it fails to
-bool Args_GetValueNext( int& i, std::string_view search, std::string_view& ret )
+bool Args_GetValueNext( int& i, const char* search, ch_string& ret )
 {
+	if ( !search )
+		return false;
+
+	size_t searchLen = strlen( search );
+
 	for ( ; i < gArgC; i++ )
 	{
-		if ( gArgV[ i ] == search )
+		if ( ch_str_equals( gArgV[ i ].data, search, searchLen ) )
 		{
 			if ( i == -1 || i + 1 > gArgC )
 				return false;

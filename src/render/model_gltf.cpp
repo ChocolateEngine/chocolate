@@ -260,9 +260,11 @@ void Graphics_LoadGltf( const std::string& srBasePath, const std::string& srPath
 
 		if ( material == InvalidHandle )
 		{
-			std::string matPath = matName + ".cmt";
-			if ( FileSys_IsFile( matPath ) )
-				material = gGraphics.LoadMaterial( matPath );
+			const ch_string strings[] = { { matName.data(), matName.size() }, { (char*)".cmt", 4 } };
+			ch_string       matPath = ch_str_concat( 2, strings );
+
+			if ( FileSys_IsFile( matPath.data, matPath.size ) )
+				material = gGraphics.LoadMaterial( matPath.data, matPath.size );
 		}
 
 		// fallback if there is no cmt file
@@ -684,9 +686,11 @@ void Graphics_LoadGltfNew( const std::string& srBasePath, const std::string& srP
 
 		if ( material == InvalidHandle )
 		{
-			std::string matPath = matName + ".cmt";
-			if ( FileSys_IsFile( matPath ) )
-				material = gGraphics.LoadMaterial( matPath );
+			const ch_string strings[] = { { matName.data(), matName.size() }, { (char*)".cmt", 4 } };
+			ch_string       matPath   = ch_str_concat( 2, strings );
+
+			if ( FileSys_IsFile( matPath.data, matPath.size ) )
+				material = gGraphics.LoadMaterial( matPath.data, matPath.size );
 		}
 
 		// fallback if there is no cmt file
