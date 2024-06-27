@@ -252,6 +252,15 @@ struct ch_string
 	char* data = nullptr;
 	u64   size = 0;
 
+	constexpr ch_string()
+	{
+	}
+
+	constexpr ch_string( char* spData, u64 sSize )
+		: data( spData ), size( sSize )
+	{
+	}
+
 	// annoying
 	// bool operator==( const ch_string& other )
 	// {
@@ -298,11 +307,56 @@ struct ch_string_auto
 			ch_str_free( data );
 	}
 
+	// auto convert to ch_string
+	operator ch_string()
+	{
+		return ch_string( data, size );
+	}
+
 	// if i don't have this here, then sometimes it will call the deconstructor, and sometimes it won't
 	void operator=( const ch_string& srString )
 	{
 		data = srString.data;
 		size = srString.size;
+	}
+
+	// copying
+	void assign( const ch_string_auto& other )
+	{
+		this->data = other.data;
+		this->size = other.size;
+	}
+
+	// moving
+	void assign( ch_string_auto&& other )
+	{
+		this->data = other.data;
+		this->size = other.size;
+	}
+
+	ch_string_auto& operator=( const ch_string_auto& other )
+	{
+		assign( other );
+		return *this;
+	}
+
+	ch_string_auto& operator=( ch_string_auto&& other )
+	{
+		assign( other );
+		return *this;
+	}
+
+	// copying
+	ch_string_auto( const ch_string_auto& other )
+	{
+		assign( other );
+	}
+
+	// moving
+	ch_string_auto( ch_string_auto&& other )
+	{
+		// assign( std::move( other ) );
+		assign( other );
 	}
 };
 
