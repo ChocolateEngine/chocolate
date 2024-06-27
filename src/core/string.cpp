@@ -109,14 +109,14 @@ static void TrackString_Free( const char* string )
 }
 
 	#else
-		#define TrackString_Alloc( file, line, func, string, len )
-		#define TrackString_Realloc( file, line, func, data, len, oldPtr )
+		#define TrackString_Alloc( string, len )
+		#define TrackString_Realloc( data, len, oldPtr )
 		#define TrackString_Free( string )
 	#endif
 
 #else
-	#define TrackString_Alloc( file, line, func, string, len )
-	#define TrackString_Realloc( file, line, func, data, len, oldPtr )
+	#define TrackString_Alloc( string, len )
+	#define TrackString_Realloc( data, len, oldPtr )
 	#define TrackString_Free( string )
 
 	#define CH_STRING_MEM_TRACKING 0
@@ -172,7 +172,7 @@ ch_string ch_str_copy( STR_FILE_LINE_DEF const char* string )
 	if ( out == nullptr )
 		return out_string;
 
-	TrackString_Alloc( file, line, func, out, len + 1 );
+	TrackString_Alloc( STR_FILE_LINE_INT out, len + 1 );
 
 	out_string.data = out;
 	out_string.size = len;
@@ -197,7 +197,7 @@ ch_string ch_str_copy( STR_FILE_LINE_DEF const char* string, u64 len )
 	if ( out == nullptr )
 		return out_string;
 
-	TrackString_Alloc( file, line, func, out, len + 1 );
+	TrackString_Alloc( STR_FILE_LINE_INT out, len + 1 );
 
 	out_string.data = out;
 	out_string.size = len;
@@ -244,7 +244,7 @@ ch_string ch_str_realloc( STR_FILE_LINE_DEF char* data, u64 len )
 	if ( out == nullptr )
 		return out_string;
 
-	TrackString_Realloc( file, line, func, out, len + 1, data );
+	TrackString_Realloc( STR_FILE_LINE_INT out, len + 1, data );
 
 	out_string.data = out;
 	out_string.size = len;
@@ -272,7 +272,7 @@ ch_string ch_str_realloc( STR_FILE_LINE_DEF char* data, const char* string, u64 
 	memcpy( out, string, len );
 	out[ len ] = '\0';
 
-	TrackString_Realloc( file, line, func, out, len + 1, data );
+	TrackString_Realloc( STR_FILE_LINE_INT out, len + 1, data );
 
 	out_string.data = out;
 	out_string.size = len;
@@ -308,7 +308,7 @@ ch_string ch_str_realloc( STR_FILE_LINE_DEF char* data, const char* string )
 	memcpy( out, string, len );
 	out[ len ] = '\0';
 
-	TrackString_Realloc( file, line, func, out, len + 1, data );
+	TrackString_Realloc( STR_FILE_LINE_INT out, len + 1, data );
 
 	out_string.data = out;
 	out_string.size = len;
@@ -352,7 +352,7 @@ CORE_API ch_string ch_str_realloc_f( STR_FILE_LINE_DEF char* data, const char* f
 		vsnprintf( result, len, format, args_copy );
 		result[ len ] = '\0';
 
-		TrackString_Alloc( file, line, func, result, len + 1 );
+		TrackString_Alloc( STR_FILE_LINE_INT result, len + 1 );
 	}
 
 	va_end( args_copy );
@@ -388,7 +388,7 @@ CORE_API ch_string ch_str_realloc_v( STR_FILE_LINE_DEF char* data, const char* f
 		std::vsnprintf( result, len, format, args );
 		result[ len ] = '\0';
 
-		TrackString_Alloc( file, line, func, result, len + 1 );
+		TrackString_Alloc( STR_FILE_LINE_INT result, len + 1 );
 
 		out_string.data = result;
 		out_string.size = len;
@@ -430,7 +430,7 @@ ch_string ch_str_copy_f( STR_FILE_LINE_DEF const char* format, ... )
 		vsnprintf( result, len, format, args_copy );
 		result[ len ] = '\0';
 
-		TrackString_Alloc( file, line, func, result, len + 1 );
+		TrackString_Alloc( STR_FILE_LINE_INT result, len + 1 );
 	}
 
 	va_end( args_copy );
@@ -459,7 +459,7 @@ ch_string ch_str_copy_v( STR_FILE_LINE_DEF const char* format, va_list args )
 		std::vsnprintf( result, len, format, args );
 		result[ len ] = '\0';
 
-		TrackString_Alloc( file, line, func, result, len + 1 );
+		TrackString_Alloc( STR_FILE_LINE_INT result, len + 1 );
 
 		out_string.data = result;
 		out_string.size = len;
@@ -538,7 +538,7 @@ ch_string ch_str_concat( STR_FILE_LINE_DEF u64 count, const char** strings, char
 
 	out[ totalLen ] = '\0';
 
-	TrackString_Realloc( file, line, func, out, totalLen + 1, data );
+	TrackString_Realloc( STR_FILE_LINE_INT out, totalLen + 1, data );
 
 	ch_free( lengths );
 
@@ -611,7 +611,7 @@ ch_string ch_str_concat( STR_FILE_LINE_DEF u64 count, const char** strings, cons
 
 	out[ totalLen ] = '\0';
 
-	TrackString_Realloc( file, line, func, out, totalLen + 1, data );
+	TrackString_Realloc( STR_FILE_LINE_INT out, totalLen + 1, data );
 
 	outString.data = out;
 	outString.size = totalLen;
@@ -621,7 +621,7 @@ ch_string ch_str_concat( STR_FILE_LINE_DEF u64 count, const char** strings, cons
 
 ch_string ch_str_concat( STR_FILE_LINE_DEF u64 count, std::vector< const char* >& strings, const std::vector< u64 >& lengths, char* data )
 {
-	return ch_str_concat( file, line, func, count, strings.data(), lengths.data(), data );
+	return ch_str_concat( STR_FILE_LINE_INT count, strings.data(), lengths.data(), data );
 }
 
 
@@ -654,7 +654,7 @@ ch_string ch_str_concat( STR_FILE_LINE_DEF u64 count, const ch_string* strings, 
 
 	out[ totalLen ] = '\0';
 
-	TrackString_Realloc( file, line, func, out, totalLen + 1, data );
+	TrackString_Realloc( STR_FILE_LINE_INT out, totalLen + 1, data );
 
 	outString.data = out;
 	outString.size = totalLen;
@@ -716,7 +716,7 @@ ch_string ch_str_join( STR_FILE_LINE_DEF u64 count, char** strings, const char* 
 
 	out[ totalLen ] = '\0';
 
-	TrackString_Realloc( file, line, func, out, totalLen + 1, data );
+	TrackString_Realloc( STR_FILE_LINE_INT out, totalLen + 1, data );
 
 	outString.data = out;
 	outString.size = totalLen;
@@ -763,7 +763,7 @@ ch_string ch_str_join( STR_FILE_LINE_DEF u64 count, char** strings, const u64* l
 
 	out[ totalLen ] = '\0';
 
-	TrackString_Realloc( file, line, func, out, totalLen + 1, data );
+	TrackString_Realloc( STR_FILE_LINE_INT out, totalLen + 1, data );
 
 	outString.data = out;
 	outString.size = totalLen;
@@ -810,7 +810,7 @@ ch_string ch_str_join( STR_FILE_LINE_DEF u64 count, const ch_string* strings, co
 
 	out[ totalLen ] = '\0';
 
-	TrackString_Realloc( file, line, func, out, totalLen + 1, data );
+	TrackString_Realloc( STR_FILE_LINE_INT out, totalLen + 1, data );
 
 	outString.data = out;
 	outString.size = totalLen;
@@ -834,18 +834,17 @@ CH_STRING Util_AllocStringConcatBase( STR_TYPE* data, u64 count, const STR_TYPE*
 		return outString;
 	}
 
-	va_list args_copy, args_copy2;
-	va_copy( args_copy2, args );
-	//va_copy( args_copy, args );
+	va_list args_copy;
+	va_copy( args_copy, args );
 
 	for ( u64 i = 0; i < count; i++ )
 	{
-		const char* arg = va_arg( args_copy2, const STR_TYPE* );
+		const char* arg = va_arg( args_copy, const STR_TYPE* );
 		lengths[ i ]    = strlen_func( arg );
 		totalLen += lengths[ i ];
 	}
 
-	va_end( args_copy2 );
+	va_end( args_copy );
 
 	STR_TYPE* out = ch_realloc< STR_TYPE >( data, totalLen + 1 );
 
@@ -906,7 +905,7 @@ ch_string ch_str_concat( STR_FILE_LINE_DEF char* data, u64 count, const char* st
 
 	ch_string out = Util_AllocStringConcatBase< ch_string >( data, count, string, args, strlen );
 
-	TrackString_Realloc( file, line, func, out.data, out.size + 1, data );
+	TrackString_Realloc( STR_FILE_LINE_INT out.data, out.size + 1, data );
 
 	va_end( args );
 	return out;
@@ -977,19 +976,19 @@ void ch_str_add( STR_FILE_LINE_DEF const char* string )
 		return;
 	}
 
-	TrackString_Alloc( file, line, func, string, len );
+	TrackString_Alloc( STR_FILE_LINE_INT string, len );
 }
 
 
 void ch_str_add( STR_FILE_LINE_DEF const char* string, u64 len )
 {
-	TrackString_Alloc( file, line, func, string, len );
+	TrackString_Alloc( STR_FILE_LINE_INT string, len );
 }
 
 
 void ch_str_add( STR_FILE_LINE_DEF const ch_string& string )
 {
-	TrackString_Alloc( file, line, func, string.data, string.size );
+	TrackString_Alloc( STR_FILE_LINE_INT string.data, string.size );
 }
 
 
@@ -1053,6 +1052,7 @@ void ch_str_free_all()
 
 bool ch_str_equals_base( const char* s1, const char* s2, u64 len )
 {
+#if 01
 	const char*       cur1 = s1;
 	const char*       cur2 = s2;
 	const char* const end  = len + s1;
@@ -1064,9 +1064,13 @@ bool ch_str_equals_base( const char* s1, const char* s2, u64 len )
 	}
 
 	return true;
+#else
+	return strncmp( s1, s2, len ) == 0;
+#endif
 }
 
 
+// would strcmp just be faster in this case?
 bool ch_str_equals( const char* str1, const char* str2 )
 {
 	if ( str1 == nullptr || str2 == nullptr )
@@ -1325,7 +1329,7 @@ bool ch_strneq( const wchar_t* str1, const char* str2, u64 count )
 template <typename CH_STR_TYPE, typename STR_TYPE>
 bolean ch_str_create_base( CH_STR_TYPE& s, const STR_TYPE* str, const size_t strLen )
 {
-	s = ch_str_copy( __FILE__, __LINE__, CH_FUNC_NAME_CLASS, str, strLen );
+	s = ch_str_copy( STR_FILE_LINE str, strLen );
 
 	if ( !s.data )
 		return false;
