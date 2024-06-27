@@ -2,6 +2,8 @@
 #include "core/platform.h"
 #include "util.h"
 
+#include <map>
+
 
 // these defines are used to add file, line, and function arguments to the string functions
 #if CH_STRING_MEM_TRACKING
@@ -33,9 +35,13 @@ struct ch_string_track_data
 	u64         size;
 };
 
-std::unordered_map< char*, ch_string_track_data >& GetTrackedStrings()
+// using ch_string_track_map = std::unordered_map< char*, ch_string_track_data >;
+using ch_string_track_map = std::map< char*, ch_string_track_data >;
+
+
+ch_string_track_map& GetTrackedStrings()
 {
-	static std::unordered_map< char*, ch_string_track_data > trackedStrings;
+	static ch_string_track_map trackedStrings;
 	return trackedStrings;
 }
 
@@ -993,7 +999,7 @@ void ch_str_remove( const char* string )
 }
 
 
-u64 Util_GetStringAllocCount()
+u64 ch_str_get_alloc_count()
 {
 #if CH_STRING_MEM_TRACKING
 	return (u64)GetTrackedStrings().size();
@@ -1003,22 +1009,40 @@ u64 Util_GetStringAllocCount()
 }
 
 
-void Util_FreeAllocStrings()
+u64 ch_str_get_alloc_size()
 {
 #if CH_STRING_MEM_TRACKING
-	u32 size = GetTrackedStrings().size();
+	u64 size = 0;
+
+	for ( auto& [ ptr, track_data ] : GetTrackedStrings() )
+	{
+		size += track_data.size;
+	}
+
+	return size;
+#else
+	return 0;
+#endif
+}
+
+
+void ch_str_free_all()
+{
+#if CH_STRING_MEM_TRACKING
+	ch_string_track_map& strings = GetTrackedStrings();
+	u32                  size    = strings.size();
 
 	if ( size == 0 )
 		return;
 
 	printf( " *** WARNING: %d STRINGS NOT FREED ON SHUTDOWN!\n", size );
 
-	for ( auto& [ ptr, track_data ] : GetTrackedStrings() )
+	for ( auto& [ ptr, track_data ] : strings )
 	{
 		ch_free( ptr );
 	}
 
-	GetTrackedStrings().clear();
+	strings.clear();
 #endif
 }
 
@@ -2004,11 +2028,11 @@ CONCMD( ch_dump_string_allocations )
 		return;
 	}
 
-	std::unordered_map< char*, ch_string_track_data >& trackedStrings = GetTrackedStrings();
+	ch_string_track_map& trackedStrings = GetTrackedStrings();
 
 	// hopefully this should never hit SIZE_MAX
 	// how would you even allocate that much memory?
-	u64                                                totalSize      = 0;
+	u64                  totalSize      = 0;
 
 	for ( const auto& [ ptr, track_data ] : trackedStrings )
 	{
@@ -2037,11 +2061,11 @@ CONCMD( ch_dump_string_allocations_extended )
 
 	Log_MsgF( "Dumping %d string allocations:\n\n", size );
 
-	std::unordered_map< char*, ch_string_track_data >& trackedStrings = GetTrackedStrings();
+	ch_string_track_map& trackedStrings = GetTrackedStrings();
 
 	// hopefully this should never hit SIZE_MAX
 	// how would you even allocate that much memory?
-	u64                                                totalSize      = 0;
+	u64                  totalSize      = 0;
 
 	for ( const auto& [ ptr, track_data ] : trackedStrings )
 	{

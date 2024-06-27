@@ -1555,6 +1555,15 @@ public:
 		return info;
 	}
 
+	void FreeTextureInfo( TextureInfo_t& srInfo ) override
+	{
+		if ( srInfo.aName.data )
+			ch_str_free( srInfo.aName.data );
+
+		if ( srInfo.aPath.data )
+			ch_str_free( srInfo.aPath.data );
+	}
+
 	void Screenshot()
 	{
 		// VkCommandBuffer c = VK_BeginOneTimeCommand();

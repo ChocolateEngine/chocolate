@@ -118,6 +118,7 @@ add_compile_definitions(
 	"$<$<CONFIG:Profile>:${COMPILE_DEF_RELEASE}>"
 	
 	CH_PLAT_FOLDER="${PLAT_FOLDER}"
+	CH_UPLAT_FOLDER=L"${PLAT_FOLDER}"
 	"CH_64_BIT=${64_BIT}"
 	"CH_32_BIT=${32_BIT}"
 )
@@ -133,13 +134,13 @@ if( MSVC )
 	set( MIMALLOC_BUILD "${MIMALLOC_DIR}/out/msvc-x64" )
 	# set( MIMALLOC_BUILD "${MIMALLOC_DIR}/build" )
 
-	#link_libraries(
-	#	"$<$<CONFIG:Debug>:${MIMALLOC_DIR}/build/Debug/mimalloc-secure-debug.lib>"
-	#	"$<$<CONFIG:Release>:${MIMALLOC_BUILD}/Release/mimalloc-override.lib>"
-	#	"$<$<CONFIG:RelWithDebInfo>:${MIMALLOC_BUILD}/Release/mimalloc-override.lib>"
-	#	"$<$<CONFIG:Profile>:${MIMALLOC_BUILD}/Release/mimalloc-override.lib>"
-	#	${MIMALLOC_DIR}/bin/mimalloc-redirect.lib
-	#)
+	# link_libraries(
+	# 	"$<$<CONFIG:Debug>:${MIMALLOC_DIR}/build/Debug/mimalloc-secure-debug.lib>"
+	# 	"$<$<CONFIG:Release>:${MIMALLOC_BUILD}/Release/mimalloc-override.lib>"
+	# 	"$<$<CONFIG:RelWithDebInfo>:${MIMALLOC_BUILD}/Release/mimalloc-override.lib>"
+	# 	"$<$<CONFIG:Profile>:${MIMALLOC_BUILD}/Release/mimalloc-override.lib>"
+	# 	${MIMALLOC_DIR}/bin/mimalloc-redirect.lib
+	# )
 
 	if ( ${64_BIT} )
 		link_directories(
@@ -161,6 +162,8 @@ if( MSVC )
 		_CRT_SECURE_NO_WARNINGS
 		_ALLOW_RUNTIME_LIBRARY_MISMATCH _ALLOW_ITERATOR_DEBUG_LEVEL_MISMATCH _ALLOW_MSC_VER_MISMATCH
 		CH_USE_MIMALLOC=0
+		//_UNICODE=1
+		//UNICODE=1
 	)
 
 	if ( ${64_BIT} )
@@ -228,8 +231,8 @@ if( MSVC )
 	set( COMPILE_OPTIONS_DEBUG
 		"/Od"        # no optimizations
 		"/fp:except" # raise floating point exceptions
-		"/ZI"        # edit and continue
-		# "/fsanitize=address" # use address sanitizing in Debug (incompatible with /INCREMENTAL)
+		# "/ZI"        # edit and continue
+		"/fsanitize=address" # use address sanitizing in Debug (incompatible with /INCREMENTAL and /ZI)
 	)
 	
 	set( COMPILE_OPTIONS_RELEASE
@@ -269,7 +272,7 @@ if( MSVC )
 	)
 	
 	add_link_options(
-		"/INCREMENTAL"
+		# "/INCREMENTAL"
 	)
 	
 else()  # linux

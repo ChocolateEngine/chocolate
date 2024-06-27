@@ -47,6 +47,12 @@
 #endif
 
 
+#undef FileSys_FindBinFile
+#undef FileSys_FindSourceFile
+#undef FileSys_FindFile
+#undef FileSys_FindFileEx
+
+
 LOG_REGISTER_CHANNEL( FileSystem, LogColor::DarkGray );
 
 static ch_string                gWorkingDir;
@@ -72,7 +78,7 @@ CONCMD( fs_reload_paths )
 
 void FileSys_WhereIsCmd( const std::string& path, ESearchPathType type )
 {
-	ch_string fullPath = FileSys_FindFileEx( path.data(), path.size(), type );
+	ch_string fullPath = FileSys_FindFileEx( CH_FS_FILE_LINE path.data(), path.size(), type );
 
     if ( !fullPath.data )
 	{
@@ -549,15 +555,16 @@ std::string FileSys_FindFileF( ESearchPathType sType, const char* spFmt, ... )
 }
 #endif
 
+#undef ch_str_copy
 
-inline ch_string FileSys_FindFileAbs( const char* file, s32 fileLen )
+inline ch_string FileSys_FindFileAbs( CH_FS_FILE_LINE_DEF const char* file, s32 fileLen )
 {
 	ch_string out;
 	out.data = nullptr;
 	out.size = 0;
 
 	if ( exists( file ) )
-		out = ch_str_copy( file, fileLen );
+		out = ch_str_copy( CH_FS_FILE_LINE_INT file, fileLen );
 
 	return out;
 }
@@ -593,27 +600,27 @@ ch_string FileSys_FindFileBaseSearchPath( const ch_string& searchPath, const cha
 #endif
 
 
-ch_string FileSys_FindFileBase( const std::vector< ch_string >& paths, const char* file, s32 fileLen )
+ch_string FileSys_FindFileBase( CH_FS_FILE_LINE_DEF const std::vector< ch_string >& paths, const char* filePath, s32 fileLen )
 {
 	PROF_SCOPE();
 
-	if ( !file )
+	if ( !filePath )
 		return {};
 
 	if ( fileLen == -1 )
-		fileLen = strlen( file );
+		fileLen = strlen( filePath );
 
 	if ( fileLen == 0 )
 		return {};
 
-	if ( FileSys_IsAbsolute( file, fileLen ) )
-		return FileSys_FindFileAbs( file, fileLen );
+	if ( FileSys_IsAbsolute( filePath, fileLen ) )
+		return FileSys_FindFileAbs( CH_FS_FILE_LINE_INT filePath, fileLen );
 
 	for ( const ch_string& searchPath : paths )
 	{
-		const char* paths[]   = { searchPath.data, CH_PATH_SEP_STR, file };
+		const char*  paths[]   = { searchPath.data, CH_PATH_SEP_STR, filePath };
 		const size_t lengths[] = { searchPath.size, 1, fileLen };
-		ch_string   concat    = ch_str_concat( 3, paths, lengths );
+		ch_string    concat    = ch_str_concat( 3, paths, lengths );
 
 		if ( !concat.data )
 		{
@@ -632,7 +639,7 @@ ch_string FileSys_FindFileBase( const std::vector< ch_string >& paths, const cha
 
 		ch_str_free( fullPath.data );
 
-		// ch_string fullPath = FileSys_FindFileBase( searchPath, file, pathLen );
+		// ch_string fullPath = FileSys_FindFileBase( searchPath, filePath, pathLen );
 		// 
 		// if ( fullPath.data )
 		// 	return fullPath;
@@ -643,39 +650,49 @@ ch_string FileSys_FindFileBase( const std::vector< ch_string >& paths, const cha
 }
 
 
-ch_string FileSys_FindBinFile( const char* file, s32 pathLen )
+ch_string FileSys_FindBinFile( CH_FS_FILE_LINE_DEF const char* filePath, s32 pathLen )
 {
-	return FileSys_FindFileBase( gBinPaths, file, pathLen );
+	return FileSys_FindFileBase( CH_FS_FILE_LINE_INT gBinPaths, filePath, pathLen );
 }
 
 
-ch_string FileSys_FindSourceFile( const char* file, s32 pathLen )
+ch_string FileSys_FindSourceFile( CH_FS_FILE_LINE_DEF const char* filePath, s32 pathLen )
 {
-	return FileSys_FindFileBase( gSourceAssetPaths, file, pathLen );
+	return FileSys_FindFileBase( CH_FS_FILE_LINE_INT gSourceAssetPaths, filePath, pathLen );
 }
 
 
-ch_string FileSys_FindFile( const char* file, s32 pathLen )
+ch_string FileSys_FindFile( CH_FS_FILE_LINE_DEF const char* filePath, s32 pathLen )
 {
-	return FileSys_FindFileBase( gSearchPaths, file, pathLen );
+	return FileSys_FindFileBase( CH_FS_FILE_LINE_INT gSearchPaths, filePath, pathLen );
 }
 
 
-ch_string FileSys_FindFileEx( const char* file, s32 pathLen, ESearchPathType sType )
+ch_string FileSys_FindFileEx( CH_FS_FILE_LINE_DEF const char* filePath, s32 pathLen, ESearchPathType sType )
 {
 	switch ( sType )
 	{
 		default:
 		case ESearchPathType_Path:
-			return FileSys_FindFileBase( gSearchPaths, file, pathLen );
+			return FileSys_FindFileBase( CH_FS_FILE_LINE_INT gSearchPaths, filePath, pathLen );
 
 		case ESearchPathType_Binary:
-			return FileSys_FindFileBase( gBinPaths, file, pathLen );
+			return FileSys_FindFileBase( CH_FS_FILE_LINE_INT gBinPaths, filePath, pathLen );
 
 		case ESearchPathType_SourceAssets:
-			return FileSys_FindFileBase( gSourceAssetPaths, file, pathLen );
+			return FileSys_FindFileBase( CH_FS_FILE_LINE_INT gSourceAssetPaths, filePath, pathLen );
 	}
 }
+
+
+#define FileSys_FindBinFile( ... )    FileSys_FindBinFile( CH_FS_FILE_LINE __VA_ARGS__ )
+#define FileSys_FindSourceFile( ... ) FileSys_FindSourceFile( CH_FS_FILE_LINE __VA_ARGS__ )
+#define FileSys_FindFile( ... )       FileSys_FindFile( CH_FS_FILE_LINE __VA_ARGS__ )
+#define FileSys_FindFileEx( ... )     FileSys_FindFileEx( CH_FS_FILE_LINE __VA_ARGS__ )
+
+#if CH_STRING_MEM_TRACKING
+	#define ch_str_copy( ... ) ch_str_copy( STR_FILE_LINE __VA_ARGS__ )
+#endif
 
 
 ch_string FileSys_FindDir( const char* path, s32 pathLen, ESearchPathType sType )
@@ -748,6 +765,7 @@ std::vector< char > FileSys_ReadFile( const char* path, s32 pathLen )
     if ( !file.is_open() )
 	{
 		Log_ErrorF( gFileSystemChannel, "Failed to open file: %s\n", path );
+		ch_str_free( fullPath.data );
 		return {};
     }
 
@@ -761,6 +779,7 @@ std::vector< char > FileSys_ReadFile( const char* path, s32 pathLen )
 
     buffer.push_back( '\0' );  // adding null terminator character
 
+	ch_str_free( fullPath.data );
     return buffer;
 }
 
@@ -771,7 +790,7 @@ std::vector< char > FileSys_ReadFileEx( const char* path, s32 pathLen, ESearchPa
     PROF_SCOPE();
 
     // Find path first
-	ch_string fullPath = FileSys_FindFileEx( path, pathLen, sType );
+	ch_string_auto fullPath = FileSys_FindFileEx( path, pathLen, sType );
     if ( !fullPath.data )
     {
         Log_ErrorF( gFileSystemChannel, "Failed to find file: %s\n", path );
@@ -1049,7 +1068,14 @@ ch_string FileSys_GetBaseName( const char* path, s32 pathLen )
 }
 
 
-ch_string FileSys_GetFileName( const char* path, s32 pathLen )
+#undef FileSys_GetFileName
+#undef FileSys_GetFileExt
+#undef FileSys_GetFileNameNoExt
+
+#undef ch_str_copy
+
+
+ch_string FileSys_GetFileName( CH_FS_FILE_LINE_DEF const char* path, s32 pathLen )
 {
 	if ( pathLen == -1 )
 		pathLen = strlen( path );
@@ -1073,16 +1099,16 @@ ch_string FileSys_GetFileName( const char* path, s32 pathLen )
     if ( startIndex == pathLen )
 		return {};
 
-	ch_string output = ch_str_copy( &path[ startIndex ], pathLen - startIndex );
+	ch_string output = ch_str_copy( CH_FS_FILE_LINE_INT & path[ startIndex ], pathLen - startIndex );
 	return output;
 }
 
 
-ch_string FileSys_GetFileExt( const char* path, s32 pathLen, bool sStripPath )
+ch_string FileSys_GetFileExt( CH_FS_FILE_LINE_DEF const char* path, s32 pathLen, bool sStripPath )
 {
     if ( sStripPath )
 	{
-		ch_string fileName = FileSys_GetFileName( path, pathLen );
+		ch_string fileName = FileSys_GetFileName( CH_FS_FILE_LINE_INT path, pathLen );
 		if ( !fileName.data )
 			return {};
 
@@ -1095,7 +1121,8 @@ ch_string FileSys_GetFileExt( const char* path, s32 pathLen, bool sStripPath )
 			return {};
 		}
 
-		ch_string output = ch_str_copy( dot + 1 );
+		ch_string output = ch_str_copy( CH_FS_FILE_LINE_INT dot + 1 );
+		ch_str_free( fileName.data );
 		return output;
 	}
 
@@ -1104,14 +1131,14 @@ ch_string FileSys_GetFileExt( const char* path, s32 pathLen, bool sStripPath )
 	if ( !dot || dot == path )
 		return {};
 
-	ch_string output = ch_str_copy( dot + 1 );
+	ch_string output = ch_str_copy( CH_FS_FILE_LINE_INT dot + 1 );
 	return output;
 }
 
 
-ch_string FileSys_GetFileNameNoExt( const char* path, s32 pathLen )
+ch_string FileSys_GetFileNameNoExt( CH_FS_FILE_LINE_DEF const char* path, s32 pathLen )
 {
-	ch_string name = FileSys_GetFileName( path, pathLen );
+	ch_string name = FileSys_GetFileName( CH_FS_FILE_LINE_INT path, pathLen );
 
 	if ( !name.data )
 		return {};
@@ -1121,10 +1148,16 @@ ch_string FileSys_GetFileNameNoExt( const char* path, s32 pathLen )
 	if ( !dot || dot == name.data )
 		return name;
 
-	ch_string output = ch_str_copy( name.data, dot - name.data );
+	ch_string output = ch_str_copy( CH_FS_FILE_LINE_INT name.data, dot - name.data );
 	ch_str_free( name.data );
 	return output;
 }
+
+
+#if CH_STRING_MEM_TRACKING
+	#define ch_str_copy( ... ) ch_str_copy( STR_FILE_LINE __VA_ARGS__ )
+#endif
+
 
 
 ch_string FileSys_CleanPath( const char* path, const s32 pathLen, char* data )
@@ -1657,7 +1690,7 @@ std::vector< ch_string > FileSys_ScanDir( const char* path, size_t pathLen, Read
     else
     {
         sys_scandir( path, pathLen, "", 0, files, flags );
-    }
+	}
 
 	return files;
 }

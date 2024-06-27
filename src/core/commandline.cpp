@@ -18,7 +18,7 @@ static ChVector< Arg_t > gArgList;
 
 extern void              Assert_Init();
 extern void              Args_Shutdown();
-extern void              Util_FreeAllocStrings();
+extern void              ch_str_free_all();
 
 static ch_string*        gArgV = nullptr;
 static int               gArgC = 0;
@@ -63,8 +63,8 @@ extern "C"
 		Args_Shutdown();
 
 		// Check if all memory is freed
-		u32 stringAllocCount = Util_GetStringAllocCount();
-		Util_FreeAllocStrings();
+		u32 stringAllocCount = ch_str_get_alloc_count();
+		ch_str_free_all();
 
 		sys_shutdown();
 	}
@@ -95,14 +95,13 @@ void DLL_EXPORT core_post_load()
 	// if ( FileSys_Exists( "cfg/autoexec.cfg" ) )
 	// 	Con_QueueCommandSilent( "exec autoexec", false );
 
-	ch_string exec = ch_str_copy( "exec " );
-	ch_string execCfg;
-	int       arg = 0;
+	ch_string      execCfg;
+	int            arg = 0;
 
 	while ( Args_GetValueNext( arg, "-exec", execCfg ) )
 	{
-		const char*    strings[] = { exec.data, execCfg.data };
-		const u64      lengths[] = { exec.size, execCfg.size };
+		const char*    strings[] = { "exec ", execCfg.data };
+		const u64      lengths[] = { 5, execCfg.size };
 		ch_string_auto command   = ch_str_concat( 2, strings, lengths );
 		Con_QueueCommandSilent( command.data, command.size, false );
 	}
@@ -528,6 +527,9 @@ void Args_Init( int argc, char* argv[] )
 
 void Args_Shutdown()
 {
+	for ( int i = 0; i < gArgC; i++ )
+		ch_str_free( gArgV[ i ].data );
+
 	delete[] gArgV;
 	gArgV = nullptr;
 	gArgC = 0;

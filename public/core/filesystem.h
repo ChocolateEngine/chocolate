@@ -32,6 +32,24 @@ constexpr char CH_PATH_SEP = '/';
 #endif
 
 
+#ifdef _DEBUG
+	#define CH_FILESYS_TRACKING 1
+#else
+	#define CH_FILESYS_TRACKING 0
+#endif
+
+
+#if CH_FILESYS_TRACKING
+	#define CH_FS_FILE_LINE     __FILE__, __LINE__, CH_FUNC_NAME_CLASS,
+	#define CH_FS_FILE_LINE_DEF const char *strtrack_file, u64 strtrack_line, const char *strtrack_func,
+	#define CH_FS_FILE_LINE_INT strtrack_file, strtrack_line, strtrack_func,
+#else
+	#define CH_FS_FILE_LINE
+	#define CH_FS_FILE_LINE_DEF
+	#define CH_FS_FILE_LINE_INT
+#endif
+
+
 // constexpr s64 CH_INVALID_PATH_LEN = -1;
 
 
@@ -111,17 +129,17 @@ CORE_API void      FileSys_InsertSearchPath( size_t index, const char* file, s32
 // CORE_API ch_string FileSys_FindFileF( ESearchPathType sType, const char* spFmt, ... );
 
 // Find the path to a file within the search paths.
-CORE_API ch_string FileSys_FindBinFile( const char* file, s32 pathLen = -1 );
+CORE_API ch_string FileSys_FindBinFile( CH_FS_FILE_LINE_DEF const char* filePath, s32 pathLen = -1 );
 
 // Find the path to a file within the search paths.
-CORE_API ch_string FileSys_FindSourceFile( const char* file, s32 pathLen = -1 );
+CORE_API ch_string FileSys_FindSourceFile( CH_FS_FILE_LINE_DEF const char* filePath, s32 pathLen = -1 );
 
 // Find the path to a file within the search paths.
-CORE_API ch_string FileSys_FindFile( const char* file, s32 pathLen = -1 );
+CORE_API ch_string FileSys_FindFile( CH_FS_FILE_LINE_DEF const char* filePath, s32 pathLen = -1 );
 
 // Find the path to a file within the search paths.
-CORE_API ch_string FileSys_FindFileEx( const char* file, ESearchPathType sType = ESearchPathType_Path );
-CORE_API ch_string FileSys_FindFileEx( const char* file, s32 pathLen, ESearchPathType sType = ESearchPathType_Path );
+CORE_API ch_string FileSys_FindFileEx( CH_FS_FILE_LINE_DEF const char* filePath, ESearchPathType sType = ESearchPathType_Path );
+CORE_API ch_string FileSys_FindFileEx( CH_FS_FILE_LINE_DEF const char* filePath, s32 pathLen, ESearchPathType sType = ESearchPathType_Path );
 
 // Find the path to a directory within the search paths.
 CORE_API ch_string FileSys_FindDir( const char* dir, ESearchPathType sType = ESearchPathType_Path );
@@ -172,13 +190,13 @@ CORE_API ch_string           FileSys_GetDirName( const char* path, s32 pathLen =
 CORE_API ch_string           FileSys_GetBaseName( const char* path, s32 pathLen = -1 );
 
 // Return the filename in this path
-CORE_API ch_string           FileSys_GetFileName( const char* path, s32 pathLen = -1 );
+CORE_API ch_string           FileSys_GetFileName( CH_FS_FILE_LINE_DEF const char* path, s32 pathLen = -1 );
 
 // Return the file extension, will return an empty string if none found
-CORE_API ch_string           FileSys_GetFileExt( const char* path, s32 pathLen = -1, bool sStripPath = true );
+CORE_API ch_string           FileSys_GetFileExt( CH_FS_FILE_LINE_DEF const char* path, s32 pathLen = -1, bool sStripPath = true );
 
 // Return the file name without the extension
-CORE_API ch_string           FileSys_GetFileNameNoExt( const char* path, s32 pathLen = -1 );
+CORE_API ch_string           FileSys_GetFileNameNoExt( CH_FS_FILE_LINE_DEF const char* path, s32 pathLen = -1 );
 
 // Cleans up the path, removes useless ".." and "."
 CORE_API ch_string           FileSys_CleanPath( const char* path, const s32 pathLen = -1, char* data = nullptr );  // reuses the data memory
@@ -220,3 +238,17 @@ CORE_API std::vector< ch_string > FileSys_ScanDir( const char* path, size_t path
 
 //DirHandle                               FileSys_ReadFirst( const std::string &path, const std::string& wildcard, std::string &file );
 //std::vector< std::string >              FileSys_ScanDir( const std::string &path, const std::string& wildcard, bool allPaths = false );
+
+
+// ================================================================================
+// Macros to help string tracking
+
+#define FileSys_FindBinFile( ... )            FileSys_FindBinFile( CH_FS_FILE_LINE __VA_ARGS__ )
+#define FileSys_FindSourceFile( ... )         FileSys_FindSourceFile( CH_FS_FILE_LINE __VA_ARGS__ )
+#define FileSys_FindFile( ... )               FileSys_FindFile( CH_FS_FILE_LINE __VA_ARGS__ )
+#define FileSys_FindFileEx( ... )             FileSys_FindFileEx( CH_FS_FILE_LINE __VA_ARGS__ )
+
+#define FileSys_GetFileName( path, ... )      FileSys_GetFileName( CH_FS_FILE_LINE path, __VA_ARGS__ )
+#define FileSys_GetFileExt( path, ... )       FileSys_GetFileExt( CH_FS_FILE_LINE path, __VA_ARGS__ )
+#define FileSys_GetFileNameNoExt( path, ... ) FileSys_GetFileNameNoExt( CH_FS_FILE_LINE path, __VA_ARGS__ )
+

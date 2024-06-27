@@ -841,7 +841,9 @@ class IRender : public ISystem
 	virtual glm::uvec2  GetTextureSize( ChHandle_t shTexture )                                                                         = 0;
 	virtual void        ReloadTextures()                                                                                               = 0;
 	virtual const std::vector< ChHandle_t >& GetTextureList()                                                                             = 0;
-	virtual TextureInfo_t                 GetTextureInfo( ChHandle_t sTexture )                                                        = 0;
+
+	virtual TextureInfo_t                    GetTextureInfo( ChHandle_t sTexture )                                                                          = 0;
+	virtual void                             FreeTextureInfo( TextureInfo_t& srInfo )                                                                       = 0;
 
 	// TODO: very early rough functions, need to be improved greatly
 	virtual ReadTexture ReadTextureFromDevice( ChHandle_t textureHandle )                                            = 0;
@@ -980,5 +982,5 @@ class IRender : public ISystem
 
 
 #define IRENDER_NAME "GraphicsAPI"
-#define IRENDER_VER 21
+#define IRENDER_VER 22
 

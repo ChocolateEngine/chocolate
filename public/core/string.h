@@ -141,7 +141,10 @@ CORE_API bool       ch_strneq( const wchar_t* str1, const char* str2, u64 count 
 #endif
 
 // Get the total amount of strings allocated
-CORE_API u64        Util_GetStringAllocCount();
+CORE_API u64        ch_str_get_alloc_count();
+
+// Get the total amount of memory allocated for strings
+CORE_API u64        ch_str_get_alloc_size();
 
 // -----------------------------------------------------------------------------------------------------
 // Creation and Destruction
