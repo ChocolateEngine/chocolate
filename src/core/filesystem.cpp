@@ -154,6 +154,18 @@ bool FileSys_Init( const char* workingDir )
 }
 
 
+void FileSys_Shutdown()
+{
+	FileSys_ClearSearchPaths();
+	FileSys_ClearBinPaths();
+	FileSys_ClearSourcePaths();
+
+	ch_str_free( gWorkingDir.data );
+	ch_str_free( gExePath.data );
+	ch_str_free( gAppPathMacro.data );
+}
+
+
 ch_string FileSys_GetWorkingDir()
 {
 	return gWorkingDir;
@@ -500,7 +512,25 @@ void FileSys_RemoveSearchPath( const char* path, s32 pathLen, ESearchPathType sT
 
 void FileSys_InsertSearchPath( size_t index, const char* path, s32 pathLen, ESearchPathType sType )
 {
+	if ( pathLen == 0 )	
+		return;
+
+	if ( pathLen == -1 )
+		pathLen = strlen( path );
+
+	if ( pathLen == 0 )
+	{
+		Log_Error( "Failed to insert search path, path length is 0\n" );
+		return;
+	}
+
 	ch_string fullPath = FileSys_BuildSearchPath( path );
+
+	if ( !fullPath.data )
+	{
+		Log_Error( "Failed to build search path\n" );
+		return;
+	}
 
 	switch ( sType )
 	{
@@ -618,9 +648,9 @@ ch_string FileSys_FindFileBase( CH_FS_FILE_LINE_DEF const std::vector< ch_string
 
 	for ( const ch_string& searchPath : paths )
 	{
-		const char*  paths[]   = { searchPath.data, CH_PATH_SEP_STR, filePath };
-		const size_t lengths[] = { searchPath.size, 1, fileLen };
-		ch_string    concat    = ch_str_concat( 3, paths, lengths );
+		const char*  pathParts[]   = { searchPath.data, CH_PATH_SEP_STR, filePath };
+		const size_t lengthParts[] = { searchPath.size, 1, fileLen };
+		ch_string    concat        = ch_str_concat( 3, pathParts, lengthParts );
 
 		if ( !concat.data )
 		{
@@ -1071,8 +1101,10 @@ ch_string FileSys_GetBaseName( const char* path, s32 pathLen )
 #undef FileSys_GetFileName
 #undef FileSys_GetFileExt
 #undef FileSys_GetFileNameNoExt
+#undef FileSys_CleanPath
 
 #undef ch_str_copy
+#undef ch_str_join
 
 
 ch_string FileSys_GetFileName( CH_FS_FILE_LINE_DEF const char* path, s32 pathLen )
@@ -1154,18 +1186,13 @@ ch_string FileSys_GetFileNameNoExt( CH_FS_FILE_LINE_DEF const char* path, s32 pa
 }
 
 
-#if CH_STRING_MEM_TRACKING
-	#define ch_str_copy( ... ) ch_str_copy( STR_FILE_LINE __VA_ARGS__ )
-#endif
 
-
-
-ch_string FileSys_CleanPath( const char* path, const s32 pathLen, char* data )
+ch_string FileSys_CleanPath( CH_FS_FILE_LINE_DEF const char* path, const s32 pathLen, char* data )
 {
     PROF_SCOPE();
 
 #if 1
-	std::vector< ch_string > pathSegments;
+	ChVector< ch_string > pathSegments;
 
 	#if __unix__
 	if ( FileSys_IsAbsolute( path, pathLen ) )
@@ -1179,7 +1206,6 @@ ch_string FileSys_CleanPath( const char* path, const s32 pathLen, char* data )
 
 	while ( endIndex < pathLen )
 	{
-	#if 1
 		while ( endIndex < pathLen )
 		{
 			if ( path[ endIndex ] == '/' || path[ endIndex ] == '\\' )
@@ -1187,28 +1213,6 @@ ch_string FileSys_CleanPath( const char* path, const s32 pathLen, char* data )
 
 			endIndex++;
 		}
-
-	#else
-
-		// stupid windows
-		const char* pathSepA = strchr( path + startIndex, '/' );
-		const char* pathSepB = strchr( path + startIndex, '\\' );
-
-		const char* pathSep  = nullptr;
-
-		// find the first path separator
-		if ( pathSepA && pathSepB )
-			pathSep = ( pathSepA < pathSepB ) ? pathSepA : pathSepB;
-		else if ( pathSepA )
-			pathSep = pathSepA;
-		else if ( pathSepB )
-			pathSep = pathSepB;
-
-		if ( !pathSep )
-			endIndex = pathLen;
-		else
-			endIndex = pathSep - path;
-	#endif
 
 		// this might occur on unix systems if the path starts with "/", an absolute path, where startIndex and endIndex are 0
 		// or if we have a path like "C://test", with extra path separators for some reason
@@ -1232,13 +1236,18 @@ ch_string FileSys_CleanPath( const char* path, const s32 pathLen, char* data )
 			if ( !pathSegments.empty() )
 			{
 				// pop the last segment
-				ch_str_free( pathSegments.back().data );
-				pathSegments.pop_back();
+				ch_str_free( pathSegments.back()->data );
+				pathSegments.erase( *pathSegments.back() );
 			}
 		}
 		else if ( endIndex - startIndex > 1 )  // if it's not an empty segment
 		{
-			ch_string segment = ch_str_copy( &path[ startIndex ], endIndex - startIndex );
+			// don't use the passed in debug path data, this isn't the final result
+			ch_string segment;
+			segment.data = nullptr;
+			segment.size = 0;
+
+			segment = ch_str_copy( CH_FS_FILE_LINE &path[ startIndex ], endIndex - startIndex );
 
 			if ( !segment.data )
 			{
@@ -1254,7 +1263,7 @@ ch_string FileSys_CleanPath( const char* path, const s32 pathLen, char* data )
 	}
 
 	// build the cleaned path
-	ch_string finalString = ch_str_join( pathSegments.size(), pathSegments.data(), CH_PATH_SEP_STR, data );
+	ch_string finalString = ch_str_join( CH_FS_FILE_LINE_INT pathSegments.size(), pathSegments.data(), CH_PATH_SEP_STR, data );
 
 	// free the path segments
 	ch_str_free( pathSegments.data(), pathSegments.size() );
@@ -1339,6 +1348,12 @@ ch_string FileSys_CleanPath( const char* path, const s32 pathLen, char* data )
 
 	return finalString;
 }
+
+
+#if CH_STRING_MEM_TRACKING
+	#define ch_str_copy( ... ) ch_str_copy( STR_FILE_LINE __VA_ARGS__ )
+	#define ch_str_join( ... ) ch_str_join( STR_FILE_LINE __VA_ARGS__ )
+#endif
 
 
 // Rename a File or Directory
@@ -1591,9 +1606,9 @@ bool sys_scandir( const char* root, size_t rootLen, const char* path, size_t pat
 		{
 			ch_string pathCopy;
 
-			const char* strings[] = { scanDir.data, ffd.cFileName };
-			const size_t lengths[] = { scanDir.size, fileNameLen };
-			pathCopy = ch_str_concat( 2, strings, lengths );
+			const char* strings2[] = { scanDir.data, ffd.cFileName };
+			const size_t lengths2[] = { scanDir.size, fileNameLen };
+			pathCopy = ch_str_concat( 2, strings2, lengths2 );
 
 			files.push_back( pathCopy );
 		}

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "core/platform.h"
+#include "core/string.h"
 
 #include <string>
 #include <vector>
@@ -40,9 +41,9 @@ constexpr char CH_PATH_SEP = '/';
 
 
 #if CH_FILESYS_TRACKING
-	#define CH_FS_FILE_LINE     __FILE__, __LINE__, CH_FUNC_NAME_CLASS,
-	#define CH_FS_FILE_LINE_DEF const char *strtrack_file, u64 strtrack_line, const char *strtrack_func,
-	#define CH_FS_FILE_LINE_INT strtrack_file, strtrack_line, strtrack_func,
+	#define CH_FS_FILE_LINE     STR_FILE_LINE
+	#define CH_FS_FILE_LINE_DEF STR_FILE_LINE_DEF
+	#define CH_FS_FILE_LINE_INT STR_FILE_LINE_INT
 #else
 	#define CH_FS_FILE_LINE
 	#define CH_FS_FILE_LINE_DEF
@@ -82,6 +83,7 @@ enum ESearchPathType
 // FileSystem Core
 
 CORE_API bool      FileSys_Init( const char* workingDir );
+CORE_API void      FileSys_Shutdown();
 
 // does not allocate a new string, just returns the internal working directory string
 CORE_API ch_string FileSys_GetWorkingDir();
@@ -199,7 +201,7 @@ CORE_API ch_string           FileSys_GetFileExt( CH_FS_FILE_LINE_DEF const char*
 CORE_API ch_string           FileSys_GetFileNameNoExt( CH_FS_FILE_LINE_DEF const char* path, s32 pathLen = -1 );
 
 // Cleans up the path, removes useless ".." and "."
-CORE_API ch_string           FileSys_CleanPath( const char* path, const s32 pathLen = -1, char* data = nullptr );  // reuses the data memory
+CORE_API ch_string           FileSys_CleanPath( CH_FS_FILE_LINE_DEF const char* path, const s32 pathLen = -1, char* data = nullptr );  // reuses the data memory
 
 // Rename a File or Directory
 CORE_API bool                FileSys_Rename( const char* spOld, const char* spNew );
@@ -247,6 +249,8 @@ CORE_API std::vector< ch_string > FileSys_ScanDir( const char* path, size_t path
 #define FileSys_FindSourceFile( ... )         FileSys_FindSourceFile( CH_FS_FILE_LINE __VA_ARGS__ )
 #define FileSys_FindFile( ... )               FileSys_FindFile( CH_FS_FILE_LINE __VA_ARGS__ )
 #define FileSys_FindFileEx( ... )             FileSys_FindFileEx( CH_FS_FILE_LINE __VA_ARGS__ )
+
+#define FileSys_CleanPath( ... )              FileSys_CleanPath( CH_FS_FILE_LINE __VA_ARGS__ )
 
 #define FileSys_GetFileName( path, ... )      FileSys_GetFileName( CH_FS_FILE_LINE path, __VA_ARGS__ )
 #define FileSys_GetFileExt( path, ... )       FileSys_GetFileExt( CH_FS_FILE_LINE path, __VA_ARGS__ )

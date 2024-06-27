@@ -16,10 +16,12 @@
 
 #if CH_STRING_MEM_TRACKING
 	#define STR_FILE_LINE     __FILE__, __LINE__, CH_FUNC_NAME_CLASS,
-	#define STR_FILE_LINE_DEF const char *file, u64 line, const char *func,
+	#define STR_FILE_LINE_DEF const char *strtrack_file, u64 strtrack_line, const char *strtrack_func,
+	#define STR_FILE_LINE_INT strtrack_file, strtrack_line, strtrack_func,
 #else
 	#define STR_FILE_LINE
 	#define STR_FILE_LINE_DEF
+	#define STR_FILE_LINE_INT
 #endif
 
 // Copies a string, useful for if you're copying a string from reading a file and then going to free that string later
