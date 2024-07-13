@@ -1091,6 +1091,11 @@ bool ch_str_equals( const char* str1, const char* str2, u64 count )
 	if ( str1 == nullptr || str2 == nullptr )
 		return false;
 
+	u64 str1Len = strlen( str1 );
+
+	if ( str1Len != count )
+		return false;
+
 	return ch_str_equals_base( str1, str2, count );
 }
 
