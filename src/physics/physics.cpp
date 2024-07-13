@@ -663,7 +663,27 @@ JPH::Ref< JPH::Shape > ConvexShapeFromSubShape( PhysicsSubShape& shape )
 static int     SHAPES_MADE = 0;
 
 
-IPhysicsShape* PhysicsEnvironment::LoadShape( const std::string& path, PhysShapeType shapeType )
+IPhysicsShape* PhysicsEnvironment::LoadShape( const char* path, PhysShapeType shapeType )
+{
+	if ( !path )
+	{
+		Log_Error( gPhysicsChannel, "No Path Specified for Physics Shape\n" );
+		return nullptr;
+	}
+
+	u64 pathLen = strlen( path );
+
+	if ( pathLen == 0 )
+	{
+		Log_Error( gPhysicsChannel, "No Path Specified for Physics Shape\n" );
+		return nullptr;
+	}
+
+	return LoadShape( path, pathLen, shapeType );
+}
+
+
+IPhysicsShape* PhysicsEnvironment::LoadShape( const char* path, s64 pathLen, PhysShapeType shapeType )
 {
 	switch ( shapeType )
 	{
@@ -691,12 +711,12 @@ IPhysicsShape* PhysicsEnvironment::LoadShape( const std::string& path, PhysShape
 			break;
 	}
 
-	ch_string_auto absPath = FileSys_FindFile( path.data(), path.size() );
+	ch_string_auto absPath = FileSys_FindFile( path, pathLen );
 
-	if ( !absPath.data && FileSys_IsRelative( path.data(), path.size() ) )
+	if ( !absPath.data && FileSys_IsRelative( path, pathLen ) )
 	{
-		const char*    strings[] = { "models" CH_PATH_SEP_STR, path.data() };
-		const u64      lengths[] = { 7, path.size() };
+		const char*    strings[] = { "models" CH_PATH_SEP_STR, path };
+		const u64      lengths[]  = { 7, pathLen };
 		ch_string_auto pathSearch = ch_str_concat( 2, strings, lengths );
 
 		absPath                   = FileSys_FindFile( pathSearch.data, pathSearch.size );
@@ -704,7 +724,7 @@ IPhysicsShape* PhysicsEnvironment::LoadShape( const std::string& path, PhysShape
 	
 	if ( !absPath.data )
 	{
-		Log_ErrorF( "Failed to find physics model: \"%s\"\n", path.data() );
+		Log_ErrorF( "Failed to find physics model: \"%s\"\n", path );
 		return nullptr;
 	}
 
@@ -716,7 +736,7 @@ IPhysicsShape* PhysicsEnvironment::LoadShape( const std::string& path, PhysShape
 	PhysicsModel* model = new PhysicsModel;
 	if ( !LoadObj_Fast( absPath.data, model, singleShape ) )
 	{
-		Log_ErrorF( gPhysicsChannel, "Failed to Load Model for Physics Shape: \"%s\"\n", path.data() );
+		Log_ErrorF( gPhysicsChannel, "Failed to Load Model for Physics Shape: \"%s\"\n", path );
 		delete model;
 		return nullptr;
 	}

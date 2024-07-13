@@ -463,7 +463,8 @@ class IPhysicsEnvironment
 
 	// Load a shape from a model file that can be shared between bodies
 	// NOTE: Only shape types Mesh, Convex, StaticCompound, and MutableCompound are supported here
-	virtual IPhysicsShape*         LoadShape( const std::string& path, PhysShapeType shapeType )                                                 = 0;
+	virtual IPhysicsShape*         LoadShape( const char* path, PhysShapeType shapeType )                                                        = 0;
+	virtual IPhysicsShape*         LoadShape( const char* path, s64 pathLen, PhysShapeType shapeType )                                           = 0;
 
 	virtual void                   DestroyShape( IPhysicsShape* body )                                                                           = 0;
 

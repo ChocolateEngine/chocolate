@@ -255,7 +255,10 @@ public:
 	// Physics Object/Shape Creation
 
 	IPhysicsShape*                    CreateShape( const PhysicsShapeInfo& physInfo ) override;
-	IPhysicsShape*                    LoadShape( const std::string& path, PhysShapeType shapeType ) override;
+
+	IPhysicsShape*                    LoadShape( const char* path, PhysShapeType shapeType ) override;
+	IPhysicsShape*                    LoadShape( const char* path, s64 pathLen, PhysShapeType shapeType ) override;
+
 	void                              DestroyShape( IPhysicsShape* body ) override;
 
 	IPhysicsObject*                   CreateObject( IPhysicsShape* spShape, const PhysicsObjectInfo& physInfo ) override;
