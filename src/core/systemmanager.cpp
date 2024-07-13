@@ -263,7 +263,7 @@ bool Mod_InitSystem( AppModule_t& srModule )
 	// Dumb, find the AppLoadedModule_t struct we made so can initialize it
 	for ( LoadedSystem_t& loadedSystem : gLoadedSystems )
 	{
-		if ( strcmp( loadedSystem.apName, srModule.apInterfaceName ) == 0 )
+		if ( ch_str_equals( loadedSystem.apName, srModule.apInterfaceName ) )
 		{
 			return Mod_InitSystem( loadedSystem );
 		}
@@ -284,7 +284,7 @@ EModLoadError Mod_LoadAndInitSystem( AppModule_t& srModule )
 	// Dumb, find the AppLoadedModule_t struct we made so can initialize it
 	for ( LoadedSystem_t& loadedSystem : gLoadedSystems )
 	{
-		if ( strcmp( loadedSystem.apName, srModule.apInterfaceName ) == 0 )
+		if ( ch_str_equals( loadedSystem.apName, srModule.apInterfaceName ) )
 		{
 			Mod_InitSystem( loadedSystem );
 			return EModLoadError_Success;
@@ -316,9 +316,12 @@ void* Mod_GetInterface( const char* spName, size_t sVersion )
 		return nullptr;
 	}
 
+	u64 searchNameLen = strlen( spName );
+
 	for ( const auto& [ interface, module ] : gInterfaces )
 	{
-		if ( strcmp( interface->apName, spName ) != 0 )
+		u64 nameLen = strlen( spName );
+		if ( !ch_str_equals( interface->apName, nameLen, spName, searchNameLen ) )
 		{
 			continue;
 		}

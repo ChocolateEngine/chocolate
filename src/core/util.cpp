@@ -47,7 +47,7 @@ bool ch_strcmplen( size_t sLenA, char* spA, size_t sLenB, char* spB )
 		return false;
 
 	// finally, do the string comparison
-	return strncmp( spA, spB, sLenA ) == 0;
+	return ch_str_equals( spA, spB, sLenA );
 }
 
 
@@ -62,7 +62,7 @@ bool ch_strcmplen( std::string_view sA, size_t sLenB, char* spB )
 		return false;
 
 	// finally, do the string comparison
-	return strncmp( sA.data(), spB, sLenB ) == 0;
+	return ch_str_equals( sA.data(), spB, sLenB );
 }
 
 

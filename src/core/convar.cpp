@@ -58,19 +58,7 @@ bool Con_RegisterConVar_Base( ConVarData_t** conVarDataIn, const char* spName, c
 
 	if ( spDesc )
 	{
-		// Check if this is null-terminated
-		size_t descLen = strlen( spDesc );
-		if ( descLen > 0 && spDesc[ descLen - 1 ] != '\0' )
-		{
-			// Log_WarnF( gConsoleChannel, "ConVar Description not null-terminated: %s\n", spName );
-			const char* strings[] = { spDesc, "\0" };
-			size_t      strLens[] = { descLen, 1 };
-			Con_GetConVarDesc()[ spName ] = ch_str_concat( 2, strings, strLens );
-		}
-		else
-		{
-			Con_GetConVarDesc()[ spName ] = ch_str_copy( spDesc );
-		}
+		Con_GetConVarDesc()[ spName ] = ch_str_copy( spDesc );
 	}
 	else
 	{

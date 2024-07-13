@@ -60,6 +60,11 @@ extern "C"
 		Core_DestroyAppInfo();
 		//Thread_Shutdown();
 
+		FileSys_Shutdown();
+
+		// shutdown sdl
+		SDL_Quit();
+
 		Args_Shutdown();
 
 		// Check if all memory is freed
@@ -155,7 +160,7 @@ static const char* Args_RegisterString( Arg_t& srArg, const char* sDefault )
 	{
 		for ( auto& name : srArg.aNames )
 		{
-			if ( ch_str_equals( gArgV[ i ].data, gArgV[ i ].size, name ) )
+			if ( ch_str_equals( gArgV[ i ], name ) )
 			{
 				if ( i + 1 >= gArgC )
 				{
@@ -183,7 +188,7 @@ static int Args_RegisterInt( Arg_t& srArg, int sDefault )
 	{
 		for ( auto& name : srArg.aNames )
 		{
-			if ( ch_str_equals( gArgV[ i ].data, gArgV[ i ].size, name ) )
+			if ( ch_str_equals( gArgV[ i ], name ) )
 			{
 				if ( i + 1 >= gArgC )
 				{
@@ -212,7 +217,7 @@ static float Args_RegisterFloat( Arg_t& srArg, float sDefault )
 	{
 		for ( auto& name : srArg.aNames )
 		{
-			if ( ch_str_equals( gArgV[ i ].data, gArgV[ i ].size, name ) )
+			if ( ch_str_equals( gArgV[ i ], name ) )
 			{
 				if ( i + 1 >= gArgC )
 				{
@@ -452,7 +457,7 @@ ch_string_auto Args_GetRegisteredPrint( const Arg_t* spArg )
 
 		case EArgType_String:
 			msg = ch_str_concat( msg.data, 3, msg.data, ANSI_CLR_GREEN " ", spArg->apString );
-			if ( spArg->apDefaultString && strcmp( spArg->apString, spArg->apDefaultString ) != 0 )
+			if ( spArg->apDefaultString && ch_str_equals( spArg->apString, spArg->apDefaultString ) )
 				msg = ch_str_concat( msg.data, 4, msg.data, ANSI_CLR_YELLOW " (", spArg->apDefaultString, " default)" );
 			break;
 
@@ -514,22 +519,14 @@ void Args_Init( int argc, char* argv[] )
 		if ( !argv[ i ] )
 			break;
 
-		gArgV[ i ] = ch_str_create( argv[ i ] );
-
-		if ( !gArgV[ i ].data )
-		{
-			Log_Fatal( "Failed to convert command line arguments to multi-byte!" );
-			break;
-		}
+		gArgV[ i ].data = argv[ i ];
+		gArgV[ i ].size = strlen( argv[ i ] );
 	}
 }
 
 
 void Args_Shutdown()
 {
-	for ( int i = 0; i < gArgC; i++ )
-		ch_str_free( gArgV[ i ].data );
-
 	delete[] gArgV;
 	gArgV = nullptr;
 	gArgC = 0;
@@ -554,7 +551,7 @@ bool Args_Find( const char* search, s32 len )
 		return false;
 
 	for ( int i = 0; i < gArgC; i++ )
-		if ( ch_str_equals( gArgV[ i ].data, gArgV[ i ].size, search, len ) )
+		if ( ch_str_equals( gArgV[ i ], search, len ) )
 			return true;
 
 	return false;
@@ -633,7 +630,7 @@ bool Args_GetValueNext( int& i, const char* search, ch_string& ret )
 
 	for ( ; i < gArgC; i++ )
 	{
-		if ( ch_str_equals( gArgV[ i ].data, search, searchLen ) )
+		if ( ch_str_equals( gArgV[ i ], search, searchLen ) )
 		{
 			if ( i == -1 || i + 1 > gArgC )
 				return false;

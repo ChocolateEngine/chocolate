@@ -204,7 +204,7 @@ bool VK_CheckValidationLayerSupport()
 
 		for ( const auto& layerProperties : availableLayers )
 		{
-			if ( strcmp( layerName, layerProperties.layerName ) == 0 )
+			if ( ch_str_equals( layerName, layerProperties.layerName ) )
 			{
 				layerFound = true;
 				break;
@@ -235,7 +235,7 @@ bool VK_CheckDebugUtilsSupport()
 
 	for ( const auto& layerProperties : availableLayers )
 	{
-		if ( strcmp( VK_EXT_DEBUG_UTILS_EXTENSION_NAME, layerProperties.layerName ) == 0 )
+		if ( ch_str_equals( VK_EXT_DEBUG_UTILS_EXTENSION_NAME, layerProperties.layerName ) )
 		{
 			return true;
 		}
