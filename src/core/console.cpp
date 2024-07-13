@@ -860,18 +860,81 @@ void Con_Shutdown()
 {
 	gArchiveCallbacks.clear();
 
-	// for ( ConVarBase* current : Con_GetConVars() )
-	// {
-	// 	if ( typeid( *current ) == typeid( ConVar ) )
-	// 	{
-	// 		// mark data as nullptr
-	// 		ConVar* cvar = static_cast< ConVar* >( current );
-	// 		cvar->apData = nullptr;
-	// 	}
-	// }
+	// Free ConVar Data
+	// ChVector< ConCommand* >& concmds = Con_GetConCommands();
+	auto&                    cvarMap = Con_GetConVarMap();
+	auto&                    descs   = Con_GetConVarDesc();
 
-	// free convar data
-	printf( " *** FREE CONVAR DATA !!!!!!!!\n" );
+	// Free ConVar Data
+	for ( auto& [ cvarName, cvarData ] : cvarMap )
+	{
+		switch ( cvarData->aType )
+		{
+			case EConVarType_Bool:
+			{
+				free( cvarData->aBool.apData );
+				break;
+			}
+
+			case EConVarType_Int:
+			{
+				free( cvarData->aInt.apData );
+				break;
+			}
+
+			case EConVarType_Float:
+			{
+				free( cvarData->aFloat.apData );
+				break;
+			}
+
+			case EConVarType_String:
+			{
+				ch_str_free( *cvarData->aString.apData );
+				ch_str_free( (char*)cvarData->aString.aDefaultData );
+				break;
+			}
+
+			case EConVarType_RangeInt:
+			{
+				free( cvarData->aRangeInt.apData );
+				break;
+			}
+
+			case EConVarType_RangeFloat:
+			{
+				free( cvarData->aRangeFloat.apData );
+				break;
+			}
+
+			case EConVarType_Vec2:
+			{
+				free( cvarData->aVec2.apData );
+				break;
+			}
+			
+			case EConVarType_Vec3:
+			{
+				free( cvarData->aVec3.apData );
+				break;
+			}
+
+			case EConVarType_Vec4:
+			{
+				free( cvarData->aVec4.apData );
+				break;
+			}
+		}
+
+		delete cvarData;
+	}
+
+	// Free ConVar Descriptions
+	for ( auto& [ cvarName, desc ] : descs )
+	{
+		if ( desc.data )
+			ch_str_free( desc.data );
+	}
 }
 
 
@@ -906,8 +969,8 @@ void Con_Archive( const char* spFile )
 	if ( spFile )
 	{
 		filename = spFile;
-		ch_string filenameExt = FileSys_GetFileExt( filename.data(), filename.size() );
-		if ( ch_str_equals( filenameExt.data, filenameExt.size, "cfg" ) )
+		ch_string_auto filenameExt = FileSys_GetFileExt( filename.data(), filename.size() );
+		if ( ch_str_equals( filenameExt, "cfg" ) )
 		{
 			filename += ".cfg";
 		}
@@ -1467,8 +1530,6 @@ CONCMD_VA( host_writeconfig, "Write a config (can optionally specify a path) con
 #if 1
 CONCMD_VA( con_cvar_mem_usage, "Print the memory usage usage of all convars" )
 {
-	size_t      size    = 0;
-
 	Log_MsgF( gConsoleChannel, "sizeof( ConVarData_t ): %zu\n", sizeof( ConVarData_t ) );
 	Log_MsgF( gConsoleChannel, "sizeof( ConCommand ):   %zu\n", sizeof( ConCommand ) );
 
@@ -1476,9 +1537,9 @@ CONCMD_VA( con_cvar_mem_usage, "Print the memory usage usage of all convars" )
 	size_t cvarHeapMemory   = 0;
 	size_t cvarStringMemory = 0;
 
-	size_t cmdHeapMemory    = 0;
-	size_t cmdStackMemory   = 0;
-	size_t cmdStringMemory  = 0;
+	//size_t cmdHeapMemory    = 0;
+	//size_t cmdStackMemory   = 0;
+	//size_t cmdStringMemory  = 0;
 
 	for ( auto& [ cvarName, cvarData ] : Con_GetConVarMap() )
 	{
