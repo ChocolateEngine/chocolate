@@ -557,18 +557,18 @@ static void ParseMaterialVarArray( VEC& value, JsonObject_t& cur )
 {
 	for ( int ii = 0; ii < value.length(); ii++ )
 	{
-		switch ( cur.aObjects[ ii ].aType )
+		switch ( cur.aObjects.apData[ ii ].aType )
 		{
 			default:
-				Log_ErrorF( "Invalid Material Array Value Type: %s, only accepts Int, Double, True, or False\n", Json_TypeToStr( cur.aObjects[ ii ].aType ) );
+				Log_ErrorF( "Invalid Material Array Value Type: %s, only accepts Int, Double, True, or False\n", Json_TypeToStr( cur.aObjects.apData[ ii ].aType ) );
 				break;
 
 			case EJsonType_Int:
-				value[ ii ] = cur.aObjects[ ii ].aInt;
+				value[ ii ] = cur.aObjects.apData[ ii ].aInt;
 				break;
 
 			case EJsonType_Double:
-				value[ ii ] = cur.aObjects[ ii ].aDouble;
+				value[ ii ] = cur.aObjects.apData[ ii ].aDouble;
 				break;
 
 			case EJsonType_True:
@@ -624,11 +624,14 @@ bool Graphics_ParseMaterial( const ch_string& srName, const std::string& srPath,
 
 	Handle        shader = InvalidHandle;
 
-	for ( size_t i = 0; i < root.aObjects.size(); i++ )
+	for ( size_t i = 0; i < root.aObjects.aCount; i++ )
 	{
-		JsonObject_t& cur = root.aObjects[ i ];
+		JsonObject_t& cur = root.aObjects.apData[ i ];
 
-		if ( cur.apName && strcmp( cur.apName, "shader" ) == 0 )
+		// dumb
+		std::string   nameString( cur.aName.data, cur.aName.size );
+
+		if ( cur.aName.data && ch_str_equals( cur.aName, "shader", 6 ) )
 		{
 			if ( shader != InvalidHandle )
 			{
@@ -643,10 +646,10 @@ bool Graphics_ParseMaterial( const ch_string& srName, const std::string& srPath,
 				return false;
 			}
 
-			shader = gGraphics.GetShader( cur.apString );
+			shader = gGraphics.GetShader( cur.aString.data );
 			if ( shader == InvalidHandle )
 			{
-				Log_ErrorF( gLC_ClientGraphics, "Failed to find Material Shader: %s - \"%s\"\n", cur.apString, srPath.c_str() );
+				Log_ErrorF( gLC_ClientGraphics, "Failed to find Material Shader: %s - \"%s\"\n", cur.aString.data, srPath.c_str() );
 				Json_Free( &root );
 				return false;
 			}
@@ -694,40 +697,40 @@ bool Graphics_ParseMaterial( const ch_string& srName, const std::string& srPath,
 				// so we need to check if it's a number or bool
 
 				// Check if it's a number
-				if ( cur.apString[0] >= '0' && cur.apString[0] <= '9' )
+				if ( cur.aString.data[ 0 ] >= '0' && cur.aString.data[ 0 ] <= '9' )
 				{
 					// Check if it's a float
-					if ( strchr( cur.apString, '.' ) )
+					if ( strchr( cur.aString.data, '.' ) )
 					{
 						float value = 0.f;
-						if ( ToFloat( cur.apString, value ) )
+						if ( ToFloat( cur.aString.data, value ) )
 						{
-							float value = static_cast< float >( atof( cur.apString ) );
-							gGraphics.Mat_SetVar( handle, cur.apName, value );
+							float value = static_cast< float >( atof( cur.aString.data ) );
+							gGraphics.Mat_SetVar( handle, nameString, value );
 							break;
 						}
 					}
 
 					// Check if it's an int
 					long value = 0;
-					if ( ToLong3( cur.apString, value ) )
+					if ( ToLong3( cur.aString.data, value ) )
 					{
-						gGraphics.Mat_SetVar( handle, cur.apName, (int)value );
+						gGraphics.Mat_SetVar( handle, nameString, (int)value );
 						break;
 					}
 				}
 
 				// Check if it's a bool
 				// TODO: use the convar bool alias list
-				if ( strcmp( cur.apString, "true" ) == 0 )
+				if ( ch_str_equals( cur.aString, "true", 4 ) )
 				{
-					gGraphics.Mat_SetVar( handle, cur.apName, true );
+					gGraphics.Mat_SetVar( handle, nameString, true );
 					break;
 				}
 
-				if ( strcmp( cur.apString, "false" ) == 0 )
+				if ( ch_str_equals( cur.aString, "false", 5 ) )
 				{
-					gGraphics.Mat_SetVar( handle, cur.apName, false );
+					gGraphics.Mat_SetVar( handle, nameString, false );
 					break;
 				}
 
@@ -736,9 +739,9 @@ bool Graphics_ParseMaterial( const ch_string& srName, const std::string& srPath,
 				createData.aUsage  = EImageUsage_Sampled;
 				createData.aFilter = EImageFilter_Linear;
 
-				std::string texturePath = cur.apString;
+				std::string texturePath( cur.aString.data, cur.aString.size );
 
-				if ( FileSys_IsRelative( cur.apString ) )
+				if ( FileSys_IsRelative( cur.aString.data, cur.aString.size ) )
 				{
 					if ( !texturePath.ends_with( ".ktx" ) )
 						texturePath += ".ktx";
@@ -753,7 +756,7 @@ bool Graphics_ParseMaterial( const ch_string& srName, const std::string& srPath,
 				}
 
 				Handle texture     = InvalidHandle;
-				gGraphics.Mat_SetVar( handle, cur.apName, render->LoadTexture( texture, texturePath, createData ) );
+				gGraphics.Mat_SetVar( handle, nameString, render->LoadTexture( texture, texturePath, createData ) );
 				break;
 			}
 
@@ -762,47 +765,47 @@ bool Graphics_ParseMaterial( const ch_string& srName, const std::string& srPath,
 				// integer is here is an int64_t
 				if ( cur.aInt > INT_MAX )
 				{
-					Log_WarnF( gLC_ClientGraphics, "Overflowed Int Value for key \"%s\", clamping to INT_MAX - \"%s\"\n", cur.apName, srPath.c_str() );
-					gGraphics.Mat_SetVar( handle, cur.apName, INT_MAX );
+					Log_WarnF( gLC_ClientGraphics, "Overflowed Int Value for key \"%s\", clamping to INT_MAX - \"%s\"\n", cur.aName.data, srPath.c_str() );
+					gGraphics.Mat_SetVar( handle, nameString, INT_MAX );
 					break;
 				}
 				else if ( cur.aInt < INT_MIN )
 				{
-					Log_WarnF( gLC_ClientGraphics, "Underflowed Int Value for key \"%s\", clamping to INT_MIN - \"%s\"\n", cur.apName, srPath.c_str() );
-					gGraphics.Mat_SetVar( handle, cur.apName, INT_MIN );
+					Log_WarnF( gLC_ClientGraphics, "Underflowed Int Value for key \"%s\", clamping to INT_MIN - \"%s\"\n", cur.aName.data, srPath.c_str() );
+					gGraphics.Mat_SetVar( handle, nameString, INT_MIN );
 					break;
 				}
 
-				gGraphics.Mat_SetVar( handle, cur.apName, static_cast< int >( cur.aInt ) );
+				gGraphics.Mat_SetVar( handle, nameString, static_cast< int >( cur.aInt ) );
 				break;
 			}
 
 			// double
 			case EJsonType_Double:
 			{
-				gGraphics.Mat_SetVar( handle, cur.apName, static_cast< float >( cur.aDouble ) );
+				gGraphics.Mat_SetVar( handle, nameString, static_cast< float >( cur.aDouble ) );
 				break;
 			}
 
 			case EJsonType_True:
 			{
-				gGraphics.Mat_SetVar( handle, cur.apName, true );
+				gGraphics.Mat_SetVar( handle, nameString, true );
 				break;
 			}
 
 			case EJsonType_False:
 			{
-				gGraphics.Mat_SetVar( handle, cur.apName, false );
+				gGraphics.Mat_SetVar( handle, nameString, false );
 				break;
 			}
 
 			case EJsonType_Array:
 			{
-				switch ( cur.aObjects.size() )
+				switch ( cur.aObjects.aCount )
 				{
 					default:
 					{
-						Log_ErrorF( "Invalid Material Vector Type: Has %d elements, only accepts 2, 3, or 4 elements\n", cur.aObjects.size() );
+						Log_ErrorF( "Invalid Material Vector Type: Has %d elements, only accepts 2, 3, or 4 elements\n", cur.aObjects.aCount );
 						break;
 					}
 
@@ -810,7 +813,7 @@ bool Graphics_ParseMaterial( const ch_string& srName, const std::string& srPath,
 					{
 						glm::vec2 value = {};
 						ParseMaterialVarArray( value, cur );
-						gGraphics.Mat_SetVar( handle, cur.apName, value );
+						gGraphics.Mat_SetVar( handle, cur.aName.data, value );
 						break;
 					}
 
@@ -818,7 +821,7 @@ bool Graphics_ParseMaterial( const ch_string& srName, const std::string& srPath,
 					{
 						glm::vec3 value = {};
 						ParseMaterialVarArray( value, cur );
-						gGraphics.Mat_SetVar( handle, cur.apName, value );
+						gGraphics.Mat_SetVar( handle, cur.aName.data, value );
 						break;
 					}
 
@@ -826,7 +829,7 @@ bool Graphics_ParseMaterial( const ch_string& srName, const std::string& srPath,
 					{
 						glm::vec4 value = {};
 						ParseMaterialVarArray( value, cur );
-						gGraphics.Mat_SetVar( handle, cur.apName, value );
+						gGraphics.Mat_SetVar( handle, cur.aName.data, value );
 						break;
 					}
 				}
@@ -842,29 +845,6 @@ bool Graphics_ParseMaterial( const ch_string& srName, const std::string& srPath,
 }
 
 
-// static ch_string ParseMaterialNameFromPath( const std::string& path )
-// {
-// 	std::string output;
-// 
-// 	// Remove .cmt from the extension, no need for this
-// 	if ( path.ends_with( ".cmt" ) )
-// 	{
-// 		output = path.substr( 0, path.size() - 4 );
-// 	}
-// 	else
-// 	{
-// 		output = path;
-// 	}
-// 
-// 	// Normalize Path Separators
-// 	std::replace( output.begin(), output.end(), '\\', '/' );
-// 
-// 	// lazy
-// 	ch_string output_ch = ch_str_copy( output.data(), output.size() );
-// 	return output_ch;
-// }
-
-
 static ch_string ParseMaterialNameFromPath( const char* path, s32 len )
 {
 	ch_string path_no_ext;
@@ -875,25 +855,20 @@ static ch_string ParseMaterialNameFromPath( const char* path, s32 len )
 	if ( len == 0 )
 		return path_no_ext;
 
-	bool alloc = false;
+	path_no_ext.data = (char*)path;
 
 	// Remove .cmt from the extension, no need for this
 	if ( ch_str_ends_with( path, len, ".cmt", 4 ) )
 	{
-		alloc       = true;
-		path_no_ext = ch_str_copy( path, len - 4 );
+		path_no_ext.size = len - 4;
 	}
 	else
 	{
-		path_no_ext.data = (char*)path;
 		path_no_ext.size = len;
 	}
 
 	// Normalize Path Separators
 	ch_string output = FileSys_CleanPath( path_no_ext.data, path_no_ext.size );
-
-	if ( alloc )
-		ch_str_free( path_no_ext.data );
 
 	return output;
 }
@@ -1054,7 +1029,16 @@ CONCMD( r_dump_materials )
 	u32 i = 0;
 	for ( auto& [ name, mat ] : gMaterialNames )
 	{
-		Log_MsgF( gLC_ClientGraphics, "%zd - \"%s\"\n", i++, name.data );
+		// get material data for ref count
+		MaterialData_t* data = nullptr;
+
+		if ( !gMaterials.Get( mat, &data ) )
+		{
+			Log_ErrorF( gLC_ClientGraphics, "Material \"%s\" - \"%zd\" not found in gMaterials\n", name.data, mat );
+			continue;
+		}
+
+		Log_MsgF( gLC_ClientGraphics, "%zd - \"%s\" - %d Ref Count\n", i++, name.data, data->aRefCount );
 	}
 }
 

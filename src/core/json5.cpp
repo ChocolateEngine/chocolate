@@ -106,15 +106,16 @@ static bool Json_ValidQuotelessKey( char c )
 }
 
 
-static EJsonError Json_ParseQuote( const char*& str, char endChar, char*& output )
+static EJsonError Json_ParseQuote( const char*& str, char endChar, ch_string& output )
 {
 	str++;
-	output = (char*)malloc( STRING_MALLOC_SIZE ); // preallocate chars
+	output.data = (char*)malloc( STRING_MALLOC_SIZE ); // preallocate chars
+	output.size = 0;
 
-	if ( output == nullptr )
+	if ( output.data == nullptr )
 		return EJsonError_OutOfMemory;
 
-	memset( output, 0, STRING_MALLOC_SIZE );
+	memset( output.data, 0, STRING_MALLOC_SIZE );
 
 	// const char* base = str;
 	int i = 0;
@@ -126,17 +127,17 @@ static EJsonError Json_ParseQuote( const char*& str, char endChar, char*& output
 
 		if ( i % STRING_MALLOC_SIZE == 0 )
 		{
-			auto* tmp = (char*)realloc( output, STRING_MALLOC_SIZE * ( j + 1 ) );
+			auto* tmp = (char*)realloc( output.data, STRING_MALLOC_SIZE * ( j + 1 ) );
 			if ( tmp == nullptr )
 			{
-				free( output );
+				free( output.data );
 				return EJsonError_OutOfMemory;
 			}
 
 			memset( tmp, 0, ( STRING_MALLOC_SIZE * ( j + 1 ) ) - ( STRING_MALLOC_SIZE * j ) );
 
 			j++;
-			output = tmp;
+			output.data = tmp;
 		}
 
 		if ( *str == '\\' )
@@ -144,34 +145,39 @@ static EJsonError Json_ParseQuote( const char*& str, char endChar, char*& output
 			str++;
 
 			if ( *str == 'n' )
-				output[ i ] = '\n';
+				output.data[ i ] = '\n';
 			else if ( *str == 't' )
-				output[ i ] = '\t';
+				output.data[ i ] = '\t';
 			else
-				output[ i ] = *str;
+				output.data[ i ] = *str;
 		}
 		else
 		{
-			output[ i ] = *str;
+			output.data[ i ] = *str;
 		}
 	}
 
 	str++;
-	auto* tmp = (char*)realloc( output, i+1 );
+	auto* tmp = (char*)realloc( output.data, i + 1 );
 
 	if ( tmp == nullptr )
 	{
-		free( output );
+		free( output.data );
 		return EJsonError_OutOfMemory;
 	}
 
-	output = tmp;
-	output[ i ] = '\0';
+	output.data = tmp;
+	output.size = i;
+	output.data[ i ] = '\0';
+
+	// add this string to the string list
+	ch_str_add( output );
+
 	return EJsonError_None;
 }
 
 
-static EJsonError Json_ParseString( const char*& str, char*& output, int* len = nullptr )
+static EJsonError Json_ParseString( const char*& str, ch_string& output )
 {
 	const char* base = str;
 
@@ -182,44 +188,46 @@ static EJsonError Json_ParseString( const char*& str, char*& output, int* len = 
 			return EJsonError_InvalidQuotelessKeyCharacter;
 	}
 
-	output = (char*)malloc( i + 1 );
+	output.data = (char*)malloc( i + 1 );
 
-	if ( output == nullptr )
+	if ( output.data == nullptr )
 		return EJsonError_OutOfMemory;
 
-	memset( output, 0, i + 1 );
+	memset( output.data, 0, i + 1 );
 
 	// output = const_cast< char* >( base );
-	strncpy( output, base, i );
-	output[ i ] = '\0';
+	strncpy( output.data, base, i );
+	output.data[ i ] = '\0';
+	output.size      = i;
 
-	if ( len )
-		*len = i;
+	// add this string to the string list
+	ch_str_add( output );
 
 	return EJsonError_None;
 }
 
 
-static EJsonError Json_ParseStringNoCheck( const char*& str, char*& output, int* len = nullptr )
+static EJsonError Json_ParseStringNoCheck( const char*& str, ch_string& output )
 {
 	const char* base = str;
 
 	int i = 0;
 	for ( ; !Json_IsWhitespace( *str ) && *str != ':' && *str != ',' && *str != ']' && *str != '}'; i++, str++ );
 
-	output = (char*)malloc( i + 1 );
+	output.data = (char*)malloc( i + 1 );
 
-	if ( output == nullptr )
+	if ( output.data == nullptr )
 		return EJsonError_OutOfMemory;
 
-	memset( output, 0, i + 1 );
+	memset( output.data, 0, i + 1 );
 
 	// output = const_cast< char* >( base );
-	strncpy( output, base, i );
-	output[ i ] = '\0';
+	strncpy( output.data, base, i );
+	output.data[ i ] = '\0';
+	output.size      = i;
 
-	if ( len )
-		*len = i;
+	// add this string to the string list
+	ch_str_add( output );
 
 	return EJsonError_None;
 }
@@ -283,6 +291,27 @@ static EJsonError Json_ParseNumber( const char*& str, JsonObject_t& srObj )
 }
 
 
+static JsonObject_t* Json_IncrementObjectList( JsonArray_t& data )
+{
+	JsonObject_t* tmp = (JsonObject_t*)realloc( data.apData, sizeof( JsonObject_t ) * ( data.aCount + 1 ) );
+
+	if ( tmp == nullptr )
+	{
+		free( data.apData );
+		return nullptr;
+	}
+
+	memset( tmp + data.aCount, 0, sizeof( JsonObject_t ) * 1 );
+
+	u64 index = data.aCount;
+
+	data.apData = tmp;
+	data.aCount++;
+
+	return &data.apData[ index ];
+}
+
+
 // --------------------------------------------------------------------------------------
 // Public Functions
 
@@ -304,6 +333,9 @@ EJsonError Json_Parse( JsonObject_t* spRoot, const char* spStr )
 
 	std::forward_list< JsonObject_t* > objStack;
 	objStack.push_front( spRoot );
+
+	memset( spRoot, 0, sizeof( JsonObject_t ) );
+
 	// int stackCount = 1;
 	// JsonObject_t* objStack = (JsonObject_t*)malloc( sizeof( JsonObject_t ) );
 	// objStack[0] = *spRoot;
@@ -413,7 +445,7 @@ EJsonError Json_Parse( JsonObject_t* spRoot, const char* spStr )
 		}
 
 
-		JsonObject_t& cur = objStack.front()->aObjects.emplace_back();
+		JsonObject_t* cur = Json_IncrementObjectList( objStack.front()->aObjects );
 
 		if ( objStack.front()->aType == EJsonType_Object )
 		{
@@ -422,7 +454,7 @@ EJsonError Json_Parse( JsonObject_t* spRoot, const char* spStr )
 				case '"':
 				case '\'':
 				{
-					if ( EJsonError err = Json_ParseQuote( spStr, c, cur.apName ) )
+					if ( EJsonError err = Json_ParseQuote( spStr, c, cur->aName ) )
 						return err;
 					break;
 				}
@@ -438,7 +470,7 @@ EJsonError Json_Parse( JsonObject_t* spRoot, const char* spStr )
 						return EJsonError_InvalidQuotelessKeyCharacter;
 					}
 
-					if ( EJsonError err = Json_ParseString( spStr, cur.apName ) )
+					if ( EJsonError err = Json_ParseString( spStr, cur->aName ) )
 						return err;
 
 					break;
@@ -475,56 +507,55 @@ EJsonError Json_Parse( JsonObject_t* spRoot, const char* spStr )
 			case '{':
 			{
 				spStr++;
-				cur.aType = EJsonType_Object;
+				cur->aType = EJsonType_Object;
 
-				objStack.push_front( &cur );
+				objStack.push_front( cur );
 
 				break;
 			}
 			case '[':
 			{
 				spStr++;
-				cur.aType = EJsonType_Array;
+				cur->aType = EJsonType_Array;
 
-				objStack.push_front( &cur );
+				objStack.push_front( cur );
 
 				break;
 			}
 			case '"':
 			case '\'':
 			{
-				if ( EJsonError err = Json_ParseQuote( spStr, c, cur.apString ) )
+				if ( EJsonError err = Json_ParseQuote( spStr, c, cur->aString ) )
 					return err;
 
-				cur.aType = EJsonType_String;
+				cur->aType = EJsonType_String;
 				break;
 			}
 			default:
 			{
 				if ( Json_IsNumber( c ) || c == '.' || c == '+' || c == '-' )
 				{
-					if ( EJsonError err = Json_ParseNumber( spStr, cur ) )
+					if ( EJsonError err = Json_ParseNumber( spStr, *cur ) )  // ---------------------------------------------------------- why is this a pointer?
 						return err;
 				}
 				
 				else
 				{
-					char* string;
-					int strLen = 0;
-					if ( EJsonError err = Json_ParseStringNoCheck( spStr, string, &strLen ) )
+					ch_string string;
+					if ( EJsonError err = Json_ParseStringNoCheck( spStr, string ) )
 						return err;
 
-					if ( strLen == 4 && strncmp( string, "true", 4 ) == 0 )
+					if ( ch_str_equals( string, "true", 4 ) )
 					{
-						cur.aType = EJsonType_True;
+						cur->aType = EJsonType_True;
 					}
-					else if ( strLen == 5 && strncmp( string, "false", 5 ) == 0 )
+					else if ( ch_str_equals( string, "false", 5 ) )
 					{
-						cur.aType = EJsonType_False;
+						cur->aType = EJsonType_False;
 					}
-					else if ( strLen == 4 && strncmp( string, "null", 4 ) == 0 )
+					else if ( ch_str_equals( string, "null", 4 ) )
 					{
-						cur.aType = EJsonType_Null;
+						cur->aType = EJsonType_Null;
 					}
 					else
 					{
@@ -556,39 +587,97 @@ EJsonError Json_Parse( JsonObject_t* spRoot, const char* spStr )
 
 void Json_Free( JsonObject_t* spRoot )
 {
-	std::vector< JsonObject_t* > objStack;
-	objStack.push_back( spRoot );
+	std::vector< JsonObject_t* > objList;
+	objList.push_back( spRoot );
 
+	// First, get all objects into one huge list
+	for ( size_t objIndex = 0; objIndex < objList.size(); objIndex++ )
+	{
+		// Does the top object have children?
+		if ( !( objList[ objIndex ]->aType == EJsonType_Object || objList[ objIndex ]->aType == EJsonType_Array ) )
+			continue;
+
+		// if ( ( objList[objIndex]->aType == EJsonType_Object || objList[objIndex]->aType == EJsonType_Array ) && objList[objIndex]->aObjects.aCount )
+		if ( objList[ objIndex ]->aObjects.aCount == 0 )
+			continue;
+
+		// put all children in the list and reserve memory for it
+		size_t j = objIndex;
+		objList.reserve( objList.size() + objList[j]->aObjects.aCount );
+		for ( size_t i = 0; i < objList[j]->aObjects.aCount; i++ )
+		{
+			objList.push_back( &objList[j]->aObjects.apData[ i ] );
+		}
+	}
+
+	// Now free all the objects
+	while ( !objList.empty() )
+	{
+		// If this is a string type, free it
+		if ( objList[objList.size() - 1]->aType == EJsonType_String )
+		{
+			ch_str_free( objList[objList.size() - 1]->aString.data );
+			objList[ objList.size() - 1 ]->aString.data = nullptr;
+			objList[ objList.size() - 1 ]->aString.size = 0;
+		}
+
+		// Free the name if it exists
+		if ( objList[objList.size() - 1]->aName.data )
+		{
+			ch_str_free( objList[ objList.size() - 1 ]->aName.data );
+			objList[ objList.size() - 1 ]->aName.data = nullptr;
+			objList[ objList.size() - 1 ]->aName.size = 0;
+		}
+
+		// pop the object off the stack
+		objList.pop_back();
+	}
+
+	#if 0
 	while ( !objStack.empty() )
 	{
-		if ( objStack[ objStack.size() - 1 ]->aType == EJsonType_Object && objStack[ objStack.size() - 1 ]->aObjects.size() )
+		// Does the top object have children?
+		if ( objStack[ objStack.size() - 1 ]->aType == EJsonType_Object && objStack[ objStack.size() - 1 ]->aObjects.aCount )
 		{
+			// push all children onto the stack and reserve memory for it
 			size_t j = objStack.size() - 1;
-			for ( size_t i = 0; i < objStack[j]->aObjects.size(); i++ )
+			objStack.reserve( objStack.size() + objStack[j]->aObjects.aCount );
+			for ( size_t i = 0; i < objStack[j]->aObjects.aCount; i++ )
 			{
-				objStack.push_back( &objStack[j]->aObjects[i] );
+				objStack.push_back( &objStack[j]->aObjects.apData[ i ] );
 			}
 
 			continue;
 		}
 
+		// If this is a string type, free it
 		if ( objStack[objStack.size() - 1]->aType == EJsonType_String )
 		{
-			free( objStack[objStack.size() - 1]->apString );
+			ch_free( objStack[objStack.size() - 1]->aString.data );
+			objStack[ objStack.size() - 1 ]->aString.data = nullptr;
+			objStack[ objStack.size() - 1 ]->aString.size = 0;
 		}
 
-		if ( objStack[objStack.size() - 1]->apName )
+		// Free the name if it exists
+		if ( objStack[objStack.size() - 1]->aName.data )
 		{
-			free( objStack[objStack.size() - 1]->apName );
+			ch_free( objStack[ objStack.size() - 1 ]->aName.data );
+			objStack[ objStack.size() - 1 ]->aName.data = nullptr;
+			objStack[ objStack.size() - 1 ]->aName.size = 0;
 		}
 
+		// pop the object off the stack
 		objStack.pop_back();
 
-		if ( objStack.size() && objStack[ objStack.size() - 1 ]->aType == EJsonType_Object && objStack[ objStack.size() - 1 ]->aObjects.size() )
+		// if the parent object has children, clear them
+		if ( objStack.size() && objStack[ objStack.size() - 1 ]->aType == EJsonType_Object && objStack[ objStack.size() - 1 ]->aObjects.aCount )
 		{
-			objStack[objStack.size() - 1]->aObjects.clear();
+			// was clear, uh
+			objStack[objStack.size() - 1]->aObjects.apData = nullptr;
+			objStack[objStack.size() - 1]->aObjects.aCount = 0;
 		}
 	}
+	#endif
 }
 
 

@@ -33,45 +33,34 @@ enum EJsonType : char
 	EJsonType_String,
 	EJsonType_Int,
 	EJsonType_Double,
-	// EJsonType_Bool,
 	EJsonType_False,
 	EJsonType_True,
 	EJsonType_Null,
 	EJsonType_Array,
 };
 
+
 struct JsonObject_t;
 
-// TODO: use this for arrays
-struct JsonArrayValue_t
-{
-	EJsonType aType  = EJsonType_Invalid;
 
-	union
-	{
-		// JsonObject_t* apObjects;
-		std::vector< JsonObject_t > aObjects{};  // REMOVE ME AND USE POINTERS - TAKES UP 32 BYTES !!!!!!!!!!!!!!!!
-		// JsonArrayValue_t* apArray;
-		int64_t       aInt;
-		double        aDouble;
-		char*         apString;
-	};
+struct JsonArray_t
+{
+	JsonObject_t* apData;
+	size_t        aCount;
 };
 
 
 struct JsonObject_t
 {
-	char*     apName = nullptr;
-	EJsonType aType  = EJsonType_Invalid;
+	ch_string aName;
+	EJsonType aType = EJsonType_Invalid;
 
 	union
 	{
-		// JsonObject_t* apObjects;
-		std::vector< JsonObject_t > aObjects{};  // REMOVE ME AND USE POINTERS - TAKES UP 32 BYTES !!!!!!!!!!!!!!!!
-		// JsonArrayValue_t* apArray;
-		int64_t           aInt;
+		JsonArray_t       aObjects;
+		s64               aInt;
 		double            aDouble;
-		char*             apString;
+		ch_string         aString;
 	};
 
 	JsonObject_t()

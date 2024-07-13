@@ -7,6 +7,17 @@
 #include "util.h"
 
 
+
+// TODO: (for ch_string)
+// one day when we have UTF-8 support, we'll need to know whether this is a UTF-8 string or not
+// using a different struct could work, and would have compiler errors making sure we don't mix them up
+// or we could use the last byte of the size to store the type, but that would be really annoying
+// as that would mean we need a function to access size and type separately
+// 
+// TODO UTF8: a lot of functions will expect UTF-8 strings, but how do we know if the input is UTF-8 or not?
+//
+
+
 #ifdef _DEBUG
 	#define CH_STRING_MEM_TRACKING 1
 #else
@@ -33,11 +44,6 @@ CORE_API ch_string ch_str_realloc( STR_FILE_LINE_DEF char* data, u64 len );
 CORE_API ch_string ch_str_realloc( STR_FILE_LINE_DEF char* data, const char* string );
 CORE_API ch_string ch_str_realloc( STR_FILE_LINE_DEF char* data, const char* string, u64 len );
 
-// Returns true if the string was reallocated, false if it wasn't, data is also empty if false
-// CORE_API bool ch_str_realloc( ch_string& data, u64 len );
-// CORE_API bool ch_str_realloc( ch_string& data, const char* string );
-// CORE_API bool ch_str_realloc( ch_string& data, const char* string, u64 len );
-
 // malloc a string with string formatting
 CORE_API ch_string ch_str_copy_f( STR_FILE_LINE_DEF const char* format, ... );
 CORE_API ch_string ch_str_copy_v( STR_FILE_LINE_DEF const char* format, va_list args );
@@ -46,17 +52,16 @@ CORE_API ch_string ch_str_realloc_f( STR_FILE_LINE_DEF char* data, const char* f
 CORE_API ch_string ch_str_realloc_v( STR_FILE_LINE_DEF char* data, const char* format, va_list args );
 
 // Concatinates a string together, pass in data to realloc that instead of allocating new memory
-// TODO: rename to ch_str_concat and ch_str_join
 CORE_API ch_string ch_str_concat( STR_FILE_LINE_DEF u64 count, const char** strings, char* data = nullptr );
-CORE_API ch_string ch_str_join( STR_FILE_LINE_DEF u64 count, const char** strings, const char* space = " ", char* data = nullptr );
-
+CORE_API ch_string ch_str_concat( STR_FILE_LINE_DEF u64 count, const ch_string* strings, char* data = nullptr );
 CORE_API ch_string ch_str_concat( STR_FILE_LINE_DEF u64 count, const char** strings, const u64* lengths, char* data = nullptr );
+
+CORE_API ch_string ch_str_join( STR_FILE_LINE_DEF u64 count, const char** strings, const char* space = " ", char* data = nullptr );
 CORE_API ch_string ch_str_join( STR_FILE_LINE_DEF u64 count, const char** strings, const u64* lengths, const char* space = " ", char* data = nullptr );
+CORE_API ch_string ch_str_join( STR_FILE_LINE_DEF u64 count, const ch_string* strings, const char* space = " ", char* data = nullptr );
 
 // hmm
 // CORE_API ch_string ch_str_concat( u64 count, const std::vector< const char* >& strings, const std::vector< u64 >& lengths, char* data = nullptr );
-CORE_API ch_string ch_str_concat( STR_FILE_LINE_DEF u64 count, const ch_string* strings, char* data = nullptr );
-CORE_API ch_string ch_str_join( STR_FILE_LINE_DEF u64 count, const ch_string* strings, const char* space = " ", char* data = nullptr );
 
 // data can be nullptr, if it is it will allocate new memory
 // if it isn't it will realloc that memory
@@ -69,10 +74,14 @@ CORE_API void      ch_str_free( char** strings, u64 count );
 CORE_API void      ch_str_free( ch_string* strings, u64 count );
 CORE_API void      ch_str_free( std::vector< ch_string >& files );
 
+// Adds a string to the list of strings allocated
+// This only does something when string memory tracking is enabled
 CORE_API void      ch_str_add( STR_FILE_LINE_DEF const char* string );
 CORE_API void      ch_str_add( STR_FILE_LINE_DEF const char* string, u64 size );
 CORE_API void      ch_str_add( STR_FILE_LINE_DEF const ch_string& string );
 
+// Removes a string from the list of strings allocated, does not free the memory
+// This only does something when string memory tracking is enabled
 CORE_API void      ch_str_remove( const char* string );
 
 // String equality functions
@@ -92,6 +101,9 @@ CORE_API bool      ch_str_equals( const ch_string_auto& str1, const char* str2, 
 
 CORE_API bool      ch_str_equals( const ch_string_auto& str1, const ch_string_auto& str2 );
 CORE_API bool      ch_str_equals( const ch_string& str1, const ch_string_auto& str2 );
+
+
+#define CH_STR_EQUALS_STATIC( str1, str2 ) ch_str_equals( str1, str2, sizeof( str2 ) - 1 )
 
 
 // Compare a string to a list of strings
@@ -267,18 +279,18 @@ CORE_API u64 ch_str_contains( const char* s, const char* find, u64 findLen );
 
 
 #if CH_STRING_MEM_TRACKING
-	#define ch_str_copy( ... )       ch_str_copy( STR_FILE_LINE __VA_ARGS__ )
-	#define ch_str_realloc( ... )     ch_str_realloc( STR_FILE_LINE __VA_ARGS__ )
+	#define ch_str_copy( ... )      ch_str_copy( STR_FILE_LINE __VA_ARGS__ )
+	#define ch_str_realloc( ... )   ch_str_realloc( STR_FILE_LINE __VA_ARGS__ )
 
-	#define ch_str_copy_f( ... )      ch_str_copy_f( STR_FILE_LINE __VA_ARGS__ )
-	#define ch_str_copy_v( ... )      ch_str_copy_v( STR_FILE_LINE __VA_ARGS__ )
+	#define ch_str_copy_f( ... )    ch_str_copy_f( STR_FILE_LINE __VA_ARGS__ )
+	#define ch_str_copy_v( ... )    ch_str_copy_v( STR_FILE_LINE __VA_ARGS__ )
 
-	#define ch_str_realloc_f( ... )    ch_str_realloc_f( STR_FILE_LINE __VA_ARGS__ )
-	#define ch_str_realloc_v( ... )    ch_str_realloc_v( STR_FILE_LINE __VA_ARGS__ )
+	#define ch_str_realloc_f( ... ) ch_str_realloc_f( STR_FILE_LINE __VA_ARGS__ )
+	#define ch_str_realloc_v( ... ) ch_str_realloc_v( STR_FILE_LINE __VA_ARGS__ )
 
-	#define ch_str_concat( ... ) ch_str_concat( STR_FILE_LINE __VA_ARGS__ )
-	#define ch_str_join( ... )   ch_str_join( STR_FILE_LINE __VA_ARGS__ )
+	#define ch_str_concat( ... )    ch_str_concat( STR_FILE_LINE __VA_ARGS__ )
+	#define ch_str_join( ... )      ch_str_join( STR_FILE_LINE __VA_ARGS__ )
 
-	#define ch_str_add( ... )    ch_str_add( STR_FILE_LINE __VA_ARGS__ )
+	#define ch_str_add( ... )       ch_str_add( STR_FILE_LINE __VA_ARGS__ )
 #endif
 

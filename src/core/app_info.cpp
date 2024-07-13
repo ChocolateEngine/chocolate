@@ -21,17 +21,19 @@ static bool Core_SetAppInfoString( char*& spDst, const char* spSrc )
 	if ( !spSrc )
 		return false;
 
-	size_t len  = strlen( spSrc );
-	void*  data = realloc( (void*)spDst, len * sizeof( char ) );
+	char* newData = ch_str_realloc( spDst, spSrc, strlen( spSrc ) ).data;
 
-	if ( data == nullptr )
+	if ( newData == nullptr )
 	{
 		Log_ErrorF( "Failed to allocate memory for string: %s\n", spSrc );
+		
+		if ( spDst )
+			ch_str_free( spDst );
+
 		return false;
 	}
 
-	memcpy( data, spSrc, len * sizeof( char ) );
-	spDst = static_cast< char* >( data );
+	spDst = newData;
 	return true;
 }
 
@@ -44,40 +46,40 @@ void Core_HandleSearchPathType( JsonObject_t& cur, ESearchPathType sType )
 		return;
 	}
 
-	for ( size_t j = 0; j < cur.aObjects.size(); j++ )
+	for ( size_t j = 0; j < cur.aObjects.aCount; j++ )
 	{
-		if ( cur.aObjects[ j ].aType != EJsonType_String )
+		if ( cur.aObjects.apData[ j ].aType != EJsonType_String )
 		{
 			Log_WarnF( "Invalid Value Type for \"binPaths\" array in app_info.json5: %s - Expected String\n", Json_TypeToStr( cur.aType ) );
 			continue;
 		}
 
-		FileSys_AddSearchPath( cur.aObjects[ j ].apString, -1, sType );
+		FileSys_AddSearchPath( cur.aObjects.apData[ j ].aString.data, cur.aObjects.apData[ j ].aString.size, sType );
 	}
 }
 
 
 bool Core_ParseSearchPaths( JsonObject_t& root )
 {
-	for ( size_t i = 0; i < root.aObjects.size(); i++ )
+	for ( size_t i = 0; i < root.aObjects.aCount; i++ )
 	{
-		JsonObject_t& cur = root.aObjects[ i ];
+		JsonObject_t& cur = root.aObjects.apData[ i ];
 
-		if ( strcmp( cur.apName, "binPaths" ) == 0 )
+		if ( ch_str_equals( cur.aName, "binPaths", 8 ) )
 		{
 			Core_HandleSearchPathType( cur, ESearchPathType_Binary );
 		}
-		else if ( strcmp( cur.apName, "paths" ) == 0 )
+		else if ( ch_str_equals( cur.aName, "paths", 5 ) )
 		{
 			Core_HandleSearchPathType( cur, ESearchPathType_Path );
 		}
-		else if ( strcmp( cur.apName, "sourceAssets" ) == 0 )
+		else if ( ch_str_equals( cur.aName, "sourceAssets", 12 ) )
 		{
 			Core_HandleSearchPathType( cur, ESearchPathType_SourceAssets );
 		}
 		else
 		{
-			Log_WarnF( "Unknown Search Path Key in app_info.json5: \"%s\"\n", cur.apName );
+			Log_WarnF( "Unknown Search Path Key in app_info.json5: \"%s\"\n", cur.aName.data );
 			continue;
 		}
 	}
@@ -140,11 +142,11 @@ bool Core_LoadAppInfo()
 		return false;
 	}
 
-	for ( size_t i = 0; i < root.aObjects.size(); i++ )
+	for ( size_t i = 0; i < root.aObjects.aCount; i++ )
 	{
-		JsonObject_t& cur = root.aObjects[ i ];
+		JsonObject_t& cur = root.aObjects.apData[ i ];
 
-		if ( strcmp( cur.apName, "name" ) == 0 )
+		if ( ch_str_equals( cur.aName, "name", 4 ) )
 		{
 			if ( cur.aType != EJsonType_String )
 			{
@@ -152,22 +154,18 @@ bool Core_LoadAppInfo()
 				continue;
 			}
 
-			size_t len  = strlen( cur.apString );
-			void*  data = realloc( (void*)gAppInfo.apName, ( len + 1 ) * sizeof( char ) );
+			gAppInfo.apName = ch_str_copy( cur.aString.data, cur.aString.size ).data;
 
-			if ( data == nullptr )
+			if ( gAppInfo.apName == nullptr )
 			{
-				Log_ErrorF( "Failed to allocate memory for \"name\" value: %s\n", cur.apString );
+				Log_ErrorF( "Failed to allocate memory for \"name\" value: %s\n", cur.aString.data );
 				Json_Free( &root );
 				return false;
 			}
 
-			memcpy( data, cur.apString, len * sizeof( char ) );
-			gAppInfo.apName = static_cast< char* >( data );
-			gAppInfo.apName[ len ] = '\0';
 			continue;
 		}
-		else if ( strcmp( cur.apName, "windowTitle" ) == 0 )
+		else if ( ch_str_equals( cur.aName, "windowTitle", 11 ) )
 		{
 			if ( cur.aType != EJsonType_String )
 			{
@@ -175,22 +173,18 @@ bool Core_LoadAppInfo()
 				continue;
 			}
 
-			size_t len  = strlen( cur.apString );
-			void*  data = realloc( (void*)gAppInfo.apWindowTitle, ( len + 1 ) * sizeof( char ) );
+			gAppInfo.apWindowTitle = ch_str_copy( cur.aString.data, cur.aString.size ).data;
 
-			if ( data == nullptr )
+			if ( gAppInfo.apWindowTitle == nullptr )
 			{
-				Log_ErrorF( "Failed to allocate memory for \"windowTitle\" value: %s\n", cur.apString );
+				Log_ErrorF( "Failed to allocate memory for \"windowTitle\" value: %s\n", cur.aString.data );
 				Json_Free( &root );
 				return false;
 			}
 
-			memcpy( data, cur.apString, len * sizeof( char ) );
-			gAppInfo.apWindowTitle = static_cast< char* >( data );
-			gAppInfo.apWindowTitle[ len ] = '\0';
 			continue;
 		}
-		else if ( strcmp( cur.apName, "searchPaths" ) == 0 )
+		else if ( ch_str_equals( cur.aName, "searchPaths", 11 ) )
 		{
 			if ( cur.aType != EJsonType_Object )
 			{
@@ -207,7 +201,7 @@ bool Core_LoadAppInfo()
 		}
 		else
 		{
-			Log_WarnF( "Unknown Key in app_info.json5: \"%s\"\n", cur.apName );
+			Log_WarnF( "Unknown Key in app_info.json5: \"%s\"\n", cur.aName );
 			continue;
 		}
 	}
@@ -244,10 +238,10 @@ bool Core_LoadAppInfo()
 void Core_DestroyAppInfo()
 {
 	if ( gAppInfo.apName )
-		free( (void*)gAppInfo.apName );
+		ch_str_free( gAppInfo.apName );
 
 	if ( gAppInfo.apWindowTitle )
-		free( (void*)gAppInfo.apWindowTitle );
+		ch_str_free( gAppInfo.apWindowTitle );
 
 	gAppInfo.apName = nullptr;
 	gAppInfo.apWindowTitle = nullptr;
@@ -264,11 +258,11 @@ bool Core_AddAppInfo( const std::string& appPath )
 
 	FileSys_SetAppPathMacro( appPath.data(), appPath.size() );
 
-	for ( size_t i = 0; i < root.aObjects.size(); i++ )
+	for ( size_t i = 0; i < root.aObjects.aCount; i++ )
 	{
-		JsonObject_t& cur = root.aObjects[ i ];
+		JsonObject_t& cur = root.aObjects.apData[ i ];
 
-		if ( strcmp( cur.apName, "searchPaths" ) == 0 )
+		if ( ch_str_equals( cur.aName, "searchPaths", 11 ) )
 		{
 			if ( cur.aType != EJsonType_Object )
 			{
@@ -303,14 +297,14 @@ void Core_ReloadSearchPaths()
 	for ( const std::string& appPath : gAppInfoPaths )
 	{
 		JsonObject_t root;
-		if ( !Core_GetAppInfoJson( root, "" ) )
+		if ( !Core_GetAppInfoJson( root, appPath ) )
 			return;
 
-		for ( size_t i = 0; i < root.aObjects.size(); i++ )
+		for ( size_t i = 0; i < root.aObjects.aCount; i++ )
 		{
-			JsonObject_t& cur = root.aObjects[ i ];
+			JsonObject_t& cur = root.aObjects.apData[ i ];
 
-			if ( strcmp( cur.apName, "searchPaths" ) == 0 )
+			if ( ch_str_equals( cur.aName, "searchPaths", 11 ) )
 			{
 				if ( cur.aType != EJsonType_Object )
 				{
