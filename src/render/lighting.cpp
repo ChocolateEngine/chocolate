@@ -738,8 +738,8 @@ void Graphics_DestroyLights()
 	for ( Light_t* light : gDestroyLights )
 		Graphics_FreeLightSlot( light );
 	
-	for ( Light_t* light : gLights )
-		Graphics_FreeLightSlot( light );
+	while ( gLights.size() )
+		Graphics_FreeLightSlot( gLights[ 0 ] );
 
 	gDestroyLights.clear();
 	gLights.clear();
