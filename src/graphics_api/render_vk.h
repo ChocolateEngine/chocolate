@@ -312,20 +312,6 @@ VkSampleCountFlagBits                 VK_GetMSAASamples();
 
 const char*                           VK_ObjectTypeStr( VkObjectType type );
 
-// mainly used for allocating names for vulkan objects
-// char*                                 VK_AllocString( const char* format );
-// char*                                 VK_AllocString( const char* format, size_t len );
-// char*                                 VK_AllocStringF( const char* format, ... );
-
-ch_string                             VK_AllocString( const char* format );
-ch_string                             VK_AllocString( const char* format, u64 len );
-ch_string                             VK_AllocStringF( const char* format, ... );
-
-void                                  VK_FreeString( char* string );
-// void                                  VK_FreeString( char* string, u64 len );
-void                                  VK_FreeString( ch_string& string );
-void                                  VK_FreeStrings();
-
 // --------------------------------------------------------------------------------------
 // Debug Helpers
 

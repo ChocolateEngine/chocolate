@@ -65,9 +65,6 @@ GraphicsAPI_t                                            gGraphicsAPIData;
 // debug thing
 size_t                                                   gTotalBufferCopyPerFrame = 0;
 
-// allocated strings
-ChVector< char* >                                        gAllocatedStrings;
-
 // HACK HACK HACK HACK
 // VULKAN NEEDS THE SURFACE BEFORE WE CREATE A DEVICE
 VkSurfaceKHR                                             gSurfaceHack = VK_NULL_HANDLE;
@@ -125,100 +122,6 @@ void VK_DumpCheckpoints()
 		Log_DevF( gLC_Render, 1, "NV CHECKPOINT: stage %08x name %s\n", cp.stage, cp.pCheckpointMarker ? static_cast< const char* >( cp.pCheckpointMarker ) : "??" );
 	}
 #endif
-}
-
-
-ch_string VK_AllocString( const char* format )
-{
-	ch_string string = ch_str_copy( format );
-
-	if ( string.data == nullptr )
-		return string;
-
-	gAllocatedStrings.push_back( string.data );
-	return string;
-}
-
-
-ch_string VK_AllocString( const char* format, size_t len )
-{
-	ch_string string = ch_str_copy( format, len );
-
-	if ( string.data == nullptr )
-		return string;
-
-	gAllocatedStrings.push_back( string.data );
-	return string;
-}
-
-
-ch_string VK_AllocStringF( const char* format, ... )
-{
-	va_list args;
-	va_start( args, format );
-	ch_string string = ch_str_copy_v( format, args );
-	va_end( args );
-
-	if ( string.data == nullptr )
-		return string;
-
-	gAllocatedStrings.push_back( string.data );
-	return string;
-}
-
-
-void VK_FreeString( char* string )
-{
-	if ( string == nullptr )
-		return;
-
-	for ( u32 i = 0; i < gAllocatedStrings.size(); i++ )
-	{
-		// pointer comparison
-		if ( gAllocatedStrings[ i ] == string )
-		// if ( ch_str_equals( gAllocatedStrings[ i ], string ) )
-		{
-			ch_str_free( gAllocatedStrings[ i ] );
-			gAllocatedStrings.remove( i );
-			break;
-		}
-	}
-}
-
-
-void VK_FreeString( char* string, u64 size )
-{
-	if ( string == nullptr )
-		return;
-
-	for ( u32 i = 0; i < gAllocatedStrings.size(); i++ )
-	{
-		// pointer comparison
-		if ( gAllocatedStrings[ i ] == string )
-		// if ( ch_str_equals( gAllocatedStrings[ i ], string, size ) )
-		{
-			ch_str_free( gAllocatedStrings[ i ] );
-			gAllocatedStrings.remove( i );
-			break;
-		}
-	}
-}
-
-
-void VK_FreeString( ch_string& string )
-{
-	VK_FreeString( string.data/*, string.size*/ );
-}
-
-
-void VK_FreeStrings()
-{
-	for ( u32 i = 0; i < gAllocatedStrings.size(); i++ )
-	{
-		ch_str_free( gAllocatedStrings[ i ] );
-	}
-
-	gAllocatedStrings.clear();
 }
 
 
@@ -667,8 +570,6 @@ void Render_Shutdown()
 	VK_DestroyDescSets();
 
 	VK_DestroyInstance();
-
-	VK_FreeStrings();
 }
 
 
@@ -937,6 +838,8 @@ public:
 			Log_ErrorF( gLC_GraphicsAPI, "Failed to allocate data for vulkan window: \"%s\"\n", title );
 			return CH_INVALID_HANDLE;
 		}
+
+		windowVK->window = window;
 
 		// fun
 		if ( window == gWindowHack )
@@ -1843,7 +1746,7 @@ public:
 			// calc size
 			size_t size = 0;
 
-			for ( int region = 0; region < bufferCopy.aRegionCount; region++ )
+			for ( u32 region = 0; region < bufferCopy.aRegionCount; region++ )
 			{
 				size += bufferCopy.apRegions[ region ].size;
 			}

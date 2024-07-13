@@ -66,7 +66,7 @@ bool VK_CreateSwapchain( WindowVK* window, VkSwapchainKHR spOldSwapchain )
 
 	VK_CheckResult( vkGetSwapchainImagesKHR( VK_GetDevice(), window->swapchain, &imageCount, window->swapImages ), "Failed to get swapchain images" );
 
-	for ( int i = 0; i < imageCount; ++i )
+	for ( u32 i = 0; i < imageCount; ++i )
 	{
 		VkImageViewCreateInfo aImageViewInfo{ VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO };
 		aImageViewInfo.pNext                           = nullptr;
