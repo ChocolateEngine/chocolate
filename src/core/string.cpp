@@ -1076,6 +1076,10 @@ bool ch_str_equals( const char* str1, const char* str2 )
 	if ( str1 == nullptr || str2 == nullptr )
 		return false;
 
+	// is this the same pointer?
+	if ( str1 == str2 )
+		return true;
+
 	u64 str1Len = strlen( str1 );
 	u64 str2Len = strlen( str2 );
 
@@ -1090,6 +1094,10 @@ bool ch_str_equals( const char* str1, const char* str2, u64 count )
 {
 	if ( str1 == nullptr || str2 == nullptr )
 		return false;
+
+	// is this the same pointer?
+	if ( str1 == str2 )
+		return true;
 
 	u64 str1Len = strlen( str1 );
 
@@ -1106,6 +1114,10 @@ bool ch_str_equals( const char* str1, u64 str1Len, const char* str2 )
 	if ( str1 == nullptr || str2 == nullptr /*|| str1Len == 0*/ )
 		return false;
 
+	// is this the same pointer?
+	if ( str1 == str2 )
+		return true;
+
 	u64 str2Len = strlen( str2 );
 
 	if ( str1Len != str2Len )
@@ -1119,6 +1131,10 @@ bool ch_str_equals( const char* str1, u64 str1Len, const char* str2, u64 str2Len
 {
 	if ( str1 == nullptr || str2 == nullptr || str1Len != str2Len )
 		return false;
+
+	// is this the same pointer?
+	if ( str1 == str2 )
+		return true;
 
 	// both are 0
 	if ( str1Len == 0 )
