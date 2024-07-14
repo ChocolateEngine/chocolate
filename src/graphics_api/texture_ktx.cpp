@@ -49,7 +49,7 @@ static ktxVulkanFunctions gKtxFuncs = {
 constexpr ktx_transcode_fmt_e gKtxFallbackFmt = KTX_TTF_BC7_RGBA;
 
 
-static bool LoadKTX2( ktxTexture2* spKTexture2, ktxVulkanDeviceInfo& vdi )
+static bool LoadKTX2( ktxTexture2* spKTexture2 )
 {
 	// ktxTexture2_CreateFromNamedFile
 	KTX_error_code result = KTX_SUCCESS;
@@ -121,7 +121,7 @@ bool KTX_LoadTexture( TextureVK* spTexture, const char* spPath )
 
 	if ( kTexture->classId == class_id::ktxTexture2_c )
 	{
-		if ( !LoadKTX2( (ktxTexture2*)kTexture, vdi ) )
+		if ( !LoadKTX2( (ktxTexture2*)kTexture ) )
 		{
 			ktxVulkanDeviceInfo_Destruct( &vdi );
 			return false;
