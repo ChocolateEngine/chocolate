@@ -593,11 +593,10 @@ void Json_Free( JsonObject_t* spRoot )
 	// First, get all objects into one huge list
 	for ( size_t objIndex = 0; objIndex < objList.size(); objIndex++ )
 	{
-		// Does the top object have children?
+		// Does the current object have children?
 		if ( !( objList[ objIndex ]->aType == EJsonType_Object || objList[ objIndex ]->aType == EJsonType_Array ) )
 			continue;
 
-		// if ( ( objList[objIndex]->aType == EJsonType_Object || objList[objIndex]->aType == EJsonType_Array ) && objList[objIndex]->aObjects.aCount )
 		if ( objList[ objIndex ]->aObjects.aCount == 0 )
 			continue;
 
@@ -620,6 +619,13 @@ void Json_Free( JsonObject_t* spRoot )
 			objList[ objList.size() - 1 ]->aString.data = nullptr;
 			objList[ objList.size() - 1 ]->aString.size = 0;
 		}
+		else if ( objList[objList.size() - 1]->aType == EJsonType_Object || objList[objList.size() - 1]->aType == EJsonType_Array )
+		{
+			// Free the object list
+			free( objList[objList.size() - 1]->aObjects.apData );
+			objList[ objList.size() - 1 ]->aObjects.apData = nullptr;
+			objList[ objList.size() - 1 ]->aObjects.aCount = 0;
+		}
 
 		// Free the name if it exists
 		if ( objList[objList.size() - 1]->aName.data )
@@ -632,52 +638,6 @@ void Json_Free( JsonObject_t* spRoot )
 		// pop the object off the stack
 		objList.pop_back();
 	}
-
-	#if 0
-	while ( !objStack.empty() )
-	{
-		// Does the top object have children?
-		if ( objStack[ objStack.size() - 1 ]->aType == EJsonType_Object && objStack[ objStack.size() - 1 ]->aObjects.aCount )
-		{
-			// push all children onto the stack and reserve memory for it
-			size_t j = objStack.size() - 1;
-			objStack.reserve( objStack.size() + objStack[j]->aObjects.aCount );
-			for ( size_t i = 0; i < objStack[j]->aObjects.aCount; i++ )
-			{
-				objStack.push_back( &objStack[j]->aObjects.apData[ i ] );
-			}
-
-			continue;
-		}
-
-		// If this is a string type, free it
-		if ( objStack[objStack.size() - 1]->aType == EJsonType_String )
-		{
-			ch_free( objStack[objStack.size() - 1]->aString.data );
-			objStack[ objStack.size() - 1 ]->aString.data = nullptr;
-			objStack[ objStack.size() - 1 ]->aString.size = 0;
-		}
-
-		// Free the name if it exists
-		if ( objStack[objStack.size() - 1]->aName.data )
-		{
-			ch_free( objStack[ objStack.size() - 1 ]->aName.data );
-			objStack[ objStack.size() - 1 ]->aName.data = nullptr;
-			objStack[ objStack.size() - 1 ]->aName.size = 0;
-		}
-
-		// pop the object off the stack
-		objStack.pop_back();
-
-		// if the parent object has children, clear them
-		if ( objStack.size() && objStack[ objStack.size() - 1 ]->aType == EJsonType_Object && objStack[ objStack.size() - 1 ]->aObjects.aCount )
-		{
-			// was clear, uh
-			objStack[objStack.size() - 1]->aObjects.apData = nullptr;
-			objStack[objStack.size() - 1]->aObjects.aCount = 0;
-		}
-	}
-	#endif
 }
 
 
