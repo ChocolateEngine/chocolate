@@ -32,61 +32,6 @@
 LOG_REGISTER_CHANNEL( KeyValue, LogColor::DarkGray );
 
 
-bool ch_strcmplen( size_t sLenA, char* spA, size_t sLenB, char* spB )
-{
-	// is the pointer the same?
-	if ( spA == spB )
-		return true;
-
-	// check if either is nullptr
-	if ( !spA || !spB )
-		return false;
-
-	// check if the length is different
-	if ( sLenA != sLenB )
-		return false;
-
-	// finally, do the string comparison
-	return ch_str_equals( spA, spB, sLenA );
-}
-
-
-bool ch_strcmplen( std::string_view sA, size_t sLenB, char* spB )
-{
-	// check if either is nullptr
-	if ( sA.empty() || !spB )
-		return false;
-
-	// check if the length is different
-	if ( sA.size() != sLenB )
-		return false;
-
-	// finally, do the string comparison
-	return ch_str_equals( sA.data(), spB, sLenB );
-}
-
-
-#if _WIN32
-bool ch_strcmplen( size_t sLenA, wchar_t* spA, size_t sLenB, wchar_t* spB )
-{
-	// is the pointer the same?
-	if ( spA == spB )
-		return true;
-
-	// check if either is nullptr
-	if ( !spA || !spB )
-		return false;
-
-	// check if the length is different
-	if ( sLenA != sLenB )
-		return false;
-
-	// finally, do the string comparison
-	return wcsncmp( spA, spB, sLenA ) == 0;
-}
-#endif
-
-
 void str_upper( std::string &string )
 {
 	std::transform( string.begin(), string.end(), string.begin(), ::toupper );

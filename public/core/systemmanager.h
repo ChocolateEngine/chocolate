@@ -14,16 +14,6 @@ an interface for getting systems from the engine
 
 #include "core/platform.h"
 
-//#define GET_SYSTEM( sType ) systems->Get< sType >( typeid( sType ) )
-#define GET_SYSTEM( sType ) systems->Get< sType >()
-
-// slightly overkill
-#define GET_SYSTEM_ASSERT( sVar, sType ) \
-	sVar = GET_SYSTEM( sType ); \
-	Assert( sVar != nullptr );
-
-#define GET_SYSTEM_CHECK GET_SYSTEM_ASSERT
-
 
 class ISystem;
 
@@ -49,10 +39,10 @@ struct AppModule_t
 
 enum EModLoadError
 {
-	EModLoadError_Success,
-	EModLoadError_LoadModule,
-	EModLoadError_LoadInterface,
-	EModLoadError_InitInterface,
+	EModLoadError_Success,        // No errors :D
+	EModLoadError_LoadModule,     // An Error Occurred when Loading the Module/DLL 
+	EModLoadError_LoadInterface,  // An Error Occurred when Getting the Interface Function from the Module
+	EModLoadError_InitInterface,  // An Error Occurred when Initializing the Interface
 };
 
 

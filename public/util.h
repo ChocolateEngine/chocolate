@@ -211,10 +211,6 @@ inline To* ch_stack_alloc( u64 sCount )
 #define CH_MALLOC2( type, count )       static_cast< Type* >( malloc( count * sizeof( type ) )
 
 
-CORE_API bool ch_strcmplen( u64 sLenA, char* spA, u64 sLenB, char* spB );
-CORE_API bool ch_strcmplen( std::string_view sA, u64 sLenB, char* spB );
-
-
 // inline int ch_strcasecmp( const char* spStr1, const char* spStr2 )
 // {
 // #ifdef _MSC_VER
@@ -245,6 +241,10 @@ CORE_API bool ch_strcmplen( std::string_view sA, u64 sLenB, char* spB );
 CORE_API void ch_str_free( char* string );
 CORE_API bool ch_str_equals( const char* str1, u64 str1Len, const char* str2, u64 str2Len );
 CORE_API bool ch_str_equals( const char* str1, u64 str1Len, const char* str2 );
+
+
+// This is an easy way to pass ch_string to functions that take a char* and a size
+#define CH_STR_UNROLL( str ) str.data, str.size
 
 
 struct ch_string

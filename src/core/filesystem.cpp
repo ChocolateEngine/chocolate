@@ -958,7 +958,7 @@ bool FileSys_IsRelative( const char* spPath, s32 pathLen )
 }
 
 
-bool FileSys_IsDir( const char* path, s32 pathLen, bool noPaths )
+static bool FileSys_CheckStatFlags( const char* path, s32 pathLen, bool noPaths, int flags )
 {
     PROF_SCOPE();
 
@@ -967,7 +967,7 @@ bool FileSys_IsDir( const char* path, s32 pathLen, bool noPaths )
     if ( noPaths || FileSys_IsAbsolute( path, pathLen ) )
     {
 		if ( ch_stat( path, &s ) == 0 )
-			return ( s.st_mode & S_IFDIR );
+			return ( s.st_mode & flags );
     }
     else
     {
@@ -978,9 +978,9 @@ bool FileSys_IsDir( const char* path, s32 pathLen, bool noPaths )
 
 		if ( ch_stat( fullPath.data, &s ) == 0 )
 		{
-			bool isDir = ( s.st_mode & S_IFDIR );
+			bool hasFlag = ( s.st_mode & flags );
 			ch_str_free( fullPath.data );
-			return isDir;
+			return hasFlag;
 		}
 	}
 
@@ -988,33 +988,15 @@ bool FileSys_IsDir( const char* path, s32 pathLen, bool noPaths )
 }
 
 
+bool FileSys_IsDir( const char* path, s32 pathLen, bool noPaths )
+{
+	return FileSys_CheckStatFlags( path, pathLen, noPaths, S_IFDIR );
+}
+
+
 bool FileSys_IsFile( const char* path, s32 pathLen, bool noPaths )
 {
-    PROF_SCOPE();
-
-    struct stat s;
-
-    if ( noPaths || FileSys_IsAbsolute( path, pathLen ) )
-    {
-		if ( ch_stat( path, &s ) == 0 )
-			return ( s.st_mode & S_IFREG );
-    }
-    else
-    {
-		ch_string fullPath = FileSys_FindFile( path );
-
-		if ( !fullPath.data )
-			return false;
-
-		if ( ch_stat( fullPath.data, &s ) == 0 )
-		{
-			bool result = ( s.st_mode & S_IFREG );
-			ch_str_free( fullPath.data );
-			return result;
-		}
-    }
-
-    return false;
+	return FileSys_CheckStatFlags( path, pathLen, noPaths, S_IFREG );
 }
 
 

@@ -79,7 +79,7 @@ extern "C"
 // it runs all startup config files, like config.cfg to store saved cvar values
 void DLL_EXPORT core_post_load()
 {
-	if ( FileSys_Exists( gConArchiveFile.data, gConArchiveFile.size ) )
+	if ( FileSys_Exists( CH_STR_UNROLL( gConArchiveFile ) ) )
 	{
 		const char*    strings[] = { "exec ", gConArchiveFile.data };
 		const u64      lengths[] = { 5, gConArchiveFile.size };
@@ -87,7 +87,7 @@ void DLL_EXPORT core_post_load()
 
 		Con_QueueCommandSilent( command.data, command.size, false );
 	}
-	else if ( FileSys_Exists( gConArchiveDefault.data, gConArchiveDefault.size ) )
+	else if ( FileSys_Exists( CH_STR_UNROLL( gConArchiveDefault ) ) )
 	{
 		const char*    strings[] = { "exec ", gConArchiveDefault.data };
 		const u64      lengths[] = { 5, gConArchiveFile.size };

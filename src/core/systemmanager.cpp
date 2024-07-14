@@ -5,29 +5,22 @@
 
 LOG_REGISTER_CHANNEL2( Module, LogColor::Default );
 
-// static std::vector< ISystem* > gSystems;
-
-// struct ModuleSystem_t
-// {
-// 	ModuleInterface_t* apInterface = nullptr;
-// 	ISystem*           apSystem    = nullptr;
-// 	Module             aModule     = nullptr;
-// };
 
 struct LoadedSystem_t
 {
-	ISystem*    apSystem;
-	Module      apModule;
-	const char* apName = nullptr;
-	size_t      apVer;
-	bool        aRequired = true;
-	bool        aRunning  = false;
+	ISystem*  apSystem;
+	Module    apModule;
+	ch_string aName;
+	size_t    apVer;
+	bool      aRequired = true;
+	bool      aRunning  = false;
 };
 
 static std::unordered_map< const char*, Module >        gModuleHandles;
 static std::unordered_map< ModuleInterface_t*, Module > gInterfaces;
-static std::vector< LoadedSystem_t >                    gLoadedSystems;
-// static std::unordered_map< ISystem*, Module >           gSystems;
+
+static LoadedSystem_t*                                  gLoadedSystems      = nullptr;
+static u32                                              gLoadedSystemsCount = 0;
 
 const u64 CH_PLAT_FOLDER_SEP_LEN = strlen( CH_PLAT_FOLDER_SEP );
 
@@ -42,9 +35,9 @@ bool Mod_InitSystem( LoadedSystem_t& appModule )
 		return true;
 
 	if ( appModule.aRequired )
-		Log_ErrorF( "Failed to Init Required System: %s\n", appModule.apName );
+		Log_ErrorF( "Failed to Init Required System: %s\n", appModule.aName.data );
 	else
-		Log_ErrorF( "Failed to Init Optional System: %s\n", appModule.apName );
+		Log_ErrorF( "Failed to Init Optional System: %s\n", appModule.aName.data );
 
 	return false;
 }
@@ -55,8 +48,10 @@ bool Mod_InitSystems()
 	// load saved cvar values and other stuff
 	core_post_load();
 
-	for ( LoadedSystem_t& appModule : gLoadedSystems )
+	for ( u32 i = 0; i < gLoadedSystemsCount; i++ )
 	{
+		LoadedSystem_t& appModule = gLoadedSystems[ i ];
+
 		CH_ASSERT( appModule.apSystem );
 
 		if ( !appModule.apSystem )
@@ -70,12 +65,12 @@ bool Mod_InitSystems()
 
 		if ( appModule.aRequired )
 		{
-			Log_ErrorF( "Failed to Init Required System: %s\n", appModule.apName );
+			Log_ErrorF( "Failed to Init Required System: %s\n", appModule.aName.data );
 			return false;
 		}
 		else
 		{
-			Log_ErrorF( "Failed to Init Optional System: %s\n", appModule.apName );
+			Log_ErrorF( "Failed to Init Optional System: %s\n", appModule.aName.data );
 		}
 	}
 
@@ -85,13 +80,19 @@ bool Mod_InitSystems()
 
 void Mod_Shutdown()
 {
-	if ( gLoadedSystems.empty() )
+	if ( gLoadedSystemsCount == 0 || gLoadedSystems == nullptr )
 		return;
 
 	// Go through the list in reverse, in order from what started up last to what started first
-	for ( size_t i = gLoadedSystems.size() - 1; i > 0; i-- )
+	u32 i = gLoadedSystemsCount;
+	do
 	{
+		i--;
+
 		LoadedSystem_t& appModule = gLoadedSystems[ i ];
+
+		if ( appModule.aName.data )
+			ch_str_free( appModule.aName.data );
 
 		if ( !appModule.apSystem )
 			continue;
@@ -102,6 +103,28 @@ void Mod_Shutdown()
 		appModule.apSystem->Shutdown();
 		appModule.aRunning = false;
 	}
+	while ( i > 0 );
+
+	// for ( u32 i = gLoadedSystemsCount - 1; i > 0; i-- )
+	// {
+	// 	LoadedSystem_t& appModule = gLoadedSystems[ i ];
+	// 
+	// 	if ( appModule.aName.data )
+	// 		ch_str_free( appModule.aName.data );
+	// 
+	// 	if ( !appModule.apSystem )
+	// 		continue;
+	// 
+	// 	if ( !appModule.aRunning )
+	// 		continue;
+	// 
+	// 	appModule.apSystem->Shutdown();
+	// 	appModule.aRunning = false;
+	// }
+
+	ch_free( gLoadedSystems );
+	gLoadedSystems      = nullptr;
+	gLoadedSystemsCount = 0;
 
 	for ( const auto& [ name, module ] : gModuleHandles )
 	{
@@ -121,7 +144,7 @@ Module Mod_Load( const char* spPath )
 	const u64      lengths[] = { CH_PLAT_FOLDER_SEP_LEN, strlen( spPath ), EXT_DLL_LEN };
 	ch_string_auto pathExt   = ch_str_concat( 3, strings, lengths );
 
-	ch_string_auto path      = FileSys_FindFileEx( pathExt.data, pathExt.size, ESearchPathType_Binary );
+	ch_string_auto path      = FileSys_FindFileEx( CH_STR_UNROLL( pathExt ), ESearchPathType_Binary );
 
 	if ( !path.data )
 	{
@@ -138,6 +161,7 @@ Module Mod_Load( const char* spPath )
 
 	gModuleHandles[ spPath ] = handle;
 
+	// TODO: change ""cframework_GetInterfaces" to "ch_module_get_interfaces" or something
 	ModuleInterface_t* ( *getInterfacesF )( size_t & srCount ) = nullptr;
 	if ( !( *(void**)( &getInterfacesF ) = sys_load_func( handle, "cframework_GetInterfaces" ) ) )
 	{
@@ -171,7 +195,7 @@ void Mod_Free( const char* spPath )
 	if ( it == gModuleHandles.end() )
 		return;  // Module was never loaded
 	
-	// Shutdown Systems loaded with this module
+	// TODO: Shutdown Systems loaded with this module
 	
 	sys_close_library( it->second );
 	gModuleHandles.erase( it );
@@ -199,20 +223,25 @@ EModLoadError Mod_LoadSystem( AppModule_t& srModule )
 	// gSystems.push_back( static_cast< ISystem* >( system ) );
 
 	LoadedSystem_t loadedModule{};
-	loadedModule.apModule        = module;
-	loadedModule.apSystem        = static_cast< ISystem* >( system );
-	loadedModule.aRequired       = srModule.aRequired;
-	loadedModule.apVer           = srModule.apInterfaceVer;
+	loadedModule.apModule   = module;
+	loadedModule.apSystem   = static_cast< ISystem* >( system );
+	loadedModule.aRequired  = srModule.aRequired;
+	loadedModule.apVer      = srModule.apInterfaceVer;
+	loadedModule.aName      = ch_str_copy( srModule.apInterfaceName );
 
-	// Copy the interface name
-	size_t len                   = strlen( srModule.apInterfaceName );
-	char*  name                  = new char[ len + 1 ];
-	strncpy( name, srModule.apInterfaceName, len );
-	name[ len ] = '\0';
+	// realloc loaded systems
+	LoadedSystem_t* newData = ch_realloc< LoadedSystem_t >( gLoadedSystems, gLoadedSystemsCount + 1 );
 
-	loadedModule.apName = name;
+	if ( !newData )
+	{
+		Log_ErrorF( gLC_Module, "Failed to realloc loaded systems\n" );
+		ch_str_free( loadedModule.aName.data );
+		return EModLoadError_LoadModule;
+	}
 
-	gLoadedSystems.push_back( loadedModule );
+	gLoadedSystems = newData;
+	gLoadedSystems[ gLoadedSystemsCount ] = loadedModule;
+	gLoadedSystemsCount++;
 
 	return EModLoadError_Success;
 }
@@ -260,10 +289,14 @@ bool Mod_AddSystems( AppModule_t* spModules, size_t sCount )
 
 bool Mod_InitSystem( AppModule_t& srModule )
 {
+	size_t nameLen = strlen( srModule.apInterfaceName );
+
 	// Dumb, find the AppLoadedModule_t struct we made so can initialize it
-	for ( LoadedSystem_t& loadedSystem : gLoadedSystems )
+	for ( u32 i = 0; i < gLoadedSystemsCount; i++ )
 	{
-		if ( ch_str_equals( loadedSystem.apName, srModule.apInterfaceName ) )
+		LoadedSystem_t& loadedSystem = gLoadedSystems[ i ];
+
+		if ( ch_str_equals( loadedSystem.aName, srModule.apInterfaceName, nameLen ) )
 		{
 			return Mod_InitSystem( loadedSystem );
 		}
@@ -281,10 +314,14 @@ EModLoadError Mod_LoadAndInitSystem( AppModule_t& srModule )
 	if ( err != EModLoadError_Success )
 		return err;
 
+	size_t nameLen = strlen( srModule.apInterfaceName );
+
 	// Dumb, find the AppLoadedModule_t struct we made so can initialize it
-	for ( LoadedSystem_t& loadedSystem : gLoadedSystems )
+	for ( u32 i = 0; i < gLoadedSystemsCount; i++ )
 	{
-		if ( ch_str_equals( loadedSystem.apName, srModule.apInterfaceName ) )
+		LoadedSystem_t& loadedSystem = gLoadedSystems[ i ];
+
+		if ( ch_str_equals( loadedSystem.aName, srModule.apInterfaceName, nameLen ) )
 		{
 			Mod_InitSystem( loadedSystem );
 			return EModLoadError_Success;
@@ -320,8 +357,7 @@ void* Mod_GetInterface( const char* spName, size_t sVersion )
 
 	for ( const auto& [ interface, module ] : gInterfaces )
 	{
-		u64 nameLen = strlen( spName );
-		if ( !ch_str_equals( interface->apName, nameLen, spName, searchNameLen ) )
+		if ( !ch_str_equals( interface->apName, spName, searchNameLen ) )
 		{
 			continue;
 		}

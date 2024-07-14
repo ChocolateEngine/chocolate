@@ -148,7 +148,7 @@ CORE_API ch_string FileSys_FindDir( const char* dir, ESearchPathType sType = ESe
 CORE_API ch_string FileSys_FindDir( const char* dir, s32 dirLen, ESearchPathType sType = ESearchPathType_Path );
 
 // Reads a file - Returns an empty array if it doesn't exist.
-// TODO: remove use of std::vector here, should just use a c array, not like it needs to resize at all
+// TODO: remove use of std::vector here, should just use ch_string, not like it needs to resize at all
 CORE_API std::vector< char > FileSys_ReadFile( const char* path, s32 pathLen = -1 );
 
 // Reads a file - Returns an empty array if it doesn't exist.

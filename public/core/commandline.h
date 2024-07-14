@@ -67,6 +67,8 @@ CORE_API const char* Args_Register( const char* sDefault, const char* spDesc, co
 CORE_API int         Args_Register( int sDefault, const char* spDesc, const char* spName );
 CORE_API float       Args_Register( float sDefault, const char* spDesc, const char* spName );
 
+// why is this called F? it's not a format string...
+// it's just a way to register multiple names at once
 CORE_API bool        Args_RegisterF( const char* spDesc, int sCount, const char* spName, ... );  // Default to false
 CORE_API bool        Args_RegisterF( bool sDefault, const char* spDesc, int sCount, const char* spName, ... );
 CORE_API const char* Args_RegisterF( const char* sDefault, const char* spDesc, int sCount, const char* spName, ... );
