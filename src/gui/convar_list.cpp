@@ -158,7 +158,7 @@ void GuiSystem::DrawConVarList( bool wasOpen )
 
 			// TODO: update this for new convar system
 #if 0
-			if ( !ch_strcmplen( cvar->apData->aDefaultValueLen, cvar->apData->apDefaultValue, cvar->GetValueLen(), cvar->apData->apValue ) )
+			if ( !ch_str_equals( cvar->apData->apDefaultValue, cvar->apData->aDefaultValueLen, cvar->apData->apValue, cvar->GetValueLen() ) )
 			{
 				ImGui::PushStyleColor( ImGuiCol_Text, ToImCol( LogColor::Yellow ) );
 				ImGui::TextUnformatted( "modified" );
