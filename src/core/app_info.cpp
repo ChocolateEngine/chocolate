@@ -113,16 +113,16 @@ bool Core_GetAppInfoJson( JsonObject_t& srRoot, const std::string& appPath )
 		return false;
 	}
 
-	std::vector< char > data = FileSys_ReadFile( fullPath.data, fullPath.size );
+	ch_string_auto data = FileSys_ReadFile( fullPath.data, fullPath.size );
 
-	if ( data.empty() )
+	if ( !data.data )
 	{
 		Log_Error( "app_info.json5 file is empty!\n" );
 		SDL_ShowSimpleMessageBox( SDL_MESSAGEBOX_ERROR, "App Info Error", "App Info file is empty!", NULL );
 		return false;
 	}
 
-	EJsonError err = Json_Parse( &srRoot, data.data() );
+	EJsonError err = Json_Parse( &srRoot, data.data );
 
 	if ( err != EJsonError_None )
 	{

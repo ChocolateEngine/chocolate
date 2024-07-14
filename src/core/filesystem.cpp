@@ -778,7 +778,7 @@ ch_string FileSys_FindDir( const char* path, s32 pathLen, ESearchPathType sType 
 
 
 /* Reads a file into a byte array.  */
-std::vector< char > FileSys_ReadFile( const char* path, s32 pathLen )
+ch_string FileSys_ReadFile( const char* path, s32 pathLen )
 {
     PROF_SCOPE();
 
@@ -800,22 +800,31 @@ std::vector< char > FileSys_ReadFile( const char* path, s32 pathLen )
     }
 
     int fileSize = ( int )file.tellg(  );
-    std::vector< char > buffer( fileSize );
+
+	ch_string buffer;
+	buffer.data = ch_malloc< char >( fileSize + 1 );
+	buffer.size = fileSize;
+
     file.seekg( 0 );
 
     /* Read contents.  */
-    file.read( buffer.data(  ), fileSize );
+    file.read( buffer.data, fileSize );
     file.close(  );
 
-    buffer.push_back( '\0' );  // adding null terminator character
+    buffer.data[ fileSize ] = '\0';  // adding null terminator character
 
+	// track this memory
+	ch_str_add( buffer );
+
+	// free the full path
 	ch_str_free( fullPath.data );
+
     return buffer;
 }
 
 
 // Reads a file - Returns an empty array if it doesn't exist.
-std::vector< char > FileSys_ReadFileEx( const char* path, s32 pathLen, ESearchPathType sType )
+ch_string FileSys_ReadFileEx( const char* path, s32 pathLen, ESearchPathType sType )
 {
     PROF_SCOPE();
 
@@ -836,12 +845,20 @@ std::vector< char > FileSys_ReadFileEx( const char* path, s32 pathLen, ESearchPa
     }
 
     int fileSize = ( int )file.tellg(  );
-    std::vector< char > buffer( fileSize );
+	ch_string buffer;
+	buffer.data = ch_malloc< char >( fileSize + 1 );
+	buffer.size = fileSize;
+
     file.seekg( 0 );
 
     /* Read contents.  */
-    file.read( buffer.data(  ), fileSize );
+    file.read( buffer.data, fileSize );
     file.close(  );
+
+    buffer.data[ fileSize ] = '\0';  // adding null terminator character
+
+	// track this memory
+	ch_str_add( buffer );
 
 	// free the full path
 	ch_str_free( fullPath.data );

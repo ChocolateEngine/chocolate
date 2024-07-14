@@ -125,9 +125,9 @@ bool VK_GetShaderStageCreateInfo( VkPipelineShaderStageCreateInfo* spStageCreate
 			return false;
 		}
 
-		std::vector< char > fileData = FileSys_ReadFile( absPath.data, absPath.size );
+		ch_string_auto fileData = FileSys_ReadFile( absPath.data, absPath.size );
 
-		if ( fileData.empty() )
+		if ( !fileData.data )
 		{
 			Log_ErrorF( gLC_Render, "Shader file is empty: \"%s\"\n", stage.aModulePath );
 			ch_free( vkShaderModules );
@@ -139,9 +139,8 @@ bool VK_GetShaderStageCreateInfo( VkPipelineShaderStageCreateInfo* spStageCreate
 		stageInfo.pName  = stage.apEntry;
 
 		VkShaderModuleCreateInfo createInfo{ VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO };
-		// FileSys_ReadFile adds a null terminator at the end
-		createInfo.codeSize = fileData.size() - 1;
-		createInfo.pCode    = (u32*)fileData.data();
+		createInfo.codeSize = fileData.size;
+		createInfo.pCode    = (u32*)fileData.data;
 
 		if ( !VK_CheckResultE( vkCreateShaderModule( VK_GetDevice(), &createInfo, NULL, &stageInfo.module ), "Failed to create shader module!" ) )
 		{

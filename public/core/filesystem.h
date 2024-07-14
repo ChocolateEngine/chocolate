@@ -147,74 +147,73 @@ CORE_API ch_string FileSys_FindFileEx( CH_FS_FILE_LINE_DEF const char* filePath,
 CORE_API ch_string FileSys_FindDir( const char* dir, ESearchPathType sType = ESearchPathType_Path );
 CORE_API ch_string FileSys_FindDir( const char* dir, s32 dirLen, ESearchPathType sType = ESearchPathType_Path );
 
-// Reads a file - Returns an empty array if it doesn't exist.
-// TODO: remove use of std::vector here, should just use ch_string, not like it needs to resize at all
-CORE_API std::vector< char > FileSys_ReadFile( const char* path, s32 pathLen = -1 );
+// Reads a file - Returns a nullptr for the data if it doesn't exist.
+CORE_API ch_string FileSys_ReadFile( const char* path, s32 pathLen = -1 );
 
-// Reads a file - Returns an empty array if it doesn't exist.
-CORE_API std::vector< char > FileSys_ReadFileEx( const char* path, s32 pathLen = -1, ESearchPathType sType = ESearchPathType_Path );
+// Reads a file - Returns a nullptr for the data if it doesn't exist.
+CORE_API ch_string FileSys_ReadFileEx( const char* path, s32 pathLen = -1, ESearchPathType sType = ESearchPathType_Path );
 
 // Saves a file - Returns true if it succeeded.
-CORE_API bool                FileSys_SaveFile( const char* path, std::vector< char >& srData, s32 pathLen = -1 );
+CORE_API bool      FileSys_SaveFile( const char* path, std::vector< char >& srData, s32 pathLen = -1 );
 
 // ================================================================================
 // File Information
 
 // Is path an absolute path?
-CORE_API bool                FileSys_IsAbsolute( const char* path, s32 pathLen = -1 );
+CORE_API bool      FileSys_IsAbsolute( const char* path, s32 pathLen = -1 );
 
 // Is path a relative path?
-CORE_API bool                FileSys_IsRelative( const char* path, s32 pathLen = -1 );
+CORE_API bool      FileSys_IsRelative( const char* path, s32 pathLen = -1 );
 
 // Is path a directory? Set noPaths to true to not use search paths for these three functions
-CORE_API bool                FileSys_IsDir( const char* path, s32 pathLen = -1, bool noPaths = false );
+CORE_API bool      FileSys_IsDir( const char* path, s32 pathLen = -1, bool noPaths = false );
 
 // Is path a file?
-CORE_API bool                FileSys_IsFile( const char* path, s32 pathLen = -1, bool noPaths = false );
+CORE_API bool      FileSys_IsFile( const char* path, s32 pathLen = -1, bool noPaths = false );
 
 // Does a file/folder exist?
-CORE_API bool                FileSys_Exists( const char* path, s32 pathLen = -1, bool noPaths = false );
+CORE_API bool      FileSys_Exists( const char* path, s32 pathLen = -1, bool noPaths = false );
 
 // Call access on a file
-CORE_API int                 FileSys_Access( const char* path, int mode = 0 );
+CORE_API int       FileSys_Access( const char* path, int mode = 0 );
 
 // Call stat on a file
-CORE_API int                 FileSys_Stat( const char* path, struct stat* info );
+CORE_API int       FileSys_Stat( const char* path, struct stat* info );
 
 // ================================================================================
 // Path Utils
 
 // Return the parent path of this path - No Trailing Slash
-CORE_API ch_string           FileSys_GetDirName( const char* path, s32 pathLen = -1 );
+CORE_API ch_string FileSys_GetDirName( const char* path, s32 pathLen = -1 );
 #define FileSys_GetParentPath FileSys_GetDirName
 
 // Return the parent path of this path - Has Trailing Slash
-CORE_API ch_string           FileSys_GetBaseName( const char* path, s32 pathLen = -1 );
+CORE_API ch_string FileSys_GetBaseName( const char* path, s32 pathLen = -1 );
 
 // Return the filename in this path
-CORE_API ch_string           FileSys_GetFileName( CH_FS_FILE_LINE_DEF const char* path, s32 pathLen = -1 );
+CORE_API ch_string FileSys_GetFileName( CH_FS_FILE_LINE_DEF const char* path, s32 pathLen = -1 );
 
 // Return the file extension, will return an empty string if none found
-CORE_API ch_string           FileSys_GetFileExt( CH_FS_FILE_LINE_DEF const char* path, s32 pathLen = -1, bool sStripPath = true );
+CORE_API ch_string FileSys_GetFileExt( CH_FS_FILE_LINE_DEF const char* path, s32 pathLen = -1, bool sStripPath = true );
 
 // Return the file name without the extension
-CORE_API ch_string           FileSys_GetFileNameNoExt( CH_FS_FILE_LINE_DEF const char* path, s32 pathLen = -1 );
+CORE_API ch_string FileSys_GetFileNameNoExt( CH_FS_FILE_LINE_DEF const char* path, s32 pathLen = -1 );
 
 // Cleans up the path, removes useless ".." and "."
-CORE_API ch_string           FileSys_CleanPath( CH_FS_FILE_LINE_DEF const char* path, const s32 pathLen = -1, char* data = nullptr );  // reuses the data memory
+CORE_API ch_string FileSys_CleanPath( CH_FS_FILE_LINE_DEF const char* path, const s32 pathLen = -1, char* data = nullptr );  // reuses the data memory
 
 // Rename a File or Directory
-CORE_API bool                FileSys_Rename( const char* spOld, const char* spNew );
+CORE_API bool      FileSys_Rename( const char* spOld, const char* spNew );
 
 // Get Date Created/Modified on a File
-CORE_API bool                FileSys_GetFileTimes( const char* spPath, float* spCreated, float* spModified );
-CORE_API bool                FileSys_GetFileTimes( const char* spPath, s32 pathLen, float* spCreated, float* spModified );
+CORE_API bool      FileSys_GetFileTimes( const char* spPath, float* spCreated, float* spModified );
+CORE_API bool      FileSys_GetFileTimes( const char* spPath, s32 pathLen, float* spCreated, float* spModified );
 
 // Set Date Created/Modified on a File (NOT IMPLEMENTED)
 // CORE_API bool                FileSys_SetFileTimes( const char* path, s32 pathLen = -1, float* spCreated, float* spModified );
 
 // Create a Directory
-CORE_API bool                FileSys_CreateDirectory( const char* path );
+CORE_API bool      FileSys_CreateDirectory( const char* path );
 
 // ================================================================================
 // Directory Reading

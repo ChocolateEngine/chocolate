@@ -608,14 +608,13 @@ bool Graphics_ParseMaterial( const ch_string& srName, const std::string& srPath,
 		return false;
 	}
 
-	std::vector< char > data = FileSys_ReadFile( fullPath.data, fullPath.size );
+	ch_string_auto data = FileSys_ReadFile( fullPath.data, fullPath.size );
 
-	if ( data.empty() )
+	if ( !data.data )
 		return false;
 
 	JsonObject_t root;
-	EJsonError   err = Json_Parse( &root, data.data() );
-
+	EJsonError   err = Json_Parse( &root, data.data );
 	if ( err != EJsonError_None )
 	{
 		Log_ErrorF( gLC_ClientGraphics, "Error Parsing Material: %s\n", Json_ErrorToStr( err ) );
