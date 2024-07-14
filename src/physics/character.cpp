@@ -66,6 +66,7 @@ EPhysGroundState PhysVirtualCharacter::GetGroundState()
 		case JPH::CharacterBase::EGroundState::NotSupported:
 			return EPhysGroundState_NotSupported;
 
+		default:
 		case JPH::CharacterBase::EGroundState::InAir:
 			return EPhysGroundState_InAir;
 	}
