@@ -69,6 +69,7 @@ CORE_API float       Args_Register( float sDefault, const char* spDesc, const ch
 
 // why is this called F? it's not a format string...
 // it's just a way to register multiple names at once
+// maybe change to Args_RegisterNames or Args_RegisterL, L for List? or just Args_RegisterList?
 CORE_API bool        Args_RegisterF( const char* spDesc, int sCount, const char* spName, ... );  // Default to false
 CORE_API bool        Args_RegisterF( bool sDefault, const char* spDesc, int sCount, const char* spName, ... );
 CORE_API const char* Args_RegisterF( const char* sDefault, const char* spDesc, int sCount, const char* spName, ... );
@@ -79,7 +80,7 @@ CORE_API float       Args_RegisterF( float sDefault, const char* spDesc, int sCo
 
 CORE_API u32         Args_GetRegisteredCount();
 CORE_API Arg_t*      Args_GetRegisteredData( u32 sIndex );
-CORE_API ch_string_auto Args_GetRegisteredPrint( const Arg_t* spArg );
+CORE_API ch_string   Args_GetRegisteredPrint( const Arg_t* spArg );
 
 // CORE_API std::string Args_GetRegisteredPrint( int sIndex );
 // CORE_API std::string Args_GetRegisteredPrint( std::string_view sString );

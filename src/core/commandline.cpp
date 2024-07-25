@@ -28,9 +28,13 @@ extern LogChannel        gConsoleChannel;
 extern ch_string         gConArchiveFile;
 extern ch_string         gConArchiveDefault;
 
+
+// TODO: Check for name conflicts
+
+
 extern "C"
 {
-	void DLL_EXPORT core_init( int argc, char* argv[], const char* workingDir )
+	void DLL_EXPORT core_init( int argc, char* argv[], const char* desiredWorkingDir )
 	{
 		if ( SDL_Init( SDL_INIT_VIDEO | SDL_INIT_EVENTS | SDL_INIT_AUDIO ) != 0 )
 			Log_Fatal( "Unable to initialize SDL2!" );
@@ -38,7 +42,7 @@ extern "C"
 		Args_Init( argc, argv );
 		Log_Init();
 		sys_init();
-		FileSys_Init( workingDir );
+		FileSys_Init( desiredWorkingDir );
 		Assert_Init();
 		//Thread_Init();
 
@@ -67,6 +71,8 @@ extern "C"
 
 		Args_Shutdown();
 
+		Log_Shutdown();
+
 		// Check if all memory is freed
 		u32 stringAllocCount = ch_str_get_alloc_count();
 		ch_str_free_all();
@@ -83,7 +89,7 @@ void DLL_EXPORT core_post_load()
 	{
 		const char*    strings[] = { "exec ", gConArchiveFile.data };
 		const u64      lengths[] = { 5, gConArchiveFile.size };
-		ch_string_auto command   = ch_str_concat( 2, strings, lengths );
+		ch_string_auto command   = ch_str_join( 2, strings, lengths );
 
 		Con_QueueCommandSilent( command.data, command.size, false );
 	}
@@ -91,8 +97,8 @@ void DLL_EXPORT core_post_load()
 	{
 		const char*    strings[] = { "exec ", gConArchiveDefault.data };
 		const u64      lengths[] = { 5, gConArchiveFile.size };
-		ch_string_auto command   = ch_str_concat( 2, strings, lengths );
-		//ch_string_auto command = ch_str_concat( 2, { "exec ", gConArchiveDefault.data }, { 5, gConArchiveFile.size } );
+		ch_string_auto command   = ch_str_join( 2, strings, lengths );
+		//ch_string_auto command = ch_str_join( 2, { "exec ", gConArchiveDefault.data }, { 5, gConArchiveFile.size } );
 
 		Con_QueueCommandSilent( command.data, command.size, false );
 	}
@@ -107,7 +113,7 @@ void DLL_EXPORT core_post_load()
 	{
 		const char*    strings[] = { "exec ", execCfg.data };
 		const u64      lengths[] = { 5, execCfg.size };
-		ch_string_auto command   = ch_str_concat( 2, strings, lengths );
+		ch_string_auto command   = ch_str_join( 2, strings, lengths );
 		Con_QueueCommandSilent( command.data, command.size, false );
 	}
 }
@@ -416,7 +422,7 @@ Arg_t* Args_GetRegisteredData( u32 sIndex )
 // }
 
 
-ch_string_auto Args_GetRegisteredPrint( const Arg_t* spArg )
+ch_string Args_GetRegisteredPrint( const Arg_t* spArg )
 {
 	if ( !spArg )
 		return {};
@@ -427,15 +433,10 @@ ch_string_auto Args_GetRegisteredPrint( const Arg_t* spArg )
 		return {};
 	}
 
-	ch_string msg = ch_str_copy( ANSI_CLR_DEFAULT );
+	ch_string      msg       = ch_str_copy( ANSI_CLR_DEFAULT );
+	ch_string_auto join_temp = ch_str_join_space( spArg->aNames.size(), spArg->aNames.apData, " " );
 
-	for ( u32 i = 0; i < spArg->aNames.size(); i++ )
-	{
-		msg = ch_str_concat( msg.data, 1, spArg->aNames[ i ] );
-
-		if ( i + 1 != spArg->aNames.size() )
-			msg = ch_str_concat( msg.data, 1, " " );
-	}
+	msg = ch_str_concat( CH_STR_UR( msg ), join_temp.data, join_temp.size );
 
 	switch ( spArg->aType )
 	{
@@ -446,19 +447,20 @@ ch_string_auto Args_GetRegisteredPrint( const Arg_t* spArg )
 			break;
 
 		case EArgType_Custom:
-			msg = ch_str_concat( msg.data, 1, ANSI_CLR_BLUE " Custom Type" );
+			msg = ch_str_concat( CH_STR_UR( msg ), ANSI_CLR_BLUE " Custom Type", 7 + 12 );
 			break;
 
 		case EArgType_Bool:
-			msg = ch_str_concat( msg.data, 3, msg.data, ANSI_CLR_BLUE " ", spArg->aBool ? "true" : "false" );
+			// msg = ch_str_join_arr( msg.data, 3, msg.data, ANSI_CLR_BLUE " ", spArg->aBool ? "true" : "false" );
+			msg = ch_str_join_list( msg.data, { msg.data, ANSI_CLR_BLUE " ", spArg->aBool ? "true" : "false" } );
 			if ( spArg->aBool != spArg->aDefaultBool )
-				msg = ch_str_concat( msg.data, 4, msg.data, ANSI_CLR_YELLOW " (", spArg->aDefaultBool ? "true" : "false", " default)" );
+				msg = ch_str_join_arr( msg.data, 4, msg.data, ANSI_CLR_YELLOW " (", spArg->aDefaultBool ? "true" : "false", " default)" );
 			break;
 
 		case EArgType_String:
-			msg = ch_str_concat( msg.data, 3, msg.data, ANSI_CLR_GREEN " ", spArg->apString );
+			msg = ch_str_join_arr( msg.data, 3, msg.data, ANSI_CLR_GREEN " ", spArg->apString );
 			if ( spArg->apDefaultString && ch_str_equals( spArg->apString, spArg->apDefaultString ) )
-				msg = ch_str_concat( msg.data, 4, msg.data, ANSI_CLR_YELLOW " (", spArg->apDefaultString, " default)" );
+				msg = ch_str_join_arr( msg.data, 4, msg.data, ANSI_CLR_YELLOW " (", spArg->apDefaultString, " default)" );
 			break;
 
 		case EArgType_Int:
@@ -475,21 +477,16 @@ ch_string_auto Args_GetRegisteredPrint( const Arg_t* spArg )
 	}
 
 	if ( spArg->apDesc )
-		msg = ch_str_concat( msg.data, 1, "\n\t" ANSI_CLR_CYAN, spArg->apDesc );
+		msg = ch_str_join_arr( msg.data, 3, msg.data, "\n\t" ANSI_CLR_CYAN, spArg->apDesc );
 
-	msg = ch_str_concat( msg.data, 1, "\n" );
+	msg = ch_str_concat( CH_STR_UR( msg ), "\n", 1 );
 
-	ch_string_auto msg_auto;
-	msg_auto.data = msg.data;
-	msg_auto.size = msg.size;
-	return msg_auto;
+	return msg;
 }
 
 
 void Args_PrintRegistered()
 {
-	ChVector< std::string > args;
-	
 	Log_Msg( gConsoleChannel, "\nArguments:\n--------------------------------------\n" );
 	for ( const Arg_t& arg : gArgList )
 	{
@@ -541,13 +538,7 @@ int Args_GetCount()
 
 bool Args_Find( const char* search, s32 len )
 {
-	if ( !search )
-		return false;
-	
-	if ( len == -1 )
-		len = strlen( search );
-
-	if ( len == 0 )
+	if ( !ch_str_check_empty( search, len ) )
 		return false;
 
 	for ( int i = 0; i < gArgC; i++ )

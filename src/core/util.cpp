@@ -17,16 +17,9 @@
 	//#include <sysinfoapi.h>
 	#include <io.h>
 
-	// get rid of the dumb windows posix depreciation warnings
-	#define mkdir _mkdir
-	#define chdir _chdir
-	#define access _access
 #elif __linux__
 	#include <stdlib.h>
 	#include <unistd.h>
-
-	// windows-specific mkdir() is used
-	#define mkdir(f) mkdir(f, 666)
 #endif
 
 LOG_REGISTER_CHANNEL( KeyValue, LogColor::DarkGray );

@@ -327,26 +327,42 @@ CORE_API const float&        Con_RegisterConVar_RangeFloat( const char* spName, 
 
 // Helper Macros for registering ConVars
 // will the va args here be an issue on gcc or clang?
+
+// dumb fix for linux, va_args needs to be used for some reason
+#if 1
+
+#define CONVAR_BOOL( name, ... )        const bool& name = Con_RegisterConVar_Bool( #name, __VA_ARGS__ )
+#define CONVAR_INT( name, ... )         const int& name = Con_RegisterConVar_Int( #name, __VA_ARGS__ )
+#define CONVAR_FLOAT( name, ... )       const float& name = Con_RegisterConVar_Float( #name, __VA_ARGS__ )
+#define CONVAR_STRING( name, ... )      char*& name = Con_RegisterConVar_String( #name, __VA_ARGS__ )
+#define CONVAR_VEC2( name, ... )        const glm::vec2& name = Con_RegisterConVar_Vec2( #name, __VA_ARGS__ )
+#define CONVAR_VEC3( name, ... )        const glm::vec3& name = Con_RegisterConVar_Vec3( #name, __VA_ARGS__ )
+#define CONVAR_VEC4( name, ... )        const glm::vec4& name = Con_RegisterConVar_Vec4( #name, __VA_ARGS__ )
+#define CONVAR_RANGE_INT( name, ... )   const int& name = Con_RegisterConVar_RangeInt( #name, __VA_ARGS__ )
+#define CONVAR_RANGE_FLOAT( name, ... ) const float& name = Con_RegisterConVar_RangeFloat( #name, __VA_ARGS__ )
+
+#else
 #define CONVAR_BOOL( name, defaultVal, ... )                             const bool& name = Con_RegisterConVar_Bool( #name, defaultVal, __VA_ARGS__ )
 #define CONVAR_INT( name, defaultVal, ... )                              const int& name = Con_RegisterConVar_Int( #name, defaultVal, __VA_ARGS__ )
 #define CONVAR_FLOAT( name, defaultVal, ... )                            const float& name = Con_RegisterConVar_Float( #name, defaultVal, __VA_ARGS__ )
-#define CONVAR_STRING( name, defaultVal, ... )                           char*& const name = Con_RegisterConVar_String( #name, defaultVal, __VA_ARGS__ )
+#define CONVAR_STRING( name, defaultVal, ... )                           char*& name = Con_RegisterConVar_String( #name, defaultVal, __VA_ARGS__ )
 #define CONVAR_VEC2( name, defaultX, defaultY, ... )                     const glm::vec2& name = Con_RegisterConVar_Vec2( #name, defaultX, defaultY, __VA_ARGS__ )
 #define CONVAR_VEC3( name, defaultX, defaultY, defaultZ, ... )           const glm::vec3& name = Con_RegisterConVar_Vec3( #name, defaultX, defaultY, defaultZ, __VA_ARGS__ )
 #define CONVAR_VEC4( name, defaultX, defaultY, defaultZ, defaultW, ... ) const glm::vec4& name = Con_RegisterConVar_Vec4( #name, defaultX, defaultY, defaultZ, defaultW, __VA_ARGS__ )
 #define CONVAR_RANGE_INT( name, defaultVal, min, max, ... )              const int& name = Con_RegisterConVar_RangeInt( #name, defaultVal, min, max, __VA_ARGS__ )
 #define CONVAR_RANGE_FLOAT( name, defaultVal, min, max, ... )            const float& name = Con_RegisterConVar_RangeFloat( #name, defaultVal, min, max, __VA_ARGS__ )
+#endif
 
 // Extern convars
-#define CONVAR_BOOL_EXT( name )                                          extern const bool& name
-#define CONVAR_INT_EXT( name )                                           extern const int& name
-#define CONVAR_FLOAT_EXT( name )                                         extern const float& name
-#define CONVAR_STRING_EXT( name )                                        extern char*& const name
-#define CONVAR_VEC2_EXT( name )                                          extern const glm::vec2& name
-#define CONVAR_VEC3_EXT( name )                                          extern const glm::vec3& name
-#define CONVAR_VEC4_EXT( name )                                          extern const glm::vec4& name
-#define CONVAR_RANGE_INT_EXT( name )                                     extern const int& name
-#define CONVAR_RANGE_FLOAT_EXT( name )                                   extern const float& name
+#define CONVAR_BOOL_EXT( name )        extern const bool& name
+#define CONVAR_INT_EXT( name )         extern const int& name
+#define CONVAR_FLOAT_EXT( name )       extern const float& name
+#define CONVAR_STRING_EXT( name )      extern char*& name
+#define CONVAR_VEC2_EXT( name )        extern const glm::vec2& name
+#define CONVAR_VEC3_EXT( name )        extern const glm::vec3& name
+#define CONVAR_VEC4_EXT( name )        extern const glm::vec4& name
+#define CONVAR_RANGE_INT_EXT( name )   extern const int& name
+#define CONVAR_RANGE_FLOAT_EXT( name ) extern const float& name
 
 // Helper Macros for registering ConVars with a callback
 #define CONVAR_BOOL_CMD( name, defaultVal, flags, desc )                                           \

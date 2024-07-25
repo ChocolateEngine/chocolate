@@ -11,11 +11,11 @@
 
 CONVAR_INT( log_dev_global, 1, "Base Developer Logging Level for all Log Channels", 0 );
 
-LogColor                                       gCurrentColor       = LogColor::Default;
-LogChannel                                     gLC_General         = INVALID_LOG_CHANNEL;
-LogChannel                                     gLC_Logging         = INVALID_LOG_CHANNEL;
-static std::string                             gDefaultChannelName = "General";
-static std::mutex                              gLogMutex;
+LogColor                     gCurrentColor = LogColor::Default;
+LogChannel                   gLC_General   = INVALID_LOG_CHANNEL;
+LogChannel                   gLC_Logging   = INVALID_LOG_CHANNEL;
+static ch_string             gDefaultChannelName( "General", 7 );
+static std::mutex            gLogMutex;
 
 // apparently you could of added stuff to this before static initialization got to this, and then you lose some log channels as a result
 std::vector< LogChannel_t >& GetLogChannels()
@@ -93,7 +93,7 @@ void Win32SetColor( LogColor color )
 
 	if ( !handle )
 	{
-		Print( "*** Failed to Get Console Window\n" );
+		ch_print( "*** Failed to Get Console Window\n" );
 		return;
 	}
 
@@ -101,7 +101,7 @@ void Win32SetColor( LogColor color )
 
 	if ( !result )
 	{
-		PrintF( "*** Failed to set console color: %s\n", sys_get_error() );
+		ch_printf( "*** Failed to set console color: %s\n", sys_get_error() );
 	}
 }
 
@@ -162,42 +162,89 @@ const char* Log_ColorToUnix( LogColor color )
 		case LogColor::Default:
 		case LogColor::Count:
 		default:
-			return UNIX_CLR_DEFAULT;
+			return ANSI_CLR_DEFAULT;
 
 		case LogColor::Black:
-			return UNIX_CLR_BLACK;
+			return ANSI_CLR_BLACK;
 		case LogColor::White:
-			return UNIX_CLR_WHITE;
+			return ANSI_CLR_WHITE;
 
 		case LogColor::DarkBlue:
-			return UNIX_CLR_DARK_BLUE;
+			return ANSI_CLR_DARK_BLUE;
 		case LogColor::DarkGreen:
-			return UNIX_CLR_DARK_GREEN;
+			return ANSI_CLR_DARK_GREEN;
 		case LogColor::DarkCyan:
-			return UNIX_CLR_DARK_CYAN;
+			return ANSI_CLR_DARK_CYAN;
 		case LogColor::DarkRed:
-			return UNIX_CLR_DARK_RED;
+			return ANSI_CLR_DARK_RED;
 		case LogColor::DarkPurple:
-			return UNIX_CLR_DARK_PURPLE;
+			return ANSI_CLR_DARK_PURPLE;
 		case LogColor::DarkYellow:
-			return UNIX_CLR_DARK_YELLOW;
+			return ANSI_CLR_DARK_YELLOW;
 		case LogColor::DarkGray:
-			return UNIX_CLR_DARK_GRAY;
+			return ANSI_CLR_DARK_GRAY;
 
 		case LogColor::Blue:
-			return UNIX_CLR_BLUE;
+			return ANSI_CLR_BLUE;
 		case LogColor::Green:
-			return UNIX_CLR_GREEN;
+			return ANSI_CLR_GREEN;
 		case LogColor::Cyan:
-			return UNIX_CLR_CYAN;
+			return ANSI_CLR_CYAN;
 		case LogColor::Red:
-			return UNIX_CLR_RED;
+			return ANSI_CLR_RED;
 		case LogColor::Purple:
-			return UNIX_CLR_PURPLE;
+			return ANSI_CLR_PURPLE;
 		case LogColor::Yellow:
-			return UNIX_CLR_YELLOW;
+			return ANSI_CLR_YELLOW;
 		case LogColor::Gray:
-			return UNIX_CLR_GRAY;
+			return ANSI_CLR_GRAY;
+	}
+}
+
+
+ch_string CORE_API Log_ColorToUnixStr( LogColor color )
+{
+	switch ( color )
+	{
+		case LogColor::Default:
+		case LogColor::Count:
+		default:
+			return STR_ANSI_CLR_DEFAULT;
+
+		case LogColor::Black:
+			return STR_ANSI_CLR_BLACK;
+		case LogColor::White:
+			return STR_ANSI_CLR_WHITE;
+
+		case LogColor::DarkBlue:
+			return STR_ANSI_CLR_DARK_BLUE;
+		case LogColor::DarkGreen:
+			return STR_ANSI_CLR_DARK_GREEN;
+		case LogColor::DarkCyan:
+			return STR_ANSI_CLR_DARK_CYAN;
+		case LogColor::DarkRed:
+			return STR_ANSI_CLR_DARK_RED;
+		case LogColor::DarkPurple:
+			return STR_ANSI_CLR_DARK_PURPLE;
+		case LogColor::DarkYellow:
+			return STR_ANSI_CLR_DARK_YELLOW;
+		case LogColor::DarkGray:
+			return STR_ANSI_CLR_DARK_GRAY;
+
+		case LogColor::Blue:
+			return STR_ANSI_CLR_BLUE;
+		case LogColor::Green:
+			return STR_ANSI_CLR_GREEN;
+		case LogColor::Cyan:
+			return STR_ANSI_CLR_CYAN;
+		case LogColor::Red:
+			return STR_ANSI_CLR_RED;
+		case LogColor::Purple:
+			return STR_ANSI_CLR_PURPLE;
+		case LogColor::Yellow:
+			return STR_ANSI_CLR_YELLOW;
+		case LogColor::Gray:
+			return STR_ANSI_CLR_GRAY;
 	}
 }
 
@@ -253,7 +300,7 @@ LogColor Log_UnixToColor( const char* spColor, size_t sLen )
 
 	if ( sLen != 7 )
 	{
-		PrintF( " *** Log_UnixToColor: Unknown Color Type: \"%s\"\n", spColor );
+		ch_printf( " *** Log_UnixToColor: Unknown Color Type: \"%s\"\n", spColor );
 		return LogColor::Default;
 	}
 
@@ -263,7 +310,7 @@ LogColor Log_UnixToColor( const char* spColor, size_t sLen )
 	long color         = 0;
 	if ( !ToLong3( colorStr, color ) )
 	{
-		PrintF( " *** Failed get color code from string: %s (%s)\n", spColor, colorStr );
+		ch_printf( " *** Failed get color code from string: %s (%s)\n", spColor, colorStr );
 		return LogColor::Default;
 	}
 
@@ -284,18 +331,44 @@ void Log_Init()
 }
 
 
+void Log_Shutdown()
+{
+	// TODO: FREE ALL STRING MEMORY
+	// except logging channel names, those are static
+
+	for ( auto& log : gLogHistory )
+	{
+		if ( log.aMessage.data )
+			ch_str_free( log.aMessage.data );
+
+		if ( log.aFormatted.data )
+			ch_str_free( log.aFormatted.data );
+	}
+}
+
+
 LogChannel Log_RegisterChannel( const char *sName, LogColor sColor )
 {
+	ch_string name;
+	name.data = (char*)sName;
+	name.size = strlen( sName );
+
+	if ( name.size == 0 )
+	{
+		ch_printf( " *** LogSystem: Invalid Channel Name: \"%s\"\n", sName );
+		return INVALID_LOG_CHANNEL;
+	}
+
 	for ( size_t i = 0; i < GetLogChannels().size(); i++ )
     {
 		LogChannel_t* channel = &GetLogChannels()[ i ];
-        if ( channel->aName != sName )
+        if ( !ch_str_equals( channel->aName, name ) )
             continue;
             
         return i;
     }
 
-    GetLogChannels().emplace_back( sName, true, sColor );
+    GetLogChannels().emplace_back( name, true, sColor );
 	return (LogChannel)GetLogChannels().size() - 1U;
 }
 
@@ -305,7 +378,7 @@ LogChannel Log_GetChannel( const char* sChannel )
 	for ( int i = 0; i < GetLogChannels().size(); i++ )
 	{
 		LogChannel_t* channel = &GetLogChannels()[ i ];
-		if ( channel->aName != sChannel )
+		if ( !ch_str_equals( channel->aName, sChannel ) )
 			continue;
 
 		return (LogChannel)i;
@@ -329,7 +402,7 @@ LogChannel_t* Log_GetChannelByName( const char* sChannel )
 	for ( int i = 0; i < GetLogChannels().size(); i++ )
     {
 		LogChannel_t* channel = &GetLogChannels()[ i ];
-        if ( channel->aName != sChannel )
+		if ( !ch_str_equals( channel->aName, sChannel ) )
             continue;
 
         return channel;
@@ -363,19 +436,53 @@ constexpr LogColor GetColor( LogChannel_t* channel, LogType sType )
 }
 
 
+static bool CheckConcatRealloc( ch_string& newOutput, ch_string& output )
+{
+	if ( !newOutput.data )
+	{
+		ch_print( " *** LogSystem: Failed to Concatenate Strings during realloc!\n" );
+		return false;
+	}
+
+	output = newOutput;
+	return true;
+}
+
+
+static bool FormatLog_Dev( LogChannel_t* channel, ch_string& output, const char* devLevel, const char* last, size_t dist )
+{
+	const char* strings[] = { "[", channel->aName.data, "] [DEV ", devLevel, "] ", last };
+	const u64   lengths[] = { 1,   channel->aName.size, 7,         1,        2,    dist };
+	ch_string   newOutput = ch_str_concat( CH_STR_UR( output ), 6, strings, lengths );
+
+	return CheckConcatRealloc( newOutput, output );
+}
+
+
+static bool FormatLog_Dev( LogChannel_t* channel, ch_string& output, ch_string& color, const char* devLevel, const char* last, size_t dist )
+{
+	const char* strings[] = { color.data, "[", channel->aName.data, "] [DEV ", devLevel, "] ", last };
+	const u64   lengths[] = { color.size, 1,   channel->aName.size, 7,         1,        2,    dist };
+	ch_string   newOutput = ch_str_concat( CH_STR_UR( output ), 7, strings, lengths );
+
+	return CheckConcatRealloc( newOutput, output );
+}
+
+
 // Format for system console output
-static std::string FormatLog( LogChannel_t* channel, LogType sType, const char* spMessage )
+static ch_string FormatLog( LogChannel_t* channel, LogType sType, const char* spMessage, s64 len )
 {
     PROF_SCOPE();
 
+	if ( !spMessage || len == 0 )
+		return ch_string();
+
 	// Special Exception for "Raw" LogType
 	if ( sType == LogType::Raw )
-		return spMessage;
+		return ch_str_copy( spMessage, len );
 
 	// Split by New Line characters
-	std::string output = "";
-
-	size_t      len  = strlen( spMessage );
+	ch_string   output;
 
 	const char* last = spMessage;
 	const char* find = strchr( spMessage, '\n' );
@@ -391,44 +498,76 @@ static std::string FormatLog( LogChannel_t* channel, LogType sType, const char* 
 		if ( dist == 0 )
 			break;
 
-		const char* color = Log_ColorToUnix( GetColor( channel, sType ) );
+		ch_string color = Log_ColorToUnixStr( GetColor( channel, sType ) );
 
 		switch ( sType )
 		{
 			default:
 			case LogType::Normal:
-				output += vstring( "%s[%s] ", color, channel->aName.data() );
-				output.append( last, dist );
+			{
+				const char* strings[] = { color.data, "[", channel->aName.data, "] ", last };
+				const u64   lengths[] = { color.size, 1, channel->aName.size, 2, dist };
+				ch_string   newOutput = ch_str_concat( CH_STR_UR( output ), 5, strings, lengths );
+
+				CheckConcatRealloc( newOutput, output );
 				break;
+			}
 
 			case LogType::Dev:
+				FormatLog_Dev( channel, output, color, "1", last, dist );
+				break;
+
 			case LogType::Dev2:
+				FormatLog_Dev( channel, output, color, "2", last, dist );
+				break;
+
 			case LogType::Dev3:
+				FormatLog_Dev( channel, output, color, "3", last, dist );
+				break;
+
 			case LogType::Dev4:
-				output += vstring( "%s[%s] [DEV %u] ", color, channel->aName.data(), sType );
-				output.append( last, dist );
+				FormatLog_Dev( channel, output, color, "4", last, dist );
 				break;
 
 			case LogType::Input:
-				output += vstring( "%s] ", color );
-				output.append( last, dist );
-				output.append( "\n" );
+			{
+				const char* strings[] = { color.data, "] ", last, "\n" };
+				const u64   lengths[] = { color.size, 2, dist, 1 };
+				ch_string   newOutput = ch_str_concat( CH_STR_UR( output ), 4, strings, lengths );
+
+				CheckConcatRealloc( newOutput, output );
 				break;
+			}
 
 			case LogType::Warning:
-				output += vstring( "%s[%s] [WARNING] ", color, channel->aName.data() );
-				output.append( last, dist );
+			{
+				const char* strings[] = { color.data, "[", channel->aName.data, "] [WARNING] ", last };
+				const u64   lengths[] = { color.size, 1, channel->aName.size, 12, dist };
+				ch_string   newOutput = ch_str_concat( CH_STR_UR( output ), 5, strings, lengths );
+
+				CheckConcatRealloc( newOutput, output );
 				break;
+			}
 
 			case LogType::Error:
-				output += vstring( "%s[%s] [ERROR] ", color, channel->aName.data() );
-				output.append( last, dist );
+			{
+				const char* strings[] = { color.data, "[", channel->aName.data, "] [ERROR] ", last };
+				const u64   lengths[] = { color.size, 1, channel->aName.size, 10, dist };
+				ch_string   newOutput = ch_str_concat( CH_STR_UR( output ), 5, strings, lengths );
+
+				CheckConcatRealloc( newOutput, output );
 				break;
+			}
 
 			case LogType::Fatal:
-				output += vstring( "%s[%s] [FATAL] ", color, channel->aName.data() );
-				output.append( last, dist );
+			{
+				const char* strings[] = { color.data, "[", channel->aName.data, "] [FATAL] ", last };
+				const u64   lengths[] = { color.size, 1, channel->aName.size, 10, dist };
+				ch_string   newOutput = ch_str_concat( CH_STR_UR( output ), 5, strings, lengths );
+
+				CheckConcatRealloc( newOutput, output );
 				break;
+			}
 		}
 
 		if ( !find )
@@ -444,20 +583,31 @@ static std::string FormatLog( LogChannel_t* channel, LogType sType, const char* 
 
 // If no colors are found, srOutput is empty
 // NOTE: this could probably be done better
-static void Log_StripColors( std::string_view sBuffer, std::string& srOutput )
+static ch_string Log_StripColors( const ch_string& sBuffer )
 {
-	char* buf  = const_cast< char* >( sBuffer.data() );
+	ch_string output;
+	output.data = nullptr;
+	output.size = 0;
 
+	char* buf  = sBuffer.data;
 	char* find = strstr( buf, "\033[" );
 
 	// no color codes found
 	if ( find == nullptr )
-		return;
+		return output;
 
 	// no color code at start of string
 	if ( find != buf )
 	{
-		srOutput.append( buf, find - buf );
+		ch_string newOutput = ch_str_concat( CH_STR_UR( output ), buf, find - buf );
+
+		if ( !newOutput.data )
+		{
+			ch_print( " *** LogSystem: Failed to Concatenate Strings in Log_StripColors!\n" );
+			return output;
+		}
+
+		output = newOutput;
 	}
 
 	char* last = buf;
@@ -488,54 +638,71 @@ static void Log_StripColors( std::string_view sBuffer, std::string& srOutput )
 
 		if ( nextFind == nullptr )
 		{
-			srOutput.append( endColor, sBuffer.size() - ( last - buf ) );
+			ch_string newOutput = ch_str_concat( CH_STR_UR( output ), endColor, sBuffer.size - ( last - buf ) );
+
+			if ( !newOutput.data )
+			{
+				ch_print( " *** LogSystem: Failed to Concatenate Strings in Log_StripColors!\n" );
+				return output;
+			}
+
+			output = newOutput;
 		}
 		else
 		{
 			// colorBuf.aLen = find - last;
-			srOutput.append( endColor, nextFind - endColor );
+			ch_string newOutput = ch_str_concat( CH_STR_UR( output ), endColor, nextFind - endColor );
+
+			if ( !newOutput.data )
+			{
+				ch_print( " *** LogSystem: Failed to Concatenate Strings in Log_StripColors!\n" );
+				return output;
+			}
+
+			output = newOutput;
 			last = endColor;
 		}
 
 		find = nextFind;
 	}
+
+	return output;
 }
 
 
 // Formats the log as normal, but strips all color codes from it
-static std::string FormatLogNoColors( const Log& srLog )
+static ch_string FormatLogNoColors( const Log& srLog )
 {
 	PROF_SCOPE();
 
 	// Split by New Line characters
-	std::string   output;
+	ch_string     output;
 
 	LogChannel_t* channel = Log_GetChannelData( srLog.aChannel );
 	if ( !channel )
 	{
-		PrintF( "\n *** LogSystem: Channel Not Found for message: \"%s\"\n", srLog.aMessage.c_str() );
+		ch_printf( "\n *** LogSystem: Channel Not Found for message: \"%s\"\n", srLog.aMessage.data );
 		return output;
 	}
 
-	std::string stripped;
-	Log_StripColors( srLog.aMessage, stripped );
+	ch_string_auto stripped = Log_StripColors( srLog.aMessage );
 
 	size_t      len  = 0;
 	const char* last = nullptr;
 	const char* find = nullptr;
 	const char* buf = nullptr;
 
-	if ( stripped.empty() )
+	if ( !stripped.data )
 	{
 		// No color codes found
-		len = srLog.aMessage.size();
-		buf = srLog.aMessage.data();
+		len = srLog.aMessage.size;
+		buf = srLog.aMessage.data;
 	}
 	else
 	{
 		// Color Codes found
-		len = stripped.size();
-		buf = stripped.data();
+		len = stripped.size;
+		buf = stripped.data;
 	}
 
 	last = buf;
@@ -556,35 +723,77 @@ static std::string FormatLogNoColors( const Log& srLog )
 		{
 			default:
 			case LogType::Normal:
-				output += vstring( "[%s] %*.*s", channel->aName.data(), dist, dist, last );
+			{
+				const char* strings[] = { "[", channel->aName.data, "] ", last };
+				const u64   lengths[] = { 1, channel->aName.size, 2, dist };
+				ch_string   newOutput = ch_str_concat( CH_STR_UR( output ), 4, strings, lengths );
+
+				CheckConcatRealloc( newOutput, output );
 				break;
+			}
 
 			case LogType::Dev:
+				FormatLog_Dev( channel, output, "1", last, dist );
+				break;
+
 			case LogType::Dev2:
+				FormatLog_Dev( channel, output, "2", last, dist );
+				break;
+
 			case LogType::Dev3:
+				FormatLog_Dev( channel, output, "3", last, dist );
+				break;
+
 			case LogType::Dev4:
-				output += vstring( "[%s] [DEV %u] %*.*s", channel->aName.data(), srLog.aType, dist, dist, last );
+				FormatLog_Dev( channel, output, "4", last, dist );
 				break;
 
 			case LogType::Input:
-				output += vstring( "] %*.*s\n", dist, dist, last );
+			{
+				const char* strings[] = { "]", last, "\n" };
+				const u64   lengths[] = { 1, dist, 1 };
+				ch_string   newOutput = ch_str_concat( CH_STR_UR( output ), 3, strings, lengths );
+
+				CheckConcatRealloc( newOutput, output );
 				break;
+			}
 
 			case LogType::Raw:
-				output += vstring( "%*.*s\n", dist, dist, last );
+			{
+				ch_string newOutput = ch_str_concat( CH_STR_UR( output ), last, dist );
+				CheckConcatRealloc( newOutput, output );
 				break;
+			}
 
 			case LogType::Warning:
-				output += vstring( "[%s] [WARNING] %*.*s", channel->aName.data(), dist, dist, last );
+			{
+				const char* strings[] = { "[", channel->aName.data, "] [WARNING] ", last };
+				const u64   lengths[] = { 1, channel->aName.size, 12, dist };
+				ch_string   newOutput = ch_str_concat( CH_STR_UR( output ), 4, strings, lengths );
+
+				CheckConcatRealloc( newOutput, output );
 				break;
+			}
 
 			case LogType::Error:
-				output += vstring( "[%s] [ERROR] %*.*s", channel->aName.data(), dist, dist, last );
+			{
+				const char* strings[] = { "[", channel->aName.data, "] [ERROR] ", last };
+				const u64   lengths[] = { 1, channel->aName.size, 10, dist };
+				ch_string   newOutput = ch_str_concat( CH_STR_UR( output ), 4, strings, lengths );
+
+				CheckConcatRealloc( newOutput, output );
 				break;
+			}
 
 			case LogType::Fatal:
-				output += vstring( "[%s] [FATAL] %*.*s", channel->aName.data(), dist, dist, last );
+			{
+				const char* strings[] = { "[", channel->aName.data, "] [FATAL] ", last };
+				const u64   lengths[] = { 1, channel->aName.size, 10, dist };
+				ch_string   newOutput = ch_str_concat( CH_STR_UR( output ), 4, strings, lengths );
+
+				CheckConcatRealloc( newOutput, output );
 				break;
+			}
 		}
 
 		if ( !find )
@@ -736,15 +945,14 @@ inline bool Log_TracyEnabled()
 }
 
 
-inline void Log_Tracy( LogColor sMainColor, std::string_view sMsg )
+inline void Log_Tracy( LogColor sMainColor, const char* sMsg, s64 msgLen )
 {
 #ifdef TRACY_ENABLE
 	if ( !tracy::ProfilerAvailable() )
 		return;
 
-	size_t len = sMsg.size();
-	StripTrailingLines( sMsg.data(), len );
-	TracyMessageC( sMsg.data(), len, GetColorU32( sMainColor ) );
+	StripTrailingLines( sMsg, msgLen );
+	TracyMessageC( sMsg, msgLen, GetColorU32( sMainColor ) );
 #endif
 }
 
@@ -765,11 +973,15 @@ void Log_AddChannelShownCallback( LogChannelShownCallbackF callback )
 
 
 // TODO: make this async and probably store elsewhere
-void Log_BuildHistoryString( std::string& srOutput, int sMaxSize )
+ch_string Log_BuildHistoryString( int sMaxSize )
 {
 	PROF_SCOPE();
 
 	gLogMutex.lock();
+
+	ch_string output;
+	output.data = nullptr;
+	output.size = 0;
 
 	// No limit
 	if ( sMaxSize == -1 )
@@ -790,12 +1002,20 @@ void Log_BuildHistoryString( std::string& srOutput, int sMaxSize )
 			if ( !Log_IsVisible( log ) )
 				continue;
 
-			srOutput += FormatLogNoColors( log );
+			ch_string append = FormatLogNoColors( log );
+
+			if ( !append.data || append.size == 0 )
+				continue;
+
+			ch_string newOutput = ch_str_concat( CH_STR_UR( output ), append.data, append.size );
+
+			if ( !CheckConcatRealloc( newOutput, output ) )
+				break;
 		}
 
 		gLogMutex.unlock();
 
-		return;
+		return output;
 	}
 
 	// go from latest to oldest
@@ -806,11 +1026,19 @@ void Log_BuildHistoryString( std::string& srOutput, int sMaxSize )
 		if ( !Log_IsVisible( log ) )
 			continue;
 
-		int strLen   = glm::min( sMaxSize, (int)log.aFormatted.length() );
-		int strStart = log.aFormatted.length() - strLen;
+		int strLen   = glm::min( sMaxSize, (int)log.aFormatted.size );
+		int strStart = log.aFormatted.size - strLen;
 
 		// if the length wanted is less then the string length, then start at an offset
-		srOutput     = log.aFormatted.substr( strStart, strLen ) + srOutput;
+		ch_string section   = ch_str_copy( log.aFormatted.data + strStart, strLen );
+
+		if ( !section.data )
+			continue;
+
+		ch_string newOutput = ch_str_concat( CH_STR_UR( section ), CH_STR_UR( output ) );
+
+		if ( !CheckConcatRealloc( newOutput, output ) )
+			continue;
 
 		sMaxSize -= strLen;
 
@@ -819,13 +1047,14 @@ void Log_BuildHistoryString( std::string& srOutput, int sMaxSize )
 	}
 
 	gLogMutex.unlock();
+	return output;
 }
 
 
-void Log_SplitStringColors( LogColor sMainColor, std::string_view sBuffer, ChVector< LogColorBuf_t >& srColorList, bool sNoColors )
+void Log_SplitStringColors( LogColor sMainColor, const ch_string& sBuffer, ChVector< LogColorBuf_t >& srColorList, bool sNoColors )
 {
 	// on win32, we need to split up the string by colors
-	char* buf  = const_cast< char* >( sBuffer.data() );
+	char* buf  = const_cast< char* >( sBuffer.data );
 
 	char* find = strstr( buf, "\033[" );
 
@@ -834,8 +1063,8 @@ void Log_SplitStringColors( LogColor sMainColor, std::string_view sBuffer, ChVec
 	{
 		LogColorBuf_t& colorBuf = srColorList.emplace_back();
 		colorBuf.aColor         = sMainColor;
-		colorBuf.aLen           = sBuffer.size();
-		colorBuf.apStr          = sBuffer.data();
+		colorBuf.aLen           = sBuffer.size;
+		colorBuf.apStr          = sBuffer.data;
 		return;
 	}
 
@@ -881,7 +1110,7 @@ void Log_SplitStringColors( LogColor sMainColor, std::string_view sBuffer, ChVec
 
 		if ( nextFind == nullptr )
 		{
-			colorBuf.aLen = sBuffer.size() - (last - buf);
+			colorBuf.aLen = sBuffer.size - (last - buf);
 		}
 		else
 		{
@@ -918,11 +1147,11 @@ void Log_SysPrint( LogColor sMainColor, const Log& srLog, FILE* spStream )
 		return;
   #endif
 
-	std::string debugString = FormatLogNoColors( srLog );
-	OutputDebugStringA( debugString.c_str() );
+	ch_string_auto debugString = FormatLogNoColors( srLog );
+	OutputDebugStringA( debugString.data );
 
 	if ( Log_TracyEnabled() )
-		Log_Tracy( sMainColor, debugString );
+		Log_Tracy( sMainColor, CH_STR_UR( debugString ) );
 #else
 	Log_SetColor( sMainColor );
 	fputs( srLog.aFormatted.c_str(), spStream );
@@ -940,7 +1169,7 @@ void Log_SysPrint( LogColor sMainColor, const Log& srLog, FILE* spStream )
 
 CONCMD( log_test_colors )
 {
-	Log_Msg( UNIX_CLR_DARK_GREEN "TEST " UNIX_CLR_CYAN "TEST CYAN " UNIX_CLR_DARK_PURPLE UNIX_CLR_DARK_BLUE "TEST DARK BLUE \n" );
+	Log_Msg( ANSI_CLR_DARK_GREEN "TEST " ANSI_CLR_CYAN "TEST CYAN " ANSI_CLR_DARK_PURPLE ANSI_CLR_DARK_BLUE "TEST DARK BLUE \n" );
 }
 
 
@@ -951,11 +1180,11 @@ void Log_AddLogInternal( Log& log )
     LogChannel_t* channel = Log_GetChannelData( log.aChannel );
     if ( !channel )
     {
-        PrintF( "\n *** LogSystem: Channel Not Found for message: \"%s\"\n", log.aMessage.c_str() );
+        ch_printf( "\n *** LogSystem: Channel Not Found for message: \"%s\"\n", log.aMessage.data );
         return;
     }
 
-    log.aFormatted = FormatLog( channel, log.aType, log.aMessage.c_str() );
+    log.aFormatted = FormatLog( channel, log.aType, CH_STR_UR( log.aMessage ) );
 
     if ( channel->aShown )
 	{
@@ -989,13 +1218,19 @@ void Log_AddLogInternal( Log& log )
             case LogType::Fatal:
 				Log_SysPrint( LOG_COLOR_ERROR, log, stderr );
 
-                std::string messageBoxTitle;
-				vstring( messageBoxTitle, "[%s] Fatal Error", channel->aName.data() );
+				const char*    strings[]       = { "[", channel->aName.data, "] Fatal Error" };
+				const u64      lengths[]       = { 1, channel->aName.size, 13 };
+				ch_string_auto messageBoxTitle = ch_str_join( 3, strings, lengths );
 
-                if ( log.aMessage.ends_with("\n") )
-                    SDL_ShowSimpleMessageBox( SDL_MESSAGEBOX_ERROR, messageBoxTitle.c_str(), log.aMessage.substr(0, log.aMessage.size()-1 ).c_str(), NULL );
-                else
-                    SDL_ShowSimpleMessageBox( SDL_MESSAGEBOX_ERROR, messageBoxTitle.c_str(), log.aMessage.c_str(), NULL );
+                if ( ch_str_ends_with( log.aMessage, "\n", 1 ) )
+				{
+					ch_string_auto substr = ch_str_copy( log.aMessage.data, log.aMessage.size - 1 );
+					SDL_ShowSimpleMessageBox( SDL_MESSAGEBOX_ERROR, messageBoxTitle.data, substr.data, NULL );
+				}
+				else
+				{
+					SDL_ShowSimpleMessageBox( SDL_MESSAGEBOX_ERROR, messageBoxTitle.data, log.aMessage.data, NULL );
+				}
 
                 sys_debug_break();
 				exit( -1 );
@@ -1026,10 +1261,15 @@ LogColor Log_GetColor()
 
 LogChannel LogGetChannel( const char* name )
 {
+	if ( !name )
+		return INVALID_LOG_CHANNEL;
+
+	u64 nameLen = strlen( name );
+
 	for ( size_t i = 0; const auto& channel : GetLogChannels() )
     {
         // if ( GetLogSystem().aChannels[i].aName == name )
-        if ( channel.aName == name )
+        if ( ch_str_equals( channel.aName, name, nameLen ) )
             return (LogChannel)i;
 
         i++;
@@ -1049,7 +1289,7 @@ LogColor Log_GetChannelColor( LogChannel handle )
 }
 
 
-std::string_view Log_GetChannelName( LogChannel handle )
+ch_string Log_GetChannelName( LogChannel handle )
 {
 	LogChannel_t* channel = Log_GetChannelData( handle );
     if ( !channel )
@@ -1116,15 +1356,20 @@ bool Log_IsVisible( const Log& log )
 // System printing, skip logging
 
 
-void PrintF( const char* format, ... )
+void ch_printf( const char* format, ... )
 {
-    std::string buffer;
-	VSTRING( buffer, format );
-	fputs( buffer.c_str(), stdout );
+	va_list args;
+	va_start( args, format );
+	ch_string msg = ch_str_copy_v( format, args );
+	va_end( args );
+
+	fputs( msg.data, stdout );
+
+	ch_str_free( msg.data );
 }
 
 
-void Print( const char* buffer )
+void ch_print( const char* buffer )
 {
 	fputs( buffer, stdout );
 }
@@ -1183,6 +1428,10 @@ void Log_Group( LogGroup sGroup, const char* spBuf )
 {
 	PROF_SCOPE();
 
+	s64 bufLen = 0;
+	if ( !ch_str_check_empty( spBuf, bufLen ) )
+		return;
+
 	auto it = gLogGroups.find( sGroup );
 	if ( it == gLogGroups.end() )
 	{
@@ -1191,8 +1440,9 @@ void Log_Group( LogGroup sGroup, const char* spBuf )
 	}
 
 	Log& log = it->second;
-	
-	log.aMessage += spBuf;
+
+	ch_string append = ch_str_concat( CH_STR_UR( log.aMessage ), spBuf, bufLen );
+	CheckConcatRealloc( append, log.aMessage );
 }
 
 
@@ -1209,6 +1459,10 @@ void Log_GroupV( LogGroup sGroup, const char* spFmt, va_list args )
 {
 	PROF_SCOPE();
 
+	s64 bufLen = 0;
+	if ( !ch_str_check_empty( spFmt, bufLen ) )
+		return;
+
 	auto it = gLogGroups.find( sGroup );
 	if ( it == gLogGroups.end() )
 	{
@@ -1216,7 +1470,14 @@ void Log_GroupV( LogGroup sGroup, const char* spFmt, va_list args )
 		return;
 	}
 
-	it->second.aMessage += vstringV( spFmt, args );
+	ch_string formatted = ch_str_copy_v( spFmt, args );
+
+	if ( !formatted.data )
+		return;
+
+	// concat it
+	ch_string append = ch_str_concat( CH_STR_UR( it->second.aMessage ), CH_STR_UR( formatted ) );
+	CheckConcatRealloc( append, it->second.aMessage );
 }
 
 
@@ -1276,7 +1537,9 @@ void Log_Ex( LogChannel sChannel, LogType sLevel, const char* spBuf )
 		return;
 	}
 
-	gLogHistory.emplace_back( sChannel, sLevel, spBuf );
+	ch_string message = ch_str_copy( spBuf );
+
+	gLogHistory.emplace_back( sChannel, sLevel, message );
 	Log& log = gLogHistory[ gLogHistory.size() - 1 ];
 
 	Log_AddLogInternal( log );
@@ -1304,7 +1567,7 @@ void Log_ExV( LogChannel sChannel, LogType sLevel, const char* spFmt, va_list ar
 		return;
 	}
 
-	gLogHistory.emplace_back( sChannel, sLevel, "" );
+	gLogHistory.emplace_back( sChannel, sLevel );
 	Log&    log = gLogHistory[ gLogHistory.size() - 1 ];
 
 	va_list copy;
@@ -1314,14 +1577,19 @@ void Log_ExV( LogChannel sChannel, LogType sLevel, const char* spFmt, va_list ar
 
 	if ( len < 0 )
 	{
-		Print( "\n *** LogSystem: vsnprintf failed?\n\n" );
+		ch_print( "\n *** LogSystem: vsnprintf failed?\n\n" );
 		gLogMutex.unlock();
 		return;
 	}
 
-	log.aMessage.resize( std::size_t( len ) + 1, '\0' );
-	std::vsnprintf( log.aMessage.data(), log.aMessage.size(), spFmt, args );
-	log.aMessage.resize( len );
+	log.aMessage = ch_str_copy_v( spFmt, args );
+
+	if ( !log.aMessage.data )
+	{
+		ch_print( "\n *** LogSystem: Failed to Allocate Memory for Log Message!\n\n" );
+		gLogMutex.unlock();
+		return;
+	}
 
 	Log_AddLogInternal( log );
 
@@ -1470,10 +1738,10 @@ void log_channel_dropdown(
 {
 	for ( const auto& channel : GetLogChannels() )
 	{
-		if ( args.size() && !channel.aName.starts_with( args[0] ) )
+		if ( args.size() && !( ch_str_starts_with( channel.aName, args[ 0 ].data(), args[ 0 ].size() ) ) )
 			continue;
 
-		results.push_back( channel.aName.data() );
+		results.push_back( channel.aName.data );
 	}
 }
 
@@ -1509,20 +1777,20 @@ CONCMD_DROP( log_channel_show, log_channel_dropdown )
 
 
 constexpr const char* LOG_CHANNEL_DUMP_HEADER     = "Channel Name%*s  | Shown  | Developer Level | Color\n";
-constexpr size_t      LOG_CHANNEL_DUMP_HEADER_LEN = 53;
+constexpr s64         LOG_CHANNEL_DUMP_HEADER_LEN = 53;
 
 
 // TODO: this is not very good, clean this up, adding developer levels broke it and i haven't fixed it yet
 CONCMD( log_channel_dump )
 {
     // Calculate max name length
-	size_t maxNameLength = 0;
-	size_t maxLength = 0;
-	constexpr size_t logNameLen = 13;
+	s64 maxNameLength = 0;
+	s64 maxLength = 0;
+	constexpr s64 logNameLen = 13;
 
     for ( const auto& channel : GetLogChannels() )
 	{
-		maxNameLength = std::max( logNameLen, std::max( maxNameLength, channel.aName.size() ) );
+		maxNameLength = std::max( logNameLen, std::max( maxNameLength, channel.aName.size ) );
 		// maxLength = std::max( maxLength, maxNameLength + 23 );
 		maxLength = std::max( maxLength, maxNameLength + ( LOG_CHANNEL_DUMP_HEADER_LEN - logNameLen ) );
 	}
@@ -1558,8 +1826,8 @@ CONCMD( log_channel_dump )
 		  group,
 		  "%s%s%*s | %s | %d | %s\n",
 		  Log_ColorToUnix( channel.aColor ),
-		  channel.aName.data(),
-		  maxNameLength - channel.aName.size(),
+		  channel.aName.data,
+		  maxNameLength - channel.aName.size,
 		  "",
 		  channel.aShown ? "Shown " : "Hidden",
 		  channel.aDevLevel,
@@ -1636,8 +1904,7 @@ CONCMD_VA( log_dump, "Dump Logging History to file" )
 		return;
 	}
 
-	std::string output;
-	Log_BuildHistoryString( output, -1 );
+	ch_string_auto output = Log_BuildHistoryString( -1 );
 
 	// Write the data
 	FILE* fp = fopen( outputPath.c_str(), "wb" );
@@ -1648,7 +1915,7 @@ CONCMD_VA( log_dump, "Dump Logging History to file" )
 		return;
 	}
 
-	fwrite( output.c_str(), sizeof( char ), output.size(), fp );
+	fwrite( output.data, sizeof( char ), output.size, fp );
 	fclose( fp );
 
 	Log_DevF( gLC_Logging, 1, "Wrote Log History to File: \"%s\"\n", outputPath.c_str() );
@@ -1665,14 +1932,14 @@ static void log_dev_dropdown(
 		// if ( args.size() && !channel.aName.starts_with( args[ 0 ] ) )
 		if ( args.size() )
 		{
-			if ( args[ 0 ].size() > channel.aName.size() )
+			if ( args[ 0 ].size() > channel.aName.size )
 				continue;
 
-			if ( ch_strncasecmp( channel.aName.data(), args[ 0 ].data(), args[ 0 ].size() ) != 0 )
+			if ( ch_strncasecmp( channel.aName.data, args[ 0 ].data(), args[ 0 ].size() ) != 0 )
 				continue;
 		}
 
-		std::string value = vstring( "%s %d", channel.aName.data(), channel.aDevLevel );
+		std::string value = vstring( "%s %d", channel.aName.data, channel.aDevLevel );
 		results.push_back( value );
 	}
 }
@@ -1704,12 +1971,12 @@ CONCMD_DROP_VA( log_dev, log_dev_dropdown, 0, "Change Log Developer Level of a C
 		else
 		{
 			channel->aDevLevel = std::clamp( out, 0L, 4L );
-			Log_MsgF( "Set Developer Level of Log Channel \"%s\" to %d\n", channel->aName.data(), channel->aDevLevel );
+			Log_MsgF( "Set Developer Level of Log Channel \"%s\" to %d\n", channel->aName.data, channel->aDevLevel );
 		}
 	}
 	else
 	{
-		Log_MsgF( "Log Channel \"%s\" - Developer Level: %d\n", channel->aName.data(), channel->aDevLevel );
+		Log_MsgF( "Log Channel \"%s\" - Developer Level: %d\n", channel->aName.data, channel->aDevLevel );
 	}
 }
 

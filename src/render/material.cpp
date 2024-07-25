@@ -598,7 +598,7 @@ bool Graphics_ParseMaterial( const ch_string& srName, const std::string& srPath,
 	{
 		const char*    strings[]     = { srPath.data(), ".cmt" };
 		const u64      lengths[]     = { srPath.size(), 4 };
-		ch_string_auto path_with_ext = ch_str_concat( 2, strings, lengths );
+		ch_string_auto path_with_ext = ch_str_join( 2, strings, lengths );
 		fullPath                     = FileSys_FindFile( path_with_ext.data, path_with_ext.size );
 	}
 

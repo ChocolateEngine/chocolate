@@ -99,6 +99,8 @@ void ConCommand::Init( const char* name, const char* desc, ConVarFlag_t flags, C
 	apFunc           = func;
 	apDropDownFunc   = dropDownFunc;
 
+	#pragma message( "TODO: OPTIMIZATION - ConCmds queue all other commands during init, and i imagine that can be a bit slow" );
+
 	ConCommand* cvar = Con_GetConCommand( aName );
 
 	if ( cvar )
@@ -120,9 +122,9 @@ void ConCommand::Init( const char* name, const char* desc, ConVarFlag_t flags, C
 std::string ConCommand::GetPrintMessage()
 {
 	if ( !aDesc )
-		return vstring( UNIX_CLR_DEFAULT "%s\n", aName );
+		return vstring( ANSI_CLR_DEFAULT "%s\n", aName );
 
-	return vstring( UNIX_CLR_DEFAULT "%s\n\t" UNIX_CLR_CYAN "%s" UNIX_CLR_DEFAULT "\n", aName, aDesc );
+	return vstring( ANSI_CLR_DEFAULT "%s\n\t" ANSI_CLR_CYAN "%s" ANSI_CLR_DEFAULT "\n", aName, aDesc );
 }
 
 const char* ConCommand::GetName()
@@ -1041,7 +1043,7 @@ void Con_SetDefaultArchive( const char* spFile, const char* spDefaultFile )
 		}
 		else
 		{
-			ch_string new_data = ch_str_concat( gConArchiveFile.data, 2, CFG_DIR, spFile );
+			ch_string new_data = ch_str_join_arr( gConArchiveFile.data, 2, CFG_DIR, spFile );
 
 			if ( !new_data.data )
 			{
@@ -1084,7 +1086,7 @@ void Con_SetDefaultArchive( const char* spFile, const char* spDefaultFile )
 		}
 		else
 		{
-			ch_string new_data = ch_str_concat( gConArchiveDefault.data, 2, CFG_DIR, spDefaultFile );
+			ch_string new_data = ch_str_join_arr( gConArchiveDefault.data, 2, CFG_DIR, spDefaultFile );
 
 			if ( !new_data.data )
 			{
@@ -1149,14 +1151,16 @@ CONCMD_DROP_VA( exec, exec_dropdown, 0, "Execute a script full of console comman
 		const char* strings[] = { "cfg" CH_PATH_SEP_STR, args[ 0 ].data() };
 		const u64   lengths[] = { 4, args[ 0 ].size() };
 
-		path = ch_str_concat( 2, strings, lengths );
+		path = ch_str_join( 2, strings, lengths );
 	}
 
 	if ( !FileSys_IsFile( path.data, path.size ) )
 	{
 		if ( !ch_str_ends_with( path.data, path.size, ".cfg", 4 ) )
 		{
-			ch_string new_data = ch_str_concat( path.data, path.size, ".cfg", 4 );
+			const char* strings[] = { path.data, ".cfg" };
+			const u64   lengths[] = { path.size, 4 };
+			ch_string   new_data  = ch_str_join( 2, strings, lengths );
 
 			if ( !new_data.data )
 			{
@@ -1350,7 +1354,8 @@ static void FindStrArg( bool andSearch, const Arg_t* spArg, const std::vector< s
 		{
 			if ( strstr( spArg->aNames[ n ], arg.c_str() ) )
 			{
-				results.push_back( Args_GetRegisteredPrint( spArg ).data );
+				ch_string_auto msg = Args_GetRegisteredPrint( spArg );
+				results.emplace_back( msg.data, msg.size );
 
 				if ( !andSearch )
 					return;

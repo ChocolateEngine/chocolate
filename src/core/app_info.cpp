@@ -88,21 +88,27 @@ bool Core_ParseSearchPaths( JsonObject_t& root )
 }
 
 
-bool Core_GetAppInfoJson( JsonObject_t& srRoot, const std::string& appPath )
+bool Core_GetAppInfoJson( JsonObject_t& srRoot, const char* appPath, s64 appPathLen )
 {
 	ch_string fullPath;
 
-	if ( appPath.empty() )
+	if ( appPath && appPathLen < 0 )
+	{
+		appPathLen = strlen( appPath );
+	}
+
+	if ( !appPath || appPathLen == 0 )
 	{
 		const char* strings[] = { FileSys_GetExePath().data, PATH_SEP_STR, FileSys_GetWorkingDir().data, gAppInfoFileName };
 		const u64   lengths[] = { FileSys_GetExePath().size, 1, FileSys_GetWorkingDir().size, gAppInfoFileNameLen };
-		fullPath              = ch_str_concat( 4, strings, lengths );
+		fullPath              = ch_str_join( 4, strings, lengths );
 	}
 	else
 	{
-		const char* strings[] = { appPath.data(), PATH_SEP_STR, gAppInfoFileName };
-		const u64   lengths[] = { appPath.size(), 1, gAppInfoFileNameLen };
-		fullPath              = ch_str_concat( 3, strings, lengths );
+
+		const char* strings[] = { appPath, PATH_SEP_STR, gAppInfoFileName };
+		const u64   lengths[] = { appPathLen, 1, gAppInfoFileNameLen };
+		fullPath              = ch_str_join( 3, strings, lengths );
 	}
 
 	if ( !FileSys_IsFile( fullPath.data, fullPath.size, true ) )
@@ -248,15 +254,32 @@ void Core_DestroyAppInfo()
 }
 
 
-bool Core_AddAppInfo( const std::string& appPath )
+bool Core_AddAppInfo( const char* appPath, s64 appPathLen )
 {
+	if ( appPath == nullptr )
+	{
+		Log_Error( "App Path is NULL\n" );
+		return false;
+	}
+
+	if ( appPathLen < 0 )
+	{
+		appPathLen = strlen( appPath );
+	}
+
+	if ( appPathLen == 0 )
+	{
+		Log_Error( "App Path is Empty\n" );
+		return false;
+	}
+
 	JsonObject_t root;
 	if ( !Core_GetAppInfoJson( root, appPath ) )
 	{
 		return false;
 	}
 
-	FileSys_SetAppPathMacro( appPath.data(), appPath.size() );
+	FileSys_SetAppPathMacro( appPath, appPathLen );
 
 	for ( size_t i = 0; i < root.aObjects.aCount; i++ )
 	{
@@ -283,7 +306,7 @@ bool Core_AddAppInfo( const std::string& appPath )
 	Json_Free( &root );
 	FileSys_SetAppPathMacro( "" );
 
-	Log_DevF( 1, "Loaded App Info File: %s\n", appPath.data() );
+	Log_DevF( 1, "Loaded App Info File: %s\n", appPath );
 	return true;
 }
 
@@ -294,10 +317,11 @@ void Core_ReloadSearchPaths()
 	FileSys_ClearBinPaths();
 	FileSys_ClearSourcePaths();
 
+	// TODO: gAppInfoPaths is unused??? huh???
 	for ( const std::string& appPath : gAppInfoPaths )
 	{
 		JsonObject_t root;
-		if ( !Core_GetAppInfoJson( root, appPath ) )
+		if ( !Core_GetAppInfoJson( root, appPath.data(), appPath.size() ) )
 			return;
 
 		for ( size_t i = 0; i < root.aObjects.aCount; i++ )

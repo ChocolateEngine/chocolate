@@ -87,16 +87,21 @@ int Sys_GetCoreCount()
 
 void* Sys_CreateWindow( const char* spWindowName, int sWidth, int sHeight, bool sMaximize )
 {
+#if 1
+    // UNUSED AT THE MOMENT, WILL USE LATER
+	return nullptr;
+#else
     // lmao just pass in vulkan here
 	int flags = SDL_WINDOW_VULKAN | SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI;
 
 	if ( sMaximize )
 		flags |= SDL_WINDOW_MAXIMIZED;
 
-	SDL_Window      = SDL_CreateWindow( spWindowName, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
+	SDL_Window window = SDL_CreateWindow( spWindowName, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
 	                                  sWidth, sHeight, flags );
 
 	return window;
+#endif
 }
 
 
@@ -108,31 +113,6 @@ void* Sys_CreateWindow( const char* spWindowName, int sWidth, int sHeight, bool 
 	// Log_DevF( 1, "Stack Limit: %ld bytes - Stack Max: %lu bytes\n", limit.rlim_cur, limit.rlim_max );
 // }
 
-
-
-
-uchar* Sys_ToWideChar( const char* spStr, int sSize )
-{
-    // uchar is equal to char on linux
-	return spStr;
-}
-
-char* Sys_ToMultiByte( const uchar* spStr, int sSize )
-{
-	// uchar is equal to char on linux
-	return spStr;
-}
-
-
-// these do nothing on linux lol
-void Sys_FreeConvertedString( const uchar* spStr )
-{
-}
-
-
-void Sys_FreeConvertedString( const char* spStr )
-{
-}
 
 
 #endif /* __unix__  */

@@ -17,7 +17,12 @@
 	#undef ch_str_realloc_v
 
 	#undef ch_str_concat
+
 	#undef ch_str_join
+	#undef ch_str_join_space
+
+	#undef ch_str_join_arr
+	#undef ch_str_join_list
 
 	#undef ch_str_add
 #endif
@@ -71,7 +76,7 @@ static void TrackString_Realloc( const char* file, u32 line, const char* func, c
 		}
 		else
 		{
-			Log_ErrorF( "Failed to find old string pointer in tracking data!\n" );
+			ch_print( "Failed to find old string pointer in tracking data!\n" );
 		}
 	}
 
@@ -85,13 +90,13 @@ static void TrackString_Free( const char* string )
 
 	if ( string == nullptr )
 	{
-		Log_Error( "Attempted to free nullptr string!\n" );
+		ch_print( "Attempted to free nullptr string!\n" );
 		return;
 	}
 
 	if ( GetTrackedStrings().empty() )
 	{
-		Log_Error( "No strings tracked to free!\n" );
+		ch_print( "No strings tracked to free!\n" );
 	}
 	else
 	{
@@ -103,7 +108,7 @@ static void TrackString_Free( const char* string )
 		}
 		else
 		{
-			Log_ErrorF( "Failed to find string pointer in tracking data to erase!\n" );
+			ch_print( "Failed to find string pointer in tracking data to erase!\n" );
 		}
 	}
 }
@@ -128,6 +133,49 @@ static void TrackString_Free( const char* string )
 // ===========================================================================================
 
 
+// calculate length of a string
+#if 0 // i'll test this later
+CORE_API u64 ch_str_len( const char* s )
+{
+	const char* end = (const char*)memchr( s, '\0', SIZE_MAX );
+
+	if ( end == NULL )
+		return SIZE_MAX;
+	else
+		return end - s;
+}
+
+
+// calculate length of a string, but return false if the string is invalid
+CORE_API bool ch_str_len_ex( const char* s, u64& length )
+{
+	const char* end = (const char*)memchr( s, '\0', SIZE_MAX );
+
+	if ( end == NULL )
+	{
+		length = SIZE_MAX;
+		return false;
+	}
+
+	length = end - s;
+	return true;
+}
+#else
+CORE_API u64 ch_str_len( const char* s )
+{
+	return strlen( s );
+}
+
+
+// calculate length of a string, but return false if the string is invalid
+CORE_API bool ch_str_len_ex( const char* s, u64& length )
+{
+	length = strlen( s );
+	return true;
+}
+#endif
+
+
 char* Util_AllocStringBase( const char* string, u64 len )
 {
 	// Check if we are already null-termianted
@@ -139,7 +187,7 @@ char* Util_AllocStringBase( const char* string, u64 len )
 
 	if ( out == nullptr )
 	{
-		Log_ErrorF( "Failed to allocate %d bytes for string!\n", memSize );
+		ch_printf( "Failed to allocate %d bytes for string!\n", memSize );
 		return nullptr;
 	}
 
@@ -162,7 +210,7 @@ ch_string ch_str_copy( STR_FILE_LINE_DEF const char* string )
 
 	if ( string == nullptr )
 	{
-		Log_Error( "Attempted to copy nullptr string!\n" );
+		ch_print( "Attempted to copy nullptr string!\n" );
 		return out_string;
 	}
 
@@ -188,7 +236,7 @@ ch_string ch_str_copy( STR_FILE_LINE_DEF const char* string, u64 len )
 
 	if ( string == nullptr )
 	{
-		Log_Error( "Attempted to copy nullptr string!\n" );
+		ch_print( "Attempted to copy nullptr string!\n" );
 		return out_string;
 	}
 
@@ -218,7 +266,7 @@ char* Util_ReallocStringBase( char* data, const char* string, u64 len )
 
 	if ( out == nullptr )
 	{
-		Log_ErrorF( "Failed to allocate %d bytes for string!\n", memSize );
+		ch_printf( "Failed to allocate %d bytes for string!\n", memSize );
 		return nullptr;
 	}
 
@@ -260,7 +308,7 @@ ch_string ch_str_realloc( STR_FILE_LINE_DEF char* data, const char* string, u64 
 
 	if ( string == nullptr )
 	{
-		Log_ErrorF( "Attempted to copy nullptr string!\n" );
+		ch_printf( "Attempted to copy nullptr string!\n" );
 		return out_string;
 	}
 
@@ -288,7 +336,7 @@ ch_string ch_str_realloc( STR_FILE_LINE_DEF char* data, const char* string )
 
 	if ( string == nullptr )
 	{
-		Log_ErrorF( "Attempted to copy nullptr string!\n" );
+		ch_printf( "Attempted to copy nullptr string!\n" );
 		return out_string;
 	}
 
@@ -296,7 +344,7 @@ ch_string ch_str_realloc( STR_FILE_LINE_DEF char* data, const char* string )
 
 	if ( len == 0 )
 	{
-		Log_ErrorF( "Attempted to copy empty string!\n" );
+		ch_printf( "Attempted to copy empty string!\n" );
 		return out_string;
 	}
 
@@ -333,7 +381,7 @@ CORE_API ch_string ch_str_realloc_f( STR_FILE_LINE_DEF char* data, const char* f
 	{
 		va_end( args_copy );
 		va_end( args );
-		Log_Error( "vstring va_args: vsnprintf failed\n" );
+		ch_print( "ch_str_realloc_f va_args: vsnprintf failed\n" );
 		return out_string;
 	}
 
@@ -343,13 +391,13 @@ CORE_API ch_string ch_str_realloc_f( STR_FILE_LINE_DEF char* data, const char* f
 
 		if ( result == nullptr )
 		{
-			Log_ErrorF( "Failed to allocate %d bytes for string!\n", ( len + 1 ) * sizeof( char ) );
+			ch_printf( "Failed to allocate %d bytes for string!\n", ( len + 1 ) * sizeof( char ) );
 			va_end( args_copy );
 			va_end( args );
 			return out_string;
 		}
 
-		vsnprintf( result, len, format, args_copy );
+		vsnprintf( result, len + 1, format, args_copy );
 		result[ len ] = '\0';
 
 		TrackString_Alloc( STR_FILE_LINE_INT result, len + 1 );
@@ -381,11 +429,11 @@ CORE_API ch_string ch_str_realloc_v( STR_FILE_LINE_DEF char* data, const char* f
 
 		if ( result == nullptr )
 		{
-			Log_ErrorF( "Failed to allocate %d bytes for string!\n", ( len + 1 ) * sizeof( char ) );
+			ch_printf( "Failed to allocate %d bytes for string!\n", ( len + 1 ) * sizeof( char ) );
 			return out_string;
 		}
 
-		std::vsnprintf( result, len, format, args );
+		std::vsnprintf( result, len + 1, format, args );
 		result[ len ] = '\0';
 
 		TrackString_Alloc( STR_FILE_LINE_INT result, len + 1 );
@@ -420,14 +468,14 @@ ch_string ch_str_copy_f( STR_FILE_LINE_DEF const char* format, ... )
 	{
 		va_end( args_copy );
 		va_end( args );
-		Log_Error( "vstring va_args: vsnprintf failed\n" );
+		ch_print( "ch_str_copy_f va_args: vsnprintf failed\n" );
 		return out_string;
 	}
 
 	if ( len > 0 )
 	{
 		result = ch_malloc< char >( len + 1 );
-		vsnprintf( result, len, format, args_copy );
+		vsnprintf( result, len + 1, format, args_copy );
 		result[ len ] = '\0';
 
 		TrackString_Alloc( STR_FILE_LINE_INT result, len + 1 );
@@ -456,7 +504,7 @@ ch_string ch_str_copy_v( STR_FILE_LINE_DEF const char* format, va_list args )
 	if ( len >= 0 )
 	{
 		char* result = ch_malloc< char >( len + 1 );
-		std::vsnprintf( result, len, format, args );
+		std::vsnprintf( result, len + 1, format, args );
 		result[ len ] = '\0';
 
 		TrackString_Alloc( STR_FILE_LINE_INT result, len + 1 );
@@ -471,11 +519,317 @@ ch_string ch_str_copy_v( STR_FILE_LINE_DEF const char* format, va_list args )
 
 
 // --------------------------------------------------------------------------
-// Basic String Joining
+// String Concatenation
 // TODO: there's a lot of duplicated code here, need to refactor
 
 
-ch_string ch_str_concat( STR_FILE_LINE_DEF u64 count, const char** strings, char* data )
+// simple single string concatenation
+ch_string ch_str_concat( STR_FILE_LINE_DEF char* dest, const char* string )
+{
+	ch_string outString;
+	outString.data = nullptr;
+	outString.size = 0;
+
+	if ( string == nullptr )
+	{
+		ch_print( "Attempted to concatenate nullptr string!\n" );
+		return outString;
+	}
+
+	u64   destLen = strlen( dest );
+	u64   strLen  = strlen( string );
+
+	char* out     = ch_realloc< char >( dest, destLen + strLen + 1 );
+
+	if ( out == nullptr )
+	{
+		ch_printf( "Failed to allocate %d bytes for string!\n", ( destLen + strLen + 1 ) * sizeof( char ) );
+		return outString;
+	}
+
+	// char* rOut = out;
+	// 
+	// while ( *rOut )
+	// 	rOut++;
+	// 
+	// while ( *rOut++ = *string++ )
+	// 	;
+
+	memcpy( out + destLen, string, strLen );
+	out[ destLen + strLen ] = '\0';
+
+	TrackString_Realloc( STR_FILE_LINE_INT out, destLen + strLen + 1, dest );
+
+	outString.data = out;
+	outString.size = destLen + strLen;
+	return outString;
+}
+
+
+ch_string ch_str_concat( STR_FILE_LINE_DEF char* dest, s64 destLen, const char* string, s64 stringLen )
+{
+	ch_string outString;
+	outString.data = nullptr;
+	outString.size = 0;
+
+	if ( string == nullptr )
+	{
+		ch_print( " *** Attempted to concatenate nullptr string!\n" );
+		return outString;
+	}
+
+	if ( !ch_str_check_len( dest, destLen ) && !ch_str_check_len( string, stringLen ) )
+	{
+		ch_print( " *** Both strings to concat are empty!\n" );
+		return outString;
+	}
+
+	char* out = ch_realloc< char >( dest, destLen + stringLen + 1 );
+
+	if ( out == nullptr )
+	{
+		ch_printf( "Failed to allocate %d bytes for string!\n", ( destLen + stringLen + 1 ) * sizeof( char ) );
+		return outString;
+	}
+
+	memcpy( out + destLen, string, stringLen );
+	out[ destLen + stringLen ] = '\0';
+
+	TrackString_Realloc( STR_FILE_LINE_INT out, destLen + stringLen + 1, dest );
+
+	outString.data = out;
+	outString.size = destLen + stringLen;
+	return outString;
+}
+
+
+// Concatenates an array of strings together, and appends it to the destination
+ch_string ch_str_concat( STR_FILE_LINE_DEF char* dest, s64 destLen, u64 count, const char** strings )
+{
+	ch_string outString;
+	outString.data = nullptr;
+	outString.size = 0;
+
+	s64  totalLen  = destLen;
+
+	u64* lengths   = ch_malloc< u64 >( count );
+
+	if ( lengths == nullptr )
+	{
+		ch_printf( "Failed to allocate %d bytes for string length array!\n", count * sizeof( u64 ) );
+		return outString;
+	}
+
+	for ( s64 i = 0; i < count; i++ )
+	{
+		if ( !strings[ i ] )
+		{
+			lengths[ i ] = 0;
+			continue;
+		}
+
+		lengths[ i ] = strlen( strings[ i ] );
+		totalLen += lengths[ i ];
+	}
+
+	// check the strings list to see if the data pointer is in there
+
+	for ( s64 i = 0; i < count && dest; i++ )
+	{
+		if ( strings[ i ] == dest )
+		{
+			// Technically, we could allocate a new string here and copy the data into it
+			// im not sure if that would be a good idea or not
+			ch_print( "Attempted to concatenate string with itself!\n" );
+			ch_free( lengths );
+			return outString;
+		}
+	}
+
+	char* out = ch_realloc< char >( dest, totalLen + 1 );
+
+	if ( out == nullptr )
+	{
+		ch_printf( "Failed to allocate %d bytes for string!\n", ( totalLen + 1 ) * sizeof( char ) );
+		ch_free( lengths );
+		return outString;
+	}
+
+	s64 offset = 0;
+	for ( s64 i = 0; i < count; i++ )
+	{
+		if ( lengths[ i ] == 0 || !strings[ i ] )
+			continue;
+
+		memcpy( out + destLen + offset, strings[ i ], lengths[ i ] );
+		offset += lengths[ i ];
+	}
+
+	out[ totalLen ] = '\0';
+
+	TrackString_Realloc( STR_FILE_LINE_INT out, totalLen + 1, dest );
+
+	ch_free( lengths );
+
+	outString.data = out;
+	outString.size = totalLen;
+	return outString;
+}
+
+
+ch_string ch_str_concat( STR_FILE_LINE_DEF char* dest, s64 destLen, u64 count, const char** strings, const u64* lengths )
+{
+	ch_string outString;
+	outString.data = nullptr;
+	outString.size = 0;
+
+	s64 totalLen   = destLen;
+
+	for ( s64 i = 0; i < count; i++ )
+		totalLen += lengths[ i ];
+
+	char* out = ch_realloc< char >( dest, totalLen + 1 );
+
+	if ( out == nullptr )
+	{
+		ch_printf( "Failed to allocate %d bytes for string!\n", ( totalLen + 1 ) * sizeof( char ) );
+		return outString;
+	}
+
+	s64 offset = 0;
+
+	for ( s64 i = 0; i < count; i++ )
+	{
+		memcpy( out + destLen + offset, strings[ i ], lengths[ i ] );
+		offset += lengths[ i ];
+	}
+
+	out[ totalLen ] = '\0';
+
+	TrackString_Realloc( STR_FILE_LINE_INT out, totalLen + 1, dest );
+
+	outString.data = out;
+	outString.size = totalLen;
+	return outString;
+}
+
+
+ch_string ch_str_concat( STR_FILE_LINE_DEF char* dest, s64 destLen, u64 count, const ch_string* strings )
+{
+	ch_string outString;
+	outString.data = nullptr;
+	outString.size = 0;
+
+	s64 totalLen   = destLen;
+
+	for ( s64 i = 0; i < count; i++ )
+		totalLen += strings[ i ].size;
+
+	char* out = ch_realloc< char >( dest, totalLen + 1 );
+
+	if ( out == nullptr )
+	{
+		ch_printf( "Failed to allocate %d bytes for string!\n", ( totalLen + 1 ) * sizeof( char ) );
+		return outString;
+	}
+
+	s64 offset = 0;
+
+	for ( s64 i = 0; i < count; i++ )
+	{
+		memcpy( out + destLen + offset, strings[ i ].data, strings[ i ].size );
+		offset += strings[ i ].size;
+	}
+
+	out[ totalLen ] = '\0';
+
+	TrackString_Realloc( STR_FILE_LINE_INT out, totalLen + 1, dest );
+
+	outString.data = out;
+	outString.size = totalLen;
+	return outString;
+}
+
+
+// --------------------------------------------------------------------------
+// String Joining
+// TODO: there's a lot of duplicated code here, need to refactor
+
+
+ch_string ch_str_join( STR_FILE_LINE_DEF const char* strLeft, const char* strRight )
+{
+	ch_string outString;
+	outString.data = nullptr;
+	outString.size = 0;
+
+	if ( strLeft == nullptr || strRight == nullptr )
+	{
+		ch_print( "Attempted to join nullptr string!\n" );
+		return outString;
+	}
+
+	u64   leftLen = strlen( strLeft );
+	u64   rightLen = strlen( strRight );
+
+	char* out      = ch_malloc< char >( leftLen + rightLen + 1 );
+
+	if ( out == nullptr )
+	{
+		ch_printf( "Failed to allocate %d bytes for string!\n", ( leftLen + rightLen + 1 ) * sizeof( char ) );
+		return outString;
+	}
+
+	memcpy( out, strLeft, rightLen );
+	memcpy( out + leftLen, strRight, rightLen );
+	out[ leftLen + rightLen ] = '\0';
+
+	TrackString_Alloc( STR_FILE_LINE_INT out, leftLen + rightLen + 1 );
+
+	outString.data = out;
+	outString.size = leftLen + rightLen;
+	return outString;
+}
+
+
+ch_string ch_str_join( STR_FILE_LINE_DEF const char* strLeft, s64 leftLen, const char* strRight, s64 rightLen )
+{
+	ch_string outString;
+	outString.data = nullptr;
+	outString.size = 0;
+
+	if ( strRight == nullptr )
+	{
+		ch_print( "Attempted to join nullptr string!\n" );
+		return outString;
+	}
+
+	if ( ch_str_check_len( strLeft, leftLen ) || ch_str_check_len( strRight, rightLen ) )
+	{
+		ch_print( "Invalid string length!\n" );
+		return outString;
+	}
+
+	char* out = ch_malloc< char >( leftLen + rightLen + 1 );
+
+	if ( out == nullptr )
+	{
+		ch_printf( "Failed to allocate %d bytes for string!\n", ( leftLen + rightLen + 1 ) * sizeof( char ) );
+		return outString;
+	}
+	
+	memcpy( out, strLeft, rightLen );
+	memcpy( out + leftLen, strRight, rightLen );
+	out[ leftLen + rightLen ] = '\0';
+
+	TrackString_Alloc( STR_FILE_LINE_INT out, leftLen + rightLen + 1 );
+
+	outString.data = out;
+	outString.size = leftLen + rightLen;
+	return outString;
+}
+
+
+ch_string ch_str_join( STR_FILE_LINE_DEF u64 count, const char** strings, char* data )
 {
 	ch_string outString;
 	outString.data = nullptr;
@@ -487,7 +841,7 @@ ch_string ch_str_concat( STR_FILE_LINE_DEF u64 count, const char** strings, char
 
 	if ( lengths == nullptr )
 	{
-		Log_ErrorF( "Failed to allocate %d bytes for string length array!\n", count * sizeof( u64 ) );
+		ch_printf( "Failed to allocate %d bytes for string length array!\n", count * sizeof( u64 ) );
 		return outString;
 	}
 
@@ -511,7 +865,7 @@ ch_string ch_str_concat( STR_FILE_LINE_DEF u64 count, const char** strings, char
 		{
 			// Technically, we could allocate a new string here and copy the data into it
 			// im not sure if that would be a good idea or not
-			Log_Error( "Attempted to concatenate string with itself!\n" );
+			ch_print( "Attempted to concatenate string with itself!\n" );
 			ch_free( lengths );
 			return outString;
 		}
@@ -521,7 +875,7 @@ ch_string ch_str_concat( STR_FILE_LINE_DEF u64 count, const char** strings, char
 
 	if ( out == nullptr )
 	{
-		Log_ErrorF( "Failed to allocate %d bytes for string!\n", ( totalLen + 1 ) * sizeof( char ) );
+		ch_printf( "Failed to allocate %d bytes for string!\n", ( totalLen + 1 ) * sizeof( char ) );
 		ch_free( lengths );
 		return outString;
 	}
@@ -548,7 +902,7 @@ ch_string ch_str_concat( STR_FILE_LINE_DEF u64 count, const char** strings, char
 }
 
 
-ch_string ch_str_concat( STR_FILE_LINE_DEF u64 count, const char** strings, const u64* lengths, char* data )
+ch_string ch_str_join( STR_FILE_LINE_DEF u64 count, const char** strings, const u64* lengths, char* data )
 {
 	ch_string outString;
 	outString.data = nullptr;
@@ -563,7 +917,7 @@ ch_string ch_str_concat( STR_FILE_LINE_DEF u64 count, const char** strings, cons
 
 	if ( out == nullptr )
 	{
-		Log_ErrorF( "Failed to allocate %d bytes for string!\n", ( totalLen + 1 ) * sizeof( char ) );
+		ch_printf( "Failed to allocate %d bytes for string!\n", ( totalLen + 1 ) * sizeof( char ) );
 		return outString;
 	}
 
@@ -619,13 +973,13 @@ ch_string ch_str_concat( STR_FILE_LINE_DEF u64 count, const char** strings, cons
 }
 
 
-ch_string ch_str_concat( STR_FILE_LINE_DEF u64 count, std::vector< const char* >& strings, const std::vector< u64 >& lengths, char* data )
+ch_string ch_str_join( STR_FILE_LINE_DEF u64 count, std::vector< const char* >& strings, const std::vector< u64 >& lengths, char* data )
 {
-	return ch_str_concat( STR_FILE_LINE_INT count, strings.data(), lengths.data(), data );
+	return ch_str_join( STR_FILE_LINE_INT count, strings.data(), lengths.data(), data );
 }
 
 
-ch_string ch_str_concat( STR_FILE_LINE_DEF u64 count, const ch_string* strings, char* data )
+ch_string ch_str_join( STR_FILE_LINE_DEF u64 count, const ch_string* strings, char* data )
 {
 	ch_string outString;
 	outString.data = nullptr;
@@ -640,7 +994,7 @@ ch_string ch_str_concat( STR_FILE_LINE_DEF u64 count, const ch_string* strings, 
 
 	if ( out == nullptr )
 	{
-		Log_ErrorF( "Failed to allocate %d bytes for string!\n", ( totalLen + 1 ) * sizeof( char ) );
+		ch_printf( "Failed to allocate %d bytes for string!\n", ( totalLen + 1 ) * sizeof( char ) );
 		return outString;
 	}
 
@@ -665,7 +1019,7 @@ ch_string ch_str_concat( STR_FILE_LINE_DEF u64 count, const ch_string* strings, 
 // --------------------------------------------------------------------------
 
 
-ch_string ch_str_join( STR_FILE_LINE_DEF u64 count, char** strings, const char* space, char* data )
+ch_string ch_str_join_space( STR_FILE_LINE_DEF u64 count, const char** strings, const char* space, char* data )
 {
 	ch_string outString;
 	outString.data = nullptr;
@@ -680,7 +1034,7 @@ ch_string ch_str_join( STR_FILE_LINE_DEF u64 count, char** strings, const char* 
 
 	if ( lengths == nullptr )
 	{
-		Log_ErrorF( "Failed to allocate %d bytes for string length array!\n", count * sizeof( u64 ) );
+		ch_printf( "Failed to allocate %d bytes for string length array!\n", count * sizeof( u64 ) );
 		return outString;
 	}
 
@@ -697,7 +1051,7 @@ ch_string ch_str_join( STR_FILE_LINE_DEF u64 count, char** strings, const char* 
 
 	if ( out == nullptr )
 	{
-		Log_ErrorF( "Failed to allocate %d bytes for string!\n", ( totalLen + 1 ) * sizeof( char ) );
+		ch_printf( "Failed to allocate %d bytes for string!\n", ( totalLen + 1 ) * sizeof( char ) );
 		return outString;
 	}
 
@@ -724,7 +1078,7 @@ ch_string ch_str_join( STR_FILE_LINE_DEF u64 count, char** strings, const char* 
 }
 
 
-ch_string ch_str_join( STR_FILE_LINE_DEF u64 count, char** strings, const u64* lengths, const char* space, char* data )
+ch_string ch_str_join_space( STR_FILE_LINE_DEF u64 count, const char** strings, const u64* lengths, const char* space, char* data )
 {
 	ch_string outString;
 	outString.data = nullptr;
@@ -744,7 +1098,7 @@ ch_string ch_str_join( STR_FILE_LINE_DEF u64 count, char** strings, const u64* l
 
 	if ( out == nullptr )
 	{
-		Log_ErrorF( "Failed to allocate %d bytes for string!\n", ( totalLen + 1 ) * sizeof( char ) );
+		ch_printf( "Failed to allocate %d bytes for string!\n", ( totalLen + 1 ) * sizeof( char ) );
 		return outString;
 	}
 
@@ -771,7 +1125,7 @@ ch_string ch_str_join( STR_FILE_LINE_DEF u64 count, char** strings, const u64* l
 }
 
 
-ch_string ch_str_join( STR_FILE_LINE_DEF u64 count, const ch_string* strings, const char* space, char* data )
+ch_string ch_str_join_space( STR_FILE_LINE_DEF u64 count, const ch_string* strings, const char* space, char* data )
 {
 	ch_string outString;
 	outString.data = nullptr;
@@ -791,7 +1145,7 @@ ch_string ch_str_join( STR_FILE_LINE_DEF u64 count, const ch_string* strings, co
 
 	if ( out == nullptr )
 	{
-		Log_ErrorF( "Failed to allocate %d bytes for string!\n", ( totalLen + 1 ) * sizeof( char ) );
+		ch_printf( "Failed to allocate %d bytes for string!\n", ( totalLen + 1 ) * sizeof( char ) );
 		return outString;
 	}
 
@@ -818,50 +1172,139 @@ ch_string ch_str_join( STR_FILE_LINE_DEF u64 count, const ch_string* strings, co
 }
 
 
-template< typename CH_STRING, typename STR_TYPE >
-CH_STRING Util_AllocStringConcatBase( STR_TYPE* data, u64 count, const STR_TYPE* string, va_list args, u64 ( *strlen_func )( const STR_TYPE* ) )
+ch_string ch_str_join_arr( STR_FILE_LINE_DEF char* data, u64 count, const char* string, ... )
 {
-	CH_STRING outString;
+	ch_string outString;
 	outString.data = nullptr;
 	outString.size = 0;
+
+	if ( count == 0 )
+	{
+		ch_print( "No strings in array to concatenate - count of 0!\n" );
+		return outString;
+	}
 
 	u64  totalLen  = 0;
 	u64* lengths   = ch_malloc< u64 >( count );
 
 	if ( lengths == nullptr )
 	{
-		Log_ErrorF( "Failed to allocate %d bytes for string length array!\n", count * sizeof( u64 ) );
+		ch_printf( "Failed to allocate %d bytes for string length array!\n", count * sizeof( u64 ) );
 		return outString;
 	}
 
+	va_list args;
 	va_list args_copy;
+
+	va_start( args, string );
 	va_copy( args_copy, args );
 
-	for ( u64 i = 0; i < count; i++ )
+	lengths[ 0 ] = strlen( string );
+	totalLen += lengths[ 0 ];
+
+	for ( u64 i = 1; i < count; i++ )
 	{
-		const char* arg = va_arg( args_copy, const STR_TYPE* );
-		lengths[ i ]    = strlen_func( arg );
+		const char* arg = va_arg( args_copy, const char* );
+
+		if ( arg == nullptr )
+		{
+			Log_WarnF( "Attempted to concatenate nullptr string at index %d!\n", i );
+			lengths[ i ] = 0;
+			continue;
+		}
+
+		lengths[ i ] = strlen( arg );
 		totalLen += lengths[ i ];
 	}
 
 	va_end( args_copy );
 
-	STR_TYPE* out = ch_realloc< STR_TYPE >( data, totalLen + 1 );
+	char* out = ch_realloc< char >( data, totalLen + 1 );
 
 	if ( out == nullptr )
 	{
-		Log_ErrorF( "Failed to allocate %d bytes for string!\n", ( totalLen + 1 ) * sizeof( STR_TYPE ) );
+		ch_printf( "Failed to allocate %d bytes for string!\n", ( totalLen + 1 ) * sizeof( char ) );
 		ch_free( lengths );
 		//va_end( args_copy );
 		return outString;
 	}
 
-	u64 offset = 0;
-	for ( u64 i = 0; i < count; i++ )
+	memcpy( out, string, lengths[ 0 ] );
+
+	u64 offset = lengths[ 0 ];
+	for ( u64 i = 1; i < count; i++ )
 	{
-		const STR_TYPE* arg = va_arg( args, const STR_TYPE* );
+		const char* arg = va_arg( args, const char* );
+
+		if ( arg == nullptr )
+			continue;
+
 		memcpy( out + offset, arg, lengths[ i ] );
 		offset += lengths[ i ];
+	}
+
+	va_end( args );
+
+	out[ totalLen ] = '\0';
+
+	outString.data  = out;
+	outString.size  = totalLen;
+
+	TrackString_Realloc( STR_FILE_LINE_INT outString.data, outString.size + 1, data );
+
+	return outString;
+}
+
+
+ch_string ch_str_join_list( STR_FILE_LINE_DEF char* data, std::initializer_list< const char* > strings )
+{
+	ch_string outString;
+	outString.data = nullptr;
+	outString.size = 0;
+
+	u64  totalLen  = 0;
+	u64* lengths   = ch_malloc< u64 >( strings.size() );
+
+	if ( lengths == nullptr )
+	{
+		ch_printf( "Failed to allocate %d bytes for string length array!\n", strings.size() * sizeof( u64 ) );
+		return outString;
+	}
+
+	u64 i = 0;
+	for ( const char* arg : strings )
+	{
+		if ( arg == nullptr )
+		{
+			Log_WarnF( "Attempted to concatenate nullptr string at index %d!\n", i );
+			lengths[ i ] = 0;
+			continue;
+		}
+
+		lengths[ i ] = strlen( arg );
+		totalLen += lengths[ i ];
+		i++;
+	}
+
+	char* out = ch_realloc< char >( data, totalLen + 1 );
+
+	if ( out == nullptr )
+	{
+		ch_printf( "Failed to allocate %d bytes for string!\n", ( totalLen + 1 ) * sizeof( char ) );
+		ch_free( lengths );
+		return outString;
+	}
+
+	u64 offset = 0;
+	i = 0;
+	for ( const char* arg : strings )
+	{
+		if ( arg == nullptr )
+			continue;
+
+		memcpy( out + offset, arg, lengths[ i ] );
+		offset += lengths[ i ];
+		i++;
 	}
 
 	out[ totalLen ] = '\0';
@@ -869,46 +1312,58 @@ CH_STRING Util_AllocStringConcatBase( STR_TYPE* data, u64 count, const STR_TYPE*
 	outString.data  = out;
 	outString.size  = totalLen;
 
+	TrackString_Realloc( STR_FILE_LINE_INT outString.data, outString.size + 1, data );
+
 	return outString;
 }
 
 
-#if 0
-char* ch_str_concat( char* data, u64 count, const char* string, ... )
+ch_string ch_str_join_list( STR_FILE_LINE_DEF char* data, std::initializer_list< ch_string > strings )
 {
-	va_list args;
-	va_start( args, string );
+	ch_string outString;
+	outString.data = nullptr;
+	outString.size = 0;
 
-	#if CH_STRING_MEM_TRACKING
-	u64 index = 0;
+	u64  totalLen  = 0;
 
-	if ( data )
-		index = GetAllocatedStrings().index( data );
-	#endif
+	u64 i = 0;
+	for ( const ch_string& arg : strings )
+	{
+		if ( arg.data == nullptr )
+		{
+			Log_WarnF( "Attempted to concatenate nullptr string at index %d!\n", i );
+			continue;
+		}
 
-	ch_string out = Util_AllocStringConcatBase< ch_string >( data, count, string, args, strlen );
+		totalLen += arg.size;
+		i++;
+	}
 
-	#if CH_STRING_MEM_TRACKING
-	Util_AllocStringConcatTrack( out.data, index );
-	#endif
+	char* out = ch_realloc< char >( data, totalLen + 1 );
 
-	va_end( args );
-	return out.data;
-}
-#endif
+	if ( out == nullptr )
+	{
+		ch_printf( "Failed to allocate %d bytes for string!\n", ( totalLen + 1 ) * sizeof( char ) );
+		return outString;
+	}
 
+	u64 offset = 0;
+	i = 0;
+	for ( const ch_string& arg : strings )
+	{
+		memcpy( out + offset, arg.data, arg.size );
+		offset += arg.size;
+		i++;
+	}
 
-ch_string ch_str_concat( STR_FILE_LINE_DEF char* data, u64 count, const char* string, ... )
-{
-	va_list args;
-	va_start( args, string );
+	out[ totalLen ] = '\0';
 
-	ch_string out = Util_AllocStringConcatBase< ch_string >( data, count, string, args, strlen );
+	outString.data  = out;
+	outString.size  = totalLen;
 
-	TrackString_Realloc( STR_FILE_LINE_INT out.data, out.size + 1, data );
+	TrackString_Realloc( STR_FILE_LINE_INT outString.data, outString.size + 1, data );
 
-	va_end( args );
-	return out;
+	return outString;
 }
 
 
@@ -920,7 +1375,7 @@ void ch_str_free( char* string )
 {
 	if ( string == nullptr )
 	{
-		Log_Error( "Attempted to free nullptr string!\n" );
+		ch_print( "Attempted to free nullptr string!\n" );
 		return;
 	}
 
@@ -964,7 +1419,7 @@ void ch_str_add( STR_FILE_LINE_DEF const char* string )
 {
 	if ( string == nullptr )
 	{
-		Log_Error( "Attempted to add nullptr string to tracking!\n" );
+		ch_print( "Attempted to add nullptr string to tracking!\n" );
 		return;
 	}
 
@@ -972,7 +1427,7 @@ void ch_str_add( STR_FILE_LINE_DEF const char* string )
 
 	if ( len == 0 )
 	{
-		Log_Error( "Attempted to add empty string to tracking!\n" );
+		ch_print( "Attempted to add empty string to tracking!\n" );
 		return;
 	}
 

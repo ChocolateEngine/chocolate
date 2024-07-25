@@ -1115,7 +1115,7 @@ static TextureVK* CreateBackBufferColor( WindowVK* window, const char* title, u6
 
 	const char* backbufStrings[] = { "Backbuffer Color - ", title };
 	const u64   backbufLengths[] = { 19, titleLen };
-	colorTex->aName              = ch_str_concat( 2, backbufStrings, backbufLengths );
+	colorTex->aName              = ch_str_join( 2, backbufStrings, backbufLengths );
 	colorTex->aRenderTarget      = true;
 
 	VkImageCreateInfo color{ VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO };
@@ -1172,7 +1172,7 @@ static TextureVK* CreateBackBufferColor( WindowVK* window, const char* title, u6
 
 	const char* backbufViewStrings[] = { "Backbuffer Color View - ", title };
 	const u64   backbufViewLengths[] = { 24, titleLen };
-	ch_string viewName               = ch_str_concat( 2, backbufViewStrings, backbufViewLengths );
+	ch_string viewName               = ch_str_join( 2, backbufViewStrings, backbufViewLengths );
 
 	VK_SetObjectName( VK_OBJECT_TYPE_IMAGE_VIEW, (u64)colorTex->aImageView, viewName.data );
 
@@ -1206,7 +1206,7 @@ void VK_CreateBackBuffer( WindowVK* window )
 
 	const char* depthStrings[] = { "Backbuffer Depth - ", title };
 	const u64   depthLengths[] = { 19, titleLen };
-	depthTex->aName            = ch_str_concat( 2, depthStrings, depthLengths );
+	depthTex->aName            = ch_str_join( 2, depthStrings, depthLengths );
 	depthTex->aRenderTarget = true;
 
 	VkImageCreateInfo depth;
@@ -1262,7 +1262,7 @@ void VK_CreateBackBuffer( WindowVK* window )
 	// MEMORY LEAK
 	const char* depthViewStrings[] = { "Backbuffer Depth View - ", title };
 	const u64   depthViewLengths[] = { 24, titleLen };
-	ch_string   depthViewName      = ch_str_concat( 2, depthViewStrings, depthViewLengths );
+	ch_string   depthViewName      = ch_str_join( 2, depthViewStrings, depthViewLengths );
 
 	VK_SetObjectName( VK_OBJECT_TYPE_IMAGE_VIEW, (u64)depthTex->aImageView, depthViewName.data );
 
@@ -1295,7 +1295,7 @@ void VK_CreateBackBuffer( WindowVK* window )
 
 		const char* strings[] = { "Backbuffer Color - ", title };
 		const u64   lengths[] = { 19, titleLen };
-		tex->aName            = ch_str_concat( 2, strings, lengths );
+		tex->aName            = ch_str_join( 2, strings, lengths );
 
 		tex->aFormat          = gColorFormat;
 		tex->aFrames          = 1;
@@ -1321,7 +1321,7 @@ void VK_CreateBackBuffer( WindowVK* window )
 
 		const char* strings[]    = { "Backbuffer Resolve - ", title };
 		const u64   lengths[]    = { 21, titleLen };
-		tex->aName               = ch_str_concat( 2, strings, lengths );
+		tex->aName               = ch_str_join( 2, strings, lengths );
 
 		tex->aFormat             = gColorFormat;
 		tex->aFrames             = 1;
@@ -1341,7 +1341,7 @@ void VK_CreateBackBuffer( WindowVK* window )
 
 	const char*         clrStrings[] = { "Backbuffer Color - ", title };
 	const u64           clrLengths[] = { 19, titleLen };
-	createBuffer.apName              = ch_str_concat( 2, clrStrings, clrLengths ).data;
+	createBuffer.apName              = ch_str_join( 2, clrStrings, clrLengths ).data;
 	createBuffer.aRenderPass         = VK_GetRenderPass();
 	createBuffer.aSize.x             = window->swapExtent.width;
 	createBuffer.aSize.y             = window->swapExtent.height;
@@ -1372,7 +1372,7 @@ void VK_CreateBackBuffer( WindowVK* window )
 	if ( createBuffer.apName )
 		ch_str_free( (char*)createBuffer.apName );
 
-	// createBuffer.apName             = ch_str_concat( 2, depthStrings, depthLengths, (char*)createBuffer.apName ).data;
+	// createBuffer.apName             = ch_str_join( 2, depthStrings, depthLengths, (char*)createBuffer.apName ).data;
 	createBuffer.apName        = depthTex->aName.data;
 
 	Handle frameBufDepthHandle = VK_CreateFramebufferVK( createBuffer );

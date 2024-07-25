@@ -245,27 +245,29 @@ CORE_API bool ch_str_equals( const char* str1, u64 str1Len, const char* str2 );
 
 // This is an easy way to pass ch_string to functions that take a char* and a size
 #define CH_STR_UNROLL( str ) str.data, str.size
+#define CH_STR_UR( str ) str.data, str.size
 
 
+// using s64 would be so we can check for -1
+// and you're never going to have a string that is greater than 2^63, right?
 struct ch_string
 {
 	char* data = nullptr;
-	u64   size = 0;
+	s64   size = 0;
 
 	constexpr ch_string()
 	{
 	}
 
-	constexpr ch_string( char* spData, u64 sSize )
+	constexpr ch_string( char* spData, s64 sSize )
 		: data( spData ), size( sSize )
 	{
 	}
 
-	// annoying
-	// bool operator==( const ch_string& other )
-	// {
-	// 	return ( ch_str_equals( data, size, other.data, other.size ) );
-	// }
+	constexpr ch_string( const char* spData, s64 sSize )
+		: data( (char*)spData ), size( sSize )
+	{
+	}
 };
 
 
@@ -285,13 +287,16 @@ inline bool operator==( const ch_string& srString, const ch_string& other )
 struct ch_string_auto
 {
 	char* data = nullptr;
-	u64   size = 0;
+	s64   size = 0;
 
 	ch_string_auto()
 	{
 	}
 
-	ch_string_auto( char* spData, u64 sSize )
+	// we don't have a const char* version,
+	// as that usually means the string is a literal,
+	// and we don't want to free that
+	ch_string_auto( char* spData, s64 sSize )
 		: data( spData ), size( sSize )
 	{
 	}

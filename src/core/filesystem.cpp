@@ -44,6 +44,9 @@
 	#define chdir  chdir
 	#define ch_uaccess access
 	#define ch_ugetcwd getcwd
+
+	// windows-specific mkdir() is used
+	#define mkdir( f ) mkdir( f, 666 )
 #endif
 
 
@@ -126,15 +129,15 @@ CONCMD( where )
 }
 
 
-bool FileSys_Init( const char* workingDir )
+bool FileSys_Init( const char* desiredWorkingDir )
 {
-    if ( !workingDir )
+	if ( !desiredWorkingDir )
 	{
 		Log_Error( "Failed to initialize File System, no working directory specified\n" );
 		return false;
 	}
 
-	gWorkingDir   = ch_str_copy( workingDir );
+	gWorkingDir   = ch_str_copy( desiredWorkingDir );
 	gExePath.data = getcwd( 0, 0 );
 
     if ( !gExePath.data )
@@ -146,7 +149,7 @@ bool FileSys_Init( const char* workingDir )
 	gExePath.size = strlen( gExePath.data );
 
 	// change to desired working directory (TODO: make this happen later after modules are loaded)
-	chdir( workingDir );
+	chdir( desiredWorkingDir );
 
     FileSys_SetAppPathMacro( gWorkingDir.data, gWorkingDir.size );
 
@@ -201,7 +204,7 @@ void FileSys_SetAppPathMacro( const char* spPath, s32 pathLen )
 	{
 		const char*  strings[] = { gExePath.data, CH_PATH_SEP_STR, gWorkingDir.data };
 		const size_t lengths[] = { gExePath.size, 1, gWorkingDir.size };
-		ch_string    newData   = ch_str_concat( 3, strings, lengths, gAppPathMacro.data );
+		ch_string    newData   = ch_str_join( 3, strings, lengths, gAppPathMacro.data );
 
 		if ( !newData.data )
 		{
@@ -234,7 +237,7 @@ void FileSys_SetAppPathMacro( const char* spPath, s32 pathLen )
         // This is a relative path, so we need to append it to the root directory of the executable
 		const char*  strings[] = { gExePath.data, CH_PATH_SEP_STR, spPath };
 		const size_t lengths[] = { gExePath.size, 1, pathLen };
-		ch_string    newData   = ch_str_concat( 3, strings, lengths, gAppPathMacro.data );
+		ch_string    newData   = ch_str_join( 3, strings, lengths, gAppPathMacro.data );
 
 		if ( !newData.data )
 		{
@@ -316,10 +319,10 @@ void FileSys_DefaultSearchPaths()
     FileSys_ClearSearchPathsBase( gSearchPaths );
 	FileSys_ClearSearchPathsBase( gSourceAssetPaths );
 
-	ch_string path1    = ch_str_concat( nullptr, 3, gExePath.data, CH_PATH_SEP_STR, "bin" );
-	ch_string path2    = ch_str_concat( nullptr, 3, gExePath.data, CH_PATH_SEP_STR, gWorkingDir.data );
-	ch_string path3    = ch_str_concat( nullptr, 2, gExePath.data, CH_PATH_SEP_STR );
-	ch_string pathCore = ch_str_concat( nullptr, 3, gExePath.data, CH_PATH_SEP_STR, "core" );
+	ch_string path1    = ch_str_join_arr( nullptr, 3, gExePath.data, CH_PATH_SEP_STR, "bin" );
+	ch_string path2    = ch_str_join_arr( nullptr, 3, gExePath.data, CH_PATH_SEP_STR, gWorkingDir.data );
+	ch_string path3    = ch_str_join_arr( nullptr, 2, gExePath.data, CH_PATH_SEP_STR );
+	ch_string pathCore = ch_str_join_arr( nullptr, 3, gExePath.data, CH_PATH_SEP_STR, "core" );
 
 	FileSys_AddSearchPath( path1.data, path1.size, ESearchPathType_Binary );
 	FileSys_AddSearchPath( path2.data, path2.size );
@@ -364,13 +367,7 @@ ch_string FileSys_BuildSearchPath( const char* path, s32 pathLen )
 {
 	ch_string output;
 
-    if ( !path )
-		return output;
-
-	if ( pathLen == -1 )
-		pathLen = strlen( path );
-
-	if ( pathLen == 0 )
+    if ( !ch_str_check_len( path, pathLen ) )
 		return output;
 
 	// output.data = ch_str_copy( path, pathLen );
@@ -400,7 +397,7 @@ ch_string FileSys_BuildSearchPath( const char* path, s32 pathLen )
 		{
 			const char* strings[] = { output.data, gExePath.data };
 			const u64   lengths[] = { output.size, gExePath.size };
-			ch_string   newData   = ch_str_concat( 2, strings, lengths, output.data );
+			ch_string   newData   = ch_str_join( 2, strings, lengths, output.data );
 
 			if ( !newData.data )
 			{
@@ -414,7 +411,7 @@ ch_string FileSys_BuildSearchPath( const char* path, s32 pathLen )
 		{
 			const char* strings[] = { output.data, gAppPathMacro.data };
 			const u64   lengths[] = { output.size, gAppPathMacro.size };
-			ch_string   newData   = ch_str_concat( 2, strings, lengths, output.data );
+			ch_string   newData   = ch_str_join( 2, strings, lengths, output.data );
 
 			if ( !newData.data )
 			{
@@ -427,10 +424,10 @@ ch_string FileSys_BuildSearchPath( const char* path, s32 pathLen )
 		else
 		{
 			// append this string to the 
-			//#undef ch_str_concat
+			//#undef ch_str_join
 			const char* strings[] = { output.data, last };
 			// const u64   lengths[] = { output.size, dist == SIZE_MAX ? strlen( last ) : dist };
-			ch_string   newData = ch_str_concat( 2, strings );
+			ch_string   newData = ch_str_join( 2, strings );
 
 			if ( !newData.data )
 			{
@@ -520,7 +517,7 @@ void FileSys_InsertSearchPath( size_t index, const char* path, s32 pathLen, ESea
 
 	if ( pathLen == 0 )
 	{
-		Log_Error( "Failed to insert search path, path length is 0\n" );
+		Log_Error( "Failed to insert search path, path or path length is empty\n" );
 		return;
 	}
 
@@ -605,7 +602,7 @@ ch_string FileSys_FindFileBaseSearchPath( const ch_string& searchPath, const cha
 {
 	const char* paths[]   = { searchPath.data, CH_PATH_SEP_STR, file };
 	const size_t lengths[] = { searchPath.size, 1, fileLen };
-	ch_string   concat    = ch_str_concat( 3, paths, lengths );
+	ch_string   concat    = ch_str_join( 3, paths, lengths );
 
 	if ( !concat.data )
 	{
@@ -650,7 +647,7 @@ ch_string FileSys_FindFileBase( CH_FS_FILE_LINE_DEF const std::vector< ch_string
 	{
 		const char*  pathParts[]   = { searchPath.data, CH_PATH_SEP_STR, filePath };
 		const size_t lengthParts[] = { searchPath.size, 1, fileLen };
-		ch_string    concat        = ch_str_concat( 3, pathParts, lengthParts );
+		ch_string    concat        = ch_str_join( 3, pathParts, lengthParts );
 
 		if ( !concat.data )
 		{
@@ -763,7 +760,7 @@ ch_string FileSys_FindDir( const char* path, s32 pathLen, ESearchPathType sType 
     {
 		const char* paths[]   = { searchPath.data, CH_PATH_SEP_STR, path };
 		const size_t lengths[] = { searchPath.size, 1, pathLen };
-		ch_string   fullPath  = ch_str_concat( 3, paths, lengths );
+		ch_string   fullPath  = ch_str_join( 3, paths, lengths );
 
         // does item exist?
         if ( is_dir( fullPath.data ) )
@@ -885,7 +882,7 @@ bool FileSys_SaveFile( const char* path, std::vector< char >& srData, s32 pathLe
 		else
 		{
 			// rename the old file
-			oldFile = ch_str_concat( nullptr, 2, path, ".bak" );
+			oldFile = ch_str_join_arr( nullptr, 2, path, ".bak" );
 
 			if ( !FileSys_Rename( path, oldFile.data ) )
 			{
@@ -1092,7 +1089,7 @@ ch_string FileSys_GetBaseName( const char* path, s32 pathLen )
 
 	const char* strings[] = { path + i, CH_PATH_SEP_STR };
 	const size_t lengths[] = { i, 1 };
-	ch_string output = ch_str_concat( 2, strings, lengths );
+	ch_string output = ch_str_join( 2, strings, lengths );
 	return output;
 }
 
@@ -1103,7 +1100,7 @@ ch_string FileSys_GetBaseName( const char* path, s32 pathLen )
 #undef FileSys_CleanPath
 
 #undef ch_str_copy
-#undef ch_str_join
+#undef ch_str_join_space
 
 
 ch_string FileSys_GetFileName( CH_FS_FILE_LINE_DEF const char* path, s32 pathLen )
@@ -1262,7 +1259,7 @@ ch_string FileSys_CleanPath( CH_FS_FILE_LINE_DEF const char* path, const s32 pat
 	}
 
 	// build the cleaned path
-	ch_string finalString = ch_str_join( CH_FS_FILE_LINE_INT pathSegments.size(), pathSegments.data(), CH_PATH_SEP_STR, data );
+	ch_string finalString = ch_str_join_space( CH_FS_FILE_LINE_INT pathSegments.size(), pathSegments.data(), CH_PATH_SEP_STR, data );
 
 	// free the path segments
 	ch_str_free( pathSegments.data(), pathSegments.size() );
@@ -1320,8 +1317,8 @@ ch_string FileSys_CleanPath( CH_FS_FILE_LINE_DEF const char* path, const s32 pat
 	// TODO: remove usage of ChVector
 	// should setup the above function to use a start index and end index of each segment,
 	// then allocate memory for that segment and copy it over to a vector element
-	#undef ch_str_join
-	ch_str_join( STR_FILE_LINE pathSegments.size(), pathSegments.data(), CH_PATH_SEP_STR );
+	#undef ch_str_join_space
+	ch_str_join_space( STR_FILE_LINE pathSegments.size(), pathSegments.data(), CH_PATH_SEP_STR );
 	
 	for ( size_t i = 0; i < pathSegments.size(); i++ )
 	{
@@ -1351,7 +1348,7 @@ ch_string FileSys_CleanPath( CH_FS_FILE_LINE_DEF const char* path, const s32 pat
 
 #if CH_STRING_MEM_TRACKING
 	#define ch_str_copy( ... ) ch_str_copy( STR_FILE_LINE __VA_ARGS__ )
-	#define ch_str_join( ... ) ch_str_join( STR_FILE_LINE __VA_ARGS__ )
+	#define ch_str_join_space( ... ) ch_str_join_space( STR_FILE_LINE __VA_ARGS__ )
 #endif
 
 
@@ -1555,13 +1552,13 @@ bool sys_scandir( const char* root, size_t rootLen, const char* path, size_t pat
 	{
 		const char*  strings[] = { root, "\\", path, "\\" };
 		const size_t lengths[] = { rootLen, 1, pathLen, 1 };
-		scanDir                = ch_str_concat( 4, strings, lengths );
+		scanDir                = ch_str_join( 4, strings, lengths );
 	}
 
 	{
 		const char*  strings[] = { scanDir.data, "*" };
 		const size_t lengths[] = { scanDir.size, 1 };
-		scanDirWildcard        = ch_str_concat( 2, strings, lengths );
+		scanDirWildcard        = ch_str_join( 2, strings, lengths );
 	}
 
 	WIN32_FIND_DATA ffd;
@@ -1584,7 +1581,7 @@ bool sys_scandir( const char* root, size_t rootLen, const char* path, size_t pat
 
 		const char*  strings[] = { path, "\\", ffd.cFileName };
 		const size_t lengths[] = { pathLen, 1, fileNameLen };
-		relPath  = ch_str_concat( 3, strings, lengths, relPath.data );
+		relPath  = ch_str_join( 3, strings, lengths, relPath.data );
 
 		if ( ( flags & ReadDir_Recursive ) && isDir && strncmp( ffd.cFileName, "..", 2 ) != 0 )
         {
@@ -1607,7 +1604,7 @@ bool sys_scandir( const char* root, size_t rootLen, const char* path, size_t pat
 
 			const char* strings2[] = { scanDir.data, ffd.cFileName };
 			const size_t lengths2[] = { scanDir.size, fileNameLen };
-			pathCopy = ch_str_concat( 2, strings2, lengths2 );
+			pathCopy = ch_str_join( 2, strings2, lengths2 );
 
 			files.push_back( pathCopy );
 		}
@@ -1639,7 +1636,7 @@ bool sys_scandir( const char* root, size_t rootLen, const char* path, size_t pat
 
 	const char*  strings[] = { path, CH_PATH_SEP_STR, ".." };
 	const size_t lengths[] = { pathLen, 1, 2 };
-	ch_string    basePath  = ch_str_concat( 3, strings, lengths );
+	ch_string    basePath  = ch_str_join( 3, strings, lengths );
 
 	for ( const auto& rFile : std::filesystem::directory_iterator( path ) )
 	{

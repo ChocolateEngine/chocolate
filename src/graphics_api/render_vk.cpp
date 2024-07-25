@@ -1235,7 +1235,7 @@ public:
 		{
 			const char*    strings[] = { srTexturePath.data(), ".ktx" };
 			const u64      lengths[] = { srTexturePath.size(), 4 };
-			ch_string_auto path      = ch_str_concat( 2, strings, lengths );
+			ch_string_auto path      = ch_str_join( 2, strings, lengths );
 
 			fullPath                 = FileSys_FindFile( path.data, path.size );
 		}

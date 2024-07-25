@@ -226,8 +226,8 @@ Handle Graphics::LoadModel( const std::string& srPath )
 	{
 		if ( FileSys_IsRelative( srPath.data() ) )
 		{
-			const ch_string strings[] = { { (char*)( "models" CH_PATH_SEP_STR ), 7 }, { (char*)srPath.data(), srPath.size() } };
-			ch_string_auto  newPath   = ch_str_concat( 2, strings );
+			const ch_string strings[] = { { (char*)( "models" CH_PATH_SEP_STR ), 7 }, { (char*)srPath.data(), (s64)srPath.size() } };
+			ch_string_auto  newPath   = ch_str_join( 2, strings );
 			fullPath                  = FileSys_FindFile( newPath.data, newPath.size );
 		}
 	}

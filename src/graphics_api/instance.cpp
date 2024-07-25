@@ -25,6 +25,9 @@ CONVAR_BOOL( vk_debug_messages, 0, "" );
 #endif
 
 
+// #error HAVE A LAUNCH OPTION TO DISABLE VALIDATION LAYERS IN DEBUG BUILDS
+
+
 #ifdef NDEBUG
 	constexpr bool        gEnableValidationLayers = false;
 
@@ -415,7 +418,8 @@ bool VK_CreateInstance()
 #ifdef _WIN32
 	std::vector< const char* > sdlExt = { "VK_KHR_surface", "VK_KHR_win32_surface" };
 #else
-	std::vector< const char* > sdlExt = { "VK_KHR_surface" };
+	// TODO: QUERY SDL EXTENSIONS INSTEAD !!!!!
+	std::vector< const char* > sdlExt = { "VK_KHR_surface", "VK_KHR_xlib_surface" };
 	// std::vector< const char* > sdlExt = VK_GetSDL2Extensions();
 #endif
 
@@ -704,7 +708,7 @@ VkSurfaceKHR VK_CreateSurface( void* sSysWindow, SDL_Window* sSDLWindow )
 
 	VK_CheckResultE( vkCreateWin32SurfaceKHR( VK_GetInstance(), &surfCreateInfo, nullptr, &surface ), "Failed to create Surface" );
 #else
-	if ( !SDL_Vulkan_CreateSurface( (SDL_Window*)spWindow, VK_GetInstance(), &surface ) )
+	if ( !SDL_Vulkan_CreateSurface( sSDLWindow, VK_GetInstance(), &surface ) )
 	{
 		Log_ErrorF( gLC_GraphicsAPI, "Error: Failed to create SDL Vulkan Surface: %s\n", SDL_GetError() );
 		return VK_NULL_HANDLE;

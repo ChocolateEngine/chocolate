@@ -82,7 +82,7 @@ enum ESearchPathType
 // ================================================================================
 // FileSystem Core
 
-CORE_API bool      FileSys_Init( const char* workingDir );
+CORE_API bool      FileSys_Init( const char* desiredWorkingDir );
 CORE_API void      FileSys_Shutdown();
 
 // does not allocate a new string, just returns the internal working directory string

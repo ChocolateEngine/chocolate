@@ -36,28 +36,7 @@ enum class LogColor: unsigned char
 };
 
 
-// Unix Color Macros (TODO: REMOVE THIS AND RENAME TO ANSI) 
-#define UNIX_CLR_DEFAULT     "\033[0m"
-#define UNIX_CLR_BLACK       "\033[0;30m"
-#define UNIX_CLR_WHITE       "\033[1;37m"
-
-#define UNIX_CLR_DARK_BLUE   "\033[0;34m"
-#define UNIX_CLR_DARK_GREEN  "\033[0;32m"
-#define UNIX_CLR_DARK_CYAN   "\033[0;36m"
-#define UNIX_CLR_DARK_RED    "\033[0;31m"
-#define UNIX_CLR_DARK_PURPLE "\033[0;35m"
-#define UNIX_CLR_DARK_YELLOW "\033[0;33m"
-#define UNIX_CLR_DARK_GRAY   "\033[0;30m"
-
-#define UNIX_CLR_BLUE        "\033[1;34m"
-#define UNIX_CLR_GREEN       "\033[1;32m"
-#define UNIX_CLR_CYAN        "\033[1;36m"
-#define UNIX_CLR_RED         "\033[1;31m"
-#define UNIX_CLR_PURPLE      "\033[1;35m"
-#define UNIX_CLR_YELLOW      "\033[1;33m"
-#define UNIX_CLR_GRAY        "\033[1;30m"
-
-
+// ANSI Color Macros
 #define ANSI_CLR_DEFAULT     "\033[0m"
 #define ANSI_CLR_BLACK       "\033[0;30m"
 #define ANSI_CLR_WHITE       "\033[1;37m"
@@ -78,27 +57,26 @@ enum class LogColor: unsigned char
 #define ANSI_CLR_YELLOW      "\033[1;33m"
 #define ANSI_CLR_GRAY        "\033[1;30m"
 
+// ch_string versions :D
+#define STR_ANSI_CLR_DEFAULT     ch_string( "\033[0m", 4 )
+#define STR_ANSI_CLR_BLACK       ch_string( "\033[0;30m", 7 )
+#define STR_ANSI_CLR_WHITE       ch_string( "\033[1;37m", 7 )
 
-// Unicode Variant for Windows
-//#define UANSI_CLR_DEFAULT     USTR( "\033[0m" )
-//#define UANSI_CLR_BLACK       USTR( "\033[0;30m" )
-//#define UANSI_CLR_WHITE       USTR( "\033[1;37m" )
-//
-//#define UANSI_CLR_DARK_BLUE   USTR( "\033[0;34m" )
-//#define UANSI_CLR_DARK_GREEN  USTR( "\033[0;32m" )
-//#define UANSI_CLR_DARK_CYAN   USTR( "\033[0;36m" )
-//#define UANSI_CLR_DARK_RED    USTR( "\033[0;31m" )
-//#define UANSI_CLR_DARK_PURPLE USTR( "\033[0;35m" )
-//#define UANSI_CLR_DARK_YELLOW USTR( "\033[0;33m" )
-//#define UANSI_CLR_DARK_GRAY   USTR( "\033[0;30m" )
-//
-//#define UANSI_CLR_BLUE        USTR( "\033[1;34m" )
-//#define UANSI_CLR_GREEN       USTR( "\033[1;32m" )
-//#define UANSI_CLR_CYAN        USTR( "\033[1;36m" )
-//#define UANSI_CLR_RED         USTR( "\033[1;31m" )
-//#define UANSI_CLR_PURPLE      USTR( "\033[1;35m" )
-//#define UANSI_CLR_YELLOW      USTR( "\033[1;33m" )
-//#define UANSI_CLR_GRAY        USTR( "\033[1;30m" )
+#define STR_ANSI_CLR_DARK_BLUE   ch_string( "\033[0;34m", 7 )
+#define STR_ANSI_CLR_DARK_GREEN  ch_string( "\033[0;32m", 7 )
+#define STR_ANSI_CLR_DARK_CYAN   ch_string( "\033[0;36m", 7 )
+#define STR_ANSI_CLR_DARK_RED    ch_string( "\033[0;31m", 7 )
+#define STR_ANSI_CLR_DARK_PURPLE ch_string( "\033[0;35m", 7 )
+#define STR_ANSI_CLR_DARK_YELLOW ch_string( "\033[0;33m", 7 )
+#define STR_ANSI_CLR_DARK_GRAY   ch_string( "\033[0;30m", 7 )
+
+#define STR_ANSI_CLR_BLUE        ch_string( "\033[1;34m", 7 )
+#define STR_ANSI_CLR_GREEN       ch_string( "\033[1;32m", 7 )
+#define STR_ANSI_CLR_CYAN        ch_string( "\033[1;36m", 7 )
+#define STR_ANSI_CLR_RED         ch_string( "\033[1;31m", 7 )
+#define STR_ANSI_CLR_PURPLE      ch_string( "\033[1;35m", 7 )
+#define STR_ANSI_CLR_YELLOW      ch_string( "\033[1;33m", 7 )
+#define STR_ANSI_CLR_GRAY        ch_string( "\033[1;30m", 7 )
 
 
 enum class LogType: unsigned char
@@ -118,10 +96,10 @@ enum class LogType: unsigned char
 
 struct LogChannel_t
 {
-	std::string_view aName;
-	bool             aShown;
-	LogColor         aColor;
-	int              aDevLevel;
+	ch_string aName;
+	bool      aShown;
+	LogColor  aColor;
+	int       aDevLevel;
 };
 
 using LogChannel = unsigned char;
@@ -130,10 +108,10 @@ using LogGroup   = unsigned int;
 
 struct Log
 {
-	LogChannel  aChannel;
-	LogType     aType;
-	std::string aMessage;
-	std::string aFormatted;
+	LogChannel aChannel;
+	LogType    aType;
+	ch_string  aMessage;
+	ch_string  aFormatted;
 };
 
 
@@ -157,6 +135,7 @@ constexpr LogChannel INVALID_LOG_CHANNEL = 255;
 // Logging API
 
 void                     CORE_API  Log_Init();
+void                     CORE_API  Log_Shutdown();
 
 // Manage Console Color
 void                     CORE_API  Log_SetColor( LogColor color );
@@ -165,9 +144,10 @@ const char               CORE_API *Log_ColorToStr( LogColor color );
 
 // Split a string by unix colors into a vector of LogColorBuf_t
 // does no new memory allocations, only stores color, a starting char pointer, and a length
-void                     CORE_API  Log_SplitStringColors( LogColor sMainColor, std::string_view sBuffer, ChVector< LogColorBuf_t >& srColorList, bool sNoColors = false );
+void                     CORE_API  Log_SplitStringColors( LogColor sMainColor, const ch_string& sBuffer, ChVector< LogColorBuf_t >& srColorList, bool sNoColors = false );
 
 const char               CORE_API *Log_ColorToUnix( LogColor color );
+ch_string                CORE_API  Log_ColorToUnixStr( LogColor color );
 LogColor                 CORE_API  Log_UnixCodeToColor( bool sIsLight, int sColor );
 LogColor                 CORE_API  Log_UnixToColor( const char* spColor, size_t sLen );
 
@@ -175,13 +155,13 @@ LogColor                 CORE_API  Log_UnixToColor( const char* spColor, size_t 
 CORE_API LogChannel                Log_RegisterChannel( const char* sName, LogColor sColor = LogColor::Default );
 LogChannel               CORE_API  Log_GetChannel( const char *sName );
 LogColor                 CORE_API  Log_GetChannelColor( LogChannel handle );
-std::string_view         CORE_API  Log_GetChannelName( LogChannel handle );
+ch_string                CORE_API  Log_GetChannelName( LogChannel handle );
 bool                     CORE_API  Log_ChannelIsShown( LogChannel handle );
 int                      CORE_API  Log_GetChannelDevLevel( LogChannel handle );
 unsigned char            CORE_API  Log_GetChannelCount();
 
 // Log Information
-void                     CORE_API  Log_BuildHistoryString( std::string& srOutput, int sMaxSize = -1 );
+ch_string                CORE_API  Log_BuildHistoryString( int sMaxSize = -1 );
 const std::vector< Log > CORE_API &Log_GetLogHistory();
 const Log                CORE_API *Log_GetLastLog();
 bool                     CORE_API  Log_IsVisible( const Log& log );
@@ -192,8 +172,8 @@ void                     CORE_API  Log_AddChannelShownCallback( LogChannelShownC
 // ----------------------------------------------------------------
 // System printing, skip logging
 
-void CORE_API                      PrintF( const char* str, ... );
-void CORE_API                      Print( const char* str );
+void CORE_API                      ch_printf( const char* str, ... );
+void CORE_API                      ch_print( const char* str );
 
 // ----------------------------------------------------------------
 // Log Group Functions
@@ -218,6 +198,7 @@ void CORE_API                      Log_ExV( LogChannel channel, LogType sLevel, 
 
 // ----------------------------------------------------------------
 // Standard Logging Functions
+// TODO: change to ch_log_msg, ch_log_warn, etc.?
 
 // Lowest severity.
 void CORE_API                      Log_Msg( LogChannel channel, const char* spBuf );

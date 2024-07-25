@@ -717,7 +717,7 @@ IPhysicsShape* PhysicsEnvironment::LoadShape( const char* path, s64 pathLen, Phy
 	{
 		const char*    strings[] = { "models" CH_PATH_SEP_STR, path };
 		const u64      lengths[]  = { 7, pathLen };
-		ch_string_auto pathSearch = ch_str_concat( 2, strings, lengths );
+		ch_string_auto pathSearch = ch_str_join( 2, strings, lengths );
 
 		absPath                   = FileSys_FindFile( pathSearch.data, pathSearch.size );
 	}

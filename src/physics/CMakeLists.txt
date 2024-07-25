@@ -25,6 +25,7 @@ if ( MSVC )
 	# NOTE: won't work for everything, really dumb
 	add_compile_options(
 	    "$<$<CONFIG:Debug>:${COMPILE_OPTION_MT_DEBUG}>"
+	    "$<$<CONFIG:AddressSanitizer>:${COMPILE_OPTION_MT_DEBUG}>"
 	    "$<$<CONFIG:Release>:${COMPILE_OPTION_MT_RELEASE}>"
 	    "$<$<CONFIG:RelWithDebInfo>:${COMPILE_OPTION_MT_RELEASE}>"
 	    "$<$<CONFIG:Profile>:${COMPILE_OPTION_MT_RELEASE}>"
@@ -59,9 +60,11 @@ add_library(
 )
 
 set( JOLT_MIN_PATH_DEBUG "${JOLTPHYSICS_DIR}/Build/min/Debug" )
+set( JOLT_MIN_PATH_ADDRESS "${JOLTPHYSICS_DIR}/Build/min/address_sanitize/Debug" )
 set( JOLT_MIN_PATH_RELEASE "${JOLTPHYSICS_DIR}/Build/min/Release" )
 
 set( JOLT_AVX2_PATH_DEBUG "${JOLTPHYSICS_DIR}/Build/avx2/Debug" )
+set( JOLT_AVX2_PATH_ADDRESS "${JOLTPHYSICS_DIR}/Build/avx2/address_sanitize/Debug" )
 set( JOLT_AVX2_PATH_RELEASE "${JOLTPHYSICS_DIR}/Build/avx2/Release" )
 
 target_link_libraries(
@@ -79,6 +82,7 @@ target_link_libraries(
 target_link_directories(
 	Physics_MIN PRIVATE
 	"$<$<CONFIG:Debug>:${JOLT_MIN_PATH_DEBUG}>"
+	"$<$<CONFIG:AddressSanitizer>:${JOLT_MIN_PATH_ADDRESS}>"
 	"$<$<CONFIG:Release>:${JOLT_MIN_PATH_RELEASE}>"
 	"$<$<CONFIG:RelWithDebInfo>:${JOLT_MIN_PATH_RELEASE}>"
 	"$<$<CONFIG:Profile>:${JOLT_MIN_PATH_RELEASE}>"
@@ -87,11 +91,11 @@ target_link_directories(
 target_link_directories(
 	Physics_AVX2 PRIVATE
 	"$<$<CONFIG:Debug>:${JOLT_AVX2_PATH_DEBUG}>"
+	"$<$<CONFIG:AddressSanitizer>:${JOLT_AVX2_PATH_ADDRESS}>"
 	"$<$<CONFIG:Release>:${JOLT_AVX2_PATH_RELEASE}>"
 	"$<$<CONFIG:RelWithDebInfo>:${JOLT_AVX2_PATH_RELEASE}>"
 	"$<$<CONFIG:Profile>:${JOLT_AVX2_PATH_RELEASE}>"
 )
-
 
 
 add_dependencies( Physics_MIN "Core" )

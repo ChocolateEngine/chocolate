@@ -19,9 +19,9 @@ struct AppInfo_t
 
 
 // Leave empty to load the current app's info
-CORE_API bool             Core_GetAppInfoJson( JsonObject_t& srRoot, const std::string& appPath );
+CORE_API bool             Core_GetAppInfoJson( JsonObject_t& srRoot, const char* appPath, s64 appPathLen = -1 );
 CORE_API bool             Core_LoadAppInfo();
-CORE_API bool             Core_AddAppInfo( const std::string& appPath );
+CORE_API bool             Core_AddAppInfo( const char* appPath, s64 appPathLen = -1 );
 CORE_API void             Core_DestroyAppInfo();
 CORE_API void             Core_ReloadSearchPaths();
 

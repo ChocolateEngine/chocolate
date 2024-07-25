@@ -142,7 +142,7 @@ Module Mod_Load( const char* spPath )
 	// TODO: improve this, what if it has a path before it
 	const char*    strings[] = { CH_PLAT_FOLDER_SEP, spPath, EXT_DLL };
 	const u64      lengths[] = { CH_PLAT_FOLDER_SEP_LEN, strlen( spPath ), EXT_DLL_LEN };
-	ch_string_auto pathExt   = ch_str_concat( 3, strings, lengths );
+	ch_string_auto pathExt   = ch_str_join( 3, strings, lengths );
 
 	ch_string_auto path      = FileSys_FindFileEx( CH_STR_UNROLL( pathExt ), ESearchPathType_Binary );
 
