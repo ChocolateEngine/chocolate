@@ -82,6 +82,9 @@ struct BufferVK
 // TODO: split this up, most of the time we don't like half of the info here, only just filling up the cpu cache more !!
 struct TextureVK
 {
+	// TODO: move to separate array
+	ch_string            aName;
+
 	// Vulkan Info
 	VkImage              aImage          = VK_NULL_HANDLE;
 	VkImageView          aImageView      = VK_NULL_HANDLE;
@@ -95,16 +98,17 @@ struct TextureVK
 	u32                  aDataSize       = 0;
 
 	// Texture Information
-	ch_string            aName;
 	int                  aIndex          = 0;  // texture sampler index (MOVE ELSEWHERE!!)
+
 	glm::uvec2           aSize{};
-	u8                   aMipLevels    = 0;
-	int                  aFrames       = 0;
-	bool                 aRenderTarget = false;
-	bool                 aSwapChain    = false;  // swapchain managed texture (wtf)
 
 	// How much memory this uses
 	u32                  aMemorySize   = 0;
+
+	int                  aFrames       = 0;
+	u8                   aMipLevels    = 0;
+	bool                 aRenderTarget = false;
+	bool                 aSwapChain    = false;  // swapchain managed texture (wtf)
 };
 
 
@@ -144,15 +148,15 @@ struct RenderPassInfoVK
 
 struct CreateFramebufferVK
 {
-	const char*                apName      = nullptr;
-	VkRenderPass               aRenderPass = VK_NULL_HANDLE;
-	glm::uvec2                 aSize{};
+	const char*             apName      = nullptr;
+	VkRenderPass            aRenderPass = VK_NULL_HANDLE;
+	glm::uvec2              aSize{};
 
-	std::vector< VkImageView > aAttachColors;
-	// std::vector< VkImageView > aAttachInput;
-	std::vector< VkImageView > aAttachResolve;
-	// std::vector< VkImageView > aAttachPreserve;
-	VkImageView                aAttachDepth = 0;
+	ChVector< VkImageView > aAttachColors;
+	// ChVector< VkImageView > aAttachInput;
+	ChVector< VkImageView > aAttachResolve;
+	// ChVector< VkImageView > aAttachPreserve;
+	VkImageView             aAttachDepth = 0;
 };
 
 
@@ -172,9 +176,9 @@ struct FramebufferVK
 
 struct RenderTarget
 {
-	std::vector< ChHandle_t >    aColors;
+	ChVector< ChHandle_t >    aColors;
 	// std::vector< TextureVK* > aInput;
-	std::vector< ChHandle_t >    aResolve;
+	ChVector< ChHandle_t >    aResolve;
 	// std::vector< TextureVK* > aPreserve;
 	ChHandle_t                   aDepth = 0;
 
@@ -182,7 +186,7 @@ struct RenderTarget
 	// std::vector< VkImageView >   aResolve;
 	// VkImageView                  apDepth = 0;
 
-	std::vector< FramebufferVK > aFrameBuffers;
+	ChVector< FramebufferVK > aFrameBuffers;
 };
 
 
@@ -232,24 +236,27 @@ struct WindowVK
 	// amount allocated is swapImageCount
 	VkFence*                        fences;
 	VkFence*                        fencesInFlight;
-	u8                              frameIndex = 0;
 
 	// swapchain info
 	VkSurfaceFormatKHR              swapSurfaceFormat;
-	VkPresentModeKHR                swapPresentMode;
 	VkExtent2D                      swapExtent;
 	VkImage*                        swapImages;
 	VkImageView*                    swapImageViews;
-	u8                              swapImageCount;
 
 	// Contains the framebuffers which are to be drawn to during command buffer recording.
 	RenderTarget*                   backbuffer;
 
 	Render_OnReset_t                onResetFunc = nullptr;
+
+	// here because of mem alignment, 2 unused bytes at the end
+	VkPresentModeKHR                swapPresentMode;
+	u8                              frameIndex = 0;
+	u8                              swapImageCount;
 };
 
 
 // TODO: migrate all the global data here
+// no dont do that, that's dumb
 struct GraphicsAPI_t
 {
 	u32                                   aQueueFamilyGraphics = UINT32_MAX;

@@ -71,11 +71,13 @@ using ReadDirFlags = unsigned char;
 
 
 // TODO: custom path types?
-enum ESearchPathType
+enum ESearchPathType : u8
 {
 	ESearchPathType_Path,
 	ESearchPathType_Binary,
 	ESearchPathType_SourceAssets,
+
+	ESearchPathType_Count,
 };
 
 
@@ -121,8 +123,9 @@ CORE_API ch_string FileSys_BuildSearchPath( const char* path, s32 pathLen = -1 )
 
 // auto builds the search path
 CORE_API void      FileSys_AddSearchPath( const char* path, s32 pathLen = -1, ESearchPathType sType = ESearchPathType_Path );
+// this one is weird, it has to build the path to remove it, why not just pass an index to remove?
 CORE_API void      FileSys_RemoveSearchPath( const char* path, s32 pathLen = -1, ESearchPathType sType = ESearchPathType_Path );
-CORE_API void      FileSys_InsertSearchPath( size_t index, const char* file, s32 pathLen = -1, ESearchPathType sType = ESearchPathType_Path );
+CORE_API void      FileSys_InsertSearchPath( u32 index, const char* file, s32 pathLen = -1, ESearchPathType sType = ESearchPathType_Path );
 
 // ================================================================================
 // Main Funcs
@@ -194,7 +197,7 @@ CORE_API ch_string FileSys_GetBaseName( const char* path, s32 pathLen = -1 );
 CORE_API ch_string FileSys_GetFileName( CH_FS_FILE_LINE_DEF const char* path, s32 pathLen = -1 );
 
 // Return the file extension, will return an empty string if none found
-CORE_API ch_string FileSys_GetFileExt( CH_FS_FILE_LINE_DEF const char* path, s32 pathLen = -1, bool sStripPath = true );
+CORE_API ch_string FileSys_GetFileExt( CH_FS_FILE_LINE_DEF const char* path, s32 pathLen = -1 );
 
 // Return the file name without the extension
 CORE_API ch_string FileSys_GetFileNameNoExt( CH_FS_FILE_LINE_DEF const char* path, s32 pathLen = -1 );

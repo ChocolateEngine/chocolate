@@ -55,6 +55,7 @@ CORE_API ch_string ch_str_realloc( STR_FILE_LINE_DEF char* data, const char* str
 CORE_API ch_string ch_str_copy_f( STR_FILE_LINE_DEF const char* format, ... );
 CORE_API ch_string ch_str_copy_v( STR_FILE_LINE_DEF const char* format, va_list args );
 
+// snprintf but it uses realloc
 CORE_API ch_string ch_str_realloc_f( STR_FILE_LINE_DEF char* data, const char* format, ... );
 CORE_API ch_string ch_str_realloc_v( STR_FILE_LINE_DEF char* data, const char* format, va_list args );
 

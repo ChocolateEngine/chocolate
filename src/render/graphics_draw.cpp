@@ -96,55 +96,6 @@ void Graphics_CmdDrawSurface( Handle cmd, Model* spModel, size_t sSurface )
 }
 
 
-bool Graphics_BindModel( ChHandle_t cmd, VertexFormat sVertexFormat, Model* spModel, ChHandle_t sVertexBuffer )
-{
-#if 0
-	PROF_SCOPE();
-
-	// Bind the mesh's vertex and index buffers
-
-	// Get Vertex Buffers the shader wants
-	// TODO: what about if we don't have an attribute the shader wants???
-	ChVector< ChHandle_t > vertexBuffers;
-
-	// lazy hack, blech
-	// ChVector< ChHandle_t >& allVertexBuffers = spRenderable->aOutVertexBuffers.size() ? spRenderable->aOutVertexBuffers : spModel->apBuffers->aVertex;
-
-	// TODO: THIS CAN BE DONE WHEN ADDING THE MODEL TO THE MAIN DRAW LIST, AND PUT IN SurfaceDraw_t
-	// for ( size_t i = 0; i < spModel->apVertexData->aData.size(); i++ )
-	// {
-	// 	VertAttribData_t& data = spModel->apVertexData->aData[ i ];
-	// 
-	// 	if ( sVertexFormat & ( 1 << data.aAttrib ) )
-	// 		vertexBuffers.push_back( srVertexBuffers[ i ] );
-	// }
-
-	uint64_t                offsets = 0;
-
-	// size_t* offsets = (size_t*)CH_STACK_ALLOC( sizeof( size_t ) * vertexBuffers.size() );
-	// if ( offsets == nullptr )
-	// {
-	// 	Log_Error( gLC_ClientGraphics, "Graphics_BindModel: Failed to allocate vertex buffer offsets!\n" );
-	// 	return false;
-	// }
-	// 
-	// // TODO: i could probably use offsets here, i imagine it might actually be faster?
-	// memset( offsets, 0, sizeof( size_t ) * vertexBuffers.size() );
-
-	render->CmdBindVertexBuffers( cmd, 0, 1, &sVertexBuffer, &offsets );
-
-	// TODO: store index type here somewhere
-	if ( spModel->apBuffers->aIndex )
-		render->CmdBindIndexBuffer( cmd, spModel->apBuffers->aIndex, 0, EIndexType_U32 );
-
-	// SHADER: update and bind per object descriptor set?
-
-	// CH_STACK_FREE( offsets );
-#endif
-	return true;
-}
-
-
 void Graphics_DrawShaderRenderables( Handle cmd, size_t sIndex, Handle shader, u32 sViewportIndex, ChVector< SurfaceDraw_t >& srRenderList )
 {
 	PROF_SCOPE();
@@ -208,31 +159,6 @@ void Graphics_DrawShaderRenderables( Handle cmd, size_t sIndex, Handle shader, u
 			Log_Error( gLC_ClientGraphics, "No Vertex/Index Buffers for Model??\n" );
 			continue;
 		}
-
-		// useless with "bindless" renderer
-#if 0
-		bool bindModel = !prevSurface;
-
-		if ( prevSurface )
-		{
-			// bindModel |= prevSurface->apDraw->aModel != renderable->apDraw->aModel;
-			// bindModel |= prevSurface->aSurface != renderable->aSurface;
-
-			if ( prevModel )
-			{
-				bindModel |= prevModel->apBuffers != model->apBuffers;
-				bindModel |= prevModel->apVertexData != model->apVertexData;
-			}
-		}
-
-		if ( bindModel )
-		{
-			prevModel   = model;
-			prevSurface = &surfaceDraw;
-			if ( !Graphics_BindModel( cmd, vertexFormat, model, renderable->aVertexBuffer ) )
-				continue;
-		}
-#endif
 		
 		ShaderPushData_t pushData{};
 		pushData.apRenderable      = renderable;

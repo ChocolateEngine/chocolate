@@ -58,13 +58,12 @@
 
 LOG_REGISTER_CHANNEL( FileSystem, LogColor::DarkGray );
 
-static ch_string                gWorkingDir;
-static ch_string                gExePath;
-static ch_string                gAppPathMacro;
+static ch_string                g_working_dir;
+static ch_string                g_exe_path;
+static ch_string                g_app_path_macro;
 
-static std::vector< ch_string > gSearchPaths;
-static std::vector< ch_string > gBinPaths;
-static std::vector< ch_string > gSourceAssetPaths;
+static ch_string*               g_paths[ ESearchPathType_Count ];
+static u32                      g_paths_count[ ESearchPathType_Count ];
 
 
 CONCMD( fs_print_paths )
@@ -137,21 +136,21 @@ bool FileSys_Init( const char* desiredWorkingDir )
 		return false;
 	}
 
-	gWorkingDir   = ch_str_copy( desiredWorkingDir );
-	gExePath.data = getcwd( 0, 0 );
+	g_working_dir   = ch_str_copy( desiredWorkingDir );
+	g_exe_path.data = getcwd( 0, 0 );
 
-    if ( !gExePath.data )
+    if ( !g_exe_path.data )
 	{
 		Log_Error( "Failed to initialize File System, failed to get current working directory\n" );
 		return false;
 	}
 
-	gExePath.size = strlen( gExePath.data );
+	g_exe_path.size = strlen( g_exe_path.data );
 
 	// change to desired working directory (TODO: make this happen later after modules are loaded)
 	chdir( desiredWorkingDir );
 
-    FileSys_SetAppPathMacro( gWorkingDir.data, gWorkingDir.size );
+    FileSys_SetAppPathMacro( g_working_dir.data, g_working_dir.size );
 
     return true;
 }
@@ -163,15 +162,15 @@ void FileSys_Shutdown()
 	FileSys_ClearBinPaths();
 	FileSys_ClearSourcePaths();
 
-	ch_str_free( gWorkingDir.data );
-	ch_str_free( gExePath.data );
-	ch_str_free( gAppPathMacro.data );
+	ch_str_free( g_working_dir.data );
+	ch_str_free( g_exe_path.data );
+	ch_str_free( g_app_path_macro.data );
 }
 
 
 ch_string FileSys_GetWorkingDir()
 {
-	return gWorkingDir;
+	return g_working_dir;
 }
 
 
@@ -180,19 +179,19 @@ void FileSys_SetWorkingDir( const char* spPath, s32 pathLen )
 	if ( !spPath )
 		return;
 
-    if ( gWorkingDir.data )
-        ch_str_free( gWorkingDir.data );
+    if ( g_working_dir.data )
+        ch_str_free( g_working_dir.data );
 
     if ( pathLen == -1 )
 		pathLen = strlen( spPath );
 
-	gWorkingDir = ch_str_copy( spPath );
+	g_working_dir = ch_str_copy( spPath );
 }
 
 
 ch_string FileSys_GetExePath()
 {
-    return gExePath;
+    return g_exe_path;
 }
 
 
@@ -202,9 +201,9 @@ void FileSys_SetAppPathMacro( const char* spPath, s32 pathLen )
     // Reset the macro
 	if ( !spPath )
 	{
-		const char*  strings[] = { gExePath.data, CH_PATH_SEP_STR, gWorkingDir.data };
-		const size_t lengths[] = { gExePath.size, 1, gWorkingDir.size };
-		ch_string    newData   = ch_str_join( 3, strings, lengths, gAppPathMacro.data );
+		const char*  strings[] = { g_exe_path.data, CH_PATH_SEP_STR, g_working_dir.data };
+		const size_t lengths[] = { g_exe_path.size, 1, g_working_dir.size };
+		ch_string    newData   = ch_str_join( 3, strings, lengths, g_app_path_macro.data );
 
 		if ( !newData.data )
 		{
@@ -212,7 +211,7 @@ void FileSys_SetAppPathMacro( const char* spPath, s32 pathLen )
 			return;
 		}
 
-		gAppPathMacro = newData;
+		g_app_path_macro = newData;
 		return;
 	}
 
@@ -223,21 +222,21 @@ void FileSys_SetAppPathMacro( const char* spPath, s32 pathLen )
     // If this is an absolute path, we can just set the macro to this path
     if ( FileSys_IsAbsolute( spPath, pathLen ) )
 	{
-		ch_string newData = ch_str_realloc( gAppPathMacro.data, spPath, pathLen );
+		ch_string newData = ch_str_realloc( g_app_path_macro.data, spPath, pathLen );
 		if ( !newData.data )
 		{
 			Log_Error( "Failed to realloc memory for App Path Macro\n" );
 			return;
 		}
 
-		gAppPathMacro = newData;
+		g_app_path_macro = newData;
 	}
 	else
 	{
         // This is a relative path, so we need to append it to the root directory of the executable
-		const char*  strings[] = { gExePath.data, CH_PATH_SEP_STR, spPath };
-		const size_t lengths[] = { gExePath.size, 1, pathLen };
-		ch_string    newData   = ch_str_join( 3, strings, lengths, gAppPathMacro.data );
+		const char*  strings[] = { g_exe_path.data, CH_PATH_SEP_STR, spPath };
+		const size_t lengths[] = { g_exe_path.size, 1, pathLen };
+		ch_string    newData   = ch_str_join( 3, strings, lengths, g_app_path_macro.data );
 
 		if ( !newData.data )
 		{
@@ -245,84 +244,84 @@ void FileSys_SetAppPathMacro( const char* spPath, s32 pathLen )
 			return;
 		}
 
-		gAppPathMacro = newData;
+		g_app_path_macro = newData;
 	}
 }
 
 
 ch_string FileSys_GetAppPathMacro()
 {
-	return gAppPathMacro;
+	return g_app_path_macro;
+}
+
+
+u32 filesys_get_search_paths_base( ch_string** paths, u32 type )
+{
+    if ( !paths )
+		return 0;
+
+    *paths = g_paths[ type ];
+	return g_paths_count[ type ];
 }
 
 
 u32 FileSys_GetSearchPaths( ch_string** paths )
 {
-    if ( !paths )
-		return 0;
-
-    *paths = gSearchPaths.data();
-	return gSearchPaths.size();
+	return filesys_get_search_paths_base( paths, ESearchPathType_Path );
 }
 
 
 u32 FileSys_GetBinPaths( ch_string** paths )
 {
-    if ( !paths )
-		return 0;
-
-	*paths = gBinPaths.data();
-	return gBinPaths.size();
+	return filesys_get_search_paths_base( paths, ESearchPathType_Binary );
 }
 
 
 u32 FileSys_GetSourcePaths( ch_string** paths )
 {
-    if ( !paths )
-		return 0;
-
-	*paths = gSourceAssetPaths.data();
-	return gSourceAssetPaths.size();
+	return filesys_get_search_paths_base( paths, ESearchPathType_SourceAssets );
 }
 
 
-void FileSys_ClearSearchPathsBase( std::vector< ch_string >& paths )
+void FileSys_ClearSearchPathsBase( ESearchPathType type )
 {
-	for ( auto& path : paths )
-		ch_str_free( path.data );
+	for ( u32 i = 0; i < g_paths_count[ type ]; i++ )
+		ch_str_free( g_paths[ type ][ i ].data );
 
-	paths.clear();
+	// dont actually realloc it right now, would be better to just set the count to 0
+	memset( g_paths[ type ], 0, sizeof( ch_string ) * g_paths_count[ type ] );
+	g_paths_count[ type ] = 0;
 }
 
 
 void FileSys_ClearSearchPaths()
 {
-	FileSys_ClearSearchPathsBase( gSearchPaths );
+	FileSys_ClearSearchPathsBase( ESearchPathType_Path );
 }
 
 
 void FileSys_ClearBinPaths()
 {
-	FileSys_ClearSearchPathsBase( gBinPaths );
+	FileSys_ClearSearchPathsBase( ESearchPathType_Binary );
 }
 
 
 void FileSys_ClearSourcePaths()
 {
-	FileSys_ClearSearchPathsBase( gSourceAssetPaths );
+	FileSys_ClearSearchPathsBase( ESearchPathType_SourceAssets );
 }
 
 
 void FileSys_DefaultSearchPaths()
 {
-	FileSys_ClearSearchPathsBase( gBinPaths );
-    FileSys_ClearSearchPathsBase( gSearchPaths );
-	FileSys_ClearSearchPathsBase( gSourceAssetPaths );
+	FileSys_ClearSearchPathsBase( ESearchPathType_Path );
+	FileSys_ClearSearchPathsBase( ESearchPathType_Binary );
+	FileSys_ClearSearchPathsBase( ESearchPathType_SourceAssets );
 
-	ch_string path1    = ch_str_join_arr( nullptr, 3, gExePath.data, CH_PATH_SEP_STR, "bin" );
-	ch_string path2    = ch_str_join_arr( nullptr, 3, gExePath.data, CH_PATH_SEP_STR, gWorkingDir.data );
-	ch_string path3    = ch_str_join_arr( nullptr, 2, gExePath.data, CH_PATH_SEP_STR );
-	ch_string pathCore = ch_str_join_arr( nullptr, 3, gExePath.data, CH_PATH_SEP_STR, "core" );
+	ch_string path1    = ch_str_join_arr( nullptr, 3, g_exe_path.data, CH_PATH_SEP_STR, "bin" );
+	ch_string path2    = ch_str_join_arr( nullptr, 3, g_exe_path.data, CH_PATH_SEP_STR, g_working_dir.data );
+	ch_string path3    = ch_str_join_arr( nullptr, 2, g_exe_path.data, CH_PATH_SEP_STR );
+	ch_string pathCore = ch_str_join_arr( nullptr, 3, g_exe_path.data, CH_PATH_SEP_STR, "core" );
 
 	FileSys_AddSearchPath( path1.data, path1.size, ESearchPathType_Binary );
 	FileSys_AddSearchPath( path2.data, path2.size );
@@ -337,29 +336,42 @@ void FileSys_DefaultSearchPaths()
 }
 
 
+static void log_group_search_paths( LogGroup group, const char* msg, ESearchPathType type )
+{
+	Log_Group( group, msg );
+	for ( u32 i = 0; i < g_paths_count[ type ]; i++ )
+	{
+		Log_GroupF( group, "    %s\n", g_paths[ type ][ i ].data );
+	}
+}
+
+
 void FileSys_PrintSearchPaths()
 {
 	LogGroup group = Log_GroupBegin( gFileSystemChannel );
 
-    Log_Group( group, "Binary Paths:\n" );
-	for ( const auto& path : gBinPaths )
-	{
-		Log_GroupF( group, "    %s\n", path.data );
-	}
-
-	Log_Group( group, "\nSearch Paths:\n" );
-	for ( const auto& path : gSearchPaths )
-	{
-		Log_GroupF( group, "    %s\n", path.data );
-	}
-
-	Log_Group( group, "\nSource Asset Paths:\n" );
-	for ( const auto& path : gSourceAssetPaths )
-	{
-		Log_GroupF( group, "    %s\n", path.data );
-	}
+	log_group_search_paths( group, "Binary Paths:\n", ESearchPathType_Path );
+	log_group_search_paths( group, "\nSearch Paths:\n", ESearchPathType_Binary );
+	log_group_search_paths( group, "\nSource Asset Paths:\n", ESearchPathType_SourceAssets );
 
     Log_GroupEnd( group );
+}
+
+
+static bool filesys_build_search_path_append_macro( ch_string& output, ch_string& macro )
+{
+	const char* strings[] = { output.data, macro.data };
+	const u64   lengths[] = { output.size, macro.size };
+	ch_string   newData   = ch_str_join( 2, strings, lengths, output.data );
+
+	if ( !newData.data )
+	{
+		Log_Error( "Failed to realloc memory for search path\n" );
+		return false;
+	}
+
+	output = newData;
+	return true;
 }
 
 
@@ -395,31 +407,13 @@ ch_string FileSys_BuildSearchPath( const char* path, s32 pathLen )
 
 		if ( dist == 11 && strncmp( last, "$root_path$", dist ) == 0 )
 		{
-			const char* strings[] = { output.data, gExePath.data };
-			const u64   lengths[] = { output.size, gExePath.size };
-			ch_string   newData   = ch_str_join( 2, strings, lengths, output.data );
-
-			if ( !newData.data )
-			{
-				Log_Error( "Failed to realloc memory for search path\n" );
+			if ( !filesys_build_search_path_append_macro( output, g_exe_path ) )
 				return output;
-			}
-
-			output = newData;
 		}
 		else if ( dist == 10 && strncmp( last, "$app_path$", dist ) == 0 )
 		{
-			const char* strings[] = { output.data, gAppPathMacro.data };
-			const u64   lengths[] = { output.size, gAppPathMacro.size };
-			ch_string   newData   = ch_str_join( 2, strings, lengths, output.data );
-
-			if ( !newData.data )
-			{
-				Log_Error( "Failed to realloc memory for search path\n" );
+			if ( !filesys_build_search_path_append_macro( output, g_app_path_macro ) )
 				return output;
-			}
-
-			output = newData;
 		}
 		else
 		{
@@ -455,67 +449,104 @@ ch_string FileSys_BuildSearchPath( const char* path, s32 pathLen )
 }
 
 
-void FileSys_AddSearchPath( const char* path, s32 pathLen, ESearchPathType sType )
+static bool filesys_is_invalid_path_type( ESearchPathType type )
 {
+	if ( type > ESearchPathType_Count )
+	{
+		Log_Error( "Invalid Search Path Type\n" );
+		return true;
+	}
+
+	return false;
+}
+
+
+static bool filesys_alloc_search_path2( ESearchPathType type, const ch_string& fullPath )
+{
+	// realloc paths
+	ch_string* new_data = ch_realloc( g_paths[ type ], g_paths_count[ type ] + 1 );
+
+	if ( !new_data )
+	{
+		Log_Error( "Failed to allocate memory for search path array\n" );
+		return false;
+	}
+
+	g_paths[ type ] = new_data;
+	return true;
+}
+
+
+static void filesys_alloc_search_path( ESearchPathType type, const ch_string& fullPath, u32 index )
+{
+	index = std::clamp( index, 0U, g_paths_count[ type ] );
+
+	// realloc paths
+	ch_string* new_data = ch_realloc( g_paths[ type ], g_paths_count[ type ] + 1 );
+
+	if ( !new_data )
+	{
+		Log_Error( "Failed to allocate memory for search path array\n" );
+		return;
+	}
+
+	g_paths[ type ] = new_data;
+	g_paths[ type ][ index ] = fullPath;
+	g_paths_count[ type ]++;
+}
+
+
+void FileSys_AddSearchPath( const char* path, s32 pathLen, ESearchPathType type )
+{
+	if ( filesys_is_invalid_path_type( type ) )
+		return;
+
 	ch_string fullPath = FileSys_BuildSearchPath( path, pathLen );
 
 	if ( !fullPath.data )
 		return;
 
-    switch ( sType )
-	{
-		default:
-		case ESearchPathType_Path:
-			gSearchPaths.push_back( fullPath );
-			break;
-
-		case ESearchPathType_Binary:
-			gBinPaths.push_back( fullPath );
-			break;
-
-		case ESearchPathType_SourceAssets:
-			gSourceAssetPaths.push_back( fullPath );
-			break;
-	}
+	filesys_alloc_search_path2( type, fullPath );
+	g_paths[ type ][ g_paths_count[ type ]++ ] = fullPath;
 }
 
 
-void FileSys_RemoveSearchPath( const char* path, s32 pathLen, ESearchPathType sType )
+// this one is weird, it has to build the path to remove it, why not just pass an index to remove?
+void FileSys_RemoveSearchPath( const char* path, s32 pathLen, ESearchPathType type )
 {
+	if ( filesys_is_invalid_path_type( type ) )
+		return;
+
 	ch_string fullPath = FileSys_BuildSearchPath( path );
 
     if ( !fullPath.data )
         return;
 
-    switch ( sType )
+	for ( u32 i = 0; i < g_paths_count[ type ]; i++ )
 	{
-		default:
-		case ESearchPathType_Path:
-			vec_remove_if( gSearchPaths, fullPath );
-			break;
+		if ( ch_str_equals( fullPath, g_paths[ type ][ i ] ) )
+		{
+			ch_str_free( g_paths[ type ][ i ].data );
 
-		case ESearchPathType_Binary:
-			vec_remove_if( gBinPaths, fullPath );
-			break;
+			// shift all the paths down
+			for ( u32 j = i; j < g_paths_count[ type ] - 1; j++ )
+				g_paths[ type ][ j ] = g_paths[ type ][ j + 1 ];
 
-		case ESearchPathType_SourceAssets:
-			vec_remove_if( gSourceAssetPaths, fullPath );
+			g_paths_count[ type ]--;
 			break;
+		}
 	}
 
     ch_str_free( fullPath.data );
 }
 
 
-void FileSys_InsertSearchPath( size_t index, const char* path, s32 pathLen, ESearchPathType sType )
+void FileSys_InsertSearchPath( u32 index, const char* path, s32 pathLen, ESearchPathType type )
 {
-	if ( pathLen == 0 )	
+	if ( filesys_is_invalid_path_type( type ) )
 		return;
 
-	if ( pathLen == -1 )
-		pathLen = strlen( path );
-
-	if ( pathLen == 0 )
+	if ( !ch_str_check_empty( path, pathLen ) )
 	{
 		Log_Error( "Failed to insert search path, path or path length is empty\n" );
 		return;
@@ -529,21 +560,30 @@ void FileSys_InsertSearchPath( size_t index, const char* path, s32 pathLen, ESea
 		return;
 	}
 
-	switch ( sType )
+	index = std::clamp( index, 0U, g_paths_count[ type ] );
+
+	// realloc paths
+	ch_string* new_data = ch_realloc( g_paths[ type ], g_paths_count[ type ] + 1 );
+
+	if ( !new_data )
 	{
-		default:
-		case ESearchPathType_Path:
-			gSearchPaths.insert( gSearchPaths.begin() + index, fullPath );
-			break;
-
-		case ESearchPathType_Binary:
-			gBinPaths.insert( gBinPaths.begin() + index, fullPath );
-			break;
-
-		case ESearchPathType_SourceAssets:
-			gSourceAssetPaths.insert( gSourceAssetPaths.begin() + index, fullPath );
-			break;
+		Log_Error( "Failed to allocate memory for search path array\n" );
+		return;
 	}
+
+	g_paths[ type ] = new_data;
+	g_paths_count[ type ]++;
+
+	// move all the paths up
+	// memcpy( &g_paths[ type ][ index + 1 ], &g_paths[ type ][ index ], sizeof( ch_string ) * ( g_paths_count[ type ] - index ) );
+
+	for ( u32 i = g_paths_count[ type ] - 1; i > index; i-- )
+	{
+		g_paths[ type ][ i ] = g_paths[ type ][ i - 1 ];
+	}
+
+	// now we have an empty slot
+	g_paths[ type ][ index ] = fullPath;
 }
 
 
@@ -569,18 +609,6 @@ inline bool is_dir( const char* path )
     return false;
 }
 
-
-#if 0
-std::string FileSys_FindFileF( ESearchPathType sType, const char* spFmt, ... )
-{
-    PROF_SCOPE();
-
-    std::string path;
-	VSTRING( path, spFmt );
-
-    return FileSys_FindFileEx( path, sType );
-}
-#endif
 
 #undef ch_str_copy
 
@@ -627,27 +655,26 @@ ch_string FileSys_FindFileBaseSearchPath( const ch_string& searchPath, const cha
 #endif
 
 
-ch_string FileSys_FindFileBase( CH_FS_FILE_LINE_DEF const std::vector< ch_string >& paths, const char* filePath, s32 fileLen )
+ch_string FileSys_FindFileBase( CH_FS_FILE_LINE_DEF ESearchPathType type, const char* filePath, s32 fileLen )
 {
 	PROF_SCOPE();
 
-	if ( !filePath )
+	if ( !ch_str_check_empty( filePath, fileLen ) )
+	{
+		Log_Error( "Failed to find file, path or path length is empty\n" );
 		return {};
-
-	if ( fileLen == -1 )
-		fileLen = strlen( filePath );
-
-	if ( fileLen == 0 )
-		return {};
+	}
 
 	if ( FileSys_IsAbsolute( filePath, fileLen ) )
 		return FileSys_FindFileAbs( CH_FS_FILE_LINE_INT filePath, fileLen );
 
-	for ( const ch_string& searchPath : paths )
+	for ( u32 i = 0; i < g_paths_count[ type ]; i++ )
 	{
-		const char*  pathParts[]   = { searchPath.data, CH_PATH_SEP_STR, filePath };
-		const size_t lengthParts[] = { searchPath.size, 1, fileLen };
-		ch_string    concat        = ch_str_join( 3, pathParts, lengthParts );
+		const ch_string& searchPath    = g_paths[ type ][ i ];
+
+		const char*      pathParts[]   = { searchPath.data, CH_PATH_SEP_STR, filePath };
+		const size_t     lengthParts[] = { searchPath.size, 1, fileLen };
+		ch_string        concat        = ch_str_join( 3, pathParts, lengthParts );
 
 		if ( !concat.data )
 		{
@@ -679,36 +706,31 @@ ch_string FileSys_FindFileBase( CH_FS_FILE_LINE_DEF const std::vector< ch_string
 
 ch_string FileSys_FindBinFile( CH_FS_FILE_LINE_DEF const char* filePath, s32 pathLen )
 {
-	return FileSys_FindFileBase( CH_FS_FILE_LINE_INT gBinPaths, filePath, pathLen );
+	return FileSys_FindFileBase( CH_FS_FILE_LINE_INT ESearchPathType_Binary, filePath, pathLen );
 }
 
 
 ch_string FileSys_FindSourceFile( CH_FS_FILE_LINE_DEF const char* filePath, s32 pathLen )
 {
-	return FileSys_FindFileBase( CH_FS_FILE_LINE_INT gSourceAssetPaths, filePath, pathLen );
+	return FileSys_FindFileBase( CH_FS_FILE_LINE_INT ESearchPathType_SourceAssets, filePath, pathLen );
 }
 
 
 ch_string FileSys_FindFile( CH_FS_FILE_LINE_DEF const char* filePath, s32 pathLen )
 {
-	return FileSys_FindFileBase( CH_FS_FILE_LINE_INT gSearchPaths, filePath, pathLen );
+	return FileSys_FindFileBase( CH_FS_FILE_LINE_INT ESearchPathType_Path, filePath, pathLen );
 }
 
 
 ch_string FileSys_FindFileEx( CH_FS_FILE_LINE_DEF const char* filePath, s32 pathLen, ESearchPathType sType )
 {
-	switch ( sType )
+	if ( sType > ESearchPathType_Count )
 	{
-		default:
-		case ESearchPathType_Path:
-			return FileSys_FindFileBase( CH_FS_FILE_LINE_INT gSearchPaths, filePath, pathLen );
-
-		case ESearchPathType_Binary:
-			return FileSys_FindFileBase( CH_FS_FILE_LINE_INT gBinPaths, filePath, pathLen );
-
-		case ESearchPathType_SourceAssets:
-			return FileSys_FindFileBase( CH_FS_FILE_LINE_INT gSourceAssetPaths, filePath, pathLen );
+		Log_Error( "Invalid search path type\n" );
+		return {};
 	}
+
+	return FileSys_FindFileBase( CH_FS_FILE_LINE_INT sType, filePath, pathLen );
 }
 
 
@@ -726,6 +748,12 @@ ch_string FileSys_FindDir( const char* path, s32 pathLen, ESearchPathType sType 
 {
     PROF_SCOPE();
 
+	if ( sType > ESearchPathType_Count )
+	{
+		Log_Error( "Invalid search path type\n" );
+		return {};
+	}
+
     // if it's an absolute path already,
     // don't bother to look in the search paths for it, and make sure it exists
 	if ( FileSys_IsAbsolute( path, pathLen ) )
@@ -738,29 +766,13 @@ ch_string FileSys_FindDir( const char* path, s32 pathLen, ESearchPathType sType 
 		return out;
 	}
 
-    std::vector< ch_string >* paths = nullptr;
-
-    switch ( sType )
-	{
-		default:
-		case ESearchPathType_Path:
-			paths = &gSearchPaths;
-			break;
-
-		case ESearchPathType_Binary:
-			paths = &gBinPaths;
-			break;
-
-		case ESearchPathType_SourceAssets:
-			paths = &gSourceAssetPaths;
-			break;
-	}
-
-    for ( auto searchPath : *paths )
+    for ( u32 i = 0; i < g_paths_count[ sType ]; i++ )
     {
-		const char* paths[]   = { searchPath.data, CH_PATH_SEP_STR, path };
+		const ch_string& searchPath = g_paths[ sType ][ i ];
+		
+		const char*  paths[]   = { searchPath.data, CH_PATH_SEP_STR, path };
 		const size_t lengths[] = { searchPath.size, 1, pathLen };
-		ch_string   fullPath  = ch_str_join( 3, paths, lengths );
+		ch_string    fullPath  = ch_str_join( 3, paths, lengths );
 
         // does item exist?
         if ( is_dir( fullPath.data ) )
@@ -921,13 +933,7 @@ bool FileSys_SaveFile( const char* path, std::vector< char >& srData, s32 pathLe
 
 bool FileSys_IsAbsolute( const char* spPath, s32 pathLen )
 {
-	if ( !spPath )
-		return false;
-
-	if ( pathLen == -1 )
-		pathLen = strlen( spPath );
-
-	if ( pathLen == 0 )
+	if ( !ch_str_check_empty( spPath, pathLen ) )
 		return false;
 
 #ifdef _WIN32
@@ -952,23 +958,6 @@ bool FileSys_IsAbsolute( const char* spPath, s32 pathLen )
 bool FileSys_IsRelative( const char* spPath, s32 pathLen )
 {
 	return !FileSys_IsAbsolute( spPath, pathLen );
-
-/*
-	if ( !spPath || pathLen == 0 )
-		return true;
-#ifdef _WIN32
-	if ( pathLen > 2 )
-		return ( spPath[ 1 ] != ':' );
-
-	return true;
-	// return PathIsRelativeA( spPath );
-#elif __unix__
-	if ( pathLen == 0 )
-		return true;
-	return spPath[ 0 ] != '/';
-#else
-	return std::filesystem::path( path ).is_relative();
-#endif*/
 }
 
 
@@ -1103,12 +1092,35 @@ ch_string FileSys_GetBaseName( const char* path, s32 pathLen )
 #undef ch_str_join_space
 
 
+const char* filesys_get_last_slash( const char* path, s32 pathLen )
+{
+	if ( ch_str_check_empty( path, pathLen ) )
+		return nullptr;
+
+#if 1
+	return strrchr( path, '/' ) > strrchr( path, '\\' ) ? strrchr( path, '/' ) + 1 : strrchr( path, '\\' ) + 1;
+#else
+	size_t i = pathLen - 1;
+	for ( ; i > 0; i-- )
+	{
+		if ( path[ i ] == '/' || path[ i ] == '\\' )
+			break;
+	}
+
+	return &path[ i ];
+#endif
+}
+
+
+const char* filesys_get_last_slash( const char* path )
+{
+	return strrchr( path, '/' ) > strrchr( path, '\\' ) ? strrchr( path, '/' ) + 1 : strrchr( path, '\\' ) + 1;
+}
+
+
 ch_string FileSys_GetFileName( CH_FS_FILE_LINE_DEF const char* path, s32 pathLen )
 {
-	if ( pathLen == -1 )
-		pathLen = strlen( path );
-
-	if ( pathLen == 0 )
+	if ( !ch_str_check_empty( path, pathLen ) )
 		return {};
 
 	size_t i = pathLen - 1;
@@ -1132,34 +1144,24 @@ ch_string FileSys_GetFileName( CH_FS_FILE_LINE_DEF const char* path, s32 pathLen
 }
 
 
-ch_string FileSys_GetFileExt( CH_FS_FILE_LINE_DEF const char* path, s32 pathLen, bool sStripPath )
+ch_string FileSys_GetFileExt( CH_FS_FILE_LINE_DEF const char* path, s32 pathLen )
 {
-    if ( sStripPath )
-	{
-		ch_string fileName = FileSys_GetFileName( CH_FS_FILE_LINE_INT path, pathLen );
-		if ( !fileName.data )
-			return {};
-
-		const char* dot = strrchr( fileName.data, '.' );
-
-		// a bit weird to return a nullptr here, but the string is empty so why bother allocating memory
-		if ( !dot || dot == fileName.data )
-		{
-			ch_str_free( fileName.data );
-			return {};
-		}
-
-		ch_string output = ch_str_copy( CH_FS_FILE_LINE_INT dot + 1 );
-		ch_str_free( fileName.data );
-		return output;
-	}
-
-	const char* dot = strrchr( path, '.' );
-
-	if ( !dot || dot == path )
+	// this is done so we elimate cases of a '.' in the file path, like "D:\user\cool.folder.name\file"
+	ch_string fileName = FileSys_GetFileName( CH_FS_FILE_LINE_INT path, pathLen );
+	if ( !fileName.data )
 		return {};
 
+	const char* dot = strrchr( fileName.data, '.' );
+
+	// a bit weird to return a nullptr here, but the string is empty so why bother allocating memory
+	if ( !dot )
+	{
+		ch_str_free( fileName.data );
+		return {};
+	}
+
 	ch_string output = ch_str_copy( CH_FS_FILE_LINE_INT dot + 1 );
+	ch_str_free( fileName.data );
 	return output;
 }
 
@@ -1182,12 +1184,10 @@ ch_string FileSys_GetFileNameNoExt( CH_FS_FILE_LINE_DEF const char* path, s32 pa
 }
 
 
-
 ch_string FileSys_CleanPath( CH_FS_FILE_LINE_DEF const char* path, const s32 pathLen, char* data )
 {
     PROF_SCOPE();
 
-#if 1
 	ChVector< ch_string > pathSegments;
 
 	#if __unix__
@@ -1263,78 +1263,6 @@ ch_string FileSys_CleanPath( CH_FS_FILE_LINE_DEF const char* path, const s32 pat
 
 	// free the path segments
 	ch_str_free( pathSegments.data(), pathSegments.size() );
-
-#else
-	std::vector< ChVector< char > > pathSegments;
-	ch_string                       root;
-
-    if ( FileSys_IsAbsolute( path, pathLen ) )
-    {
-#ifdef _WIN32
-
-#elif __unix__
-        root.data = "/";
-		root.size = 1;
-#endif
-    }
-
-    // TODO: have this use strchr instead to check for '/', '\\', '.',
-    // and just check the next character for if it's ".."
-    for ( int i = 0; i < pathLen; i++ )
-    {
-		ChVector< char > dir;
-        // forming the current directory.
-
-        while ( i < pathLen && ( path[ i ] != '/' && path[ i ] != '\\' ) )
-		{
-			dir.push_back( path[ i ] );
-            i++;
-        }
-
-        // if ".." , we pop.
-		if ( dir.size() == 2 && dir[ 0 ] == '.' && dir[ 1 ] == '.' )
-        {
-            if ( !pathSegments.empty() )
-                pathSegments.pop_back();
-        }
-		else if ( dir.size() && dir[ 0 ] != '.' )
-        {
-            // push the current directory into the vector.
-            pathSegments.push_back( dir );
-        }
-    }
-    
-    // build the cleaned path
-	ChVector< char > out;
-	
-	if ( root.size )
-	{
-		out.reserve( root.size );
-		for ( size_t i = 0; i < root.size; i++ )
-			out.push_back( root.data[ i ] );
-	}
-	
-	// TODO: remove usage of ChVector
-	// should setup the above function to use a start index and end index of each segment,
-	// then allocate memory for that segment and copy it over to a vector element
-	#undef ch_str_join_space
-	ch_str_join_space( STR_FILE_LINE pathSegments.size(), pathSegments.data(), CH_PATH_SEP_STR );
-	
-	for ( size_t i = 0; i < pathSegments.size(); i++ )
-	{
-		out.reserve( out.size() + pathSegments[ i ].size() );
-
-		for ( size_t j = 0; j < pathSegments[ i ].size(); j++ )
-			out.push_back( pathSegments[ i ][ j ] );
-
-		if ( i + 1 != pathSegments.size() )
-		{
-			out.push_back( CH_PATH_SEP );
-		}
-	}
-
-	ch_string finalString = ch_str_copy( out.data(), out.size() );
-#endif
 
 	if ( !finalString.data )
 	{
@@ -1418,32 +1346,6 @@ bool FileSys_CreateDirectory( const char* path )
 }
 
 
-struct SearchParams
-{
-    ReadDirFlags flags;
-    std::string rootPath;
-    std::string relPath;
-    std::string wildcard;
-};
-
-std::unordered_map< DirHandle, SearchParams > gSearchParams;
-
-
-bool FitsWildcard( DirHandle dirh, const std::string &path )
-{
-    auto it = gSearchParams.find( dirh );
-
-    if ( it != gSearchParams.end() )
-    {
-		Log_Msg( gFileSystemChannel, "TODO: wildcard check oh god\n" );
-        return false;
-    }
-    else
-    {
-        return true;
-    }
-}
-
 #if 0
 
 /* Read the first file in a Directory  */
@@ -1459,7 +1361,7 @@ DirHandle FileSys_ReadFirst( const std::string &path, std::string &file, ReadDir
 
     std::string absSearchPath;
 
-    for ( auto searchPath: gSearchPaths )
+    for ( auto searchPath: g_paths_search )
     {
         absSearchPath = searchPath + PATH_SEP + readPath;
         hFind = FindFirstFile( absSearchPath.c_str(), &ffd );
@@ -1689,9 +1591,9 @@ std::vector< ch_string > FileSys_ScanDir( const char* path, size_t pathLen, Read
 
     if ( !FileSys_IsAbsolute( path, pathLen ) )
     {
-        for ( auto searchPath : gSearchPaths )
+        for ( u32 i = 0; i < g_paths_count[ ESearchPathType_Path ]; i++ )
         {
-            if ( !sys_scandir( searchPath.data, searchPath.size, path, pathLen, files, flags ) )
+			if ( !sys_scandir( g_paths[ ESearchPathType_Path ][ i ].data, g_paths[ ESearchPathType_Path ][ i ].size, path, pathLen, files, flags ) )
                 continue;
 
             if ( !( flags & ReadDir_AllPaths ) )

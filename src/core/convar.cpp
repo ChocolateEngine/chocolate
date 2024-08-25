@@ -613,7 +613,7 @@ std::string Con_GetConVarHelp( std::string_view spName )
 	if ( !cvarData )
 		return vstring( "ConVar not found: %s\n", spName.data() );
 
-	std::string msg = vstring( "%s%s %s", UNIX_CLR_DEFAULT, spName.data(), Con_GetConVarValueStr( cvarData ).data() );
+	std::string msg = vstring( "%s%s %s", ANSI_CLR_DEFAULT, spName.data(), Con_GetConVarValueStr( cvarData ).data() );
 
 	// Check if the current value differs from the default value
 	switch ( cvarData->aType )
@@ -621,43 +621,43 @@ std::string Con_GetConVarHelp( std::string_view spName )
 		case EConVarType_Bool:
 			
 			if ( *cvarData->aBool.apData != cvarData->aBool.aDefaultData )
-				msg += vstring( " " UNIX_CLR_YELLOW "(%s default)", cvarData->aBool.aDefaultData ? "true" : "false" );
+				msg += vstring( " " ANSI_CLR_YELLOW "(%s default)", cvarData->aBool.aDefaultData ? "true" : "false" );
 			break;
 
 		case EConVarType_Int:
 			if ( *cvarData->aInt.apData != cvarData->aInt.aDefaultData )
-				msg += vstring( " " UNIX_CLR_YELLOW "(%d default)", cvarData->aInt.aDefaultData );
+				msg += vstring( " " ANSI_CLR_YELLOW "(%d default)", cvarData->aInt.aDefaultData );
 			break;
 
 		case EConVarType_Float:
 			if ( *cvarData->aFloat.apData != cvarData->aFloat.aDefaultData )
-				msg += vstring( " " UNIX_CLR_YELLOW "(%.6f default)", cvarData->aFloat.aDefaultData );
+				msg += vstring( " " ANSI_CLR_YELLOW "(%.6f default)", cvarData->aFloat.aDefaultData );
 			break;
 
 		case EConVarType_String:
 			if ( ch_strcasecmp( *cvarData->aString.apData, cvarData->aString.aDefaultData ) != 0 )
-				msg += vstring( " " UNIX_CLR_YELLOW "(\"%s\" default)", cvarData->aString.aDefaultData );
+				msg += vstring( " " ANSI_CLR_YELLOW "(\"%s\" default)", cvarData->aString.aDefaultData );
 			break;
 
 		case EConVarType_Vec2:
 			if ( *cvarData->aVec2.apData != cvarData->aVec2.aDefaultData )
-				msg += vstring( " " UNIX_CLR_YELLOW "(%.6f %.6f default)", cvarData->aVec2.aDefaultData.x, cvarData->aVec2.aDefaultData.y );
+				msg += vstring( " " ANSI_CLR_YELLOW "(%.6f %.6f default)", cvarData->aVec2.aDefaultData.x, cvarData->aVec2.aDefaultData.y );
 			break;
 
 		case EConVarType_Vec3:
 			if ( *cvarData->aVec3.apData != cvarData->aVec3.aDefaultData )
-				msg += vstring( " " UNIX_CLR_YELLOW "(%.6f %.6f %.6f default)", cvarData->aVec3.aDefaultData.x, cvarData->aVec3.aDefaultData.y, cvarData->aVec3.aDefaultData.z );
+				msg += vstring( " " ANSI_CLR_YELLOW "(%.6f %.6f %.6f default)", cvarData->aVec3.aDefaultData.x, cvarData->aVec3.aDefaultData.y, cvarData->aVec3.aDefaultData.z );
 			break;
 
 		case EConVarType_Vec4:
 			if ( *cvarData->aVec4.apData != cvarData->aVec4.aDefaultData )
-				msg += vstring( " " UNIX_CLR_YELLOW "(%.6f %.6f %.6f %.6f default)", cvarData->aVec4.aDefaultData.x, cvarData->aVec4.aDefaultData.y, cvarData->aVec4.aDefaultData.z, cvarData->aVec4.aDefaultData.w );
+				msg += vstring( " " ANSI_CLR_YELLOW "(%.6f %.6f %.6f %.6f default)", cvarData->aVec4.aDefaultData.x, cvarData->aVec4.aDefaultData.y, cvarData->aVec4.aDefaultData.z, cvarData->aVec4.aDefaultData.w );
 			break;
 
 		case EConVarType_RangeInt:
 		{
 			if ( *cvarData->aRangeInt.apData != cvarData->aRangeInt.aDefaultData )
-				msg += vstring( " " UNIX_CLR_YELLOW "(%d default)", cvarData->aRangeInt.aDefaultData );
+				msg += vstring( " " ANSI_CLR_YELLOW "(%d default)", cvarData->aRangeInt.aDefaultData );
 
 			// put in data about the range this convar can be, also check if it's INT_MIN and INT_MAX, don't print that
 			std::string minStr;
@@ -681,7 +681,7 @@ std::string Con_GetConVarHelp( std::string_view spName )
 		case EConVarType_RangeFloat:
 		{
 			if ( *cvarData->aRangeFloat.apData != cvarData->aRangeFloat.aDefaultData )
-				msg += vstring( " " UNIX_CLR_YELLOW "(%.6f default)", cvarData->aRangeFloat.aDefaultData );
+				msg += vstring( " " ANSI_CLR_YELLOW "(%.6f default)", cvarData->aRangeFloat.aDefaultData );
 
 			// put in data about the range this convar can be, also check if it's FLT_MIN and FLT_MAX, don't print that
 			std::string minStr;
@@ -704,11 +704,11 @@ std::string Con_GetConVarHelp( std::string_view spName )
 	}
 
 	std::string type = Con_ConVarTypeStr( cvarData->aType );
-	msg += UNIX_CLR_CYAN " - " + type;
+	msg += ANSI_CLR_CYAN " - " + type;
 
 	if ( cvarData->aFlags )
 	{
-		msg += "\n\t" UNIX_CLR_DARK_GREEN;
+		msg += "\n\t" ANSI_CLR_DARK_GREEN;
 		// TODO: this could be better probably
 		// 3:30 am and very lazy programming here
 		for ( size_t i = 0, j = 0; i < gConVarFlags.size(); i++ )
@@ -732,11 +732,11 @@ std::string Con_GetConVarHelp( std::string_view spName )
 
 	if ( desc )
 	{
-		msg += vstring( "\n\t" UNIX_CLR_CYAN "%s" UNIX_CLR_DEFAULT "\n\n", desc );
+		msg += vstring( "\n\t" ANSI_CLR_CYAN "%s" ANSI_CLR_DEFAULT "\n\n", desc );
 		return msg;
 	}
 
-	return msg + UNIX_CLR_DEFAULT "\n";
+	return msg + ANSI_CLR_DEFAULT "\n";
 }
 
 
