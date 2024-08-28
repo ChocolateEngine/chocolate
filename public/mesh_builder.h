@@ -1,7 +1,9 @@
 #pragma once
 
+#if 0
+
 #include "core/core.h"
-#include "igraphics.h"
+#include "irender.h"
 
 
 // Vertex containing all possible values
@@ -266,3 +268,4 @@ void MeshBuild_AllocateBlendShapes( MeshBuildMaterial_t& srMeshBuildMaterial, u3
 // void MeshBuild_SetVertexPos( MeshBuildMaterial_t& srMeshBuildMaterial, u32 sVertIndex, const glm::vec3& data );
 // void MeshBuild_FillVertexPosData( MeshBuildData_t& srMeshBuildData, u32 sMaterial, glm::vec3* spData, u32 sCount, u32 sOffset );
 
+#endif

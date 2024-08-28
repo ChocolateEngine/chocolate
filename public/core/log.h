@@ -3,8 +3,6 @@
 #include "platform.h"
 #include "util.h"
 
-#include <functional>
-
 template< typename T >
 struct ChVector;
 
@@ -252,4 +250,11 @@ void CORE_API                      Log_DevF( u8 sLvl, const char* spFmt, ... );
 
 #define LOG_CHANNEL( name )                       extern LogChannel g##name##Channel;
 #define LOG_CHANNEL2( name )                      extern LogChannel gLC_##name;
+
+// better names
+#define LOG_CHANNEL_REGISTER( name, ... )         LogChannel gLC_##name = Log_RegisterChannel( #name, __VA_ARGS__ );
+#define LOG_CHANNEL_REGISTER_EX( var, name, ... ) LogChannel var = Log_RegisterChannel( #name, __VA_ARGS__ );
+
+#define LOG_CHANNEL_EXTERN( name )                extern LogChannel gLC_##name;
+#define EXTERN_LOG_CHANNEL( name )                extern LogChannel gLC_##name;
 

@@ -25,12 +25,17 @@ get_property( CH_BIN GLOBAL PROPERTY CH_BIN )
 add_subdirectory( ${CH_SRC}/core )
 add_subdirectory( ${CH_SRC}/imgui )
 add_subdirectory( ${CH_SRC}/audio )
-add_subdirectory( ${CH_SRC}/render )
-add_subdirectory( ${CH_SRC}/graphics_api )
+
+add_subdirectory( ${CH_SRC}/render3 )
+# add_subdirectory( ${CH_SRC}/graphics_data )
+
+# add_subdirectory( ${CH_SRC}/render )
+# add_subdirectory( ${CH_SRC}/graphics_api )
+
 add_subdirectory( ${CH_SRC}/gui )
 add_subdirectory( ${CH_SRC}/input )
-add_subdirectory( ${CH_SRC}/physics )
-add_subdirectory( ${CH_SRC}/physics_wrapper )
+# add_subdirectory( ${CH_SRC}/physics )
+# add_subdirectory( ${CH_SRC}/physics_wrapper )
 # add_subdirectory( ${CH_SRC}/asset_system )
 
 # Public Files

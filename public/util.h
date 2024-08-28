@@ -374,9 +374,9 @@ struct hash< ch_string >
 {
 	size_t operator()( ch_string const& string ) const
 	{
-		size_t value = ( hash< u64 >()( string.size ) );
+		size_t value = ( hash< s64 >()( string.size ) );
 
-		for ( u64 i = 0; i < string.size; i++ )
+		for ( s64 i = 0; i < string.size; i++ )
 			value ^= ( hash< char >()( string.data[ i ] ) );
 
 		return value;
@@ -388,9 +388,9 @@ struct hash< ch_string_auto >
 {
 	size_t operator()( ch_string_auto const& string ) const
 	{
-		size_t value = ( hash< u64 >()( string.size ) );
+		size_t value = ( hash< s64 >()( string.size ) );
 
-		for ( u64 i = 0; i < string.size; i++ )
+		for ( s64 i = 0; i < string.size; i++ )
 			value ^= ( hash< char >()( string.data[ i ] ) );
 
 		return value;

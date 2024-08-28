@@ -1,6 +1,8 @@
+#if 0
+
 #include "core/core.h"
 #include "types/transform.h"
-#include "render/irender.h"
+#include "irender.h"
 #include "mesh_builder.h"
 
 #include <glm/vec3.hpp>
@@ -88,6 +90,7 @@ void MeshBuilder::End( bool sCreateBuffers )
 {
 	PROF_SCOPE();
 
+#if 0
 	if ( apMesh->aMeshes.size() )
 	{
 		Log_WarnF( gLC_MeshBuilder, "Meshes already created for Model: \"%s\"\n", apDebugName ? apDebugName : "internal" );
@@ -252,6 +255,7 @@ void MeshBuilder::End( bool sCreateBuffers )
 
 #if MESH_BUILDER_USE_IND
 	apGraphics->CreateIndexBuffer( apMesh->apBuffers, vertData, apDebugName );
+#endif
 #endif
 }
 
@@ -525,7 +529,7 @@ void MeshBuilder::CalculateNormals( size_t sIndex )
 	CH_ASSERT( aSurfaces.size() );
 
 	Surface& surf = aSurfaces[sIndex];
-	VertexData_t* vertData = apMesh->apVertexData;
+//	VertexData_t* vertData = apMesh->apVertexData;
 
 #if 0
 	vec3_t v1 = ( vec3_t ){ c->x - b->x, c->y - b->y, c->z - b->z };
@@ -616,7 +620,7 @@ static bool realloc_free_cast( T*& spData, size_t sCount )
 }
 
 
-void MeshBuild_FinishMesh( IGraphics* spGraphics, MeshBuildData_t& srMeshBuildData, Model* spModel, bool sCalculateIndices, bool sUploadMesh, const char* spDebugName )
+void MeshBuild_FinishMesh( IRender3* render_api, MeshBuildData_t& srMeshBuildData, Model* spModel, bool sCalculateIndices, bool sUploadMesh, const char* spDebugName )
 {
 	if ( spModel->aMeshes.size() )
 	{
@@ -831,3 +835,4 @@ void MeshBuild_FillVertexPosData( MeshBuildData_t& srMeshBuildData, u32 sMateria
 	MeshBuildMaterial_t& material = srMeshBuildData.aMaterials[ sMaterial ];
 }
 
+#endif

@@ -1,7 +1,7 @@
 #pragma once
 
 #include "physics/iphysics.h"
-#include "render/irender.h"
+#include "irender3.h"
 
 #ifndef JPH_DEBUG_RENDERER
 	// Hack to compile DebugRenderer
@@ -294,7 +294,7 @@ public:
 
 
 // for debugging
-extern IRender* render;
+extern IRender3* render;
 
 
 // Layer that objects can be in, determines which other objects it can collide with

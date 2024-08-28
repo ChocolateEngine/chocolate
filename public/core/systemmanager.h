@@ -6,12 +6,6 @@ an interface for getting systems from the engine
 */
 #pragma once
 
-#include <memory>
-#include <unordered_map>
-#include <typeindex>
-#include <any>
-#include <vector>
-
 #include "core/platform.h"
 
 

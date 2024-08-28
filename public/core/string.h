@@ -152,44 +152,7 @@ CORE_API bool      ch_str_equals_any( const ch_string& str1, u64 count, const ch
 
 CORE_API bool      ch_str_equals_any( const ch_string& str1, u64 count, const ch_string* strings );
 
-// -----------------------------------------------------------------
-// Wide String Functions
-
-#if 0  // _WIN32
-CORE_API wchar_t*   ch_str_copy( const wchar_t* format );
-CORE_API wchar_t*   ch_str_copy( const wchar_t* format, u64 len );
-
-CORE_API wchar_t*   ch_str_realloc( wchar_t* data, u64 len );
-CORE_API wchar_t*   ch_str_realloc( wchar_t* data, const wchar_t* format );
-CORE_API wchar_t*   ch_str_realloc( wchar_t* data, const wchar_t* format, u64 len );
-
-CORE_API ch_ustring ch_str_join( u64 count, const wchar_t** strings, wchar_t* data = nullptr );
-CORE_API ch_ustring ch_str_join_space( u64 count, const wchar_t** strings, const wchar_t* space = (wchar_t*)L" ", wchar_t* data = nullptr );
-
-CORE_API ch_ustring ch_str_join( u64 count, const wchar_t** strings, const u64* lengths, wchar_t* data = nullptr );
-CORE_API ch_ustring ch_str_join_space( u64 count, const wchar_t** strings, const u64* lengths, const wchar_t* space = (wchar_t*)L" ", wchar_t* data = nullptr );
-
-// CORE_API wchar_t*   ch_str_join( wchar_t* data, u64 count, const wchar_t* string, ... );
-CORE_API ch_ustring ch_str_join( wchar_t* data, u64 count, const wchar_t* string, ... );
-
-CORE_API wchar_t*   ch_str_copy_f( const wchar_t* format, ... );
-CORE_API wchar_t*   ch_str_copy_v( const wchar_t* format, va_list args );
-
-CORE_API void       ch_str_free( wchar_t* string );
-
-CORE_API void       ch_str_add( const wchar_t* string );
-CORE_API void       ch_str_remove( const wchar_t* string );
-
-CORE_API bool       ch_streq( const wchar_t* str1, const wchar_t* str2 );
-CORE_API bool       ch_strneq( const wchar_t* str1, const wchar_t* str2, u64 count );
-
-// compare a wide string to a normal string
-CORE_API bool       ch_streq( const char* str1, const wchar_t* str2 );
-CORE_API bool       ch_strneq( const char* str1, const wchar_t* str2, u64 count );
-
-CORE_API bool       ch_streq( const wchar_t* str1, const char* str2 );
-CORE_API bool       ch_strneq( const wchar_t* str1, const char* str2, u64 count );
-#endif
+// -----------------------------------------------------------------------------------------------------
 
 // Get the total amount of strings allocated
 CORE_API u64        ch_str_get_alloc_count();
@@ -212,77 +175,6 @@ CORE_API ch_string  ch_str_create( const char* str );
 
 CORE_API ch_string  ch_str_create( const char* str, u64 len );
 // CORE_API ch_ustring ch_str_create( const uchar* str, u32 len );
-
-#if 0
-
-CORE_API void       ch_str_destroy( ch_string& s );
-CORE_API void       ch_str_destroy( ch_ustring& s );
-
-// -----------------------------------------------------------------------------------------------------
-// Comparisons
-
-CORE_API bool       ch_str_compare( const ch_string& s1, const ch_string& s2 );
-CORE_API bool       ch_str_compare( const ch_ustring& s1, const ch_ustring& s2 );
-
-CORE_API bool       ch_str_compare( const ch_string& s1, const char* s2 );
-CORE_API bool       ch_str_compare( const ch_ustring& s1, const uchar* s2 );
-
-CORE_API bool       ch_str_compare( const ch_string& s1, const char* s2, u64 len );
-CORE_API bool       ch_str_compare( const ch_ustring& s1, const uchar* s2, u32 len );
-
-// -----------------------------------------------------------------------------------------------------
-// Appending
-
-CORE_API bool       ch_str_append( ch_string& dest, const ch_string& src );
-CORE_API bool       ch_str_append( ch_ustring& dest, const ch_ustring& src );
-
-CORE_API bool       ch_str_append( ch_string& dest, const char* src );
-CORE_API bool       ch_str_append( ch_ustring& dest, const uchar* src );
-
-CORE_API bool       ch_str_append( ch_string& dest, const char* src, u64 len );
-CORE_API bool       ch_str_append( ch_ustring& dest, const uchar* src, u32 len );
-
-CORE_API bool       ch_str_append( ch_string& dest, const ch_string* srcList, const size_t sCount );
-CORE_API bool       ch_str_append( ch_ustring& dest, const ch_ustring* srcList, const size_t sCount );
-
-// -----------------------------------------------------------------------------------------------------
-// Assigning
-
-CORE_API bool       ch_str_assign( ch_string& dest, const ch_string& src );
-CORE_API bool       ch_str_assign( ch_ustring& dest, const ch_ustring& src );
-
-CORE_API bool       ch_str_assign( ch_string& dest, const char* src );
-CORE_API bool       ch_str_assign( ch_ustring& dest, const uchar* src );
-
-CORE_API bool       ch_str_assign( ch_string& dest, const char* src, u64 len );
-CORE_API bool       ch_str_assign( ch_ustring& dest, const uchar* src, u32 len );
-
-// -----------------------------------------------------------------------------------------------------
-// Other
-
-// Convert Between Unicode and ANSI
-CORE_API bool       ch_str_convert( ch_string& dest, const ch_ustring& src );
-CORE_API bool       ch_str_convert( ch_ustring& dest, const ch_string& src );
-
-
-inline bool         ch_str_copy( ch_string& dest, const ch_string& src )
-{
-	if ( dest.data )
-		ch_str_destroy( dest );
-
-	return ch_str_create( dest, src.data, src.size );
-}
-
-
-inline bool ch_str_copy( ch_ustring& dest, const ch_ustring& src )
-{
-	if ( dest.data )
-		ch_str_destroy( dest );
-
-	return ch_str_create( dest, src.data, src.size );
-}
-
-#endif
 
 
 // maybe change u64 to s64, so you can pass in -1 to calc the string length in the function?

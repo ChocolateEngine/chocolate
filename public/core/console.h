@@ -8,7 +8,6 @@ Declares the sdfhuosdfhuiosdfhusdfhuisfhu
 
 #include <string>
 #include <vector>
-#include <functional>
 
 #include "core/platform.h"
 
@@ -331,15 +330,25 @@ CORE_API const float&        Con_RegisterConVar_RangeFloat( const char* spName, 
 // dumb fix for linux, va_args needs to be used for some reason
 #if 1
 
-#define CONVAR_BOOL( name, ... )        const bool& name = Con_RegisterConVar_Bool( #name, __VA_ARGS__ )
-#define CONVAR_INT( name, ... )         const int& name = Con_RegisterConVar_Int( #name, __VA_ARGS__ )
-#define CONVAR_FLOAT( name, ... )       const float& name = Con_RegisterConVar_Float( #name, __VA_ARGS__ )
-#define CONVAR_STRING( name, ... )      char*& name = Con_RegisterConVar_String( #name, __VA_ARGS__ )
-#define CONVAR_VEC2( name, ... )        const glm::vec2& name = Con_RegisterConVar_Vec2( #name, __VA_ARGS__ )
-#define CONVAR_VEC3( name, ... )        const glm::vec3& name = Con_RegisterConVar_Vec3( #name, __VA_ARGS__ )
-#define CONVAR_VEC4( name, ... )        const glm::vec4& name = Con_RegisterConVar_Vec4( #name, __VA_ARGS__ )
-#define CONVAR_RANGE_INT( name, ... )   const int& name = Con_RegisterConVar_RangeInt( #name, __VA_ARGS__ )
-#define CONVAR_RANGE_FLOAT( name, ... ) const float& name = Con_RegisterConVar_RangeFloat( #name, __VA_ARGS__ )
+  #define CONVAR_BOOL( name, ... )                const bool& name = Con_RegisterConVar_Bool( #name, __VA_ARGS__ )
+  #define CONVAR_INT( name, ... )                 const int& name = Con_RegisterConVar_Int( #name, __VA_ARGS__ )
+  #define CONVAR_FLOAT( name, ... )               const float& name = Con_RegisterConVar_Float( #name, __VA_ARGS__ )
+  #define CONVAR_STRING( name, ... )              char*& name = Con_RegisterConVar_String( #name, __VA_ARGS__ )
+  #define CONVAR_VEC2( name, ... )                const glm::vec2& name = Con_RegisterConVar_Vec2( #name, __VA_ARGS__ )
+  #define CONVAR_VEC3( name, ... )                const glm::vec3& name = Con_RegisterConVar_Vec3( #name, __VA_ARGS__ )
+  #define CONVAR_VEC4( name, ... )                const glm::vec4& name = Con_RegisterConVar_Vec4( #name, __VA_ARGS__ )
+  #define CONVAR_RANGE_INT( name, ... )           const int& name = Con_RegisterConVar_RangeInt( #name, __VA_ARGS__ )
+  #define CONVAR_RANGE_FLOAT( name, ... )         const float& name = Con_RegisterConVar_RangeFloat( #name, __VA_ARGS__ )
+
+  #define CONVAR_EX_BOOL( var, name, ... )        const bool& var = Con_RegisterConVar_Bool( name, __VA_ARGS__ )
+  #define CONVAR_EX_INT( var, name, ... )         const int& var = Con_RegisterConVar_Int( name, __VA_ARGS__ )
+  #define CONVAR_EX_FLOAT( var, name, ... )       const float& var = Con_RegisterConVar_Float( name, __VA_ARGS__ )
+  #define CONVAR_EX_STRING( var, name, ... )      char*& var = Con_RegisterConVar_String( name, __VA_ARGS__ )
+  #define CONVAR_EX_VEC2( var, name, ... )        const glm::vec2& var = Con_RegisterConVar_Vec2( name, __VA_ARGS__ )
+  #define CONVAR_EX_VEC3( var, name, ... )        const glm::vec3& var = Con_RegisterConVar_Vec3( name, __VA_ARGS__ )
+  #define CONVAR_EX_VEC4( var, name, ... )        const glm::vec4& var = Con_RegisterConVar_Vec4( name, __VA_ARGS__ )
+  #define CONVAR_EX_RANGE_INT( var, name, ... )   const int& var = Con_RegisterConVar_RangeInt( name, __VA_ARGS__ )
+  #define CONVAR_EX_RANGE_FLOAT( var, name, ... ) const float& var = Con_RegisterConVar_RangeFloat( name, __VA_ARGS__ )
 
 #else
 #define CONVAR_BOOL( name, defaultVal, ... )                             const bool& name = Con_RegisterConVar_Bool( #name, defaultVal, __VA_ARGS__ )
