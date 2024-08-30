@@ -2,6 +2,7 @@
 # yeah, i could use FindVulkan, but i don't like cmake's automated things so...
 
 set( VK_DIR $ENV{VULKAN_SDK} )
+set( VMA_DIR ${CH_THIRDPARTY}/VulkanMemoryAllocator )
 
 message( "VK_DIR = " ${VK_DIR} )
 

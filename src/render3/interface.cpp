@@ -10,6 +10,7 @@ VkSurfaceKHR          g_surface_hack         = VK_NULL_HANDLE;
 SDL_Window*           g_window_hack          = nullptr;
 void*                 g_window_hack_native   = nullptr;
 
+VmaAllocator          g_vma                  = VK_NULL_HANDLE;
 
 constexpr const char* CH_DEFAULT_WINDOW_NAME = "Vulkan Window";
 
@@ -51,9 +52,22 @@ struct Render3 final : public IRender3
 			return false;
 		}
 
-		// create command pools
+		vk_command_pool_create();
 
-		// create descriptor sets and one time commands
+		// init vma
+		VmaAllocatorCreateInfo vma_create{};
+		vma_create.physicalDevice   = g_vk_physical_device;
+		vma_create.device           = g_vk_device;
+		vma_create.instance         = g_vk_instance;
+		vma_create.vulkanApiVersion = VK_HEADER_VERSION_COMPLETE;
+
+		if ( vmaCreateAllocator( &vma_create, &g_vma ) != VK_SUCCESS )
+		{
+			Log_Error( gLC_Render, "Failed to create VMA allocator\n" );
+			return false;
+		}
+
+	//	vk_descriptor_pool_create();
 
 		// create the missing texture
 
@@ -64,6 +78,21 @@ struct Render3 final : public IRender3
 
 	void Shutdown()
 	{
+		// free windows
+		// TODO: if the window fails to free, we will be stuff here forever, maybe free in reverse order?
+		// while ( g_windows.GetHandleCount() > 0 )
+		for ( u32 i = g_windows.GetHandleCount() - 1; i > 0; i-- )
+		{
+			window_free( g_windows.aHandles[ i ] );
+		}
+
+		g_vk_delete_queue.flush();
+
+		vmaDestroyAllocator( g_vma );
+
+		vk_command_pool_destroy();
+		vk_surface_destroy( g_surface_hack );
+		vk_instance_destroy();
 	}
 
 	void Update( float sDT ) override
@@ -121,14 +150,58 @@ struct Render3 final : public IRender3
 			}
 		}
 
-		window->context = ImGui::GetCurrentContext();
-
 		if ( !vk_swapchain_create( window, VK_NULL_HANDLE ) )
 		{
 			Log_ErrorF( gLC_Render, "Failed to create swapchain for window: \"%s\"\n", title );
 			window_free( window_handle );
 			return CH_INVALID_HANDLE;
 		}
+
+		if ( !vk_backbuffer_create( window ) )
+		{
+			Log_ErrorF( gLC_Render, "Failed to create backbuffer for window: \"%s\"\n", title );
+			window_free( window_handle );
+			return CH_INVALID_HANDLE;
+		}
+
+		if ( !vk_command_buffers_create( window ) )
+		{
+			Log_ErrorF( gLC_Render, "Failed to create command buffers for window: \"%s\"\n", title );
+			window_free( window_handle );
+			return CH_INVALID_HANDLE;
+		}
+
+		if ( !vk_render_sync_create( window ) )
+		{
+			Log_ErrorF( gLC_Render, "Failed to create fences and semaphores for window: \"%s\"\n", title );
+			window_free( window_handle );
+			return CH_INVALID_HANDLE;
+		}
+		
+#if 0
+		// init imgui
+		ImGui_ImplVulkan_InitInfo imgui_init{};
+		imgui_init.Instance            = g_vk_instance;
+		imgui_init.PhysicalDevice      = g_vk_physical_device;
+		imgui_init.Device              = g_vk_device;
+		imgui_init.Queue               = g_vk_queue_graphics;
+		imgui_init.DescriptorPool      = gVkDescriptorPool;
+		imgui_init.RenderPass          = VK_NULL_HANDLE;
+		imgui_init.UseDynamicRendering = true;
+		imgui_init.MinImageCount       = window->swap_image_count;
+		imgui_init.ImageCount          = window->swap_image_count;
+		imgui_init.CheckVkResultFn     = vk_check;
+		imgui_init.MSAASamples         = VK_SAMPLE_COUNT_1_BIT;  // no msaa yet
+
+		// VkPipelineRenderingCreateInfoKHR
+
+		if ( !ImGui_ImplVulkan_Init( &imgui_init ) )
+		{
+			Log_ErrorF( gLC_Render, "Failed to init ImGui Vulkan for Window: \"%s\"\n", title );
+			window_free( window_handle );
+			return CH_INVALID_HANDLE;
+		}
+#endif
 
 // 		VK_CreateBackBuffer( window );
 // 		VK_CreateFences( window );
@@ -164,7 +237,10 @@ struct Render3 final : public IRender3
 			return;
 		}
 
+		window_data->delete_queue.flush();
+
 		// free vulkan resources
+		vk_command_buffers_destroy( window_data );
 		vk_swapchain_destroy( window_data );
 		vk_surface_destroy( window_data->surface );
 
@@ -219,6 +295,8 @@ struct Render3 final : public IRender3
 		// do rendering
 
 		// present the window
+
+		vk_draw( window );
 	}
 };
 

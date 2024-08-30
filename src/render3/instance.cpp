@@ -21,13 +21,14 @@ VkInstance                          g_vk_instance           = VK_NULL_HANDLE;
 VkDevice                            g_vk_device             = VK_NULL_HANDLE;
 VkPhysicalDevice                    g_vk_physical_device    = VK_NULL_HANDLE;
 
-VkQueue                             g_queue_graphics        = VK_NULL_HANDLE;
-VkQueue                             g_queue_transfer        = VK_NULL_HANDLE;
+VkQueue                             g_vk_queue_graphics        = VK_NULL_HANDLE;
+VkQueue                             g_vk_queue_transfer        = VK_NULL_HANDLE;
 
-u32                                 g_queue_family_graphics = UINT32_MAX;
-u32                                 g_queue_family_transfer = UINT32_MAX;
+u32                                 g_vk_queue_family_graphics = UINT32_MAX;
+u32                                 g_vk_queue_family_transfer = UINT32_MAX;
 
-VkPhysicalDeviceProperties          g_device_properties{};
+VkPhysicalDeviceProperties          g_vk_device_properties{};
+VkPhysicalDeviceMemoryProperties    g_vk_device_memory_properties{};
 
 
 // function pointers for debug utils
@@ -48,6 +49,8 @@ PFN_vkCmdInsertDebugUtilsLabelEXT   pfnCmdInsertDebugUtilsLabel   = nullptr;
 constexpr char const* g_device_extensions[] = {
 	VK_KHR_SWAPCHAIN_EXTENSION_NAME,
 	"VK_EXT_descriptor_indexing",
+    VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME,
+	VK_KHR_SYNCHRONIZATION_2_EXTENSION_NAME,
 #if _DEBUG
 // VK_EXT_DEVICE_MEMORY_REPORT_EXTENSION_NAME,
 #endif
@@ -60,10 +63,11 @@ extern void vk_swapchain_setup_info( device_info_t& info );
 #ifdef NDEBUG
 	constexpr bool        g_use_validation_layers = false;
 
+	constexpr bool        r_vk_debug_messages     = false;
 	constexpr bool        r_vk_verbose            = false;
 	constexpr bool        r_vk_formatted          = false;
 #else
-	bool                  g_use_validation_layers = Args_Register( false, "Enable Vulkan Validation Layers Extensions", "-vk-valid" );
+	static bool           g_use_validation_layers = Args_Register( false, "Enable Vulkan Validation Layers Extensions", "--vk-valid" );
 	constexpr char const* g_validation_layers[]   = { "VK_LAYER_KHRONOS_validation" };
 	static bool           g_has_validation        = false;
 
@@ -80,10 +84,10 @@ extern void vk_swapchain_setup_info( device_info_t& info );
 // lengths to chop off from warnings:
 
 // "Validation Performance Warning: "
-int                            gVkStripPerf  = 32;
+int                            g_vk_dbg_strip_perf  = 32;
 
 // "Validation Error: "
-int                            gVkStripError = 18;
+int                            g_vk_dbg_strip_err = 18;
 // auto a = "Validation Error: [ VUID-vkFreeDescriptorSets-pDescriptorSets-00309 ] Object 0: handle = 0x7cd292000000004f, name = Light Point Set, type = VK_OBJECT_TYPE_DESCRIPTOR_SET; | MessageID = 0xbfce1114 | vkUpdateDescriptorSets() pDescriptorWrites[0] failed write update validation for VkDescriptorSet 0x7cd292000000004f[Light Point Set] with error: Cannot call vkUpdateDescriptorSets() to perform write update on VkDescriptorSet 0x7cd292000000004f[Light Point Set] allocated with VkDescriptorSetLayout 0x612f93000000004e[Light Point Layout] that is in use by a command buffer"
 
 VKAPI_ATTR VkBool32 VKAPI_CALL vk_debug_callback( VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, VkDebugUtilsMessageTypeFlagsEXT messageType,
@@ -101,10 +105,10 @@ VKAPI_ATTR VkBool32 VKAPI_CALL vk_debug_callback( VkDebugUtilsMessageSeverityFla
 	std::string formatted;
 
 	if ( messageType & VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT )
-		vstring( formatted, "Validation: %s\n\n", pCallbackData->pMessage + gVkStripError );
+		vstring( formatted, "Validation: %s\n\n", pCallbackData->pMessage + g_vk_dbg_strip_err );
 
 	else if ( messageType & VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT )
-		vstring( formatted, "Performance: %s\n\n", pCallbackData->pMessage + gVkStripPerf );
+		vstring( formatted, "Performance: %s\n\n", pCallbackData->pMessage + g_vk_dbg_strip_perf );
 
 	else
 		vstring( formatted, "%s\n\n", pCallbackData->pMessage );
@@ -241,8 +245,8 @@ bool vk_instance_create()
 	app_info.applicationVersion = VK_MAKE_VERSION( 1, 0, 0 );
 	app_info.pEngineName        = "Chocolate Engine Render 3";
 	app_info.engineVersion      = VK_MAKE_VERSION( 3, CH_RENDER3_VER, 0 );
-	// app_info.apiVersion         = VK_HEADER_VERSION_COMPLETE;
-	app_info.apiVersion         = VK_MAKE_API_VERSION( 0, 1, 2, 0 );
+	app_info.apiVersion         = VK_HEADER_VERSION_COMPLETE;
+	// app_info.apiVersion         = VK_MAKE_API_VERSION( 0, 1, 2, 0 );
 
 	VkInstanceCreateInfo create_info{ VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO };
 	create_info.pApplicationInfo = &app_info;
@@ -551,21 +555,20 @@ static void vk_find_queue_families( VkSurfaceKHR surface, const VkPhysicalDevice
 		if ( queueFamily.queueCount == 0 )
 			continue;
 
-		VkBool32 present_support = false;
-		if ( vk_check_e( vkGetPhysicalDeviceSurfaceSupportKHR( device, queue_index, surface, &present_support ), "Failed to Get Physical Device Surface Support" ) )
-		{
-			CH_STACK_FREE( queue_families );
-			return;
-		}
-
 		if ( graphics == UINT32_MAX && queueFamily.queueFlags & ( VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_COMPUTE_BIT ) )
 		{
-			if ( !present_support )
-				continue;
+			VkBool32 present_support = false;
+			if ( vk_check_e( vkGetPhysicalDeviceSurfaceSupportKHR( device, queue_index, surface, &present_support ), "Failed to Get Physical Device Surface Support" ) )
+			{
+				CH_STACK_FREE( queue_families );
+				return;
+			}
 
-			graphics = queue_index;
+			if ( present_support )
+				graphics = queue_index;
 		}
 
+		// is it a better idea to have the transfer queue on a separate queue family, like we have here?
 		if ( queueFamily.queueFlags & VK_QUEUE_TRANSFER_BIT && ( transfer == UINT32_MAX || graphics == transfer ) )
 		{
 			transfer = queue_index;
@@ -585,14 +588,16 @@ static void vk_device_select( VkPhysicalDevice device, device_info_t& info )
 	}
 
 	g_vk_physical_device    = device;
-	g_device_properties     = info.props;
+	g_vk_device_properties     = info.props;
 
-	g_queue_family_graphics = info.queue_graphics;
-	g_queue_family_transfer = info.queue_transfer;
+	g_vk_queue_family_graphics = info.queue_graphics;
+	g_vk_queue_family_transfer = info.queue_transfer;
 
 	vk_swapchain_setup_info( info );
+	
+	vkGetPhysicalDeviceMemoryProperties( g_vk_physical_device, &g_vk_device_memory_properties );
 
-	Log_MsgF( gLC_Render, "Using GPU \"%s\"\n", g_device_properties.deviceName );
+	Log_MsgF( gLC_Render, "Using GPU \"%s\"\n", g_vk_device_properties.deviceName );
 }
 
 
@@ -805,28 +810,25 @@ bool vk_device_create( VkSurfaceKHR surface )
 	if ( !select_physical_device( surface ) )
 		return false;
 
-	// create device
-
 	// create device queues
 	float queue_priority = 1.0f;
-	vk_find_queue_families( surface, g_device_properties, g_vk_physical_device, g_queue_family_graphics, g_queue_family_transfer );
 
 	ChVector< VkDeviceQueueCreateInfo > queue_create_infos;
 
 	VkDeviceQueueCreateInfo             queueCreateInfo = {
 					.sType            = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
-					.queueFamilyIndex = g_queue_family_graphics,
+					.queueFamilyIndex = g_vk_queue_family_graphics,
 					.queueCount       = 1,
 					.pQueuePriorities = &queue_priority,
 	};
 
 	queue_create_infos.push_back( queueCreateInfo );
 
-	if ( g_queue_family_graphics != g_queue_family_transfer )
+	if ( g_vk_queue_family_graphics != g_vk_queue_family_transfer )
 	{
 		VkDeviceQueueCreateInfo queueCreateInfo = {
 			.sType            = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
-			.queueFamilyIndex = g_queue_family_transfer,
+			.queueFamilyIndex = g_vk_queue_family_transfer,
 			.queueCount       = 1,
 			.pQueuePriorities = &queue_priority,
 		};
@@ -834,11 +836,18 @@ bool vk_device_create( VkSurfaceKHR surface )
 		queue_create_infos.push_back( queueCreateInfo );
 	}
 
-	VkPhysicalDeviceDescriptorIndexingFeaturesEXT indexing{ VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES_EXT };
-	indexing.pNext                                    = nullptr;
-	indexing.descriptorBindingPartiallyBound          = VK_TRUE;
-	indexing.runtimeDescriptorArray                   = VK_TRUE;
-	indexing.descriptorBindingVariableDescriptorCount = VK_TRUE;
+	// TODO: check if we can use these features on the device
+	VkPhysicalDeviceVulkan12Features features_12{ VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES };
+	features_12.bufferDeviceAddress                      = VK_TRUE;
+	features_12.descriptorIndexing                       = VK_TRUE;
+	features_12.descriptorBindingPartiallyBound          = VK_TRUE;
+	features_12.runtimeDescriptorArray                   = VK_TRUE;
+	features_12.descriptorBindingVariableDescriptorCount = VK_TRUE;
+
+	VkPhysicalDeviceVulkan13Features features_13{ VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES };
+	features_13.pNext            = &features_12;
+	features_13.dynamicRendering = VK_TRUE;
+	features_13.synchronization2 = VK_TRUE;
 
 	VkPhysicalDeviceFeatures deviceFeatures{};
 	deviceFeatures.samplerAnisotropy = VK_TRUE;
@@ -850,7 +859,7 @@ bool vk_device_create( VkSurfaceKHR surface )
 
 	VkDeviceCreateInfo createInfo    = {
 		   .sType                = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
-		   .pNext                = &indexing,
+		   .pNext                = &features_13,
 		   .flags                = 0,
 		   .queueCreateInfoCount = queue_create_infos.size(),
 		   .pQueueCreateInfos    = queue_create_infos.data(),
@@ -867,8 +876,8 @@ bool vk_device_create( VkSurfaceKHR surface )
 
 	vk_check( vkCreateDevice( g_vk_physical_device, &createInfo, NULL, &g_vk_device ), "Failed to create logical device!" );
 
-	vkGetDeviceQueue( g_vk_device, g_queue_family_graphics, 0, &g_queue_graphics );
-	vkGetDeviceQueue( g_vk_device, g_queue_family_transfer, 0, &g_queue_transfer );
+	vkGetDeviceQueue( g_vk_device, g_vk_queue_family_graphics, 0, &g_vk_queue_graphics );
+	vkGetDeviceQueue( g_vk_device, g_vk_queue_family_transfer, 0, &g_vk_queue_transfer );
 
 	// do we have debug utils?
 	if ( g_has_debug_utils )
@@ -892,11 +901,11 @@ bool vk_device_create( VkSurfaceKHR surface )
 			Log_Dev( gLC_Vulkan, 2, "Loaded PFN_vkSetDebugUtilsObjectTagEXT\n" );
 	}
 
-	vk_set_name( VK_OBJECT_TYPE_PHYSICAL_DEVICE, (u64)g_vk_physical_device, g_device_properties.deviceName );
-	vk_set_name( VK_OBJECT_TYPE_DEVICE, (u64)g_vk_device, g_device_properties.deviceName );
+	vk_set_name( VK_OBJECT_TYPE_PHYSICAL_DEVICE, (u64)g_vk_physical_device, g_vk_device_properties.deviceName );
+	vk_set_name( VK_OBJECT_TYPE_DEVICE, (u64)g_vk_device, g_vk_device_properties.deviceName );
 
-	vk_set_name( VK_OBJECT_TYPE_QUEUE, (u64)g_queue_graphics, "Graphics" );
-	vk_set_name( VK_OBJECT_TYPE_QUEUE, (u64)g_queue_transfer, "Transfer" );
+	vk_set_name( VK_OBJECT_TYPE_QUEUE, (u64)g_vk_queue_graphics, "Graphics" );
+	vk_set_name( VK_OBJECT_TYPE_QUEUE, (u64)g_vk_queue_transfer, "Transfer" );
 
 	return true;
 }

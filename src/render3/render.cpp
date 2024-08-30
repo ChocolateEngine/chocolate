@@ -1,5 +1,6 @@
-#include "render.h"
+#define VMA_IMPLEMENTATION 1
 
+#include "render.h"
 
 LOG_CHANNEL_REGISTER( Render );
 LOG_CHANNEL_REGISTER( Vulkan );
@@ -11,6 +12,10 @@ ChHandle_t                      g_main_window;
 
 SDL_Window**                    g_windows_sdl;
 ImGuiContext**                  g_windows_imgui_contexts;
+
+delete_queue_t                  g_vk_delete_queue;
+
+handle_list_t< vk_image_t >     g_vk_images;
 
 
 CONVAR_EX_BOOL( r_msaa_enabled, "r.msaa.enabled", false, CVARF_ARCHIVE );

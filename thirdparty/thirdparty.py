@@ -514,6 +514,10 @@ def post_libvorbis_extract():
 
 def post_sdl_extract():
     shutil.copytree("SDL2/include", "../public/SDL2", dirs_exist_ok=True)
+
+
+def post_vma_extract():
+    pass
     
 
 # =================================================================================================
@@ -542,6 +546,14 @@ FILE_LIST = {
 
     # All Platforms
     OS.Any: [
+        [
+            "https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator/archive/refs/tags/v3.1.0.zip",
+            "zip",                          # file extension it's stored as
+            "VulkanMemoryAllocator",        # folder to check for if it exists already
+            "VulkanMemoryAllocator-3.1.0",  # folder it extracts as to rename to the folder above (optional)
+            ".",                            # extract into this folder (optional)
+            post_vma_extract,
+        ],
         [
             "https://github.com/mozilla/mozjpeg/archive/refs/tags/v4.1.1.zip",
             "zip",                   # file extension it's stored as
