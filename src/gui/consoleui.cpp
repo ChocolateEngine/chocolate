@@ -576,6 +576,7 @@ void ReBuildConsoleOutput()
 
 	for ( const auto& log: logs )
 	{
+		// TODO: maybe make a separate array for logs that are visible, so we don't have to check this every time
 		if ( !Log_IsVisible( log ) )
 			continue;
 
@@ -800,7 +801,7 @@ void GuiSystem::DrawConsole( bool wasConsoleOpen, bool isChild )
 	// if ( false )
 	{
 		Con_QueueCommand( buf );
-		snprintf( buf, 256, "" );
+		memset( buf, 0, 256 );
 		ImGui::SetKeyboardFocusHere();
 	
 		gCmdUserInput     = "";
