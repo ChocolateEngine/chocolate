@@ -20,6 +20,7 @@ static std::mutex            gLogMutex;
 // apparently you could of added stuff to this before static initialization got to this, and then you lose some log channels as a result
 std::vector< LogChannel_t >& GetLogChannels()
 {
+	// TODO: make this just a c array
 	static std::vector< LogChannel_t > gChannels;
 	return gChannels;
 }
@@ -27,6 +28,7 @@ std::vector< LogChannel_t >& GetLogChannels()
 // static std::vector< LogChannel_t >             gChannels;
 static std::vector< Log >                      gLogHistory;
 
+// maybe make this a c array?
 static std::unordered_map< LogGroup, Log >     gLogGroups;
 
 static std::vector< LogChannelShownCallbackF > gCallbacksChannelShown;
