@@ -125,7 +125,7 @@ void vk_transition_image( VkCommandBuffer c, VkImage image, VkImageLayout curren
 }
 
 
-static u32 vk_get_next_image( r_window_data_t* window )
+static u32 vk_get_next_image( ChHandle_t window_handle, r_window_data_t* window )
 {
 	u32 frame = window->frame_index;
 
@@ -145,8 +145,8 @@ static u32 vk_get_next_image( r_window_data_t* window )
 	{
 		// Recreate all resources.
 		printf( "Out of date swapchain! Must reset\n" );
-		// VK_Reset( windowHandle, window );
-		// return VK_GetNextImage( windowHandle, window );
+		vk_reset( window_handle, window, e_render_reset_flags_resize );
+		return vk_get_next_image( window_handle, window );
 
 		return UINT32_MAX;
 	}
@@ -180,16 +180,31 @@ static void vk_record_commands_window( r_window_data_t* window, u32 swap_index )
 	// https://registry.khronos.org/vulkan/specs/1.3-extensions/html/chap12.html#resources-image-layouts
 	vk_transition_image( c, window->draw_image.image, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL );
 
+	// ---------------------------------------------------------------
+	// start drawing
+
 	// TEMP - cycled clear color, flash with 120 frame period
 	VkClearColorValue clear_value;
 	float             flash = std::abs( std::sin( g_frame_number / 120.f ) );
 	clear_value             = { { 0.0f, 0.0f, flash, 1.0f } };
+//
+//	// tells us what part of the draw image to clear
+//	VkImageSubresourceRange clear_range{ VK_IMAGE_ASPECT_COLOR_BIT, 0, VK_REMAINING_MIP_LEVELS, 0, VK_REMAINING_ARRAY_LAYERS };
+//
+//	// clear image
+///	vkCmdClearColorImage( c, window->draw_image.image, VK_IMAGE_LAYOUT_GENERAL, &clear_value, 1, &clear_range );
 
-	// tells us what part of the draw image to clear
-	VkImageSubresourceRange clear_range{ VK_IMAGE_ASPECT_COLOR_BIT, 0, VK_REMAINING_MIP_LEVELS, 0, VK_REMAINING_ARRAY_LAYERS };
+	// bind the gradient drawing compute pipeline
+	vkCmdBindPipeline( c, VK_PIPELINE_BIND_POINT_COMPUTE, g_pipeline_gradient );
 
-	// clear image
-	vkCmdClearColorImage( c, window->draw_image.image, VK_IMAGE_LAYOUT_GENERAL, &clear_value, 1, &clear_range );
+	// bind the descriptor set containing the draw image for the compute pipeline
+	vkCmdBindDescriptorSets( c, VK_PIPELINE_BIND_POINT_COMPUTE, g_pipeline_gradient_layout, 0, 1, &window->desc_draw_image, 0, nullptr );
+
+	// execute the compute pipeline dispatch. We are using 16x16 workgroup size so we need to divide by it
+	vkCmdDispatch( c, std::ceil( window->swap_extent.width / 16.0 ), std::ceil( window->swap_extent.height / 16.0 ), 1 );
+
+	// ---------------------------------------------------------------
+	// end drawing
 
 	// transition the draw image and swap image to be ready for copying
 	vk_transition_image( c, window->draw_image.image, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL );
@@ -199,10 +214,46 @@ static void vk_record_commands_window( r_window_data_t* window, u32 swap_index )
 	vk_blit_image_to_image( c, window->draw_image.image, window->swap_images[ swap_index ], window->swap_extent, window->swap_extent );
 
 	// imgui test
-//	ImGui_ImplVulkan_RenderDrawData( ImGui::GetDrawData(), c );
+	if ( ImGui::GetDrawData() )
+	{
+		vk_transition_image( c, window->swap_images[ swap_index ], VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL );
 
-	// make the swapchain presentable
-	vk_transition_image( c, window->swap_images[ swap_index ], VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR );
+		VkClearValue clear{};
+		clear.color = { 0.0f, 0.0f, 0.0f, 1.0f };
+
+		VkRenderingAttachmentInfo color_attachment{ VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO };
+		color_attachment.imageView   = window->swap_image_views[ swap_index ];
+		color_attachment.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+		// color_attachment.loadOp      = clear ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_LOAD;
+		// color_attachment.loadOp      = VK_ATTACHMENT_LOAD_OP_CLEAR;
+		color_attachment.loadOp      = VK_ATTACHMENT_LOAD_OP_LOAD;
+		color_attachment.storeOp     = VK_ATTACHMENT_STORE_OP_STORE;
+
+		// if ( clear )
+		{
+		//	color_attachment.clearValue = clear;
+		}
+
+		VkRenderingInfo render_info{ VK_STRUCTURE_TYPE_RENDERING_INFO };
+		render_info.colorAttachmentCount = 1;
+		render_info.pColorAttachments    = &color_attachment;
+		render_info.renderArea.extent    = window->swap_extent;
+		render_info.layerCount           = 1;
+
+		vkCmdBeginRendering( c, &render_info );
+
+		ImGui_ImplVulkan_RenderDrawData( ImGui::GetDrawData(), c );
+
+		vkCmdEndRendering( c );
+
+		// make the swapchain presentable
+		vk_transition_image( c, window->swap_images[ swap_index ], VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR );
+	}
+	else
+	{
+		// make the swapchain presentable
+		vk_transition_image( c, window->swap_images[ swap_index ], VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR );
+	}
 
 	// end the command buffer
 	vk_check( vkEndCommandBuffer( c ), "Failed to end command buffer" );
@@ -213,7 +264,7 @@ static void vk_submit_command_buffer( r_window_data_t* window )
 {
 	u32                   frame = window->frame_index;
 
-	// wait for the swapchain to be ready, signaled by
+	// wait for the swapchain to be ready
 	VkSemaphoreSubmitInfo semaphore_wait_info{ VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO };
 	semaphore_wait_info.semaphore   = window->semaphore_swapchain[ frame ];
 	semaphore_wait_info.stageMask   = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT;
@@ -245,12 +296,12 @@ static void vk_submit_command_buffer( r_window_data_t* window )
 }
 
 
-void vk_draw( r_window_data_t* window )
+void vk_draw( ChHandle_t window_handle, r_window_data_t* window )
 {
 	u32 frame = window->frame_index;
 
 	// get next image
-	u32 swapchain_index = vk_get_next_image( window );
+	u32 swapchain_index = vk_get_next_image( window_handle, window );
 
 	if ( swapchain_index == UINT32_MAX )
 	{
@@ -278,5 +329,30 @@ void vk_draw( r_window_data_t* window )
 	vk_check( vkQueuePresentKHR( g_vk_queue_graphics, &present_info ), "Failed to present window" );
 
 	g_frame_number++;
+}
+
+
+void vk_reset( ChHandle_t window_handle, r_window_data_t* window, e_render_reset_flags flags )
+{
+	// recreate swapchain
+	vk_swapchain_recreate( window );
+
+	// recreate draw image
+	vk_backbuffer_destroy( window );
+
+	if ( !vk_backbuffer_create( window ) )
+	{
+		Log_Error( "Failed to create draw image\n" );
+		return;
+	}
+
+	// update window descriptors
+	vk_descriptor_update_window( window );
+
+	// call the window reset callback
+	if ( window->fn_on_reset )
+	{
+		window->fn_on_reset( window_handle, flags );
+	}
 }
 

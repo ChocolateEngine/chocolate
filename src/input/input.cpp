@@ -256,7 +256,7 @@ void InputSystem::ParseInput()
 
 		{
 			PROF_SCOPE_NAMED( "ImGui_ImplSDL2_ProcessEvent" );
-//			ImGui_ImplSDL2_ProcessEvent( &event );
+			ImGui_ImplSDL2_ProcessEvent( &event );
 		}
 
 		switch (event.type)

@@ -11,6 +11,18 @@
 // #include "igraphics_data.h"
 
 
+enum e_render_reset_flags
+{
+	e_render_reset_flags_none   = 0,
+	e_render_reset_flags_resize = ( 1 << 0 ),  // A Window Resize Occurred
+	e_render_reset_flags_msaa   = ( 1 << 1 ),  // MSAA was toggled, Recreate RenderPass and shaders (is this needed with dynamic rendering?)
+};
+
+
+// Function callback for app code for when renderer gets reset
+typedef void ( *fn_render_on_reset_t )( ChHandle_t window, e_render_reset_flags flags );
+
+
 struct SDL_Window;
 
 
@@ -34,7 +46,10 @@ struct IRender3 : public ISystem
 {
 	// Required to be called before Init(), blame vulkan
 	// TODO: If this is not called, we will be in headless mode
-	virtual void       set_main_surface( SDL_Window* window, void* native_window = nullptr ) = 0;
+	virtual void        set_main_surface( SDL_Window* window, void* native_window = nullptr )     = 0;
+
+	// get gpu name
+	virtual const char* get_device_name()                                                         = 0;
 
 	// --------------------------------------------------------------------------------------------
 	// Windows
@@ -43,9 +58,10 @@ struct IRender3 : public ISystem
 	// --------------------------------------------------------------------------------------------
 
 	// the native window would be the HWND on windows, also required on windows
-	virtual ChHandle_t window_create( SDL_Window* window, void* native_window = nullptr )    = 0;
-	virtual void       window_free( ChHandle_t window )                                      = 0;
-	virtual glm::uvec2 window_surface_size( ChHandle_t window )                              = 0;
+	virtual ChHandle_t  window_create( SDL_Window* window, void* native_window = nullptr )        = 0;
+	virtual void        window_free( ChHandle_t window )                                          = 0;
+	virtual void        window_set_reset_callback( ChHandle_t window, fn_render_on_reset_t func ) = 0;
+	virtual glm::uvec2  window_surface_size( ChHandle_t window )                                  = 0;
 
 	// --------------------------------------------------------------------------------------------
 	// Rendering
@@ -53,9 +69,9 @@ struct IRender3 : public ISystem
 
 	// new_frame needs to be called per window despite not needing a window handle
 	// it does stuff with imgui internally
-	virtual void       new_frame()                                                           = 0;
-	virtual void       reset( ChHandle_t window )                                            = 0;
-	virtual void       present( ChHandle_t window )                                          = 0;
+	virtual void        new_frame()                                                               = 0;
+	virtual void        reset( ChHandle_t window )                                                = 0;
+	virtual void        present( ChHandle_t window )                                              = 0;
 
 	// notes for rendering ideas
 	// 
@@ -121,6 +137,7 @@ struct IRender3 : public ISystem
 	* render->cmd_set_viewport( c, main_view );
 	* 
 	* render->cmd_draw_renderables( c, renderables, renderable_count );
+	* render->cmd_draw_debug( c );
 	* render->cmd_draw_lights( c, lights, light_count );
 	* render->cmd_draw_particles( c, particles, particle_count );
 	* render->cmd_apply_screen_space_effects( c ); // ?? i have no idea how screenspace stuff works right now lol
@@ -196,5 +213,5 @@ struct IRender3 : public ISystem
 
 
 #define CH_RENDER3     "chocolate_render3"
-#define CH_RENDER3_VER 1
+#define CH_RENDER3_VER 3
 

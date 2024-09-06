@@ -67,7 +67,17 @@ struct Render3 final : public IRender3
 			return false;
 		}
 
-	//	vk_descriptor_pool_create();
+		if ( !vk_descriptor_init() )
+		{
+			Log_Error( gLC_Render, "Failed to init descriptor pool and layouts\n" );
+			return false;
+		}
+
+		if ( !vk_shaders_init() )
+		{
+			Log_Error( gLC_Render, "Failed to create shaders\n" );
+			return false;
+		}
 
 		// create the missing texture
 
@@ -81,17 +91,22 @@ struct Render3 final : public IRender3
 		// free windows
 		// TODO: if the window fails to free, we will be stuff here forever, maybe free in reverse order?
 		// while ( g_windows.GetHandleCount() > 0 )
-		for ( u32 i = g_windows.GetHandleCount() - 1; i > 0; i-- )
+		if ( g_windows.GetHandleCount() )
 		{
-			window_free( g_windows.aHandles[ i ] );
+			for ( u32 i = g_windows.GetHandleCount() - 1; i > 0; i-- )
+			{
+				window_free( g_windows.aHandles[ i ] );
+			}
 		}
 
 		g_vk_delete_queue.flush();
 
+		vk_shaders_shutdown();
+		vk_descriptor_destroy();
+
 		vmaDestroyAllocator( g_vma );
 
 		vk_command_pool_destroy();
-		vk_surface_destroy( g_surface_hack );
 		vk_instance_destroy();
 	}
 
@@ -110,6 +125,11 @@ struct Render3 final : public IRender3
 	{
 		g_window_hack        = window;
 		g_window_hack_native = native_window;
+	}
+
+	const char* get_device_name() override
+	{
+		return g_vk_device_properties.deviceName;
 	}
 
 	// --------------------------------------------------------------------------------------------
@@ -177,21 +197,31 @@ struct Render3 final : public IRender3
 			window_free( window_handle );
 			return CH_INVALID_HANDLE;
 		}
+
+		if ( !vk_descriptor_allocate_window( window ) )
+		{
+			Log_Error( gLC_Render, "Failed to allocate descriptor sets for window\n" );
+			return false;
+		}
 		
-#if 0
 		// init imgui
 		ImGui_ImplVulkan_InitInfo imgui_init{};
 		imgui_init.Instance            = g_vk_instance;
 		imgui_init.PhysicalDevice      = g_vk_physical_device;
 		imgui_init.Device              = g_vk_device;
 		imgui_init.Queue               = g_vk_queue_graphics;
-		imgui_init.DescriptorPool      = gVkDescriptorPool;
+		imgui_init.DescriptorPool      = g_vk_imgui_desc_pool;
 		imgui_init.RenderPass          = VK_NULL_HANDLE;
 		imgui_init.UseDynamicRendering = true;
 		imgui_init.MinImageCount       = window->swap_image_count;
 		imgui_init.ImageCount          = window->swap_image_count;
 		imgui_init.CheckVkResultFn     = vk_check;
 		imgui_init.MSAASamples         = VK_SAMPLE_COUNT_1_BIT;  // no msaa yet
+
+		//dynamic rendering parameters for imgui to use
+		imgui_init.PipelineRenderingCreateInfo                         = { VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO };
+		imgui_init.PipelineRenderingCreateInfo.colorAttachmentCount    = 1;
+		imgui_init.PipelineRenderingCreateInfo.pColorAttachmentFormats = &g_vk_surface_format.format;
 
 		// VkPipelineRenderingCreateInfoKHR
 
@@ -201,29 +231,21 @@ struct Render3 final : public IRender3
 			window_free( window_handle );
 			return CH_INVALID_HANDLE;
 		}
-#endif
 
-// 		VK_CreateBackBuffer( window );
-// 		VK_CreateFences( window );
-// 		VK_CreateSemaphores( window );
-// 
-// 		VK_AllocateCommands( window );
-// 
-// 		InitImGui( 0 );
-// 
-// 		if ( !ImGui_ImplSDL2_InitForVulkan( sdl_window ) )
-// 		{
-// 			Log_ErrorF( gLC_Render, "Failed to init ImGui SDL2 for Vulkan Window: \"%s\"\n", title );
-// 			window_free( window_handle );
-// 			return false;
-// 		}
-// 
-// 		if ( !VK_CreateImGuiFonts() )
-// 		{
-// 			Log_ErrorF( gLC_Render, "Failed to create ImGui fonts for Window: \"%s\"\n", title );
-// 			window_free( window_handle );
-// 			return false;
-// 		}
+		// upload fonts
+		if ( !ImGui_ImplVulkan_CreateFontsTexture() )
+		{
+			Log_ErrorF( gLC_Render, "Failed to create ImGui fonts for Window: \"%s\"\n", title );
+			window_free( window_handle );
+			return CH_INVALID_HANDLE;
+		}
+
+		if ( !ImGui_ImplSDL2_InitForVulkan( sdl_window ) )
+ 		{
+ 			Log_ErrorF( gLC_Render, "Failed to init ImGui SDL2 for Vulkan Window: \"%s\"\n", title );
+ 			window_free( window_handle );
+ 			return false;
+ 		}
 
 		return window_handle;
 	}
@@ -237,18 +259,34 @@ struct Render3 final : public IRender3
 			return;
 		}
 
+		vk_queue_wait_graphics();
+
 		window_data->delete_queue.flush();
 
 		// free vulkan resources
+		vk_render_sync_destroy( window_data );
+		vk_backbuffer_destroy( window_data );
 		vk_command_buffers_destroy( window_data );
 		vk_swapchain_destroy( window_data );
 		vk_surface_destroy( window_data->surface );
 
 		// free imgui resources
-		//ImGui_ImplSDL2_Shutdown();
+		ImGui_ImplVulkan_Shutdown();
 
 		// free window data
 		g_windows.Remove( window );
+	}
+
+	void window_set_reset_callback( ChHandle_t window, fn_render_on_reset_t func )
+	{
+		r_window_data_t* window_data = nullptr;
+		if ( !g_windows.Get( window, &window_data ) )
+		{
+			Log_ErrorF( gLC_Render, "Failed to find window to set reset callback!\n" );
+			return;
+		}
+
+		window_data->fn_on_reset = func;
 	}
 	
 	glm::uvec2 window_surface_size( ChHandle_t window ) override
@@ -271,6 +309,7 @@ struct Render3 final : public IRender3
 
 	void new_frame() override
 	{
+		ImGui_ImplVulkan_NewFrame();
 	}
 
 	void reset( ChHandle_t window_handle ) override
@@ -281,6 +320,8 @@ struct Render3 final : public IRender3
 			Log_ErrorF( gLC_Render, "Failed to find window to reset!\n" );
 			return;
 		}
+
+		vk_reset( window_handle, window, e_render_reset_flags_resize );
 	}
 
 	void present( ChHandle_t window_handle ) override
@@ -296,7 +337,7 @@ struct Render3 final : public IRender3
 
 		// present the window
 
-		vk_draw( window );
+		vk_draw( window_handle, window );
 	}
 };
 

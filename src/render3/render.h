@@ -67,6 +67,7 @@ struct handle_list_t
 
 // TEST - array that keeps track of used slots
 template< typename T >
+//struct handle_list2_t
 struct slot_array_t
 {
 	T*   data;
@@ -233,6 +234,13 @@ struct device_info_t
 };
 
 
+struct vk_desc_pool_size_ratio_t
+{
+	VkDescriptorType type;
+	float            ratio;
+};
+
+
 struct vk_buffer_t
 {
 	VkBuffer       buffer;
@@ -257,6 +265,14 @@ struct vk_texture_t
 };
 
 
+struct vk_shader_module_create_t
+{
+	VkShaderStageFlagBits stage;
+	const char*           path;
+	const char* 		  entry;
+};
+
+
 struct backbuffer_image_t
 {
 	VkImage     image;  // not used for resolve, or color is msaa is off
@@ -277,41 +293,43 @@ struct backbuffer_t
 
 // data for each window
 // TODO: this SUCKS, make it data oriented !!!
+// TODO: dont use ResourceList to store this, maybe use a free index queue like that entity system idea
 struct r_window_data_t
 {
-	SDL_Window*      window    = nullptr;
-	VkSurfaceKHR     surface   = VK_NULL_HANDLE;
-	VkSwapchainKHR   swapchain = VK_NULL_HANDLE;
+	SDL_Window*           window    = nullptr;
+	VkSurfaceKHR          surface   = VK_NULL_HANDLE;
+	VkSwapchainKHR        swapchain = VK_NULL_HANDLE;
 
 	// only allocates to swap_image_count for the main window buffers
 	// probably could be moved elsewhere as well
-	VkCommandBuffer* command_buffers;
+	VkCommandBuffer*      command_buffers;
 
 	// amount allocated is swap_image_count
-	VkSemaphore*     semaphore_swapchain;  // signals that we have finished presenting the last image
-	VkSemaphore*     semaphore_render;     // signals that we have finished executing the last command buffer
+	VkSemaphore*          semaphore_swapchain;  // signals that we have finished presenting the last image
+	VkSemaphore*          semaphore_render;     // signals that we have finished executing the last command buffer
 
 	// amount allocated is swap_image_count
-	VkFence*         fence_render;
+	VkFence*              fence_render;
 
 	// swapchain info - this could be moved elsewhere, as these are only used during window creation and destruction
 	// also getting the surface size with swap_extent, to avoid having to call SDL_GetWindowSize, but is it worth it?
 	// also backbuffer has a size parameter currently so this is kinda useless
-	VkExtent2D       swap_extent;
-	VkImage*         swap_images;
-	VkImageView*     swap_image_views;
+	VkExtent2D            swap_extent;
+	VkImage*              swap_images;
+	VkImageView*          swap_image_views;
 
 	// Contains the framebuffers which are to be drawn to during command buffer recording.
 	// backbuffer_t       backbuffer;
-	vk_image_t       draw_image;
+	vk_image_t            draw_image;
+	VkDescriptorSet       desc_draw_image = VK_NULL_HANDLE;
 
-	delete_queue_t   delete_queue;
+	delete_queue_t        delete_queue;
 
-	// Render_OnReset_t   onResetFunc = nullptr;
+	fn_render_on_reset_t  fn_on_reset = nullptr;
 
 	// here because of mem alignment, 2 unused bytes at the end
-	u8               frame_index = 0;
-	u8               swap_image_count;
+	u8                    frame_index = 0;
+	u8                    swap_image_count;
 };
 
 
@@ -382,6 +400,16 @@ extern VkCommandPool                       g_vk_command_pool_transfer;
 
 extern VkCommandBuffer                     g_vk_command_buffer_transfer;
 
+extern VkDescriptorPool                    g_vk_imgui_desc_pool;
+extern VkDescriptorSetLayout               g_vk_imgui_desc_layout;
+
+extern VkDescriptorPool                    g_vk_desc_pool;
+extern VkDescriptorSetLayout               g_vk_desc_draw_image_layout;
+
+// temp
+extern VkPipeline                          g_pipeline_gradient;
+extern VkPipelineLayout                    g_pipeline_gradient_layout;
+
 // extern slot_array_t< r_window_data_t >     g_windows2;
 // extern SDL_Window**                        g_windows_sdl;
 // extern ImGuiContext**                      g_windows_imgui_contexts;
@@ -419,6 +447,9 @@ bool                                       vk_check_e( VkResult sResult );
 
 void                                       vk_set_name_ex( VkObjectType type, u64 handle, const char* name, const char* type_name );
 void                                       vk_set_name( VkObjectType type, u64 handle, const char* name );
+
+void                                       vk_queue_wait_graphics();
+void                                       vk_queue_wait_transfer();
 
 // void                                       vk_add_delete( fn_vk_destroy* destroy_func );
 // void                                       vk_flush_delete_queue();
@@ -462,10 +493,19 @@ bool                                       vk_render_sync_create( r_window_data_
 void                                       vk_render_sync_destroy( r_window_data_t* window );
 void                                       vk_render_sync_reset( r_window_data_t* window );
 
-void                                       vk_draw( r_window_data_t* window );
+void                                       vk_draw( ChHandle_t window_handle, r_window_data_t* window );
+void                                       vk_reset( ChHandle_t window_handle, r_window_data_t* window, e_render_reset_flags flags );
 
 void                                       vk_blit_image_to_image( VkCommandBuffer c, VkImage src, VkImage dst, VkExtent2D src_size, VkExtent2D dst_size );
 
+bool                                       vk_shaders_init();
+void                                       vk_shaders_shutdown();
+
+VkDescriptorPool                           vk_descriptor_pool_create( const char* name, u32 max_sets, vk_desc_pool_size_ratio_t* pool_sizes, u32 pool_size_count );
+bool                                       vk_descriptor_init();
+void                                       vk_descriptor_destroy();
+bool                                       vk_descriptor_allocate_window( r_window_data_t* window );
+void                                       vk_descriptor_update_window( r_window_data_t* window );
 
 // --------------------------------------------------------------------------------------------
 // Allocator Functions

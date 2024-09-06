@@ -48,6 +48,18 @@ void vk_set_name( VkObjectType type, u64 handle, const char* name )
 }
 
 
+void vk_queue_wait_graphics()
+{
+	vk_check( vkQueueWaitIdle( g_vk_queue_graphics ), "Failed to wait for graphics queue" );
+}
+
+
+void vk_queue_wait_transfer()
+{
+	vk_check( vkQueueWaitIdle( g_vk_queue_transfer ), "Failed to wait for transfer queue" );
+}
+
+
 #if 0
 // ------------------------------------------------------------------
 // Basic Deletion Queue

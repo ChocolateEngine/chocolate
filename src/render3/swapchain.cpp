@@ -165,8 +165,8 @@ bool vk_swapchain_create( r_window_data_t* window, VkSwapchainKHR old_swapchain 
 	if ( old_swapchain )
 		vkDestroySwapchainKHR( g_vk_device, old_swapchain, NULL );
 
-	window->swap_images      = ch_malloc< VkImage >( image_count );
-	window->swap_image_views = ch_malloc< VkImageView >( image_count );
+	window->swap_images      = ch_realloc( window->swap_images, image_count );
+	window->swap_image_views = ch_realloc( window->swap_image_views, image_count );
 
 	vk_check( vkGetSwapchainImagesKHR( g_vk_device, window->swapchain, &image_count, window->swap_images ), "Failed to get swapchain images" );
 
@@ -200,8 +200,8 @@ bool vk_swapchain_create( r_window_data_t* window, VkSwapchainKHR old_swapchain 
 
 void vk_swapchain_destroy( r_window_data_t* window )
 {
-//	VK_WaitForGraphicsQueue();
-//	VK_WaitForTransferQueue();
+	// wait for nothing to potentially be using the swapchain
+	vk_queue_wait_graphics();
 
 	if ( window->swap_image_views )
 	{
@@ -230,8 +230,8 @@ void vk_swapchain_destroy( r_window_data_t* window )
 
 void vk_swapchain_recreate( r_window_data_t* window )
 {
-//	VK_WaitForGraphicsQueue();
-//	VK_WaitForTransferQueue();
+	// wait for nothing to potentially be using the swapchain
+	vk_queue_wait_graphics();
 
 	if ( window->swap_image_views )
 	{
@@ -239,8 +239,6 @@ void vk_swapchain_recreate( r_window_data_t* window )
 		{
 			vkDestroyImageView( g_vk_device, window->swap_image_views[ i ], nullptr );
 		}
-
-		free( window->swap_image_views );
 	}
 
 	vk_swapchain_update_info( window->surface );
