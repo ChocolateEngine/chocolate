@@ -231,8 +231,8 @@ if( MSVC )
 	set( COMPILE_OPTIONS_DEBUG
 		"/Od"        # no optimizations
 		"/fp:except" # raise floating point exceptions
-		# "/ZI"        # edit and continue
-		"/fsanitize=address" # use address sanitizing in Debug (incompatible with /INCREMENTAL and /ZI)
+		"/ZI"        # edit and continue
+		# "/fsanitize=address" # use address sanitizing in Debug (incompatible with /INCREMENTAL and /ZI)
 	)
 	
 	set( COMPILE_OPTIONS_RELEASE
