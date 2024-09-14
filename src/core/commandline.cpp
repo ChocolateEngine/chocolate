@@ -34,27 +34,39 @@ extern ch_string         gConArchiveDefault;
 
 extern "C"
 {
-	void DLL_EXPORT core_init( int argc, char* argv[], const char* desiredWorkingDir )
+	int DLL_EXPORT core_init( int argc, char* argv[], const char* desiredWorkingDir )
 	{
-		if ( SDL_Init( SDL_INIT_VIDEO | SDL_INIT_EVENTS | SDL_INIT_AUDIO ) != 0 )
-			Log_Fatal( "Unable to initialize SDL2!" );
-
 		Args_Init( argc, argv );
 		Log_Init();
+
+		if ( SDL_Init( SDL_INIT_VIDEO | SDL_INIT_EVENTS | SDL_INIT_AUDIO ) != 0 )
+		{
+			Log_Fatal( "Unable to initialize SDL2!" );
+			return 1;
+		}
+
 		sys_init();
-		FileSys_Init( desiredWorkingDir );
+
+		if ( !FileSys_Init( desiredWorkingDir ) )
+		{
+			Log_Fatal( "Failed to initialize File System!" );
+			return 1;
+		}
+
 		Assert_Init();
 		//Thread_Init();
 
-		Core_LoadAppInfo();
+		// handled by apps now, not required
+		// Core_LoadAppInfo();
 
 		Args_RegisterEx( "Execute Scripts on Engine Start", "-exec" );
+		return 0;
 	}
 
-	void DLL_EXPORT core_exit( bool writeArchive )
+	void DLL_EXPORT core_exit( bool write_archive )
 	{
 		// should only do this on safe shutdown
-		if ( writeArchive )
+		if ( write_archive )
 			Con_Archive();
 
 		// Shutdown All Systems

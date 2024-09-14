@@ -264,7 +264,7 @@ void GuiSystem::StartFrame()
 
 bool GuiSystem::Init()
 {
-	render = Mod_GetInterfaceCast< IRender3 >( CH_RENDER3, CH_RENDER3_VER );
+	render = Mod_GetSystemCast< IRender3 >( CH_RENDER3, CH_RENDER3_VER );
 
 	InitConsole();
 	InitConVarList();
