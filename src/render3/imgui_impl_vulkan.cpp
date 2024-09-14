@@ -351,7 +351,7 @@ void main()
 */
 static uint32_t __glsl_shader_frag_spv[] =
 {
-#if 1
+#if 0
     #include "_imgui.frag.u32"
 #else
     0x07230203,0x00010000,0x00080001,0x0000001e,0x00000000,0x00020011,0x00000001,0x0006000b,

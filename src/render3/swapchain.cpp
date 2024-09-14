@@ -9,7 +9,7 @@ CONVAR_EX_RANGE_INT( r_vk_present_mode, "r.vk.present.mode", 0, 0, 3, "Image Pre
 
 
 // desired surface format
-static VkFormat            g_color_format = VK_FORMAT_B8G8R8A8_SRGB;
+static VkFormat            g_color_format = VK_FORMAT_B8G8R8A8_UNORM;
 static VkColorSpaceKHR     g_color_space  = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR;
 
 VkSurfaceCapabilitiesKHR   g_vk_surface_capabilities{};

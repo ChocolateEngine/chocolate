@@ -185,14 +185,15 @@ static void vk_record_commands_window( r_window_data_t* window, u32 swap_index )
 
 	// TEMP - cycled clear color, flash with 120 frame period
 	VkClearColorValue clear_value;
-	float             flash = std::abs( std::sin( g_frame_number / 120.f ) );
-	clear_value             = { { 0.0f, 0.0f, flash, 1.0f } };
+//	float             flash = std::abs( std::sin( g_frame_number / 120.f ) );
+//	clear_value             = { { 0.0f, 0.0f, flash, 1.0f } };
+//	clear_value             = { { 0.0f, 0.0f, 0.5f, 1.0f } };
 //
 //	// tells us what part of the draw image to clear
 //	VkImageSubresourceRange clear_range{ VK_IMAGE_ASPECT_COLOR_BIT, 0, VK_REMAINING_MIP_LEVELS, 0, VK_REMAINING_ARRAY_LAYERS };
 //
 //	// clear image
-///	vkCmdClearColorImage( c, window->draw_image.image, VK_IMAGE_LAYOUT_GENERAL, &clear_value, 1, &clear_range );
+//	vkCmdClearColorImage( c, window->draw_image.image, VK_IMAGE_LAYOUT_GENERAL, &clear_value, 1, &clear_range );
 
 	// bind the gradient drawing compute pipeline
 	vkCmdBindPipeline( c, VK_PIPELINE_BIND_POINT_COMPUTE, g_pipeline_gradient );
