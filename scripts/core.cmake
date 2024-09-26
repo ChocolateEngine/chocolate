@@ -162,8 +162,8 @@ if( MSVC )
 		_CRT_SECURE_NO_WARNINGS
 		_ALLOW_RUNTIME_LIBRARY_MISMATCH _ALLOW_ITERATOR_DEBUG_LEVEL_MISMATCH _ALLOW_MSC_VER_MISMATCH
 		CH_USE_MIMALLOC=0
-		//_UNICODE=1
-		//UNICODE=1
+		# _UNICODE=1
+		# UNICODE=1
 	)
 
 	if ( ${64_BIT} )
@@ -231,8 +231,8 @@ if( MSVC )
 	set( COMPILE_OPTIONS_DEBUG
 		"/Od"        # no optimizations
 		"/fp:except" # raise floating point exceptions
-		# "/ZI"        # edit and continue
-		"/fsanitize=address" # use address sanitizing in Debug (incompatible with /INCREMENTAL and /ZI)
+		"/ZI"        # edit and continue
+		# "/fsanitize=address" # use address sanitizing in Debug (incompatible with /INCREMENTAL and /ZI)
 	)
 	
 	set( COMPILE_OPTIONS_RELEASE
@@ -272,7 +272,7 @@ if( MSVC )
 	)
 	
 	add_link_options(
-		# "/INCREMENTAL"
+		"/INCREMENTAL"
 	)
 	
 else()  # linux
