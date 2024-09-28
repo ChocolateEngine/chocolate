@@ -226,8 +226,8 @@ struct WindowVK
 	VkSwapchainKHR                  swapchain = VK_NULL_HANDLE;
 
 	// amount allocated is swapImageCount
-	VkSemaphore*                    imageAvailableSemaphores;
-	VkSemaphore*                    renderFinishedSemaphores;
+	VkSemaphore*                    imageAvailableSemaphores;  // signals that we have finished presenting the last image
+	VkSemaphore*                    renderFinishedSemaphores;  // signals that we have finished executing the last command buffer
 
 	// only allocates to swapImageCount for the main window buffers
 	VkCommandBuffer*                commandBuffers;
@@ -235,7 +235,7 @@ struct WindowVK
 
 	// amount allocated is swapImageCount
 	VkFence*                        fences;
-	VkFence*                        fencesInFlight;
+	VkFence*                        fencesInFlight;  // useless?
 
 	// swapchain info
 	VkSurfaceFormatKHR              swapSurfaceFormat;
@@ -523,6 +523,8 @@ void                                  VK_CreateImage( VkImageCreateInfo& srCreat
 // --------------------------------------------------------------------------------------
 // KTX Texture Support
 
+bool                                  KTX_Init();
+void                                  KTX_Shutdown();
 bool                                  KTX_LoadTexture( TextureVK* spTexture, const char* spPath );
 
 

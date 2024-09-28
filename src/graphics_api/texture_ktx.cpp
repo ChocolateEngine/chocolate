@@ -4,13 +4,6 @@
 #include "ktxvulkan.h"
 
 
-struct KTXTexture_t
-{
-	ktxTexture*       apTexture;
-	ktxVulkanTexture* apVkTexture;
-};
-
-
 static ktxVulkanFunctions gKtxFuncs = {
 	vkGetInstanceProcAddr,
 	vkGetDeviceProcAddr,
@@ -47,6 +40,36 @@ static ktxVulkanFunctions gKtxFuncs = {
 
 
 constexpr ktx_transcode_fmt_e gKtxFallbackFmt = KTX_TTF_BC7_RGBA;
+// constexpr ktx_transcode_fmt_e gKtxFallbackFmt = KTX_TTF_RGBA32;
+
+static ktxVulkanDeviceInfo    g_ktx_vdi;
+
+bool KTX_Init()
+{
+	KTX_error_code result = ktxVulkanDeviceInfo_ConstructEx(
+	  &g_ktx_vdi,
+      VK_GetInstance(),
+      VK_GetPhysicalDevice(),
+      VK_GetDevice(),
+      VK_GetTransferQueue(),
+      VK_GetTransferCommandPool(),
+      nullptr,
+      &gKtxFuncs );
+
+	if ( result != KTX_SUCCESS )
+	{
+		Log_ErrorF( gLC_Render, "KTX Error %d: %s - Failed to Construct KTX Vulkan Device\n", result, ktxErrorString( result ) );
+		return false;
+	}
+
+	return true;
+}
+
+
+void KTX_Shutdown()
+{
+	ktxVulkanDeviceInfo_Destruct( &g_ktx_vdi );
+}
 
 
 static bool LoadKTX2( ktxTexture2* spKTexture2 )
@@ -81,33 +104,13 @@ static bool LoadKTX2( ktxTexture2* spKTexture2 )
 
 bool KTX_LoadTexture( TextureVK* spTexture, const char* spPath )
 {
-	ktxVulkanDeviceInfo vdi;
-
-	// TODO: can i just create this once?
-	KTX_error_code      result = ktxVulkanDeviceInfo_ConstructEx(
-		   &vdi,
-		   VK_GetInstance(),
-		   VK_GetPhysicalDevice(),
-		   VK_GetDevice(),
-		   VK_GetGraphicsQueue(),
-		   VK_GetPrimaryCommandPool(),
-		   nullptr,
-		   &gKtxFuncs );
-
-	if ( result != KTX_SUCCESS )
-	{
-		Log_ErrorF( gLC_Render, "KTX Error %d: %s - Failed to Construct KTX Vulkan Device\n", result, ktxErrorString( result ) );
-		return false;
-	}
-
 	ktxTexture* kTexture = nullptr;
 
-	result               = ktxTexture_CreateFromNamedFile( spPath, KTX_TEXTURE_CREATE_NO_FLAGS, &kTexture );
+	KTX_error_code result = ktxTexture_CreateFromNamedFile( spPath, KTX_TEXTURE_CREATE_NO_FLAGS, &kTexture );
 
 	if ( result != KTX_SUCCESS )
 	{
 		Log_ErrorF( gLC_Render, "KTX Error %d: %s - Failed to open texture: %s\n", result, ktxErrorString( result ), spPath );
-		ktxVulkanDeviceInfo_Destruct( &vdi );
 		return false;
 	}
 
@@ -123,7 +126,6 @@ bool KTX_LoadTexture( TextureVK* spTexture, const char* spPath )
 	{
 		if ( !LoadKTX2( (ktxTexture2*)kTexture ) )
 		{
-			ktxVulkanDeviceInfo_Destruct( &vdi );
 			return false;
 		}
 	}
@@ -132,7 +134,7 @@ bool KTX_LoadTexture( TextureVK* spTexture, const char* spPath )
 
 	result = ktxTexture_VkUploadEx(
 	  kTexture,
-	  &vdi,
+	  &g_ktx_vdi,
 	  &kVkTexture,
 	  VK_IMAGE_TILING_OPTIMAL,
 	  VK_IMAGE_USAGE_SAMPLED_BIT,
@@ -142,7 +144,6 @@ bool KTX_LoadTexture( TextureVK* spTexture, const char* spPath )
 	{
 		Log_ErrorF( gLC_Render, "KTX Error %d: %s - Failed to upload texture: %s\n", result, ktxErrorString( result ), spPath );
 		ktxTexture_Destroy( kTexture );
-		ktxVulkanDeviceInfo_Destruct( &vdi );
 		return false;
 	}
 
@@ -195,8 +196,6 @@ bool KTX_LoadTexture( TextureVK* spTexture, const char* spPath )
 	VK_SetObjectName( VK_OBJECT_TYPE_IMAGE_VIEW, (u64)spTexture->aImageView, spPath );
 
 	ktxTexture_Destroy( kTexture );
-	ktxVulkanDeviceInfo_Destruct( &vdi );
-
 	return true;
 }
 

@@ -544,6 +544,12 @@ bool Render_Init()
 		return false;
 	}
 
+	if ( !KTX_Init() )
+	{
+		Log_Error( "Failed to init KTX Texture Loader\n" );
+		return false;
+	}
+
 	Log_Msg( gLC_Render, "Loaded Vulkan Renderer\n" );
 
 	return true;
@@ -554,6 +560,8 @@ void Render_Shutdown()
 {
 	if ( gpViewports )
 		delete gpViewports;
+
+	KTX_Shutdown();
 
 	VK_DestroyShaders();
 
@@ -1852,7 +1860,7 @@ public:
 		// TODO: expose this
 		VkCommandBufferBeginInfo begin{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
 		begin.pNext            = nullptr;
-		begin.flags            = 0;
+		begin.flags            = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
 		begin.pInheritanceInfo = nullptr;
 
 		VK_CheckResult( vkBeginCommandBuffer( c, &begin ), "Failed to begin command buffer" );
