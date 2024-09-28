@@ -68,7 +68,17 @@ static void Shader_Debug_PushConstants( Handle cmd, Handle sLayout, const Shader
 {
 	Debug_Push push{};
 	push.aModelMatrix = sPushData.apRenderable->aModelMatrix;
-	push.aColor       = sPushData.apMaterialData->vars[ COLOR_MAT_INDEX ].aVec4;
+
+	// this should never happen, but it is, need to fix
+	if ( sPushData.apMaterialData->vars.empty() )
+	{
+		push.aColor = glm::vec4( 1.f, 1.f, 1.f, 1.f );
+	}
+	else
+	{
+		push.aColor = sPushData.apMaterialData->vars[ COLOR_MAT_INDEX ].aVec4;
+	}
+
 	push.aRenderable  = sPushData.aRenderableIndex;
 	push.aViewport    = sPushData.aViewportIndex;
 
