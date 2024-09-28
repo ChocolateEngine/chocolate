@@ -99,7 +99,7 @@ struct LogChannel_t
 	ch_string aName;
 	bool      aShown;
 	LogColor  aColor;
-	int       aDevLevel;
+	int       aDevLevel;  // TODO: change to verbosity_level;
 };
 
 using LogChannel = unsigned char;

@@ -1784,9 +1784,9 @@ constexpr s64         LOG_CHANNEL_DUMP_HEADER_LEN = 53;
 CONCMD( log_channel_dump )
 {
     // Calculate max name length
-	s64 maxNameLength = 0;
-	s64 maxLength = 0;
-	constexpr s64 logNameLen = 13;
+	size_t           maxNameLength = 0;
+	size_t           maxLength     = 0;
+	constexpr size_t logNameLen = 13;
 
     for ( const auto& channel : GetLogChannels() )
 	{

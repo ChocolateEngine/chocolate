@@ -803,7 +803,7 @@ ch_string ch_str_join( STR_FILE_LINE_DEF const char* strLeft, s64 leftLen, const
 		return outString;
 	}
 
-	if ( ch_str_check_len( strLeft, leftLen ) || ch_str_check_len( strRight, rightLen ) )
+	if ( !ch_str_check_len( strLeft, leftLen ) || !ch_str_check_len( strRight, rightLen ) )
 	{
 		ch_print( "Invalid string length!\n" );
 		return outString;

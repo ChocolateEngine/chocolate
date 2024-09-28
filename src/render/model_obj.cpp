@@ -269,8 +269,7 @@ void Graphics_LoadSceneObj( const std::string& srBasePath, const std::string& sr
 
 		if ( material == InvalidHandle )
 		{
-			const ch_string strings[] = { { matName.data(), (s64)matName.size() }, { (char*)".cmt", 4 } };
-			ch_string       matPath   = ch_str_join( 2, strings );
+			ch_string_auto matPath = ch_str_join( matName.data(), matName.size(), ".cmt", 4 );
 
 			if ( FileSys_IsFile( matPath.data, matPath.size ) )
 				material = gGraphics.LoadMaterial( matPath.data, matPath.size );

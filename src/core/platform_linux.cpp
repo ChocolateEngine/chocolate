@@ -14,7 +14,7 @@ void sys_init()
 
 Module sys_load_library( const char* path )
 {
-    auto pHandle = dlopen( path, RTLD_LAZY );
+	auto pHandle = dlopen( path, RTLD_NOW );
     if ( !pHandle )
     {
         Log_DevF(  1, "Failed to load library: %s!\n", dlerror() );

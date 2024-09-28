@@ -50,6 +50,30 @@ struct JsonArray_t
 };
 
 
+// TODO: maybe try this?
+// 
+// struct ch_json_root_t
+// {
+//     // contains many strings next to each other, separated by null terminators, not an array of arrays
+//     // the ch_json_object_t can store an offset to this string in the array
+//     const char*       strings;
+//     s64*              ints;
+//     double*           doubles;
+//     ch_json_object_t* objects;
+//     
+//     ch_json_object_t* object;
+//     u32               object_count;
+// };
+// 
+// struct ch_json_object_t
+// {
+//     u32         name;
+//     e_json_type type;
+//     u32         value_offset;
+// };
+// 
+
+
 struct JsonObject_t
 {
 	ch_string aName;

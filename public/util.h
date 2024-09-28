@@ -248,23 +248,21 @@ CORE_API bool ch_str_equals( const char* str1, u64 str1Len, const char* str2 );
 #define CH_STR_UR( str ) str.data, str.size
 
 
-// using s64 would be so we can check for -1
-// and you're never going to have a string that is greater than 2^63, right?
 struct ch_string
 {
-	char* data = nullptr;
-	s64   size = 0;
+	char*  data = nullptr;
+	size_t size = 0;
 
 	constexpr ch_string()
 	{
 	}
 
-	constexpr ch_string( char* spData, s64 sSize )
+	constexpr ch_string( char* spData, size_t sSize )
 		: data( spData ), size( sSize )
 	{
 	}
 
-	constexpr ch_string( const char* spData, s64 sSize )
+	constexpr ch_string( const char* spData, size_t sSize )
 		: data( (char*)spData ), size( sSize )
 	{
 	}
@@ -286,8 +284,8 @@ inline bool operator==( const ch_string& srString, const ch_string& other )
 // this one automatically frees the memory upon destruction
 struct ch_string_auto
 {
-	char* data = nullptr;
-	s64   size = 0;
+	char*  data = nullptr;
+	size_t size = 0;
 
 	ch_string_auto()
 	{
@@ -296,7 +294,7 @@ struct ch_string_auto
 	// we don't have a const char* version,
 	// as that usually means the string is a literal,
 	// and we don't want to free that
-	ch_string_auto( char* spData, s64 sSize )
+	ch_string_auto( char* spData, size_t sSize )
 		: data( spData ), size( sSize )
 	{
 	}
@@ -374,9 +372,9 @@ struct hash< ch_string >
 {
 	size_t operator()( ch_string const& string ) const
 	{
-		size_t value = ( hash< u64 >()( string.size ) );
+		size_t value = ( hash< size_t >()( string.size ) );
 
-		for ( u64 i = 0; i < string.size; i++ )
+		for ( size_t i = 0; i < string.size; i++ )
 			value ^= ( hash< char >()( string.data[ i ] ) );
 
 		return value;
@@ -388,9 +386,9 @@ struct hash< ch_string_auto >
 {
 	size_t operator()( ch_string_auto const& string ) const
 	{
-		size_t value = ( hash< u64 >()( string.size ) );
+		size_t value = ( hash< size_t >()( string.size ) );
 
-		for ( u64 i = 0; i < string.size; i++ )
+		for ( size_t i = 0; i < string.size; i++ )
 			value ^= ( hash< char >()( string.data[ i ] ) );
 
 		return value;
@@ -414,14 +412,14 @@ struct hash< ch_string_auto >
 #define NEW_VEC_INDEX 1
 
 template <class T>
-constexpr u64 vec_index( std::vector<T> &vec, T item, u64 fallback = SIZE_MAX )
+constexpr size_t vec_index( std::vector< T >& vec, T item, size_t fallback = SIZE_MAX )
 {
 #if NEW_VEC_INDEX
 	auto it = std::find( vec.begin(), vec.end(), item );
 	if ( it != vec.end() )
 		return it - vec.begin();
 #else
-	for (u64 i = 0; i < vec.size(); i++)
+	for ( size_t i = 0; i < vec.size(); i++ )
 	{
 		if (vec[i] == item)
 			return i;
@@ -433,14 +431,14 @@ constexpr u64 vec_index( std::vector<T> &vec, T item, u64 fallback = SIZE_MAX )
 
 
 template <class T>
-constexpr u64 vec_index( const std::vector<T> &vec, T item, u64 fallback = SIZE_MAX )
+constexpr size_t vec_index( const std::vector< T >& vec, T item, size_t fallback = SIZE_MAX )
 {
 #if NEW_VEC_INDEX
 	auto it = std::find( vec.begin(), vec.end(), item );
 	if ( it != vec.end() )
 		return it - vec.begin();
 #else
-	for (u64 i = 0; i < vec.size(); i++)
+	for ( size_t i = 0; i < vec.size(); i++ )
 	{
 		if (vec[i] == item)
 			return i;
@@ -462,14 +460,14 @@ constexpr void vec_remove( std::vector<T> &vec, T item )
 template <class T>
 constexpr void vec_remove_if( std::vector<T> &vec, T item )
 {
-	u64 index = vec_index( vec, item );
+	size_t index = vec_index( vec, item );
 	if ( index != SIZE_MAX )
 		vec.erase( vec.begin() + index );
 }
 
 
 template <class T>
-constexpr void vec_remove_index( std::vector<T> &vec, u64 index )
+constexpr void vec_remove_index( std::vector< T >& vec, size_t index )
 {
 	vec.erase( vec.begin() + index );
 }

@@ -2,6 +2,8 @@ message( "Current Project: Core" )
 
 add_custom_target(
 	BuildNumberUpdater
+	# this updates the date modified and accessed of the file, so visual studio will compile this source file again,
+	# and then cause the core dll to compile again
     COMMAND ${CMAKE_COMMAND} -E touch_nocreate "${CMAKE_CURRENT_SOURCE_DIR}/build_number.cpp"
 )
 
@@ -25,6 +27,7 @@ set(
 	"systemmanager.cpp"
 	"string.cpp"
 	"util.cpp"
+	# "thread.cpp"
 )
 
 file(

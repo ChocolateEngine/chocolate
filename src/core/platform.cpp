@@ -152,7 +152,7 @@ static LONG WINAPI Win32_ExceptionFilter( struct _EXCEPTION_POINTERS* ExceptionI
 
 Module sys_load_library( const char* path )
 {
-	return (Module)LoadLibrary( path );
+	return (Module)LoadLibraryEx( path, nullptr, LOAD_LIBRARY_SEARCH_DEFAULT_DIRS | LOAD_LIBRARY_SEARCH_DLL_LOAD_DIR );
 }
 
 void sys_close_library( Module mod )

@@ -1419,22 +1419,17 @@ bool Con_ProcessConVar( ConVarData_t* cvar, const char* name, const std::vector<
 	{
 		case EConVarType_Bool:
 		{
-			bool foundBool = false;
-
-
 			// check 1 and 0 first for a fast-path
 			if ( args[ 0 ].size() == 1 )
 			{
 				if ( ch_strncasecmp( args[ 0 ].data(), "1", 1 ) == 0 )
 				{
 					Con_SetConVarValueInternal_Bool( cvar, name, true );
-					foundBool = true;
 					break;
 				}
 				else if ( ch_strncasecmp( args[ 0 ].data(), "0", 1 ) == 0 )
 				{
 					Con_SetConVarValueInternal_Bool( cvar, name, false );
-					foundBool = true;
 					break;
 				}
 			}
@@ -1453,7 +1448,7 @@ bool Con_ProcessConVar( ConVarData_t* cvar, const char* name, const std::vector<
 
 			if ( CheckBoolConVarInput( fullCommand, gConVarBoolList_CoinFlip, ARR_SIZE( gConVarBoolList_CoinFlip ) ) )
 			{
-				Con_SetConVarValueInternal_Bool( cvar, name, rand() & 1 );
+				Con_SetConVarValueInternal_Bool( cvar, name, rand() % 2 == 0 );
 				break;
 			}
 

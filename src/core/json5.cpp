@@ -316,6 +316,7 @@ static JsonObject_t* Json_IncrementObjectList( JsonArray_t& data )
 // Public Functions
 
 
+// TODO: try using a stack allocator so this can be all just one big allocation?
 EJsonError Json_Parse( JsonObject_t* spRoot, const char* spStr )
 {
 	if ( spRoot == nullptr )

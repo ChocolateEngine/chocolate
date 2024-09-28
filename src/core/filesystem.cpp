@@ -350,8 +350,8 @@ void FileSys_PrintSearchPaths()
 {
 	LogGroup group = Log_GroupBegin( gFileSystemChannel );
 
-	log_group_search_paths( group, "Binary Paths:\n", ESearchPathType_Path );
-	log_group_search_paths( group, "\nSearch Paths:\n", ESearchPathType_Binary );
+	log_group_search_paths( group, "Search Paths:\n", ESearchPathType_Path );
+	log_group_search_paths( group, "\nBinary Paths:\n", ESearchPathType_Binary );
 	log_group_search_paths( group, "\nSource Asset Paths:\n", ESearchPathType_SourceAssets );
 
     Log_GroupEnd( group );
