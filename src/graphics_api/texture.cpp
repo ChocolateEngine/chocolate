@@ -1381,7 +1381,7 @@ void VK_CreateBackBuffer( WindowVK* window )
 	target->aFrameBuffers[ 0 ].aBuffer                        = VK_GetFramebuffer( frameBufColorHandle );
 	target->aFrameBuffers[ 1 ].aBuffer                        = VK_GetFramebuffer( frameBufDepthHandle );
 	target->aFrameBuffers[ 0 ].aType                          = EAttachmentType_Color;
-	target->aFrameBuffers[ 1 ].aType                          = EAttachmentType_Color;
+	target->aFrameBuffers[ 1 ].aType                          = EAttachmentType_Depth;
 
 	gFramebufferHandles[ target->aFrameBuffers[ 0 ].aBuffer ] = frameBufColorHandle;
 	gFramebufferHandles[ target->aFrameBuffers[ 1 ].aBuffer ] = frameBufDepthHandle;

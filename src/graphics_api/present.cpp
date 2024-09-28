@@ -391,6 +391,9 @@ u32 VK_GetNextImage( ChHandle_t windowHandle, WindowVK* window )
 {
 	PROF_SCOPE();
 
+	// are we able to move this wait for fences and acquire next image to the start of VK_Present,
+	// that way we can record the command buffer while the gpu is still working on the previous frame?
+	// this waits for the gpu to finish rendering the last frame
 	VK_CheckResult( vkWaitForFences( VK_GetDevice(), 1, &window->fences[ window->frameIndex ], VK_TRUE, UINT64_MAX ), "Failed waiting for fences" );
 
 	u32      imageIndex = UINT32_MAX;
@@ -430,12 +433,12 @@ void VK_Present( ChHandle_t windowHandle, WindowVK* window, u32 sImageIndex )
 	VkCommandBuffer      cmdBuffer  = window->commandBuffers[ sImageIndex ];
 
 	submitInfo.waitSemaphoreCount   = ARR_SIZE( waitSemaphores );
-	submitInfo.pWaitSemaphores      = waitSemaphores;
+	submitInfo.pWaitSemaphores      = waitSemaphores;  // wait for the image to be available from vkAcquireNextImageKHR
 	submitInfo.pWaitDstStageMask    = waitStages;
 	submitInfo.commandBufferCount   = 1;
-	submitInfo.pCommandBuffers      = &cmdBuffer;
+	submitInfo.pCommandBuffers      = &cmdBuffer;  // could i render the command buffers for all windows in one go here?
 	submitInfo.signalSemaphoreCount = ARR_SIZE( signalSemaphores );
-	submitInfo.pSignalSemaphores    = signalSemaphores;
+	submitInfo.pSignalSemaphores    = signalSemaphores;  // signal to the gpu that we have finished executing the command buffer
 
 	VK_CheckResult( vkResetFences( VK_GetDevice(), 1, &window->fences[ window->frameIndex ] ), "Failed to Reset Fences" );
 
@@ -446,12 +449,13 @@ void VK_Present( ChHandle_t windowHandle, WindowVK* window, u32 sImageIndex )
 	VkPresentInfoKHR presentInfo{ VK_STRUCTURE_TYPE_PRESENT_INFO_KHR };
 	presentInfo.pNext              = nullptr;
 	presentInfo.waitSemaphoreCount = ARR_SIZE( signalSemaphores );
-	presentInfo.pWaitSemaphores    = signalSemaphores;
+	presentInfo.pWaitSemaphores    = signalSemaphores;  // wait for the command buffer to be finished executing
 	presentInfo.swapchainCount     = 1;
-	presentInfo.pSwapchains        = swapChains;
+	presentInfo.pSwapchains        = swapChains;  // could i render the swapchains for all windows in one go here?
 	presentInfo.pImageIndices      = &sImageIndex;
 	presentInfo.pResults           = nullptr;
 
+	// now present the image we just rendered to the screen
 	VkResult res                   = vkQueuePresentKHR( VK_GetGraphicsQueue(), &presentInfo );
 
 	if ( res == VK_ERROR_OUT_OF_DATE_KHR || res == VK_SUBOPTIMAL_KHR )

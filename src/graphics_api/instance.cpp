@@ -14,7 +14,7 @@
 static bool gListExts    = Args_Register( false, "List All Vulkan Extensions, marking what ones are loaded", "-vk-list-exts" );
 static bool gListQueues  = Args_Register( false, "List All Device Queues", "-vk-list-queues" );
 static int  gDeviceIndex = Args_Register( -1, "Manually select a GPU by the index in the device list", "-gpu" );
-static int  gListDevices = Args_RegisterF( false, "List Graphics Cards detected", 2, "-gpus", "-list-gpus" );
+static bool gListDevices = Args_RegisterF( false, "List Graphics Cards detected", 2, "-gpus", "-list-gpus" );
 static int  gDebugUtils  = Args_Register( true, "Vulkan Debug Tools", "-vk-no-debug" );
 
 

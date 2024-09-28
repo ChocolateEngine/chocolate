@@ -478,6 +478,7 @@ void VK_UpdateDescSets( WriteDescSet_t* spUpdate, u32 sCount )
 					case EDescriptorType_StorageImage:
 					{
 						auto images = ch_malloc_count< VkDescriptorImageInfo >( binding.aCount );
+						write.pImageInfo = images;
 
 						for ( uint32_t j = 0; j < binding.aCount; j++ )
 						{
@@ -493,7 +494,6 @@ void VK_UpdateDescSets( WriteDescSet_t* spUpdate, u32 sCount )
 							images[ j ].sampler     = VK_GetSampler( tex->aFilter, tex->aSamplerAddress, tex->aDepthCompare );
 						}
 
-						write.pImageInfo = images;
 						break;
 					}
 
@@ -503,6 +503,7 @@ void VK_UpdateDescSets( WriteDescSet_t* spUpdate, u32 sCount )
 					case EDescriptorType_StorageBufferDynamic:
 					{
 						auto buffers = ch_malloc_count< VkDescriptorBufferInfo >( binding.aCount );
+						write.pBufferInfo = buffers;
 
 						for ( u32 j = 0; j < binding.aCount; j++ )
 						{
@@ -519,7 +520,6 @@ void VK_UpdateDescSets( WriteDescSet_t* spUpdate, u32 sCount )
 							buffers[ j ].range  = buffer->aSize;
 						}
 
-						write.pBufferInfo = buffers;
 						break;
 					}
 				}

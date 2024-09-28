@@ -4,10 +4,9 @@
 
 #include "render_vk.h"
 
-#include <algorithm>
-
 
 VkFormat                          gColorFormat = VK_FORMAT_B8G8R8A8_SRGB;
+//VkFormat                          gColorFormat = VK_FORMAT_B8G8R8A8_UNORM;
 VkColorSpaceKHR                   gColorSpace  = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR;
 
 
@@ -87,7 +86,7 @@ bool VK_CreateSwapchain( WindowVK* window, VkSwapchainKHR spOldSwapchain )
 		VK_CheckResult( vkCreateImageView( VK_GetDevice(), &aImageViewInfo, nullptr, &window->swapImageViews[ i ] ), "Failed to create image view" );
 
 		VK_SetObjectName( VK_OBJECT_TYPE_IMAGE, (u64)window->swapImages[ i ], "Swapchain Image" );
-		VK_SetObjectName( VK_OBJECT_TYPE_IMAGE_VIEW, (u64)window->swapImageViews[ i ], "Swapcha^in Image View" );
+		VK_SetObjectName( VK_OBJECT_TYPE_IMAGE_VIEW, (u64)window->swapImageViews[ i ], "Swapchain Image View" );
 	}
 
 	return true;
