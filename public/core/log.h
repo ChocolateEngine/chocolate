@@ -248,6 +248,7 @@ void CORE_API                      Log_DevF( u8 sLvl, const char* spFmt, ... );
 #define LOG_REGISTER_CHANNEL( name, ... )         LogChannel g##name##Channel = Log_RegisterChannel( #name, __VA_ARGS__ );
 #define LOG_REGISTER_CHANNEL2( name, ... )        LogChannel gLC_##name = Log_RegisterChannel( #name, __VA_ARGS__ );
 #define LOG_REGISTER_CHANNEL_EX( var, name, ... ) LogChannel var = Log_RegisterChannel( name, __VA_ARGS__ );
+#define LOG_CHANNEL_REGISTER( name, ... )         LogChannel gLC_##name = Log_RegisterChannel( #name, __VA_ARGS__ );
 
 #define LOG_CHANNEL( name )                       extern LogChannel g##name##Channel;
 #define LOG_CHANNEL2( name )                      extern LogChannel gLC_##name;

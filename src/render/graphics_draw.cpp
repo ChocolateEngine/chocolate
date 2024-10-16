@@ -538,7 +538,7 @@ void Graphics::SetViewportRenderList( u32 sViewport, ChHandle_t* srRenderables, 
 				// TODO: add Mat_IsValid()
 				if ( mat == CH_INVALID_HANDLE )
 				{
-					Log_ErrorF( gLC_ClientGraphics, "Model part \"%d\" has no material!\n", surf );
+				//	Log_ErrorF( gLC_ClientGraphics, "Model part \"%d\" has no material!\n", surf );
 					continue;
 				}
 

@@ -510,32 +510,6 @@ static size_t gConHistoryIndex = 0;
 constexpr size_t CON_MAX_BUFFER_SIZE = 512;
 
 
-static void AddToConsoleOutputOld( ConLogBuffer* spBuffer, const Log& srLog )
-{
-	ChVector< LogColorBuf_t > colorBuffers;
-	Log_SplitStringColors( GetConsoleTextColor( srLog ), srLog.aFormatted, colorBuffers );
-
-	for ( LogColorBuf_t& colorBuf : colorBuffers )
-	{
-		std::string buf( colorBuf.apStr, colorBuf.aLen );
-
-		if ( colorBuf.aColor != spBuffer->aColor && spBuffer->aBuffer.size() || spBuffer->aBuffer.size() > CON_MAX_BUFFER_SIZE )
-		{
-			spBuffer = &gConHistory.emplace_back( colorBuf.aColor, buf );
-		}
-		else if ( spBuffer->aBuffer.empty() )
-		{
-			spBuffer->aColor = colorBuf.aColor;
-			spBuffer->aBuffer += buf;
-		}
-		else
-		{
-			spBuffer->aBuffer += buf;
-		}
-	}
-}
-
-
 static void AddToConsoleOutput( ConLogBuffer* spBuffer, const Log& srLog )
 {
 	ChVector< LogColorBuf_t > colorBuffers;

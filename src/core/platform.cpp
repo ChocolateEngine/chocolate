@@ -418,7 +418,7 @@ void sys_init()
 	Log_DevF( 1, "Windows Version: %d.%d.%d\n", gOSVer.dwMajorVersion, gOSVer.dwMinorVersion, gOSVer.dwBuildNumber );
 
 	// List CPU Version
-	cpu_info_t cpu_info = Sys_GetCpuInfo();
+	cpu_info_t cpu_info = sys_get_cpu_info();
 
 	Log_DevF( 1, "CPU Vendor ID: %s\n", cpu_info.vendor_id );
 	Log_DevF( 1, "CPU Model Name: %s\n", cpu_info.model_name );
@@ -537,7 +537,7 @@ void sys_shutdown()
 }
 
 
-int Sys_GetCoreCount()
+int sys_get_core_count()
 {
 	SYSTEM_INFO sysinfo;
 	GetSystemInfo( &sysinfo );

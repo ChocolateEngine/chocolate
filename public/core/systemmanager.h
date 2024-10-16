@@ -32,7 +32,7 @@ struct AppModule_t
 	ISystem**   apSystem;  // TODO: try ISystem*&
 	const char* apModuleName;
 	const char* apInterfaceName;
-	size_t      apInterfaceVer;
+	u16         apInterfaceVer;
 	bool        aRequired = true;
 };
 
@@ -46,7 +46,7 @@ enum EModLoadError
 };
 
 
-typedef ModuleInterface_t* ( *cframework_GetInterfacesF )( size_t& srCount );
+typedef ModuleInterface_t* ( *fn_ch_get_interfaces_t )( u8& srCount );
 
 
 extern "C"
@@ -64,19 +64,19 @@ extern "C"
 
 	// CORE_API void   Mod_AddLoadedSystem( Module spModule, ISystem* spSystem );
 
-	CORE_API void*         Mod_GetInterface( const char* spName, size_t sHash );
+	CORE_API void*         Mod_GetSystem( const char* spName, size_t sHash );
 }
 
 
 template< typename T >
-inline T* Mod_GetInterfaceCast( const char* spName, size_t sVer )
+inline T* Mod_GetSystemCast( const char* spName, size_t sVer )
 {
-	return static_cast< T* >( Mod_GetInterface( spName, sVer ) );
+	return static_cast< T* >( Mod_GetSystem( spName, sVer ) );
 }
 
 
-#define CH_GET_INTERFACE( var, type, name, ver )     \
-	var = Mod_GetInterfaceCast< type >( name, ver ); \
+#define CH_GET_SYSTEM( var, type, name, ver )     \
+	var = Mod_GetSystemCast< type >( name, ver ); \
 	if ( var == nullptr )                            \
 	{                                                \
 		Log_Error( "Failed to load " name "\n" );    \

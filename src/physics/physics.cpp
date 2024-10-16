@@ -297,12 +297,12 @@ Physics phys;
 
 
 static ModuleInterface_t gInterfaces[] = {
-	{ &phys, IPHYSICS_NAME, IPHYSICS_HASH }
+	{ &phys, IPHYSICS_NAME, IPHYSICS_VER }
 };
 
 extern "C"
 {
-	DLL_EXPORT ModuleInterface_t* cframework_GetInterfaces( size_t& srCount )
+	DLL_EXPORT ModuleInterface_t* ch_get_interfaces( u8& srCount )
 	{
 		srCount = 1;
 		return gInterfaces;

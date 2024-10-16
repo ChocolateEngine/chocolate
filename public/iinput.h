@@ -90,5 +90,5 @@ protected:
 
 
 #define IINPUTSYSTEM_NAME "InputSystem"
-#define IINPUTSYSTEM_HASH 2
+#define IINPUTSYSTEM_VER 2
 

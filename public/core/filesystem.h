@@ -113,6 +113,7 @@ CORE_API u32       FileSys_GetSourcePaths( ch_string** paths );
 CORE_API void      FileSys_ClearSearchPaths();
 CORE_API void      FileSys_ClearBinPaths();
 CORE_API void      FileSys_ClearSourcePaths();
+CORE_API void      FileSys_ClearAllPaths();
 
 CORE_API void      FileSys_DefaultSearchPaths();
 CORE_API void      FileSys_PrintSearchPaths();

@@ -632,7 +632,7 @@ void VK_SetCheckpoint( VkCommandBuffer c, const char* spName )
 // ----------------------------------------------------------------------------------
 // Chocolate Engine Render Abstraction
 
-static ImWchar gFontRanges[] = { 0x1, 0x1FFFF, 0 };
+static ImWchar gFontRanges[] = { 0x1, 0xFFFF, 0 };
 
 
 class RenderVK : public IRender
@@ -2381,7 +2381,7 @@ static ModuleInterface_t gInterfaces[] = {
 
 extern "C"
 {
-	DLL_EXPORT ModuleInterface_t* cframework_GetInterfaces( size_t& srCount )
+	DLL_EXPORT ModuleInterface_t* ch_get_interfaces( u8& srCount )
 	{
 		srCount = 1;
 		return gInterfaces;

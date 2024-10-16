@@ -3,7 +3,7 @@
 
 #include <set>
 
-LOG_REGISTER_CHANNEL2( Module, LogColor::Default );
+LOG_CHANNEL_REGISTER( Module, LogColor::Default );
 
 
 struct LoadedSystem_t
@@ -16,15 +16,31 @@ struct LoadedSystem_t
 	bool      aRunning  = false;
 };
 
-static std::unordered_map< const char*, Module >        gModuleHandles;
-static std::unordered_map< ModuleInterface_t*, Module > gInterfaces;
 
-static LoadedSystem_t*                                  gLoadedSystems      = nullptr;
-static u32                                              gLoadedSystemsCount = 0;
+struct InterfacesFromModule_t
+{
+	Module             module;
+	ModuleInterface_t* interfaces;
+	size_t             count;
+};
+
+
+static std::unordered_map< const char*, Module > gModuleHandles;
+
+static ModuleInterface_t*                        gInterfaces            = nullptr;
+static u32                                       gInterfacesCount       = 0;
+
+// stupid, used only in Mod_Free, where we need to know what interfaces are in what modules
+// or don't do this? what if we just free the module and have the app free the interfaces?
+static InterfacesFromModule_t*                   gInterfacesFromModule;
+
+static LoadedSystem_t*                           gLoadedSystems         = nullptr;
+static u32                                       gLoadedSystemsCount    = 0;
 
 const u64 CH_PLAT_FOLDER_SEP_LEN = strlen( CH_PLAT_FOLDER_SEP );
 
-bool Mod_InitSystem( LoadedSystem_t& appModule )
+
+bool Mod_InitLoadedSystem( LoadedSystem_t& appModule )
 {
 	CH_ASSERT( appModule.apSystem );
 
@@ -32,7 +48,10 @@ bool Mod_InitSystem( LoadedSystem_t& appModule )
 		return false;
 
 	if ( appModule.apSystem->Init() )
+	{
+		appModule.aRunning = true;
 		return true;
+	}
 
 	if ( appModule.aRequired )
 		Log_ErrorF( "Failed to Init Required System: %s\n", appModule.aName.data );
@@ -54,23 +73,10 @@ bool Mod_InitSystems()
 
 		CH_ASSERT( appModule.apSystem );
 
-		if ( !appModule.apSystem )
-			continue;
-
-		if ( appModule.apSystem->Init() )
+		// If we failed to init this system and it's required, then stop
+		if ( !Mod_InitLoadedSystem( appModule ) && appModule.aRequired )
 		{
-			appModule.aRunning = true;
-			continue;
-		}
-
-		if ( appModule.aRequired )
-		{
-			Log_ErrorF( "Failed to Init Required System: %s\n", appModule.aName.data );
 			return false;
-		}
-		else
-		{
-			Log_ErrorF( "Failed to Init Optional System: %s\n", appModule.aName.data );
 		}
 	}
 
@@ -105,27 +111,23 @@ void Mod_Shutdown()
 	}
 	while ( i > 0 );
 
-	// for ( u32 i = gLoadedSystemsCount - 1; i > 0; i-- )
-	// {
-	// 	LoadedSystem_t& appModule = gLoadedSystems[ i ];
-	// 
-	// 	if ( appModule.aName.data )
-	// 		ch_str_free( appModule.aName.data );
-	// 
-	// 	if ( !appModule.apSystem )
-	// 		continue;
-	// 
-	// 	if ( !appModule.aRunning )
-	// 		continue;
-	// 
-	// 	appModule.apSystem->Shutdown();
-	// 	appModule.aRunning = false;
-	// }
+	if ( gLoadedSystems )
+		ch_free( gLoadedSystems );
 
-	ch_free( gLoadedSystems );
-	gLoadedSystems      = nullptr;
-	gLoadedSystemsCount = 0;
+	if ( gInterfaces )
+		ch_free( gInterfaces );
 
+	if ( gInterfacesFromModule )
+		ch_free( gInterfacesFromModule );
+
+	gLoadedSystems        = nullptr;
+	gLoadedSystemsCount   = 0;
+
+	gInterfaces           = nullptr;
+	gInterfacesFromModule = nullptr;
+	gInterfacesCount      = 0;
+
+	// Free all the modules we loaded
 	for ( const auto& [ name, module ] : gModuleHandles )
 	{
 		sys_close_library( module );
@@ -133,6 +135,7 @@ void Mod_Shutdown()
 }
 
 
+// Load the dll, get the interfaces, and store them
 Module Mod_Load( const char* spPath )
 {
 	auto it = gModuleHandles.find( spPath );
@@ -161,15 +164,14 @@ Module Mod_Load( const char* spPath )
 
 	gModuleHandles[ spPath ] = handle;
 
-	// TODO: change ""cframework_GetInterfaces" to "ch_module_get_interfaces" or something
-	ModuleInterface_t* ( *getInterfacesF )( size_t & srCount ) = nullptr;
-	if ( !( *(void**)( &getInterfacesF ) = sys_load_func( handle, "cframework_GetInterfaces" ) ) )
+	ModuleInterface_t* ( *getInterfacesF )( u8 & srCount ) = nullptr;
+	if ( !( *(void**)( &getInterfacesF ) = sys_load_func( handle, "ch_get_interfaces" ) ) )
 	{
-		Log_ErrorF( gLC_Module, "Unable to load \"cframework_GetInterfaces\" function from library: %s - %s\n", pathExt.data, sys_get_error() );
+		Log_ErrorF( gLC_Module, "Unable to load \"ch_get_interfaces\" function from library: %s - %s\n", pathExt.data, sys_get_error() );
 		return nullptr;
 	}
 
-	size_t             count      = 0;
+	u8                 count      = 0;
 	ModuleInterface_t* interfaces = getInterfacesF( count );
 
 	if ( interfaces == nullptr || count == 0 )
@@ -179,11 +181,32 @@ Module Mod_Load( const char* spPath )
 	}
 
 	Log_DevF( gLC_Module, 1, "Loading Module: %s\n", pathExt.data );
+
+	// realloc interfaces
+	ModuleInterface_t* newData = ch_realloc< ModuleInterface_t >( gInterfaces, gInterfacesCount + count );
+
+	if ( !newData )
+	{
+		Log_ErrorF( gLC_Module, "Failed to realloc interfaces\n" );
+		return nullptr;
+	}
+
+	gInterfaces = newData;
+
 	for ( size_t i = 0; i < count; i++ )
 	{
-		gInterfaces[ &interfaces[ i ] ] = handle;
+		// add interface
+		gInterfaces[ gInterfacesCount + i ] = interfaces[ i ];
 		Log_DevF( gLC_Module, 1, "    Found Interface: %s - Version %zd\n", interfaces[ i ].apName, interfaces[ i ].aVersion );
 	}
+
+	// add interfaces from this module for freeing later if needed
+	gInterfacesFromModule                                = ch_realloc< InterfacesFromModule_t >( gInterfacesFromModule, gInterfacesCount + 1 );
+	gInterfacesFromModule[ gInterfacesCount ].module     = handle;
+	gInterfacesFromModule[ gInterfacesCount ].interfaces = interfaces;
+	gInterfacesFromModule[ gInterfacesCount ].count      = count;
+
+	gInterfacesCount += count;
 
 	return handle;
 }
@@ -195,8 +218,37 @@ void Mod_Free( const char* spPath )
 	if ( it == gModuleHandles.end() )
 		return;  // Module was never loaded
 	
-	// TODO: Shutdown Systems loaded with this module
+	// Shutdown Systems loaded with this module
+	for ( u32 i = 0; i < gLoadedSystemsCount; i++ )
+	{
+		LoadedSystem_t& loadedSystem = gLoadedSystems[ i ];
+
+		if ( loadedSystem.apModule == it->second )
+		{
+			loadedSystem.apSystem->Shutdown();
+			loadedSystem.aRunning = false;
+		}
+
+	}
 	
+	// find this module in gInterfacesModules so we can remove this system from gInterfaces
+	// wait no this wont work smh, because of multiple interface in one module, this would just remove the first one only
+	for ( u32 i = 0; i < gInterfacesCount; i++ )
+	{
+		if ( gInterfacesFromModule[ i ].module != it->second )
+			continue;
+
+		// shift everything back 1
+		for ( u16 shift_i = i; shift_i < gInterfacesCount - 1; shift_i++ )
+		{
+			gInterfacesFromModule[ shift_i ] = gInterfacesFromModule[ shift_i + 1 ];
+			gInterfaces[ shift_i ]           = gInterfaces[ shift_i + 1 ];
+		}
+
+		gInterfacesCount--;
+		break;
+	}
+
 	sys_close_library( it->second );
 	gModuleHandles.erase( it );
 }
@@ -212,7 +264,7 @@ EModLoadError Mod_LoadSystem( AppModule_t& srModule )
 	}
 
 	// Add the System we want from the Module
-	void* system = Mod_GetInterface( srModule.apInterfaceName, srModule.apInterfaceVer );
+	void* system = Mod_GetSystem( srModule.apInterfaceName, srModule.apInterfaceVer );
 	if ( system == nullptr )
 	{
 		Log_ErrorF( gLC_Module, "Failed to load system from module: %s - %s\n", srModule.apModuleName, srModule.apInterfaceName );
@@ -298,7 +350,7 @@ bool Mod_InitSystem( AppModule_t& srModule )
 
 		if ( ch_str_equals( loadedSystem.aName, srModule.apInterfaceName, nameLen ) )
 		{
-			return Mod_InitSystem( loadedSystem );
+			return Mod_InitLoadedSystem( loadedSystem );
 		}
 	}
 
@@ -323,7 +375,7 @@ EModLoadError Mod_LoadAndInitSystem( AppModule_t& srModule )
 
 		if ( ch_str_equals( loadedSystem.aName, srModule.apInterfaceName, nameLen ) )
 		{
-			Mod_InitSystem( loadedSystem );
+			Mod_InitLoadedSystem( loadedSystem );
 			return EModLoadError_Success;
 		}
 	}
@@ -345,33 +397,35 @@ EModLoadError Mod_LoadAndInitSystem( AppModule_t& srModule )
 // }
 
 
-void* Mod_GetInterface( const char* spName, size_t sVersion )
+void* Mod_GetSystem( const char* spName, size_t sVersion )
 {
 	if ( spName == nullptr )
 	{
-		Log_ErrorF( gLC_Module, "Interface Search is nullptr\n" );
+		Log_ErrorF( gLC_Module, "System Search is nullptr\n" );
 		return nullptr;
 	}
 
 	u64 searchNameLen = strlen( spName );
 
-	for ( const auto& [ interface, module ] : gInterfaces )
+	for ( u32 i = 0; i < gInterfacesCount; i++ )
 	{
-		if ( !ch_str_equals( interface->apName, spName, searchNameLen ) )
+		ModuleInterface_t& interface = gInterfaces[ i ];
+
+		if ( !ch_str_equals( interface.apName, spName, searchNameLen ) )
 		{
 			continue;
 		}
 
-		if ( interface->aVersion != sVersion )
+		if ( interface.aVersion != sVersion )
 		{
-			Log_ErrorF( gLC_Module, "Found Interface \"%s\" but version is different: App Version: %zd - Module Version: %zd\n", spName, sVersion, interface->aVersion );
+			Log_ErrorF( gLC_Module, "Found system \"%s\" but version is different: App Version: %zd - Module Version: %zd\n", spName, sVersion, interface.aVersion );
 			continue;
 		}
 
-		return interface->apInterface;
+		return interface.apInterface;
 	}
 
-	Log_ErrorF( gLC_Module, "Failed to find interface: %s\n", spName );
+	Log_ErrorF( gLC_Module, "Failed to find system: %s\n", spName );
 	return nullptr;
 }
 

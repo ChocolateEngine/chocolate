@@ -312,11 +312,17 @@ void FileSys_ClearSourcePaths()
 }
 
 
-void FileSys_DefaultSearchPaths()
+void FileSys_ClearAllPaths()
 {
 	FileSys_ClearSearchPathsBase( ESearchPathType_Path );
 	FileSys_ClearSearchPathsBase( ESearchPathType_Binary );
 	FileSys_ClearSearchPathsBase( ESearchPathType_SourceAssets );
+}
+
+
+void FileSys_DefaultSearchPaths()
+{
+	FileSys_ClearAllPaths();
 
 	ch_string path1    = ch_str_join_arr( nullptr, 3, g_exe_path.data, CH_PATH_SEP_STR, "bin" );
 	ch_string path2    = ch_str_join_arr( nullptr, 3, g_exe_path.data, CH_PATH_SEP_STR, g_working_dir.data );
@@ -461,41 +467,6 @@ static bool filesys_is_invalid_path_type( ESearchPathType type )
 }
 
 
-static bool filesys_alloc_search_path2( ESearchPathType type, const ch_string& fullPath )
-{
-	// realloc paths
-	ch_string* new_data = ch_realloc( g_paths[ type ], g_paths_count[ type ] + 1 );
-
-	if ( !new_data )
-	{
-		Log_Error( "Failed to allocate memory for search path array\n" );
-		return false;
-	}
-
-	g_paths[ type ] = new_data;
-	return true;
-}
-
-
-static void filesys_alloc_search_path( ESearchPathType type, const ch_string& fullPath, u32 index )
-{
-	index = std::clamp( index, 0U, g_paths_count[ type ] );
-
-	// realloc paths
-	ch_string* new_data = ch_realloc( g_paths[ type ], g_paths_count[ type ] + 1 );
-
-	if ( !new_data )
-	{
-		Log_Error( "Failed to allocate memory for search path array\n" );
-		return;
-	}
-
-	g_paths[ type ] = new_data;
-	g_paths[ type ][ index ] = fullPath;
-	g_paths_count[ type ]++;
-}
-
-
 void FileSys_AddSearchPath( const char* path, s32 pathLen, ESearchPathType type )
 {
 	if ( filesys_is_invalid_path_type( type ) )
@@ -506,7 +477,16 @@ void FileSys_AddSearchPath( const char* path, s32 pathLen, ESearchPathType type 
 	if ( !fullPath.data )
 		return;
 
-	filesys_alloc_search_path2( type, fullPath );
+	// realloc paths
+	ch_string* new_data = ch_realloc( g_paths[ type ], g_paths_count[ type ] + 1 );
+
+	if ( !new_data )
+	{
+		Log_Error( "Failed to allocate memory for search path array\n" );
+		return;
+	}
+
+	g_paths[ type ] = new_data;
 	g_paths[ type ][ g_paths_count[ type ]++ ] = fullPath;
 }
 

@@ -29,14 +29,8 @@
 // ==============================================================================
 // Helper Macros
 
-#define MALLOC_NEW( type ) (type*)malloc(sizeof(struct type))
-
 #define CH_ARR_SIZE( arr ) (sizeof(arr) / sizeof(arr[0]))
 #define ARR_SIZE           CH_ARR_SIZE
-
-// much faster alternative to dynamic_cast
-#define IS_TYPE( var1, var2 ) typeid(var1) == typeid(var2)
-#define IS_NOT_TYPE( var1, var2 ) typeid(var1) != typeid(var2)
 
 // need macro for constant expression
 #define CH_ALIGN_VALUE( val, alignment ) ( ( val + alignment - 1 ) & ~( alignment - 1 ) ) 
@@ -124,21 +118,15 @@ inline To* ch_pointer_cast( From* in )
 // TODO: add in memory tracking here
 inline void ch_free( void* data )
 {
-	if ( !data )
-		return;
-
 	free( data );
 }
 
 
-template< typename Type >
-inline void ch_free( Type* data )
-{
-	if ( !data )
-		return;
-
-	free( data );
-}
+//template< typename Type >
+//inline void ch_free( Type* data )
+//{
+//	free( data );
+//}
 
 
 // Allocate X Amount of a specific type, could be named better

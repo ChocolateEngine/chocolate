@@ -26,7 +26,7 @@ static ModuleInterface_t gInterfaces[] = {
 
 extern "C"
 {
-	DLL_EXPORT ModuleInterface_t* cframework_GetInterfaces( size_t& srCount )
+	DLL_EXPORT ModuleInterface_t* ch_get_interfaces( u8& srCount )
 	{
 		srCount = 1;
 		return gInterfaces;
@@ -264,7 +264,7 @@ void GuiSystem::StartFrame()
 
 bool GuiSystem::Init()
 {
-	render = Mod_GetInterfaceCast< IRender >( IRENDER_NAME, IRENDER_VER );
+	render = Mod_GetSystemCast< IRender >( IRENDER_NAME, IRENDER_VER );
 
 	InitConsole();
 	InitConVarList();

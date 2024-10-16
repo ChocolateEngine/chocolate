@@ -78,7 +78,7 @@ void sys_shutdown()
 }
 
 
-int Sys_GetCoreCount()
+int sys_get_core_count()
 {
     int numCPU = sysconf(_SC_NPROCESSORS_ONLN);
 	return numCPU;

@@ -565,4 +565,4 @@ public:
 
 
 #define IPHYSICS_NAME "Physics"
-#define IPHYSICS_HASH 3
+#define IPHYSICS_VER 3

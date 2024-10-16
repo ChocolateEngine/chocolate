@@ -43,7 +43,7 @@ bool CodecVorbis::Open( const char* soundPath, AudioStream* stream )
 		return false;
 	}
 
-	OggVorbis_File* oggFile = MALLOC_NEW( OggVorbis_File );
+	OggVorbis_File* oggFile = ch_malloc< OggVorbis_File >( 1 );
 	vorbis_info*    ovfInfo;
 
 	// check if valid
@@ -77,7 +77,7 @@ bool CodecVorbis::Open( const char* soundPath, AudioStream* stream )
 		return false;
 	}
 
-	CodecVorbisData* vorbisData = MALLOC_NEW( CodecVorbisData );
+	CodecVorbisData* vorbisData = ch_malloc< CodecVorbisData >( 1 );
 	vorbisData->file            = soundFileHandle;
 	vorbisData->oggFile         = oggFile;
 	vorbisData->buffer          = nullptr;

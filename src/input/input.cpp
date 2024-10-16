@@ -23,12 +23,12 @@ LOG_REGISTER_CHANNEL( InputSystem, LogColor::Default );
 
 
 static ModuleInterface_t gInterfaces[] = {
-	{ input, IINPUTSYSTEM_NAME, IINPUTSYSTEM_HASH }
+	{ input, IINPUTSYSTEM_NAME, IINPUTSYSTEM_VER }
 };
 
 extern "C"
 {
-	DLL_EXPORT ModuleInterface_t* cframework_GetInterfaces( size_t& srCount )
+	DLL_EXPORT ModuleInterface_t* ch_get_interfaces( u8& srCount )
 	{
 		srCount = 1;
 		return gInterfaces;
