@@ -348,7 +348,7 @@ void Con_QueueCommand( const char* cmd, int len )
 
 	Con_AddToCommandHistory( cmdStr );
 
-	Log_Ex( gConsoleChannel, LogType::Input, cmd );
+	Log_ExF( gConsoleChannel, LogType::Raw, "] %s\n", cmd );
 }
 
 

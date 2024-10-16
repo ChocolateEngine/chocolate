@@ -1506,6 +1506,7 @@ void ch_str_free_all()
 
 
 bool ch_str_equals_base( const char* s1, const char* s2, u64 len )
+
 {
 #if 01
 	const char*       cur1 = s1;

@@ -86,7 +86,6 @@ enum class LogType: unsigned char
 	Dev2,
 	Dev3,
 	Dev4,
-	Input,    // "] %s" - user console input
 	Raw,      // "%s" - kind of a hack for quick new line printing
 	Warning,  // "[Channel] [WARNING] "%s"
 	Error,    // "[Channel] [ERROR] %s"

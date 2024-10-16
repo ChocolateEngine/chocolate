@@ -277,7 +277,7 @@ static EJsonError Json_ParseNumber( const char*& str, JsonObject_t& srObj )
 	else  // int
 	{
 		char *end;
-		srObj.aInt = strtol( output, &end, 10 );
+		srObj.aInt = strtoll( output, &end, 0 );
 
 		if ( end == output )
 		{

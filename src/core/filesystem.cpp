@@ -1342,7 +1342,7 @@ bool FileSys_SetFileTimes( std::string_view srPath, float* spCreated, float* spM
 bool FileSys_CreateDirectory( const char* path )
 {
 	int ret = mkdir( path );
-	return ret != 0;
+	return ret == 0;
 }
 
 

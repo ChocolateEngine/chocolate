@@ -422,7 +422,6 @@ constexpr LogColor GetColor( LogChannel_t* channel, LogType sType )
 		case LogType::Dev2:
 		case LogType::Dev3:
 		case LogType::Dev4:
-		case LogType::Input:
 		case LogType::Raw:
 			return channel->aColor;
 
@@ -528,16 +527,6 @@ static ch_string FormatLog( LogChannel_t* channel, LogType sType, const char* sp
 			case LogType::Dev4:
 				FormatLog_Dev( channel, output, color, "4", last, dist );
 				break;
-
-			case LogType::Input:
-			{
-				const char* strings[] = { color.data, "] ", last, "\n" };
-				const u64   lengths[] = { color.size, 2, dist, 1 };
-				ch_string   newOutput = ch_str_concat( CH_STR_UR( output ), 4, strings, lengths );
-
-				CheckConcatRealloc( newOutput, output );
-				break;
-			}
 
 			case LogType::Warning:
 			{
@@ -747,16 +736,6 @@ static ch_string FormatLogNoColors( const Log& srLog )
 			case LogType::Dev4:
 				FormatLog_Dev( channel, output, "4", last, dist );
 				break;
-
-			case LogType::Input:
-			{
-				const char* strings[] = { "]", last, "\n" };
-				const u64   lengths[] = { 1, dist, 1 };
-				ch_string   newOutput = ch_str_concat( CH_STR_UR( output ), 3, strings, lengths );
-
-				CheckConcatRealloc( newOutput, output );
-				break;
-			}
 
 			case LogType::Raw:
 			{
@@ -1192,7 +1171,6 @@ void Log_AddLogInternal( Log& log )
         {
             default:
             case LogType::Normal:
-            case LogType::Input:
             case LogType::Raw:
 				Log_SysPrint( channel->aColor, log, stdout );
                 break;

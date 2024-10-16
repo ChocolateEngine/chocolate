@@ -139,15 +139,15 @@ std::string vstring( const char* format, ... )
 	PROF_SCOPE();
 
 	std::string result;
-	va_list args, args_copy;
+	va_list     args, args_copy;
 
 	va_start( args, format );
 	va_copy( args_copy, args );
 
 	int len = vsnprintf( nullptr, 0, format, args );
-	if (len < 0)
+	if ( len < 0 )
 	{
-		va_end(args_copy);
+		va_end( args_copy );
 		va_end( args );
 		Log_Error( "vstring va_args: vsnprintf failed\n" );
 		return "";
@@ -156,7 +156,7 @@ std::string vstring( const char* format, ... )
 	if ( len > 0 )
 	{
 		result.resize( len );
-		vsnprintf( result.data(), len+1, format, args_copy );
+		vsnprintf( result.data(), len + 1, format, args_copy );
 	}
 
 	va_end( args_copy );
