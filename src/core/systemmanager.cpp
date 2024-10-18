@@ -3,7 +3,7 @@
 
 #include <set>
 
-LOG_CHANNEL_REGISTER( Module, LogColor::Default );
+LOG_CHANNEL_REGISTER( Module, ELogColor_Default );
 
 
 struct LoadedSystem_t

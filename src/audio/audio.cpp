@@ -15,7 +15,7 @@
 // debugging
 #include "igui.h"
 
-LOG_CHANNEL_REGISTER( Aduio, LogColor::Green );
+LOG_CHANNEL_REGISTER( Aduio, ELogColor_Green );
 
 AudioSystem* audio = new AudioSystem;
 

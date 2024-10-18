@@ -17,93 +17,93 @@ static int                        gCmdUserCursor = 0;
 
 // NOTE: all these colors are just kinda randomly picked,
 // change if you think a certain color is bad
-constexpr ImVec4 ToImCol( LogColor col )
+constexpr ImVec4 ToImCol( ELogColor col )
 {
 	switch (col)
 	{
 		// hmm
-		case LogColor::Black:
+		case ELogColor_Black:
 			return {0.3, 0.3, 0.3, 1};
-		case LogColor::White:
+		case ELogColor_White:
 			return {1, 1, 1, 1};
 
-		case LogColor::DarkBlue:
+		case ELogColor_DarkBlue:
 			return {0, 0.3, 0.8, 1};
-		case LogColor::DarkGreen:
+		case ELogColor_DarkGreen:
 			return {0.25, 0.57, 0.25, 1};
-		case LogColor::DarkCyan:
+		case ELogColor_DarkCyan:
 			return {0, 0.35, 0.75, 1};
-		case LogColor::DarkRed:
+		case ELogColor_DarkRed:
 			return {0.7, 0, 0.25, 1};
-		case LogColor::DarkPurple:
+		case ELogColor_DarkPurple:
 			return {0.45, 0, 0.7, 1};
-		case LogColor::DarkYellow:
+		case ELogColor_DarkYellow:
 			return {0.6, 0.6, 0, 1};
-		case LogColor::DarkGray:
+		case ELogColor_DarkGray:
 			return {0.45, 0.45, 0.45, 1};
 
-		case LogColor::Blue:
+		case ELogColor_Blue:
 			return {0, 0.4, 1, 1};
-		case LogColor::Green:
+		case ELogColor_Green:
 			return {0.4, 0.9, 0.4, 1};
-		case LogColor::Cyan:
+		case ELogColor_Cyan:
 			return {0, 0.85, 1, 1};
-		case LogColor::Red:
+		case ELogColor_Red:
 			return {0.9, 0, 0.4, 1};
-		case LogColor::Purple:
+		case ELogColor_Purple:
 			return {0.6, 0, 0.9, 1};
-		case LogColor::Yellow:
+		case ELogColor_Yellow:
 			return {1, 1, 0, 1};
-		case LogColor::Gray:
+		case ELogColor_Gray:
 			return {0.7, 0.7, 0.7, 1};
 
-		case LogColor::Default:
+		case ELogColor_Default:
 		default:
 			return ImGui::GetStyleColorVec4( ImGuiCol_Text );
 	}
 }
 
 
-constexpr const char* ToImHex( LogColor col )
+constexpr const char* ToImHex( ELogColor col )
 {
 	switch ( col )
 	{
-		case LogColor::Black:
+		case ELogColor_Black:
 			return "\0334C4C4CFFm";
-		case LogColor::White:
+		case ELogColor_White:
 			return "\033FFFFFFFFm";
 
-		case LogColor::DarkBlue:
+		case ELogColor_DarkBlue:
 			return "\033004CCCFF";
-		case LogColor::DarkGreen:
+		case ELogColor_DarkGreen:
 			return "\033409140FFm";
-		case LogColor::DarkCyan:
+		case ELogColor_DarkCyan:
 			return "\0330059BFFFm";
-		case LogColor::DarkRed:
+		case ELogColor_DarkRed:
 			return "\033B30040FFm";
-		case LogColor::DarkPurple:
+		case ELogColor_DarkPurple:
 			return "\0334300B3FFm";
-		case LogColor::DarkYellow:
+		case ELogColor_DarkYellow:
 			return "\033999900FFm";
-		case LogColor::DarkGray:
+		case ELogColor_DarkGray:
 			return "\033737373FFm";
 
-		case LogColor::Blue:
+		case ELogColor_Blue:
 			return "\0330066FFFFm";
-		case LogColor::Green:
+		case ELogColor_Green:
 			return "\03366E666FFm";
-		case LogColor::Cyan:
+		case ELogColor_Cyan:
 			return "\03300D9FFFFm";
-		case LogColor::Red:
+		case ELogColor_Red:
 			return "\033E60066FFm";
-		case LogColor::Purple:
+		case ELogColor_Purple:
 			return "\0339900E6FFm";
-		case LogColor::Yellow:
+		case ELogColor_Yellow:
 			return "\033FFFF00FFm";
-		case LogColor::Gray:
+		case ELogColor_Gray:
 			return "\033B3B3B3FFm";
 
-		case LogColor::Default:
+		case ELogColor_Default:
 		default:
 			return "\033FFFFFFFFm";
 	}
@@ -146,7 +146,7 @@ void GuiSystem::DrawConVarList( bool wasOpen )
 			// ImGui::TableSetColumnIndex( 1 );
 			// if ( cvar->aDesc )
 			{
-				ImGui::PushStyleColor( ImGuiCol_Text, ToImCol( LogColor::Cyan ) );
+				ImGui::PushStyleColor( ImGuiCol_Text, ToImCol( ELogColor_Cyan ) );
 				ImGui::TextWrapped( cvarDesc.data ? cvarDesc.data : "" );
 				ImGui::PopStyleColor();
 			}
@@ -160,7 +160,7 @@ void GuiSystem::DrawConVarList( bool wasOpen )
 #if 0
 			if ( !ch_str_equals( cvar->apData->apDefaultValue, cvar->apData->aDefaultValueLen, cvar->apData->apValue, cvar->GetValueLen() ) )
 			{
-				ImGui::PushStyleColor( ImGuiCol_Text, ToImCol( LogColor::Yellow ) );
+				ImGui::PushStyleColor( ImGuiCol_Text, ToImCol( ELogColor_Yellow ) );
 				ImGui::TextUnformatted( "modified" );
 				ImGui::PopStyleColor();
 
@@ -182,7 +182,7 @@ void GuiSystem::DrawConVarList( bool wasOpen )
 #if 0
 			if ( cvar->apData->apFunc )
 			{
-				ImGui::PushStyleColor( ImGuiCol_Text, ToImCol( LogColor::Yellow ) );
+				ImGui::PushStyleColor( ImGuiCol_Text, ToImCol( ELogColor_Yellow ) );
 				ImGui::TextUnformatted( "Has Callback" );
 				ImGui::PopStyleColor();
 			}

@@ -14,7 +14,7 @@
 #include <unordered_set>
 
 
-LOG_CHANNEL_REGISTER_EX( gLC_ClientGraphics, "ClientGraphics", LogColor::Green );
+LOG_CHANNEL_REGISTER_EX( gLC_ClientGraphics, "ClientGraphics", ELogColor_Green );
 
 bool _Graphics_LoadModel( ch_handle_t& item, const fs::path& srPath );
 bool _Graphics_CreateModel( ch_handle_t& item, const fs::path& srInternalPath, void* spData );

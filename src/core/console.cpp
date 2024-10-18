@@ -12,7 +12,7 @@
 #include <fstream>
 #include <mutex>
 
-LOG_CHANNEL_REGISTER( Console, LogColor::Gray );
+LOG_CHANNEL_REGISTER( Console, ELogColor_Gray );
 
 std::vector< std::string >      gQueue;
 std::vector< std::string >      gCommandHistory;
@@ -348,7 +348,7 @@ void Con_QueueCommand( const char* cmd, int len )
 
 	Con_AddToCommandHistory( cmdStr );
 
-	Log_ExF( gLC_Console, LogType::Raw, "] %s\n", cmd );
+	Log_ExF( gLC_Console, ELogType_Raw, "] %s\n", cmd );
 }
 
 

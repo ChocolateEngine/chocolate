@@ -23,7 +23,7 @@ namespace fs = std::filesystem;
 // then the callback is run to tell whatever type it is to reload this file
 // -----------------------------------------------------------------------
 
-static LOG_CHANNEL_REGISTER( Resource, LogColor::DarkYellow );
+static LOG_CHANNEL_REGISTER( Resource, ELogColor_DarkYellow );
 
 #define CH_GET_HANDLE_INDEX( sHandle ) ( sHandle & 0xFFFFFFFF )
 #define CH_GET_HANDLE_MAGIC( sHandle ) ( sHandle >> 32 )

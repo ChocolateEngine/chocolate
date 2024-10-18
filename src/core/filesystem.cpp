@@ -56,7 +56,7 @@
 #undef FileSys_FindFileEx
 
 
-LOG_CHANNEL_REGISTER( FileSystem, LogColor::DarkGray );
+LOG_CHANNEL_REGISTER( FileSystem, ELogColor_DarkGray );
 
 static ch_string                g_working_dir;
 static ch_string                g_exe_path;

@@ -19,7 +19,7 @@
 // then the callback is run to tell whatever type it is to reload this file
 // -----------------------------------------------------------------------
 
-LOG_CHANNEL_REGISTER( ResourceSystem, LogColor::DarkYellow );
+LOG_CHANNEL_REGISTER( ResourceSystem, ELogColor_DarkYellow );
 
 
 struct ResourceData_t

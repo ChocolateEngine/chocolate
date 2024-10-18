@@ -19,7 +19,7 @@ input.h
 
 InputSystem* input = new InputSystem;
 
-LOG_CHANNEL_REGISTER( InputSystem, LogColor::Default );
+LOG_CHANNEL_REGISTER( InputSystem, ELogColor_Default );
 
 
 static ModuleInterface_t gInterfaces[] = {

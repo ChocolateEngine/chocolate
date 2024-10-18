@@ -27,7 +27,7 @@
 // ------------------------------------------------------------------------
 
 
-LOG_CHANNEL_REGISTER_EX( gLC_MeshBuilder, "MeshBuilder", LogColor::Green );
+LOG_CHANNEL_REGISTER_EX( gLC_MeshBuilder, "MeshBuilder", ELogColor_Green );
 
 
 void MeshBuild_ComputeTangentBasis()

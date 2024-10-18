@@ -22,7 +22,7 @@
 	#include <unistd.h>
 #endif
 
-LOG_CHANNEL_REGISTER( KeyValue, LogColor::DarkGray );
+LOG_CHANNEL_REGISTER( KeyValue, ELogColor_DarkGray );
 
 
 void str_upper( std::string &string )

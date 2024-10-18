@@ -106,7 +106,7 @@ VKAPI_ATTR VkBool32 VKAPI_CALL VK_DebugCallback( VkDebugUtilsMessageSeverityFlag
 
 	// blech
 	if ( log && log->aChannel != gLC_Vulkan )
-		Log_Ex( gLC_Vulkan, LogType::Raw, "\n" );
+		Log_Ex( gLC_Vulkan, ELogType_Raw, "\n" );
 
 	std::string formatted;
 
@@ -344,7 +344,7 @@ std::vector< const char* > VK_GetSDL2Extensions()
 	if ( !SDL_Vulkan_GetInstanceExtensions( gpWindow, &extensionCount, extensions.data() ) )
 		Log_Fatal( gLC_Render, "Unable to query the number of Vulkan instance extension names\n" );
 
-	LogGroup group = Log_GroupBeginEx( gLC_Render, LogType::Dev );
+	LogGroup group = Log_GroupBeginEx( gLC_Render, ELogType_Dev );
 
 	// Display names
 	Log_GroupF( group, "Found %d Vulkan extensions:\n", extensionCount );

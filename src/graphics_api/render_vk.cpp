@@ -25,9 +25,9 @@
 
 #include "render_vk.h"
 
-LOG_CHANNEL_REGISTER( GraphicsAPI, LogColor::Cyan );
-LOG_CHANNEL_REGISTER( Vulkan, LogColor::DarkYellow );
-LOG_CHANNEL_REGISTER( Validation, LogColor::DarkYellow );
+LOG_CHANNEL_REGISTER( GraphicsAPI, ELogColor_Cyan );
+LOG_CHANNEL_REGISTER( Vulkan, ELogColor_DarkYellow );
+LOG_CHANNEL_REGISTER( Validation, ELogColor_DarkYellow );
 
 LogChannel                                               gLC_Render = gLC_GraphicsAPI;
 

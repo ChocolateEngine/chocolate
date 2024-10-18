@@ -11,7 +11,7 @@
   #include <vorbis/vorbisfile.h>
 
 
-LOG_CHANNEL_REGISTER( Vorbis, LogColor::Green );
+LOG_CHANNEL_REGISTER( Vorbis, ELogColor_Green );
 
 struct CodecVorbisData
 {

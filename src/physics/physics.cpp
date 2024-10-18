@@ -7,7 +7,7 @@
 #endif
 
 
-LOG_CHANNEL_REGISTER( Physics, LogColor::DarkGreen );
+LOG_CHANNEL_REGISTER( Physics, ELogColor_DarkGreen );
 
 
 CONVAR_BOOL_EXT( phys_dbg );
