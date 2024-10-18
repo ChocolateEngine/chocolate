@@ -6,11 +6,9 @@
 #include "physics_debug.h"
 
 
-LOG_CHANNEL( Physics );
-
 extern Phys_DebugFuncs_t gDebugFuncs;
 
-CONVAR_BOOL( phys_dbg, 0, "" );
+CONVAR_BOOL_NAME( phys_dbg, "phys.debug.render", false, "Enable Physics Debug Drawing" );
 
 // constexpr glm::vec3 vec3_default( 255, 255, 255 );
 // constexpr glm::vec4 vec4_default( 255, 255, 255, 255 );
@@ -104,7 +102,7 @@ PhysDebugDraw::Batch PhysDebugDraw::CreateTriangleBatch(
 		tris[ i ].aPos[ 2 ] = fromJolt( inTriangles[ i ].mV[ 2 ].mPosition );
 	}
 
-	Handle handle = gDebugFuncs.apCreateTriBatch( tris );
+	ch_handle_t handle = gDebugFuncs.apCreateTriBatch( tris );
 
 	if ( handle )
 	{
@@ -140,7 +138,7 @@ PhysDebugDraw::Batch PhysDebugDraw::CreateTriangleBatch(
 	// {
 	// }
 
-	Handle handle = gDebugFuncs.apCreateTriBatchInd( verts, ind );
+	ch_handle_t handle = gDebugFuncs.apCreateTriBatchInd( verts, ind );
 
 	if ( handle )
 	{

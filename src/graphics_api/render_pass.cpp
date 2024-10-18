@@ -165,7 +165,7 @@ VkRenderPass VK_CreateMainRenderPass()
 }
 
 
-Handle VK_CreateRenderPass( const RenderPassCreate_t& srPass )
+ch_handle_t VK_CreateRenderPass( const RenderPassCreate_t& srPass )
 {
 	ChVector< VkAttachmentDescription > attachments( srPass.aAttachments.size() );
 	ChVector< VkSubpassDescription >    subpasses( srPass.aSubpasses.size() );
@@ -203,7 +203,7 @@ Handle VK_CreateRenderPass( const RenderPassCreate_t& srPass )
 			if ( depthRef.layout != VK_IMAGE_LAYOUT_MAX_ENUM )
 			{
 				Log_Error( "VK_CreateRenderPass: Already have a depth attachment!\n" );
-				return InvalidHandle;
+				return CH_INVALID_HANDLE;
 			}
 
 			depthRef.attachment = i;
@@ -269,7 +269,7 @@ Handle VK_CreateRenderPass( const RenderPassCreate_t& srPass )
 }
 
 
-void VK_DestroyRenderPass( Handle shHandle )
+void VK_DestroyRenderPass( ch_handle_t shHandle )
 {
 	VkRenderPass renderPass = VK_NULL_HANDLE;
 
@@ -314,10 +314,10 @@ void VK_DestroyMainRenderPass()
 }
 
 
-VkRenderPass VK_GetRenderPass( Handle shHandle )
+VkRenderPass VK_GetRenderPass( ch_handle_t shHandle )
 {
 	// fallback to main renderpass
-	if ( shHandle == InvalidHandle )
+	if ( shHandle == CH_INVALID_HANDLE )
 		return VK_CreateMainRenderPass();
 
 	VkRenderPass renderPass = VK_NULL_HANDLE;

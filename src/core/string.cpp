@@ -37,24 +37,24 @@ struct ch_string_track_data
 	const char* file;
 	const char* func;
 	u32         line;
-	u64         size;
+	size_t         size;
 };
 
 // using ch_string_track_map = std::unordered_map< char*, ch_string_track_data >;
 using ch_string_track_map = std::map< char*, ch_string_track_data >;
 
 
-ch_string_track_map& GetTrackedStrings()
+ch_string_track_map& str_track_get()
 {
 	static ch_string_track_map trackedStrings;
 	return trackedStrings;
 }
 
-static void TrackString_Alloc( const char* file, u32 line, const char* func, const char* string, u64 len )
+static void str_track_alloc( const char* file, u32 line, const char* func, const char* string, size_t len )
 {
 	PROF_SCOPE();
 
-	ch_string_track_data& data = GetTrackedStrings()[ (char*)string ];
+	ch_string_track_data& data = str_track_get()[ (char*)string ];
 	data.file                  = file;
 	data.func                  = func;
 	data.line                  = line;
@@ -62,17 +62,17 @@ static void TrackString_Alloc( const char* file, u32 line, const char* func, con
 }
 
 
-static void TrackString_Realloc( const char* file, u32 line, const char* func, char* data, u64 len, char* oldPtr )
+static void str_track_realloc( const char* file, u32 line, const char* func, char* data, size_t len, char* oldPtr )
 {
 	PROF_SCOPE();
 
 	if ( oldPtr && oldPtr != data )
 	{
-		auto it = GetTrackedStrings().find( oldPtr );
+		auto it = str_track_get().find( oldPtr );
 
-		if ( it != GetTrackedStrings().end() )
+		if ( it != str_track_get().end() )
 		{
-			GetTrackedStrings().erase( it );
+			str_track_get().erase( it );
 		}
 		else
 		{
@@ -80,11 +80,11 @@ static void TrackString_Realloc( const char* file, u32 line, const char* func, c
 		}
 	}
 
-	TrackString_Alloc( file, line, func, data, len );
+	str_track_alloc( file, line, func, data, len );
 }
 
 
-static void TrackString_Free( const char* string )
+static void str_track_free( const char* string )
 {
 	PROF_SCOPE();
 
@@ -94,17 +94,17 @@ static void TrackString_Free( const char* string )
 		return;
 	}
 
-	if ( GetTrackedStrings().empty() )
+	if ( str_track_get().empty() )
 	{
 		ch_print( "No strings tracked to free!\n" );
 	}
 	else
 	{
-		auto it = GetTrackedStrings().find( (char*)string );
+		auto it = str_track_get().find( (char*)string );
 
-		if ( it != GetTrackedStrings().end() )
+		if ( it != str_track_get().end() )
 		{
-			GetTrackedStrings().erase( it );
+			str_track_get().erase( it );
 		}
 		else
 		{
@@ -114,15 +114,15 @@ static void TrackString_Free( const char* string )
 }
 
 	#else
-		#define TrackString_Alloc( string, len )
-		#define TrackString_Realloc( data, len, oldPtr )
-		#define TrackString_Free( string )
+		#define str_track_alloc( string, len )
+		#define str_track_realloc( data, len, oldPtr )
+		#define str_track_free( string )
 	#endif
 
 #else
-	#define TrackString_Alloc( string, len )
-	#define TrackString_Realloc( data, len, oldPtr )
-	#define TrackString_Free( string )
+	#define str_track_alloc( string, len )
+	#define str_track_realloc( data, len, oldPtr )
+	#define str_track_free( string )
 
 	#define CH_STRING_MEM_TRACKING 0
 #endif
@@ -133,69 +133,17 @@ static void TrackString_Free( const char* string )
 // ===========================================================================================
 
 
-// calculate length of a string
-#if 0 // i'll test this later
-CORE_API u64 ch_str_len( const char* s )
+char* ch_str_copy_base( const char* string, size_t len )
 {
-	const char* end = (const char*)memchr( s, '\0', SIZE_MAX );
-
-	if ( end == NULL )
-		return SIZE_MAX;
-	else
-		return end - s;
-}
-
-
-// calculate length of a string, but return false if the string is invalid
-CORE_API bool ch_str_len_ex( const char* s, u64& length )
-{
-	const char* end = (const char*)memchr( s, '\0', SIZE_MAX );
-
-	if ( end == NULL )
-	{
-		length = SIZE_MAX;
-		return false;
-	}
-
-	length = end - s;
-	return true;
-}
-#else
-CORE_API u64 ch_str_len( const char* s )
-{
-	return strlen( s );
-}
-
-
-// calculate length of a string, but return false if the string is invalid
-CORE_API bool ch_str_len_ex( const char* s, u64& length )
-{
-	length = strlen( s );
-	return true;
-}
-#endif
-
-
-char* Util_AllocStringBase( const char* string, u64 len )
-{
-	// Check if we are already null-termianted
-	//bool  nullTerminated = string[ len ] == nullTerminator;
-
-	// u64   memSize        = nullTerminated ? len : len + 1;  // allocate extra byte for null terminator
-	u64   memSize = len + 1;  // allocate extra byte for null terminator
-	char* out     = ch_malloc< char >( memSize );
+	char* out = ch_malloc< char >( len + 1 );  // allocate extra byte for null terminator
 
 	if ( out == nullptr )
 	{
-		ch_printf( "Failed to allocate %d bytes for string!\n", memSize );
+		ch_printf( "Failed to allocate %d bytes for string!\n", ( len + 1 ) * sizeof( char ) );
 		return nullptr;
 	}
 
-	memset( out, 0, memSize );
-
 	memcpy( out, string, len );
-
-	//if ( !nullTerminated )
 	out[ len ] = '\0';
 
 	return out;
@@ -214,13 +162,13 @@ ch_string ch_str_copy( STR_FILE_LINE_DEF const char* string )
 		return out_string;
 	}
 
-	u64   len = strlen( string );
-	char* out = Util_AllocStringBase( string, len );
+	size_t   len = strlen( string );
+	char* out = ch_str_copy_base( string, len );
 
 	if ( out == nullptr )
 		return out_string;
 
-	TrackString_Alloc( STR_FILE_LINE_INT out, len + 1 );
+	str_track_alloc( STR_FILE_LINE_INT out, len + 1 );
 
 	out_string.data = out;
 	out_string.size = len;
@@ -228,7 +176,7 @@ ch_string ch_str_copy( STR_FILE_LINE_DEF const char* string )
 }
 
 
-ch_string ch_str_copy( STR_FILE_LINE_DEF const char* string, u64 len )
+ch_string ch_str_copy( STR_FILE_LINE_DEF const char* string, size_t len )
 {
 	ch_string out_string;
 	out_string.data = nullptr;
@@ -240,12 +188,12 @@ ch_string ch_str_copy( STR_FILE_LINE_DEF const char* string, u64 len )
 		return out_string;
 	}
 
-	char* out = Util_AllocStringBase( string, len );
+	char* out = ch_str_copy_base( string, len );
 
 	if ( out == nullptr )
 		return out_string;
 
-	TrackString_Alloc( STR_FILE_LINE_INT out, len + 1 );
+	str_track_alloc( STR_FILE_LINE_INT out, len + 1 );
 
 	out_string.data = out;
 	out_string.size = len;
@@ -257,31 +205,7 @@ ch_string ch_str_copy( STR_FILE_LINE_DEF const char* string, u64 len )
 // Reallocating Strings
 
 
-// unused?
-#if 0
-char* Util_ReallocStringBase( char* data, const char* string, u64 len )
-{
-	u64   memSize = len + sizeof( char );  // allocate extra byte for null terminator
-	char* out     = ch_malloc< char >( memSize );
-
-	if ( out == nullptr )
-	{
-		ch_printf( "Failed to allocate %d bytes for string!\n", memSize );
-		return nullptr;
-	}
-
-	char* out = ch_realloc< char >( data, len + 1 );
-
-	if ( out == nullptr )
-		return nullptr;
-
-	memcpy( out, string, len );
-	out[ len ] = '\0';
-}
-#endif
-
-
-ch_string ch_str_realloc( STR_FILE_LINE_DEF char* data, u64 len )
+ch_string ch_str_realloc( STR_FILE_LINE_DEF char* data, size_t len )
 {
 	ch_string out_string;
 	out_string.data = nullptr;
@@ -292,7 +216,7 @@ ch_string ch_str_realloc( STR_FILE_LINE_DEF char* data, u64 len )
 	if ( out == nullptr )
 		return out_string;
 
-	TrackString_Realloc( STR_FILE_LINE_INT out, len + 1, data );
+	str_track_realloc( STR_FILE_LINE_INT out, len + 1, data );
 
 	out_string.data = out;
 	out_string.size = len;
@@ -300,7 +224,7 @@ ch_string ch_str_realloc( STR_FILE_LINE_DEF char* data, u64 len )
 }
 
 
-ch_string ch_str_realloc( STR_FILE_LINE_DEF char* data, const char* string, u64 len )
+ch_string ch_str_realloc( STR_FILE_LINE_DEF char* data, const char* string, size_t len )
 {
 	ch_string out_string;
 	out_string.data = nullptr;
@@ -320,7 +244,7 @@ ch_string ch_str_realloc( STR_FILE_LINE_DEF char* data, const char* string, u64 
 	memcpy( out, string, len );
 	out[ len ] = '\0';
 
-	TrackString_Realloc( STR_FILE_LINE_INT out, len + 1, data );
+	str_track_realloc( STR_FILE_LINE_INT out, len + 1, data );
 
 	out_string.data = out;
 	out_string.size = len;
@@ -340,7 +264,7 @@ ch_string ch_str_realloc( STR_FILE_LINE_DEF char* data, const char* string )
 		return out_string;
 	}
 
-	u64 len = strlen( string );
+	size_t len = strlen( string );
 
 	if ( len == 0 )
 	{
@@ -356,7 +280,7 @@ ch_string ch_str_realloc( STR_FILE_LINE_DEF char* data, const char* string )
 	memcpy( out, string, len );
 	out[ len ] = '\0';
 
-	TrackString_Realloc( STR_FILE_LINE_INT out, len + 1, data );
+	str_track_realloc( STR_FILE_LINE_INT out, len + 1, data );
 
 	out_string.data = out;
 	out_string.size = len;
@@ -400,7 +324,7 @@ CORE_API ch_string ch_str_realloc_f( STR_FILE_LINE_DEF char* data, const char* f
 		vsnprintf( result, len + 1, format, args_copy );
 		result[ len ] = '\0';
 
-		TrackString_Alloc( STR_FILE_LINE_INT result, len + 1 );
+		str_track_alloc( STR_FILE_LINE_INT result, len + 1 );
 	}
 
 	va_end( args_copy );
@@ -436,7 +360,7 @@ CORE_API ch_string ch_str_realloc_v( STR_FILE_LINE_DEF char* data, const char* f
 		std::vsnprintf( result, len + 1, format, args );
 		result[ len ] = '\0';
 
-		TrackString_Alloc( STR_FILE_LINE_INT result, len + 1 );
+		str_track_alloc( STR_FILE_LINE_INT result, len + 1 );
 
 		out_string.data = result;
 		out_string.size = len;
@@ -478,7 +402,7 @@ ch_string ch_str_copy_f( STR_FILE_LINE_DEF const char* format, ... )
 		vsnprintf( result, len + 1, format, args_copy );
 		result[ len ] = '\0';
 
-		TrackString_Alloc( STR_FILE_LINE_INT result, len + 1 );
+		str_track_alloc( STR_FILE_LINE_INT result, len + 1 );
 	}
 
 	va_end( args_copy );
@@ -507,7 +431,7 @@ ch_string ch_str_copy_v( STR_FILE_LINE_DEF const char* format, va_list args )
 		std::vsnprintf( result, len + 1, format, args );
 		result[ len ] = '\0';
 
-		TrackString_Alloc( STR_FILE_LINE_INT result, len + 1 );
+		str_track_alloc( STR_FILE_LINE_INT result, len + 1 );
 
 		out_string.data = result;
 		out_string.size = len;
@@ -536,8 +460,8 @@ ch_string ch_str_concat( STR_FILE_LINE_DEF char* dest, const char* string )
 		return outString;
 	}
 
-	u64   destLen = strlen( dest );
-	u64   strLen  = strlen( string );
+	size_t   destLen = strlen( dest );
+	size_t   strLen  = strlen( string );
 
 	char* out     = ch_realloc< char >( dest, destLen + strLen + 1 );
 
@@ -558,7 +482,7 @@ ch_string ch_str_concat( STR_FILE_LINE_DEF char* dest, const char* string )
 	memcpy( out + destLen, string, strLen );
 	out[ destLen + strLen ] = '\0';
 
-	TrackString_Realloc( STR_FILE_LINE_INT out, destLen + strLen + 1, dest );
+	str_track_realloc( STR_FILE_LINE_INT out, destLen + strLen + 1, dest );
 
 	outString.data = out;
 	outString.size = destLen + strLen;
@@ -566,7 +490,7 @@ ch_string ch_str_concat( STR_FILE_LINE_DEF char* dest, const char* string )
 }
 
 
-ch_string ch_str_concat( STR_FILE_LINE_DEF char* dest, s64 destLen, const char* string, s64 stringLen )
+ch_string ch_str_concat( STR_FILE_LINE_DEF char* dest, size_t destLen, const char* string, size_t stringLen )
 {
 	ch_string outString;
 	outString.data = nullptr;
@@ -595,7 +519,7 @@ ch_string ch_str_concat( STR_FILE_LINE_DEF char* dest, s64 destLen, const char* 
 	memcpy( out + destLen, string, stringLen );
 	out[ destLen + stringLen ] = '\0';
 
-	TrackString_Realloc( STR_FILE_LINE_INT out, destLen + stringLen + 1, dest );
+	str_track_realloc( STR_FILE_LINE_INT out, destLen + stringLen + 1, dest );
 
 	outString.data = out;
 	outString.size = destLen + stringLen;
@@ -604,23 +528,23 @@ ch_string ch_str_concat( STR_FILE_LINE_DEF char* dest, s64 destLen, const char* 
 
 
 // Concatenates an array of strings together, and appends it to the destination
-ch_string ch_str_concat( STR_FILE_LINE_DEF char* dest, s64 destLen, u64 count, const char** strings )
+ch_string ch_str_concat( STR_FILE_LINE_DEF char* dest, size_t destLen, size_t count, const char** strings )
 {
 	ch_string outString;
 	outString.data = nullptr;
 	outString.size = 0;
 
-	s64  totalLen  = destLen;
+	size_t  totalLen  = destLen;
 
-	u64* lengths   = ch_malloc< u64 >( count );
+	size_t* lengths   = ch_malloc< size_t >( count );
 
 	if ( lengths == nullptr )
 	{
-		ch_printf( "Failed to allocate %d bytes for string length array!\n", count * sizeof( u64 ) );
+		ch_printf( "Failed to allocate %d bytes for string length array!\n", count * sizeof( size_t ) );
 		return outString;
 	}
 
-	for ( s64 i = 0; i < count; i++ )
+	for ( size_t i = 0; i < count; i++ )
 	{
 		if ( !strings[ i ] )
 		{
@@ -634,7 +558,7 @@ ch_string ch_str_concat( STR_FILE_LINE_DEF char* dest, s64 destLen, u64 count, c
 
 	// check the strings list to see if the data pointer is in there
 
-	for ( s64 i = 0; i < count && dest; i++ )
+	for ( size_t i = 0; i < count && dest; i++ )
 	{
 		if ( strings[ i ] == dest )
 		{
@@ -655,8 +579,8 @@ ch_string ch_str_concat( STR_FILE_LINE_DEF char* dest, s64 destLen, u64 count, c
 		return outString;
 	}
 
-	s64 offset = 0;
-	for ( s64 i = 0; i < count; i++ )
+	size_t offset = 0;
+	for ( size_t i = 0; i < count; i++ )
 	{
 		if ( lengths[ i ] == 0 || !strings[ i ] )
 			continue;
@@ -667,7 +591,7 @@ ch_string ch_str_concat( STR_FILE_LINE_DEF char* dest, s64 destLen, u64 count, c
 
 	out[ totalLen ] = '\0';
 
-	TrackString_Realloc( STR_FILE_LINE_INT out, totalLen + 1, dest );
+	str_track_realloc( STR_FILE_LINE_INT out, totalLen + 1, dest );
 
 	ch_free( lengths );
 
@@ -677,15 +601,15 @@ ch_string ch_str_concat( STR_FILE_LINE_DEF char* dest, s64 destLen, u64 count, c
 }
 
 
-ch_string ch_str_concat( STR_FILE_LINE_DEF char* dest, s64 destLen, u64 count, const char** strings, const u64* lengths )
+ch_string ch_str_concat( STR_FILE_LINE_DEF char* dest, size_t destLen, size_t count, const char** strings, const size_t* lengths )
 {
 	ch_string outString;
 	outString.data = nullptr;
 	outString.size = 0;
 
-	s64 totalLen   = destLen;
+	size_t totalLen   = destLen;
 
-	for ( s64 i = 0; i < count; i++ )
+	for ( size_t i = 0; i < count; i++ )
 		totalLen += lengths[ i ];
 
 	char* out = ch_realloc< char >( dest, totalLen + 1 );
@@ -696,9 +620,9 @@ ch_string ch_str_concat( STR_FILE_LINE_DEF char* dest, s64 destLen, u64 count, c
 		return outString;
 	}
 
-	s64 offset = 0;
+	size_t offset = 0;
 
-	for ( s64 i = 0; i < count; i++ )
+	for ( size_t i = 0; i < count; i++ )
 	{
 		memcpy( out + destLen + offset, strings[ i ], lengths[ i ] );
 		offset += lengths[ i ];
@@ -706,7 +630,7 @@ ch_string ch_str_concat( STR_FILE_LINE_DEF char* dest, s64 destLen, u64 count, c
 
 	out[ totalLen ] = '\0';
 
-	TrackString_Realloc( STR_FILE_LINE_INT out, totalLen + 1, dest );
+	str_track_realloc( STR_FILE_LINE_INT out, totalLen + 1, dest );
 
 	outString.data = out;
 	outString.size = totalLen;
@@ -714,15 +638,15 @@ ch_string ch_str_concat( STR_FILE_LINE_DEF char* dest, s64 destLen, u64 count, c
 }
 
 
-ch_string ch_str_concat( STR_FILE_LINE_DEF char* dest, s64 destLen, u64 count, const ch_string* strings )
+ch_string ch_str_concat( STR_FILE_LINE_DEF char* dest, size_t destLen, size_t count, const ch_string* strings )
 {
 	ch_string outString;
 	outString.data = nullptr;
 	outString.size = 0;
 
-	s64 totalLen   = destLen;
+	size_t totalLen   = destLen;
 
-	for ( s64 i = 0; i < count; i++ )
+	for ( size_t i = 0; i < count; i++ )
 		totalLen += strings[ i ].size;
 
 	char* out = ch_realloc< char >( dest, totalLen + 1 );
@@ -733,9 +657,9 @@ ch_string ch_str_concat( STR_FILE_LINE_DEF char* dest, s64 destLen, u64 count, c
 		return outString;
 	}
 
-	s64 offset = 0;
+	size_t offset = 0;
 
-	for ( s64 i = 0; i < count; i++ )
+	for ( size_t i = 0; i < count; i++ )
 	{
 		memcpy( out + destLen + offset, strings[ i ].data, strings[ i ].size );
 		offset += strings[ i ].size;
@@ -743,7 +667,7 @@ ch_string ch_str_concat( STR_FILE_LINE_DEF char* dest, s64 destLen, u64 count, c
 
 	out[ totalLen ] = '\0';
 
-	TrackString_Realloc( STR_FILE_LINE_INT out, totalLen + 1, dest );
+	str_track_realloc( STR_FILE_LINE_INT out, totalLen + 1, dest );
 
 	outString.data = out;
 	outString.size = totalLen;
@@ -768,8 +692,8 @@ ch_string ch_str_join( STR_FILE_LINE_DEF const char* strLeft, const char* strRig
 		return outString;
 	}
 
-	u64   leftLen = strlen( strLeft );
-	u64   rightLen = strlen( strRight );
+	size_t   leftLen = strlen( strLeft );
+	size_t   rightLen = strlen( strRight );
 
 	char* out      = ch_malloc< char >( leftLen + rightLen + 1 );
 
@@ -783,7 +707,7 @@ ch_string ch_str_join( STR_FILE_LINE_DEF const char* strLeft, const char* strRig
 	memcpy( out + leftLen, strRight, rightLen );
 	out[ leftLen + rightLen ] = '\0';
 
-	TrackString_Alloc( STR_FILE_LINE_INT out, leftLen + rightLen + 1 );
+	str_track_alloc( STR_FILE_LINE_INT out, leftLen + rightLen + 1 );
 
 	outString.data = out;
 	outString.size = leftLen + rightLen;
@@ -791,7 +715,7 @@ ch_string ch_str_join( STR_FILE_LINE_DEF const char* strLeft, const char* strRig
 }
 
 
-ch_string ch_str_join( STR_FILE_LINE_DEF const char* strLeft, s64 leftLen, const char* strRight, s64 rightLen )
+ch_string ch_str_join( STR_FILE_LINE_DEF const char* strLeft, size_t leftLen, const char* strRight, size_t rightLen )
 {
 	ch_string outString;
 	outString.data = nullptr;
@@ -821,7 +745,7 @@ ch_string ch_str_join( STR_FILE_LINE_DEF const char* strLeft, s64 leftLen, const
 	memcpy( out + leftLen, strRight, rightLen );
 	out[ leftLen + rightLen ] = '\0';
 
-	TrackString_Alloc( STR_FILE_LINE_INT out, leftLen + rightLen + 1 );
+	str_track_alloc( STR_FILE_LINE_INT out, leftLen + rightLen + 1 );
 
 	outString.data = out;
 	outString.size = leftLen + rightLen;
@@ -829,23 +753,23 @@ ch_string ch_str_join( STR_FILE_LINE_DEF const char* strLeft, s64 leftLen, const
 }
 
 
-ch_string ch_str_join( STR_FILE_LINE_DEF u64 count, const char** strings, char* data )
+ch_string ch_str_join( STR_FILE_LINE_DEF size_t count, const char** strings, char* data )
 {
 	ch_string outString;
 	outString.data = nullptr;
 	outString.size = 0;
 
-	u64  totalLen  = 0;
+	size_t  totalLen  = 0;
 
-	u64* lengths   = ch_malloc< u64 >( count );
+	size_t* lengths   = ch_malloc< size_t >( count );
 
 	if ( lengths == nullptr )
 	{
-		ch_printf( "Failed to allocate %d bytes for string length array!\n", count * sizeof( u64 ) );
+		ch_printf( "Failed to allocate %d bytes for string length array!\n", count * sizeof( size_t ) );
 		return outString;
 	}
 
-	for ( u64 i = 0; i < count; i++ )
+	for ( size_t i = 0; i < count; i++ )
 	{
 		if ( !strings[ i ] )
 		{
@@ -859,7 +783,7 @@ ch_string ch_str_join( STR_FILE_LINE_DEF u64 count, const char** strings, char* 
 
 	// check the strings list to see if the data pointer is in there
 
-	for ( u64 i = 0; i < count && data; i++ )
+	for ( size_t i = 0; i < count && data; i++ )
 	{
 		if ( strings[ i ] == data )
 		{
@@ -880,8 +804,8 @@ ch_string ch_str_join( STR_FILE_LINE_DEF u64 count, const char** strings, char* 
 		return outString;
 	}
 
-	u64 offset = 0;
-	for ( u64 i = 0; i < count; i++ )
+	size_t offset = 0;
+	for ( size_t i = 0; i < count; i++ )
 	{
 		if ( lengths[ i ] == 0 || !strings[ i ] )
 			continue;
@@ -892,7 +816,7 @@ ch_string ch_str_join( STR_FILE_LINE_DEF u64 count, const char** strings, char* 
 
 	out[ totalLen ] = '\0';
 
-	TrackString_Realloc( STR_FILE_LINE_INT out, totalLen + 1, data );
+	str_track_realloc( STR_FILE_LINE_INT out, totalLen + 1, data );
 
 	ch_free( lengths );
 
@@ -902,15 +826,15 @@ ch_string ch_str_join( STR_FILE_LINE_DEF u64 count, const char** strings, char* 
 }
 
 
-ch_string ch_str_join( STR_FILE_LINE_DEF u64 count, const char** strings, const u64* lengths, char* data )
+ch_string ch_str_join( STR_FILE_LINE_DEF size_t count, const char** strings, const size_t* lengths, char* data )
 {
 	ch_string outString;
 	outString.data = nullptr;
 	outString.size = 0;
 
-	u64 totalLen   = 0;
+	size_t totalLen   = 0;
 
-	for ( u64 i = 0; i < count; i++ )
+	for ( size_t i = 0; i < count; i++ )
 		totalLen += lengths[ i ];
 
 	char* out = ch_realloc< char >( data, totalLen + 1 );
@@ -921,19 +845,19 @@ ch_string ch_str_join( STR_FILE_LINE_DEF u64 count, const char** strings, const 
 		return outString;
 	}
 
-	u64 offset = 0;
+	size_t offset = 0;
 
 #if 1
-	for ( u64 i = 0; i < count; i++ )
+	for ( size_t i = 0; i < count; i++ )
 	{
 		memcpy( out + offset, strings[ i ], lengths[ i ] );
 		offset += lengths[ i ];
 	}
 #elif 0  // slightly slower than memcpy
-	for ( u64 i = 0; i < count; i++ )
+	for ( size_t i = 0; i < count; i++ )
 	{
 		char* outOffset = out + offset;
-		for ( u64 j = 0; j < lengths[ i ]; j++ )
+		for ( size_t j = 0; j < lengths[ i ]; j++ )
 		{
 			// memcpy( out + offset, strings[ i ], lengths[ i ] );
 			outOffset[ j ] = strings[ i ][ j ];
@@ -948,10 +872,10 @@ ch_string ch_str_join( STR_FILE_LINE_DEF u64 count, const char** strings, const 
 	CH_ASSERT( 0 );
 
 	char* outOffset = out;
-	u64   remaining = count;
+	size_t   remaining = count;
 	while ( remaining-- )
 	{
-		u64   strRemain = *lengths;
+		size_t   strRemain = *lengths;
 		char* str       = (char*)*strings;
 		while ( strRemain-- )
 		{
@@ -965,7 +889,7 @@ ch_string ch_str_join( STR_FILE_LINE_DEF u64 count, const char** strings, const 
 
 	out[ totalLen ] = '\0';
 
-	TrackString_Realloc( STR_FILE_LINE_INT out, totalLen + 1, data );
+	str_track_realloc( STR_FILE_LINE_INT out, totalLen + 1, data );
 
 	outString.data = out;
 	outString.size = totalLen;
@@ -973,21 +897,21 @@ ch_string ch_str_join( STR_FILE_LINE_DEF u64 count, const char** strings, const 
 }
 
 
-ch_string ch_str_join( STR_FILE_LINE_DEF u64 count, std::vector< const char* >& strings, const std::vector< u64 >& lengths, char* data )
+ch_string ch_str_join( STR_FILE_LINE_DEF size_t count, std::vector< const char* >& strings, const std::vector< size_t >& lengths, char* data )
 {
 	return ch_str_join( STR_FILE_LINE_INT count, strings.data(), lengths.data(), data );
 }
 
 
-ch_string ch_str_join( STR_FILE_LINE_DEF u64 count, const ch_string* strings, char* data )
+ch_string ch_str_join( STR_FILE_LINE_DEF size_t count, const ch_string* strings, char* data )
 {
 	ch_string outString;
 	outString.data = nullptr;
 	outString.size = 0;
 
-	u64 totalLen   = 0;
+	size_t totalLen   = 0;
 
-	for ( u64 i = 0; i < count; i++ )
+	for ( size_t i = 0; i < count; i++ )
 		totalLen += strings[ i ].size;
 
 	char* out = ch_realloc< char >( data, totalLen + 1 );
@@ -998,9 +922,9 @@ ch_string ch_str_join( STR_FILE_LINE_DEF u64 count, const ch_string* strings, ch
 		return outString;
 	}
 
-	u64 offset = 0;
+	size_t offset = 0;
 
-	for ( u64 i = 0; i < count; i++ )
+	for ( size_t i = 0; i < count; i++ )
 	{
 		memcpy( out + offset, strings[ i ].data, strings[ i ].size );
 		offset += strings[ i ].size;
@@ -1008,7 +932,7 @@ ch_string ch_str_join( STR_FILE_LINE_DEF u64 count, const ch_string* strings, ch
 
 	out[ totalLen ] = '\0';
 
-	TrackString_Realloc( STR_FILE_LINE_INT out, totalLen + 1, data );
+	str_track_realloc( STR_FILE_LINE_INT out, totalLen + 1, data );
 
 	outString.data = out;
 	outString.size = totalLen;
@@ -1019,7 +943,7 @@ ch_string ch_str_join( STR_FILE_LINE_DEF u64 count, const ch_string* strings, ch
 // --------------------------------------------------------------------------
 
 
-ch_string ch_str_join_space( STR_FILE_LINE_DEF u64 count, const char** strings, const char* space, char* data )
+ch_string ch_str_join_space( STR_FILE_LINE_DEF size_t count, const char** strings, const char* space, char* data )
 {
 	ch_string outString;
 	outString.data = nullptr;
@@ -1028,23 +952,23 @@ ch_string ch_str_join_space( STR_FILE_LINE_DEF u64 count, const char** strings, 
 	if ( !space )
 		space = " ";
 
-	u64  totalLen = 0;
+	size_t  totalLen = 0;
 
-	u64* lengths  = ch_malloc< u64 >( count );
+	size_t* lengths  = ch_malloc< size_t >( count );
 
 	if ( lengths == nullptr )
 	{
-		ch_printf( "Failed to allocate %d bytes for string length array!\n", count * sizeof( u64 ) );
+		ch_printf( "Failed to allocate %d bytes for string length array!\n", count * sizeof( size_t ) );
 		return outString;
 	}
 
-	for ( u64 i = 0; i < count; i++ )
+	for ( size_t i = 0; i < count; i++ )
 	{
 		lengths[ i ] = strlen( strings[ i ] );
 		totalLen += lengths[ i ];
 	}
 
-	u64 spaceLen = strlen( space );
+	size_t spaceLen = strlen( space );
 	totalLen += ( count - 1 ) * spaceLen;
 
 	char* out = ch_realloc< char >( data, totalLen + 1 );
@@ -1055,8 +979,8 @@ ch_string ch_str_join_space( STR_FILE_LINE_DEF u64 count, const char** strings, 
 		return outString;
 	}
 
-	u64 offset = 0;
-	for ( u64 i = 0; i < count; i++ )
+	size_t offset = 0;
+	for ( size_t i = 0; i < count; i++ )
 	{
 		memcpy( out + offset, strings[ i ], lengths[ i ] );
 		offset += lengths[ i ];
@@ -1070,7 +994,7 @@ ch_string ch_str_join_space( STR_FILE_LINE_DEF u64 count, const char** strings, 
 
 	out[ totalLen ] = '\0';
 
-	TrackString_Realloc( STR_FILE_LINE_INT out, totalLen + 1, data );
+	str_track_realloc( STR_FILE_LINE_INT out, totalLen + 1, data );
 
 	outString.data = out;
 	outString.size = totalLen;
@@ -1078,7 +1002,7 @@ ch_string ch_str_join_space( STR_FILE_LINE_DEF u64 count, const char** strings, 
 }
 
 
-ch_string ch_str_join_space( STR_FILE_LINE_DEF u64 count, const char** strings, const u64* lengths, const char* space, char* data )
+ch_string ch_str_join_space( STR_FILE_LINE_DEF size_t count, const char** strings, const size_t* lengths, const char* space, char* data )
 {
 	ch_string outString;
 	outString.data = nullptr;
@@ -1087,11 +1011,11 @@ ch_string ch_str_join_space( STR_FILE_LINE_DEF u64 count, const char** strings, 
 	if ( !space )
 		space = " ";
 
-	u64 totalLen = 0;
-	for ( u64 i = 0; i < count; i++ )
+	size_t totalLen = 0;
+	for ( size_t i = 0; i < count; i++ )
 		totalLen += lengths[ i ];
 
-	u64 spaceLen = strlen( space );
+	size_t spaceLen = strlen( space );
 	totalLen += ( count - 1 ) * spaceLen;
 
 	char* out = ch_realloc< char >( data, totalLen + 1 );
@@ -1102,8 +1026,8 @@ ch_string ch_str_join_space( STR_FILE_LINE_DEF u64 count, const char** strings, 
 		return outString;
 	}
 
-	u64 offset = 0;
-	for ( u64 i = 0; i < count; i++ )
+	size_t offset = 0;
+	for ( size_t i = 0; i < count; i++ )
 	{
 		memcpy( out + offset, strings[ i ], lengths[ i ] );
 		offset += lengths[ i ];
@@ -1117,7 +1041,7 @@ ch_string ch_str_join_space( STR_FILE_LINE_DEF u64 count, const char** strings, 
 
 	out[ totalLen ] = '\0';
 
-	TrackString_Realloc( STR_FILE_LINE_INT out, totalLen + 1, data );
+	str_track_realloc( STR_FILE_LINE_INT out, totalLen + 1, data );
 
 	outString.data = out;
 	outString.size = totalLen;
@@ -1125,7 +1049,7 @@ ch_string ch_str_join_space( STR_FILE_LINE_DEF u64 count, const char** strings, 
 }
 
 
-ch_string ch_str_join_space( STR_FILE_LINE_DEF u64 count, const ch_string* strings, const char* space, char* data )
+ch_string ch_str_join_space( STR_FILE_LINE_DEF size_t count, const ch_string* strings, const char* space, char* data )
 {
 	ch_string outString;
 	outString.data = nullptr;
@@ -1134,11 +1058,11 @@ ch_string ch_str_join_space( STR_FILE_LINE_DEF u64 count, const ch_string* strin
 	if ( !space )
 		space = " ";
 
-	u64 totalLen = 0;
-	for ( u64 i = 0; i < count; i++ )
+	size_t totalLen = 0;
+	for ( size_t i = 0; i < count; i++ )
 		totalLen += strings[ i ].size;
 
-	u64 spaceLen = strlen( space );
+	size_t spaceLen = strlen( space );
 	totalLen += ( count - 1 ) * spaceLen;
 
 	char* out = ch_realloc< char >( data, totalLen + 1 );
@@ -1149,8 +1073,8 @@ ch_string ch_str_join_space( STR_FILE_LINE_DEF u64 count, const ch_string* strin
 		return outString;
 	}
 
-	u64 offset = 0;
-	for ( u64 i = 0; i < count; i++ )
+	size_t offset = 0;
+	for ( size_t i = 0; i < count; i++ )
 	{
 		memcpy( out + offset, strings[ i ].data, strings[ i ].size );
 		offset += strings[ i ].size;
@@ -1164,7 +1088,7 @@ ch_string ch_str_join_space( STR_FILE_LINE_DEF u64 count, const ch_string* strin
 
 	out[ totalLen ] = '\0';
 
-	TrackString_Realloc( STR_FILE_LINE_INT out, totalLen + 1, data );
+	str_track_realloc( STR_FILE_LINE_INT out, totalLen + 1, data );
 
 	outString.data = out;
 	outString.size = totalLen;
@@ -1172,7 +1096,7 @@ ch_string ch_str_join_space( STR_FILE_LINE_DEF u64 count, const ch_string* strin
 }
 
 
-ch_string ch_str_join_arr( STR_FILE_LINE_DEF char* data, u64 count, const char* string, ... )
+ch_string ch_str_join_arr( STR_FILE_LINE_DEF char* data, size_t count, const char* string, ... )
 {
 	ch_string outString;
 	outString.data = nullptr;
@@ -1184,12 +1108,12 @@ ch_string ch_str_join_arr( STR_FILE_LINE_DEF char* data, u64 count, const char* 
 		return outString;
 	}
 
-	u64  totalLen  = 0;
-	u64* lengths   = ch_malloc< u64 >( count );
+	size_t  totalLen  = 0;
+	size_t* lengths   = ch_malloc< size_t >( count );
 
 	if ( lengths == nullptr )
 	{
-		ch_printf( "Failed to allocate %d bytes for string length array!\n", count * sizeof( u64 ) );
+		ch_printf( "Failed to allocate %d bytes for string length array!\n", count * sizeof( size_t ) );
 		return outString;
 	}
 
@@ -1202,7 +1126,7 @@ ch_string ch_str_join_arr( STR_FILE_LINE_DEF char* data, u64 count, const char* 
 	lengths[ 0 ] = strlen( string );
 	totalLen += lengths[ 0 ];
 
-	for ( u64 i = 1; i < count; i++ )
+	for ( size_t i = 1; i < count; i++ )
 	{
 		const char* arg = va_arg( args_copy, const char* );
 
@@ -1231,8 +1155,8 @@ ch_string ch_str_join_arr( STR_FILE_LINE_DEF char* data, u64 count, const char* 
 
 	memcpy( out, string, lengths[ 0 ] );
 
-	u64 offset = lengths[ 0 ];
-	for ( u64 i = 1; i < count; i++ )
+	size_t offset = lengths[ 0 ];
+	for ( size_t i = 1; i < count; i++ )
 	{
 		const char* arg = va_arg( args, const char* );
 
@@ -1250,7 +1174,7 @@ ch_string ch_str_join_arr( STR_FILE_LINE_DEF char* data, u64 count, const char* 
 	outString.data  = out;
 	outString.size  = totalLen;
 
-	TrackString_Realloc( STR_FILE_LINE_INT outString.data, outString.size + 1, data );
+	str_track_realloc( STR_FILE_LINE_INT outString.data, outString.size + 1, data );
 
 	return outString;
 }
@@ -1262,16 +1186,16 @@ ch_string ch_str_join_list( STR_FILE_LINE_DEF char* data, std::initializer_list<
 	outString.data = nullptr;
 	outString.size = 0;
 
-	u64  totalLen  = 0;
-	u64* lengths   = ch_malloc< u64 >( strings.size() );
+	size_t  totalLen  = 0;
+	size_t* lengths   = ch_malloc< size_t >( strings.size() );
 
 	if ( lengths == nullptr )
 	{
-		ch_printf( "Failed to allocate %d bytes for string length array!\n", strings.size() * sizeof( u64 ) );
+		ch_printf( "Failed to allocate %d bytes for string length array!\n", strings.size() * sizeof( size_t ) );
 		return outString;
 	}
 
-	u64 i = 0;
+	size_t i = 0;
 	for ( const char* arg : strings )
 	{
 		if ( arg == nullptr )
@@ -1295,7 +1219,7 @@ ch_string ch_str_join_list( STR_FILE_LINE_DEF char* data, std::initializer_list<
 		return outString;
 	}
 
-	u64 offset = 0;
+	size_t offset = 0;
 	i = 0;
 	for ( const char* arg : strings )
 	{
@@ -1312,7 +1236,7 @@ ch_string ch_str_join_list( STR_FILE_LINE_DEF char* data, std::initializer_list<
 	outString.data  = out;
 	outString.size  = totalLen;
 
-	TrackString_Realloc( STR_FILE_LINE_INT outString.data, outString.size + 1, data );
+	str_track_realloc( STR_FILE_LINE_INT outString.data, outString.size + 1, data );
 
 	return outString;
 }
@@ -1324,9 +1248,9 @@ ch_string ch_str_join_list( STR_FILE_LINE_DEF char* data, std::initializer_list<
 	outString.data = nullptr;
 	outString.size = 0;
 
-	u64  totalLen  = 0;
+	size_t  totalLen  = 0;
 
-	u64 i = 0;
+	size_t i = 0;
 	for ( const ch_string& arg : strings )
 	{
 		if ( arg.data == nullptr )
@@ -1347,7 +1271,7 @@ ch_string ch_str_join_list( STR_FILE_LINE_DEF char* data, std::initializer_list<
 		return outString;
 	}
 
-	u64 offset = 0;
+	size_t offset = 0;
 	i = 0;
 	for ( const ch_string& arg : strings )
 	{
@@ -1361,7 +1285,7 @@ ch_string ch_str_join_list( STR_FILE_LINE_DEF char* data, std::initializer_list<
 	outString.data  = out;
 	outString.size  = totalLen;
 
-	TrackString_Realloc( STR_FILE_LINE_INT outString.data, outString.size + 1, data );
+	str_track_realloc( STR_FILE_LINE_INT outString.data, outString.size + 1, data );
 
 	return outString;
 }
@@ -1373,29 +1297,36 @@ ch_string ch_str_join_list( STR_FILE_LINE_DEF char* data, std::initializer_list<
 
 void ch_str_free( char* string )
 {
-	if ( string == nullptr )
-	{
-		ch_print( "Attempted to free nullptr string!\n" );
+	if ( !string )
 		return;
-	}
 
-	TrackString_Free( string );
+	str_track_free( string );
 	ch_free( string );
 }
 
 
-void ch_str_free( char** strings, u64 count )
+void ch_str_free( ch_string string )
 {
-	for ( u64 i = 0; i < count; i++ )
+	if ( !string.data )
+		return;
+
+	str_track_free( string.data );
+	ch_free( string.data );
+}
+
+
+void ch_str_free( char** strings, size_t count )
+{
+	for ( size_t i = 0; i < count; i++ )
 	{
 		ch_str_free( strings[ i ] );
 	}
 }
 
 
-void ch_str_free( ch_string* strings, u64 count )
+void ch_str_free( ch_string* strings, size_t count )
 {
-	for ( u64 i = 0; i < count; i++ )
+	for ( size_t i = 0; i < count; i++ )
 	{
 		ch_str_free( strings[ i ].data );
 	}
@@ -1423,7 +1354,7 @@ void ch_str_add( STR_FILE_LINE_DEF const char* string )
 		return;
 	}
 
-	u64 len = strlen( string );
+	size_t len = strlen( string );
 
 	if ( len == 0 )
 	{
@@ -1431,44 +1362,44 @@ void ch_str_add( STR_FILE_LINE_DEF const char* string )
 		return;
 	}
 
-	TrackString_Alloc( STR_FILE_LINE_INT string, len );
+	str_track_alloc( STR_FILE_LINE_INT string, len );
 }
 
 
-void ch_str_add( STR_FILE_LINE_DEF const char* string, u64 len )
+void ch_str_add( STR_FILE_LINE_DEF const char* string, size_t len )
 {
-	TrackString_Alloc( STR_FILE_LINE_INT string, len );
+	str_track_alloc( STR_FILE_LINE_INT string, len );
 }
 
 
 void ch_str_add( STR_FILE_LINE_DEF const ch_string& string )
 {
-	TrackString_Alloc( STR_FILE_LINE_INT string.data, string.size );
+	str_track_alloc( STR_FILE_LINE_INT string.data, string.size );
 }
 
 
 void ch_str_remove( const char* string )
 {
-	TrackString_Free( string );
+	str_track_free( string );
 }
 
 
-u64 ch_str_get_alloc_count()
+size_t ch_str_get_alloc_count()
 {
 #if CH_STRING_MEM_TRACKING
-	return (u64)GetTrackedStrings().size();
+	return (size_t)str_track_get().size();
 #else
 	return 0;
 #endif
 }
 
 
-u64 ch_str_get_alloc_size()
+size_t ch_str_get_alloc_size()
 {
 #if CH_STRING_MEM_TRACKING
-	u64 size = 0;
+	size_t size = 0;
 
-	for ( auto& [ ptr, track_data ] : GetTrackedStrings() )
+	for ( auto& [ ptr, track_data ] : str_track_get() )
 	{
 		size += track_data.size;
 	}
@@ -1483,7 +1414,7 @@ u64 ch_str_get_alloc_size()
 void ch_str_free_all()
 {
 #if CH_STRING_MEM_TRACKING
-	ch_string_track_map& strings = GetTrackedStrings();
+	ch_string_track_map& strings = str_track_get();
 	u32                  size    = strings.size();
 
 	if ( size == 0 )
@@ -1505,7 +1436,7 @@ void ch_str_free_all()
 // String Equality
 
 
-bool ch_str_equals_base( const char* s1, const char* s2, u64 len )
+bool ch_str_equals_base( const char* s1, const char* s2, size_t len )
 
 {
 #if 01
@@ -1536,8 +1467,8 @@ bool ch_str_equals( const char* str1, const char* str2 )
 	if ( str1 == str2 )
 		return true;
 
-	u64 str1Len = strlen( str1 );
-	u64 str2Len = strlen( str2 );
+	size_t str1Len = strlen( str1 );
+	size_t str2Len = strlen( str2 );
 
 	if ( str1Len != str2Len )
 		return false;
@@ -1546,7 +1477,7 @@ bool ch_str_equals( const char* str1, const char* str2 )
 }
 
 
-bool ch_str_equals( const char* str1, const char* str2, u64 count )
+bool ch_str_equals( const char* str1, const char* str2, size_t count )
 {
 	if ( str1 == nullptr || str2 == nullptr )
 		return false;
@@ -1555,7 +1486,7 @@ bool ch_str_equals( const char* str1, const char* str2, u64 count )
 	if ( str1 == str2 )
 		return true;
 
-	u64 str1Len = strlen( str1 );
+	size_t str1Len = strlen( str1 );
 
 	if ( str1Len != count )
 		return false;
@@ -1564,7 +1495,7 @@ bool ch_str_equals( const char* str1, const char* str2, u64 count )
 }
 
 
-bool ch_str_equals( const char* str1, u64 str1Len, const char* str2 )
+bool ch_str_equals( const char* str1, size_t str1Len, const char* str2 )
 {
 	// TODO: technically, if both string lengths are 0, they are equal
 	if ( str1 == nullptr || str2 == nullptr /*|| str1Len == 0*/ )
@@ -1574,7 +1505,7 @@ bool ch_str_equals( const char* str1, u64 str1Len, const char* str2 )
 	if ( str1 == str2 )
 		return true;
 
-	u64 str2Len = strlen( str2 );
+	size_t str2Len = strlen( str2 );
 
 	if ( str1Len != str2Len )
 		return false;
@@ -1583,7 +1514,7 @@ bool ch_str_equals( const char* str1, u64 str1Len, const char* str2 )
 }
 
 
-bool ch_str_equals( const char* str1, u64 str1Len, const char* str2, u64 str2Len )
+bool ch_str_equals( const char* str1, size_t str1Len, const char* str2, size_t str2Len )
 {
 	if ( str1 == nullptr || str2 == nullptr || str1Len != str2Len )
 		return false;
@@ -1606,7 +1537,7 @@ bool ch_str_equals( const ch_string& str1, const char* str2 )
 }
 
 
-bool ch_str_equals( const ch_string& str1, const char* str2, u64 str2Len )
+bool ch_str_equals( const ch_string& str1, const char* str2, size_t str2Len )
 {
 	return ch_str_equals( str1.data, str1.size, str2, str2Len );
 }
@@ -1624,7 +1555,7 @@ bool ch_str_equals( const ch_string_auto& str1, const char* str2 )
 }
 
 
-bool ch_str_equals( const ch_string_auto& str1, const char* str2, u64 str2Len )
+bool ch_str_equals( const ch_string_auto& str1, const char* str2, size_t str2Len )
 {
 	return ch_str_equals( str1.data, str1.size, str2, str2Len );
 }
@@ -1645,12 +1576,12 @@ bool ch_str_equals( const ch_string& str1, const ch_string_auto& str2 )
 // --------------------------------------------------------------------------
 
 
-bool ch_str_equals_any( const ch_string& str1, u64 count, const char** strings )
+bool ch_str_equals_any( const ch_string& str1, size_t count, const char** strings )
 {
 	if ( !strings )
 		return false;
 
-	for ( u64 i = 0; i < count; i++ )
+	for ( size_t i = 0; i < count; i++ )
 	{
 		if ( ch_str_equals( str1.data, str1.size, strings[ i ] ) )
 			return true;
@@ -1660,12 +1591,12 @@ bool ch_str_equals_any( const ch_string& str1, u64 count, const char** strings )
 }
 
 
-bool ch_str_equals_any( const char* str1, u64 strLen, u64 count, const char** strings )
+bool ch_str_equals_any( const char* str1, size_t strLen, size_t count, const char** strings )
 {
 	if ( !strings )
 		return false;
 
-	for ( u64 i = 0; i < count; i++ )
+	for ( size_t i = 0; i < count; i++ )
 	{
 		if ( ch_str_equals( str1, strLen, strings[ i ] ) )
 			return true;
@@ -1675,7 +1606,7 @@ bool ch_str_equals_any( const char* str1, u64 strLen, u64 count, const char** st
 }
 
 
-bool ch_str_equals_any( const char* str1, u64 strLen, u64 count, const char** strings, u64* lengths )
+bool ch_str_equals_any( const char* str1, size_t strLen, size_t count, const char** strings, size_t* lengths )
 {
 	if ( !lengths )
 		return false;
@@ -1683,7 +1614,7 @@ bool ch_str_equals_any( const char* str1, u64 strLen, u64 count, const char** st
 	if ( !strings )
 		return false;
 
-	for ( u64 i = 0; i < count; i++ )
+	for ( size_t i = 0; i < count; i++ )
 	{
 		if ( ch_str_equals( str1, strLen, strings[ i ], lengths[ i ] ) )
 			return true;
@@ -1693,7 +1624,7 @@ bool ch_str_equals_any( const char* str1, u64 strLen, u64 count, const char** st
 }
 
 
-bool ch_str_equals_any( const ch_string& str1, u64 count, const char** strings, u64* lengths )
+bool ch_str_equals_any( const ch_string& str1, size_t count, const char** strings, size_t* lengths )
 {
 	if ( !lengths )
 		return false;
@@ -1701,7 +1632,7 @@ bool ch_str_equals_any( const ch_string& str1, u64 count, const char** strings, 
 	if ( !strings )
 		return false;
 
-	for ( u64 i = 0; i < count; i++ )
+	for ( size_t i = 0; i < count; i++ )
 	{
 		if ( ch_str_equals( str1.data, str1.size, strings[ i ], lengths[ i ] ) )
 			return true;
@@ -1711,12 +1642,12 @@ bool ch_str_equals_any( const ch_string& str1, u64 count, const char** strings, 
 }
 
 
-bool ch_str_equals_any( const ch_string& str1, u64 count, const ch_string* strings )
+bool ch_str_equals_any( const ch_string& str1, size_t count, const ch_string* strings )
 {
 	if ( !strings )
 		return false;
 
-	for ( u64 i = 0; i < count; i++ )
+	for ( size_t i = 0; i < count; i++ )
 	{
 		if ( ch_str_equals( str1.data, str1.size, strings[ i ].data, strings[ i ].size ) )
 			return true;
@@ -1726,189 +1657,12 @@ bool ch_str_equals_any( const ch_string& str1, u64 count, const ch_string* strin
 }
 
 
-#if 0  // _WIN32
-bool ch_streq( const wchar_t* str1, const wchar_t* str2 )
-{
-	if ( str1 == nullptr || str2 == nullptr )
-		return false;
-
-	u64 len = wcslen( str1 );
-
-	// if ( len != wcslen( str2 ) )
-	// 	return false;
-
-	return ch_streq_base( str1, str2, len );
-}
-
-
-bool ch_strneq( const wchar_t* str1, const wchar_t* str2, u64 count )
-{
-	if ( str1 == nullptr || str2 == nullptr )
-		return false;
-
-	return ch_streq_base( str1, str2, count );
-}
-
-
-bool ch_streq( const char* str1, const wchar_t* str2 )
-{
-	if ( str1 == nullptr || str2 == nullptr )
-		return false;
-
-	u64 len = strlen( str1 );
-
-	// if ( len != wcslen( str2 ) )
-	// 	return false;
-
-	wchar_t* wStr1 = Sys_ToWideChar( str1, len );
-
-	bool ret = ch_streq_base( wStr1, str2, len );
-
-	ch_free( wStr1 );
-
-	return ret;
-}
-
-
-bool ch_strneq( const char* str1, const wchar_t* str2, u64 count )
-{
-	if ( str1 == nullptr || str2 == nullptr )
-		return false;
-
-	wchar_t* wStr1 = Sys_ToWideChar( str1, count );
-
-	bool ret = ch_streq_base( wStr1, str2, count );
-
-	ch_free( wStr1 );
-
-	return ret;
-}
-
-
-bool ch_streq( const wchar_t* str1, const char* str2 )
-{
-	return ch_streq( str2, str1 );
-}
-
-
-bool ch_strneq( const wchar_t* str1, const char* str2, u64 count )
-{
-	return ch_strneq( str2, str1, count );
-}
-#endif
-
-
-// ----------------------------------------------------------------------------------------
-// Creation and Deletion
-// ----------------------------------------------------------------------------------------
-
-
-template <typename CH_STR_TYPE, typename STR_TYPE>
-bolean ch_str_create_base( CH_STR_TYPE& s, const STR_TYPE* str, const size_t strLen )
-{
-	s = ch_str_copy( STR_FILE_LINE str, strLen );
-
-	if ( !s.data )
-		return false;
-
-	return true;
-}
-
-
-CORE_API bool ch_str_create( ch_string& s, const char* str )
-{
-	if ( !str )
-		return false;
-
-	return ch_str_create_base( s, str, strlen( str ) );
-}
-
-/*
-CORE_API bool ch_str_create( ch_ustring& s, const uchar* str )
-{
-	if ( !str )
-		return false;
-
-	return ch_str_create_base( s, str, ch_ustrlen( str ) );
-}*/
-
-
-CORE_API bool ch_str_create( ch_string& s, const char* str, u64 len )
-{
-	if ( !str )
-		return false;
-
-	return ch_str_create_base( s, str, len );
-}
-
-/*
-CORE_API bool ch_str_create( ch_ustring& s, const uchar* str, u32 len )
-{
-	if ( !str )
-		return false;
-
-	return ch_str_create_base( s, str, len );
-}*/
-
-
-CORE_API ch_string ch_str_create( const char* str )
-{
-	ch_string s;
-	ch_str_create( s, str );
-	return s;
-}
-
-/*
-CORE_API ch_ustring ch_str_create( const uchar* str )
-{
-	ch_ustring s;
-	ch_str_create( s, str );
-	return s;
-}
-*/
-
-CORE_API ch_string ch_str_create( const char* str, u64 len )
-{
-	ch_string s;
-	ch_str_create( s, str, len );
-	return s;
-}
-
-/*
-CORE_API ch_ustring ch_str_create( const uchar* str, u32 len )
-{
-	ch_ustring s;
-	ch_str_create( s, str, len );
-	return s;
-}
-*/
-
-CORE_API void ch_str_destroy( ch_string& s )
-{
-	if ( s.data )
-		ch_str_free( s.data );
-
-	s.data = 0;
-	s.size = 0;
-}
-
-/*
-CORE_API void ch_str_destroy( ch_ustring& s )
-{
-	if ( s.data )
-		ch_str_free( s.data );
-
-	s.data = 0;
-	s.size = 0;
-}
-*/
-
 // ----------------------------------------------------------------------------------------
 // Comparison
 // ----------------------------------------------------------------------------------------
 
 
-bool ch_str_compare_base( const char* s1, const char* s2, u64 len )
+bool ch_str_compare_base( const char* s1, const char* s2, size_t len )
 {
 	const char*       cur1 = s1;
 	const char*       cur2 = s2;
@@ -1974,7 +1728,7 @@ bool ch_str_compare( const ch_ustring& s1, const uchar* s2 )
 }
 */
 
-bool ch_str_compare( const ch_string& s1, const char* s2, u64 len )
+bool ch_str_compare( const ch_string& s1, const char* s2, size_t len )
 {
 	if ( !s2 )
 		return 1;
@@ -2040,7 +1794,7 @@ bool ch_str_append( ch_ustring& dest, const ch_ustring& src )
 }
 
 
-bool ch_str_append( ch_string& dest, const char* src, u64 len )
+bool ch_str_append( ch_string& dest, const char* src, size_t len )
 {
 	size_t oldSize = dest.size;
 	dest.size += len;
@@ -2147,7 +1901,7 @@ bool ch_str_append( ch_ustring& dest, const ch_ustring* srcList, const size_t sC
 
 
 template< typename CH_STR, typename STR_TYPE >
-bool ch_str_assign_base( CH_STR& dest, const STR_TYPE* src, u64 len, STR_TYPE nullTerminator )
+bool ch_str_assign_base( CH_STR& dest, const STR_TYPE* src, size_t len, STR_TYPE nullTerminator )
 {
 	if ( !src )
 		return false;
@@ -2200,7 +1954,7 @@ bool ch_str_assign( ch_ustring& dest, const uchar* src )
 }
 
 
-bool ch_str_assign( ch_string& dest, const char* src, u64 len )
+bool ch_str_assign( ch_string& dest, const char* src, size_t len )
 {
 	return ch_str_assign_base( dest, src, len, '\0' );
 }
@@ -2248,12 +2002,12 @@ CORE_API bool ch_str_convert( ch_ustring& dest, const ch_string& src )
 
 
 
-bool ch_str_starts_with( const char* s, u64 len, const char* start )
+bool ch_str_starts_with( const char* s, size_t len, const char* start )
 {
 	if ( !s || !start )
 		return false;
 
-	u64 startLen = strlen( start );
+	size_t startLen = strlen( start );
 
 	if ( startLen == 0 )
 		return false;
@@ -2268,7 +2022,7 @@ bool ch_str_starts_with( const char* s, u64 len, const char* start )
 }
 
 
-bool ch_str_starts_with( const char* s, u64 len, const char* start, u64 startLen )
+bool ch_str_starts_with( const char* s, size_t len, const char* start, size_t startLen )
 {
 	if ( !s || !start )
 		return false;
@@ -2290,7 +2044,7 @@ bool ch_str_starts_with( const char* s, const char* start )
 	if ( !s || !start )
 		return false;
 
-	u64 startLen = strlen( start );
+	size_t startLen = strlen( start );
 
 	if ( startLen == 0 )
 		return false;
@@ -2299,7 +2053,7 @@ bool ch_str_starts_with( const char* s, const char* start )
 }
 
 
-bool ch_str_starts_with( const char* s, const char* start, u64 startLen )
+bool ch_str_starts_with( const char* s, const char* start, size_t startLen )
 {
 	if ( !s || !start )
 		return false;
@@ -2317,7 +2071,7 @@ bool ch_str_starts_with( const ch_string& s, const char* start )
 }
 
 
-bool ch_str_starts_with( const ch_string& s, const char* start, u64 startLen )
+bool ch_str_starts_with( const ch_string& s, const char* start, size_t startLen )
 {
 	return ch_str_starts_with( s.data, s.size, start, startLen );
 }
@@ -2332,12 +2086,12 @@ bool ch_str_starts_with( const ch_string& s, const ch_string& start )
 // ----------------------------------------------------------------------------------------
 
 
-bool ch_str_ends_with( const char* s, u64 len, const char* end )
+bool ch_str_ends_with( const char* s, size_t len, const char* end )
 {
 	if ( !s || !end )
 		return false;
 
-	u64 endLen = strlen( end );
+	size_t endLen = strlen( end );
 
 	if ( len == 0 )
 		len = strlen( s );
@@ -2349,7 +2103,7 @@ bool ch_str_ends_with( const char* s, u64 len, const char* end )
 }
 
 
-bool ch_str_ends_with( const char* s, u64 len, const char* end, u64 endLen )
+bool ch_str_ends_with( const char* s, size_t len, const char* end, size_t endLen )
 {
 	if ( !s || !end )
 		return false;
@@ -2378,8 +2132,8 @@ bool ch_str_ends_with( const char* s, const char* end )
 	if ( !s || !end )
 		return false;
 
-	u64 len = strlen( s );
-	u64 endLen = strlen( end );
+	size_t len = strlen( s );
+	size_t endLen = strlen( end );
 
 	if ( len < endLen )
 		return false;
@@ -2388,12 +2142,12 @@ bool ch_str_ends_with( const char* s, const char* end )
 }
 
 
-bool ch_str_ends_with( const char* s, const char* end, u64 endLen )
+bool ch_str_ends_with( const char* s, const char* end, size_t endLen )
 {
 	if ( !s || !end )
 		return false;
 
-	u64 len = strlen( s );
+	size_t len = strlen( s );
 
 	if ( len < endLen )
 		return false;
@@ -2408,7 +2162,7 @@ bool ch_str_ends_with( const ch_string& s, const char* end )
 }
 
 
-bool ch_str_ends_with( const ch_string& s, const char* end, u64 endLen )
+bool ch_str_ends_with( const ch_string& s, const char* end, size_t endLen )
 {
 	return ch_str_ends_with( s.data, s.size, end, endLen );
 }
@@ -2425,12 +2179,12 @@ bool ch_str_ends_with( const ch_string& s, const ch_string& end )
 
 // returns the index of the first instance of find in s
 // returns SIZE_MAX if not found
-u64 ch_str_contains_base( const char* s, u64 len, const char* find, u64 findLen )
+size_t ch_str_contains_base( const char* s, size_t len, const char* find, size_t findLen )
 {
 	if ( !s || !find || len == 0 || findLen == 0 || len < findLen )
 		return SIZE_MAX;
 
-	for ( u64 i = 0; i < len - findLen; i++ )
+	for ( size_t i = 0; i < len - findLen; i++ )
 	{
 		if ( ch_str_compare_base( s + i, find, findLen ) )
 			return i;
@@ -2440,7 +2194,7 @@ u64 ch_str_contains_base( const char* s, u64 len, const char* find, u64 findLen 
 }
 
 
-u64 ch_str_contains( const char* s, u64 len, const char* find, u64 findLen )
+size_t ch_str_contains( const char* s, size_t len, const char* find, size_t findLen )
 {
 	if ( !s || !find )
 		return SIZE_MAX;
@@ -2458,35 +2212,35 @@ u64 ch_str_contains( const char* s, u64 len, const char* find, u64 findLen )
 }
 
 
-u64 ch_str_contains( const char* s, u64 len, const char* find )
+size_t ch_str_contains( const char* s, size_t len, const char* find )
 {
 	if ( !s || !find )
 		return SIZE_MAX;
 
-	u64 findLen = strlen( find );
+	size_t findLen = strlen( find );
 
 	return ch_str_contains_base( s, len, find, findLen );
 }
 
 
-u64 ch_str_contains( const char* s, const char* find )
+size_t ch_str_contains( const char* s, const char* find )
 {
 	if ( !s || !find )
 		return SIZE_MAX;
 
-	u64 len = strlen( s );
-	u64 findLen = strlen( find );
+	size_t len = strlen( s );
+	size_t findLen = strlen( find );
 
 	return ch_str_contains_base( s, len, find, findLen );
 }
 
 
-u64 ch_str_contains( const char* s, const char* find, u64 findLen )
+size_t ch_str_contains( const char* s, const char* find, size_t findLen )
 {
 	if ( !s || !find )
 		return SIZE_MAX;
 
-	u64 len = strlen( s );
+	size_t len = strlen( s );
 
 	return ch_str_contains_base( s, len, find, findLen );
 }
@@ -2500,7 +2254,7 @@ u64 ch_str_contains( const char* s, const char* find, u64 findLen )
 CONCMD( ch_dump_string_allocations )
 {
 #if CH_STRING_MEM_TRACKING
-	u32 size = GetTrackedStrings().size();
+	u32 size = str_track_get().size();
 
 	if ( size == 0 )
 	{
@@ -2509,11 +2263,11 @@ CONCMD( ch_dump_string_allocations )
 		return;
 	}
 
-	ch_string_track_map& trackedStrings = GetTrackedStrings();
+	ch_string_track_map& trackedStrings = str_track_get();
 
 	// hopefully this should never hit SIZE_MAX
 	// how would you even allocate that much memory?
-	u64                  totalSize      = 0;
+	size_t                  totalSize      = 0;
 
 	for ( const auto& [ ptr, track_data ] : trackedStrings )
 	{
@@ -2531,7 +2285,7 @@ CONCMD( ch_dump_string_allocations )
 CONCMD( ch_dump_string_allocations_extended )
 {
 #if CH_STRING_MEM_TRACKING
-	u32 size = GetTrackedStrings().size();
+	u32 size = str_track_get().size();
 
 	if ( size == 0 )
 	{
@@ -2542,11 +2296,11 @@ CONCMD( ch_dump_string_allocations_extended )
 
 	Log_MsgF( "Dumping %d string allocations:\n\n", size );
 
-	ch_string_track_map& trackedStrings = GetTrackedStrings();
+	ch_string_track_map& trackedStrings = str_track_get();
 
 	// hopefully this should never hit SIZE_MAX
 	// how would you even allocate that much memory?
-	u64                  totalSize      = 0;
+	size_t                  totalSize      = 0;
 
 	for ( const auto& [ ptr, track_data ] : trackedStrings )
 	{

@@ -508,20 +508,20 @@ struct CreateRenderTarget_t
 
 struct FramebufferPass_t
 {
-	ChVector< ChHandle_t > aAttachColors;
-	// ChVector< ChHandle_t > aAttachInput;
-	ChVector< ChHandle_t > aAttachResolve;
-	// ChVector< ChHandle_t > aAttachPreserve;
-	ChHandle_t             aAttachDepth = 0;
+	ChVector< ch_handle_t > aAttachColors;
+	// ChVector< ch_handle_t > aAttachInput;
+	ChVector< ch_handle_t > aAttachResolve;
+	// ChVector< ch_handle_t > aAttachPreserve;
+	ch_handle_t             aAttachDepth = 0;
 };
 
 
 struct CreateFramebuffer_t
 {
 	const char*       apName      = nullptr;
-	Handle            aRenderPass = InvalidHandle;
+	ch_handle_t            aRenderPass = CH_INVALID_HANDLE;
 	glm::uvec2        aSize{};
-	// const Handle*    aTextures = nullptr;
+	// const ch_handle_t*    aTextures = nullptr;
 	// u8               aTextureCount = 0;
 
 	FramebufferPass_t aPass{};
@@ -569,7 +569,7 @@ struct ColorBlendAttachment_t
 
 struct PipelineLayoutCreate_t
 {
-	ChVector< ChHandle_t >              aLayouts;
+	ChVector< ch_handle_t >              aLayouts;
 	ChVector< PushConstantRange_t > aPushConstants;
 };
 
@@ -578,7 +578,7 @@ struct ComputePipelineCreate_t
 {
 	const char*    apName = nullptr;
 	ShaderModule_t aShaderModule;
-	Handle         aPipelineLayout;
+	ch_handle_t         aPipelineLayout;
 };
 
 
@@ -598,8 +598,8 @@ struct GraphicsPipelineCreate_t
 	bool                               aDepthBiasEnable = false;
 	bool                               aLineMode        = false;
 
-	Handle                             aPipelineLayout;
-	Handle                             aRenderPass;
+	ch_handle_t                             aPipelineLayout;
+	ch_handle_t                             aRenderPass;
 };
 
 
@@ -644,8 +644,8 @@ struct RenderPassClear_t
 
 struct RenderPassBegin_t
 {
-	Handle                        aRenderPass  = InvalidHandle;
-	Handle                        aFrameBuffer = InvalidHandle;
+	ch_handle_t                        aRenderPass  = CH_INVALID_HANDLE;
+	ch_handle_t                        aFrameBuffer = CH_INVALID_HANDLE;
 
 	ChVector< RenderPassClear_t > aClear;
 };
@@ -673,14 +673,14 @@ struct WriteDescSetBinding_t
 	u32             aBinding = 0;
 
 	u32             aCount   = 0;
-	ChHandle_t*     apData   = nullptr;
+	ch_handle_t*     apData   = nullptr;
 };
 
 
 struct WriteDescSet_t
 {
 	u32                    aDescSetCount = 0;
-	ChHandle_t*            apDescSets    = nullptr;
+	ch_handle_t*            apDescSets    = nullptr;
 
 	u32                    aBindingCount = 0;
 	WriteDescSetBinding_t* apBindings    = nullptr;
@@ -690,7 +690,7 @@ struct WriteDescSet_t
 struct AllocVariableDescLayout_t
 {
 	const char* apName    = nullptr;
-	Handle      aLayout   = InvalidHandle;
+	ch_handle_t      aLayout   = CH_INVALID_HANDLE;
 	u32         aCount    = 0;
 	u32         aSetCount = 0;
 };
@@ -699,7 +699,7 @@ struct AllocVariableDescLayout_t
 struct AllocDescLayout_t
 {
 	const char* apName    = nullptr;
-	Handle      aLayout   = InvalidHandle;
+	ch_handle_t      aLayout   = CH_INVALID_HANDLE;
 	// u32         aCount    = 0;
 	u32         aSetCount = 0;
 };
@@ -725,7 +725,7 @@ struct GraphicsBufferMemoryBarrier_t
 	EGraphicsAccessFlags aSrcAccessMask;
 	EGraphicsAccessFlags aDstAccessMask;
 
-	ChHandle_t           aBuffer;
+	ch_handle_t           aBuffer;
 	size_t               aOffset;
 	size_t               aSize;
 };
@@ -739,7 +739,7 @@ struct GraphicsImageMemoryBarrier_t
 	EImageLayout            aOldLayout;
 	EImageLayout            aNewLayout;
 
-	ChHandle_t              aImage;
+	ch_handle_t              aImage;
 };
 
 
@@ -768,7 +768,7 @@ struct ReadTexture
 
 
 // Function callback for game code for when renderer gets reset
-typedef void ( *Render_OnReset_t )( ChHandle_t window, ERenderResetFlags sFlags );
+typedef void ( *Render_OnReset_t )( ch_handle_t window, ERenderResetFlags sFlags );
 
 // Callback Function for when Texture Indices in the descriptor is updated
 using Render_OnTextureIndexUpdate = void();
@@ -782,13 +782,13 @@ class IRender : public ISystem
 	// General Purpose Functions
 	// --------------------------------------------------------------------------------------------
 	  
-	virtual bool        InitImGui( Handle shRenderPass )                                                                               = 0;
+	virtual bool        InitImGui( ch_handle_t shRenderPass )                                                                               = 0;
 	virtual void        ShutdownImGui()                                                                                                = 0;
 	
-	virtual void        GetSurfaceSize( ChHandle_t windowHandle, int& srWidth, int& srHeight )                                         = 0;
+	virtual void        GetSurfaceSize( ch_handle_t windowHandle, int& srWidth, int& srHeight )                                         = 0;
 	
-	virtual ImTextureID AddTextureToImGui( ChHandle_t sHandle )                                                                        = 0;
-	virtual void        FreeTextureFromImGui( ChHandle_t sHandle )                                                                     = 0;
+	virtual ImTextureID AddTextureToImGui( ch_handle_t sHandle )                                                                        = 0;
+	virtual void        FreeTextureFromImGui( ch_handle_t sHandle )                                                                     = 0;
 	virtual bool        BuildFonts()                                                                                                   = 0;
 
 	virtual int         GetMaxMSAASamples()                                                                                            = 0;
@@ -801,72 +801,72 @@ class IRender : public ISystem
 	// EACH ONE SHOULD HAVE THEIR OWN IMGUI CONTEXT !!!!
 	// --------------------------------------------------------------------------------------------
 
-	virtual ChHandle_t  CreateWindow( SDL_Window* window, void* sysWindow = nullptr )                                                  = 0;
-	virtual void        DestroyWindow( ChHandle_t window )                                                                             = 0;
+	virtual ch_handle_t  CreateWindow( SDL_Window* window, void* sysWindow = nullptr )                                                  = 0;
+	virtual void        DestroyWindow( ch_handle_t window )                                                                             = 0;
 
 	// --------------------------------------------------------------------------------------------
 	// Buffers
 	// --------------------------------------------------------------------------------------------
 
-	virtual Handle      CreateBuffer( const char* spName, u32 sSize, EBufferFlags sBufferFlags, EBufferMemory sBufferMem )             = 0;
-	virtual Handle      CreateBuffer( u32 sSize, EBufferFlags sBufferFlags, EBufferMemory sBufferMem )                                 = 0;
-	virtual void        DestroyBuffer( Handle buffer )                                                                                 = 0;
-	virtual void        DestroyBuffers( ChHandle_t* spBuffers, u32 sCount )                                                            = 0;
+	virtual ch_handle_t      CreateBuffer( const char* spName, u32 sSize, EBufferFlags sBufferFlags, EBufferMemory sBufferMem )             = 0;
+	virtual ch_handle_t      CreateBuffer( u32 sSize, EBufferFlags sBufferFlags, EBufferMemory sBufferMem )                                 = 0;
+	virtual void        DestroyBuffer( ch_handle_t buffer )                                                                                 = 0;
+	virtual void        DestroyBuffers( ch_handle_t* spBuffers, u32 sCount )                                                            = 0;
 
 	// Returns the Amount Read/Written
-	virtual u32         BufferWrite( Handle buffer, u32 sSize, void* spData )                                                          = 0;
+	virtual u32         BufferWrite( ch_handle_t buffer, u32 sSize, void* spData )                                                          = 0;
 
 	// Read data from a buffer
-	virtual u32         BufferRead( Handle buffer, u32 sSize, void* spData )                                                           = 0;
+	virtual u32         BufferRead( ch_handle_t buffer, u32 sSize, void* spData )                                                           = 0;
 
 	// Copy one buffer to another buffer, useful for copying between host and device memory
-	virtual bool        BufferCopy( Handle shSrc, Handle shDst, BufferRegionCopy_t* spRegions, u32 sRegionCount )                      = 0;
+	virtual bool        BufferCopy( ch_handle_t shSrc, ch_handle_t shDst, BufferRegionCopy_t* spRegions, u32 sRegionCount )                      = 0;
 
 	// Queues a copy of one buffer to another buffer, useful for copying between host and device memory
-	virtual bool        BufferCopyQueued( Handle shSrc, Handle shDst, BufferRegionCopy_t* spRegions, u32 sRegionCount )                = 0;
+	virtual bool        BufferCopyQueued( ch_handle_t shSrc, ch_handle_t shDst, BufferRegionCopy_t* spRegions, u32 sRegionCount )                = 0;
 
-	virtual const char* BufferGetName( ChHandle_t buffer )                                                                             = 0;
+	virtual const char* BufferGetName( ch_handle_t buffer )                                                                             = 0;
 
 	// --------------------------------------------------------------------------------------------
 	// Textures
 	// --------------------------------------------------------------------------------------------
 
-	// virtual Handle      LoadTexture( const std::string& srTexturePath, const TextureCreateData_t& srCreateData, Handle* spHandle = nullptr ) = 0;
-	virtual ChHandle_t  LoadTexture( ChHandle_t& srHandle, const std::string& srTexturePath, const TextureCreateData_t& srCreateData ) = 0;
-	virtual ChHandle_t  CreateTexture( const TextureCreateInfo_t& srTextureCreateInfo, const TextureCreateData_t& srCreateData )       = 0;
-	virtual void        FreeTexture( ChHandle_t shTexture )                                                                            = 0;
-	virtual int         GetTextureIndex( ChHandle_t shTexture )                                                                        = 0;
-	// virtual EImageUsage GetTextureUsage( ChHandle_t shTexture )                                                                        = 0;
-	virtual GraphicsFmt GetTextureFormat( ChHandle_t shTexture )                                                                       = 0;
-	virtual glm::uvec2  GetTextureSize( ChHandle_t shTexture )                                                                         = 0;
+	// virtual ch_handle_t      LoadTexture( const std::string& srTexturePath, const TextureCreateData_t& srCreateData, ch_handle_t* spHandle = nullptr ) = 0;
+	virtual ch_handle_t  LoadTexture( ch_handle_t& srHandle, const std::string& srTexturePath, const TextureCreateData_t& srCreateData ) = 0;
+	virtual ch_handle_t  CreateTexture( const TextureCreateInfo_t& srTextureCreateInfo, const TextureCreateData_t& srCreateData )       = 0;
+	virtual void        FreeTexture( ch_handle_t shTexture )                                                                            = 0;
+	virtual int         GetTextureIndex( ch_handle_t shTexture )                                                                        = 0;
+	// virtual EImageUsage GetTextureUsage( ch_handle_t shTexture )                                                                        = 0;
+	virtual GraphicsFmt GetTextureFormat( ch_handle_t shTexture )                                                                       = 0;
+	virtual glm::uvec2  GetTextureSize( ch_handle_t shTexture )                                                                         = 0;
 	virtual void        ReloadTextures()                                                                                               = 0;
-	virtual const std::vector< ChHandle_t >& GetTextureList()                                                                             = 0;
+	virtual const std::vector< ch_handle_t >& GetTextureList()                                                                             = 0;
 
-	virtual TextureInfo_t                    GetTextureInfo( ChHandle_t sTexture )                                                                          = 0;
+	virtual TextureInfo_t                    GetTextureInfo( ch_handle_t sTexture )                                                                          = 0;
 	virtual void                             FreeTextureInfo( TextureInfo_t& srInfo )                                                                       = 0;
 
 	// TODO: very early rough functions, need to be improved greatly
-	virtual ReadTexture ReadTextureFromDevice( ChHandle_t textureHandle )                                            = 0;
+	virtual ReadTexture ReadTextureFromDevice( ch_handle_t textureHandle )                                            = 0;
 	virtual void        FreeReadTexture( ReadTexture* pData )                                                        = 0;
 	 
 	// Basically a hack function out of laziness, blech
 	// virtual void        CalcTextureIndices()                                                                                           = 0;
-	virtual void        SetTextureDescSet( ChHandle_t* spDescSets, int sCount, u32 sBinding )                                          = 0;
+	virtual void        SetTextureDescSet( ch_handle_t* spDescSets, int sCount, u32 sBinding )                                          = 0;
 
-	virtual Handle      CreateFramebuffer( const CreateFramebuffer_t& srCreate )                                                       = 0;
-	virtual void        DestroyFramebuffer( Handle shFramebuffer )                                                                     = 0;
-	virtual glm::uvec2  GetFramebufferSize( Handle shFramebuffer )                                                                     = 0;
+	virtual ch_handle_t      CreateFramebuffer( const CreateFramebuffer_t& srCreate )                                                       = 0;
+	virtual void        DestroyFramebuffer( ch_handle_t shFramebuffer )                                                                     = 0;
+	virtual glm::uvec2  GetFramebufferSize( ch_handle_t shFramebuffer )                                                                     = 0;
 
 	// --------------------------------------------------------------------------------------------
 	// Shader System
 	// --------------------------------------------------------------------------------------------
 
-	virtual bool        CreatePipelineLayout( ChHandle_t& sHandle, PipelineLayoutCreate_t& srPipelineCreate )                          = 0;
-	virtual bool        CreateGraphicsPipeline( ChHandle_t& sHandle, GraphicsPipelineCreate_t& srGraphicsCreate )                      = 0;
-	virtual bool        CreateComputePipeline( ChHandle_t& sHandle, ComputePipelineCreate_t& srComputeCreate )                         = 0;
+	virtual bool        CreatePipelineLayout( ch_handle_t& sHandle, PipelineLayoutCreate_t& srPipelineCreate )                          = 0;
+	virtual bool        CreateGraphicsPipeline( ch_handle_t& sHandle, GraphicsPipelineCreate_t& srGraphicsCreate )                      = 0;
+	virtual bool        CreateComputePipeline( ch_handle_t& sHandle, ComputePipelineCreate_t& srComputeCreate )                         = 0;
 
-	virtual void        DestroyPipeline( ChHandle_t sPipeline )                                                                        = 0;
-	virtual void        DestroyPipelineLayout( ChHandle_t sPipeline )                                                                  = 0;
+	virtual void        DestroyPipeline( ch_handle_t sPipeline )                                                                        = 0;
+	virtual void        DestroyPipelineLayout( ch_handle_t sPipeline )                                                                  = 0;
 
 	// --------------------------------------------------------------------------------------------
 	// Descriptor Pool
@@ -874,110 +874,110 @@ class IRender : public ISystem
 
 	// virtual void      GetDescriptorPoolStats()                                                     = 0;
 
-	virtual Handle      CreateDescLayout( const CreateDescLayout_t& srCreate )                                                     = 0;
+	virtual ch_handle_t      CreateDescLayout( const CreateDescLayout_t& srCreate )                                                     = 0;
 	virtual void        UpdateDescSets( WriteDescSet_t* spUpdate, u32 sCount )                                                     = 0;
 
-	virtual bool        AllocateDescLayout( const AllocDescLayout_t& srCreate, Handle* handles )                                   = 0;
-	virtual bool        AllocateVariableDescLayout( const AllocVariableDescLayout_t& srCreate, Handle* handles )                   = 0;
+	virtual bool        AllocateDescLayout( const AllocDescLayout_t& srCreate, ch_handle_t* handles )                                   = 0;
+	virtual bool        AllocateVariableDescLayout( const AllocVariableDescLayout_t& srCreate, ch_handle_t* handles )                   = 0;
 
 	// --------------------------------------------------------------------------------------------
 	// Back Buffer Info
 	// --------------------------------------------------------------------------------------------
 
-	virtual GraphicsFmt GetSwapFormatColor( ChHandle_t window )                                                                    = 0;
+	virtual GraphicsFmt GetSwapFormatColor( ch_handle_t window )                                                                    = 0;
 	virtual GraphicsFmt GetSwapFormatDepth()                                                                                       = 0;
 
-	virtual Handle      GetBackBufferColor( ChHandle_t window )                                                                    = 0;
-	virtual Handle      GetBackBufferDepth( ChHandle_t window )                                                                    = 0;
+	virtual ch_handle_t      GetBackBufferColor( ch_handle_t window )                                                                    = 0;
+	virtual ch_handle_t      GetBackBufferDepth( ch_handle_t window )                                                                    = 0;
 
 	// --------------------------------------------------------------------------------------------
 	// Rendering
 	// --------------------------------------------------------------------------------------------
 
-	virtual void        SetResetCallback( ChHandle_t window, Render_OnReset_t sFunc )                                              = 0;
+	virtual void        SetResetCallback( ch_handle_t window, Render_OnReset_t sFunc )                                              = 0;
 	virtual void        SetTextureIndexUpdateCallback( Render_OnTextureIndexUpdate* spFunc )                                       = 0;
 
-	virtual void        Reset( ChHandle_t window )                                                                                 = 0;
+	virtual void        Reset( ch_handle_t window )                                                                                 = 0;
 	virtual void        NewFrame()                                                                                                 = 0;
 	virtual void        PreRenderPass()                                                                                            = 0;
 	virtual void        CopyQueuedBuffers()                                                                                        = 0;
-	virtual u32         GetFlightImageIndex( ChHandle_t window )                                                                   = 0;
-	virtual void        Present( ChHandle_t window, u32 sImageIndex )                                                              = 0;
+	virtual u32         GetFlightImageIndex( ch_handle_t window )                                                                   = 0;
+	virtual void        Present( ch_handle_t window, u32 sImageIndex )                                                              = 0;
 
 	virtual void        WaitForQueues()                                                                                            = 0;
 	virtual void        ResetCommandPool()                                                                                         = 0;
 
 	// blech
-	virtual u32         GetCommandBufferHandles( ChHandle_t window, Handle* spHandles )                                            = 0;
+	virtual u32         GetCommandBufferHandles( ch_handle_t window, ch_handle_t* spHandles )                                            = 0;
 
-	virtual void        BeginCommandBuffer( Handle cmd )                                                                           = 0;
-	virtual void        EndCommandBuffer( Handle cmd )                                                                             = 0;
+	virtual void        BeginCommandBuffer( ch_handle_t cmd )                                                                           = 0;
+	virtual void        EndCommandBuffer( ch_handle_t cmd )                                                                             = 0;
 
-	virtual Handle      CreateRenderPass( const RenderPassCreate_t& srCreate )                                                     = 0;
-	virtual void        DestroyRenderPass( Handle shPass )                                                                         = 0;
-	virtual void        BeginRenderPass( Handle cmd, const RenderPassBegin_t& srBegin )                                            = 0;
-	virtual void        EndRenderPass( Handle cmd )                                                                                = 0;
+	virtual ch_handle_t      CreateRenderPass( const RenderPassCreate_t& srCreate )                                                     = 0;
+	virtual void        DestroyRenderPass( ch_handle_t shPass )                                                                         = 0;
+	virtual void        BeginRenderPass( ch_handle_t cmd, const RenderPassBegin_t& srBegin )                                            = 0;
+	virtual void        EndRenderPass( ch_handle_t cmd )                                                                                = 0;
 
-	virtual void        DrawImGui( ImDrawData* spDrawData, Handle cmd )                                                            = 0;
+	virtual void        DrawImGui( ImDrawData* spDrawData, ch_handle_t cmd )                                                            = 0;
 
 	// --------------------------------------------------------------------------------------------
 	// Vulkan Commands
 	// --------------------------------------------------------------------------------------------
 
-	virtual void        CmdSetViewport( Handle cmd, u32 sOffset, const Viewport_t* spViewports, u32 sCount )                       = 0;
+	virtual void        CmdSetViewport( ch_handle_t cmd, u32 sOffset, const Viewport_t* spViewports, u32 sCount )                       = 0;
 
-	virtual void        CmdSetScissor( Handle cmd, u32 sOffset, const Rect2D_t* spScissors, u32 sCount )                           = 0;
+	virtual void        CmdSetScissor( ch_handle_t cmd, u32 sOffset, const Rect2D_t* spScissors, u32 sCount )                           = 0;
 
-	virtual void        CmdSetDepthBias( Handle cmd, float sConstantFactor, float sClamp, float sSlopeFactor )                     = 0;
+	virtual void        CmdSetDepthBias( ch_handle_t cmd, float sConstantFactor, float sClamp, float sSlopeFactor )                     = 0;
 
-	virtual void        CmdSetLineWidth( Handle cmd, float sLineWidth )                                                            = 0;
+	virtual void        CmdSetLineWidth( ch_handle_t cmd, float sLineWidth )                                                            = 0;
 
-	virtual bool        CmdBindPipeline( Handle cmd, Handle shader )                                                               = 0;
+	virtual bool        CmdBindPipeline( ch_handle_t cmd, ch_handle_t shader )                                                               = 0;
 
-	virtual void        CmdPushConstants( Handle      cmd,
-	                                      Handle      shPipelineLayout,
+	virtual void        CmdPushConstants( ch_handle_t      cmd,
+	                                      ch_handle_t      shPipelineLayout,
 	                                      ShaderStage sShaderStage,
 	                                      u32         sOffset,
 	                                      u32         sSize,
 	                                      void*       spValues ) = 0;
 
-	virtual void        CmdBindDescriptorSets( Handle             cmd,
+	virtual void        CmdBindDescriptorSets( ch_handle_t             cmd,
 	                                           size_t             sCmdIndex,
 	                                           EPipelineBindPoint sBindPoint,
-	                                           Handle             shPipelineLayout,
-	                                           Handle*            spSets,
+	                                           ch_handle_t             shPipelineLayout,
+	                                           ch_handle_t*            spSets,
 	                                           u32                sSetCount ) = 0;
 
-	virtual void        CmdBindVertexBuffers( Handle        cmd,
+	virtual void        CmdBindVertexBuffers( ch_handle_t        cmd,
 	                                          u32           sFirstBinding,
 	                                          u32           sCount,
-	                                          const Handle* spBuffers,
+	                                          const ch_handle_t* spBuffers,
 	                                          const uint64_t* spOffsets ) = 0;
 
-	virtual void        CmdBindIndexBuffer( Handle     cmd,
-	                                        Handle     shBuffer,
+	virtual void        CmdBindIndexBuffer( ch_handle_t     cmd,
+	                                        ch_handle_t     shBuffer,
 	                                        size_t     offset,
 	                                        EIndexType indexType ) = 0;
 
-	virtual void        CmdDraw( Handle cmd,
+	virtual void        CmdDraw( ch_handle_t cmd,
 	                             u32    sVertCount,
 	                             u32    sInstanceCount,
 	                             u32    sFirstVert,
 	                             u32    sFirstInstance ) = 0;
 
-	virtual void        CmdDrawIndexed( Handle cmd,
+	virtual void        CmdDrawIndexed( ch_handle_t cmd,
 	                                    u32    sIndexCount,
 	                                    u32    sInstanceCount,
 	                                    u32    sFirstIndex,
 	                                    int    sVertOffset,
 	                                    u32    sFirstInstance ) = 0;
 
-	virtual void        CmdDispatch( ChHandle_t sCmd,
+	virtual void        CmdDispatch( ch_handle_t sCmd,
 	                                 u32        sGroupCountX,
 	                                 u32        sGroupCountY,
 	                                 u32        sGroupCountZ ) = 0;
 
-	virtual void        CmdPipelineBarrier( ChHandle_t sCmd, PipelineBarrier_t& srBarrier ) = 0;
+	virtual void        CmdPipelineBarrier( ch_handle_t sCmd, PipelineBarrier_t& srBarrier ) = 0;
 };
 
 

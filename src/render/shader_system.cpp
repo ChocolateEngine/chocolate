@@ -3,13 +3,13 @@
 #include "graphics_int.h"
 
 
-static std::unordered_map< std::string_view, Handle >                  gShaderNames;
+static std::unordered_map< std::string_view, ch_handle_t >                  gShaderNames;
 static std::unordered_map< std::string_view, ShaderSets_t >            gShaderSets;  // [shader name] = descriptor sets for this shader
 
-static std::unordered_map< Handle, EPipelineBindPoint >                gShaderBindPoint;   // [shader] = bind point
-static std::unordered_map< Handle, VertexFormat >                      gShaderVertFormat;  // [shader] = vertex format
-static std::unordered_map< Handle, FShader_Destroy* >                  gShaderDestroy;     // [shader] = shader destroy function
-static std::unordered_map< Handle, ShaderData_t >                      gShaderData;        // [shader] = assorted shader data
+static std::unordered_map< ch_handle_t, EPipelineBindPoint >                gShaderBindPoint;   // [shader] = bind point
+static std::unordered_map< ch_handle_t, VertexFormat >                      gShaderVertFormat;  // [shader] = vertex format
+static std::unordered_map< ch_handle_t, FShader_Destroy* >                  gShaderDestroy;     // [shader] = shader destroy function
+static std::unordered_map< ch_handle_t, ShaderData_t >                      gShaderData;        // [shader] = assorted shader data
 
 // descriptor set layouts
 // extern ShaderBufferArray_t                              gUniformSampler;
@@ -19,19 +19,19 @@ static std::unordered_map< Handle, ShaderData_t >                      gShaderDa
 
 //static std::unordered_map< SurfaceDraw_t, void* >                      gShaderPushData;
 
-static ChVector< ChHandle_t >                                          gShaderGraphics;
-static ChVector< ChHandle_t >                                          gShaderCompute;
+static ChVector< ch_handle_t >                                          gShaderGraphics;
+static ChVector< ch_handle_t >                                          gShaderCompute;
 
 
 // Shader = List of Materials using that shader
-// static std::unordered_map< ChHandle_t, ChVector< ShaderMaterialData > > gShaderMaterials;
-// static std::unordered_map< ChHandle_t, std::vector< ShaderMaterialData > > gShaderMaterials;
+// static std::unordered_map< ch_handle_t, ChVector< ShaderMaterialData > > gShaderMaterials;
+// static std::unordered_map< ch_handle_t, std::vector< ShaderMaterialData > > gShaderMaterials;
 
 // Shader = [Materials = Shader Material Data]
-static std::unordered_map< ChHandle_t, std::unordered_map< ChHandle_t, ShaderMaterialData > > gShaderMaterials;
+static std::unordered_map< ch_handle_t, std::unordered_map< ch_handle_t, ShaderMaterialData > > gShaderMaterials;
 
 // Material = Storage Buffer
-static std::unordered_map< ChHandle_t, DeviceBufferStaging_t >          gMaterialBuffers;
+static std::unordered_map< ch_handle_t, DeviceBufferStaging_t >          gMaterialBuffers;
 
 
 // shader
@@ -88,7 +88,7 @@ std::vector< ShaderCreate_t* >& Shader_GetCreateList()
 }
 
 
-Handle Graphics::GetShader( const char* sName )
+ch_handle_t Graphics::GetShader( const char* sName )
 {
 	// address sanitizer crashes when you have the input be std::string_view for some reason
 	std::string_view temp = sName;
@@ -97,11 +97,11 @@ Handle Graphics::GetShader( const char* sName )
 		return it->second;
 
 	Log_ErrorF( gLC_ClientGraphics, "Graphics_GetShader: Shader not found: %s\n", sName );
-	return InvalidHandle;
+	return CH_INVALID_HANDLE;
 }
 
 
-const char* Graphics::GetShaderName( Handle sShader )
+const char* Graphics::GetShaderName( ch_handle_t sShader )
 {
 	for ( const auto& [name, shader] : gShaderNames )
 	{
@@ -122,7 +122,7 @@ u32 Graphics::GetShaderCount()
 }
 
 
-ChHandle_t Graphics::GetShaderByIndex( u32 sIndex )
+ch_handle_t Graphics::GetShaderByIndex( u32 sIndex )
 {
 	u32 i = 0;
 	for ( const auto& [ name, shader ] : gShaderNames )
@@ -146,7 +146,7 @@ u32 Graphics::GetGraphicsShaderCount()
 }
 
 
-ChHandle_t Graphics::GetGraphicsShaderByIndex( u32 sIndex )
+ch_handle_t Graphics::GetGraphicsShaderByIndex( u32 sIndex )
 {
 	if ( sIndex >= gShaderGraphics.size() )
 	{
@@ -164,7 +164,7 @@ u32 Graphics::GetComputeShaderCount()
 }
 
 
-ChHandle_t Graphics::GetComputeShaderByIndex( u32 sIndex )
+ch_handle_t Graphics::GetComputeShaderByIndex( u32 sIndex )
 {
 	if ( sIndex >= gShaderCompute.size() )
 	{
@@ -176,7 +176,7 @@ ChHandle_t Graphics::GetComputeShaderByIndex( u32 sIndex )
 }
 
 
-u32 Graphics::GetShaderVarCount( ChHandle_t shader )
+u32 Graphics::GetShaderVarCount( ch_handle_t shader )
 {
 	ShaderData_t* data = Shader_GetData( shader );
 
@@ -190,7 +190,7 @@ u32 Graphics::GetShaderVarCount( ChHandle_t shader )
 }
 
 
-ShaderMaterialVarDesc* Graphics::GetShaderVars( ChHandle_t shader )
+ShaderMaterialVarDesc* Graphics::GetShaderVars( ch_handle_t shader )
 {
 	ShaderData_t* data = Shader_GetData( shader );
 
@@ -204,7 +204,7 @@ ShaderMaterialVarDesc* Graphics::GetShaderVars( ChHandle_t shader )
 }
 
 
-bool Shader_CreatePipelineLayout( std::string_view sName, Handle& srLayout, FShader_GetPipelineLayoutCreate fCreate )
+bool Shader_CreatePipelineLayout( std::string_view sName, ch_handle_t& srLayout, FShader_GetPipelineLayoutCreate fCreate )
 {
 	if ( fCreate == nullptr )
 	{
@@ -237,7 +237,7 @@ bool Shader_CreatePipelineLayout( std::string_view sName, Handle& srLayout, FSha
 }
 
 
-bool Shader_CreateGraphicsPipeline( ShaderCreate_t& srCreate, Handle& srPipeline, Handle& srLayout, Handle sRenderPass )
+bool Shader_CreateGraphicsPipeline( ShaderCreate_t& srCreate, ch_handle_t& srPipeline, ch_handle_t& srLayout, ch_handle_t sRenderPass )
 {
 	if ( srCreate.apGraphicsCreate == nullptr )
 	{
@@ -262,7 +262,7 @@ bool Shader_CreateGraphicsPipeline( ShaderCreate_t& srCreate, Handle& srPipeline
 }
 
 
-bool Shader_CreateComputePipeline( ShaderCreate_t& srCreate, Handle& srPipeline, Handle& srLayout, Handle sRenderPass )
+bool Shader_CreateComputePipeline( ShaderCreate_t& srCreate, ch_handle_t& srPipeline, ch_handle_t& srLayout, ch_handle_t sRenderPass )
 {
 	if ( srCreate.apComputeCreate == nullptr )
 	{
@@ -286,9 +286,9 @@ bool Shader_CreateComputePipeline( ShaderCreate_t& srCreate, Handle& srPipeline,
 }
 
 
-bool Graphics_CreateShader( bool sRecreate, Handle sRenderPass, ShaderCreate_t& srCreate )
+bool Graphics_CreateShader( bool sRecreate, ch_handle_t sRenderPass, ShaderCreate_t& srCreate )
 {
-	Handle pipeline = InvalidHandle;
+	ch_handle_t pipeline = CH_INVALID_HANDLE;
 
 	auto   nameFind = gShaderNames.find( srCreate.apName );
 	if ( nameFind != gShaderNames.end() )
@@ -395,7 +395,7 @@ bool Graphics_CreateShader( bool sRecreate, Handle sRenderPass, ShaderCreate_t& 
 }
 
 
-void Shader_Destroy( Handle sShader )
+void Shader_Destroy( ch_handle_t sShader )
 {
 	auto it = gShaderData.find( sShader );
 	if ( it != gShaderData.end() )
@@ -441,7 +441,7 @@ bool Graphics_ShaderInit( bool sRecreate )
 {
 	for ( ShaderCreate_t* shaderCreate : Shader_GetCreateList() )
 	{
-		ChHandle_t renderPass = gGraphicsData.aRenderPassGraphics;
+		ch_handle_t renderPass = gGraphicsData.aRenderPassGraphics;
 
 		if ( shaderCreate->aRenderPass == ERenderPass_Shadow )
 			renderPass = gGraphicsData.aRenderPassShadow;
@@ -466,7 +466,7 @@ void Graphics_ShaderDestroy()
 }
 
 
-EPipelineBindPoint Shader_GetPipelineBindPoint( Handle sShader )
+EPipelineBindPoint Shader_GetPipelineBindPoint( ch_handle_t sShader )
 {
 	PROF_SCOPE();
 
@@ -479,7 +479,7 @@ EPipelineBindPoint Shader_GetPipelineBindPoint( Handle sShader )
 }
 
 
-ShaderData_t* Shader_GetData( Handle sShader )
+ShaderData_t* Shader_GetData( ch_handle_t sShader )
 {
 	PROF_SCOPE();
 
@@ -527,13 +527,13 @@ bool Shader_ParseRequirements( ShaderRequirmentsList_t& srOutput )
 }
 
 
-// Handle Shader_RegisterDescriptorData( EShaderSlot sSlot, FShader_DescriptorData* sCallback )
+// ch_handle_t Shader_RegisterDescriptorData( EShaderSlot sSlot, FShader_DescriptorData* sCallback )
 // {
 // 
 // }
 
 
-bool Shader_Bind( Handle sCmd, u32 sIndex, Handle sShader )
+bool Shader_Bind( ch_handle_t sCmd, u32 sIndex, ch_handle_t sShader )
 {
 	PROF_SCOPE();
 
@@ -545,7 +545,7 @@ bool Shader_Bind( Handle sCmd, u32 sIndex, Handle sShader )
 		return false;
 
 	// Bind Descriptor Sets (TODO: Keep track of what is currently bound so we don't need to rebind set 0)
-	ChVector< Handle > descSets;
+	ChVector< ch_handle_t > descSets;
 	descSets.reserve( 2 );
 
 	// TODO: Should only be done once per frame
@@ -565,7 +565,7 @@ bool Shader_Bind( Handle sCmd, u32 sIndex, Handle sShader )
 }
 
 
-bool Shader_PreMaterialDraw( Handle sCmd, u32 sIndex, ShaderData_t* spShaderData, ShaderPushData_t& sPushData )
+bool Shader_PreMaterialDraw( ch_handle_t sCmd, u32 sIndex, ShaderData_t* spShaderData, ShaderPushData_t& sPushData )
 {
 	PROF_SCOPE();
 
@@ -584,7 +584,7 @@ bool Shader_PreMaterialDraw( Handle sCmd, u32 sIndex, ShaderData_t* spShaderData
 }
 
 
-VertexFormat Shader_GetVertexFormat( Handle sShader )
+VertexFormat Shader_GetVertexFormat( ch_handle_t sShader )
 {
 	return VertexFormat_All;
 
@@ -606,7 +606,7 @@ VertexFormat Shader_GetVertexFormat( Handle sShader )
 
 // BAD
 // gets the total count of material buffers for this shader
-//ChVector< DeviceBufferStaging_t* > Shader_GetMaterialBufferCount( ChHandle_t sShader, ShaderData_t* sShaderData )
+//ChVector< DeviceBufferStaging_t* > Shader_GetMaterialBufferCount( ch_handle_t sShader, ShaderData_t* sShaderData )
 //{
 //	i = 0;
 //	for ( const auto& [ mat, buffer ] : gMaterialBuffers )
@@ -617,7 +617,7 @@ VertexFormat Shader_GetVertexFormat( Handle sShader )
 //}
 
 
-void Shader_UpdateMaterialDescriptorSets( ChHandle_t shader, ShaderData_t* shaderData, std::unordered_map< ChHandle_t, ShaderMaterialData >& shaderMatDataList )
+void Shader_UpdateMaterialDescriptorSets( ch_handle_t shader, ShaderData_t* shaderData, std::unordered_map< ch_handle_t, ShaderMaterialData >& shaderMatDataList )
 {
 	// can't update without any material buffers
 	if ( shaderMatDataList.size() == 0 )
@@ -635,7 +635,7 @@ void Shader_UpdateMaterialDescriptorSets( ChHandle_t shader, ShaderData_t* shade
 
 	// update.aBindingCount = CH_ARR_SIZE( gBasic3D_Bindings );
 	update.aBindingCount = shaderData->aBindingCount;
-	update.apBindings    = ch_calloc_count< WriteDescSetBinding_t >( update.aBindingCount );
+	update.apBindings    = ch_calloc< WriteDescSetBinding_t >( update.aBindingCount );
 
 	size_t i             = 0;
 	for ( size_t binding = 0; binding < update.aBindingCount; binding++ )
@@ -653,13 +653,13 @@ void Shader_UpdateMaterialDescriptorSets( ChHandle_t shader, ShaderData_t* shade
 		shaderMat.matIndex = matIndex++;
 	}
 
-	// update.apBindings[ shaderData->aMaterialBufferBinding ].apData = ch_calloc_count< ChHandle_t >( CH_BASIC3D_MAX_MATERIALS );
-	update.apBindings[ shaderData->aMaterialBufferBinding ].apData = ch_calloc_count< ChHandle_t >( shaderMatDataList.size() );
+	// update.apBindings[ shaderData->aMaterialBufferBinding ].apData = ch_calloc< ch_handle_t >( CH_BASIC3D_MAX_MATERIALS );
+	update.apBindings[ shaderData->aMaterialBufferBinding ].apData = ch_calloc< ch_handle_t >( shaderMatDataList.size() );
 	update.apBindings[ shaderData->aMaterialBufferBinding ].aCount = shaderMatDataList.size();
 
 	i                                                            = 0;
 
-	// for ( ChHandle_t buffer : bufferList )
+	// for ( ch_handle_t buffer : bufferList )
 	// {
 	// 	update.apBindings[ shaderData->aMaterialBufferBinding ].apData[ i++ ] = buffer;
 	// }
@@ -689,11 +689,11 @@ void Shader_UpdateMaterialDescriptorSets( ChHandle_t shader, ShaderData_t* shade
 }
 
 
-void Shader_RemoveMaterial( ChHandle_t sMat )
+void Shader_RemoveMaterial( ch_handle_t sMat )
 {
 	// TODO: queue this
 
-	ChHandle_t shader = gGraphics.Mat_GetShader( sMat );
+	ch_handle_t shader = gGraphics.Mat_GetShader( sMat );
 
 	if ( shader == CH_INVALID_HANDLE )
 	{
@@ -710,7 +710,7 @@ void Shader_RemoveMaterial( ChHandle_t sMat )
 	}
 
 	ShaderData_t*                                         shaderData   = Shader_GetData( shader );
-	std::unordered_map< ChHandle_t, ShaderMaterialData >& matData      = shaderIt->second;
+	std::unordered_map< ch_handle_t, ShaderMaterialData >& matData      = shaderIt->second;
 	bool                                                  foundMatData = false;
 
 	auto matIt = matData.find( sMat );
@@ -745,11 +745,11 @@ void Shader_RemoveMaterial( ChHandle_t sMat )
 }
 
 
-void Shader_AddMaterial( ChHandle_t sMat )
+void Shader_AddMaterial( ch_handle_t sMat )
 {
 	// TODO: queue this
 
-	ChHandle_t shader = gGraphics.Mat_GetShader( sMat );
+	ch_handle_t shader = gGraphics.Mat_GetShader( sMat );
 
 	if ( shader == CH_INVALID_HANDLE )
 	{
@@ -788,7 +788,7 @@ void Shader_AddMaterial( ChHandle_t sMat )
 }
 
 
-void Shader_WriteMaterialBuffer( ChHandle_t mat, ChHandle_t shader, ShaderData_t* shaderData, ShaderMaterialData* materialData )
+void Shader_WriteMaterialBuffer( ch_handle_t mat, ch_handle_t shader, ShaderData_t* shaderData, ShaderMaterialData* materialData )
 {
 	auto bufIt = gMaterialBuffers.find( mat );
 
@@ -872,7 +872,7 @@ void Shader_UpdateMaterialVars()
 {
 	for ( const auto& mat : gGraphicsData.aDirtyMaterials )
 	{
-		ChHandle_t    shader     = gGraphics.Mat_GetShader( mat );
+		ch_handle_t    shader     = gGraphics.Mat_GetShader( mat );
 		ShaderData_t* shaderData = Shader_GetData( shader );
 
 		if ( shaderData->aMaterialVarCount == 0 )
@@ -950,7 +950,7 @@ void Shader_UpdateMaterialVars()
 }
 
 
-ShaderMaterialData* Shader_GetMaterialData( ChHandle_t sShader, ChHandle_t sMat )
+ShaderMaterialData* Shader_GetMaterialData( ch_handle_t sShader, ch_handle_t sMat )
 {
 	auto shaderIt = gShaderMaterials.find( sShader );
 
@@ -972,7 +972,7 @@ ShaderMaterialData* Shader_GetMaterialData( ChHandle_t sShader, ChHandle_t sMat 
 }
 
 
-const std::unordered_map< ChHandle_t, ShaderMaterialData >* Shader_GetMaterialDataMap( ChHandle_t sShader )
+const std::unordered_map< ch_handle_t, ShaderMaterialData >* Shader_GetMaterialDataMap( ch_handle_t sShader )
 {
 	auto shaderIt = gShaderMaterials.find( sShader );
 

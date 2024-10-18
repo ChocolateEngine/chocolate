@@ -12,8 +12,7 @@
 #include <fstream>
 #include <mutex>
 
-LOG_REGISTER_CHANNEL( Console, LogColor::Gray );
-
+LOG_CHANNEL_REGISTER( Console, LogColor::Gray );
 
 std::vector< std::string >      gQueue;
 std::vector< std::string >      gCommandHistory;
@@ -24,10 +23,11 @@ std::vector< FArchive* >        gArchiveCallbacks;
 
 constexpr const char*           CON_ARCHIVE_FILE    = "cfg/config.cfg";
 constexpr const char*           CON_ARCHIVE_DEFAULT = "cfg/config_default.cfg";
-ch_string                       gConArchiveFile     = ch_str_create( CON_ARCHIVE_FILE );
-ch_string                       gConArchiveDefault  = ch_str_create( CON_ARCHIVE_DEFAULT );
 
-constexpr const char*           CFG_DIR    = "cfg" CH_PATH_SEP_STR;
+ch_string                       gConArchiveFile{};
+ch_string                       gConArchiveDefault{};
+
+constexpr const char*           CFG_DIR             = "cfg" CH_PATH_SEP_STR;
 
 
 CONVAR_BOOL( con_remove_dup_input_history, true, "Remove duplicate user inputs from the history" );
@@ -348,7 +348,7 @@ void Con_QueueCommand( const char* cmd, int len )
 
 	Con_AddToCommandHistory( cmdStr );
 
-	Log_ExF( gConsoleChannel, LogType::Raw, "] %s\n", cmd );
+	Log_ExF( gLC_Console, LogType::Raw, "] %s\n", cmd );
 }
 
 
@@ -400,7 +400,7 @@ void Con_PrintAllConVars()
 		conCommandMsgs.push_back( cmd->GetPrintMessage() );
 	}
 
-	LogGroup group = Log_GroupBegin( gConsoleChannel );
+	LogGroup group = Log_GroupBegin( gLC_Console );
 	Log_Group( group, "\nConVars:\n--------------------------------------\n" );
 	for ( const auto& msg : conVarMsgs )
 		Log_Group( group, msg.c_str() );
@@ -422,7 +422,7 @@ void Con_PrintAllConVars()
 // 
 // 		if ( cvarRef->apRef == nullptr )
 // 		{
-// 			Log_WarnF( gConsoleChannel, "Found unlinked cvar ref: %s\n", cvarRef->GetName() );
+// 			Log_WarnF( gLC_Console, "Found unlinked cvar ref: %s\n", cvarRef->GetName() );
 // 			return nullptr;
 // 		}
 // 
@@ -680,7 +680,7 @@ bool Con_RunCommandArgs( const std::string& name, const std::vector< std::string
 
 	// command wasn't used?
 	if ( !commandCalled )
-		Log_WarnF( gConsoleChannel, "Command \"%s\" is undefined\n", name.c_str() );
+		Log_WarnF( gLC_Console, "Command \"%s\" is undefined\n", name.c_str() );
 
 	return commandCalled;
 }
@@ -858,6 +858,13 @@ ConVarFlagChangeFunc* Con_GetCvarFlagCallback( ConVarFlag_t sFlag )
 }
 
 
+void con_init()
+{
+	gConArchiveFile    = ch_str_copy( CON_ARCHIVE_FILE );
+	gConArchiveDefault = ch_str_copy( CON_ARCHIVE_DEFAULT );
+}
+
+
 void Con_Shutdown()
 {
 	gArchiveCallbacks.clear();
@@ -999,14 +1006,14 @@ void Con_Archive( const char* spFile )
 
 	if ( fp == nullptr )
 	{
-		Log_ErrorF( gConsoleChannel, "Failed to open file handle: \"%s\"\n", filename.c_str() );
+		Log_ErrorF( gLC_Console, "Failed to open file handle: \"%s\"\n", filename.c_str() );
 		return;
 	}
 
 	fwrite( output.c_str(), sizeof( char ), output.size(), fp );
 	fclose( fp );
 
-	Log_DevF( gConsoleChannel, 1, "Wrote Config to File: \"%s\"\n", filename.c_str() );
+	Log_DevF( gLC_Console, 1, "Wrote Config to File: \"%s\"\n", filename.c_str() );
 }
 
 
@@ -1021,7 +1028,7 @@ void Con_SetDefaultArchive( const char* spFile, const char* spDefaultFile )
 
 		if ( !new_data.data )
 		{
-			Log_Error( gConsoleChannel, "Failed to allocate memory for default console config file path\n" );
+			Log_Error( gLC_Console, "Failed to allocate memory for default console config file path\n" );
 			return;
 		}
 
@@ -1035,7 +1042,7 @@ void Con_SetDefaultArchive( const char* spFile, const char* spDefaultFile )
 
 			if ( !new_data.data )
 			{
-				Log_Error( gConsoleChannel, "Failed to allocate memory for console config file path\n" );
+				Log_Error( gLC_Console, "Failed to allocate memory for console config file path\n" );
 				return;
 			}
 
@@ -1047,7 +1054,7 @@ void Con_SetDefaultArchive( const char* spFile, const char* spDefaultFile )
 
 			if ( !new_data.data )
 			{
-				Log_Error( gConsoleChannel, "Failed to allocate memory for console config file path\n" );
+				Log_Error( gLC_Console, "Failed to allocate memory for console config file path\n" );
 				return;
 			}
 
@@ -1064,7 +1071,7 @@ void Con_SetDefaultArchive( const char* spFile, const char* spDefaultFile )
 
 		if ( !new_data.data )
 		{
-			Log_Error( gConsoleChannel, "Failed to allocate memory for default console config file path\n" );
+			Log_Error( gLC_Console, "Failed to allocate memory for default console config file path\n" );
 			return;
 		}
 
@@ -1078,7 +1085,7 @@ void Con_SetDefaultArchive( const char* spFile, const char* spDefaultFile )
 
 			if ( !new_data.data )
 			{
-				Log_Error( gConsoleChannel, "Failed to allocate memory for default console config file path\n" );
+				Log_Error( gLC_Console, "Failed to allocate memory for default console config file path\n" );
 				return;
 			}
 
@@ -1090,7 +1097,7 @@ void Con_SetDefaultArchive( const char* spFile, const char* spDefaultFile )
 
 			if ( !new_data.data )
 			{
-				Log_Error( gConsoleChannel, "Failed to allocate memory for default console config file path\n" );
+				Log_Error( gLC_Console, "Failed to allocate memory for default console config file path\n" );
 				return;
 			}
 
@@ -1132,7 +1139,7 @@ CONCMD_DROP_VA( exec, exec_dropdown, 0, "Execute a script full of console comman
 {
 	if ( args.size() == 0 )
 	{
-		Log_Msg( gConsoleChannel, "No Path Specified for exec!\n" );
+		Log_Msg( gLC_Console, "No Path Specified for exec!\n" );
 		return;
 	}
 
@@ -1164,7 +1171,7 @@ CONCMD_DROP_VA( exec, exec_dropdown, 0, "Execute a script full of console comman
 
 			if ( !new_data.data )
 			{
-				Log_Error( gConsoleChannel, "Failed to allocate memory for console config file path\n" );
+				Log_Error( gLC_Console, "Failed to allocate memory for console config file path\n" );
 				ch_str_free( path.data );
 				return;
 			}
@@ -1175,7 +1182,7 @@ CONCMD_DROP_VA( exec, exec_dropdown, 0, "Execute a script full of console comman
 
 	if ( !FileSys_IsFile( path.data, path.size ) )
 	{
-		Log_WarnF( gConsoleChannel, "File does not exist: \"%s\"\n", path.data );
+		Log_WarnF( gLC_Console, "File does not exist: \"%s\"\n", path.data );
 		ch_str_free( path.data );
 		return;
 	}
@@ -1184,7 +1191,7 @@ CONCMD_DROP_VA( exec, exec_dropdown, 0, "Execute a script full of console comman
 
 	if ( !fileStream.is_open() )
 	{
-		Log_ErrorF( gConsoleChannel, "Failed to open file for exec: \"%s\"\n", path.data );
+		Log_ErrorF( gLC_Console, "Failed to open file for exec: \"%s\"\n", path.data );
 		ch_str_free( path.data );
 		return;
 	}
@@ -1216,7 +1223,7 @@ CONCMD_DROP_VA( exec, exec_dropdown, 0, "Execute a script full of console comman
 			if ( line != "" )
 			{
 				if ( line == "exec " + args[0] )
-					Log_Warn( gConsoleChannel, "cfg file trying to exec itself and cause infinite recursion\n" );
+					Log_Warn( gLC_Console, "cfg file trying to exec itself and cause infinite recursion\n" );
 				else
 					Con_RunCommand( line.data(), line.size() );
 
@@ -1268,7 +1275,7 @@ CONCMD_VA( echo, "Print a string to the console" )
 
 	msg += "\n";
 
-	Log_Msg( gConsoleChannel, msg.c_str() );
+	Log_Msg( gLC_Console, msg.c_str() );
 }
 
 
@@ -1289,7 +1296,7 @@ CONCMD_DROP_VA( help, help_dropdown, 0, "If no args specified, Print all Registe
 		Con_PrintAllConVars();
 		Args_PrintRegistered();
 
-		Log_Msg( gConsoleChannel, "--------------------------------------\n" );
+		Log_Msg( gLC_Console, "--------------------------------------\n" );
 		return;
 	}
 
@@ -1298,11 +1305,11 @@ CONCMD_DROP_VA( help, help_dropdown, 0, "If no args specified, Print all Registe
 
 	if ( cmd )
 	{
-		Log_Msg( gConsoleChannel, cmd->GetPrintMessage().data() );
+		Log_Msg( gLC_Console, cmd->GetPrintMessage().data() );
 	}
 	else if ( cvar )
 	{
-		Log_Msg( gConsoleChannel, Con_GetConVarHelp( args[ 0 ] ).data() );
+		Log_Msg( gLC_Console, Con_GetConVarHelp( args[ 0 ] ).data() );
 	}
 	else
 	{
@@ -1314,13 +1321,13 @@ CONCMD_DROP_VA( help, help_dropdown, 0, "If no args specified, Print all Registe
 			{
 				if ( arg->aNames[ n ] == args[ 0 ] )
 				{
-					Log_Msg( gConsoleChannel, Args_GetRegisteredPrint( arg ).data );
+					Log_Msg( gLC_Console, Args_GetRegisteredPrint( arg ).data );
 					return;
 				}
 			}
 		}
 
-		Log_WarnF( gConsoleChannel, "Convar not found: %s\n", args[0].c_str() );
+		Log_WarnF( gLC_Console, "Convar not found: %s\n", args[0].c_str() );
 	}
 }
 
@@ -1388,32 +1395,32 @@ void CmdFind( bool andSearch, const std::vector< std::string >& args )
 		FindStrArg( andSearch, Args_GetRegisteredData( i ), args, resultsArgs );
 	}
 
-	Log_MsgF( gConsoleChannel, "Search Results: %zu\n", resultsCvar.size() + resultsCCmd.size() );
+	Log_MsgF( gLC_Console, "Search Results: %zu\n", resultsCvar.size() + resultsCCmd.size() );
 
-	Log_MsgF( gConsoleChannel,
+	Log_MsgF( gLC_Console,
 		"\nConVars: %zu"
 		"\n--------------------------------------\n", resultsCvar.size() );
 
 	for ( const auto& msg : resultsCvar )
-		Log_Msg( gConsoleChannel, msg.c_str() );
+		Log_Msg( gLC_Console, msg.c_str() );
 
-	Log_MsgF( gConsoleChannel,
+	Log_MsgF( gLC_Console,
 		"--------------------------------------\n"
 		"\nConCommands: %zu"
 		"\n--------------------------------------\n", resultsCCmd.size() );
 
 	for ( const auto& msg : resultsCCmd )
-		Log_Msg( gConsoleChannel, msg.c_str() );
+		Log_Msg( gLC_Console, msg.c_str() );
 
-	Log_MsgF( gConsoleChannel,
+	Log_MsgF( gLC_Console,
 		"--------------------------------------\n"
 		"\nArguments: %zu"
 		"\n--------------------------------------\n", resultsArgs.size() );
 
 	for ( const auto& msg : resultsArgs )
-		Log_Msg( gConsoleChannel, msg.c_str() );
+		Log_Msg( gLC_Console, msg.c_str() );
 
-	Log_Msg( gConsoleChannel, "--------------------------------------\n" );
+	Log_Msg( gLC_Console, "--------------------------------------\n" );
 }
 
 
@@ -1424,7 +1431,7 @@ CONCMD_VA( find, "Search if cvar name contains any of the search arguments" )
 {
 	if ( args.empty() )
 	{
-		Log_MsgF( gConsoleChannel, "%s\n", find_cmd.GetDesc() );
+		Log_MsgF( gLC_Console, "%s\n", find_cmd.GetDesc() );
 		return;
 	}
 
@@ -1436,7 +1443,7 @@ CONCMD_VA( findand, "Search if cvar name contains all of the search arguments" )
 {
 	if ( args.empty() )
 	{
-		Log_MsgF( gConsoleChannel, "%s\n", findand_cmd.GetDesc() );
+		Log_MsgF( gLC_Console, "%s\n", findand_cmd.GetDesc() );
 		return;
 	}
 
@@ -1465,7 +1472,7 @@ CONCMD_DROP_VA( cvar_reset, reset_cvar_dropdown, 0, "reset a convar back to it's
 {
 	if ( args.empty() )
 	{
-		Log_Msg( gConsoleChannel, "No ConVar specified to reset!\n" );
+		Log_Msg( gLC_Console, "No ConVar specified to reset!\n" );
 		return;
 	}
 
@@ -1477,7 +1484,7 @@ CONCMD_DROP_VA( cvar_toggle, reset_cvar_dropdown, 0, "toggle a convar between tw
 {
 	if ( args.empty() )
 	{
-		Log_Msg( gConsoleChannel, "No ConVar specified to reset!\n" );
+		Log_Msg( gLC_Console, "No ConVar specified to reset!\n" );
 		return;
 	}
 
@@ -1508,13 +1515,13 @@ CONCMD_DROP_VA( cvar_toggle, reset_cvar_dropdown, 0, "toggle a convar between tw
 
 	if ( !cvar )
 	{
-		Log_WarnF( gConsoleChannel, "Convar not found: %s\n", args[ 0 ].c_str() );
+		Log_WarnF( gLC_Console, "Convar not found: %s\n", args[ 0 ].c_str() );
 		return;
 	}
 
 	if ( cvar->aType != EConVarType_Bool )
 	{
-		Log_WarnF( gConsoleChannel, "Cannot Toggle Non-Bool type Convar: %s\n", args[ 0 ].c_str() );
+		Log_WarnF( gLC_Console, "Cannot Toggle Non-Bool type Convar: %s\n", args[ 0 ].c_str() );
 		return;
 	}
 	
@@ -1535,8 +1542,8 @@ CONCMD_VA( host_writeconfig, "Write a config (can optionally specify a path) con
 #if 1
 CONCMD_VA( con_cvar_mem_usage, "Print the memory usage usage of all convars" )
 {
-	Log_MsgF( gConsoleChannel, "sizeof( ConVarData_t ): %zu\n", sizeof( ConVarData_t ) );
-	Log_MsgF( gConsoleChannel, "sizeof( ConCommand ):   %zu\n", sizeof( ConCommand ) );
+	Log_MsgF( gLC_Console, "sizeof( ConVarData_t ): %zu\n", sizeof( ConVarData_t ) );
+	Log_MsgF( gLC_Console, "sizeof( ConCommand ):   %zu\n", sizeof( ConCommand ) );
 
 	// Calculate the Amount of memory each value take up in the ConVarData_t
 	size_t cvarHeapMemory   = 0;
@@ -1591,8 +1598,8 @@ CONCMD_VA( con_cvar_mem_usage, "Print the memory usage usage of all convars" )
 		}
 	}
 
-	Log_MsgF( gConsoleChannel, "ConVar Count: %zu\n", Con_GetConVarMap().size() );
-	Log_MsgF( gConsoleChannel, "ConVar Memory Usage: %.6f KB\n", Util_BytesToKB( cvarHeapMemory + cvarStringMemory ) );
+	Log_MsgF( gLC_Console, "ConVar Count: %zu\n", Con_GetConVarMap().size() );
+	Log_MsgF( gLC_Console, "ConVar Memory Usage: %.6f KB\n", Util_BytesToKB( cvarHeapMemory + cvarStringMemory ) );
 
 	// for ( ConVarBase* current : Con_GetConVars() )
 	// {
@@ -1609,7 +1616,7 @@ CONCMD_VA( con_cvar_mem_usage, "Print the memory usage usage of all convars" )
 	// 		size += sizeof( *current );
 	// }
 	// 
-	// Log_DevF( gConsoleChannel, 1, "INCOMPLETE Convar Memory Usage: %zu bytes\n", size );
+	// Log_DevF( gLC_Console, 1, "INCOMPLETE Convar Memory Usage: %zu bytes\n", size );
 }
 #endif
 

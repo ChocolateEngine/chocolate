@@ -209,42 +209,25 @@ ch_string CORE_API Log_ColorToUnixStr( LogColor color )
 		case LogColor::Default:
 		case LogColor::Count:
 		default:
-			return STR_ANSI_CLR_DEFAULT;
+			return ch_string( Log_ColorToUnix( color ), 4 );
 
 		case LogColor::Black:
-			return STR_ANSI_CLR_BLACK;
 		case LogColor::White:
-			return STR_ANSI_CLR_WHITE;
-
 		case LogColor::DarkBlue:
-			return STR_ANSI_CLR_DARK_BLUE;
 		case LogColor::DarkGreen:
-			return STR_ANSI_CLR_DARK_GREEN;
 		case LogColor::DarkCyan:
-			return STR_ANSI_CLR_DARK_CYAN;
 		case LogColor::DarkRed:
-			return STR_ANSI_CLR_DARK_RED;
 		case LogColor::DarkPurple:
-			return STR_ANSI_CLR_DARK_PURPLE;
 		case LogColor::DarkYellow:
-			return STR_ANSI_CLR_DARK_YELLOW;
 		case LogColor::DarkGray:
-			return STR_ANSI_CLR_DARK_GRAY;
-
 		case LogColor::Blue:
-			return STR_ANSI_CLR_BLUE;
 		case LogColor::Green:
-			return STR_ANSI_CLR_GREEN;
 		case LogColor::Cyan:
-			return STR_ANSI_CLR_CYAN;
 		case LogColor::Red:
-			return STR_ANSI_CLR_RED;
 		case LogColor::Purple:
-			return STR_ANSI_CLR_PURPLE;
 		case LogColor::Yellow:
-			return STR_ANSI_CLR_YELLOW;
 		case LogColor::Gray:
-			return STR_ANSI_CLR_GRAY;
+			return ch_string( Log_ColorToUnix( color ), 7 );
 	}
 }
 
@@ -1406,7 +1389,7 @@ void Log_Group( LogGroup sGroup, const char* spBuf )
 {
 	PROF_SCOPE();
 
-	s64 bufLen = 0;
+	size_t bufLen = 0;
 	if ( !ch_str_check_empty( spBuf, bufLen ) )
 		return;
 
@@ -1437,7 +1420,7 @@ void Log_GroupV( LogGroup sGroup, const char* spFmt, va_list args )
 {
 	PROF_SCOPE();
 
-	s64 bufLen = 0;
+	size_t bufLen = 0;
 	if ( !ch_str_check_empty( spFmt, bufLen ) )
 		return;
 

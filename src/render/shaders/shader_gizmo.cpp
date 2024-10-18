@@ -51,11 +51,11 @@ static glm::vec4 AdjustColor( glm::vec4 baseColor, glm::vec4 darkenColor )
 }
 
 
-static void Shader_Gizmo_PushConstants( Handle cmd, Handle sLayout, const ShaderPushData_t& sPushData )
+static void Shader_Gizmo_PushConstants( ch_handle_t cmd, ch_handle_t sLayout, const ShaderPushData_t& sPushData )
 {
 	Gizmo_Push push{};
 	push.aModelMatrix = sPushData.apRenderable->aModelMatrix;
-	Handle mat        = sPushData.apRenderable->apMaterials[ sPushData.aSurfaceDraw.aSurface ];
+	ch_handle_t mat        = sPushData.apRenderable->apMaterials[ sPushData.aSurfaceDraw.aSurface ];
 	push.aColor       = gGraphics.Mat_GetVec4( mat, "color" );
 
 	if ( gGraphics.Mat_GetBool( mat, "hovered" ) )

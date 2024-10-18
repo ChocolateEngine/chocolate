@@ -7,9 +7,9 @@
 
 
 // static MeshBuilder                               gDebugLineBuilder;
-static Handle                   gDebugLineModel    = InvalidHandle;
-static Handle                   gDebugLineDraw     = InvalidHandle;
-static Handle                   gDebugLineMaterial = InvalidHandle;
+static ch_handle_t                   gDebugLineModel    = CH_INVALID_HANDLE;
+static ch_handle_t                   gDebugLineDraw     = CH_INVALID_HANDLE;
+static ch_handle_t                   gDebugLineMaterial = CH_INVALID_HANDLE;
 ChVector< Shader_VertexData_t > gDebugLineVerts;
 static size_t                   gDebugLineBufferSize = 0;
 
@@ -47,7 +47,7 @@ void Graphics_DebugDrawNewFrame()
 		if ( gDebugLineModel )
 		{
 			gGraphics.FreeModel( gDebugLineModel );
-			gDebugLineModel = InvalidHandle;
+			gDebugLineModel = CH_INVALID_HANDLE;
 		}
 
 		if ( gDebugLineDraw )
@@ -59,7 +59,7 @@ void Graphics_DebugDrawNewFrame()
 
 			// gGraphics.FreeModel( renderable->aModel );
 			gGraphics.FreeRenderable( gDebugLineDraw );
-			gDebugLineDraw = InvalidHandle;
+			gDebugLineDraw = CH_INVALID_HANDLE;
 		}
 
 		return;
@@ -192,7 +192,7 @@ void Graphics_UpdateDebugDraw()
 		if ( !gGraphicsData.aModels.Get( gDebugLineModel, &model ) )
 		{
 			Log_Error( gLC_ClientGraphics, "Failed to get Debug Draw Model!\n" );
-			gDebugLineModel = InvalidHandle;
+			gDebugLineModel = CH_INVALID_HANDLE;
 			return;
 		}
 
@@ -500,7 +500,7 @@ void Graphics::DrawFrustum( const Frustum_t& srFrustum )
 }
 
 
-void Graphics::DrawNormals( Handle sModel, const glm::mat4& srMatrix )
+void Graphics::DrawNormals( ch_handle_t sModel, const glm::mat4& srMatrix )
 {
 	PROF_SCOPE();
 

@@ -6,7 +6,7 @@ bool   Graphics_CreateShadowRenderPass();
 void   Graphics_AddShadowMap( Light_t* spLight );
 void   Graphics_DestroyShadowMap( Light_t* spLight );
 
-//Handle Graphics_AddLightBuffer( const char* spBufferName, size_t sBufferSize, Light_t* spLight );
+//ch_handle_t Graphics_AddLightBuffer( const char* spBufferName, size_t sBufferSize, Light_t* spLight );
 //void   Graphics_DestroyLightBuffer( Light_t* spLight );
 
 u32    Graphics_AllocateLightSlot( Light_t* spLight );
@@ -20,6 +20,6 @@ void   Graphics_DestroyLights();
 // Are we using any shadowmaps/are any shadowmaps enabled?
 bool   Graphics_IsUsingShadowMaps();
 
-void   Graphics_DrawShadowMaps( Handle sCmd, size_t sIndex, u32* viewports, u32 viewportCount );
+void   Graphics_DrawShadowMaps( ch_handle_t sCmd, size_t sIndex, u32* viewports, u32 viewportCount );
 
 void   Graphics_ResetShadowMapsRenderList();

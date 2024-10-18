@@ -23,10 +23,11 @@ extern void              ch_str_free_all();
 static ch_string*        gArgV = nullptr;
 static int               gArgC = 0;
 
-extern LogChannel        gConsoleChannel;
-
 extern ch_string         gConArchiveFile;
 extern ch_string         gConArchiveDefault;
+
+
+LOG_CHANNEL( Console )
 
 
 // TODO: Check for name conflicts
@@ -53,6 +54,7 @@ extern "C"
 			return 1;
 		}
 
+		con_init();
 		Assert_Init();
 		//Thread_Init();
 
@@ -182,7 +184,7 @@ static const char* Args_RegisterString( Arg_t& srArg, const char* sDefault )
 			{
 				if ( i + 1 >= gArgC )
 				{
-					Log_WarnF( gConsoleChannel, "No Value Specified for Argument \"%s\"", name );
+					Log_WarnF( gLC_Console, "No Value Specified for Argument \"%s\"", name );
 					break;
 				}
 
@@ -210,7 +212,7 @@ static int Args_RegisterInt( Arg_t& srArg, int sDefault )
 			{
 				if ( i + 1 >= gArgC )
 				{
-					Log_WarnF( gConsoleChannel, "No Int Value Specified for Argument \"%s\"", name );
+					Log_WarnF( gLC_Console, "No Int Value Specified for Argument \"%s\"", name );
 					break;
 				}
 
@@ -239,7 +241,7 @@ static float Args_RegisterFloat( Arg_t& srArg, float sDefault )
 			{
 				if ( i + 1 >= gArgC )
 				{
-					Log_WarnF( gConsoleChannel, "No Int Value Specified for Argument \"%s\"", name );
+					Log_WarnF( gLC_Console, "No Int Value Specified for Argument \"%s\"", name );
 					break;
 				}
 
@@ -411,7 +413,7 @@ Arg_t* Args_GetRegisteredData( u32 sIndex )
 {
 	if ( sIndex >= gArgList.size() )
 	{
-		Log_WarnF( gConsoleChannel, "Argument Index Out of Bounds: %zd size, %d index\n", gArgList.size(), sIndex );
+		Log_WarnF( gLC_Console, "Argument Index Out of Bounds: %zd size, %d index\n", gArgList.size(), sIndex );
 		return nullptr;
 	}
 
@@ -441,7 +443,7 @@ ch_string Args_GetRegisteredPrint( const Arg_t* spArg )
 
 	if ( spArg->aNames.empty() )
 	{
-		Log_Warn( gConsoleChannel, "No names for argument!\n" );
+		Log_Warn( gLC_Console, "No names for argument!\n" );
 		return {};
 	}
 
@@ -454,7 +456,7 @@ ch_string Args_GetRegisteredPrint( const Arg_t* spArg )
 	{
 		default:
 		case EArgType_None:
-			Log_WarnF( gConsoleChannel, "Unknown argument type for arg: %s\n", spArg->aNames[ 0 ] );
+			Log_WarnF( gLC_Console, "Unknown argument type for arg: %s\n", spArg->aNames[ 0 ] );
 			CH_ASSERT_MSG( 0, "Unknown Argument Type" );
 			break;
 
@@ -499,12 +501,12 @@ ch_string Args_GetRegisteredPrint( const Arg_t* spArg )
 
 void Args_PrintRegistered()
 {
-	Log_Msg( gConsoleChannel, "\nArguments:\n--------------------------------------\n" );
+	Log_Msg( gLC_Console, "\nArguments:\n--------------------------------------\n" );
 	for ( const Arg_t& arg : gArgList )
 	{
 		if ( arg.aNames.empty() )
 		{
-			Log_Warn( gConsoleChannel, "No names for argument!\n" );
+			Log_Warn( gLC_Console, "No names for argument!\n" );
 			continue;
 		}
 
@@ -513,7 +515,7 @@ void Args_PrintRegistered()
 		if ( !msg.data )
 			continue;
 
-		Log_Msg( gConsoleChannel, msg.data );
+		Log_Msg( gLC_Console, msg.data );
 	}
 }
 

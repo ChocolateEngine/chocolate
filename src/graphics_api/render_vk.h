@@ -20,10 +20,10 @@
 #include <set>
 
 
-LOG_CHANNEL2( GraphicsAPI );
-LOG_CHANNEL2( Render );
-LOG_CHANNEL2( Vulkan );
-LOG_CHANNEL2( Validation );
+LOG_CHANNEL( GraphicsAPI );
+LOG_CHANNEL( Render );
+LOG_CHANNEL( Vulkan );
+LOG_CHANNEL( Validation );
 
 
 constexpr const char*  CH_DEFAULT_WINDOW_NAME = "App Window";
@@ -35,7 +35,7 @@ extern VkColorSpaceKHR gColorSpace;
 CONVAR_BOOL_EXT( r_msaa );
 CONVAR_INT_EXT( r_msaa_samples );
 
-extern ChHandle_t      gMissingTexHandle;
+extern ch_handle_t      gMissingTexHandle;
 
 enum class GraphicsFmt;
 using ShaderStage = char;
@@ -176,11 +176,11 @@ struct FramebufferVK
 
 struct RenderTarget
 {
-	ChVector< ChHandle_t >    aColors;
+	ChVector< ch_handle_t >    aColors;
 	// std::vector< TextureVK* > aInput;
-	ChVector< ChHandle_t >    aResolve;
+	ChVector< ch_handle_t >    aResolve;
 	// std::vector< TextureVK* > aPreserve;
-	ChHandle_t                   aDepth = 0;
+	ch_handle_t                   aDepth = 0;
 
 	// std::vector< VkImageView >   aColors;
 	// std::vector< VkImageView >   aResolve;
@@ -231,7 +231,7 @@ struct WindowVK
 
 	// only allocates to swapImageCount for the main window buffers
 	VkCommandBuffer*                commandBuffers;
-	ChHandle_t*                     commandBufferHandles;
+	ch_handle_t*                     commandBufferHandles;
 
 	// amount allocated is swapImageCount
 	VkFence*                        fences;
@@ -264,17 +264,17 @@ struct GraphicsAPI_t
 
 	CommandBufferGroup_t                  aCommandGroups[ ECommandBufferType_Count ];
 
-	ChVector< ChHandle_t >                aSampledTextures;
+	ChVector< ch_handle_t >                aSampledTextures;
 
 	ChVector< QueuedBufferCopy_t >        aBufferCopies;
 
-	std::unordered_map< ChHandle_t, u32 > aTextureRefs;
+	std::unordered_map< ch_handle_t, u32 > aTextureRefs;
 
 	// WindowVK*                             aWindows;
 	// u8                                    aWindowCount;
 
 	ResourceList< WindowVK >              windows;
-	ChHandle_t                            mainWindow;
+	ch_handle_t                            mainWindow;
 };
 
 
@@ -311,7 +311,7 @@ VkAccessFlags                         VK_ToAccessFlags( EGraphicsAccessFlags sFl
 void                                  VK_memcpy( VkDeviceMemory sBufferMemory, VkDeviceSize sSize, const void* spData );
 void                                  VK_memread( VkDeviceMemory sBufferMemory, VkDeviceSize sSize, void* spData );
 
-void                                  VK_Reset( ChHandle_t windowHandle, WindowVK* window, ERenderResetFlags sFlags = ERenderResetFlags_None );
+void                                  VK_Reset( ch_handle_t windowHandle, WindowVK* window, ERenderResetFlags sFlags = ERenderResetFlags_None );
 void                                  VK_ResetAll( ERenderResetFlags sFlags = ERenderResetFlags_None );
 
 bool                                  VK_UseMSAA();
@@ -382,8 +382,8 @@ VkDescriptorPool                      VK_GetDescPool();
 // VkDescriptorSetLayout                 VK_GetDescBufferSet();
 
 // blech
-Handle                                VK_GetSamplerLayoutHandle();
-const std::vector< Handle >&          VK_GetSamplerSetsHandles();
+ch_handle_t                                VK_GetSamplerLayoutHandle();
+const std::vector< ch_handle_t >&          VK_GetSamplerSetsHandles();
 
 // VkDescriptorSetLayout                 VK_GetImageLayout();
 // VkDescriptorSetLayout                 VK_GetImageStorageLayout();
@@ -393,17 +393,17 @@ const std::vector< Handle >&          VK_GetSamplerSetsHandles();
 // VkDescriptorSet                       VK_GetImageSet( size_t sIndex );
 void                                  VK_UpdateImageSets();
 void                                  VK_CalcTextureIndices();
-void                                  VK_SetImageSets( ChHandle_t* spDescSets, int sCount, u32 sBinding );
+void                                  VK_SetImageSets( ch_handle_t* spDescSets, int sCount, u32 sBinding );
 
-Handle                                VK_CreateDescLayout( const CreateDescLayout_t& srCreate );
+ch_handle_t                                VK_CreateDescLayout( const CreateDescLayout_t& srCreate );
 void                                  VK_UpdateDescSets( WriteDescSet_t* spUpdate, u32 sCount );
 
-bool                                  VK_AllocateDescLayout( const AllocDescLayout_t& srCreate, Handle* handles );
-bool                                  VK_AllocateVariableDescLayout( const AllocVariableDescLayout_t& srCreate, Handle* handles );
+bool                                  VK_AllocateDescLayout( const AllocDescLayout_t& srCreate, ch_handle_t* handles );
+bool                                  VK_AllocateVariableDescLayout( const AllocVariableDescLayout_t& srCreate, ch_handle_t* handles );
 
 
-VkDescriptorSetLayout                 VK_GetDescLayout( Handle sHandle );
-VkDescriptorSet                       VK_GetDescSet( Handle sHandle );
+VkDescriptorSetLayout                 VK_GetDescLayout( ch_handle_t sHandle );
+VkDescriptorSet                       VK_GetDescSet( ch_handle_t sHandle );
 
 // --------------------------------------------------------------------------------------
 // Command Pool
@@ -422,17 +422,17 @@ VkCommandPool&                        VK_GetTransferCommandPool();
 VkRenderPass                          VK_CreateMainRenderPass();
 void                                  VK_DestroyMainRenderPass();
 
-Handle                                VK_CreateRenderPass( const RenderPassCreate_t& srCreate );
-void                                  VK_DestroyRenderPass( Handle shHandle );
+ch_handle_t                                VK_CreateRenderPass( const RenderPassCreate_t& srCreate );
+void                                  VK_DestroyRenderPass( ch_handle_t shHandle );
 
 void                                  VK_DestroyRenderPasses();
-VkRenderPass                          VK_GetRenderPass( ChHandle_t shHandle = CH_INVALID_HANDLE );
+VkRenderPass                          VK_GetRenderPass( ch_handle_t shHandle = CH_INVALID_HANDLE );
 RenderPassInfoVK*                     VK_GetRenderPassInfo( VkRenderPass renderPass );
 
 // --------------------------------------------------------------------------------------
 // Present
 
-VkCommandBuffer                       VK_GetCommandBuffer( Handle cmd );
+VkCommandBuffer                       VK_GetCommandBuffer( ch_handle_t cmd );
 
 bool                                  VK_CreateFences( WindowVK* window );
 void                                  VK_DestroyFences( WindowVK* window );
@@ -457,24 +457,24 @@ void                                  VK_OneTimeCommand( std::function< void( Vk
 void                                  VK_WaitForTransferQueue();
 void                                  VK_WaitForGraphicsQueue();
 
-u32                                   VK_GetNextImage( ChHandle_t windowHandle, WindowVK* window );
-void                                  VK_Present( ChHandle_t windowHandle, WindowVK* window, u32 sImageIndex );
+u32                                   VK_GetNextImage( ch_handle_t windowHandle, WindowVK* window );
+void                                  VK_Present( ch_handle_t windowHandle, WindowVK* window, u32 sImageIndex );
 
 void                                  VK_CheckFenceStatus( WindowVK* window );
 
 // --------------------------------------------------------------------------------------
 // Shader System
 
-bool                                  VK_CreatePipelineLayout( ChHandle_t& sHandle, PipelineLayoutCreate_t& srPipelineCreate );
-bool                                  VK_CreateGraphicsPipeline( ChHandle_t& sHandle, GraphicsPipelineCreate_t& srGraphicsCreate );
-bool                                  VK_CreateComputePipeline( ChHandle_t& srHandle, ComputePipelineCreate_t& srPipelineCreate );
+bool                                  VK_CreatePipelineLayout( ch_handle_t& sHandle, PipelineLayoutCreate_t& srPipelineCreate );
+bool                                  VK_CreateGraphicsPipeline( ch_handle_t& sHandle, GraphicsPipelineCreate_t& srGraphicsCreate );
+bool                                  VK_CreateComputePipeline( ch_handle_t& srHandle, ComputePipelineCreate_t& srPipelineCreate );
 
-void                                  VK_DestroyPipeline( Handle sPipeline );
-void                                  VK_DestroyPipelineLayout( Handle sPipeline );
+void                                  VK_DestroyPipeline( ch_handle_t sPipeline );
+void                                  VK_DestroyPipelineLayout( ch_handle_t sPipeline );
 void                                  VK_DestroyShaders();
 
-bool                                  VK_BindShader( VkCommandBuffer c, Handle handle );
-VkPipelineLayout                      VK_GetPipelineLayout( Handle handle );
+bool                                  VK_BindShader( VkCommandBuffer c, ch_handle_t handle );
+VkPipelineLayout                      VK_GetPipelineLayout( ch_handle_t handle );
 
 // --------------------------------------------------------------------------------------
 // Buffers
@@ -490,21 +490,21 @@ void                                  VK_CreateTextureSamplers();
 void                                  VK_DestroyTextureSamplers();
 VkSampler                             VK_GetSampler( VkFilter sFilter, VkSamplerAddressMode addressMode, VkBool32 sDepthCompare );
 
-TextureVK*                            VK_NewTexture( ChHandle_t& srHandle );
-bool                                  VK_LoadTexture( ChHandle_t& srHandle, TextureVK* spTexture, const ch_string& srPath, const TextureCreateData_t& srCreateData );
-TextureVK*                            VK_CreateTexture( ChHandle_t& srHandle, const TextureCreateInfo_t& srTextureCreateInfo, const TextureCreateData_t& srCreateData );
-void                                  VK_DestroyTexture( ChHandle_t sTexture );
+TextureVK*                            VK_NewTexture( ch_handle_t& srHandle );
+bool                                  VK_LoadTexture( ch_handle_t& srHandle, TextureVK* spTexture, const ch_string& srPath, const TextureCreateData_t& srCreateData );
+TextureVK*                            VK_CreateTexture( ch_handle_t& srHandle, const TextureCreateInfo_t& srTextureCreateInfo, const TextureCreateData_t& srCreateData );
+void                                  VK_DestroyTexture( ch_handle_t sTexture );
 void                                  VK_DestroyAllTextures();
-TextureVK*                            VK_GetTexture( ChHandle_t sTexture );
-TextureVK*                            VK_GetTextureNoMissing( ChHandle_t sTexture );  // Same as above, but does not return the missing texture as a fallback
+TextureVK*                            VK_GetTexture( ch_handle_t sTexture );
+TextureVK*                            VK_GetTextureNoMissing( ch_handle_t sTexture );  // Same as above, but does not return the missing texture as a fallback
 
-Handle                                VK_CreateFramebuffer( const char* name, VkRenderPass sRenderPass, u16 sWidth, u16 sHeight, const VkImageView* spAttachments, u32 sCount );
-Handle                                VK_CreateFramebuffer( const char* name, const VkFramebufferCreateInfo& sCreateInfo );
-Handle                                VK_CreateFramebuffer( const CreateFramebuffer_t& srCreate );
-void                                  VK_DestroyFramebuffer( Handle shHandle );
-VkFramebuffer                         VK_GetFramebuffer( Handle shHandle );
-glm::uvec2                            VK_GetFramebufferSize( Handle shHandle );
-Handle                                VK_GetFramebufferHandle( VkFramebuffer sFrameBuffer );
+ch_handle_t                                VK_CreateFramebuffer( const char* name, VkRenderPass sRenderPass, u16 sWidth, u16 sHeight, const VkImageView* spAttachments, u32 sCount );
+ch_handle_t                                VK_CreateFramebuffer( const char* name, const VkFramebufferCreateInfo& sCreateInfo );
+ch_handle_t                                VK_CreateFramebuffer( const CreateFramebuffer_t& srCreate );
+void                                  VK_DestroyFramebuffer( ch_handle_t shHandle );
+VkFramebuffer                         VK_GetFramebuffer( ch_handle_t shHandle );
+glm::uvec2                            VK_GetFramebufferSize( ch_handle_t shHandle );
+ch_handle_t                                VK_GetFramebufferHandle( VkFramebuffer sFrameBuffer );
 
 RenderTarget*                         VK_CreateRenderTarget( const std::vector< TextureVK* >& srImages, u16 sWidth, u16 sHeight, const std::vector< VkImageView >& srSwapImages = {} );
 void                                  VK_DestroyRenderTarget( RenderTarget* spTarget );

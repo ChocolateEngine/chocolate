@@ -36,7 +36,7 @@ void VK_BindDescSets()
 }
 
 
-bool VK_BindShader( VkCommandBuffer c, Handle handle )
+bool VK_BindShader( VkCommandBuffer c, ch_handle_t handle )
 {
 	PROF_SCOPE();
 
@@ -52,7 +52,7 @@ bool VK_BindShader( VkCommandBuffer c, Handle handle )
 }
 
 
-VkPipelineLayout VK_GetPipelineLayout( Handle handle )
+VkPipelineLayout VK_GetPipelineLayout( ch_handle_t handle )
 {
 	VkPipelineLayout* layout = gPipelineLayouts.Get( handle );
 	if ( layout == nullptr )
@@ -65,7 +65,7 @@ VkPipelineLayout VK_GetPipelineLayout( Handle handle )
 }
 
 
-bool VK_CreatePipelineLayout( ChHandle_t& srHandle, PipelineLayoutCreate_t& srPipelineCreate )
+bool VK_CreatePipelineLayout( ch_handle_t& srHandle, PipelineLayoutCreate_t& srPipelineCreate )
 {
 	std::vector< VkDescriptorSetLayout > layouts;
 
@@ -101,7 +101,7 @@ bool VK_CreatePipelineLayout( ChHandle_t& srHandle, PipelineLayoutCreate_t& srPi
 	VkPipelineLayout pipelineLayout;
 	VK_CheckResult( vkCreatePipelineLayout( VK_GetDevice(), &pipelineCreateInfo, NULL, &pipelineLayout ), "Failed to create pipeline layout" );
 
-	if ( srHandle != InvalidHandle )
+	if ( srHandle != CH_INVALID_HANDLE )
 		return gPipelineLayouts.Update( srHandle, pipelineLayout );
 
 	srHandle = gPipelineLayouts.Add( pipelineLayout );
@@ -164,7 +164,7 @@ bool VK_GetShaderStageCreateInfo( VkPipelineShaderStageCreateInfo* spStageCreate
 }
 
 
-bool VK_CreateComputePipeline( ChHandle_t& srHandle, ComputePipelineCreate_t& srPipelineCreate )
+bool VK_CreateComputePipeline( ch_handle_t& srHandle, ComputePipelineCreate_t& srPipelineCreate )
 {
 	VkPipelineLayout* layout = gPipelineLayouts.Get( srPipelineCreate.aPipelineLayout );
 	if ( layout == nullptr )
@@ -231,7 +231,7 @@ bool VK_CreateComputePipeline( ChHandle_t& srHandle, ComputePipelineCreate_t& sr
 }
 
 
-bool VK_CreateGraphicsPipeline( ChHandle_t& srHandle, GraphicsPipelineCreate_t& srGraphicsCreate )
+bool VK_CreateGraphicsPipeline( ch_handle_t& srHandle, GraphicsPipelineCreate_t& srGraphicsCreate )
 {
 	VkPipelineLayout* layout = gPipelineLayouts.Get( srGraphicsCreate.aPipelineLayout );
 	if ( layout == nullptr )
@@ -508,7 +508,7 @@ bool VK_CreateGraphicsPipeline( ChHandle_t& srHandle, GraphicsPipelineCreate_t& 
 }
 
 
-void VK_DestroyPipeline( Handle sPipeline )
+void VK_DestroyPipeline( ch_handle_t sPipeline )
 {
 	ShaderVK* shader = gShaders.Get( sPipeline );
 	if ( !shader )
@@ -533,7 +533,7 @@ void VK_DestroyPipeline( Handle sPipeline )
 }
 
 
-void VK_DestroyPipelineLayout( Handle sPipeline )
+void VK_DestroyPipelineLayout( ch_handle_t sPipeline )
 {
 	VkPipelineLayout* layout = gPipelineLayouts.Get( sPipeline );
 	if ( layout == nullptr )

@@ -266,7 +266,7 @@ public:
 class PhysCollisionCollector;
 
 
-// this could technically be a Handle, but i mean, that would add a lot of functions so
+// this could technically be a ch_handle_t, but i mean, that would add a lot of functions so
 class IPhysicsObject
 {
   public:
@@ -512,10 +512,10 @@ typedef void ( *Phys_DrawTriangle_t )(
     const glm::vec3& inV3,
     const glm::vec4& srColor );
 
-typedef Handle ( *Phys_CreateTriangleBatch_t )(
+typedef ch_handle_t ( *Phys_CreateTriangleBatch_t )(
 	const std::vector< PhysTriangle_t >& srTriangles );
 
-typedef Handle ( *Phys_CreateTriangleBatchInd_t )(
+typedef ch_handle_t ( *Phys_CreateTriangleBatchInd_t )(
 	const std::vector< PhysVertex_t >& srVerts,
 	const std::vector< u32 >& srInd );
 
@@ -524,7 +524,7 @@ typedef void ( *Phys_DrawGeometry_t )(
 	// const JPH::AABox& inWorldSpaceBounds,
 	float            sLODScaleSq,
 	const glm::vec4& srColor,
-	Handle           sGeometry,
+	ch_handle_t           sGeometry,
 	EPhysCullMode    sCullMode,
 	bool             sCastShadow,
 	bool             sWireframe );

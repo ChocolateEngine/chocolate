@@ -64,7 +64,7 @@ static void Shader_Debug_GetGraphicsPipelineCreate( GraphicsPipelineCreate_t& sr
 }
 
 
-static void Shader_Debug_PushConstants( Handle cmd, Handle sLayout, const ShaderPushData_t& sPushData )
+static void Shader_Debug_PushConstants( ch_handle_t cmd, ch_handle_t sLayout, const ShaderPushData_t& sPushData )
 {
 	Debug_Push push{};
 	push.aModelMatrix = sPushData.apRenderable->aModelMatrix;
@@ -151,7 +151,7 @@ CH_REGISTER_SHADER( gShaderCreate_DebugLine );
 // Wireframe Shader is just the debug shader with a different push constant lol
 
 
-static void Shader_Wireframe_PushConstants( Handle cmd, Handle sLayout, const ShaderPushData_t& sPushData )
+static void Shader_Wireframe_PushConstants( ch_handle_t cmd, ch_handle_t sLayout, const ShaderPushData_t& sPushData )
 {
 	Debug_Push push{};
 	push.aModelMatrix = sPushData.apRenderable->aModelMatrix;

@@ -19,7 +19,7 @@ input.h
 
 InputSystem* input = new InputSystem;
 
-LOG_REGISTER_CHANNEL( InputSystem, LogColor::Default );
+LOG_CHANNEL_REGISTER( InputSystem, LogColor::Default );
 
 
 static ModuleInterface_t gInterfaces[] = {
@@ -504,7 +504,7 @@ void InputSystem::UpdateKeyState( EButton key )
 
 	if ( key < 0 )
 	{
-		Log_ErrorF( gInputSystemChannel, "Invalid Button ID: %d\n", key );
+		Log_ErrorF( gLC_InputSystem, "Invalid Button ID: %d\n", key );
 		return;
 	}
 
@@ -582,7 +582,7 @@ bool InputSystem::RegisterKey( EButton key )
 {
 	if ( key < 0 )
 	{
-		Log_ErrorF( gInputSystemChannel, "Invalid Button ID: %d\n", key );
+		Log_ErrorF( gLC_InputSystem, "Invalid Button ID: %d\n", key );
 		return false;
 	}
 
@@ -695,7 +695,7 @@ KeyState InputSystem::GetKeyState( EButton key )
 		if ( state == aKeyStates.end() )
 		{
 			// would be odd if this got hit
-			Log_WarnF( gInputSystemChannel, "Invalid Key: \"%s\"\n", GetKeyName( key ) );
+			Log_WarnF( gLC_InputSystem, "Invalid Key: \"%s\"\n", GetKeyName( key ) );
 			return KeyState_Invalid;
 		}
 	}

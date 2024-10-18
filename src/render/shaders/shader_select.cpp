@@ -40,7 +40,7 @@ static void Shader_SelectResult_GetComputePipelineCreate( ComputePipelineCreate_
 }
 
 
-static void Shader_Select_PushConstants( Handle cmd, Handle sLayout, const ShaderPushData_t& sPushData )
+static void Shader_Select_PushConstants( ch_handle_t cmd, ch_handle_t sLayout, const ShaderPushData_t& sPushData )
 {
 	PROF_SCOPE();
 
@@ -75,11 +75,11 @@ static void Shader_Select_PushConstants( Handle cmd, Handle sLayout, const Shade
 	push.aColor.z            = color[ 2 ] / 255.f;
 	push.aDiffuse            = -1;
 
-	ChHandle_t mat           = sPushData.apRenderable->apMaterials[ sPushData.aSurfaceDraw.aSurface ];
+	ch_handle_t mat           = sPushData.apRenderable->apMaterials[ sPushData.aSurfaceDraw.aSurface ];
 
 	if ( mat != CH_INVALID_HANDLE )
 	{
-		ChHandle_t texture = gGraphics.Mat_GetTexture( mat, "diffuse" );
+		ch_handle_t texture = gGraphics.Mat_GetTexture( mat, "diffuse" );
 
 		if ( texture != CH_INVALID_HANDLE )
 		{

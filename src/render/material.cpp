@@ -14,7 +14,7 @@
 extern IRender* render;
 
 using MaterialVar2 = std::variant<
-  ChHandle_t,
+  ch_handle_t,
   float,
   int,
   glm::vec2,
@@ -32,7 +32,7 @@ struct MaterialVar
 
 	}
 
-	MaterialVar( const std::string_view name, Handle data ) :
+	MaterialVar( const std::string_view name, ch_handle_t data ) :
 		MaterialVar( name, EMatVar_Texture )
 	{ aDataTexture = data; }
 
@@ -70,7 +70,7 @@ struct MaterialVar
 	// which will only be used very, very rarely!!
 	union
 	{
-		Handle    aDataTexture;
+		ch_handle_t    aDataTexture;
 		float     aDataFloat;
 		int       aDataInt;
 		bool      aDataBool;
@@ -79,14 +79,14 @@ struct MaterialVar
 		glm::vec4 aDataVec4;
 	};
 	
-	// inline void             SetTexture( Handle val )                      { aType = EMatVar_Texture; aDataTexture = val; }
+	// inline void             SetTexture( ch_handle_t val )                      { aType = EMatVar_Texture; aDataTexture = val; }
 	// inline void             SetFloat( float val )                         { aType = EMatVar_Float; aDataFloat = val; }
 	// inline void             SetInt( int val )                             { aType = EMatVar_Int; aDataInt = val; }
 	// inline void             SetVec2( const glm::vec2 &val )               { aType = EMatVar_Vec2; aDataVec2 = val; }
 	// inline void             SetVec3( const glm::vec3 &val )               { aType = EMatVar_Vec3; aDataVec3 = val; }
 	// inline void             SetVec4( const glm::vec4 &val )               { aType = EMatVar_Vec4; aDataVec4 = val; }
 	
-	inline void             SetVar( Handle val )                          { aType = EMatVar_Texture; aDataTexture = val; }
+	inline void             SetVar( ch_handle_t val )                          { aType = EMatVar_Texture; aDataTexture = val; }
 	inline void             SetVar( float val )                           { aType = EMatVar_Float; aDataFloat = val; }
 	inline void             SetVar( int val )                             { aType = EMatVar_Int; aDataInt = val; }
 	inline void             SetVar( bool val )                            { aType = EMatVar_Bool; aDataBool = val; }
@@ -94,7 +94,7 @@ struct MaterialVar
 	inline void             SetVar( const glm::vec3 &val )                { aType = EMatVar_Vec3; aDataVec3 = val; }
 	inline void             SetVar( const glm::vec4 &val )                { aType = EMatVar_Vec4; aDataVec4 = val; }
 
-	inline Handle           GetTexture( Handle fallback = InvalidHandle ) { return ( aType == EMatVar_Texture ) ? aDataTexture : fallback; }
+	inline ch_handle_t           GetTexture( ch_handle_t fallback = CH_INVALID_HANDLE ) { return ( aType == EMatVar_Texture ) ? aDataTexture : fallback; }
 	inline const float&     GetFloat( float fallback = 0.f )              { return ( aType == EMatVar_Float ) ? aDataFloat : fallback; }
 	inline const int&       GetInt( int fallback = 0 )                    { return ( aType == EMatVar_Int ) ? aDataInt : fallback; }
 	inline bool             GetBool( bool fallback = false )              { return ( aType == EMatVar_Bool ) ? aDataBool : fallback; }
@@ -113,15 +113,15 @@ struct MaterialData_t
 
 
 static ResourceList< MaterialData_t* >         gMaterials;
-static std::unordered_map< ch_string, Handle > gMaterialPaths;
-static std::unordered_map< ch_string, Handle > gMaterialNames;  // TODO: use string hashing for this?
-static std::unordered_map< Handle, Handle >    gMaterialShaders;
+static std::unordered_map< ch_string, ch_handle_t > gMaterialPaths;
+static std::unordered_map< ch_string, ch_handle_t > gMaterialNames;  // TODO: use string hashing for this?
+static std::unordered_map< ch_handle_t, ch_handle_t >    gMaterialShaders;
 
-static Handle                                  gInvalidMaterial;
+static ch_handle_t                                  gInvalidMaterial;
 static std::string                             gStrEmpty;
 
 
-const char* Graphics::Mat_GetName( Handle shMat )
+const char* Graphics::Mat_GetName( ch_handle_t shMat )
 {
 	for ( auto& [name, mat] : gMaterialNames )
 	{
@@ -138,7 +138,7 @@ const char* Graphics::Mat_GetName( Handle shMat )
 }
 
 
-size_t Graphics::Mat_GetVarCount( Handle mat )
+size_t Graphics::Mat_GetVarCount( ch_handle_t mat )
 {
 	MaterialData_t* data = nullptr;
 	if ( !gMaterials.Get( mat, &data ) )
@@ -151,7 +151,7 @@ size_t Graphics::Mat_GetVarCount( Handle mat )
 }
 
 
-EMatVar Graphics::Mat_GetVarType( Handle mat, size_t sIndex )
+EMatVar Graphics::Mat_GetVarType( ch_handle_t mat, size_t sIndex )
 {
 	MaterialData_t* data = nullptr;
 	if ( !gMaterials.Get( mat, &data ) )
@@ -170,7 +170,7 @@ EMatVar Graphics::Mat_GetVarType( Handle mat, size_t sIndex )
 }
 
 
-const char* Graphics::Mat_GetVarName( Handle mat, size_t sIndex )
+const char* Graphics::Mat_GetVarName( ch_handle_t mat, size_t sIndex )
 {
 	MaterialData_t* data = nullptr;
 	if ( !gMaterials.Get( mat, &data ) )
@@ -189,18 +189,18 @@ const char* Graphics::Mat_GetVarName( Handle mat, size_t sIndex )
 }
 
 
-Handle Graphics::Mat_GetShader( Handle mat )
+ch_handle_t Graphics::Mat_GetShader( ch_handle_t mat )
 {
 	auto it = gMaterialShaders.find( mat );
 	if ( it != gMaterialShaders.end() )
 		return it->second;
 
 	Log_Warn( gLC_ClientGraphics, "Mat_GetShader: No Material found in gMaterialShaders!\n" );
-	return InvalidHandle;
+	return CH_INVALID_HANDLE;
 }
 
 
-void Graphics::Mat_SetShader( Handle mat, Handle shShader )
+void Graphics::Mat_SetShader( ch_handle_t mat, ch_handle_t shShader )
 {
 	auto it = gMaterialShaders.find( mat );
 	if ( it != gMaterialShaders.end() )
@@ -219,11 +219,11 @@ void Graphics::Mat_SetShader( Handle mat, Handle shShader )
 }
 
 
-VertexFormat Graphics::Mat_GetVertexFormat( Handle mat )
+VertexFormat Graphics::Mat_GetVertexFormat( ch_handle_t mat )
 {
-	Handle shader = Mat_GetShader( mat );
+	ch_handle_t shader = Mat_GetShader( mat );
 
-	if ( shader == InvalidHandle )
+	if ( shader == CH_INVALID_HANDLE )
 		return VertexFormat_None;
 
 	return Shader_GetVertexFormat( shader );
@@ -231,7 +231,7 @@ VertexFormat Graphics::Mat_GetVertexFormat( Handle mat )
 
 
 // Increments Reference Count for material
-void Graphics::Mat_AddRef( ChHandle_t sMat )
+void Graphics::Mat_AddRef( ch_handle_t sMat )
 {
 	MaterialData_t* data = nullptr;
 	if ( !gMaterials.Get( sMat, &data ) )
@@ -246,7 +246,7 @@ void Graphics::Mat_AddRef( ChHandle_t sMat )
 
 
 // Decrements Reference Count for material - returns true if the material is deleted
-bool Graphics::Mat_RemoveRef( ChHandle_t sMat )
+bool Graphics::Mat_RemoveRef( ch_handle_t sMat )
 {
 	MaterialData_t* data = nullptr;
 	if ( !gMaterials.Get( sMat, &data ) )
@@ -296,7 +296,7 @@ bool Graphics::Mat_RemoveRef( ChHandle_t sMat )
 
 	if ( matName.size )
 	{
-		// Log_DevF( gLC_ClientGraphics, 1, "Freeing Material \"%s\" - Handle \"%zd\"\n", matName.data(), sMat );
+		// Log_DevF( gLC_ClientGraphics, 1, "Freeing Material \"%s\" - ch_handle_t \"%zd\"\n", matName.data(), sMat );
 		Log_DevF( gLC_ClientGraphics, 1, "Freeing Material \"%s\"\n", matName.data );
 		char* matNameChar = matName.data;
 		gMaterialNames.erase( matName );
@@ -316,7 +316,7 @@ bool Graphics::Mat_RemoveRef( ChHandle_t sMat )
 
 
 template <typename T>
-void Mat_SetVarInternal( Handle mat, const std::string& name, const T& value )
+void Mat_SetVarInternal( ch_handle_t mat, const std::string& name, const T& value )
 {
 	PROF_SCOPE();
 
@@ -351,20 +351,20 @@ void Mat_SetVarInternal( Handle mat, const std::string& name, const T& value )
 }
 
 
-void Graphics::Mat_SetVar( Handle mat, const std::string& name, Handle value )
+void Graphics::Mat_SetVar( ch_handle_t mat, const std::string& name, ch_handle_t value )
 {
 	Mat_SetVarInternal( mat, name, value );
 }
 
-void Graphics::Mat_SetVar( Handle mat, const std::string& name, float value )              { Mat_SetVarInternal( mat, name, value ); }
-void Graphics::Mat_SetVar( Handle mat, const std::string& name, int value )                { Mat_SetVarInternal( mat, name, value ); }
-void Graphics::Mat_SetVar( Handle mat, const std::string& name, bool value )               { Mat_SetVarInternal( mat, name, value ); }
-void Graphics::Mat_SetVar( Handle mat, const std::string& name, const glm::vec2& value )   { Mat_SetVarInternal( mat, name, value ); }
-void Graphics::Mat_SetVar( Handle mat, const std::string& name, const glm::vec3& value )   { Mat_SetVarInternal( mat, name, value ); }
-void Graphics::Mat_SetVar( Handle mat, const std::string& name, const glm::vec4& value )   { Mat_SetVarInternal( mat, name, value ); }
+void Graphics::Mat_SetVar( ch_handle_t mat, const std::string& name, float value )              { Mat_SetVarInternal( mat, name, value ); }
+void Graphics::Mat_SetVar( ch_handle_t mat, const std::string& name, int value )                { Mat_SetVarInternal( mat, name, value ); }
+void Graphics::Mat_SetVar( ch_handle_t mat, const std::string& name, bool value )               { Mat_SetVarInternal( mat, name, value ); }
+void Graphics::Mat_SetVar( ch_handle_t mat, const std::string& name, const glm::vec2& value )   { Mat_SetVarInternal( mat, name, value ); }
+void Graphics::Mat_SetVar( ch_handle_t mat, const std::string& name, const glm::vec3& value )   { Mat_SetVarInternal( mat, name, value ); }
+void Graphics::Mat_SetVar( ch_handle_t mat, const std::string& name, const glm::vec4& value )   { Mat_SetVarInternal( mat, name, value ); }
 
 
-MaterialVar* Mat_GetVarInternal( Handle mat, std::string_view name )
+MaterialVar* Mat_GetVarInternal( ch_handle_t mat, std::string_view name )
 {
 	PROF_SCOPE();
 
@@ -388,7 +388,7 @@ MaterialVar* Mat_GetVarInternal( Handle mat, std::string_view name )
 }
 
 
-MaterialVar* Mat_GetVarInternal( Handle mat, u32 sIndex )
+MaterialVar* Mat_GetVarInternal( ch_handle_t mat, u32 sIndex )
 {
 	PROF_SCOPE();
 
@@ -409,14 +409,14 @@ MaterialVar* Mat_GetVarInternal( Handle mat, u32 sIndex )
 }
 
 
-int Graphics::Mat_GetTextureIndex( Handle mat, std::string_view name, Handle fallback )
+int Graphics::Mat_GetTextureIndex( ch_handle_t mat, std::string_view name, ch_handle_t fallback )
 {
 	MaterialVar* var = Mat_GetVarInternal( mat, name );
 	return render->GetTextureIndex( var ? var->GetTexture( fallback ) : fallback );
 }
 
 
-Handle Graphics::Mat_GetTexture( Handle mat, std::string_view name, Handle fallback )
+ch_handle_t Graphics::Mat_GetTexture( ch_handle_t mat, std::string_view name, ch_handle_t fallback )
 {
 	MaterialVar* var = Mat_GetVarInternal( mat, name );
 	return var ? var->GetTexture( fallback ) : fallback;
@@ -448,42 +448,42 @@ T Mat_GetNumberValue( MaterialVar* var, T fallback )
 }
 
 
-float Graphics::Mat_GetFloat( Handle mat, std::string_view name, float fallback )
+float Graphics::Mat_GetFloat( ch_handle_t mat, std::string_view name, float fallback )
 {
 	MaterialVar* var = Mat_GetVarInternal( mat, name );
 	return Mat_GetNumberValue( var, fallback );
 }
 
 
-int Graphics::Mat_GetInt( Handle mat, std::string_view name, int fallback )
+int Graphics::Mat_GetInt( ch_handle_t mat, std::string_view name, int fallback )
 {
 	MaterialVar* var = Mat_GetVarInternal( mat, name );
 	return Mat_GetNumberValue( var, fallback );
 }
 
 
-bool Graphics::Mat_GetBool( Handle mat, std::string_view name, bool fallback )
+bool Graphics::Mat_GetBool( ch_handle_t mat, std::string_view name, bool fallback )
 {
 	MaterialVar* var = Mat_GetVarInternal( mat, name );
 	return Mat_GetNumberValue( var, fallback );
 }
 
 
-const glm::vec2& Graphics::Mat_GetVec2( Handle mat, std::string_view name, const glm::vec2& fallback )
+const glm::vec2& Graphics::Mat_GetVec2( ch_handle_t mat, std::string_view name, const glm::vec2& fallback )
 {
 	MaterialVar* var = Mat_GetVarInternal( mat, name );
 	return var ? var->GetVec2( fallback ) : fallback;
 }
 
 
-const glm::vec3& Graphics::Mat_GetVec3( Handle mat, std::string_view name, const glm::vec3& fallback )
+const glm::vec3& Graphics::Mat_GetVec3( ch_handle_t mat, std::string_view name, const glm::vec3& fallback )
 {
 	MaterialVar* var = Mat_GetVarInternal( mat, name );
 	return var ? var->GetVec3( fallback ) : fallback;
 }
 
 
-const glm::vec4& Graphics::Mat_GetVec4( Handle mat, std::string_view name, const glm::vec4& fallback )
+const glm::vec4& Graphics::Mat_GetVec4( ch_handle_t mat, std::string_view name, const glm::vec4& fallback )
 {
 	MaterialVar* var = Mat_GetVarInternal( mat, name );
 	return var ? var->GetVec4( fallback ) : fallback;
@@ -493,56 +493,56 @@ const glm::vec4& Graphics::Mat_GetVec4( Handle mat, std::string_view name, const
 // ---------------------------------------------------------------------------------------------------------
 
 
-int Graphics::Mat_GetTextureIndex( Handle mat, u32 sIndex, Handle fallback )
+int Graphics::Mat_GetTextureIndex( ch_handle_t mat, u32 sIndex, ch_handle_t fallback )
 {
 	MaterialVar* var = Mat_GetVarInternal( mat, sIndex );
 	return render->GetTextureIndex( var ? var->GetTexture( fallback ) : fallback );
 }
 
 
-Handle Graphics::Mat_GetTexture( Handle mat, u32 sIndex, Handle fallback )
+ch_handle_t Graphics::Mat_GetTexture( ch_handle_t mat, u32 sIndex, ch_handle_t fallback )
 {
 	MaterialVar* var = Mat_GetVarInternal( mat, sIndex );
 	return var ? var->GetTexture( fallback ) : fallback;
 }
 
 
-float Graphics::Mat_GetFloat( Handle mat, u32 sIndex, float fallback )
+float Graphics::Mat_GetFloat( ch_handle_t mat, u32 sIndex, float fallback )
 {
 	MaterialVar* var = Mat_GetVarInternal( mat, sIndex );
 	return var ? var->GetFloat( fallback ) : fallback;
 }
 
 
-int Graphics::Mat_GetInt( Handle mat, u32 sIndex, int fallback )
+int Graphics::Mat_GetInt( ch_handle_t mat, u32 sIndex, int fallback )
 {
 	MaterialVar* var = Mat_GetVarInternal( mat, sIndex );
 	return var ? var->GetInt( fallback ) : fallback;
 }
 
 
-bool Graphics::Mat_GetBool( Handle mat, u32 sIndex, bool fallback )
+bool Graphics::Mat_GetBool( ch_handle_t mat, u32 sIndex, bool fallback )
 {
 	MaterialVar* var = Mat_GetVarInternal( mat, sIndex );
 	return var ? var->GetBool( fallback ) : fallback;
 }
 
 
-const glm::vec2& Graphics::Mat_GetVec2( Handle mat, u32 sIndex, const glm::vec2& fallback )
+const glm::vec2& Graphics::Mat_GetVec2( ch_handle_t mat, u32 sIndex, const glm::vec2& fallback )
 {
 	MaterialVar* var = Mat_GetVarInternal( mat, sIndex );
 	return var ? var->GetVec2( fallback ) : fallback;
 }
 
 
-const glm::vec3& Graphics::Mat_GetVec3( Handle mat, u32 sIndex, const glm::vec3& fallback )
+const glm::vec3& Graphics::Mat_GetVec3( ch_handle_t mat, u32 sIndex, const glm::vec3& fallback )
 {
 	MaterialVar* var = Mat_GetVarInternal( mat, sIndex );
 	return var ? var->GetVec3( fallback ) : fallback;
 }
 
 
-const glm::vec4& Graphics::Mat_GetVec4( Handle mat, u32 sIndex, const glm::vec4& fallback )
+const glm::vec4& Graphics::Mat_GetVec4( ch_handle_t mat, u32 sIndex, const glm::vec4& fallback )
 {
 	MaterialVar* var = Mat_GetVarInternal( mat, sIndex );
 	return var ? var->GetVec4( fallback ) : fallback;
@@ -584,7 +584,7 @@ static void ParseMaterialVarArray( VEC& value, JsonObject_t& cur )
 
 
 // Used in normal material loading, and eventually, live material reloading
-bool Graphics_ParseMaterial( const ch_string& srName, const std::string& srPath, Handle& handle )
+bool Graphics_ParseMaterial( const ch_string& srName, const std::string& srPath, ch_handle_t& handle )
 {
 	PROF_SCOPE();
 
@@ -621,7 +621,7 @@ bool Graphics_ParseMaterial( const ch_string& srName, const std::string& srPath,
 		return false;
 	}
 
-	Handle        shader = InvalidHandle;
+	ch_handle_t        shader = CH_INVALID_HANDLE;
 
 	for ( size_t i = 0; i < root.aObjects.aCount; i++ )
 	{
@@ -632,7 +632,7 @@ bool Graphics_ParseMaterial( const ch_string& srName, const std::string& srPath,
 
 		if ( cur.aName.data && ch_str_equals( cur.aName, "shader", 6 ) )
 		{
-			if ( shader != InvalidHandle )
+			if ( shader != CH_INVALID_HANDLE )
 			{
 				Log_WarnF( gLC_ClientGraphics, "Shader is specified multiple times in material \"%s\"", srPath.c_str() );
 				continue;
@@ -646,7 +646,7 @@ bool Graphics_ParseMaterial( const ch_string& srName, const std::string& srPath,
 			}
 
 			shader = gGraphics.GetShader( cur.aString.data );
-			if ( shader == InvalidHandle )
+			if ( shader == CH_INVALID_HANDLE )
 			{
 				Log_ErrorF( gLC_ClientGraphics, "Failed to find Material Shader: %s - \"%s\"\n", cur.aString.data, srPath.c_str() );
 				Json_Free( &root );
@@ -654,7 +654,7 @@ bool Graphics_ParseMaterial( const ch_string& srName, const std::string& srPath,
 			}
 
 			MaterialData_t* matData = nullptr;
-			if ( handle == InvalidHandle )
+			if ( handle == CH_INVALID_HANDLE )
 			{
 				matData                = new MaterialData_t;
 				matData->aRefCount     = 1;
@@ -754,7 +754,7 @@ bool Graphics_ParseMaterial( const ch_string& srName, const std::string& srPath,
 						texturePath = "materials/" + basePath;
 				}
 
-				Handle texture     = InvalidHandle;
+				ch_handle_t texture     = CH_INVALID_HANDLE;
 				gGraphics.Mat_SetVar( handle, nameString, render->LoadTexture( texture, texturePath, createData ) );
 				break;
 			}
@@ -873,7 +873,7 @@ static ch_string ParseMaterialNameFromPath( const char* path, s32 len )
 }
 
 
-Handle Graphics::LoadMaterial( const char* spPath, s32 sLen )
+ch_handle_t Graphics::LoadMaterial( const char* spPath, s32 sLen )
 {
 	ch_string name = ParseMaterialNameFromPath( spPath, sLen );
 
@@ -886,7 +886,7 @@ Handle Graphics::LoadMaterial( const char* spPath, s32 sLen )
 		return nameIt->second;
 	}
 
-	Handle handle = InvalidHandle;
+	ch_handle_t handle = CH_INVALID_HANDLE;
 
 	// lazy
 	std::string tempPath( spPath, sLen );
@@ -908,7 +908,7 @@ Handle Graphics::LoadMaterial( const char* spPath, s32 sLen )
 
 
 // Create a new material with a name and a shader
-Handle Graphics::CreateMaterial( const std::string& srName, Handle shShader )
+ch_handle_t Graphics::CreateMaterial( const std::string& srName, ch_handle_t shShader )
 {
 	ch_string name   = ParseMaterialNameFromPath( srName.data(), srName.size() );
 	auto      nameIt = gMaterialNames.find( name );
@@ -924,7 +924,7 @@ Handle Graphics::CreateMaterial( const std::string& srName, Handle shShader )
 	auto matData               = new MaterialData_t;
 	matData->aRefCount         = 1;
 
-	Handle handle              = gMaterials.Add( matData );
+	ch_handle_t handle              = gMaterials.Add( matData );
 
 	gMaterialNames[ name ]     = handle;
 	gMaterialShaders[ handle ] = shShader;
@@ -936,7 +936,7 @@ Handle Graphics::CreateMaterial( const std::string& srName, Handle shShader )
 
 
 // Free a material
-void Graphics::FreeMaterial( ChHandle_t shMaterial )
+void Graphics::FreeMaterial( ch_handle_t shMaterial )
 {
 	Mat_RemoveRef( shMaterial );
 }
@@ -946,7 +946,7 @@ void Graphics::FreeMaterial( ChHandle_t shMaterial )
 // Name is a full path to the cmt file
 // EXAMPLE: C:/chocolate/sidury/materials/dev/grid01.cmt
 // NAME: dev/grid01
-ChHandle_t Graphics::FindMaterial( const char* spName )
+ch_handle_t Graphics::FindMaterial( const char* spName )
 {
 	ch_string name = ParseMaterialNameFromPath( spName, -1 );
 	auto nameIt = gMaterialNames.find( name );
@@ -971,7 +971,7 @@ u32 Graphics::GetMaterialCount()
 }
 
 
-ChHandle_t Graphics::GetMaterialByIndex( u32 sIndex )
+ch_handle_t Graphics::GetMaterialByIndex( u32 sIndex )
 {
 	return gMaterials.GetHandleByIndex( sIndex );
 
@@ -986,7 +986,7 @@ ChHandle_t Graphics::GetMaterialByIndex( u32 sIndex )
 
 
 // Get the path to the material
-const std::string& Graphics::GetMaterialPath( Handle sMaterial )
+const std::string& Graphics::GetMaterialPath( ch_handle_t sMaterial )
 {
 	if ( sMaterial == CH_INVALID_HANDLE )
 		return "";
@@ -1047,19 +1047,19 @@ CONCMD( r_dump_materials )
 // Resource System Functions
 
 
-bool _Graphics_LoadMaterial( ChHandle_t& item, const fs::path& srPath )
+bool _Graphics_LoadMaterial( ch_handle_t& item, const fs::path& srPath )
 {
 	return false;
 }
 
 
-bool _Graphics_CreateMaterial( ChHandle_t& item, const fs::path& srInternalPath, void* spData )
+bool _Graphics_CreateMaterial( ch_handle_t& item, const fs::path& srInternalPath, void* spData )
 {
 	return false;
 }
 
 
-void _Graphics_FreeMaterial( ChHandle_t item )
+void _Graphics_FreeMaterial( ch_handle_t item )
 {
 }
 

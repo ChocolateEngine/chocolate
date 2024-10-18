@@ -149,9 +149,9 @@ inline To* ch_realloc( To* spData, u64 sCount )
 }
 
 
-// Reallocate X Amount of a specific type, could be named better
+// Reallocate X Amount of a specific type, automatically reassigns the pointer
 template< typename To >
-inline bool ch_realloc2( To*& spData, u64 sCount )
+inline bool ch_realloc_auto( To*& spData, u64 sCount )
 {
 	To* data = static_cast< To* >( realloc( spData, sizeof( To ) * sCount ) );
 	
@@ -185,18 +185,9 @@ inline To* ch_stack_alloc( u64 sCount )
 }
 
 
-// old names
-// TODO: replace this
-#define ch_malloc_count                 ch_malloc
-#define ch_calloc_count                 ch_calloc
-#define ch_realloc_count                ch_realloc
-#define ch_realloc_count2               ch_realloc2
-
 #define CH_MALLOC( type, count )        ch_malloc< type >( count )
 #define CH_CALLOC( type, count )        ch_calloc< type >( count )
-#define CH_REALLOC( type, data, count ) ch_realloc2< type >( data, count )
-
-#define CH_MALLOC2( type, count )       static_cast< Type* >( malloc( count * sizeof( type ) )
+#define CH_REALLOC( type, data, count ) ch_realloc< type >( data, count )
 
 
 // inline int ch_strcasecmp( const char* spStr1, const char* spStr2 )
@@ -515,6 +506,10 @@ std::string CORE_API vstringV( const char* format, va_list args );
 std::string     CORE_API Vec2Str( const glm::vec3& in );
 std::string     CORE_API Quat2Str( const glm::quat& in );
 
+// TODO: write this
+// void     CORE_API ch_vec3_to_str( char* buffer, size_t buffer_size, const glm::vec3& in );
+// void     CORE_API ch_quat_to_str( char* buffer, size_t buffer_size, const glm::quat& in );
+
 double          CORE_API ToDouble( const char* value, double prev );
 long            CORE_API ToLong( const std::string& value, int prev );
 
@@ -608,24 +603,6 @@ inline float Sys_BytesToKB( u64 bytes )
 }
 
 
-// ==============================================================================
-// Helper Functions for SpeedyKeyV
-// mainly until speedykeyv can parse lists, one day
-
-std::vector< std::string >	CORE_API KV_GetVec( const std::string& value );
-
-std::vector< int >          CORE_API KV_GetVecInt( const std::string& value );
-std::vector< float >        CORE_API KV_GetVecFloat( const std::string& value );
-
-glm::vec2                   CORE_API KV_GetVec2( const std::string& value, const glm::vec2& fallback = {} );
-glm::vec3                   CORE_API KV_GetVec3( const std::string& value, const glm::vec3& fallback = {} );
-glm::vec4                   CORE_API KV_GetVec4( const std::string& value, const glm::vec4& fallback = {} );
-
-
-// ==============================================================================
-// Ref Counter Class
-
-
 struct RefCounted
 {
 	virtual ~RefCounted() = default;
@@ -660,32 +637,3 @@ struct RefCounted
 
 	mutable std::atomic< u32 > aRefCount = 0;  // Current reference count
 };
-
-
-template <class T>
-class RefTarget
-{
-public:
-	virtual            ~RefTarget() = default;
-
-	inline RefTarget&   operator=( const RefTarget &srRef )        { return *this; }
-	
-	u32                 GetRefCount() const                         { return aRefCount; }
-
-	// Add or release a reference to this object
-	inline void         AddRef() const                              { ++aRefCount; }
-	inline void         Release() const                             { if (--aRefCount == 0) delete static_cast<const T *>(this); }
-
-private:
-
-	mutable std::atomic< u32 > aRefCount = 0;  // Current reference count
-};
-
-
-// ==============================================================================
-// Assorted Functions
-
-
-
-
-

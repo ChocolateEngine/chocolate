@@ -24,7 +24,7 @@ bool                            gInGraphicsQueue = false;
 std::mutex                      gGraphicsMutex;
 
 
-VkCommandBuffer                 VK_GetCommandBuffer( Handle cmd )
+VkCommandBuffer                 VK_GetCommandBuffer( ch_handle_t cmd )
 {
 	return *gCommandBuffers.Get( cmd );
 }
@@ -54,8 +54,8 @@ void VK_CheckFenceStatus( WindowVK* window )
 
 bool VK_CreateFences( WindowVK* window )
 {
-	window->fences         = ch_malloc_count< VkFence >( window->swapImageCount );
-	window->fencesInFlight = ch_malloc_count< VkFence >( window->swapImageCount );
+	window->fences         = ch_malloc< VkFence >( window->swapImageCount );
+	window->fencesInFlight = ch_malloc< VkFence >( window->swapImageCount );
 
 	VkFenceCreateInfo info{ VK_STRUCTURE_TYPE_FENCE_CREATE_INFO };
 	info.flags = VK_FENCE_CREATE_SIGNALED_BIT;
@@ -87,8 +87,8 @@ void VK_DestroyFences( WindowVK* window )
 
 bool VK_CreateSemaphores( WindowVK* window )
 {
-	window->imageAvailableSemaphores = ch_calloc_count< VkSemaphore >( window->swapImageCount );
-	window->renderFinishedSemaphores = ch_calloc_count< VkSemaphore >( window->swapImageCount );
+	window->imageAvailableSemaphores = ch_calloc< VkSemaphore >( window->swapImageCount );
+	window->renderFinishedSemaphores = ch_calloc< VkSemaphore >( window->swapImageCount );
 
 	VkSemaphoreCreateInfo info{ VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO };
 
@@ -136,7 +136,7 @@ bool VK_AllocateCommands( WindowVK* window )
 	if ( window->commandBuffers == nullptr )
 		return false;
 
-	window->commandBufferHandles = CH_MALLOC( ChHandle_t, window->swapImageCount );
+	window->commandBufferHandles = CH_MALLOC( ch_handle_t, window->swapImageCount );
 
 	if ( window->commandBufferHandles == nullptr )
 		return false;
@@ -387,7 +387,7 @@ void VK_RecordCommands()
 }
 
 
-u32 VK_GetNextImage( ChHandle_t windowHandle, WindowVK* window )
+u32 VK_GetNextImage( ch_handle_t windowHandle, WindowVK* window )
 {
 	PROF_SCOPE();
 
@@ -419,7 +419,7 @@ u32 VK_GetNextImage( ChHandle_t windowHandle, WindowVK* window )
 }
 
 
-void VK_Present( ChHandle_t windowHandle, WindowVK* window, u32 sImageIndex )
+void VK_Present( ch_handle_t windowHandle, WindowVK* window, u32 sImageIndex )
 {
 	PROF_SCOPE();
 

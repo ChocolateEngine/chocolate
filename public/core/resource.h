@@ -23,29 +23,20 @@ namespace fs = std::filesystem;
 // then the callback is run to tell whatever type it is to reload this file
 // -----------------------------------------------------------------------
 
-static LOG_REGISTER_CHANNEL( Resource, LogColor::DarkYellow );
+static LOG_CHANNEL_REGISTER( Resource, LogColor::DarkYellow );
 
 #define CH_GET_HANDLE_INDEX( sHandle ) ( sHandle & 0xFFFFFFFF )
 #define CH_GET_HANDLE_MAGIC( sHandle ) ( sHandle >> 32 )
 
-// backwards compatibility
-#define GET_HANDLE_INDEX( sHandle )    CH_GET_HANDLE_INDEX( sHandle )
-#define GET_HANDLE_MAGIC( sHandle )    CH_GET_HANDLE_MAGIC( sHandle )
+// change ch_handle_t to this?
+using ch_handle_t                       = u64;
+constexpr ch_handle_t CH_INVALID_HANDLE = 0;
 
-// change Handle to this?
-using ChResource_t                     = size_t;
-
-using ChHandle_t                       = size_t;
-using Handle                           = ChHandle_t;  // backwards compatibility
-
-constexpr ChHandle_t CH_INVALID_HANDLE = 0;
-constexpr ChHandle_t InvalidHandle     = CH_INVALID_HANDLE;  // backwards compatibility
-
-using ResourceFunc_Load                = bool( ChHandle_t& item, const fs::path& srPath, void* spUserData );
-using ResourceFunc_Reload              = bool( ChHandle_t& item, const fs::path& srPath );
-using ResourceFunc_Create              = bool( ChHandle_t& item, const fs::path& srInternalPath, void* spData, void* spUserData );
-using ResourceFunc_Free                = void( ChHandle_t item );
-using ResourceFunc_OnLoadFinish        = void( ChHandle_t item );
+using ResourceFunc_Load                = bool( ch_handle_t& item, const fs::path& srPath, void* spUserData );
+using ResourceFunc_Reload              = bool( ch_handle_t& item, const fs::path& srPath );
+using ResourceFunc_Create              = bool( ch_handle_t& item, const fs::path& srInternalPath, void* spData, void* spUserData );
+using ResourceFunc_Free                = void( ch_handle_t item );
+using ResourceFunc_OnLoadFinish        = void( ch_handle_t item );
 
 
 struct ResourceType_t
@@ -66,46 +57,46 @@ CORE_API void       Resource_Update();
 // Free all still loaded resources
 CORE_API void       Resource_Shutdown();
 
-CORE_API ChHandle_t Resource_RegisterType( const ResourceType_t& srType );
+CORE_API ch_handle_t Resource_RegisterType( const ResourceType_t& srType );
 
-// CORE_API ChHandle_t Resource_RegisterType( const char* spName, ResourceFunc_Load* apFuncLoad, ResourceFunc_Create* apFuncCreate, ResourceFunc_Free* apFuncFree );
+// CORE_API ch_handle_t Resource_RegisterType( const char* spName, ResourceFunc_Load* apFuncLoad, ResourceFunc_Create* apFuncCreate, ResourceFunc_Free* apFuncFree );
 
 // old idea's
-// CORE_API bool       Resource_Add( ChHandle_t shType, ChHandle_t shResource, const std::string& srPath );
-// CORE_API void       Resource_Remove( ChHandle_t shResource );
+// CORE_API bool       Resource_Add( ch_handle_t shType, ch_handle_t shResource, const std::string& srPath );
+// CORE_API void       Resource_Remove( ch_handle_t shResource );
 
 // Load's this resource from disk
-CORE_API bool       Resource_Load( ChHandle_t shType, ChHandle_t& shResource, const fs::path& srPath );
+CORE_API bool       Resource_Load( ch_handle_t shType, ch_handle_t& shResource, const fs::path& srPath );
 
 // Create's a resource from memory
-CORE_API bool       Resource_Create( ChHandle_t shType, ChHandle_t& shResource, const fs::path& srInternalPath, void* spData );
+CORE_API bool       Resource_Create( ch_handle_t shType, ch_handle_t& shResource, const fs::path& srInternalPath, void* spData );
 
 // Add's an already created resource externally
-CORE_API bool       Resource_Add( ChHandle_t shType, ChHandle_t& shResource, const fs::path& srPath );
+CORE_API bool       Resource_Add( ch_handle_t shType, ch_handle_t& shResource, const fs::path& srPath );
 
 // Queue's a Resource for Deletion
-CORE_API void       Resource_Free( ChHandle_t shType, ChHandle_t shResource );
+CORE_API void       Resource_Free( ch_handle_t shType, ch_handle_t shResource );
 
 // Pause or Resume Updating of this Resource Type
-CORE_API void       Resource_SetTypePaused( ChHandle_t sType, bool sPaused );
+CORE_API void       Resource_SetTypePaused( ch_handle_t sType, bool sPaused );
 
 
 // locks a resource currently in use, so we don't try to update it in the background if it changed on disk
 // instead, we can queue that resource reload, and wait for the resource to be unlocked, and then do that reload
 // you can also lock a resource multiple times
 // returns a handle to a lock, this will be
-CORE_API ChHandle_t Resource_Lock( ChHandle_t sType, ChHandle_t sResource );
-CORE_API void       Resource_Unlock( ChHandle_t sLock );
+CORE_API ch_handle_t Resource_Lock( ch_handle_t sType, ch_handle_t sResource );
+CORE_API void       Resource_Unlock( ch_handle_t sLock );
 
-CORE_API void       Resource_IncrementRef( ChHandle_t sType, ChHandle_t sResource );
-CORE_API void       Resource_DecrementRef( ChHandle_t sType, ChHandle_t sResource );
+CORE_API void       Resource_IncrementRef( ch_handle_t sType, ch_handle_t sResource );
+CORE_API void       Resource_DecrementRef( ch_handle_t sType, ch_handle_t sResource );
 
 
 struct ResourceAutoLock_t
 {
-	ChHandle_t aLock;
+	ch_handle_t aLock;
 
-	ResourceAutoLock_t( ChHandle_t sType, ChHandle_t sResource )
+	ResourceAutoLock_t( ch_handle_t sType, ch_handle_t sResource )
 	{
 		aLock = Resource_Lock( sType, sResource );
 	}
@@ -139,8 +130,8 @@ struct ResourceList
 	mempool_t*             apPool;
 	u32                    aSize;
 	u32                    aStepSize;
-	std::vector< ChHandle_t> aHandles;
-	// ChHandle_t*            apHandles;
+	std::vector< ch_handle_t> aHandles;
+	// ch_handle_t*            apHandles;
 	// u32                    aHandlesAllocated;
 
 	/*
@@ -245,9 +236,9 @@ struct ResourceList
 	/*
      *    Allocate a resource.
      *
-     *    @return Handle    The handle to the resource.
+     *    @return ch_handle_t    The handle to the resource.
      */
-	ChHandle_t Add( const T& pData )
+	ch_handle_t Add( const T& pData )
 	{
 		// Generate a handle magic number.
 		unsigned int magic = ( rand() % 0xFFFFFFFE ) + 1;
@@ -256,7 +247,7 @@ struct ResourceList
 		s8*          pBuf  = Allocate( magic );
 
 		if ( pBuf == nullptr )
-			return InvalidHandle;
+			return CH_INVALID_HANDLE;
 
 		// Write the data to the chunk
 		// followed by the data.
@@ -265,12 +256,12 @@ struct ResourceList
 		unsigned int index = ( (size_t)pBuf - (size_t)apPool->apBuf ) / ( sizeof( T ) + sizeof( magic ) );
 
 #if RESOURCE_DEBUG
-		Log_DevF( gResourceChannel, 3, "ResourceManager::Add( T* ): Allocated resource at index %u\n", index );
+		Log_DevF( gLC_Resource, 3, "ResourceManager::Add( T* ): Allocated resource at index %u\n", index );
 #endif
 
 		aSize++;
 
-		ChHandle_t& handle = aHandles.emplace_back();
+		ch_handle_t& handle = aHandles.emplace_back();
 		handle             = index | (int64_t)magic << 32;
 		return handle;
 	}
@@ -279,9 +270,9 @@ struct ResourceList
      *    Create a new resource.
      *
      *    @param  pData     Output structure
-     *    @return Handle    The handle to the resource.
+     *    @return ch_handle_t    The handle to the resource.
      */
-	ChHandle_t Create( T* pData, bool sZero = true )
+	ch_handle_t Create( T* pData, bool sZero = true )
 	{
 		// Generate a handle magic number.
 		unsigned int magic = ( rand() % 0xFFFFFFFE ) + 1;
@@ -290,7 +281,7 @@ struct ResourceList
 		s8*          pBuf  = Allocate( magic, sZero );
 
 		if ( pBuf == nullptr )
-			return InvalidHandle;
+			return CH_INVALID_HANDLE;
 
 		// Re-assign the output pointer to a pointer to the data
 		*pData             = *(T*)( pBuf + sizeof( u32 ) );
@@ -304,12 +295,12 @@ struct ResourceList
 		}
 
 #if RESOURCE_DEBUG
-		Log_DevF( gResourceChannel, 3, "ResourceManager::Add( T* ): Allocated resource at index %u\n", index );
+		Log_DevF( gLC_Resource, 3, "ResourceManager::Add( T* ): Allocated resource at index %u\n", index );
 #endif
 
 		aSize++;
 
-		ChHandle_t& handle = aHandles.emplace_back();
+		ch_handle_t& handle = aHandles.emplace_back();
 		handle             = index | (int64_t)magic << 32;
 		return handle;
 	}
@@ -318,9 +309,9 @@ struct ResourceList
      *    Create a new resource.
      *
      *    @param  pData     Output structure for a pointer
-     *    @return Handle    The handle to the resource.
+     *    @return ch_handle_t    The handle to the resource.
      */
-	ChHandle_t Create( T** pData, bool sZero = true )
+	ch_handle_t Create( T** pData, bool sZero = true )
 	{
 		// Generate a handle magic number.
 		unsigned int magic = ( rand() % 0xFFFFFFFE ) + 1;
@@ -329,7 +320,7 @@ struct ResourceList
 		s8*          pBuf  = Allocate( magic );
 
 		if ( pBuf == nullptr )
-			return InvalidHandle;
+			return CH_INVALID_HANDLE;
 
 		// Re-assign the output pointer to a pointer to the data
 		*pData             = (T*)( pBuf + sizeof( unsigned int ) );
@@ -337,7 +328,7 @@ struct ResourceList
 		unsigned int index = ( (size_t)pBuf - (size_t)apPool->apBuf ) / ( sizeof( T ) + sizeof( magic ) );
 
 #if RESOURCE_DEBUG
-		Log_DevF( gResourceChannel, 3, "ResourceManager::Add( T* ): Allocated resource at index %u\n", index );
+		Log_DevF( gLC_Resource, 3, "ResourceManager::Add( T* ): Allocated resource at index %u\n", index );
 #endif
 
 		// Set the remaining memory to zero if wanted
@@ -348,7 +339,7 @@ struct ResourceList
 
 		aSize++;
 
-		ChHandle_t& handle = aHandles.emplace_back();
+		ch_handle_t& handle = aHandles.emplace_back();
 		handle             = index | (int64_t)magic << 32;
 		return handle;
 	}
@@ -356,10 +347,10 @@ struct ResourceList
 	/*
 	 *    Gets Magic Number and Index from handle, returns true/false if succeeded
 	 */
-	bool GetMagicAndIndex( ChHandle_t sHandle, u32& srMagic, u32& srIndex )
+	bool GetMagicAndIndex( ch_handle_t sHandle, u32& srMagic, u32& srIndex )
 	{
 		// Check if handle is valid
-		if ( sHandle == InvalidHandle )
+		if ( sHandle == CH_INVALID_HANDLE )
 			return false;
 
 		// Get the magic number from the handle.
@@ -370,7 +361,7 @@ struct ResourceList
 
 		if ( srIndex > mempool_capacity( apPool ) )
 		{
-			Log_WarnF( gResourceChannel, "GetMagicAndIndex(): Index larger than mempool capacity: %zd > %zd\n", srIndex, mempool_capacity( apPool ) );
+			Log_WarnF( gLC_Resource, "GetMagicAndIndex(): Index larger than mempool capacity: %zd > %zd\n", srIndex, mempool_capacity( apPool ) );
 			return false;
 		}
 
@@ -380,7 +371,7 @@ struct ResourceList
 	/*
 	 *    Gets Data from handle, returns true/false if succeeded
 	 */
-	s8* GetHandleData( ChHandle_t sHandle )
+	s8* GetHandleData( ch_handle_t sHandle )
 	{
 		// Check if handle is valid
 		unsigned int magic, index;
@@ -393,14 +384,14 @@ struct ResourceList
 		// Check if the buffer is nullptr
 		if ( spBuf == nullptr )
 		{
-			Log_WarnF( gResourceChannel, "GetHandleData(): Invalid index - Buffer is nullptr: %zd\n", index );
+			Log_WarnF( gLC_Resource, "GetHandleData(): Invalid index - Buffer is nullptr: %zd\n", index );
 			return nullptr;
 		}
 
 		// Verify the magic numbers at the start of the buffer match
 		if ( *(unsigned int*)spBuf != magic )
 		{
-			Log_Warn( gResourceChannel, "GetHandleData(): Invalid magic number\n" );
+			Log_Warn( gLC_Resource, "GetHandleData(): Invalid magic number\n" );
 			return nullptr;
 		}
 
@@ -410,12 +401,12 @@ struct ResourceList
 	/*
      *    Update a resource.
      *
-     *    @param  sHandle   Handle to Data
+     *    @param  sHandle   ch_handle_t to Data
      *    @param  pData     New Data
 	 * 
      *    @return bool      Whether the update was sucessful or not.
      */
-	bool Update( ChHandle_t sHandle, const T& pData )
+	bool Update( ch_handle_t sHandle, const T& pData )
 	{
 		// Get handle data and check if the handle is valid
 		s8* pBuf = nullptr;
@@ -431,9 +422,9 @@ struct ResourceList
 	/*
      *    Remove a resource.
      *
-     *    @param Handle    The handle to the resource.
+     *    @param ch_handle_t    The handle to the resource.
      */
-	void Remove( ChHandle_t sHandle )
+	void Remove( ch_handle_t sHandle )
 	{
 		// Get handle data and check if the handle is valid
 		s8*          pBuf = nullptr;
@@ -451,14 +442,14 @@ struct ResourceList
 		// Check if the buffer is nullptr
 		if ( pBuf == nullptr )
 		{
-			Log_WarnF( gResourceChannel, "%s : Invalid index - Buffer is nullptr: %zd\n", CH_FUNC_NAME_CLASS,  index );
+			Log_WarnF( gLC_Resource, "%s : Invalid index - Buffer is nullptr: %zd\n", CH_FUNC_NAME_CLASS,  index );
 			return;
 		}
 
 		// Verify the magic numbers at the start of the buffer match
 		if ( *(unsigned int*)pBuf != magic )
 		{
-			Log_WarnF( gResourceChannel, "%s : Invalid magic number\n", CH_FUNC_NAME_CLASS );
+			Log_WarnF( gLC_Resource, "%s : Invalid magic number\n", CH_FUNC_NAME_CLASS );
 			return;
 		}
 
@@ -470,20 +461,20 @@ struct ResourceList
 		aSize--;
 
 #if RESOURCE_DEV
-		Log_DevF( gResourceChannel, 3, "ResourceManager::Remove( Handle ): Removed resource at index %u\n", index );
+		Log_DevF( gLC_Resource, 3, "ResourceManager::Remove( Handle ): Removed resource at index %u\n", index );
 #endif
 	}
 
 	/*
      *    Get a resource.
      *
-     *    @param Handle    The handle to the resource.
+     *    @param ch_handle_t    The handle to the resource.
      *
      *    @return T *      The resource, nullptr if the handle
      *                     is invalid/ points to a different type.
      */
 
-	T* Get( ChHandle_t sHandle )
+	T* Get( ch_handle_t sHandle )
 	{
 		// Get handle data and check if the handle is valid
 		s8* pBuf = nullptr;
@@ -497,15 +488,15 @@ struct ResourceList
 	/*
      *    Get a resource.
      *
-     *    @param Handle    The handle to the resource.
+     *    @param ch_handle_t    The handle to the resource.
      * 
      *    @param T*        The resource, nullptr if the handle
      *                     is invalid/ points to a different type.
      * 
-     *    @return bool     Returns whether the Handle was valid the resource data was found or not.
+     *    @return bool     Returns whether the ch_handle_t was valid the resource data was found or not.
      */
 
-	bool Get( ChHandle_t sHandle, T* pData )
+	bool Get( ch_handle_t sHandle, T* pData )
 	{
 		// Get handle data and check if the handle is valid
 		s8* pBuf = nullptr;
@@ -521,15 +512,15 @@ struct ResourceList
 	/*
      *    Get a resource.
      *
-     *    @param Handle    The handle to the resource.
+     *    @param ch_handle_t    The handle to the resource.
      * 
      *    @param T**       The resource, nullptr if the handle
      *                     is invalid/ points to a different type.
      * 
-     *    @return bool     Returns whether the Handle was valid the resource data was found or not.
+     *    @return bool     Returns whether the ch_handle_t was valid the resource data was found or not.
      */
 
-	bool Get( ChHandle_t sHandle, T** pData )
+	bool Get( ch_handle_t sHandle, T** pData )
 	{
 		// Get handle data and check if the handle is valid
 		s8* pBuf = nullptr;
@@ -551,7 +542,7 @@ struct ResourceList
      *    @param T*        The resource, nullptr if the handle
      *                     is invalid/ points to a different type.
      * 
-     *    @return bool     Returns whether the Handle was valid the resource data was found or not.
+     *    @return bool     Returns whether the ch_handle_t was valid the resource data was found or not.
      */
 	bool GetByIndex( size_t sIndex, T* pData )
 	{
@@ -575,7 +566,7 @@ struct ResourceList
      *    @param T**       The resource, nullptr if the handle
      *                     is invalid/ points to a different type.
      * 
-     *    @return bool     Returns whether the Handle was valid the resource data was found or not.
+     *    @return bool     Returns whether the ch_handle_t was valid the resource data was found or not.
      */
 	bool GetByIndex( size_t sIndex, T** pData )
 	{
@@ -597,12 +588,12 @@ struct ResourceList
     *
     *    @param size_t    The index of the resource.
     *
-    *    @return Handle   The handle to the resource, InvalidHandle if index is out of bounds
+    *    @return ch_handle_t   The handle to the resource, CH_INVALID_HANDLE if index is out of bounds
     */
-	// ChHandle_t GetHandleByIndex( size_t sIndex )
+	// ch_handle_t GetHandleByIndex( size_t sIndex )
 	// {
 	// 	if ( sIndex >= aSize )
-	// 		return InvalidHandle;
+	// 		return CH_INVALID_HANDLE;
 	// 
 	// 	// Get the chunk of memory.
 	// 	s8*          pBuf  = apPool->apBuf + sIndex * ( sizeof( T ) + sizeof( unsigned int ) );
@@ -615,12 +606,12 @@ struct ResourceList
 	/*
      *    Check if this handle is valid.
      *
-     *    @param Handle    The handle to the resource.
+     *    @param ch_handle_t    The handle to the resource.
      *
      *    @return bool     Whether the handle is valid or not.
      */
 
-	bool Contains( Handle sHandle )
+	bool Contains( ch_handle_t sHandle )
 	{
 		// Get handle data and check if the handle is valid
 		return GetHandleData( sHandle );
@@ -628,11 +619,11 @@ struct ResourceList
 
 	/*
     * 
-    *    Get a Random Handle
+    *    Get a Random ch_handle_t
     * 
-    *    @return Handle    The Handle picked at random
+    *    @return ch_handle_t    The ch_handle_t picked at random
 	*/
-	ChHandle_t Random( u32 sMin, u32 sMax ) const
+	ch_handle_t Random( u32 sMin, u32 sMax ) const
 	{
 		CH_ASSERT( sMin <= aHandles.size() );
 		CH_ASSERT( sMax <= aHandles.size() );
@@ -680,7 +671,7 @@ struct ResourceList
 		return aHandles.size();
 	}
 
-	ChHandle_t GetHandleByIndex( u32 sIndex )
+	ch_handle_t GetHandleByIndex( u32 sIndex )
 	{
 		if ( aHandles.size() <= sIndex )
 			return CH_INVALID_HANDLE;
@@ -696,11 +687,11 @@ struct ResourceList
      *    @param T*        The resource, nullptr if the handle
      *                     is invalid/ points to a different type.
      * 
-     *    @return bool     Returns whether the Handle was valid the resource data was found or not.
+     *    @return bool     Returns whether the ch_handle_t was valid the resource data was found or not.
      */
 	bool GetByIndex( size_t sIndex, T* pData )
 	{
-		ChHandle_t handle = GetHandleByIndex( sIndex );
+		ch_handle_t handle = GetHandleByIndex( sIndex );
 
 		if ( handle == CH_INVALID_HANDLE )
 			return false;
@@ -716,11 +707,11 @@ struct ResourceList
      *    @param T**       The resource, nullptr if the handle
      *                     is invalid/ points to a different type.
      * 
-     *    @return bool     Returns whether the Handle was valid the resource data was found or not.
+     *    @return bool     Returns whether the ch_handle_t was valid the resource data was found or not.
      */
 	bool GetByIndex( size_t sIndex, T** pData )
 	{
-		ChHandle_t handle = GetHandleByIndex( sIndex );
+		ch_handle_t handle = GetHandleByIndex( sIndex );
 
 		if ( handle == CH_INVALID_HANDLE )
 			return false;

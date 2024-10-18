@@ -60,8 +60,8 @@ bool VK_CreateSwapchain( WindowVK* window, VkSwapchainKHR spOldSwapchain )
 	if ( spOldSwapchain )
 		vkDestroySwapchainKHR( VK_GetDevice(), spOldSwapchain, NULL );
 
-	window->swapImages     = ch_malloc_count< VkImage >( imageCount );
-	window->swapImageViews = ch_malloc_count< VkImageView >( imageCount );
+	window->swapImages     = ch_malloc< VkImage >( imageCount );
+	window->swapImageViews = ch_malloc< VkImageView >( imageCount );
 
 	VK_CheckResult( vkGetSwapchainImagesKHR( VK_GetDevice(), window->swapchain, &imageCount, window->swapImages ), "Failed to get swapchain images" );
 

@@ -14,15 +14,15 @@
 #include <unordered_set>
 
 
-LOG_REGISTER_CHANNEL_EX( gLC_ClientGraphics, "ClientGraphics", LogColor::Green );
+LOG_CHANNEL_REGISTER_EX( gLC_ClientGraphics, "ClientGraphics", LogColor::Green );
 
-bool _Graphics_LoadModel( ChHandle_t& item, const fs::path& srPath );
-bool _Graphics_CreateModel( ChHandle_t& item, const fs::path& srInternalPath, void* spData );
-void _Graphics_FreeModel( ChHandle_t item );
+bool _Graphics_LoadModel( ch_handle_t& item, const fs::path& srPath );
+bool _Graphics_CreateModel( ch_handle_t& item, const fs::path& srInternalPath, void* spData );
+void _Graphics_FreeModel( ch_handle_t item );
 
-bool _Graphics_LoadMaterial( ChHandle_t& item, const fs::path& srPath );
-bool _Graphics_CreateMaterial( ChHandle_t& item, const fs::path& srInternalPath, void* spData );
-void _Graphics_FreeMaterial( ChHandle_t item );
+bool _Graphics_LoadMaterial( ch_handle_t& item, const fs::path& srPath );
+bool _Graphics_CreateMaterial( ch_handle_t& item, const fs::path& srInternalPath, void* spData );
+void _Graphics_FreeMaterial( ch_handle_t item );
 
 
 // static ResourceType_t gResourceType_Model = {
@@ -40,11 +40,11 @@ void _Graphics_FreeMaterial( ChHandle_t item );
 // };
 // 
 // 
-// ChHandle_t             gResource_Model    = Resource_RegisterType( gResourceType_Model );
-// ChHandle_t             gResource_Material = Resource_RegisterType( gResourceType_Material );
+// ch_handle_t             gResource_Model    = Resource_RegisterType( gResourceType_Model );
+// ch_handle_t             gResource_Material = Resource_RegisterType( gResourceType_Material );
 
 // #define CH_REGISTER_RESOURCE_TYPE( name, loadFunc, createFunc, freeFunc ) \
-// 	ChHandle_t gResource_##name = Resource_RegisterType( #name, loadFunc, createFunc, freeFunc )
+// 	ch_handle_t gResource_##name = Resource_RegisterType( #name, loadFunc, createFunc, freeFunc )
 // 
 // CH_REGISTER_RESOURCE_TYPE( Model, _Graphics_LoadModel, _Graphics_CreateModel, nullptr );
 // CH_REGISTER_RESOURCE_TYPE( Material, _Graphics_LoadMaterial, _Graphics_CreateMaterial, nullptr );
@@ -63,7 +63,7 @@ void                   Graphics_LoadGltfNew( const std::string& srBasePath, cons
 
 void                   Graphics_LoadSceneObj( const std::string& srBasePath, const std::string& srPath, Scene_t* spScene );
 
-Handle                 CreateModelBuffer( const char* spName, void* spData, size_t sBufferSize, EBufferFlags sUsage );
+ch_handle_t                 CreateModelBuffer( const char* spName, void* spData, size_t sBufferSize, EBufferFlags sUsage );
 
 // --------------------------------------------------------------------------------------
 // General Rendering
@@ -115,8 +115,8 @@ CONCMD( r_reload_textures )
 }
 
 
-// TODO: Handle Blend Shapes and Animations
-ModelBBox_t Graphics::CalcModelBBox( Handle sModel )
+// TODO: ch_handle_t Blend Shapes and Animations
+ModelBBox_t Graphics::CalcModelBBox( ch_handle_t sModel )
 {
 	PROF_SCOPE();
 
@@ -186,7 +186,7 @@ ModelBBox_t Graphics::CalcModelBBox( Handle sModel )
 }
 
 
-bool Graphics::GetModelBBox( Handle sModel, ModelBBox_t& srBBox )
+bool Graphics::GetModelBBox( ch_handle_t sModel, ModelBBox_t& srBBox )
 {
 	auto it = gGraphicsData.aModelBBox.find( sModel );
 	if ( it == gGraphicsData.aModelBBox.end() )
@@ -197,7 +197,7 @@ bool Graphics::GetModelBBox( Handle sModel, ModelBBox_t& srBBox )
 }
 
 
-Handle Graphics::LoadModel( const std::string& srPath )
+ch_handle_t Graphics::LoadModel( const std::string& srPath )
 {
 	PROF_SCOPE();
 
@@ -212,7 +212,7 @@ Handle Graphics::LoadModel( const std::string& srPath )
 		if ( !gGraphicsData.aModels.Get( it->second, &model ) )
 		{
 			Log_Error( gLC_ClientGraphics, "Graphics::LoadModel: Model is nullptr\n" );
-			return InvalidHandle;
+			return CH_INVALID_HANDLE;
 		}
 
 		model->AddRef();
@@ -234,23 +234,23 @@ Handle Graphics::LoadModel( const std::string& srPath )
 	if ( !fullPath.data )
 	{
 		Log_ErrorF( gLC_ClientGraphics, "LoadModel: Failed to Find Model: %s\n", srPath.c_str() );
-		return InvalidHandle;
+		return CH_INVALID_HANDLE;
 	}
 
 	ch_string_auto fileExt = FileSys_GetFileExt( srPath.data(), srPath.size() );
 
 	Model*      model   = nullptr;
-	Handle      handle  = InvalidHandle;
+	ch_handle_t      handle  = CH_INVALID_HANDLE;
 
 	// TODO: try to do file header checking
 	if ( ch_str_equals( fileExt, "obj", 3 ) )
 	{
 		handle = gGraphicsData.aModels.Create( &model );
 
-		if ( handle == InvalidHandle )
+		if ( handle == CH_INVALID_HANDLE )
 		{
 			Log_ErrorF( gLC_ClientGraphics, "LoadModel: Failed to Allocate Model: %s\n", srPath.c_str() );
-			return InvalidHandle;
+			return CH_INVALID_HANDLE;
 		}
 
 		// fuck
@@ -261,10 +261,10 @@ Handle Graphics::LoadModel( const std::string& srPath )
 	{
 		handle = gGraphicsData.aModels.Create( &model );
 
-		if ( handle == InvalidHandle )
+		if ( handle == CH_INVALID_HANDLE )
 		{
 			Log_ErrorF( gLC_ClientGraphics, "LoadModel: Failed to Allocate Model: %s\n", srPath.c_str() );
-			return InvalidHandle;
+			return CH_INVALID_HANDLE;
 		}
 
 		// fuck
@@ -275,7 +275,7 @@ Handle Graphics::LoadModel( const std::string& srPath )
 	else
 	{
 		Log_DevF( gLC_ClientGraphics, 1, "Unknown Model File Extension: %s\n", fileExt.data );
-		return InvalidHandle;
+		return CH_INVALID_HANDLE;
 	}
 
 	//sModel->aRadius = glm::distance( mesh->aMinSize, mesh->aMaxSize ) / 2.0f;
@@ -284,7 +284,7 @@ Handle Graphics::LoadModel( const std::string& srPath )
 	if ( model->aMeshes.empty() )
 	{
 		gGraphicsData.aModels.Remove( handle );
-		return InvalidHandle;
+		return CH_INVALID_HANDLE;
 	}
 
 	// calculate a bounding box
@@ -298,11 +298,11 @@ Handle Graphics::LoadModel( const std::string& srPath )
 }
 
 
-Handle Graphics::CreateModel( Model** spModel )
+ch_handle_t Graphics::CreateModel( Model** spModel )
 {
-	Handle handle = gGraphicsData.aModels.Create( spModel );
+	ch_handle_t handle = gGraphicsData.aModels.Create( spModel );
 
-	if ( handle != InvalidHandle )
+	if ( handle != CH_INVALID_HANDLE )
 		( *spModel )->AddRef();
 
 	return handle;
@@ -314,12 +314,12 @@ void Graphics_FreeQueuedResources()
 	PROF_SCOPE();
 
 	// Free Renderables
-	for ( ChHandle_t renderHandle : gGraphicsData.aRenderablesToFree )
+	for ( ch_handle_t renderHandle : gGraphicsData.aRenderablesToFree )
 	{
 	}
 
 	// Free Models
-	for ( ChHandle_t modelHandle : gGraphicsData.aModelsToFree )
+	for ( ch_handle_t modelHandle : gGraphicsData.aModelsToFree )
 	{
 		Model* model = nullptr;
 		if ( !gGraphicsData.aModels.Get( modelHandle, &model ) )
@@ -393,7 +393,7 @@ void Graphics_FreeQueuedResources()
 }
 
 
-void Graphics::FreeModel( ChHandle_t shModel )
+void Graphics::FreeModel( ch_handle_t shModel )
 {
 	if ( shModel == CH_INVALID_HANDLE )
 		return;
@@ -406,26 +406,26 @@ void Graphics::FreeModel( ChHandle_t shModel )
 // Resource System Funcs
 
 
-bool _Graphics_LoadModel( ChHandle_t& item, const fs::path& srPath )
+bool _Graphics_LoadModel( ch_handle_t& item, const fs::path& srPath )
 {
 	return false;
 }
 
 
-bool _Graphics_CreateModel( ChHandle_t& item, const fs::path& srInternalPath, void* spData )
+bool _Graphics_CreateModel( ch_handle_t& item, const fs::path& srInternalPath, void* spData )
 {
 	return false;
 }
 
 
-void _Graphics_FreeModel( ChHandle_t item )
+void _Graphics_FreeModel( ch_handle_t item )
 {
 }
 
 // ---------------------------------------------------
 
 
-Model* Graphics::GetModelData( Handle shModel )
+Model* Graphics::GetModelData( ch_handle_t shModel )
 {
 	PROF_SCOPE();
 
@@ -440,7 +440,7 @@ Model* Graphics::GetModelData( Handle shModel )
 }
 
 
-std::string_view Graphics::GetModelPath( Handle sModel )
+std::string_view Graphics::GetModelPath( ch_handle_t sModel )
 {
 	for ( auto& [ path, modelHandle ] : gGraphicsData.aModelPaths )
 	{
@@ -454,7 +454,7 @@ std::string_view Graphics::GetModelPath( Handle sModel )
 }
 
 
-void Graphics::Model_SetMaterial( Handle shModel, size_t sSurface, Handle shMat )
+void Graphics::Model_SetMaterial( ch_handle_t shModel, size_t sSurface, ch_handle_t shMat )
 {
 	Model* model = nullptr;
 	if ( !gGraphicsData.aModels.Get( shModel, &model ) )
@@ -473,19 +473,19 @@ void Graphics::Model_SetMaterial( Handle shModel, size_t sSurface, Handle shMat 
 }
 
 
-Handle Graphics::Model_GetMaterial( Handle shModel, size_t sSurface )
+ch_handle_t Graphics::Model_GetMaterial( ch_handle_t shModel, size_t sSurface )
 {
 	Model* model = nullptr;
 	if ( !gGraphicsData.aModels.Get( shModel, &model ) )
 	{
 		Log_Error( gLC_ClientGraphics, "Model_GetMaterial: Model is nullptr\n" );
-		return InvalidHandle;
+		return CH_INVALID_HANDLE;
 	}
 
 	if ( sSurface >= model->aMeshes.size() )
 	{
 		Log_ErrorF( gLC_ClientGraphics, "Model_GetMaterial: surface is out of range: %zu (Surface Count: %zu)\n", sSurface, model->aMeshes.size() );
-		return InvalidHandle;
+		return CH_INVALID_HANDLE;
 	}
 
 	return model->aMeshes[ sSurface ].aMaterial;
@@ -496,7 +496,7 @@ Handle Graphics::Model_GetMaterial( Handle shModel, size_t sSurface )
 // Scenes
 
 
-Handle Graphics::LoadScene( const std::string& srPath )
+ch_handle_t Graphics::LoadScene( const std::string& srPath )
 {
 #if 0
 	// Have we loaded this scene already?
@@ -514,24 +514,24 @@ Handle Graphics::LoadScene( const std::string& srPath )
 	if ( fullPath.empty() )
 	{
 		Log_ErrorF( gLC_ClientGraphics, "LoadScene: Failed to Find Scene: %s\n", srPath.c_str() );
-		return InvalidHandle;
+		return CH_INVALID_HANDLE;
 	}
 
 	std::string fileExt = FileSys_GetFileExt( srPath );
 
 	// Scene_t*    scene   = new Scene_t;
 	Scene_t*    scene   = nullptr;
-	Handle      handle  = InvalidHandle;
+	ch_handle_t      handle  = CH_INVALID_HANDLE;
 
 	// TODO: try to do file header checking
 	if ( fileExt == "obj" )
 	{
 		handle = gGraphicsData.aScenes.Create( &scene );
 		
-		if ( handle == InvalidHandle )
+		if ( handle == CH_INVALID_HANDLE )
 		{
 			Log_ErrorF( gLC_ClientGraphics, "LoadScene: Failed to Allocate Scene: %s\n", srPath.c_str() );
-			return InvalidHandle;
+			return CH_INVALID_HANDLE;
 		}
 
 		memset( &scene->aModels, 0, sizeof( scene->aModels ) );
@@ -545,7 +545,7 @@ Handle Graphics::LoadScene( const std::string& srPath )
 	else
 	{
 		Log_DevF( gLC_ClientGraphics, 1, "Unknown Model File Extension: %s\n", fileExt.c_str() );
-		return InvalidHandle;
+		return CH_INVALID_HANDLE;
 	}
 
 	//sModel->aRadius = glm::distance( mesh->aMinSize, mesh->aMaxSize ) / 2.0f;
@@ -555,7 +555,7 @@ Handle Graphics::LoadScene( const std::string& srPath )
 	{
 		gGraphicsData.aScenes.Remove( handle );
 		// delete scene;
-		return InvalidHandle;
+		return CH_INVALID_HANDLE;
 	}
 
 	// Calculate Bounding Boxes for Models
@@ -572,7 +572,7 @@ Handle Graphics::LoadScene( const std::string& srPath )
 }
 
 
-void Graphics::FreeScene( Handle sScene )
+void Graphics::FreeScene( ch_handle_t sScene )
 {
 	// HACK HACK PERF: we have to wait for queues to finish, so we could just free this model later
 	// maybe right before the next draw?
@@ -604,7 +604,7 @@ void Graphics::FreeScene( Handle sScene )
 }
 
 
-SceneDraw_t* Graphics::AddSceneDraw( Handle sScene )
+SceneDraw_t* Graphics::AddSceneDraw( ch_handle_t sScene )
 {
 	if ( !sScene )
 		return nullptr;
@@ -650,7 +650,7 @@ void Graphics::RemoveSceneDraw( SceneDraw_t* spScene )
 }
 
 
-size_t Graphics::GetSceneModelCount( Handle sScene )
+size_t Graphics::GetSceneModelCount( ch_handle_t sScene )
 {
 	Scene_t* scene = nullptr;
 	if ( !gGraphicsData.aScenes.Get( sScene, &scene ) )
@@ -663,7 +663,7 @@ size_t Graphics::GetSceneModelCount( Handle sScene )
 }
 
 
-Handle Graphics::GetSceneModel( Handle sScene, size_t sIndex )
+ch_handle_t Graphics::GetSceneModel( ch_handle_t sScene, size_t sIndex )
 {
 	Scene_t* scene = nullptr;
 	if ( !gGraphicsData.aScenes.Get( sScene, &scene ) )
@@ -675,7 +675,7 @@ Handle Graphics::GetSceneModel( Handle sScene, size_t sIndex )
 	if ( sIndex >= scene->aModels.size() )
 	{
 		Log_Error( gLC_ClientGraphics, "Graphics::GetSceneModel: Index out of range\n" );
-		return InvalidHandle;
+		return CH_INVALID_HANDLE;
 	}
 
 	return scene->aModels[ sIndex ];
@@ -752,7 +752,7 @@ bool Graphics::RenderListCopy( RenderList* pSrc, RenderList* pDest )
 // Draw a Render List to a Frame Buffer
 // if CH_INVALID_HANDLE is passed in as the Frame Buffer, it defaults to the backbuffer
 // TODO: what if we want to pass in a render list to a compute shader?
-void Graphics::RenderListDraw( RenderList* pRenderList, ChHandle_t framebuffer )
+void Graphics::RenderListDraw( RenderList* pRenderList, ch_handle_t framebuffer )
 {
 	if ( framebuffer == CH_INVALID_HANDLE )
 	{
@@ -779,21 +779,21 @@ void Graphics::RenderListDoFrustumCulling( RenderList* pRenderList, u32 viewport
 // ---------------------------------------------------------------------------------------
 
 
-ChHandle_t Graphics::LoadTexture( ChHandle_t& srHandle, const std::string& srTexturePath, const TextureCreateData_t& srCreateData )
+ch_handle_t Graphics::LoadTexture( ch_handle_t& srHandle, const std::string& srTexturePath, const TextureCreateData_t& srCreateData )
 {
 	//gGraphicsData.aTexturesDirty = true;
 	return render->LoadTexture( srHandle, srTexturePath, srCreateData );
 }
 
 
-ChHandle_t Graphics::CreateTexture( const TextureCreateInfo_t& srTextureCreateInfo, const TextureCreateData_t& srCreateData )
+ch_handle_t Graphics::CreateTexture( const TextureCreateInfo_t& srTextureCreateInfo, const TextureCreateData_t& srCreateData )
 {
 	//gGraphicsData.aTexturesDirty = true;
 	return render->CreateTexture( srTextureCreateInfo, srCreateData );
 }
 
 
-void Graphics::FreeTexture( ChHandle_t shTexture )
+void Graphics::FreeTexture( ch_handle_t shTexture )
 {
 	//gGraphicsData.aTexturesDirty = true;
 	render->FreeTexture( shTexture );
@@ -830,11 +830,11 @@ bool Graphics_CreateRenderPasses()
 
 
 #if 0
-bool Graphics_CreateVariableDescLayout( CreateDescLayout_t& srCreate, Handle& srLayout, Handle* spSets, u32 sSetCount, const char* spSetName, int sCount )
+bool Graphics_CreateVariableDescLayout( CreateDescLayout_t& srCreate, ch_handle_t& srLayout, ch_handle_t* spSets, u32 sSetCount, const char* spSetName, int sCount )
 {
 	srLayout = render->CreateDescLayout( srCreate );
 
-	if ( srLayout == InvalidHandle )
+	if ( srLayout == CH_INVALID_HANDLE )
 	{
 		Log_Error( gLC_ClientGraphics, "Failed to create variable descriptor layout\n" );
 		return false;
@@ -857,11 +857,11 @@ bool Graphics_CreateVariableDescLayout( CreateDescLayout_t& srCreate, Handle& sr
 #endif
 
 
-bool Graphics_CreateDescLayout( CreateDescLayout_t& srCreate, Handle& srLayout, Handle* spSets, u32 sSetCount, const char* spSetName )
+bool Graphics_CreateDescLayout( CreateDescLayout_t& srCreate, ch_handle_t& srLayout, ch_handle_t* spSets, u32 sSetCount, const char* spSetName )
 {
 	srLayout = render->CreateDescLayout( srCreate );
 
-	if ( srLayout == InvalidHandle )
+	if ( srLayout == CH_INVALID_HANDLE )
 	{
 		Log_ErrorF( gLC_ClientGraphics, "Failed to create descriptor layout - %s\n", spSetName );
 		return false;
@@ -895,14 +895,14 @@ bool Graphics_CreateDescLayout( CreateDescLayout_t& srCreate, Handle& srLayout, 
 // }
 
 
-bool Graphics_CreateShaderBuffers( EBufferFlags sFlags, std::vector< Handle >& srBuffers, const char* spBufferName, size_t sBufferSize )
+bool Graphics_CreateShaderBuffers( EBufferFlags sFlags, std::vector< ch_handle_t >& srBuffers, const char* spBufferName, size_t sBufferSize )
 {
 	// create buffers for it
 	for ( size_t i = 0; i < srBuffers.size(); i++ )
 	{
-		Handle buffer = render->CreateBuffer( spBufferName, sBufferSize, sFlags, EBufferMemory_Host );
+		ch_handle_t buffer = render->CreateBuffer( spBufferName, sBufferSize, sFlags, EBufferMemory_Host );
 
-		if ( buffer == InvalidHandle )
+		if ( buffer == CH_INVALID_HANDLE )
 		{
 			Log_Error( gLC_ClientGraphics, "Failed to Create Light Uniform Buffer\n" );
 			return false;
@@ -923,13 +923,13 @@ bool Graphics_CreateShaderBuffers( EBufferFlags sFlags, std::vector< Handle >& s
 }
 
 
-bool Graphics_CreateUniformBuffers( std::vector< Handle >& srBuffers, const char* spBufferName, size_t sBufferSize )
+bool Graphics_CreateUniformBuffers( std::vector< ch_handle_t >& srBuffers, const char* spBufferName, size_t sBufferSize )
 {
 	return Graphics_CreateShaderBuffers( EDescriptorType_UniformBuffer, srBuffers, spBufferName, sBufferSize );
 }
 
 
-bool Graphics_CreateStorageBuffers( std::vector< Handle >& srBuffers, const char* spBufferName, size_t sBufferSize )
+bool Graphics_CreateStorageBuffers( std::vector< ch_handle_t >& srBuffers, const char* spBufferName, size_t sBufferSize )
 {
 	return Graphics_CreateShaderBuffers( EDescriptorType_StorageBuffer, srBuffers, spBufferName, sBufferSize );
 }
@@ -941,8 +941,8 @@ static void Graphics_AllocateShaderArray( ShaderArrayAllocator_t& srAllocator, u
 	srAllocator.aAllocated = sCount;
 	srAllocator.aUsed      = 0;
 
-	srAllocator.apUsed     = ch_calloc_count< u32 >( sCount );
-	srAllocator.apFree     = ch_calloc_count< u32 >( sCount );
+	srAllocator.apUsed     = ch_calloc< u32 >( sCount );
+	srAllocator.apFree     = ch_calloc< u32 >( sCount );
 
 	// Fill the free list with handles, and the used list with invalid handles
 	for ( u32 index = 0; index < sCount; index++ )
@@ -1026,9 +1026,9 @@ bool Graphics_CreateDescriptorSets( ShaderRequirmentsList_t& srRequire )
 
 	Graphics_AllocateShaderArray( gGraphicsData.aViewportSlots, CH_R_MAX_VIEWPORTS, "Viewports" );
 
-	gGraphicsData.aRenderableData  = ch_calloc_count< Shader_Renderable_t >( CH_R_MAX_RENDERABLES );
-	gGraphicsData.aModelMatrixData = ch_calloc_count< glm::mat4 >( CH_R_MAX_RENDERABLES );
-	gGraphicsData.aViewportData    = ch_calloc_count< Shader_Viewport_t >( CH_R_MAX_VIEWPORTS );
+	gGraphicsData.aRenderableData  = ch_calloc< Shader_Renderable_t >( CH_R_MAX_RENDERABLES );
+	gGraphicsData.aModelMatrixData = ch_calloc< glm::mat4 >( CH_R_MAX_RENDERABLES );
+	gGraphicsData.aViewportData    = ch_calloc< Shader_Viewport_t >( CH_R_MAX_VIEWPORTS );
 
 	gGraphicsData.aVertexBuffers.aBuffers.reserve( CH_R_MAX_VERTEX_BUFFERS );
 	gGraphicsData.aIndexBuffers.aBuffers.reserve( CH_R_MAX_INDEX_BUFFERS );
@@ -1109,7 +1109,7 @@ bool Graphics_CreateDescriptorSets( ShaderRequirmentsList_t& srRequire )
 
 		// TODO: this is for 2 swap chain images, but the swap chain image count could be different
 		gShaderDescriptorData.aGlobalSets.aCount = 2;
-		gShaderDescriptorData.aGlobalSets.apSets = ch_calloc_count< ChHandle_t >( gShaderDescriptorData.aGlobalSets.aCount );
+		gShaderDescriptorData.aGlobalSets.apSets = ch_calloc< ch_handle_t >( gShaderDescriptorData.aGlobalSets.aCount );
 
 		if ( !Graphics_CreateDescLayout( createLayout, gShaderDescriptorData.aGlobalLayout, gShaderDescriptorData.aGlobalSets.apSets, 2, "Global Sets" ) )
 			return false;
@@ -1121,7 +1121,7 @@ bool Graphics_CreateDescriptorSets( ShaderRequirmentsList_t& srRequire )
 		update.apDescSets    = gShaderDescriptorData.aGlobalSets.apSets;
 
 		update.aBindingCount = static_cast< u32 >( createLayout.aBindings.size() - 2 );  // don't write anything for vertex and index buffers
-		update.apBindings    = ch_calloc_count< WriteDescSetBinding_t >( update.aBindingCount );
+		update.apBindings    = ch_calloc< WriteDescSetBinding_t >( update.aBindingCount );
 
 		size_t i             = 0;
 		for ( const CreateDescBinding_t& binding : createLayout.aBindings )
@@ -1135,7 +1135,7 @@ bool Graphics_CreateDescriptorSets( ShaderRequirmentsList_t& srRequire )
 				break;
 		}
 
-		update.apBindings[ CH_BINDING_TEXTURES ].apData       = ch_calloc_count< ChHandle_t >( CH_R_MAX_TEXTURES );
+		update.apBindings[ CH_BINDING_TEXTURES ].apData       = ch_calloc< ch_handle_t >( CH_R_MAX_TEXTURES );
 		update.apBindings[ CH_BINDING_CORE ].apData           = &gGraphicsData.aCoreDataStaging.aBuffer;
 
 		update.apBindings[ CH_BINDING_VIEWPORTS ].apData      = &gGraphicsData.aViewportStaging.aBuffer;
@@ -1166,7 +1166,7 @@ bool Graphics_CreateDescriptorSets( ShaderRequirmentsList_t& srRequire )
 
 		ShaderDescriptor_t& descriptor = gShaderDescriptorData.aPerShaderSets[ requirement.aShader ];
 		descriptor.aCount              = 2;
-		descriptor.apSets              = ch_calloc_count< ChHandle_t >( descriptor.aCount );
+		descriptor.apSets              = ch_calloc< ch_handle_t >( descriptor.aCount );
 
 		if ( !Graphics_CreateDescLayout( createLayout, gShaderDescriptorData.aPerShaderLayout[ requirement.aShader ], descriptor.apSets, descriptor.aCount, "Shader Sets" ) )
 		{
@@ -1308,7 +1308,7 @@ u32 Graphics_GetShaderSlot( ShaderArrayAllocator_t& srAllocator, u32 sHandle )
 
 
 // return a magic number
-u32 Graphics_AddShaderBuffer( ShaderBufferList_t& srBufferList, ChHandle_t sBuffer )
+u32 Graphics_AddShaderBuffer( ShaderBufferList_t& srBufferList, ch_handle_t sBuffer )
 {
 	// Generate a handle magic number.
 	u32 magic = ( rand() % 0xFFFFFFFE ) + 1;
@@ -1327,7 +1327,7 @@ void Graphics_RemoveShaderBuffer( ShaderBufferList_t& srBufferList, u32 sHandle 
 }
 
 
-ChHandle_t Graphics_GetShaderBuffer( const ShaderBufferList_t& srBufferList, u32 sHandle )
+ch_handle_t Graphics_GetShaderBuffer( const ShaderBufferList_t& srBufferList, u32 sHandle )
 {
 	if ( sHandle == UINT32_MAX )
 		return CH_INVALID_HANDLE;
@@ -1370,7 +1370,7 @@ void Graphics_OnTextureIndexUpdate()
 }
 
 
-void Graphics_OnResetCallback( ChHandle_t window, ERenderResetFlags sFlags )
+void Graphics_OnResetCallback( ch_handle_t window, ERenderResetFlags sFlags )
 {
 	// int width, height;
 	// render->GetSurfaceSize( width, height );
@@ -1659,7 +1659,7 @@ void FreeRenderableModel( Renderable_t* renderable )
 }
 
 
-void SetRenderableModel( ChHandle_t modelHandle, Model* model, Renderable_t* renderable )
+void SetRenderableModel( ch_handle_t modelHandle, Model* model, Renderable_t* renderable )
 {
 	// HACK - REMOVE WHEN WE ADD QUEUED DELETION FOR ASSETS
 	render->WaitForQueues();
@@ -1676,7 +1676,7 @@ void SetRenderableModel( ChHandle_t modelHandle, Model* model, Renderable_t* ren
 
 	if ( renderable->aMaterialCount )
 	{
-		renderable->apMaterials = ch_malloc_count< ChHandle_t >( renderable->aMaterialCount );
+		renderable->apMaterials = ch_malloc< ch_handle_t >( renderable->aMaterialCount );
 
 		for ( u32 i = 0; i < renderable->aMaterialCount; i++ )
 		{
@@ -1728,17 +1728,17 @@ void SetRenderableModel( ChHandle_t modelHandle, Model* model, Renderable_t* ren
 		update.apDescSets               = gShaderDescriptorData.aPerShaderSets[ "__skinning" ].apSets;
 
 		update.aBindingCount            = 2;
-		update.apBindings               = ch_calloc_count< WriteDescSetBinding_t >( update.aBindingCount );
+		update.apBindings               = ch_calloc< WriteDescSetBinding_t >( update.aBindingCount );
 
 		update.apBindings[ 0 ].aBinding = 0;
 		update.apBindings[ 0 ].aType    = EDescriptorType_StorageBuffer;
 		update.apBindings[ 0 ].aCount   = gGraphicsData.aBlendShapeWeightBuffers.aBuffers.size();
-		update.apBindings[ 0 ].apData   = ch_calloc_count< ChHandle_t >( gGraphicsData.aBlendShapeWeightBuffers.aBuffers.size() );
+		update.apBindings[ 0 ].apData   = ch_calloc< ch_handle_t >( gGraphicsData.aBlendShapeWeightBuffers.aBuffers.size() );
 
 		update.apBindings[ 1 ].aBinding = 1;
 		update.apBindings[ 1 ].aType    = EDescriptorType_StorageBuffer;
 		update.apBindings[ 1 ].aCount   = gGraphicsData.aBlendShapeDataBuffers.aBuffers.size();
-		update.apBindings[ 1 ].apData   = ch_calloc_count< ChHandle_t >( gGraphicsData.aBlendShapeDataBuffers.aBuffers.size() );
+		update.apBindings[ 1 ].apData   = ch_calloc< ch_handle_t >( gGraphicsData.aBlendShapeDataBuffers.aBuffers.size() );
 
 		int i                           = 0;
 		for ( const auto& [ index, buffer ] : gGraphicsData.aBlendShapeWeightBuffers.aBuffers )
@@ -1771,24 +1771,24 @@ void SetRenderableModel( ChHandle_t modelHandle, Model* model, Renderable_t* ren
 }
 
 
-ChHandle_t Graphics::CreateRenderable( ChHandle_t sModel )
+ch_handle_t Graphics::CreateRenderable( ch_handle_t sModel )
 {
 	Model* model = nullptr;
 	if ( !gGraphicsData.aModels.Get( sModel, &model ) )
 	{
 		Log_Warn( gLC_ClientGraphics, "Renderable has no model!\n" );
-		return InvalidHandle;
+		return CH_INVALID_HANDLE;
 	}
 
 	// Log_Dev( gLC_ClientGraphics, 2, "Created Renderable\n" );
 
 	Renderable_t* renderable  = nullptr;
-	ChHandle_t    drawHandle = InvalidHandle;
+	ch_handle_t    drawHandle = CH_INVALID_HANDLE;
 
 	if ( !( drawHandle = gGraphicsData.aRenderables.Create( &renderable ) ) )
 	{
 		Log_ErrorF( gLC_ClientGraphics, "Failed to create Renderable_t\n" );
-		return InvalidHandle;
+		return CH_INVALID_HANDLE;
 	}
 
 	renderable->aModelMatrix   = glm::identity< glm::mat4 >();
@@ -1809,7 +1809,7 @@ ChHandle_t Graphics::CreateRenderable( ChHandle_t sModel )
 }
 
 
-Renderable_t* Graphics::GetRenderableData( ChHandle_t sRenderable )
+Renderable_t* Graphics::GetRenderableData( ch_handle_t sRenderable )
 {
 	PROF_SCOPE();
 
@@ -1824,7 +1824,7 @@ Renderable_t* Graphics::GetRenderableData( ChHandle_t sRenderable )
 }
 
 
-void Graphics::SetRenderableModel( ChHandle_t sRenderable, ChHandle_t sModel )
+void Graphics::SetRenderableModel( ch_handle_t sRenderable, ch_handle_t sModel )
 {
 	// TODO: queue this stuff for when the model is finished loading
 	Renderable_t* renderable = nullptr;
@@ -1846,7 +1846,7 @@ void Graphics::SetRenderableModel( ChHandle_t sRenderable, ChHandle_t sModel )
 }
 
 
-void Graphics::FreeRenderable( Handle sRenderable )
+void Graphics::FreeRenderable( ch_handle_t sRenderable )
 {
 	// TODO: QUEUE THIS RENDERABLE FOR DELETION, DON'T DELETE THIS NOW, SAME WITH MODELS, MATERIALS, AND TEXTURES!!!
 
@@ -1878,7 +1878,7 @@ void Graphics::FreeRenderable( Handle sRenderable )
 }
 
 
-void Graphics::ResetRenderableMaterials( ChHandle_t sRenderable )
+void Graphics::ResetRenderableMaterials( ch_handle_t sRenderable )
 {
 	Renderable_t* renderable = nullptr;
 	if ( !gGraphicsData.aRenderables.Get( sRenderable, &renderable ) )
@@ -1906,7 +1906,7 @@ void Graphics::ResetRenderableMaterials( ChHandle_t sRenderable )
 }
 
 
-void Graphics::UpdateRenderableAABB( Handle sRenderable )
+void Graphics::UpdateRenderableAABB( ch_handle_t sRenderable )
 {
 	PROF_SCOPE();
 
@@ -1918,7 +1918,7 @@ void Graphics::UpdateRenderableAABB( Handle sRenderable )
 }
 
 
-ModelBBox_t Graphics::GetRenderableAABB( Handle sRenderable )
+ModelBBox_t Graphics::GetRenderableAABB( ch_handle_t sRenderable )
 {
 	PROF_SCOPE();
 
@@ -1939,7 +1939,7 @@ void FreeRenderableDebugName( Renderable_t* renderable )
 }
 
 
-void Graphics::SetRenderableDebugName( ChHandle_t sRenderable, std::string_view sName )
+void Graphics::SetRenderableDebugName( ch_handle_t sRenderable, std::string_view sName )
 {
 	if ( Renderable_t* renderable = gGraphics.GetRenderableData( sRenderable ) )
 	{
@@ -1959,7 +1959,7 @@ u32 Graphics::GetRenderableCount()
 }
 
 
-ChHandle_t Graphics::GetRenderableByIndex( u32 i )
+ch_handle_t Graphics::GetRenderableByIndex( u32 i )
 {
 	return gGraphicsData.aRenderables.GetHandleByIndex( i );
 }
@@ -2142,16 +2142,16 @@ const char* Graphics_GetVertexAttributeName( VertexAttribute attrib )
 // Buffers
 
 // sBufferSize is sizeof(element) * count
-Handle CreateModelBuffer( const char* spName, void* spData, size_t sBufferSize, EBufferFlags sUsage )
+ch_handle_t CreateModelBuffer( const char* spName, void* spData, size_t sBufferSize, EBufferFlags sUsage )
 {
 	PROF_SCOPE();
 
-	Handle stagingBuffer = render->CreateBuffer( "Staging Model Buffer", sBufferSize, sUsage | EBufferFlags_TransferSrc, EBufferMemory_Host );
+	ch_handle_t stagingBuffer = render->CreateBuffer( "Staging Model Buffer", sBufferSize, sUsage | EBufferFlags_TransferSrc, EBufferMemory_Host );
 
 	// Copy Data to Buffer
 	render->BufferWrite( stagingBuffer, sBufferSize, spData );
 
-	Handle deviceBuffer = render->CreateBuffer( spName, sBufferSize, sUsage | EBufferFlags_TransferDst, EBufferMemory_Device );
+	ch_handle_t deviceBuffer = render->CreateBuffer( spName, sBufferSize, sUsage | EBufferFlags_TransferDst, EBufferMemory_Device );
 
 	// Copy Local Buffer data to Device
 	BufferRegionCopy_t copy;
@@ -2196,7 +2196,7 @@ void Graphics::CreateVertexBuffers( ModelBuffers_t* spBuffer, VertexData_t* spVe
 	// HACK HACK HACK !!!!!!
 	// We append all the data together for now just because i don't want to deal with changing a ton of code
 	// Maybe later on we can do that
-	Shader_VertexData_t* dataHack   = ch_calloc_count< Shader_VertexData_t >( spVertexData->aCount );
+	Shader_VertexData_t* dataHack   = ch_calloc< Shader_VertexData_t >( spVertexData->aCount );
 
 	if ( dataHack == nullptr )
 	{
@@ -2282,7 +2282,7 @@ void Graphics::CreateVertexBuffers( ModelBuffers_t* spBuffer, VertexData_t* spVe
 	// Allocate an Index for this
 	spBuffer->aVertexHandle = Graphics_AddShaderBuffer( gGraphicsData.aVertexBuffers, spBuffer->aVertex );
 
-	// Handle Blend Shapes
+	// ch_handle_t Blend Shapes
 	
 	// TODO: this expects each vertex attribute to have it's own vertex buffer
 	// but we want the blend shapes to all be in one huge storage buffer
@@ -2366,7 +2366,7 @@ void Graphics_CreateModelBuffers( ModelBuffers_t* spBuffers, VertexData_t* spVer
 #endif
 
 
-void DumpRenderableInfo( ChHandle_t renderHandle )
+void DumpRenderableInfo( ch_handle_t renderHandle )
 {
 	Renderable_t* renderable = nullptr;
 	if ( !gGraphicsData.aRenderables.Get( renderHandle, &renderable ) )
@@ -2402,7 +2402,7 @@ void DumpRenderableInfo( ChHandle_t renderHandle )
 
 	for ( u32 matI = 0; matI < renderable->aMaterialCount; matI++ )
 	{
-		ChHandle_t material = renderable->apMaterials[ matI ];
+		ch_handle_t material = renderable->apMaterials[ matI ];
 		Log_MsgF( gLC_ClientGraphics, "        %d - %s\n", matI, gGraphics.Mat_GetName( material ) );
 	}
 }
@@ -2412,7 +2412,7 @@ CONCMD( r_dump_renderables )
 {
 	for ( u32 i = 0; i < gGraphicsData.aRenderables.size(); i++ )
 	{
-		ChHandle_t renderHandle = gGraphicsData.aRenderables.GetHandleByIndex( i );
+		ch_handle_t renderHandle = gGraphicsData.aRenderables.GetHandleByIndex( i );
 		DumpRenderableInfo( renderHandle );
 	}
 

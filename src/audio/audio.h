@@ -6,14 +6,14 @@
 #include <SDL2/SDL.h>
 #include <phonon.h>
 
-LOG_CHANNEL2( Aduio );
+LOG_CHANNEL( Aduio );
 
 constexpr size_t FRAME_SIZE         = 256;
 constexpr size_t SOUND_RATE         = 48000;
 constexpr size_t MAX_STREAMS        = 32;
 constexpr size_t CH_OUT_BUFFER_SIZE = 2048;
 
-extern Handle    gDefaultChannel;
+extern ch_handle_t    gDefaultChannel;
 
 bool             HandleIPLErr( IPLerror ret, const char* msg );
 
@@ -131,7 +131,7 @@ struct AudioStream
 	float                vol         = 1.f;
 
 	// Audio Playback Channel
-	Handle               aChannel    = gDefaultChannel;
+	ch_handle_t               aChannel    = gDefaultChannel;
 
 	// audio stream to store audio from the codec and covert it
 	SDL_AudioStream*     audioStream = nullptr;
@@ -250,86 +250,86 @@ class AudioSystem : public IAudioSystem
 	// -------------------------------------------------------------------------------------
 
 	// Create a new audio channel, if one with the same name is already taken, it will return the existing channel
-	Handle                        RegisterChannel( const char* spName ) override;
+	ch_handle_t                        RegisterChannel( const char* spName ) override;
 
-	// Get's an Audio Channel Handle by the name of it
-	Handle                        GetChannel( std::string_view sName ) override;
+	// Get's an Audio Channel ch_handle_t by the name of it
+	ch_handle_t                        GetChannel( std::string_view sName ) override;
 
 	// Get's an Audio Channel's Name
-	const std::string&            GetChannelName( Handle sChannel ) override;
+	const std::string&            GetChannelName( ch_handle_t sChannel ) override;
 
 	// Get and Set the Volume of this Audio Channel
-	float                         GetChannelVolume( Handle sChannel ) override;
-	void                          SetChannelVolume( Handle sChannel, float sVol ) override;
+	float                         GetChannelVolume( ch_handle_t sChannel ) override;
+	void                          SetChannelVolume( ch_handle_t sChannel, float sVol ) override;
 
 	// Get and Set whether all sounds playing on this channel are paused or not
-	bool                          GetChannelPaused( Handle sChannel ) override;
-	void                          SetChannelPaused( Handle sChannel, bool sPaused ) override;
+	bool                          GetChannelPaused( ch_handle_t sChannel ) override;
+	void                          SetChannelPaused( ch_handle_t sChannel, bool sPaused ) override;
 
 	// Internal Function for getting the Audio Channel data
-	AudioChannel*                 GetChannelData( Handle sChannel );
+	AudioChannel*                 GetChannelData( ch_handle_t sChannel );
 
 	// -------------------------------------------------------------------------------------
 	// Sound Playback
 	// -------------------------------------------------------------------------------------
 
 	// Preload a entire sound for playback, useful for playing a sound multiple times in a row
-	// Handle                        PrecacheSound( std::string_view sSoundPath ) override;
+	// ch_handle_t                        PrecacheSound( std::string_view sSoundPath ) override;
 
 	// Free a Preloaded sound
-	// void                          FreePrecachedSound( Handle sSound ) override;
+	// void                          FreePrecachedSound( ch_handle_t sSound ) override;
 
 	// Load a sound from a path, usable for one time playback only
-	Handle                        OpenSound( std::string_view sSoundPath ) override;
+	ch_handle_t                        OpenSound( std::string_view sSoundPath ) override;
 
 	// Load a sound from a precached sound handle
-	// Handle                        OpenSound( Handle sSound ) override;
+	// ch_handle_t                        OpenSound( ch_handle_t sSound ) override;
 
 	// Read an entire opened sound for playback
-	bool                          PreloadSound( Handle sSound ) override;
+	bool                          PreloadSound( ch_handle_t sSound ) override;
 
 	// Load a sound from audio data from a SoundInfo struct (is this worth setting up?)
-	// virtual Handle               LoadSoundFromData( const SoundInfo& soundInfo ) = 0;
+	// virtual ch_handle_t               LoadSoundFromData( const SoundInfo& soundInfo ) = 0;
 
 	// Play an instance of a sound, you can play a handle multiple times
-	bool                          PlaySound( Handle sSound ) override;
+	bool                          PlaySound( ch_handle_t sSound ) override;
 
 	// Free a sound
-	void                          FreeSound( Handle sSound ) override;
+	void                          FreeSound( ch_handle_t sSound ) override;
 
 	// Is This a Valid Sound?
-	bool                          IsValid( Handle sSound ) override;
+	bool                          IsValid( ch_handle_t sSound ) override;
 
 	// Sound Volume ranges from 0.0f to 1.0f
-	void                          SetVolume( Handle sSound, float sVol ) override;
-	float                         GetVolume( Handle sSound ) override;
+	void                          SetVolume( ch_handle_t sSound, float sVol ) override;
+	float                         GetVolume( ch_handle_t sSound ) override;
 
 	/* Audio Stream Volume ranges from 0.0f to 1.0f */
-	//bool                    SetSampleRate( Handle stream, float vol ) = 0;
-	//float                   GetSampleRate( Handle stream ) = 0;
+	//bool                    SetSampleRate( ch_handle_t stream, float vol ) = 0;
+	//float                   GetSampleRate( ch_handle_t stream ) = 0;
 
 	// Audio Volume Channels (ex. General, Music, Voices, Commentary, etc.)
-	void                          SetChannel( Handle sSound, Handle sChannel ) override;
-	Handle                        GetChannel( Handle sSound ) override;
+	void                          SetChannel( ch_handle_t sSound, ch_handle_t sChannel ) override;
+	ch_handle_t                        GetChannel( ch_handle_t sSound ) override;
 
 	// UNTESTED: seek to different point in the audio file
-	bool                          Seek( Handle sSound, double sPos ) override;
+	bool                          Seek( ch_handle_t sSound, double sPos ) override;
 
 	// -------------------------------------------------------------------------------------
 	// Audio Effects
 	// -------------------------------------------------------------------------------------
 
-	void                          AddEffects( Handle stream, AudioEffect effect ) override;
-	void                          RemoveEffects( Handle stream, AudioEffect effect ) override;
-	bool                          HasEffects( Handle stream, AudioEffect effect ) override;
+	void                          AddEffects( ch_handle_t stream, AudioEffect effect ) override;
+	void                          RemoveEffects( ch_handle_t stream, AudioEffect effect ) override;
+	bool                          HasEffects( ch_handle_t stream, AudioEffect effect ) override;
 
-	bool                          SetEffectData( Handle stream, EAudioEffectData sDataType, int data ) override;
-	bool                          SetEffectData( Handle stream, EAudioEffectData sDataType, float data ) override;
-	bool                          SetEffectData( Handle stream, EAudioEffectData sDataType, const glm::vec3& data ) override;
+	bool                          SetEffectData( ch_handle_t stream, EAudioEffectData sDataType, int data ) override;
+	bool                          SetEffectData( ch_handle_t stream, EAudioEffectData sDataType, float data ) override;
+	bool                          SetEffectData( ch_handle_t stream, EAudioEffectData sDataType, const glm::vec3& data ) override;
 
-	bool                          GetEffectData( Handle stream, EAudioEffectData sDataType, int& data ) override;
-	bool                          GetEffectData( Handle stream, EAudioEffectData sDataType, float& data ) override;
-	bool                          GetEffectData( Handle stream, EAudioEffectData sDataType, glm::vec3& data ) override;
+	bool                          GetEffectData( ch_handle_t stream, EAudioEffectData sDataType, int& data ) override;
+	bool                          GetEffectData( ch_handle_t stream, EAudioEffectData sDataType, float& data ) override;
+	bool                          GetEffectData( ch_handle_t stream, EAudioEffectData sDataType, glm::vec3& data ) override;
 
 	// -------------------------------------------------------------------------------------
 	// Internal Functions
@@ -338,7 +338,7 @@ class AudioSystem : public IAudioSystem
 	bool                          LoadSoundInternal( AudioStream* stream );
 
 	/* Checks If This a Valid Audio Stream, if not, throw a warning and return nullptr. */
-	AudioStream*                  GetStream( Handle stream );
+	AudioStream*                  GetStream( ch_handle_t stream );
 
 	bool                          RegisterCodec( IAudioCodec* codec );
 
@@ -384,7 +384,7 @@ class AudioSystem : public IAudioSystem
 	IAudioOccluder*               apOccluder = nullptr;
 
 	ResourceList< AudioStream* >  aStreams;         // all streams loaded into memory
-	std::vector< Handle >         aStreamsPlaying;  // streams currently playing audio for
+	std::vector< ch_handle_t >         aStreamsPlaying;  // streams currently playing audio for
 
 	ResourceList< AudioChannel* > aChannels;
 

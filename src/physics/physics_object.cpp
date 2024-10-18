@@ -3,7 +3,6 @@
 
 #include <Physics/Collision/CollideShape.h>
 
-LOG_CHANNEL( Physics );
 
 // ====================================================================================
 

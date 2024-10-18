@@ -19,7 +19,7 @@ bool Con_RegisterConVar_Base( ConVarData_t** conVarDataIn, const char* spName, c
 {
 	if ( !spName )
 	{
-		Log_Error( gConsoleChannel, "ConVar Name is NULL\n" );
+		Log_Error( gLC_Console, "ConVar Name is NULL\n" );
 		return false;
 	}
 
@@ -31,7 +31,7 @@ bool Con_RegisterConVar_Base( ConVarData_t** conVarDataIn, const char* spName, c
 
 		if ( conVarData->aType != sType )
 		{
-			Log_ErrorF( gConsoleChannel, "ConVar Type Mismatch: %s - %s VS %s\n", spName, Con_ConVarTypeStr( conVarData->aType ), Con_ConVarTypeStr( sType ) );
+			Log_ErrorF( gLC_Console, "ConVar Type Mismatch: %s - %s VS %s\n", spName, Con_ConVarTypeStr( conVarData->aType ), Con_ConVarTypeStr( sType ) );
 			return false;
 		}
 		else
@@ -46,7 +46,7 @@ bool Con_RegisterConVar_Base( ConVarData_t** conVarDataIn, const char* spName, c
 	// Make sure this is a valid type
 	if ( sType >= EConVarType_Count )
 	{
-		Log_ErrorF( gConsoleChannel, "Invalid ConVar Type: %s\n", spName );
+		Log_ErrorF( gLC_Console, "Invalid ConVar Type: %s\n", spName );
 		return false;
 	}
 
@@ -487,7 +487,7 @@ ch_string Con_GetConVarDesc( const char* spName )
 	if ( it != Con_GetConVarDesc().end() )
 		return it->second;
 
-	Log_ErrorF( gConsoleChannel, "ConVar Description not found: %s\n", spName );
+	Log_ErrorF( gLC_Console, "ConVar Description not found: %s\n", spName );
 	return {};
 }
 
@@ -499,7 +499,7 @@ ch_string Con_GetConVarDesc( const char* spName )
 // 	if ( it != Con_GetConVarMap().end() )
 // 		return it->second;
 //
-// 	Log_ErrorF( gConsoleChannel, "ConVar Data not found: %s\n", spName );
+// 	Log_ErrorF( gLC_Console, "ConVar Data not found: %s\n", spName );
 // 	return nullptr;
 // }
 
@@ -536,7 +536,7 @@ const char* Con_ConVarTypeStr( EConVarType sType )
 {
 	if ( sType < 0 || sType >= EConVarType_Count )
 	{
-		Log_ErrorF( gConsoleChannel, "Invalid ConVar Type: %d\n", sType );
+		Log_ErrorF( gLC_Console, "Invalid ConVar Type: %d\n", sType );
 		return nullptr;
 	}
 
@@ -552,7 +552,7 @@ EConVarType Con_ConVarType( const char* spType )
 			return (EConVarType)i;
 	}
 
-	Log_ErrorF( gConsoleChannel, "Invalid ConVar Type: %s\n", spType );
+	Log_ErrorF( gLC_Console, "Invalid ConVar Type: %s\n", spType );
 	return EConVarType_Invalid;
 }
 
@@ -746,7 +746,7 @@ void Con_ResetConVar( std::string_view name )
 
 	if ( !cvarData )
 	{
-		Log_ErrorF( gConsoleChannel, "ConVar not found: %s\n", name.data() );
+		Log_ErrorF( gLC_Console, "ConVar not found: %s\n", name.data() );
 		return;
 	}
 
@@ -789,7 +789,7 @@ void Con_ResetConVar( std::string_view name )
 			break;
 
 		default:
-			Log_ErrorF( gConsoleChannel, "Invalid ConVar Type: %s\n", name.data() );
+			Log_ErrorF( gLC_Console, "Invalid ConVar Type: %s\n", name.data() );
 			break;
 	}
 }
@@ -802,7 +802,7 @@ int Con_SetConVarValueInternal_Bool( ConVarData_t* cvarData, const char* spName,
 {
 	if ( cvarData->aType != EConVarType_Bool )
 	{
-		Log_ErrorF( gConsoleChannel, "ConVar Type Mismatch for %s, got \"Bool\", expected \"%s\"\n", spName, Con_ConVarTypeStr( cvarData->aType ) );
+		Log_ErrorF( gLC_Console, "ConVar Type Mismatch for %s, got \"Bool\", expected \"%s\"\n", spName, Con_ConVarTypeStr( cvarData->aType ) );
 		return 0;
 	}
 
@@ -821,7 +821,7 @@ int Con_SetConVarValueInternal_Int( ConVarData_t* cvarData, const char* spName, 
 {
 	if ( cvarData->aType != EConVarType_Int && cvarData->aType != EConVarType_RangeInt )
 	{
-		Log_ErrorF( gConsoleChannel, "ConVar Type Mismatch for %s, got \"Int\", expected \"%s\"\n", spName, Con_ConVarTypeStr( cvarData->aType ) );
+		Log_ErrorF( gLC_Console, "ConVar Type Mismatch for %s, got \"Int\", expected \"%s\"\n", spName, Con_ConVarTypeStr( cvarData->aType ) );
 		return 0;
 	}
 
@@ -829,7 +829,7 @@ int Con_SetConVarValueInternal_Int( ConVarData_t* cvarData, const char* spName, 
 	{
 		if ( sValue < cvarData->aRangeInt.aMin || sValue > cvarData->aRangeInt.aMax )
 		{
-			Log_ErrorF( gConsoleChannel, "ConVar Value out of Range for %s, got %d, must be within %d - %d\n", spName, sValue, cvarData->aRangeInt.aMin, cvarData->aRangeInt.aMax );
+			Log_ErrorF( gLC_Console, "ConVar Value out of Range for %s, got %d, must be within %d - %d\n", spName, sValue, cvarData->aRangeInt.aMin, cvarData->aRangeInt.aMax );
 			sValue = std::clamp( sValue, cvarData->aRangeInt.aMin, cvarData->aRangeInt.aMax );
 		}
 
@@ -859,7 +859,7 @@ int Con_SetConVarValueInternal_Float( ConVarData_t* cvarData, const char* spName
 	// check if the convar type is float or ranged
 	if ( cvarData->aType != EConVarType_Float && cvarData->aType != EConVarType_RangeFloat )
 	{
-		Log_ErrorF( gConsoleChannel, "ConVar Type Mismatch for %s, got \"Float\", expected \"%s\"\n", spName, Con_ConVarTypeStr( cvarData->aType ) );
+		Log_ErrorF( gLC_Console, "ConVar Type Mismatch for %s, got \"Float\", expected \"%s\"\n", spName, Con_ConVarTypeStr( cvarData->aType ) );
 		return 0;
 	}
 
@@ -867,7 +867,7 @@ int Con_SetConVarValueInternal_Float( ConVarData_t* cvarData, const char* spName
 	{
 		if ( sValue < cvarData->aRangeFloat.aMin || sValue > cvarData->aRangeFloat.aMax )
 		{
-			Log_ErrorF( gConsoleChannel, "ConVar Value out of Range for %s, got %.6f, must be within %.6f - %.6f\n", spName, sValue, cvarData->aRangeFloat.aMin, cvarData->aRangeFloat.aMax );
+			Log_ErrorF( gLC_Console, "ConVar Value out of Range for %s, got %.6f, must be within %.6f - %.6f\n", spName, sValue, cvarData->aRangeFloat.aMin, cvarData->aRangeFloat.aMax );
 			sValue = std::clamp( sValue, cvarData->aRangeFloat.aMin, cvarData->aRangeFloat.aMax );
 		}
 
@@ -896,7 +896,7 @@ int Con_SetConVarValueInternal_String( ConVarData_t* cvarData, const char* spNam
 {
 	if ( cvarData->aType != EConVarType_String )
 	{
-		Log_ErrorF( gConsoleChannel, "ConVar Type Mismatch for %s, got \"String\", expected \"%s\"\n", spName, Con_ConVarTypeStr( cvarData->aType ) );
+		Log_ErrorF( gLC_Console, "ConVar Type Mismatch for %s, got \"String\", expected \"%s\"\n", spName, Con_ConVarTypeStr( cvarData->aType ) );
 		return 0;
 	}
 
@@ -911,7 +911,7 @@ int Con_SetConVarValueInternal_String( ConVarData_t* cvarData, const char* spNam
 
 	if ( newValue == nullptr )
 	{
-		Log_ErrorF( gConsoleChannel, "Failed to set ConVar Value for %s\n", spName );
+		Log_ErrorF( gLC_Console, "Failed to set ConVar Value for %s\n", spName );
 		return 0;
 	}
 
@@ -931,7 +931,7 @@ int Con_SetConVarValueInternal_String( ConVarData_t* cvarData, const char* spNam
 {
 	if ( cvarData->aType != EConVarType_String )
 	{
-		Log_ErrorF( gConsoleChannel, "ConVar Type Mismatch for %s, got \"String\", expected \"%s\"\n", spName, Con_ConVarTypeStr( cvarData->aType ) );
+		Log_ErrorF( gLC_Console, "ConVar Type Mismatch for %s, got \"String\", expected \"%s\"\n", spName, Con_ConVarTypeStr( cvarData->aType ) );
 		return 0;
 	}
 
@@ -946,7 +946,7 @@ int Con_SetConVarValueInternal_String( ConVarData_t* cvarData, const char* spNam
 
 	if ( newValue == nullptr )
 	{
-		Log_ErrorF( gConsoleChannel, "Failed to set ConVar Value for %s\n", spName );
+		Log_ErrorF( gLC_Console, "Failed to set ConVar Value for %s\n", spName );
 		return 0;
 	}
 
@@ -966,7 +966,7 @@ int Con_SetConVarValueInternal_Vec( ConVarData_t* cvarData, const char* spName, 
 {
 	if ( cvarData->aType != EConVarType_Vec2 )
 	{
-		Log_ErrorF( gConsoleChannel, "ConVar Type Mismatch for %s, got \"Vec2\", expected \"%s\"\n", spName, Con_ConVarTypeStr( cvarData->aType ) );
+		Log_ErrorF( gLC_Console, "ConVar Type Mismatch for %s, got \"Vec2\", expected \"%s\"\n", spName, Con_ConVarTypeStr( cvarData->aType ) );
 		return 0;
 	}
 
@@ -986,7 +986,7 @@ int Con_SetConVarValueInternal_Vec( ConVarData_t* cvarData, const char* spName, 
 {
 	if ( cvarData->aType != EConVarType_Vec3 )
 	{
-		Log_ErrorF( gConsoleChannel, "ConVar Type Mismatch for %s, got \"Vec3\", expected \"%s\"\n", spName, Con_ConVarTypeStr( cvarData->aType ) );
+		Log_ErrorF( gLC_Console, "ConVar Type Mismatch for %s, got \"Vec3\", expected \"%s\"\n", spName, Con_ConVarTypeStr( cvarData->aType ) );
 		return 0;
 	}
 
@@ -1007,7 +1007,7 @@ int Con_SetConVarValueInternal_Vec( ConVarData_t* cvarData, const char* spName, 
 {
 	if ( cvarData->aType != EConVarType_Vec4 )
 	{
-		Log_ErrorF( gConsoleChannel, "ConVar Type Mismatch for %s, got \"Vec4\", expected \"%s\"\n", spName, Con_ConVarTypeStr( cvarData->aType ) );
+		Log_ErrorF( gLC_Console, "ConVar Type Mismatch for %s, got \"Vec4\", expected \"%s\"\n", spName, Con_ConVarTypeStr( cvarData->aType ) );
 		return 0;
 	}
 
@@ -1044,7 +1044,7 @@ bool& Con_GetConVarData_Bool( const char* spName, bool fallback )
 
 	if ( cvarData->aType != EConVarType_Bool )
 	{
-		Log_ErrorF( gConsoleChannel, "ConVar Type Mismatch for %s, got \"%s\", expected \"Bool\"\n", spName, Con_ConVarTypeStr( cvarData->aType ) );
+		Log_ErrorF( gLC_Console, "ConVar Type Mismatch for %s, got \"%s\", expected \"Bool\"\n", spName, Con_ConVarTypeStr( cvarData->aType ) );
 
 		bool* temp = ch_malloc< bool >( 1 );
 		memcpy( temp, &fallback, sizeof( bool ) );
@@ -1076,7 +1076,7 @@ int& Con_GetConVarData_Int( const char* spName, int fallback )
 		return *cvarData->aRangeInt.apData;
 	}
 
-	Log_ErrorF( gConsoleChannel, "ConVar Type Mismatch for %s, got \"%s\", expected \"Int\" or \"RangeInt\"\n", spName, Con_ConVarTypeStr( cvarData->aType ) );
+	Log_ErrorF( gLC_Console, "ConVar Type Mismatch for %s, got \"%s\", expected \"Int\" or \"RangeInt\"\n", spName, Con_ConVarTypeStr( cvarData->aType ) );
 
 	int* temp = ch_malloc< int >( 1 );
 	memcpy( temp, &fallback, sizeof( int ) );
@@ -1105,7 +1105,7 @@ float& Con_GetConVarData_Float( const char* spName, float fallback )
 		return *cvarData->aRangeFloat.apData;
 	}
 
-	Log_ErrorF( gConsoleChannel, "ConVar Type Mismatch for %s, got \"%s\", expected \"Float\" or \"RangeFloat\"\n", spName, Con_ConVarTypeStr( cvarData->aType ) );
+	Log_ErrorF( gLC_Console, "ConVar Type Mismatch for %s, got \"%s\", expected \"Float\" or \"RangeFloat\"\n", spName, Con_ConVarTypeStr( cvarData->aType ) );
 
 	float* temp = ch_malloc< float >( 1 );
 	memcpy( temp, &fallback, sizeof( float ) );
@@ -1125,7 +1125,7 @@ char*& Con_GetConVarData_String( const char* spName, const char* fallback )
 
 	if ( cvarData->aType != EConVarType_String )
 	{
-		Log_ErrorF( gConsoleChannel, "ConVar Type Mismatch for %s, got \"%s\", expected \"String\"\n", spName, Con_ConVarTypeStr( cvarData->aType ) );
+		Log_ErrorF( gLC_Console, "ConVar Type Mismatch for %s, got \"%s\", expected \"String\"\n", spName, Con_ConVarTypeStr( cvarData->aType ) );
 
 		char* temp = ch_str_copy( fallback ).data;
 		return temp;
@@ -1148,7 +1148,7 @@ glm::vec2& Con_GetConVarData_Vec2( const char* spName, const glm::vec2& fallback
 
 	if ( cvarData->aType != EConVarType_Vec2 )
 	{
-		Log_ErrorF( gConsoleChannel, "ConVar Type Mismatch for %s, got \"%s\", expected \"Vec2\"\n", spName, Con_ConVarTypeStr( cvarData->aType ) );
+		Log_ErrorF( gLC_Console, "ConVar Type Mismatch for %s, got \"%s\", expected \"Vec2\"\n", spName, Con_ConVarTypeStr( cvarData->aType ) );
 
 		glm::vec2* temp = ch_malloc< glm::vec2 >( 1 );
 		memcpy( temp, &fallback, sizeof( glm::vec2 ) );
@@ -1172,7 +1172,7 @@ glm::vec3& Con_GetConVarData_Vec3( const char* spName, const glm::vec3& fallback
 
 	if ( cvarData->aType != EConVarType_Vec3 )
 	{
-		Log_ErrorF( gConsoleChannel, "ConVar Type Mismatch for %s, got \"%s\", expected \"Vec3\"\n", spName, Con_ConVarTypeStr( cvarData->aType ) );
+		Log_ErrorF( gLC_Console, "ConVar Type Mismatch for %s, got \"%s\", expected \"Vec3\"\n", spName, Con_ConVarTypeStr( cvarData->aType ) );
 
 		glm::vec3* temp = ch_malloc< glm::vec3 >( 1 );
 		memcpy( temp, &fallback, sizeof( glm::vec3 ) );
@@ -1196,7 +1196,7 @@ glm::vec4& Con_GetConVarData_Vec4( const char* spName, const glm::vec4& fallback
 
 	if ( cvarData->aType != EConVarType_Vec4 )
 	{
-		Log_ErrorF( gConsoleChannel, "ConVar Type Mismatch for %s, got \"%s\", expected \"Vec4\"\n", spName, Con_ConVarTypeStr( cvarData->aType ) );
+		Log_ErrorF( gLC_Console, "ConVar Type Mismatch for %s, got \"%s\", expected \"Vec4\"\n", spName, Con_ConVarTypeStr( cvarData->aType ) );
 
 		glm::vec4* temp = ch_malloc< glm::vec4 >( 1 );
 		memcpy( temp, &fallback, sizeof( glm::vec4 ) );
@@ -1314,7 +1314,7 @@ bool ParseVector( const char* spName, const std::vector< std::string >& args, VE
 {
 	if ( args.size() < srVector.length() )
 	{
-		Log_ErrorF( gConsoleChannel, "ConVar \"%s\", Type of \"Vec2\" requires 2 arguments\n", spName );
+		Log_ErrorF( gLC_Console, "ConVar \"%s\", Type of \"Vec2\" requires 2 arguments\n", spName );
 		return false;
 	}
 
@@ -1322,7 +1322,7 @@ bool ParseVector( const char* spName, const std::vector< std::string >& args, VE
 	{
 		if ( !ToFloat( args[ i ].data(), srVector[ i ] ) )
 		{
-			Log_ErrorF( gConsoleChannel, "ConVar \"%s\", Invalid argument %d \"%s\" for Vector type, expected a number\n", spName, i, args[ i ].data() );
+			Log_ErrorF( gLC_Console, "ConVar \"%s\", Invalid argument %d \"%s\" for Vector type, expected a number\n", spName, i, args[ i ].data() );
 			return false;
 		}
 	}
@@ -1411,7 +1411,7 @@ bool Con_ProcessConVar( ConVarData_t* cvar, const char* name, const std::vector<
 	if ( args.empty() )
 	{
 		const std::string& help = Con_GetConVarHelp( name );
-		Log_Msg( gConsoleChannel, help.data() );
+		Log_Msg( gLC_Console, help.data() );
 		return true;
 	}
 
@@ -1460,7 +1460,7 @@ bool Con_ProcessConVar( ConVarData_t* cvar, const char* name, const std::vector<
 				float valueFl = 0.f;
 				if ( !ToFloat( args[ 0 ].data(), valueFl ) )
 				{
-					LogGroup group = Log_GroupBeginEx( gConsoleChannel, LogType::Error );
+					LogGroup group = Log_GroupBeginEx( gLC_Console, LogType::Error );
 
 					Log_GroupF( group, "ConVar \"%s\", Invalid argument \"%s\" for Bool type, expected a number, or any of these options:\n", name, args[ 0 ].data() );
 
@@ -1497,7 +1497,7 @@ bool Con_ProcessConVar( ConVarData_t* cvar, const char* name, const std::vector<
 			long value = 0;
 			if ( !ToLong3( args[ 0 ].data(), value ) )
 			{
-				Log_ErrorF( gConsoleChannel, "ConVar \"%s\", Invalid argument \"%s\" for Integer type, expected a number\n", name, args[ 0 ].data() );
+				Log_ErrorF( gLC_Console, "ConVar \"%s\", Invalid argument \"%s\" for Integer type, expected a number\n", name, args[ 0 ].data() );
 				break;
 			}
 
@@ -1510,7 +1510,7 @@ bool Con_ProcessConVar( ConVarData_t* cvar, const char* name, const std::vector<
 			float value = 0.f;
 			if ( !ToFloat( args[ 0 ].data(), value ) )
 			{
-				Log_ErrorF( gConsoleChannel, "ConVar \"%s\", Invalid argument \"%s\" for Float type, expected a number\n", name, args[ 0 ].data() );
+				Log_ErrorF( gLC_Console, "ConVar \"%s\", Invalid argument \"%s\" for Float type, expected a number\n", name, args[ 0 ].data() );
 				break;
 			}
 

@@ -33,7 +33,7 @@ static std::string MatVar_Diffuse = "diffuse";
 static std::string MatVar_Emissive = "emissive";
 
 
-static ChHandle_t LoadMaterial( const std::string& path )
+static ch_handle_t LoadMaterial( const std::string& path )
 {
 	std::string matPath = path;
 
@@ -76,15 +76,15 @@ void LoadObj_Fast( const std::string &srBasePath, const std::string &srPath, Mod
   #endif
 	meshBuilder.SetSurfaceCount( matCount );
 
-	static ChHandle_t defaultShader = gGraphics.GetShader( gDefaultShader.data() );
+	static ch_handle_t defaultShader = gGraphics.GetShader( gDefaultShader.data() );
 	
 	for ( unsigned int i = 0; i < obj->material_count; i++ )
 	{
 		fastObjMaterial& objMat   = obj->materials[ i ];
 		std::string      matName  = baseDir2 + "/" + objMat.name;
-		Handle           material = gGraphics.FindMaterial( matName.c_str() );
+		ch_handle_t           material = gGraphics.FindMaterial( matName.c_str() );
 
-		if ( material == InvalidHandle )
+		if ( material == CH_INVALID_HANDLE )
 		{
 			// kinda strange this setup
 			
@@ -98,7 +98,7 @@ void LoadObj_Fast( const std::string &srBasePath, const std::string &srPath, Mod
 		}
 
 		// fallback if there is no cmt file
-		if ( material == InvalidHandle )
+		if ( material == CH_INVALID_HANDLE )
 		{
 			material = gGraphics.CreateMaterial( objMat.name, defaultShader );
 
@@ -111,7 +111,7 @@ void LoadObj_Fast( const std::string &srBasePath, const std::string &srPath, Mod
 				if ( fastTexture.path == nullptr )
 					return;
 
-				ChHandle_t texture = CH_INVALID_HANDLE;
+				ch_handle_t texture = CH_INVALID_HANDLE;
 
 				// check if the name is an absolute path
 				const char* texName = nullptr;
@@ -143,7 +143,7 @@ void LoadObj_Fast( const std::string &srBasePath, const std::string &srPath, Mod
 
 	if ( obj->material_count == 0 )
 	{
-		Handle material = gGraphics.CreateMaterial( srPath, gGraphics.GetShader( gDefaultShader.data() ) );
+		ch_handle_t material = gGraphics.CreateMaterial( srPath, gGraphics.GetShader( gDefaultShader.data() ) );
 		meshBuilder.SetCurrentSurface( 0 );
 		meshBuilder.SetMaterial( material );
 	}
@@ -259,15 +259,15 @@ void Graphics_LoadSceneObj( const std::string& srBasePath, const std::string& sr
 	std::string baseDir  = GetBaseDir( srPath );
 	std::string baseDir2 = GetBaseDir( srBasePath );
 
-	std::vector< Handle > materials;
+	std::vector< ch_handle_t > materials;
 
 	for ( unsigned int i = 0; i < obj->material_count; i++ )
 	{
 		fastObjMaterial& objMat   = obj->materials[ i ];
 		std::string      matName  = baseDir2 + "/" + objMat.name;
-		Handle           material = gGraphics.FindMaterial( matName.c_str() );
+		ch_handle_t           material = gGraphics.FindMaterial( matName.c_str() );
 
-		if ( material == InvalidHandle )
+		if ( material == CH_INVALID_HANDLE )
 		{
 			ch_string_auto matPath = ch_str_join( matName.data(), matName.size(), ".cmt", 4 );
 
@@ -276,7 +276,7 @@ void Graphics_LoadSceneObj( const std::string& srBasePath, const std::string& sr
 		}
 
 		// fallback if there is no cmt file
-		if ( material == InvalidHandle )
+		if ( material == CH_INVALID_HANDLE )
 		{
 			material = gGraphics.CreateMaterial( matName, gGraphics.GetShader( gDefaultShader.data() ) );
 
@@ -289,7 +289,7 @@ void Graphics_LoadSceneObj( const std::string& srBasePath, const std::string& sr
 				if ( texname == nullptr )
 					return;
 
-				Handle texture = InvalidHandle;
+				ch_handle_t texture = CH_INVALID_HANDLE;
 
 				if ( FileSys_IsRelative( texname ) )
 					gGraphics.LoadTexture( texture, baseDir2 + "/" + texname, createData );

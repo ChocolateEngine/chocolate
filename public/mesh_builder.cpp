@@ -27,7 +27,7 @@
 // ------------------------------------------------------------------------
 
 
-LOG_REGISTER_CHANNEL_EX( gLC_MeshBuilder, "MeshBuilder", LogColor::Green );
+LOG_CHANNEL_REGISTER_EX( gLC_MeshBuilder, "MeshBuilder", LogColor::Green );
 
 
 void MeshBuild_ComputeTangentBasis()
@@ -449,7 +449,7 @@ void MeshBuilder::SetTexCoord( float x, float y )
 // ------------------------------------------------------------------------
 
 
-void MeshBuilder::SetMaterial( Handle sMaterial )
+void MeshBuilder::SetMaterial( ch_handle_t sMaterial )
 {
 	CH_ASSERT( aSurfaces.size() );
 	CH_ASSERT( apSurf );
@@ -562,7 +562,7 @@ void MeshBuilder::CalculateAllNormals()
 // Helper System for loading models, not really meant for creating meshes from scratch in code
 
 
-bool MeshBuild_StartMesh( MeshBuildData_t& srMeshBuildData, u32 sMaterialCount, ChHandle_t* spMaterials )
+bool MeshBuild_StartMesh( MeshBuildData_t& srMeshBuildData, u32 sMaterialCount, ch_handle_t* spMaterials )
 {
 	if ( sMaterialCount == 0 )
 		return false;
@@ -782,9 +782,9 @@ void MeshBuild_AllocateVertices( MeshBuildData_t& srMeshBuildData, u32 sMaterial
 	MeshBuildMaterial_t& material   = srMeshBuildData.aMaterials[ sMaterial ];
 	u32                  startCount = material.aVertexCount;
 
-	material.apPos                  = ch_realloc_count( material.apPos, startCount + sCount );
-	material.apNorm                 = ch_realloc_count( material.apNorm, startCount + sCount );
-	material.apUV                   = ch_realloc_count( material.apUV, startCount + sCount );
+	material.apPos                  = ch_realloc( material.apPos, startCount + sCount );
+	material.apNorm                 = ch_realloc( material.apNorm, startCount + sCount );
+	material.apUV                   = ch_realloc( material.apUV, startCount + sCount );
 
 	memset( material.apPos + startCount, 0, sCount );
 	memset( material.apNorm + startCount, 0, sCount );
@@ -803,11 +803,11 @@ void MeshBuild_AllocateBlendShapes( MeshBuildMaterial_t& srMeshBuildMaterial, u3
 
 	for ( MeshBuildBlendShape_t& blendShape : srMeshBuildMaterial.aBlendShapes )
 	{
-		// blendShape.apPos  = ch_calloc_count< glm::vec3 >( vertCount );
-		// blendShape.apNorm = ch_calloc_count< glm::vec3 >( vertCount );
-		// blendShape.apUV   = ch_calloc_count< glm::vec2 >( vertCount );
+		// blendShape.apPos  = ch_calloc< glm::vec3 >( vertCount );
+		// blendShape.apNorm = ch_calloc< glm::vec3 >( vertCount );
+		// blendShape.apUV   = ch_calloc< glm::vec2 >( vertCount );
 		
-		blendShape.apData = ch_calloc_count< MeshBuildBlendShapeElement_t >( vertCount );
+		blendShape.apData = ch_calloc< MeshBuildBlendShapeElement_t >( vertCount );
 
 		// blendShape.apData = calloc( vertCount, sizeof( float ) * blendElemSize );
 	}

@@ -40,7 +40,7 @@ void Shader_ShadowMap_SetViewInfo( u32 sViewInfo )
 }
 
 
-static void Shader_ShadowMap_PushConstants( Handle cmd, Handle sLayout, const ShaderPushData_t& sPushData )
+static void Shader_ShadowMap_PushConstants( ch_handle_t cmd, ch_handle_t sLayout, const ShaderPushData_t& sPushData )
 {
 	PROF_SCOPE();
 
@@ -50,13 +50,13 @@ static void Shader_ShadowMap_PushConstants( Handle cmd, Handle sLayout, const Sh
 	push.aViewport       = gShadowViewInfoIndex;
 	push.aAlbedo         = -1;
 
-	Handle mat           = sPushData.apRenderable->apMaterials[ sPushData.aSurfaceDraw.aSurface ];
-	if ( mat == InvalidHandle )
+	ch_handle_t mat           = sPushData.apRenderable->apMaterials[ sPushData.aSurfaceDraw.aSurface ];
+	if ( mat == CH_INVALID_HANDLE )
 		return;
 
-	Handle texture = gGraphics.Mat_GetTexture( mat, "diffuse" );
+	ch_handle_t texture = gGraphics.Mat_GetTexture( mat, "diffuse" );
 
-	if ( texture == InvalidHandle )
+	if ( texture == CH_INVALID_HANDLE )
 		return;
 
 	bool alphaTest = gGraphics.Mat_GetBool( mat, "alphaTest" );

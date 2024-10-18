@@ -38,9 +38,9 @@ bool AudioSystem::LoadSoundInternal( AudioStream* stream )
 
 
 // Checks If This a Valid Audio Stream, if not, throw a warning and return nullptr.
-AudioStream* AudioSystem::GetStream( Handle streamHandle )
+AudioStream* AudioSystem::GetStream( ch_handle_t streamHandle )
 {
-	if ( streamHandle == InvalidHandle )
+	if ( streamHandle == CH_INVALID_HANDLE )
 		return nullptr;
 
 	AudioStream* stream = *aStreams.Get( streamHandle );
@@ -60,7 +60,7 @@ AudioStream* AudioSystem::GetStream( Handle streamHandle )
 // probably have ReadAudio check if we're preloaded or not, if it is,
 // then it returns data from the preload cache instead of reading from the file
 
-bool AudioSystem::PreloadSound( Handle sSound )
+bool AudioSystem::PreloadSound( ch_handle_t sSound )
 {
 	AudioStream* stream = GetStream( sSound );
 
@@ -111,9 +111,9 @@ bool AudioSystem::PreloadSound( Handle sSound )
 }
 
 
-bool AudioSystem::PlaySound( Handle sStream )
+bool AudioSystem::PlaySound( ch_handle_t sStream )
 {
-	if ( sStream == InvalidHandle )
+	if ( sStream == CH_INVALID_HANDLE )
 		return false;
 
 	AudioStream* stream = *aStreams.Get( sStream );
@@ -132,9 +132,9 @@ bool AudioSystem::PlaySound( Handle sStream )
 }
 
 
-void AudioSystem::FreeSound( Handle sStream )
+void AudioSystem::FreeSound( ch_handle_t sStream )
 {
-	if ( sStream == InvalidHandle )
+	if ( sStream == CH_INVALID_HANDLE )
 		return;
 
 	AudioStream* stream = *aStreams.Get( sStream );
@@ -223,9 +223,9 @@ bool AudioSystem::ReadAudio( AudioStream* stream )
 
 
 // Is This a Valid Audio Stream?
-bool AudioSystem::IsValid( Handle stream )
+bool AudioSystem::IsValid( ch_handle_t stream )
 {
-	if ( stream == InvalidHandle )
+	if ( stream == CH_INVALID_HANDLE )
 		return false;
 
 	return aStreams.Get( stream );
@@ -233,7 +233,7 @@ bool AudioSystem::IsValid( Handle stream )
 
 
 // Audio Stream Volume ranges from 0.0f to 1.0f
-void AudioSystem::SetVolume( Handle handle, float vol )
+void AudioSystem::SetVolume( ch_handle_t handle, float vol )
 {
 	AudioStream* stream = GetStream( handle );
 	if ( !stream )
@@ -243,7 +243,7 @@ void AudioSystem::SetVolume( Handle handle, float vol )
 }
 
 
-float AudioSystem::GetVolume( Handle handle )
+float AudioSystem::GetVolume( ch_handle_t handle )
 {
 	AudioStream* stream = GetStream( handle );
 	if ( !stream )
@@ -253,7 +253,7 @@ float AudioSystem::GetVolume( Handle handle )
 }
 
 
-bool AudioSystem::Seek( Handle streamHandle, double pos )
+bool AudioSystem::Seek( ch_handle_t streamHandle, double pos )
 {
 	AudioStream* stream = GetStream( streamHandle );
 
@@ -265,7 +265,7 @@ bool AudioSystem::Seek( Handle streamHandle, double pos )
 
 
 // Audio Volume Channels (ex. General, Music, Voices, Commentary, etc.)
-void AudioSystem::SetChannel( Handle handle, Handle channel )
+void AudioSystem::SetChannel( ch_handle_t handle, ch_handle_t channel )
 {
 	AudioStream* stream = GetStream( handle );
 	if ( !stream )
@@ -275,11 +275,11 @@ void AudioSystem::SetChannel( Handle handle, Handle channel )
 }
 
 
-Handle AudioSystem::GetChannel( Handle handle )
+ch_handle_t AudioSystem::GetChannel( ch_handle_t handle )
 {
 	AudioStream* stream = GetStream( handle );
 	if ( !stream )
-		return InvalidHandle;
+		return CH_INVALID_HANDLE;
 
 	return stream->aChannel;
 }
@@ -288,8 +288,8 @@ Handle AudioSystem::GetChannel( Handle handle )
 // TODO: actually be able to change input sample rate live,
 // right now it's impossible due to how SDL_AudioStream works
 // need to make my own sample rate converter somehow probably
-//bool AudioSystem::SetSampleRate( Handle stream, float vol ) override;
-//float AudioSystem::GetSampleRate( Handle stream ) override;
+//bool AudioSystem::SetSampleRate( ch_handle_t stream, float vol ) override;
+//float AudioSystem::GetSampleRate( ch_handle_t stream ) override;
 
 
 // ============================================================================

@@ -63,6 +63,9 @@
 #include "types/transform.h"
 
 
+LOG_CHANNEL( Physics );
+
+
 inline glm::mat4 fromJolt( const JPH::Mat44& from ) {
 	return glm::mat4(
 		from(0, 0), from(1, 0), from(2, 0), from(3, 0),
@@ -139,7 +142,7 @@ struct PhysicsSubShape
 	//u32*         indices     = nullptr;
 	u32          vertexCount = 0;
 	//u32          indexCount  = 0;
-	// ChHandle_t material;
+	// ch_handle_t material;
 
 	~PhysicsSubShape()
 	{

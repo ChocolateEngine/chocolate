@@ -385,7 +385,7 @@ void sys_init()
 
 	g_win_10_or_later = gOSVer.dwMajorVersion >= 10;
 
-	// Get Module Handle because we don't use WinMain at the moment (probably should tbh, idk)
+	// Get Module ch_handle_t because we don't use WinMain at the moment (probably should tbh, idk)
 	// ghInst = GetModuleHandle( 0 );
 	ghInst = GetModuleHandle( "ch_core.dll" );
 

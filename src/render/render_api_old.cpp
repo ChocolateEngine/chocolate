@@ -6,7 +6,7 @@
 RenderSystemOld gRenderOld;
 
 extern bool Graphics_ViewFrustumTest( Renderable_t* spModelDraw, ViewportShader_t& srViewport );
-extern void Graphics_RenderView( Handle cmd, size_t sIndex, u32 sViewportIndex, ViewportShader_t& srViewport, ViewRenderList_t& srViewList );
+extern void Graphics_RenderView( ch_handle_t cmd, size_t sIndex, u32 sViewportIndex, ViewportShader_t& srViewport, ViewRenderList_t& srViewList );
 
 
 CONVAR_BOOL_EXT( r_vis_lock );
@@ -28,13 +28,13 @@ void RenderSystemOld::NewFrame()
 }
 
 
-void RenderSystemOld::Reset( ChHandle_t window )
+void RenderSystemOld::Reset( ch_handle_t window )
 {
 	render->Reset( window );
 }
 
 
-void Graphics_DrawSelectionTextureRenderables( Handle cmd, size_t sIndex )
+void Graphics_DrawSelectionTextureRenderables( ch_handle_t cmd, size_t sIndex )
 {
 	PROF_SCOPE();
 
@@ -73,15 +73,15 @@ void Graphics_DrawSelectionTextureRenderables( Handle cmd, size_t sIndex )
 	ChVector< SurfaceDraw_t > gizmos;
 	ChVector< SurfaceDraw_t > otherRenderables;
 
-	static Handle     gizmo     = gGraphics.GetShader( "gizmo" );
+	static ch_handle_t     gizmo     = gGraphics.GetShader( "gizmo" );
 
 	for ( auto& [ shader, renderList ] : viewList.aRenderLists )
 	{
 		for ( SurfaceDraw_t& surface : renderList )
 		{
 			Renderable_t* renderable = gGraphics.GetRenderableData( surface.aRenderable );
-			ChHandle_t    mat        = renderable->apMaterials[ surface.aSurface ];
-			ChHandle_t    matShader  = gGraphics.Mat_GetShader( mat );
+			ch_handle_t    mat        = renderable->apMaterials[ surface.aSurface ];
+			ch_handle_t    matShader  = gGraphics.Mat_GetShader( mat );
 
 			if ( matShader == gizmo )
 				gizmos.push_back( surface );
@@ -90,7 +90,7 @@ void Graphics_DrawSelectionTextureRenderables( Handle cmd, size_t sIndex )
 		}
 	}
 
-	static Handle     select    = gGraphics.GetShader( "__select" );
+	static ch_handle_t     select    = gGraphics.GetShader( "__select" );
 
 	auto findGizmo = viewList.aRenderLists.find( gizmo );
 
@@ -124,7 +124,7 @@ void Graphics_DrawSelectionTextureRenderables( Handle cmd, size_t sIndex )
 }
 
 
-void Graphics_SelectionTexturePass( Handle sCmd, size_t sIndex )
+void Graphics_SelectionTexturePass( ch_handle_t sCmd, size_t sIndex )
 {
 	PROF_SCOPE();
 
@@ -143,7 +143,7 @@ void Graphics_SelectionTexturePass( Handle sCmd, size_t sIndex )
 	renderPassBegin.aRenderPass          = gGraphicsData.aRenderPassSelect;
 	renderPassBegin.aFrameBuffer         = gRenderOld.aSelectionFramebuffer;
 
-	if ( renderPassBegin.aFrameBuffer == InvalidHandle )
+	if ( renderPassBegin.aFrameBuffer == CH_INVALID_HANDLE )
 		return;
 
 	render->BeginRenderPass( sCmd, renderPassBegin );
@@ -164,7 +164,7 @@ void Graphics_UpdateShaderBufferDescriptors( ShaderBufferList_t& srBufferList, u
 	write.aBindingCount = 1;
 	write.apBindings    = CH_STACK_NEW( WriteDescSetBinding_t, write.aBindingCount );
 
-	ChVector< ChHandle_t > buffers;
+	ChVector< ch_handle_t > buffers;
 	buffers.reserve( srBufferList.aBuffers.size() );
 
 	for ( auto& [ handle, buffer ] : srBufferList.aBuffers )
@@ -234,7 +234,7 @@ void Graphics_PrepareDrawData()
 	// Prepare Skinning Compute Shader Buffers
 
 	u32 r = 0;
-	for ( ChHandle_t renderHandle : gGraphicsData.aSkinningRenderList )
+	for ( ch_handle_t renderHandle : gGraphicsData.aSkinningRenderList )
 	{
 		Renderable_t* renderable = nullptr;
 		if ( !gGraphicsData.aRenderables.Get( renderHandle, &renderable ) )
@@ -348,10 +348,10 @@ void Graphics_PrepareDrawData()
 }
 
 
-void Graphics_DoSkinning( ChHandle_t sCmd, u32 sCmdIndex )
+void Graphics_DoSkinning( ch_handle_t sCmd, u32 sCmdIndex )
 {
 #if 1
-	static ChHandle_t shaderSkinning = gGraphics.GetShader( "__skinning" );
+	static ch_handle_t shaderSkinning = gGraphics.GetShader( "__skinning" );
 
 	if ( shaderSkinning == CH_INVALID_HANDLE )
 	{
@@ -370,7 +370,7 @@ void Graphics_DoSkinning( ChHandle_t sCmd, u32 sCmdIndex )
 	ChVector< GraphicsBufferMemoryBarrier_t > buffers;
 
 	u32                                       i = 0;
-	for ( ChHandle_t renderHandle : gGraphicsData.aSkinningRenderList )
+	for ( ch_handle_t renderHandle : gGraphicsData.aSkinningRenderList )
 	{
 		Renderable_t* renderable = nullptr;
 		if ( !gGraphicsData.aRenderables.Get( renderHandle, &renderable ) )
@@ -442,10 +442,10 @@ void Graphics_DoSkinning( ChHandle_t sCmd, u32 sCmdIndex )
 
 
 
-void RenderSystemOld::DoSelectionCompute( ChHandle_t cmd, u32 cmdIndex )
+void RenderSystemOld::DoSelectionCompute( ch_handle_t cmd, u32 cmdIndex )
 {
 #if 0
-	static ChHandle_t shaderSelect = gGraphics.GetShader( CH_SHADER_NAME_SELECT );
+	static ch_handle_t shaderSelect = gGraphics.GetShader( CH_SHADER_NAME_SELECT );
 
 	if ( aSelectionRenderables.empty() )
 		return;
@@ -543,10 +543,10 @@ void RenderSystemOld::PrePresent()
 }
 
 
-extern void Graphics_OnResetCallback( ChHandle_t window, ERenderResetFlags sFlags );
+extern void Graphics_OnResetCallback( ch_handle_t window, ERenderResetFlags sFlags );
 
 
-void RenderSystemOld::Present( ChHandle_t window, u32* viewports, u32 viewportCount )
+void RenderSystemOld::Present( ch_handle_t window, u32* viewports, u32 viewportCount )
 {
 	PROF_SCOPE();
 
@@ -563,7 +563,7 @@ void RenderSystemOld::Present( ChHandle_t window, u32* viewports, u32 viewportCo
 
 	// render->LockGraphicsMutex();
 
-	ChHandle_t backBuffer[ 2 ];
+	ch_handle_t backBuffer[ 2 ];
 	backBuffer[ 0 ] = render->GetBackBufferColor( window );
 	backBuffer[ 1 ] = render->GetBackBufferDepth( window );
 
@@ -582,7 +582,7 @@ void RenderSystemOld::Present( ChHandle_t window, u32* viewports, u32 viewportCo
 	}
 
 	// cool memory leak
-	static ChHandle_t* commandBuffers = ch_malloc< ChHandle_t >( commandBufferCount );
+	static ch_handle_t* commandBuffers = ch_malloc< ch_handle_t >( commandBufferCount );
 	render->GetCommandBufferHandles( window, commandBuffers );
 
 	u32        imageIndex = render->GetFlightImageIndex( window );
@@ -594,7 +594,7 @@ void RenderSystemOld::Present( ChHandle_t window, u32* viewports, u32 viewportCo
 		size_t cmdIndex = imageIndex;
 		PROF_SCOPE_NAMED( "Primary Command Buffer" );
 
-		ChHandle_t c = commandBuffers[ cmdIndex ];
+		ch_handle_t c = commandBuffers[ cmdIndex ];
 
 		render->BeginCommandBuffer( c );
 
@@ -682,7 +682,7 @@ void RenderSystemOld::Present( ChHandle_t window, u32* viewports, u32 viewportCo
 
 void Graphics_DestroySelectRenderPass()
 {
-	if ( gGraphicsData.aRenderPassSelect != InvalidHandle )
+	if ( gGraphicsData.aRenderPassSelect != CH_INVALID_HANDLE )
 		render->DestroyRenderPass( gGraphicsData.aRenderPassSelect );
 }
 
@@ -830,7 +830,7 @@ void RenderSystemOld::CreateSelectionTexture()
 
 	aSelectionFramebuffer = render->CreateFramebuffer( frameBufCreate );
 
-	if ( aSelectionFramebuffer == InvalidHandle )
+	if ( aSelectionFramebuffer == CH_INVALID_HANDLE )
 	{
 		Log_Error( gLC_ClientGraphics, "Failed to create selection framebuffer!\n" );
 	}
@@ -878,7 +878,7 @@ void RenderSystemOld::EnableSelection( bool enabled, u32 viewport )
 		write.aBindingCount = 1;
 		write.apBindings    = CH_STACK_NEW( WriteDescSetBinding_t, write.aBindingCount );
 
-		ChVector< ChHandle_t > buffers;
+		ChVector< ch_handle_t > buffers;
 		buffers.push_back( aSelectionBuffer );
 
 		write.apBindings[ 0 ].aBinding = 0;

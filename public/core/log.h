@@ -57,27 +57,6 @@ enum class LogColor: unsigned char
 #define ANSI_CLR_YELLOW      "\033[1;33m"
 #define ANSI_CLR_GRAY        "\033[1;30m"
 
-// ch_string versions :D
-#define STR_ANSI_CLR_DEFAULT     ch_string( "\033[0m", 4 )
-#define STR_ANSI_CLR_BLACK       ch_string( "\033[0;30m", 7 )
-#define STR_ANSI_CLR_WHITE       ch_string( "\033[1;37m", 7 )
-
-#define STR_ANSI_CLR_DARK_BLUE   ch_string( "\033[0;34m", 7 )
-#define STR_ANSI_CLR_DARK_GREEN  ch_string( "\033[0;32m", 7 )
-#define STR_ANSI_CLR_DARK_CYAN   ch_string( "\033[0;36m", 7 )
-#define STR_ANSI_CLR_DARK_RED    ch_string( "\033[0;31m", 7 )
-#define STR_ANSI_CLR_DARK_PURPLE ch_string( "\033[0;35m", 7 )
-#define STR_ANSI_CLR_DARK_YELLOW ch_string( "\033[0;33m", 7 )
-#define STR_ANSI_CLR_DARK_GRAY   ch_string( "\033[0;30m", 7 )
-
-#define STR_ANSI_CLR_BLUE        ch_string( "\033[1;34m", 7 )
-#define STR_ANSI_CLR_GREEN       ch_string( "\033[1;32m", 7 )
-#define STR_ANSI_CLR_CYAN        ch_string( "\033[1;36m", 7 )
-#define STR_ANSI_CLR_RED         ch_string( "\033[1;31m", 7 )
-#define STR_ANSI_CLR_PURPLE      ch_string( "\033[1;35m", 7 )
-#define STR_ANSI_CLR_YELLOW      ch_string( "\033[1;33m", 7 )
-#define STR_ANSI_CLR_GRAY        ch_string( "\033[1;30m", 7 )
-
 
 enum class LogType: unsigned char
 {
@@ -177,7 +156,7 @@ void CORE_API                      ch_print( const char* str );
 // ----------------------------------------------------------------
 // Log Group Functions
 
-// Returns a Handle to the current log group
+// Returns a ch_handle_t to the current log group
 LogGroup CORE_API                  Log_GroupBeginEx( LogChannel channel, LogType sType );
 LogGroup CORE_API                  Log_GroupBegin( LogChannel channel );
 LogGroup CORE_API                  Log_GroupBegin();
@@ -245,11 +224,11 @@ void CORE_API                      Log_DevF( u8 sLvl, const char* spFmt, ... );
 // ----------------------------------------------------------------
 // Helper Macros
 
-#define LOG_REGISTER_CHANNEL( name, ... )         LogChannel g##name##Channel = Log_RegisterChannel( #name, __VA_ARGS__ );
-#define LOG_REGISTER_CHANNEL2( name, ... )        LogChannel gLC_##name = Log_RegisterChannel( #name, __VA_ARGS__ );
-#define LOG_REGISTER_CHANNEL_EX( var, name, ... ) LogChannel var = Log_RegisterChannel( name, __VA_ARGS__ );
+// register log channel with a custom name
+#define LOG_CHANNEL_REGISTER_EX( var, name, ... ) LogChannel var = Log_RegisterChannel( name, __VA_ARGS__ );
+
+// register a log channel prefixed with gLC_, for global log channel
 #define LOG_CHANNEL_REGISTER( name, ... )         LogChannel gLC_##name = Log_RegisterChannel( #name, __VA_ARGS__ );
 
-#define LOG_CHANNEL( name )                       extern LogChannel g##name##Channel;
-#define LOG_CHANNEL2( name )                      extern LogChannel gLC_##name;
-
+// extern log channel
+#define LOG_CHANNEL( name )                       extern LogChannel gLC_##name;

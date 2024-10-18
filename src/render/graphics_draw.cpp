@@ -15,7 +15,7 @@
 // --------------------------------------------------------------------------------------
 
 // shaders, fun
-u32                                    Shader_Basic3D_UpdateMaterialData( Handle sMat );
+u32                                    Shader_Basic3D_UpdateMaterialData( ch_handle_t sMat );
 
 
 // --------------------------------------------------------------------------------------
@@ -59,7 +59,7 @@ bool Graphics_ViewFrustumTest( Renderable_t* spModelDraw, ViewportShader_t& srVi
 
 
 // TODO: experiment with instanced drawing
-void Graphics_CmdDrawSurface( Handle cmd, Model* spModel, size_t sSurface )
+void Graphics_CmdDrawSurface( ch_handle_t cmd, Model* spModel, size_t sSurface )
 {
 	PROF_SCOPE();
 
@@ -96,7 +96,7 @@ void Graphics_CmdDrawSurface( Handle cmd, Model* spModel, size_t sSurface )
 }
 
 
-void Graphics_DrawShaderRenderables( Handle cmd, size_t sIndex, Handle shader, u32 sViewportIndex, ChVector< SurfaceDraw_t >& srRenderList )
+void Graphics_DrawShaderRenderables( ch_handle_t cmd, size_t sIndex, ch_handle_t shader, u32 sViewportIndex, ChVector< SurfaceDraw_t >& srRenderList )
 {
 	PROF_SCOPE();
 
@@ -125,7 +125,7 @@ void Graphics_DrawShaderRenderables( Handle cmd, size_t sIndex, Handle shader, u
 	if ( shaderData->aDynamicState & EDynamicState_LineWidth )
 		render->CmdSetLineWidth( cmd, r_line_thickness );
 
-	const std::unordered_map< ChHandle_t, ShaderMaterialData >* matDataMap = Shader_GetMaterialDataMap( shader );
+	const std::unordered_map< ch_handle_t, ShaderMaterialData >* matDataMap = Shader_GetMaterialDataMap( shader );
 
 	for ( uint32_t i = 0; i < srRenderList.size(); i++ )
 	{
@@ -139,9 +139,9 @@ void Graphics_DrawShaderRenderables( Handle cmd, size_t sIndex, Handle shader, u
 		}
 
 		// get model and check if it's nullptr
-		if ( renderable->aModel == InvalidHandle )
+		if ( renderable->aModel == CH_INVALID_HANDLE )
 		{
-			Log_Error( gLC_ClientGraphics, "Graphics::DrawShaderRenderables: model handle is InvalidHandle\n" );
+			Log_Error( gLC_ClientGraphics, "Graphics::DrawShaderRenderables: model handle is CH_INVALID_HANDLE\n" );
 			continue;
 		}
 
@@ -187,7 +187,7 @@ void Graphics_DrawShaderRenderables( Handle cmd, size_t sIndex, Handle shader, u
 }
 
 
-void Graphics_RenderView( Handle cmd, size_t sIndex, u32 sViewportIndex, ViewportShader_t& srViewport, ViewRenderList_t& srViewList )
+void Graphics_RenderView( ch_handle_t cmd, size_t sIndex, u32 sViewportIndex, ViewportShader_t& srViewport, ViewRenderList_t& srViewList )
 {
 	PROF_SCOPE();
 
@@ -203,8 +203,8 @@ void Graphics_RenderView( Handle cmd, size_t sIndex, u32 sViewportIndex, Viewpor
 	bool          hasSkybox = false;
 
 	// here we go again
-	static Handle skybox    = gGraphics.GetShader( "skybox" );
-	static Handle gizmo     = gGraphics.GetShader( "gizmo" );
+	static ch_handle_t skybox    = gGraphics.GetShader( "skybox" );
+	static ch_handle_t gizmo     = gGraphics.GetShader( "gizmo" );
 
 	Rect2D_t rect{};
 	rect.aOffset.x = srViewport.aOffset.x;
@@ -248,7 +248,7 @@ void Graphics_RenderView( Handle cmd, size_t sIndex, u32 sViewportIndex, Viewpor
 
 	for ( auto& [ shader, renderList ] : srViewList.aRenderLists )
 	{
-		if ( shader == InvalidHandle )
+		if ( shader == CH_INVALID_HANDLE )
 		{
 			Log_Warn( gLC_ClientGraphics, "Invalid Shader Handle (0) in View RenderList\n" );
 			continue;
@@ -279,7 +279,7 @@ void Graphics_RenderView( Handle cmd, size_t sIndex, u32 sViewportIndex, Viewpor
 }
 
 
-ChHandle_t Graphics_CreateRenderPass( EDescriptorType sType )
+ch_handle_t Graphics_CreateRenderPass( EDescriptorType sType )
 {
 	RenderPassData_t passData{};
 
@@ -288,7 +288,7 @@ ChHandle_t Graphics_CreateRenderPass( EDescriptorType sType )
 
 
 #if 0
-void Graphics_UpdateRenderPass( ChHandle_t sRenderPass )
+void Graphics_UpdateRenderPass( ch_handle_t sRenderPass )
 {
 	// update the descriptor sets
 	WriteDescSet_t update{};
@@ -430,18 +430,18 @@ void Graphics::SetViewportUpdate( bool sUpdate )
 }
 
 
-void Graphics::SetViewportRenderList( u32 sViewport, ChHandle_t* srRenderables, size_t sCount )
+void Graphics::SetViewportRenderList( u32 sViewport, ch_handle_t* srRenderables, size_t sCount )
 {
 	// fun
-	static Handle        shadow_map       = gGraphics.GetShader( "__shadow_map" );
+	static ch_handle_t        shadow_map       = gGraphics.GetShader( "__shadow_map" );
 	static ShaderData_t* shadowShaderData = Shader_GetData( shadow_map );
-	static ChHandle_t    debugShader      = gGraphics.GetShader( "wireframe" );
+	static ch_handle_t    debugShader      = gGraphics.GetShader( "wireframe" );
 
 	// shaders to exclude from wireframe
-	static ChHandle_t    shaderSkybox     = gGraphics.GetShader( "skybox" );
-	static ChHandle_t    shaderGizmo      = gGraphics.GetShader( "gizmo" );
-	static ChHandle_t    shaderDebug      = gGraphics.GetShader( "debug" );
-	static ChHandle_t    shaderDebugLine  = gGraphics.GetShader( "debug_line" );
+	static ch_handle_t    shaderSkybox     = gGraphics.GetShader( "skybox" );
+	static ch_handle_t    shaderGizmo      = gGraphics.GetShader( "gizmo" );
+	static ch_handle_t    shaderDebug      = gGraphics.GetShader( "debug" );
+	static ch_handle_t    shaderDebugLine  = gGraphics.GetShader( "debug_line" );
 
 	if ( r_vis_lock )
 		return;
@@ -533,7 +533,7 @@ void Graphics::SetViewportRenderList( u32 sViewport, ChHandle_t* srRenderables, 
 			// Add each surface to the shader draw list
 			for ( uint32_t surf = 0; surf < renderable->aMaterialCount; surf++ )
 			{
-				ChHandle_t mat = renderable->apMaterials[ surf ];
+				ch_handle_t mat = renderable->apMaterials[ surf ];
 
 				// TODO: add Mat_IsValid()
 				if ( mat == CH_INVALID_HANDLE )
@@ -542,7 +542,7 @@ void Graphics::SetViewportRenderList( u32 sViewport, ChHandle_t* srRenderables, 
 					continue;
 				}
 
-				ChHandle_t shader = gGraphics.Mat_GetShader( mat );
+				ch_handle_t shader = gGraphics.Mat_GetShader( mat );
 
 				if ( viewport.aShaderOverride )
 					shader = viewport.aShaderOverride;

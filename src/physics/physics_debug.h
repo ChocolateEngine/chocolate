@@ -14,6 +14,7 @@
 //  and i don't want this dll to try and load graphics tbh,
 //  feel like it should be isolated and only use ch_core.dll
 
+
 // class PhysDebugMesh:  public JPH::RefTargetVirtual, public JPH::RefTarget<IMesh>
 class PhysDebugMesh:  public JPH::RefTargetVirtual, public RefCounted
 {
@@ -21,7 +22,7 @@ public:
 	PhysDebugMesh();
 	~PhysDebugMesh();
 
-	Handle       aModel;
+	ch_handle_t       aModel;
 
 	virtual void AddRef() override { RefCounted::AddRef(); }
 	virtual void Release() override { RefCounted::Release(); }
