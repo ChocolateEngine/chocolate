@@ -99,7 +99,7 @@ void Resource_Update()
 			struct stat fileStat
 			{
 			};
-			int ret = FileSys_Stat( data->aPath.c_str(), &fileStat );
+			int ret = stat( data->aPath.c_str(), &fileStat );
 
 			if ( ret != 0 )
 			{
@@ -177,7 +177,7 @@ bool Resource_Add( ch_handle_t shType, ch_handle_t shResource, const std::string
 	struct stat fileStat
 	{
 	};
-	int ret = FileSys_Stat( srPath.c_str(), &fileStat );
+	int ret = stat( srPath.c_str(), &fileStat );
 
 	if ( ret != 0 )
 	{

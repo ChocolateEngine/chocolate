@@ -9,24 +9,6 @@
 #include <sys/stat.h>
 
 
-#ifdef _WIN32
-#define stat _stat
-
-constexpr char    PATH_SEP = '\\';
-#define           PATH_SEP_STR "\\"
-
-constexpr char    CH_PATH_SEP = '\\';
-#define           CH_PATH_SEP_STR "\\"
-
-#elif __unix__
-constexpr char PATH_SEP = '/';
-#define        PATH_SEP_STR "/"
-
-constexpr char CH_PATH_SEP = '/';
-#define        CH_PATH_SEP_STR "/"
-#endif
-
-
 using DirHandle = void*;
 
 
@@ -153,9 +135,6 @@ CORE_API bool      FileSys_Exists( const char* path, s32 pathLen = -1, bool noPa
 
 // Call access on a file
 CORE_API int       FileSys_Access( const char* path, int mode = 0 );
-
-// Call stat on a file
-CORE_API int       FileSys_Stat( const char* path, struct stat* info );
 
 // ================================================================================
 // Path Utils

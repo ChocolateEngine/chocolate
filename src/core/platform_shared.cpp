@@ -8,6 +8,12 @@
 #endif
 
 
+void sys_print_last_error( const char* userErrorMessage )
+{
+	fprintf( stderr, "System Error: %s\n%s\n", sys_get_error(), userErrorMessage );
+}
+
+
 // https://gist.github.com/leiless/8b8603ae31c00fe38d2e97d94462a5a5
 
 

@@ -583,7 +583,7 @@ inline bool exists( const char* path )
 inline bool is_dir( const char* path )
 {
     struct stat s;
-    if ( ch_stat( path, &s ) == 0 )
+    if ( stat( path, &s ) == 0 )
         return (s.st_mode & S_IFDIR);
 
     return false;
@@ -949,7 +949,7 @@ static bool FileSys_CheckStatFlags( const char* path, s32 pathLen, bool noPaths,
 
     if ( noPaths || FileSys_IsAbsolute( path, pathLen ) )
     {
-		if ( ch_stat( path, &s ) == 0 )
+		if ( stat( path, &s ) == 0 )
 			return ( s.st_mode & flags );
     }
     else
@@ -959,7 +959,7 @@ static bool FileSys_CheckStatFlags( const char* path, s32 pathLen, bool noPaths,
 		if ( !fullPath.data )
 			return false;
 
-		if ( ch_stat( fullPath.data, &s ) == 0 )
+		if ( stat( fullPath.data, &s ) == 0 )
 		{
 			bool hasFlag = ( s.st_mode & flags );
 			ch_str_free( fullPath.data );
@@ -1012,12 +1012,6 @@ bool FileSys_Exists( const char* path, s32 pathLen, bool noPaths )
 int FileSys_Access( const char* path, int mode )
 {
     return access( path, mode );
-}
-
-
-int FileSys_Stat( const char* path, struct stat* info )
-{
-    return ch_stat( path, info );
 }
 
 

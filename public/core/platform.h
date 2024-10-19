@@ -8,83 +8,37 @@ typedef void* Module;
 	#define EXT_DLL_LEN 4
 	#define DLL_EXPORT __declspec(dllexport)
 	#define DLL_IMPORT __declspec(dllimport)
+
+	#define PATH_SEP_STR "\\"
+	#define CH_PATH_SEP_STR "\\"
+
+	#define stat            _stat
+
+constexpr char PATH_SEP    = '\\';
+constexpr char CH_PATH_SEP = '\\';
+
 #elif __linux__
 	#define EXT_DLL ".so"
 	#define EXT_DLL_LEN 3
 	#define DLL_EXPORT __attribute__((__visibility__("default")))
 	#define DLL_IMPORT
+
+	#define PATH_SEP_STR    "/"
+	#define CH_PATH_SEP_STR "/"
+
+constexpr char PATH_SEP    = '/';
+constexpr char CH_PATH_SEP = '/';
 #else
 	#error "Library loading not setup for this platform"
 #endif
 
 #ifndef CORE_DLL
 	#define CORE_API DLL_IMPORT
-#else
-	#define CORE_API DLL_EXPORT
 #endif
 
 
 #define CH_PLAT_FOLDER_SEP CH_PLAT_FOLDER CH_PATH_SEP_STR
 //#define CH_PLAT_FOLDER_SEP_LEN ( strlen( CH_PLAT_FOLDER_SEP ) - 1 )
-
-
-#ifdef _WIN32
-
-// platform specific unicode character type
-//using uchar = wchar_t;
-
-	// Make this widechar on windows
-	//#define USTR( str )     L##str
-
-	// Make this widechar on windows
-	//#define _U( str )       L##str
-
-	#define ch_stat         _stat
-//	#define ch_ustat        _wstat
-//	#define ch_unprintf     _snwprintf
-//	#define ch_urename 	    _wrename
-//
-//	#define ch_ustrcasecmp  _wcsicmp
-//	#define ch_ustrncasecmp _wcsnicmp
-//	#define ch_ustrcmp      wcscmp
-//	#define ch_ustrncmp     wcsncmp
-//	#define ch_ustrlen      wcslen
-//	#define ch_ustrcat      wcscat
-//	#define ch_ustrchr      wcschr
-//
-//	#define ch_uopen 	    _wopen
-//
-//	#define ch_ufopen( path, mode ) _wfopen( path, L##mode )
-
-#else
-
-// platform specific unicode character type
-//using uchar = char;
-
-	// Make this widechar on windows
-	//#define USTR( str )  L##str
-
-	// Make this widechar on windows
-	//#define _U( str )    L##str
-
-	#define ch_stat      stat
-//	#define ch_ustat     stat
-//	#define ch_unprintf  snprintf
-//	#define ch_urename   rename
-//
-//	#define ch_ustricmp  strcasecmp
-//	#define ch_ustrnicmp strncasecmp
-//	#define ch_ustrcmp   strcmp
-//	#define ch_ustrncmp  strncmp
-//	#define ch_ustrlen   strlen
-//	#define ch_ustrcat   strcat
-//	#define ch_ustrchr   strchr
-//
-//	#define ch_uopen     open
-//
-//	#define ch_ufopen( path, mode ) fopen( path, mode )
-
-#endif
 
 
 using FResizeCallback = void( void* window );
@@ -143,53 +97,56 @@ struct cpu_info_t
 };
 
 
-// why is msvc like this with this dllexport/dllimport stuff aaaa
-void            CORE_API    sys_init();
-void            CORE_API    sys_shutdown();
+CORE_API void        sys_init();
+CORE_API void        sys_shutdown();
 
-Module          CORE_API    sys_load_library( const char* path );
-void            CORE_API    sys_close_library( Module mod );
-void            CORE_API*   sys_load_func( Module mod, const char* path );
-const char      CORE_API*   sys_get_error();
-void            CORE_API    sys_print_last_error( const char* userErrorMessage );
+// these are defined in platform_lib_loader.cpp, separated because of the launcher
+CORE_API Module      sys_load_library( const char* path );
+CORE_API void        sys_close_library( Module mod );
+CORE_API void*       sys_load_func( Module mod, const char* path );
+CORE_API const char* sys_get_error();
+CORE_API void        sys_print_last_error( const char* userErrorMessage );
+
+// not implemented on linux yet
+#if 0
+// get folder exe is stored in
+CORE_API char*       sys_get_exe_folder( size_t* len = nullptr );
+
+// get the full path of the exe
+CORE_API char*       sys_get_exe_path();
+#endif
+
+// get current working directory
+CORE_API char*       sys_get_cwd();
 
 // sleep for x milliseconds
-void            CORE_API    sys_sleep( float ms );
+CORE_API void        sys_sleep( float ms );
 
 // console functions
-void            CORE_API*   sys_get_console_window();
-int             CORE_API    sys_allow_console_input();
+CORE_API void*       sys_get_console_window();
+CORE_API int         sys_allow_console_input();
 
 // wait for a debugger to attach
-void            CORE_API    sys_wait_for_debugger();
-void            CORE_API    sys_debug_break();
+CORE_API void        sys_wait_for_debugger();
+CORE_API void        sys_debug_break();
 
-int CORE_API                sys_get_core_count();
+CORE_API int         sys_get_core_count();
 
-struct cpu_info_t CORE_API         sys_get_cpu_info();
-
-//uchar*                      Sys_ToWideChar( const char* spStr, int sSize );
-//char*                       Sys_ToMultiByte( const uchar* spStr, int sSize );
-
-//void                        Sys_FreeConvertedString( const uchar* spStr );
-//void                        Sys_FreeConvertedString( const char* spStr );
+CORE_API cpu_info_t  sys_get_cpu_info();
 
 // window management
 #ifdef _WIN32
-	#define CH_SYS_TO_UNICODE( str, len ) Sys_ToWideChar( str, len )
-	#define CH_SYS_TO_ANSI( str, len )    Sys_ToMultiByte( str, len )
 
 // TODO: use a struct for this probably
-void            CORE_API*   Sys_CreateWindow( const char* spWindowName, int sWidth, int sHeight, bool maximize );
-void            CORE_API    Sys_SetResizeCallback( FResizeCallback callback );
+CORE_API void* Sys_CreateWindow( const char* spWindowName, int sWidth, int sHeight, bool maximize );
+// CORE_API bool Sys_CreateWindow( void* native_window, SDL_Window* sdl_window, const char* spWindowName, int sWidth, int sHeight, bool maximize );
 
-int             CORE_API    Sys_Execute( const char* spFile, const char* spArgs );
-int             CORE_API    Sys_ExecuteV( const char* spFile, const char* spArgs, ... );
+CORE_API void  Sys_SetResizeCallback( FResizeCallback callback );
 
-void CORE_API               Sys_CheckHeap();
+CORE_API int   Sys_Execute( const char* spFile, const char* spArgs );
+CORE_API int   Sys_ExecuteV( const char* spFile, const char* spArgs, ... );
+
+CORE_API void  Sys_CheckHeap();
 #else
-	#define CH_SYS_TO_UNICODE( str, len ) str
-	#define CH_SYS_TO_ANSI( str, len )    str
-
 	#define Sys_CheckHeap()
 #endif

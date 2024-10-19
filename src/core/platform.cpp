@@ -4,6 +4,7 @@
 #include <stdlib.h>
 //#include <string>
 
+#include <direct.h>
 #include <wtypes.h>  // HWND
 #include <libloaderapi.h>
 //#include <errhandlingapi.h>
@@ -155,10 +156,12 @@ Module sys_load_library( const char* path )
 	return (Module)LoadLibraryEx( path, nullptr, LOAD_LIBRARY_SEARCH_DEFAULT_DIRS | LOAD_LIBRARY_SEARCH_DLL_LOAD_DIR );
 }
 
+
 void sys_close_library( Module mod )
 {
 	FreeLibrary( (HMODULE)mod );
 }
+
 
 void* sys_load_func( Module mod, const char* name )
 {
@@ -169,27 +172,27 @@ const char* sys_get_error()
 {
 	DWORD errorID = GetLastError();
 
-	if( errorID == 0 )
-		return ""; // No error message
+	if ( errorID == 0 )
+		return "";  // No error message
 
 	LPSTR strErrorMessage = NULL;
 
 	FormatMessage(
-		FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS | FORMAT_MESSAGE_ARGUMENT_ARRAY | FORMAT_MESSAGE_ALLOCATE_BUFFER,
-		NULL,
-		errorID,
-		0,
-		(LPSTR)&strErrorMessage,
-		0,
-		NULL);
+	  FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS | FORMAT_MESSAGE_ARGUMENT_ARRAY | FORMAT_MESSAGE_ALLOCATE_BUFFER,
+	  NULL,
+	  errorID,
+	  0,
+	  (LPSTR)&strErrorMessage,
+	  0,
+	  NULL );
 
 	//std::string message;
 	//message.resize(512);
 	//snprintf( message.data(), 512, "Win32 API Error %d: %s", errorID, strErrorMessage );
 
-	static char message[512];
+	static char message[ 512 ];
 	memset( message, 512, 0 );
-	snprintf( message, 512, "Win32 API Error %ud: %s", errorID, strErrorMessage );
+	snprintf( message, 512, "%d - %s", errorID, strErrorMessage );
 
 	// Free the Win32 string buffer.
 	LocalFree( strErrorMessage );
@@ -197,9 +200,36 @@ const char* sys_get_error()
 	return message;
 }
 
-void sys_print_last_error( const char* userErrorMessage )
+
+char* sys_get_exe_path()
 {
-	fprintf( stderr, "Error: %s\n%s\n", userErrorMessage, sys_get_error() );
+	char* output = static_cast< char* >( malloc( sizeof( char ) * MAX_PATH ) );
+	GetModuleFileName( NULL, output, MAX_PATH );
+	return output;
+}
+
+
+char* sys_get_exe_folder( size_t* len )
+{
+	char* output = static_cast< char* >( malloc( sizeof( char ) * MAX_PATH ) );
+	GetModuleFileName( NULL, output, MAX_PATH );
+
+	// find index of last path separator
+	char*  sep    = strrchr( output, '\\' );
+	size_t path_i = sep - output;
+
+	memset( output + path_i, 0, MAX_PATH - path_i );
+
+	if ( len )
+		*len = path_i;
+
+	return output;
+}
+
+
+char* sys_get_cwd()
+{
+	return _getcwd( 0, 0 );
 }
 
 

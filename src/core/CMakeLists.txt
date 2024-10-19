@@ -40,7 +40,7 @@ list( APPEND PUBLIC_FILES
 	${CH_PUBLIC}/util.h
 )
 
-add_compile_definitions( "CORE_DLL" "TRACY_EXPORTS" )
+add_compile_definitions( "CORE_DLL" "CORE_API=DLL_EXPORT" "TRACY_EXPORTS" )
 
 link_libraries( SDL2 )
 
