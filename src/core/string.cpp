@@ -76,7 +76,7 @@ static void str_track_realloc( const char* file, u32 line, const char* func, cha
 		}
 		else
 		{
-			ch_print( "Failed to find old string pointer in tracking data!\n" );
+			print( "Failed to find old string pointer in tracking data!\n" );
 		}
 	}
 
@@ -90,13 +90,13 @@ static void str_track_free( const char* string )
 
 	if ( string == nullptr )
 	{
-		ch_print( "Attempted to free nullptr string!\n" );
+		print( "Attempted to free nullptr string!\n" );
 		return;
 	}
 
 	if ( str_track_get().empty() )
 	{
-		ch_print( "No strings tracked to free!\n" );
+		print( "No strings tracked to free!\n" );
 	}
 	else
 	{
@@ -108,7 +108,7 @@ static void str_track_free( const char* string )
 		}
 		else
 		{
-			ch_print( "Failed to find string pointer in tracking data to erase!\n" );
+			print( "Failed to find string pointer in tracking data to erase!\n" );
 		}
 	}
 }
@@ -139,7 +139,7 @@ char* ch_str_copy_base( const char* string, size_t len )
 
 	if ( out == nullptr )
 	{
-		ch_printf( "Failed to allocate %d bytes for string!\n", ( len + 1 ) * sizeof( char ) );
+		printf( "Failed to allocate %d bytes for string!\n", ( len + 1 ) * sizeof( char ) );
 		return nullptr;
 	}
 
@@ -158,7 +158,7 @@ ch_string ch_str_copy( STR_FILE_LINE_DEF const char* string )
 
 	if ( string == nullptr )
 	{
-		ch_print( "Attempted to copy nullptr string!\n" );
+		print( "Attempted to copy nullptr string!\n" );
 		return out_string;
 	}
 
@@ -184,7 +184,7 @@ ch_string ch_str_copy( STR_FILE_LINE_DEF const char* string, size_t len )
 
 	if ( string == nullptr )
 	{
-		ch_print( "Attempted to copy nullptr string!\n" );
+		print( "Attempted to copy nullptr string!\n" );
 		return out_string;
 	}
 
@@ -232,7 +232,7 @@ ch_string ch_str_realloc( STR_FILE_LINE_DEF char* data, const char* string, size
 
 	if ( string == nullptr )
 	{
-		ch_printf( "Attempted to copy nullptr string!\n" );
+		printf( "Attempted to copy nullptr string!\n" );
 		return out_string;
 	}
 
@@ -260,7 +260,7 @@ ch_string ch_str_realloc( STR_FILE_LINE_DEF char* data, const char* string )
 
 	if ( string == nullptr )
 	{
-		ch_printf( "Attempted to copy nullptr string!\n" );
+		printf( "Attempted to copy nullptr string!\n" );
 		return out_string;
 	}
 
@@ -268,7 +268,7 @@ ch_string ch_str_realloc( STR_FILE_LINE_DEF char* data, const char* string )
 
 	if ( len == 0 )
 	{
-		ch_printf( "Attempted to copy empty string!\n" );
+		printf( "Attempted to copy empty string!\n" );
 		return out_string;
 	}
 
@@ -305,7 +305,7 @@ CORE_API ch_string ch_str_realloc_f( STR_FILE_LINE_DEF char* data, const char* f
 	{
 		va_end( args_copy );
 		va_end( args );
-		ch_print( "ch_str_realloc_f va_args: vsnprintf failed\n" );
+		print( "ch_str_realloc_f va_args: vsnprintf failed\n" );
 		return out_string;
 	}
 
@@ -315,7 +315,7 @@ CORE_API ch_string ch_str_realloc_f( STR_FILE_LINE_DEF char* data, const char* f
 
 		if ( result == nullptr )
 		{
-			ch_printf( "Failed to allocate %d bytes for string!\n", ( len + 1 ) * sizeof( char ) );
+			printf( "Failed to allocate %d bytes for string!\n", ( len + 1 ) * sizeof( char ) );
 			va_end( args_copy );
 			va_end( args );
 			return out_string;
@@ -353,7 +353,7 @@ CORE_API ch_string ch_str_realloc_v( STR_FILE_LINE_DEF char* data, const char* f
 
 		if ( result == nullptr )
 		{
-			ch_printf( "Failed to allocate %d bytes for string!\n", ( len + 1 ) * sizeof( char ) );
+			printf( "Failed to allocate %d bytes for string!\n", ( len + 1 ) * sizeof( char ) );
 			return out_string;
 		}
 
@@ -392,7 +392,7 @@ ch_string ch_str_copy_f( STR_FILE_LINE_DEF const char* format, ... )
 	{
 		va_end( args_copy );
 		va_end( args );
-		ch_print( "ch_str_copy_f va_args: vsnprintf failed\n" );
+		print( "ch_str_copy_f va_args: vsnprintf failed\n" );
 		return out_string;
 	}
 
@@ -456,7 +456,7 @@ ch_string ch_str_concat( STR_FILE_LINE_DEF char* dest, const char* string )
 
 	if ( string == nullptr )
 	{
-		ch_print( "Attempted to concatenate nullptr string!\n" );
+		print( "Attempted to concatenate nullptr string!\n" );
 		return outString;
 	}
 
@@ -467,7 +467,7 @@ ch_string ch_str_concat( STR_FILE_LINE_DEF char* dest, const char* string )
 
 	if ( out == nullptr )
 	{
-		ch_printf( "Failed to allocate %d bytes for string!\n", ( destLen + strLen + 1 ) * sizeof( char ) );
+		printf( "Failed to allocate %d bytes for string!\n", ( destLen + strLen + 1 ) * sizeof( char ) );
 		return outString;
 	}
 
@@ -498,13 +498,13 @@ ch_string ch_str_concat( STR_FILE_LINE_DEF char* dest, size_t destLen, const cha
 
 	if ( string == nullptr )
 	{
-		ch_print( " *** Attempted to concatenate nullptr string!\n" );
+		print( " *** Attempted to concatenate nullptr string!\n" );
 		return outString;
 	}
 
 	if ( !ch_str_check_len( dest, destLen ) && !ch_str_check_len( string, stringLen ) )
 	{
-		ch_print( " *** Both strings to concat are empty!\n" );
+		print( " *** Both strings to concat are empty!\n" );
 		return outString;
 	}
 
@@ -512,7 +512,7 @@ ch_string ch_str_concat( STR_FILE_LINE_DEF char* dest, size_t destLen, const cha
 
 	if ( out == nullptr )
 	{
-		ch_printf( "Failed to allocate %d bytes for string!\n", ( destLen + stringLen + 1 ) * sizeof( char ) );
+		printf( "Failed to allocate %d bytes for string!\n", ( destLen + stringLen + 1 ) * sizeof( char ) );
 		return outString;
 	}
 
@@ -540,7 +540,7 @@ ch_string ch_str_concat( STR_FILE_LINE_DEF char* dest, size_t destLen, size_t co
 
 	if ( lengths == nullptr )
 	{
-		ch_printf( "Failed to allocate %d bytes for string length array!\n", count * sizeof( size_t ) );
+		printf( "Failed to allocate %d bytes for string length array!\n", count * sizeof( size_t ) );
 		return outString;
 	}
 
@@ -564,7 +564,7 @@ ch_string ch_str_concat( STR_FILE_LINE_DEF char* dest, size_t destLen, size_t co
 		{
 			// Technically, we could allocate a new string here and copy the data into it
 			// im not sure if that would be a good idea or not
-			ch_print( "Attempted to concatenate string with itself!\n" );
+			print( "Attempted to concatenate string with itself!\n" );
 			ch_free( lengths );
 			return outString;
 		}
@@ -574,7 +574,7 @@ ch_string ch_str_concat( STR_FILE_LINE_DEF char* dest, size_t destLen, size_t co
 
 	if ( out == nullptr )
 	{
-		ch_printf( "Failed to allocate %d bytes for string!\n", ( totalLen + 1 ) * sizeof( char ) );
+		printf( "Failed to allocate %d bytes for string!\n", ( totalLen + 1 ) * sizeof( char ) );
 		ch_free( lengths );
 		return outString;
 	}
@@ -616,7 +616,7 @@ ch_string ch_str_concat( STR_FILE_LINE_DEF char* dest, size_t destLen, size_t co
 
 	if ( out == nullptr )
 	{
-		ch_printf( "Failed to allocate %d bytes for string!\n", ( totalLen + 1 ) * sizeof( char ) );
+		printf( "Failed to allocate %d bytes for string!\n", ( totalLen + 1 ) * sizeof( char ) );
 		return outString;
 	}
 
@@ -653,7 +653,7 @@ ch_string ch_str_concat( STR_FILE_LINE_DEF char* dest, size_t destLen, size_t co
 
 	if ( out == nullptr )
 	{
-		ch_printf( "Failed to allocate %d bytes for string!\n", ( totalLen + 1 ) * sizeof( char ) );
+		printf( "Failed to allocate %d bytes for string!\n", ( totalLen + 1 ) * sizeof( char ) );
 		return outString;
 	}
 
@@ -688,7 +688,7 @@ ch_string ch_str_join( STR_FILE_LINE_DEF const char* strLeft, const char* strRig
 
 	if ( strLeft == nullptr || strRight == nullptr )
 	{
-		ch_print( "Attempted to join nullptr string!\n" );
+		print( "Attempted to join nullptr string!\n" );
 		return outString;
 	}
 
@@ -699,7 +699,7 @@ ch_string ch_str_join( STR_FILE_LINE_DEF const char* strLeft, const char* strRig
 
 	if ( out == nullptr )
 	{
-		ch_printf( "Failed to allocate %d bytes for string!\n", ( leftLen + rightLen + 1 ) * sizeof( char ) );
+		printf( "Failed to allocate %d bytes for string!\n", ( leftLen + rightLen + 1 ) * sizeof( char ) );
 		return outString;
 	}
 
@@ -723,13 +723,13 @@ ch_string ch_str_join( STR_FILE_LINE_DEF const char* strLeft, size_t leftLen, co
 
 	if ( strRight == nullptr )
 	{
-		ch_print( "Attempted to join nullptr string!\n" );
+		print( "Attempted to join nullptr string!\n" );
 		return outString;
 	}
 
 	if ( !ch_str_check_len( strLeft, leftLen ) || !ch_str_check_len( strRight, rightLen ) )
 	{
-		ch_print( "Invalid string length!\n" );
+		print( "Invalid string length!\n" );
 		return outString;
 	}
 
@@ -737,7 +737,7 @@ ch_string ch_str_join( STR_FILE_LINE_DEF const char* strLeft, size_t leftLen, co
 
 	if ( out == nullptr )
 	{
-		ch_printf( "Failed to allocate %d bytes for string!\n", ( leftLen + rightLen + 1 ) * sizeof( char ) );
+		printf( "Failed to allocate %d bytes for string!\n", ( leftLen + rightLen + 1 ) * sizeof( char ) );
 		return outString;
 	}
 	
@@ -765,7 +765,7 @@ ch_string ch_str_join( STR_FILE_LINE_DEF size_t count, const char** strings, cha
 
 	if ( lengths == nullptr )
 	{
-		ch_printf( "Failed to allocate %d bytes for string length array!\n", count * sizeof( size_t ) );
+		printf( "Failed to allocate %d bytes for string length array!\n", count * sizeof( size_t ) );
 		return outString;
 	}
 
@@ -789,7 +789,7 @@ ch_string ch_str_join( STR_FILE_LINE_DEF size_t count, const char** strings, cha
 		{
 			// Technically, we could allocate a new string here and copy the data into it
 			// im not sure if that would be a good idea or not
-			ch_print( "Attempted to concatenate string with itself!\n" );
+			print( "Attempted to concatenate string with itself!\n" );
 			ch_free( lengths );
 			return outString;
 		}
@@ -799,7 +799,7 @@ ch_string ch_str_join( STR_FILE_LINE_DEF size_t count, const char** strings, cha
 
 	if ( out == nullptr )
 	{
-		ch_printf( "Failed to allocate %d bytes for string!\n", ( totalLen + 1 ) * sizeof( char ) );
+		printf( "Failed to allocate %d bytes for string!\n", ( totalLen + 1 ) * sizeof( char ) );
 		ch_free( lengths );
 		return outString;
 	}
@@ -841,7 +841,7 @@ ch_string ch_str_join( STR_FILE_LINE_DEF size_t count, const char** strings, con
 
 	if ( out == nullptr )
 	{
-		ch_printf( "Failed to allocate %d bytes for string!\n", ( totalLen + 1 ) * sizeof( char ) );
+		printf( "Failed to allocate %d bytes for string!\n", ( totalLen + 1 ) * sizeof( char ) );
 		return outString;
 	}
 
@@ -918,7 +918,7 @@ ch_string ch_str_join( STR_FILE_LINE_DEF size_t count, const ch_string* strings,
 
 	if ( out == nullptr )
 	{
-		ch_printf( "Failed to allocate %d bytes for string!\n", ( totalLen + 1 ) * sizeof( char ) );
+		printf( "Failed to allocate %d bytes for string!\n", ( totalLen + 1 ) * sizeof( char ) );
 		return outString;
 	}
 
@@ -958,7 +958,7 @@ ch_string ch_str_join_space( STR_FILE_LINE_DEF size_t count, const char** string
 
 	if ( lengths == nullptr )
 	{
-		ch_printf( "Failed to allocate %d bytes for string length array!\n", count * sizeof( size_t ) );
+		printf( "Failed to allocate %d bytes for string length array!\n", count * sizeof( size_t ) );
 		return outString;
 	}
 
@@ -975,7 +975,7 @@ ch_string ch_str_join_space( STR_FILE_LINE_DEF size_t count, const char** string
 
 	if ( out == nullptr )
 	{
-		ch_printf( "Failed to allocate %d bytes for string!\n", ( totalLen + 1 ) * sizeof( char ) );
+		printf( "Failed to allocate %d bytes for string!\n", ( totalLen + 1 ) * sizeof( char ) );
 		return outString;
 	}
 
@@ -1022,7 +1022,7 @@ ch_string ch_str_join_space( STR_FILE_LINE_DEF size_t count, const char** string
 
 	if ( out == nullptr )
 	{
-		ch_printf( "Failed to allocate %d bytes for string!\n", ( totalLen + 1 ) * sizeof( char ) );
+		printf( "Failed to allocate %d bytes for string!\n", ( totalLen + 1 ) * sizeof( char ) );
 		return outString;
 	}
 
@@ -1069,7 +1069,7 @@ ch_string ch_str_join_space( STR_FILE_LINE_DEF size_t count, const ch_string* st
 
 	if ( out == nullptr )
 	{
-		ch_printf( "Failed to allocate %d bytes for string!\n", ( totalLen + 1 ) * sizeof( char ) );
+		printf( "Failed to allocate %d bytes for string!\n", ( totalLen + 1 ) * sizeof( char ) );
 		return outString;
 	}
 
@@ -1104,7 +1104,7 @@ ch_string ch_str_join_arr( STR_FILE_LINE_DEF char* data, size_t count, const cha
 
 	if ( count == 0 )
 	{
-		ch_print( "No strings in array to concatenate - count of 0!\n" );
+		print( "No strings in array to concatenate - count of 0!\n" );
 		return outString;
 	}
 
@@ -1113,7 +1113,7 @@ ch_string ch_str_join_arr( STR_FILE_LINE_DEF char* data, size_t count, const cha
 
 	if ( lengths == nullptr )
 	{
-		ch_printf( "Failed to allocate %d bytes for string length array!\n", count * sizeof( size_t ) );
+		printf( "Failed to allocate %d bytes for string length array!\n", count * sizeof( size_t ) );
 		return outString;
 	}
 
@@ -1147,7 +1147,7 @@ ch_string ch_str_join_arr( STR_FILE_LINE_DEF char* data, size_t count, const cha
 
 	if ( out == nullptr )
 	{
-		ch_printf( "Failed to allocate %d bytes for string!\n", ( totalLen + 1 ) * sizeof( char ) );
+		printf( "Failed to allocate %d bytes for string!\n", ( totalLen + 1 ) * sizeof( char ) );
 		ch_free( lengths );
 		//va_end( args_copy );
 		return outString;
@@ -1191,7 +1191,7 @@ ch_string ch_str_join_list( STR_FILE_LINE_DEF char* data, std::initializer_list<
 
 	if ( lengths == nullptr )
 	{
-		ch_printf( "Failed to allocate %d bytes for string length array!\n", strings.size() * sizeof( size_t ) );
+		printf( "Failed to allocate %d bytes for string length array!\n", strings.size() * sizeof( size_t ) );
 		return outString;
 	}
 
@@ -1214,7 +1214,7 @@ ch_string ch_str_join_list( STR_FILE_LINE_DEF char* data, std::initializer_list<
 
 	if ( out == nullptr )
 	{
-		ch_printf( "Failed to allocate %d bytes for string!\n", ( totalLen + 1 ) * sizeof( char ) );
+		printf( "Failed to allocate %d bytes for string!\n", ( totalLen + 1 ) * sizeof( char ) );
 		ch_free( lengths );
 		return outString;
 	}
@@ -1267,7 +1267,7 @@ ch_string ch_str_join_list( STR_FILE_LINE_DEF char* data, std::initializer_list<
 
 	if ( out == nullptr )
 	{
-		ch_printf( "Failed to allocate %d bytes for string!\n", ( totalLen + 1 ) * sizeof( char ) );
+		printf( "Failed to allocate %d bytes for string!\n", ( totalLen + 1 ) * sizeof( char ) );
 		return outString;
 	}
 
@@ -1350,7 +1350,7 @@ void ch_str_add( STR_FILE_LINE_DEF const char* string )
 {
 	if ( string == nullptr )
 	{
-		ch_print( "Attempted to add nullptr string to tracking!\n" );
+		print( "Attempted to add nullptr string to tracking!\n" );
 		return;
 	}
 
@@ -1358,7 +1358,7 @@ void ch_str_add( STR_FILE_LINE_DEF const char* string )
 
 	if ( len == 0 )
 	{
-		ch_print( "Attempted to add empty string to tracking!\n" );
+		print( "Attempted to add empty string to tracking!\n" );
 		return;
 	}
 

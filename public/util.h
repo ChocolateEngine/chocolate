@@ -497,10 +497,6 @@ std::string CORE_API vstringV( const char* format, va_list args );
 
 
 // ==============================================================================
-// String Allocation System
-
-
-// ==============================================================================
 // Assorted Number/String Functions
 
 std::string     CORE_API Vec2Str( const glm::vec3& in );
@@ -600,6 +596,13 @@ inline float Sys_BytesToKB( u64 bytes )
 #else
 	return bytes * 0.001;
 #endif
+}
+
+
+// print a string to stdout, shortcut to fputs( str, stdout );
+inline void print( const char* str )
+{
+	fputs( str, stdout );
 }
 
 

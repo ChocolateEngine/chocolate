@@ -174,18 +174,22 @@ ch_string FileSys_GetWorkingDir()
 }
 
 
-void FileSys_SetWorkingDir( const char* spPath, s32 pathLen )
+bool FileSys_SetWorkingDir( const char* spPath )
 {
 	if ( !spPath )
-		return;
+		return false;
+
+	if ( chdir( spPath ) != 0 )
+	{
+		Log_ErrorF( "Failed to Change Directory - %s", sys_get_error() );
+		return false;
+	}
 
     if ( g_working_dir.data )
         ch_str_free( g_working_dir.data );
 
-    if ( pathLen == -1 )
-		pathLen = strlen( spPath );
-
 	g_working_dir = ch_str_copy( spPath );
+	return true;
 }
 
 

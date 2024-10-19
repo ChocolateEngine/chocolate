@@ -61,14 +61,15 @@ using ELogType = u8;
 enum ELogType_: ELogType
 {
 	ELogType_Normal = 0,  // [Channel] %s
-	ELogType_Verbose,     // [Channel] [V3] %s
-	ELogType_Verbose2,    // [Channel] [V3] %s
+	ELogType_Verbose,     // [Channel] [V1] %s
+	ELogType_Verbose2,    // [Channel] [V2] %s
 	ELogType_Verbose3,    // [Channel] [V3] %s
 	ELogType_Verbose4,    // [Channel] [V4] %s
 	ELogType_Raw,         // %s
 	ELogType_Warning,     // [Channel] [WARNING] %s
 	ELogType_Error,       // [Channel] [ERROR] %s
-	ELogType_Fatal        // [Channel] [FATAL] %s
+	ELogType_Fatal,       // [Channel] [FATAL] %s
+	ELogType_Count
 };
 
 
@@ -149,12 +150,6 @@ CORE_API int                         Log_GetDevLevel();
 CORE_API void                        Log_AddChannelShownCallback( LogChannelShownCallbackF callback );
 
 // ----------------------------------------------------------------
-// System printing, skip logging
-
-CORE_API void                        ch_printf( const char* str, ... );
-CORE_API void                        ch_print( const char* str );
-
-// ----------------------------------------------------------------
 // log_t Group Functions
 
 // Returns a ch_handle_t to the current log group
@@ -163,7 +158,6 @@ CORE_API log_t                       Log_GroupBegin( log_channel_h_t channel );
 CORE_API log_t                       Log_GroupBegin();
 
 CORE_API void                        Log_GroupEnd( log_t& sGroup );
-CORE_API void                        Log_Submit( log_t& sLog );
 
 // change to Log_Build
 CORE_API void                        Log_Group( log_t& sGroup, const char* spBuf );
@@ -223,6 +217,7 @@ CORE_API void                        Log_FatalF( const char* spFmt, ... );
 // Dev only.
 CORE_API void                        Log_Dev( u8 sLvl, const char* spFmt );
 CORE_API void                        Log_DevF( u8 sLvl, const char* spFmt, ... );
+
 
 // ----------------------------------------------------------------
 // Helper Macros

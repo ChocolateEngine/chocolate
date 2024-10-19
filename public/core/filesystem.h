@@ -44,7 +44,7 @@ CORE_API void      FileSys_Shutdown();
 
 // does not allocate a new string, just returns the internal working directory string
 CORE_API ch_string FileSys_GetWorkingDir();
-CORE_API void      FileSys_SetWorkingDir( const char* spPath, s32 pathLen = -1 );
+CORE_API bool      FileSys_SetWorkingDir( const char* spPath );
 
 CORE_API ch_string FileSys_GetExePath();
 

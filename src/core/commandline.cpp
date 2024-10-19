@@ -51,7 +51,7 @@ extern "C"
 		if ( !FileSys_Init( desiredWorkingDir ) )
 		{
 			Log_Fatal( "Failed to initialize File System!" );
-			return 1;
+			return 2;
 		}
 
 		con_init();

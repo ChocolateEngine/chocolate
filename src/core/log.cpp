@@ -74,7 +74,7 @@ void Win32SetColor( ELogColor color )
 
 	if ( !result )
 	{
-		ch_printf( "*** Failed to set console color: %s\n", sys_get_error() );
+		printf( "*** Failed to set console color: %s\n", sys_get_error() );
 	}
 }
 
@@ -248,7 +248,7 @@ ELogColor Log_UnixToColor( const char* spColor, size_t sLen )
 
 	if ( sLen != 7 )
 	{
-		ch_printf( " *** Log_UnixToColor: Unknown Color Type: \"%s\"\n", spColor );
+		printf( " *** Log_UnixToColor: Unknown Color Type: \"%s\"\n", spColor );
 		return ELogColor_Default;
 	}
 
@@ -258,7 +258,7 @@ ELogColor Log_UnixToColor( const char* spColor, size_t sLen )
 	long color         = 0;
 	if ( !ToLong3( colorStr, color ) )
 	{
-		ch_printf( " *** Failed get color code from string: %s (%s)\n", spColor, colorStr );
+		printf( " *** Failed get color code from string: %s (%s)\n", spColor, colorStr );
 		return ELogColor_Default;
 	}
 
@@ -364,7 +364,7 @@ log_channel_h_t Log_RegisterChannel( const char *sName, ELogColor sColor )
 
 	if ( name.size == 0 )
 	{
-		ch_printf( " *** LogSystem: Invalid Channel Name: \"%s\"\n", sName );
+		printf( " *** LogSystem: Invalid Channel Name: \"%s\"\n", sName );
 		return INVALID_LOG_CHANNEL;
 	}
 
@@ -429,7 +429,7 @@ static bool CheckConcatRealloc( ch_string& newOutput, ch_string& output )
 {
 	if ( !newOutput.data )
 	{
-		ch_print( " *** LogSystem: Failed to Concatenate Strings during realloc!\n" );
+		print( " *** LogSystem: Failed to Concatenate Strings during realloc!\n" );
 		return false;
 	}
 
@@ -438,20 +438,20 @@ static bool CheckConcatRealloc( ch_string& newOutput, ch_string& output )
 }
 
 
-static bool FormatLog_Dev( log_channel_t* channel, ch_string& output, const char* devLevel, const char* last, size_t dist )
+static bool Log_FormatVerbose( log_channel_t* channel, ch_string& output, const char* devLevel, const char* last, size_t dist )
 {
-	const char* strings[] = { "[", channel->name.data, "] [DEV ", devLevel, "] ", last };
-	const u64   lengths[] = { 1,   channel->name.size, 7,         1,        2,    dist };
+	const char* strings[] = { "[", channel->name.data, "] [V", devLevel, "] ", last };
+	const u64   lengths[] = { 1,   channel->name.size, 4,         1,        2,    dist };
 	ch_string   newOutput = ch_str_concat( CH_STR_UR( output ), 6, strings, lengths );
 
 	return CheckConcatRealloc( newOutput, output );
 }
 
 
-static bool FormatLog_Dev( log_channel_t* channel, ch_string& output, ch_string& color, const char* devLevel, const char* last, size_t dist )
+static bool Log_FormatVerboseColor( log_channel_t* channel, ch_string& output, ch_string& color, const char* devLevel, const char* last, size_t dist )
 {
-	const char* strings[] = { color.data, "[", channel->name.data, "] [DEV ", devLevel, "] ", last };
-	const u64   lengths[] = { color.size, 1,   channel->name.size, 7,         1,        2,    dist };
+	const char* strings[] = { color.data, "[", channel->name.data, "] [V", devLevel, "] ", last };
+	const u64   lengths[] = { color.size, 1,   channel->name.size, 4,         1,        2,    dist };
 	ch_string   newOutput = ch_str_concat( CH_STR_UR( output ), 7, strings, lengths );
 
 	return CheckConcatRealloc( newOutput, output );
@@ -503,19 +503,19 @@ static ch_string FormatLog( log_channel_t* channel, ELogType sType, const char* 
 			}
 
 			case ELogType_Verbose:
-				FormatLog_Dev( channel, output, color, "1", last, dist );
+				Log_FormatVerboseColor( channel, output, color, "1", last, dist );
 				break;
 
 			case ELogType_Verbose2:
-				FormatLog_Dev( channel, output, color, "2", last, dist );
+				Log_FormatVerboseColor( channel, output, color, "2", last, dist );
 				break;
 
 			case ELogType_Verbose3:
-				FormatLog_Dev( channel, output, color, "3", last, dist );
+				Log_FormatVerboseColor( channel, output, color, "3", last, dist );
 				break;
 
 			case ELogType_Verbose4:
-				FormatLog_Dev( channel, output, color, "4", last, dist );
+				Log_FormatVerboseColor( channel, output, color, "4", last, dist );
 				break;
 
 			case ELogType_Warning:
@@ -582,7 +582,7 @@ static ch_string Log_StripColors( const ch_string& sBuffer )
 
 		if ( !newOutput.data )
 		{
-			ch_print( " *** LogSystem: Failed to Concatenate Strings in Log_StripColors!\n" );
+			print( " *** LogSystem: Failed to Concatenate Strings in Log_StripColors!\n" );
 			return output;
 		}
 
@@ -621,7 +621,7 @@ static ch_string Log_StripColors( const ch_string& sBuffer )
 
 			if ( !newOutput.data )
 			{
-				ch_print( " *** LogSystem: Failed to Concatenate Strings in Log_StripColors!\n" );
+				print( " *** LogSystem: Failed to Concatenate Strings in Log_StripColors!\n" );
 				return output;
 			}
 
@@ -634,7 +634,7 @@ static ch_string Log_StripColors( const ch_string& sBuffer )
 
 			if ( !newOutput.data )
 			{
-				ch_print( " *** LogSystem: Failed to Concatenate Strings in Log_StripColors!\n" );
+				print( " *** LogSystem: Failed to Concatenate Strings in Log_StripColors!\n" );
 				return output;
 			}
 
@@ -660,7 +660,7 @@ static ch_string FormatLogNoColors( const log_t& srLog )
 	log_channel_t* channel = Log_GetChannelData( srLog.channel );
 	if ( !channel )
 	{
-		ch_printf( "\n *** LogSystem: Channel Not Found for message: \"%s\"\n", srLog.aMessage.data );
+		printf( "\n *** LogSystem: Channel Not Found for message: \"%s\"\n", srLog.aMessage.data );
 		return output;
 	}
 
@@ -712,19 +712,19 @@ static ch_string FormatLogNoColors( const log_t& srLog )
 			}
 
 			case ELogType_Verbose:
-				FormatLog_Dev( channel, output, "1", last, dist );
+				Log_FormatVerbose( channel, output, "1", last, dist );
 				break;
 
 			case ELogType_Verbose2:
-				FormatLog_Dev( channel, output, "2", last, dist );
+				Log_FormatVerbose( channel, output, "2", last, dist );
 				break;
 
 			case ELogType_Verbose3:
-				FormatLog_Dev( channel, output, "3", last, dist );
+				Log_FormatVerbose( channel, output, "3", last, dist );
 				break;
 
 			case ELogType_Verbose4:
-				FormatLog_Dev( channel, output, "4", last, dist );
+				Log_FormatVerbose( channel, output, "4", last, dist );
 				break;
 
 			case ELogType_Raw:
@@ -1069,7 +1069,7 @@ void Log_AddLogInternal( log_t& log )
     log_channel_t* channel = Log_GetChannelData( log.channel );
     if ( !channel )
     {
-        ch_printf( "\n *** LogSystem: Channel Not Found for message: \"%s\"\n", log.aMessage.data );
+        printf( "\n *** LogSystem: Channel Not Found for message: \"%s\"\n", log.aMessage.data );
         return;
     }
 
@@ -1237,29 +1237,6 @@ bool Log_IsVisible( const log_t& log )
         return false;
 
     return Log_ChannelIsShown( log.channel );
-}
-
-
-// ----------------------------------------------------------------
-// System printing, skip logging
-
-
-void ch_printf( const char* format, ... )
-{
-	va_list args;
-	va_start( args, format );
-	ch_string msg = ch_str_copy_v( format, args );
-	va_end( args );
-
-	fputs( msg.data, stdout );
-
-	ch_str_free( msg.data );
-}
-
-
-void ch_print( const char* buffer )
-{
-	fputs( buffer, stdout );
 }
 
 
@@ -1443,7 +1420,7 @@ void Log_ExV( log_channel_h_t sChannel, ELogType sLevel, const char* spFmt, va_l
 
 	if ( len < 0 )
 	{
-		ch_print( "\n *** LogSystem: vsnprintf failed?\n\n" );
+		print( "\n *** LogSystem: vsnprintf failed?\n\n" );
 		gLogMutex.unlock();
 		return;
 	}
@@ -1452,7 +1429,7 @@ void Log_ExV( log_channel_h_t sChannel, ELogType sLevel, const char* spFmt, va_l
 
 	if ( !log.aMessage.data )
 	{
-		ch_print( "\n *** LogSystem: Failed to Allocate Memory for Log Message!\n\n" );
+		print( "\n *** LogSystem: Failed to Allocate Memory for Log Message!\n\n" );
 		gLogMutex.unlock();
 		return;
 	}
