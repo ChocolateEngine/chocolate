@@ -83,7 +83,7 @@ struct BufferVK
 struct TextureVK
 {
 	// TODO: move to separate array
-	ch_string            aName;
+	ch_string            name;
 
 	// Vulkan Info
 	VkImage              aImage          = VK_NULL_HANDLE;

@@ -225,7 +225,7 @@ void GuiSystem::DrawConVarList( bool wasOpen )
 	// 	if ( !cvarBase )
 	// 		continue;
 	// 
-	// 	ImGui::Text( cvarBase->aName );
+	// 	ImGui::Text( cvarBase->name );
 	// }
 
 	ImGui::EndChild();

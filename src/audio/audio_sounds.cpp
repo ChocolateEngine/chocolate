@@ -271,7 +271,7 @@ void AudioSystem::SetChannel( ch_handle_t handle, ch_handle_t channel )
 	if ( !stream )
 		return;
 
-	stream->aChannel = channel;
+	stream->channel = channel;
 }
 
 
@@ -281,7 +281,7 @@ ch_handle_t AudioSystem::GetChannel( ch_handle_t handle )
 	if ( !stream )
 		return CH_INVALID_HANDLE;
 
-	return stream->aChannel;
+	return stream->channel;
 }
 
 
@@ -305,7 +305,7 @@ AudioEffectVar* AudioStream::GetVar( EAudioEffectData sName )
 {
 	for ( auto var : aVars )
 	{
-		if ( var->aName == sName )
+		if ( var->name == sName )
 			return var;
 	}
 
@@ -317,7 +317,7 @@ bool AudioStream::RemoveVar( EAudioEffectData sName )
 {
 	for ( size_t i = 0; i < aVars.size(); i++ )
 	{
-		if ( aVars[ i ]->aName == sName )
+		if ( aVars[ i ]->name == sName )
 		{
 			delete aVars[ i ];
 			vec_remove_index( aVars, i );
@@ -333,7 +333,7 @@ bool AudioStream::RemoveVar( EAudioEffectData sName )
 #define SET_VAR( func, type )                                                                     \
   for ( auto var : aVars )                                                                        \
   {                                                                                               \
-	if ( var->aName == sName )                                                                     \
+	if ( var->name == sName )                                                                     \
 	{                                                                                             \
 	  if ( var->aType != type )                                                                   \
 	  {                                                                                           \

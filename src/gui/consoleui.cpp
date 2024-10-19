@@ -478,7 +478,7 @@ void DrawLogChannelButtons()
 }
 
 
-ELogColor GetConsoleTextColor( const Log& log )
+ELogColor GetConsoleTextColor( const log_t& log )
 {
 	if ( conui_colors == 0.f )
 		return ELogColor_Default;
@@ -490,7 +490,7 @@ ELogColor GetConsoleTextColor( const Log& log )
 		return LOG_COLOR_ERROR;
 
 	else if ( conui_colors >= 2.f )
-		return Log_GetChannelColor( log.aChannel );
+		return Log_GetChannelColor( log.channel );
 
 	return ELogColor_Default;
 }
@@ -498,7 +498,7 @@ ELogColor GetConsoleTextColor( const Log& log )
 
 struct ConLogBuffer
 {
-	ELogColor    aColor;
+	ELogColor    color;
 	std::string aBuffer;
 };
 
@@ -510,7 +510,7 @@ static size_t gConHistoryIndex = 0;
 constexpr size_t CON_MAX_BUFFER_SIZE = 512;
 
 
-static void AddToConsoleOutput( ConLogBuffer* spBuffer, const Log& srLog )
+static void AddToConsoleOutput( ConLogBuffer* spBuffer, const log_t& srLog )
 {
 	ChVector< LogColorBuf_t > colorBuffers;
 	ELogColor mainColor = GetConsoleTextColor( srLog );
@@ -520,17 +520,17 @@ static void AddToConsoleOutput( ConLogBuffer* spBuffer, const Log& srLog )
 	{
 		std::string buf( colorBuf.apStr, colorBuf.aLen );
 
-		// if ( colorBuf.aColor != spBuffer->aColor && spBuffer->aBuffer.size() || spBuffer->aBuffer.size() > CON_MAX_BUFFER_SIZE )
-		// if ( mainColor != spBuffer->aColor && spBuffer->aBuffer.size() || spBuffer->aBuffer.size() > CON_MAX_BUFFER_SIZE )
-		if ( mainColor != spBuffer->aColor && spBuffer->aBuffer.size() )
+		// if ( colorBuf.color != spBuffer->color && spBuffer->aBuffer.size() || spBuffer->aBuffer.size() > CON_MAX_BUFFER_SIZE )
+		// if ( mainColor != spBuffer->color && spBuffer->aBuffer.size() || spBuffer->aBuffer.size() > CON_MAX_BUFFER_SIZE )
+		if ( mainColor != spBuffer->color && spBuffer->aBuffer.size() )
 		{
 			spBuffer = &gConHistory.emplace_back( mainColor );
-			// spBuffer->aBuffer += ToImHex( colorBuf.aColor );
+			// spBuffer->aBuffer += ToImHex( colorBuf.color );
 		}
 
 		if ( spBuffer->aBuffer.empty() )
 		{
-			spBuffer->aColor = mainColor;
+			spBuffer->color = mainColor;
 			spBuffer->aBuffer += buf;
 		}
 		else
@@ -546,7 +546,7 @@ void ReBuildConsoleOutput()
 	gConHistory.clear();
 	gConHistory.resize( 1 );
 
-	const std::vector< Log >& logs = Log_GetLogHistory();
+	const std::vector< log_t >& logs = Log_GetLogHistory();
 
 	for ( const auto& log: logs )
 	{
@@ -562,7 +562,7 @@ void ReBuildConsoleOutput()
 
 void UpdateConsoleOutput()
 {
-	const std::vector< Log >& logs = Log_GetLogHistory();
+	const std::vector< log_t >& logs = Log_GetLogHistory();
 
 	if ( logs.empty() )
 		return;
@@ -578,7 +578,7 @@ void UpdateConsoleOutput()
 
 	for ( ; gConHistoryIndex < logs.size(); gConHistoryIndex++ )
 	{
-		const Log& log = logs[ gConHistoryIndex ];
+		const log_t& log = logs[ gConHistoryIndex ];
 
 		if ( !Log_IsVisible( log ) )
 			continue;
@@ -623,7 +623,7 @@ void DrawConsoleOutput()
 		const ConLogBuffer& buffer = gConHistory.at( i );
 
 		// show buffer, clear it, then set the new color
-		ImGui::PushStyleColor( ImGuiCol_Text, ToImCol( buffer.aColor ) );
+		ImGui::PushStyleColor( ImGuiCol_Text, ToImCol( buffer.color ) );
 
 		bool needWrap   = false;
 		bool hasNewLine = false;

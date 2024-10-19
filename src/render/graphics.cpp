@@ -2239,7 +2239,7 @@ void Graphics::CreateVertexBuffers( ModelBuffers_t* spBuffer, VertexData_t* spVe
 
 				case VertexAttribute_Color:
 				{
-					memcpy( &dataHack[ v ].aColor, dataSrc, elemSize );
+					memcpy( &dataHack[ v ].color, dataSrc, elemSize );
 					break;
 				}
 

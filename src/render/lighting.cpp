@@ -394,10 +394,10 @@ void Graphics_UpdateLightBuffer( Light_t* spLight )
 		{
 			u32                     index = Graphics_GetCoreSlot( EShaderCoreArray_LightWorld, spLight->aShaderIndex );
 			UBO_LightDirectional_t& light = gGraphicsData.aCoreData.aLightWorld[ index ];
-			light.aColor.x                = spLight->aColor.x;
-			light.aColor.y                = spLight->aColor.y;
-			light.aColor.z                = spLight->aColor.z;
-			light.aColor.w                = spLight->aEnabled ? spLight->aColor.w : 0.f;
+			light.color.x                = spLight->color.x;
+			light.color.y                = spLight->color.y;
+			light.color.z                = spLight->color.z;
+			light.color.w                = spLight->aEnabled ? spLight->color.w : 0.f;
 
 			glm::mat4 matrix;
 			Util_ToMatrix( matrix, &spLight->aPos, &spLight->aRot );
@@ -465,10 +465,10 @@ void Graphics_UpdateLightBuffer( Light_t* spLight )
 		{
 			u32               index = Graphics_GetCoreSlot( EShaderCoreArray_LightPoint, spLight->aShaderIndex );
 			UBO_LightPoint_t& light = gGraphicsData.aCoreData.aLightPoint[ index ];
-			light.aColor.x          = spLight->aColor.x;
-			light.aColor.y          = spLight->aColor.y;
-			light.aColor.z          = spLight->aColor.z;
-			light.aColor.w          = spLight->aEnabled ? spLight->aColor.w : 0.f;
+			light.color.x          = spLight->color.x;
+			light.color.y          = spLight->color.y;
+			light.color.z          = spLight->color.z;
+			light.color.w          = spLight->aEnabled ? spLight->color.w : 0.f;
 
 			light.aPos              = spLight->aPos;
 			light.aRadius           = spLight->aRadius;
@@ -479,10 +479,10 @@ void Graphics_UpdateLightBuffer( Light_t* spLight )
 		{
 			u32              index = Graphics_GetCoreSlot( EShaderCoreArray_LightCone, spLight->aShaderIndex );
 			UBO_LightCone_t& light = gGraphicsData.aCoreData.aLightCone[ index ];
-			light.aColor.x         = spLight->aColor.x;
-			light.aColor.y         = spLight->aColor.y;
-			light.aColor.z         = spLight->aColor.z;
-			light.aColor.w         = spLight->aEnabled ? spLight->aColor.w : 0.f;
+			light.color.x         = spLight->color.x;
+			light.color.y         = spLight->color.y;
+			light.color.z         = spLight->color.z;
+			light.color.w         = spLight->aEnabled ? spLight->color.w : 0.f;
 
 			light.aPos             = spLight->aPos;
 			light.aFov.x           = glm::radians( spLight->aInnerFov );
@@ -557,10 +557,10 @@ void Graphics_UpdateLightBuffer( Light_t* spLight )
 		// case ELightType_Capsule:
 		// {
 		// 	UBO_LightCapsule_t light;
-		// 	light.aColor.x   = spLight->aColor.x;
-		// 	light.aColor.y   = spLight->aColor.y;
-		// 	light.aColor.z   = spLight->aColor.z;
-		// 	light.aColor.w   = spLight->aEnabled ? spLight->aColor.w : 0.f;
+		// 	light.color.x   = spLight->color.x;
+		// 	light.color.y   = spLight->color.y;
+		// 	light.color.z   = spLight->color.z;
+		// 	light.color.w   = spLight->aEnabled ? spLight->color.w : 0.f;
 		// 
 		// 	light.aPos       = spLight->aPos;
 		// 	light.aLength    = spLight->aLength;
@@ -821,7 +821,7 @@ void Graphics_DrawShadowMaps( ch_handle_t sCmd, size_t sIndex, u32* viewports, u
 
 	RenderPassBegin_t renderPassBegin{};
 	renderPassBegin.aClear.resize( 1 );
-	renderPassBegin.aClear[ 0 ].aColor   = { 0.f, 0.f, 0.f, 1.f };
+	renderPassBegin.aClear[ 0 ].color   = { 0.f, 0.f, 0.f, 1.f };
 	renderPassBegin.aClear[ 0 ].aIsDepth = true;
 	
 	ViewportShader_t** viewportList = ch_malloc< ViewportShader_t* >( viewportCount );

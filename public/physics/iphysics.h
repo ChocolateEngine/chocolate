@@ -124,7 +124,7 @@ struct PhysVertex_t
 	glm::vec3 aPos;
 	glm::vec3 aNorm;
 	glm::vec2 aUV;
-	glm::vec4 aColor;
+	glm::vec4 color;
 };
 
 

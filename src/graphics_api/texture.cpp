@@ -509,7 +509,7 @@ bool VK_LoadTexture( ch_handle_t& srHandle, TextureVK* tex, const ch_string& srP
 	tex->aFilter         = VK_ToVkFilter( srCreateData.aFilter );
 	tex->aSamplerAddress = VK_ToVkSamplerAddress( srCreateData.aSamplerAddress );
 	tex->aDepthCompare   = srCreateData.aDepthCompare;	// Does this need a dedicated function?
-	tex->aName           = ch_str_copy( srPath.data, srPath.size );
+	tex->name           = ch_str_copy( srPath.data, srPath.size );
 
 	// textures loaded through KTX are always sampled currently
 	if ( tex->aUsage & VK_IMAGE_USAGE_SAMPLED_BIT )
@@ -541,7 +541,7 @@ TextureVK* VK_CreateTexture( ch_handle_t& srHandle, const TextureCreateInfo_t& s
 	tex->aSize           = srCreate.aSize;
 	tex->aFormat         = VK_ToVkFormat( srCreate.aFormat );
 	tex->aUsage          = VK_ToVkImageUsage( srCreateData.aUsage );
-	tex->aName           = ch_str_copy( srCreate.apName );
+	tex->name           = ch_str_copy( srCreate.apName );
 	tex->aFilter         = VK_ToVkFilter( srCreateData.aFilter );
 	tex->aSamplerAddress = VK_ToVkSamplerAddress( srCreateData.aSamplerAddress );
 	tex->aDepthCompare   = srCreateData.aDepthCompare;
@@ -715,7 +715,7 @@ TextureVK* VK_CreateTexture( ch_handle_t& srHandle, const TextureCreateInfo_t& s
 
 	VK_CheckResult( vkCreateImageView( VK_GetDevice(), &viewInfo, nullptr, &tex->aImageView ), "Failed to create Image View" );
 
-	VK_SetObjectName( VK_OBJECT_TYPE_IMAGE, (u64)tex->aImage, tex->aName.data ? tex->aName.data : "MANUALLY CREATED TEXTURE" );
+	VK_SetObjectName( VK_OBJECT_TYPE_IMAGE, (u64)tex->aImage, tex->name.data ? tex->name.data : "MANUALLY CREATED TEXTURE" );
 
 	VK_CalcTextureIndices();
 
@@ -737,8 +737,8 @@ void VK_DestroyTexture( ch_handle_t sTexture )
 		return;
 	}
 
-	if ( texture->aName.data )
-		ch_str_free( texture->aName.data );
+	if ( texture->name.data )
+		ch_str_free( texture->name.data );
 
 	// big hack, blech
 	if ( !texture->aSwapChain )
@@ -1115,7 +1115,7 @@ static TextureVK* CreateBackBufferColor( WindowVK* window, const char* title, u6
 
 	const char* backbufStrings[] = { "Backbuffer Color - ", title };
 	const u64   backbufLengths[] = { 19, titleLen };
-	colorTex->aName              = ch_str_join( 2, backbufStrings, backbufLengths );
+	colorTex->name              = ch_str_join( 2, backbufStrings, backbufLengths );
 	colorTex->aRenderTarget      = true;
 
 	VkImageCreateInfo color{ VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO };
@@ -1206,7 +1206,7 @@ void VK_CreateBackBuffer( WindowVK* window )
 
 	const char* depthStrings[] = { "Backbuffer Depth - ", title };
 	const u64   depthLengths[] = { 19, titleLen };
-	depthTex->aName            = ch_str_join( 2, depthStrings, depthLengths );
+	depthTex->name            = ch_str_join( 2, depthStrings, depthLengths );
 	depthTex->aRenderTarget = true;
 
 	VkImageCreateInfo depth;
@@ -1295,7 +1295,7 @@ void VK_CreateBackBuffer( WindowVK* window )
 
 		const char* strings[] = { "Backbuffer Color - ", title };
 		const u64   lengths[] = { 19, titleLen };
-		tex->aName            = ch_str_join( 2, strings, lengths );
+		tex->name            = ch_str_join( 2, strings, lengths );
 
 		tex->aFormat          = gColorFormat;
 		tex->aFrames          = 1;
@@ -1321,7 +1321,7 @@ void VK_CreateBackBuffer( WindowVK* window )
 
 		const char* strings[]    = { "Backbuffer Resolve - ", title };
 		const u64   lengths[]    = { 21, titleLen };
-		tex->aName               = ch_str_join( 2, strings, lengths );
+		tex->name               = ch_str_join( 2, strings, lengths );
 
 		tex->aFormat             = gColorFormat;
 		tex->aFrames             = 1;
@@ -1373,7 +1373,7 @@ void VK_CreateBackBuffer( WindowVK* window )
 		ch_str_free( (char*)createBuffer.apName );
 
 	// createBuffer.apName             = ch_str_join( 2, depthStrings, depthLengths, (char*)createBuffer.apName ).data;
-	createBuffer.apName        = depthTex->aName.data;
+	createBuffer.apName        = depthTex->name.data;
 
 	ch_handle_t frameBufDepthHandle = VK_CreateFramebufferVK( createBuffer );
 
@@ -1455,7 +1455,7 @@ void VK_CreateImage( VkImageCreateInfo& srCreateInfo, TextureVK* spTexture )
 
 	VK_CheckResult( vkCreateImage( VK_GetDevice(), &srCreateInfo, nullptr, &spTexture->aImage ), "Failed to create image!" );
 
-	VK_SetObjectName( VK_OBJECT_TYPE_IMAGE, (u64)spTexture->aImage, spTexture->aName.data );
+	VK_SetObjectName( VK_OBJECT_TYPE_IMAGE, (u64)spTexture->aImage, spTexture->name.data );
 
 	VkMemoryRequirements memReqs;
 	vkGetImageMemoryRequirements( VK_GetDevice(), spTexture->aImage, &memReqs );
@@ -1477,7 +1477,7 @@ void VK_CreateImage( VkImageCreateInfo& srCreateInfo, TextureVK* spTexture )
 	VK_CheckResult( vkAllocateMemory( VK_GetDevice(), &allocInfo, nullptr, &spTexture->aMemory ), "Failed to allocate image memory!" );
 	VK_CheckResult( vkBindImageMemory( VK_GetDevice(), spTexture->aImage, spTexture->aMemory, 0 ), "Failed to bind image memory" );
 
-	VK_SetObjectName( VK_OBJECT_TYPE_DEVICE_MEMORY, (u64)spTexture->aMemory, spTexture->aName.data );
+	VK_SetObjectName( VK_OBJECT_TYPE_DEVICE_MEMORY, (u64)spTexture->aMemory, spTexture->name.data );
 }
 
 

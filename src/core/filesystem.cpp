@@ -342,7 +342,7 @@ void FileSys_DefaultSearchPaths()
 }
 
 
-static void log_group_search_paths( LogGroup group, const char* msg, ESearchPathType type )
+static void log_group_search_paths( log_t group, const char* msg, ESearchPathType type )
 {
 	Log_Group( group, msg );
 	for ( u32 i = 0; i < g_paths_count[ type ]; i++ )
@@ -354,7 +354,7 @@ static void log_group_search_paths( LogGroup group, const char* msg, ESearchPath
 
 void FileSys_PrintSearchPaths()
 {
-	LogGroup group = Log_GroupBegin( gLC_FileSystem );
+	log_t group = Log_GroupBegin( gLC_FileSystem );
 
 	log_group_search_paths( group, "Search Paths:\n", ESearchPathType_Path );
 	log_group_search_paths( group, "\nBinary Paths:\n", ESearchPathType_Binary );

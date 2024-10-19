@@ -467,7 +467,7 @@ struct TextureCreateData_t
 
 struct TextureInfo_t
 {
-	ch_string   aName;
+	ch_string   name;
 	ch_string   aPath;
 	glm::uvec2  aSize;
 	GraphicsFmt aFormat;
@@ -637,7 +637,7 @@ struct RenderPassCreate_t
 struct RenderPassClear_t
 {
 	bool      aIsDepth = false;
-	glm::vec4 aColor{};
+	glm::vec4 color{};
 	u32       aStencil = 0;
 };
 

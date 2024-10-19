@@ -70,9 +70,9 @@ static void Shader_Select_PushConstants( ch_handle_t cmd, ch_handle_t sLayout, c
 	ShaderSelect_Push push;
 	push.aViewport           = Graphics_GetShaderSlot( gGraphicsData.aViewportSlots, gRenderOld.aSelectionViewport );
 	push.aRenderable         = sPushData.apRenderable->aIndex;
-	push.aColor.x            = color[ 0 ] / 255.f;
-	push.aColor.y            = color[ 1 ] / 255.f;
-	push.aColor.z            = color[ 2 ] / 255.f;
+	push.color.x            = color[ 0 ] / 255.f;
+	push.color.y            = color[ 1 ] / 255.f;
+	push.color.z            = color[ 2 ] / 255.f;
 	push.aDiffuse            = -1;
 
 	ch_handle_t mat           = sPushData.apRenderable->apMaterials[ sPushData.aSurfaceDraw.aSurface ];

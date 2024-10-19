@@ -15,7 +15,7 @@ constexpr glm::vec4         gWireframeColor = { 0.f, 221.f / 255.f, 1.f, 1.f };
 struct Debug_Push
 {
 	alignas( 16 ) glm::mat4 aModelMatrix;
-	alignas( 16 ) glm::vec4 aColor;
+	alignas( 16 ) glm::vec4 color;
 	u32 aRenderable = 0;  // renderable index
 	u32 aViewport   = 0;  // viewport index
 };
@@ -72,11 +72,11 @@ static void Shader_Debug_PushConstants( ch_handle_t cmd, ch_handle_t sLayout, co
 	// this should never happen, but it is, need to fix
 	if ( sPushData.apMaterialData->vars.empty() )
 	{
-		push.aColor = glm::vec4( 1.f, 1.f, 1.f, 1.f );
+		push.color = glm::vec4( 1.f, 1.f, 1.f, 1.f );
 	}
 	else
 	{
-		push.aColor = sPushData.apMaterialData->vars[ COLOR_MAT_INDEX ].aVec4;
+		push.color = sPushData.apMaterialData->vars[ COLOR_MAT_INDEX ].aVec4;
 	}
 
 	push.aRenderable  = sPushData.aRenderableIndex;
@@ -158,9 +158,9 @@ static void Shader_Wireframe_PushConstants( ch_handle_t cmd, ch_handle_t sLayout
 
 	// this should never happen, but it is, need to fix
 	if ( sPushData.apMaterialData )
-		push.aColor = sPushData.apMaterialData->vars[ COLOR_MAT_INDEX ].aVec4;
+		push.color = sPushData.apMaterialData->vars[ COLOR_MAT_INDEX ].aVec4;
 	else
-		push.aColor = gWireframeColor;
+		push.color = gWireframeColor;
 
 	render->CmdPushConstants( cmd, sLayout, ShaderStage_Vertex | ShaderStage_Fragment, 0, sizeof( Debug_Push ), &push );
 }

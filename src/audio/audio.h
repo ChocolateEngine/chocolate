@@ -40,7 +40,7 @@ class AudioEffectVar
 {
   private:
 	AudioEffectVar( EAudioEffectData name, AudioVar type ) :
-		aName( name ), aType( type )
+		name( name ), aType( type )
 	{
 	}
 
@@ -63,7 +63,7 @@ class AudioEffectVar
 		aDataVec3 = data;
 	}
 
-	EAudioEffectData aName;
+	EAudioEffectData name;
 	AudioVar         aType;
 
 	union
@@ -131,7 +131,7 @@ struct AudioStream
 	float                vol         = 1.f;
 
 	// Audio Playback Channel
-	ch_handle_t               aChannel    = gDefaultChannel;
+	ch_handle_t               channel    = gDefaultChannel;
 
 	// audio stream to store audio from the codec and covert it
 	SDL_AudioStream*     audioStream = nullptr;
@@ -208,7 +208,7 @@ class IAudioCodec
 
 struct AudioChannel
 {
-	std::string aName;
+	std::string name;
 	float       aVol    = 1.f;
 	bool        aPaused = false;
 };

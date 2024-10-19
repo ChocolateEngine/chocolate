@@ -298,7 +298,7 @@ struct Shader_VertexData_t
 {
 	glm::vec4 aPosNormX;
 	glm::vec4 aNormYZ_UV;
-	glm::vec4 aColor;
+	glm::vec4 color;
 	//glm::vec4 aTangentXYZ_BiTanX;
 	//glm::vec2 aBiTangentYZ;
 };
@@ -584,7 +584,7 @@ struct ShadowMap_t
 struct Light_t
 {
 	ELightType   aType = ELightType_Directional;
-	glm::vec4    aColor{ 1.f, 1.f, 1.f, 1.f };
+	glm::vec4    color{ 1.f, 1.f, 1.f, 1.f };
 	glm::vec3    aPos{};
 	glm::quat    aRot{};
 	float        aInnerFov    = 45.f;

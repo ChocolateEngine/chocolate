@@ -683,7 +683,7 @@ ch_handle_t AudioSystem::RegisterChannel( const char* name )
 {
 	// TODO: probably use the memory pool for this
 	AudioChannel* channel = new AudioChannel;
-	channel->aName        = name;
+	channel->name        = name;
 	channel->aVol         = 1.f;
 
 	ch_handle_t handle         = aChannels.Add( channel );
@@ -702,7 +702,7 @@ ch_handle_t AudioSystem::GetChannel( std::string_view name )
 			continue;
 		}
 
-		if ( channel->aName == name )
+		if ( channel->name == name )
 			return aChannels.aHandles[ i ];
 	}
 
@@ -717,7 +717,7 @@ const std::string& AudioSystem::GetChannelName( ch_handle_t handle )
 	if ( !channel )
 		return gInvalidChannelName;
 
-	return channel->aName;
+	return channel->name;
 }
 
 

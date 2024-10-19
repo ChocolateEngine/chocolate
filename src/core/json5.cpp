@@ -455,7 +455,7 @@ EJsonError Json_Parse( JsonObject_t* spRoot, const char* spStr )
 				case '"':
 				case '\'':
 				{
-					if ( EJsonError err = Json_ParseQuote( spStr, c, cur->aName ) )
+					if ( EJsonError err = Json_ParseQuote( spStr, c, cur->name ) )
 						return err;
 					break;
 				}
@@ -471,7 +471,7 @@ EJsonError Json_Parse( JsonObject_t* spRoot, const char* spStr )
 						return EJsonError_InvalidQuotelessKeyCharacter;
 					}
 
-					if ( EJsonError err = Json_ParseString( spStr, cur->aName ) )
+					if ( EJsonError err = Json_ParseString( spStr, cur->name ) )
 						return err;
 
 					break;
@@ -629,11 +629,11 @@ void Json_Free( JsonObject_t* spRoot )
 		}
 
 		// Free the name if it exists
-		if ( objList[objList.size() - 1]->aName.data )
+		if ( objList[objList.size() - 1]->name.data )
 		{
-			ch_str_free( objList[ objList.size() - 1 ]->aName.data );
-			objList[ objList.size() - 1 ]->aName.data = nullptr;
-			objList[ objList.size() - 1 ]->aName.size = 0;
+			ch_str_free( objList[ objList.size() - 1 ]->name.data );
+			objList[ objList.size() - 1 ]->name.data = nullptr;
+			objList[ objList.size() - 1 ]->name.size = 0;
 		}
 
 		// pop the object off the stack

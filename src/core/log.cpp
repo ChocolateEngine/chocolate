@@ -9,23 +9,24 @@
 
 #include <SDL.h>
 
-CONVAR_INT( log_dev_global, 1, "Base Developer Logging Level for all Log Channels", 0 );
+CONVAR_INT_NAME( log_verbose_global, "ch.log.verbosity.base", 1, "Base Developer Logging Level for all Log Channels", 0 );
 
-ELogColor                     gCurrentColor = ELogColor_Default;
-LogChannel                   gLC_General   = INVALID_LOG_CHANNEL;
-LogChannel                   gLC_Logging   = INVALID_LOG_CHANNEL;
-static ch_string             gDefaultChannelName( "General", 7 );
-static std::mutex            gLogMutex;
+ELogColor                  gCurrentColor = ELogColor_Default;
+log_channel_h_t            gLC_General   = INVALID_LOG_CHANNEL;
+log_channel_h_t            gLC_Logging   = INVALID_LOG_CHANNEL;
+static ch_string           gDefaultChannelName( "General", 7 );
+static std::mutex          gLogMutex;
 
 // apparently you could of added stuff to this before static initialization got to this, and then you lose some log channels as a result
-ChVector< LogChannelDef_t >& GetLogChannels()
+// TODO: this can just be a simple c array + u8 size, only allocates at start up and that's it
+ChVector< log_channel_t >& GetLogChannels()
 {
-	static ChVector< LogChannelDef_t > gChannels;
+	static ChVector< log_channel_t > gChannels;
 	return gChannels;
 }
 
-// static std::vector< LogChannelDef_t >             gChannels;
-static std::vector< Log >                      gLogHistory;
+// static std::vector< log_channel_t >             gChannels;
+static std::vector< log_t >                    gLogHistory;
 
 static std::vector< LogChannelShownCallbackF > gCallbacksChannelShown;
 
@@ -37,65 +38,39 @@ constexpr glm::vec4                            gVecTo255( 255, 255, 255, 255 );
 #include <consoleapi2.h>
 #include <debugapi.h>
 
+
+int g_log_color_win32[] = {
+	FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE,                         // Default
+	0,                                                                           // Black
+	FOREGROUND_INTENSITY | FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE,  // White
+
+	FOREGROUND_BLUE,                                      // Dark Blue
+	FOREGROUND_GREEN,                                     // Dark Green
+	FOREGROUND_GREEN | FOREGROUND_BLUE,                   // Dark Cyan
+	FOREGROUND_RED,                                       // Dark Red
+	FOREGROUND_RED | FOREGROUND_BLUE,                     // Dark Purple
+	FOREGROUND_RED | FOREGROUND_GREEN,                    // Dark Yellow
+	FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE,  // Dark Gray
+
+	FOREGROUND_INTENSITY | FOREGROUND_BLUE,                     // Blue
+	FOREGROUND_INTENSITY | FOREGROUND_GREEN,                    // Green
+	FOREGROUND_INTENSITY | FOREGROUND_GREEN | FOREGROUND_BLUE,  // Cyan
+	FOREGROUND_INTENSITY | FOREGROUND_RED,                      // Red
+	FOREGROUND_INTENSITY | FOREGROUND_RED | FOREGROUND_BLUE,    // Purple
+	FOREGROUND_INTENSITY | FOREGROUND_RED | FOREGROUND_GREEN,   // Yellow
+	FOREGROUND_INTENSITY,                                       // Gray
+};
+
+
 constexpr int Win32GetColor( ELogColor color )
 {
-	switch ( color )
-	{
-		case ELogColor_Black:
-			return 0;
-		case ELogColor_White:
-			return FOREGROUND_INTENSITY | FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE;
-
-		case ELogColor_DarkBlue:
-			return FOREGROUND_BLUE;
-		case ELogColor_DarkGreen:
-			return FOREGROUND_GREEN;
-		case ELogColor_DarkCyan:
-			return FOREGROUND_GREEN | FOREGROUND_BLUE;
-		case ELogColor_DarkRed:
-			return FOREGROUND_RED;
-		case ELogColor_DarkPurple:
-			return FOREGROUND_RED | FOREGROUND_BLUE;
-		case ELogColor_DarkYellow:
-			return FOREGROUND_RED | FOREGROUND_GREEN;
-		case ELogColor_DarkGray:
-			return FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE;
-
-		case ELogColor_Blue:
-			return FOREGROUND_INTENSITY | FOREGROUND_BLUE;
-		case ELogColor_Green:
-			return FOREGROUND_INTENSITY | FOREGROUND_GREEN;
-		case ELogColor_Cyan:
-			return FOREGROUND_INTENSITY | FOREGROUND_GREEN | FOREGROUND_BLUE;
-		case ELogColor_Red:
-			return FOREGROUND_INTENSITY | FOREGROUND_RED;
-		case ELogColor_Purple:
-			return FOREGROUND_INTENSITY | FOREGROUND_RED | FOREGROUND_BLUE;
-		case ELogColor_Yellow:
-			return FOREGROUND_INTENSITY | FOREGROUND_RED | FOREGROUND_GREEN;
-		case ELogColor_Gray:
-			return FOREGROUND_INTENSITY;
-
-		case ELogColor_Default:
-		case ELogColor_Count:
-		default:
-			return FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE;
-	}
+	return g_log_color_win32[ static_cast< int >( color ) ];
 }
 
 
 void Win32SetColor( ELogColor color )
 {
-	// um
-	HANDLE handle = sys_get_console_window();
-
-	if ( !handle )
-	{
-		ch_print( "*** Failed to Get Console Window\n" );
-		return;
-	}
-
-	BOOL result = SetConsoleTextAttribute( handle, Win32GetColor( color ) );
+	BOOL result = SetConsoleTextAttribute( sys_get_console_window(), Win32GetColor( color ) );
 
 	if ( !result )
 	{
@@ -106,97 +81,89 @@ void Win32SetColor( ELogColor color )
 #endif
 
 
+constexpr const char* g_log_color_str[] = {
+	"Default",
+	"Black",
+	"White",
+
+	"Dark Blue",
+	"Dark Green",
+	"Dark Cyan",
+	"Dark Red",
+	"Dark Purple",
+	"Dark Yellow",
+	"Dark Gray",
+
+	"Blue",
+	"Green",
+	"Cyan",
+	"Red",
+	"Purple",
+	"Yellow",
+	"Gray",
+};
+
+
+constexpr const char* g_log_color_ansi[] = {
+	ANSI_CLR_DEFAULT,
+	ANSI_CLR_BLACK,
+	ANSI_CLR_WHITE,
+
+	ANSI_CLR_DARK_BLUE,
+	ANSI_CLR_DARK_GREEN,
+	ANSI_CLR_DARK_CYAN,
+	ANSI_CLR_DARK_RED,
+	ANSI_CLR_DARK_PURPLE,
+	ANSI_CLR_DARK_YELLOW,
+	ANSI_CLR_DARK_GRAY,
+
+	ANSI_CLR_BLUE,
+	ANSI_CLR_GREEN,
+	ANSI_CLR_CYAN,
+	ANSI_CLR_RED,
+	ANSI_CLR_PURPLE,
+	ANSI_CLR_YELLOW,
+	ANSI_CLR_GRAY,
+};
+
+
+glm::vec4 g_log_color_rgba[] = {
+	{ 1, 1, 1, 1 },        // Default
+	{ 0.3, 0.3, 0.3, 1 },  // Black
+	{ 1, 1, 1, 1 },        // White
+
+	{ 0, 0.3, 0.8, 1 },       // Dark Blue
+	{ 0.25, 0.57, 0.25, 1 },  // Dark Green
+	{ 0, 0.35, 0.75, 1 },     // Dark Cyan
+	{ 0.7, 0, 0.25, 1 },      // Dark Red
+	{ 0.45, 0, 0.7, 1 },      // Dark Purple
+	{ 0.6, 0.6, 0, 1 },       // Dark Yellow
+	{ 0.45, 0.45, 0.45, 1 },  // Dark Gray
+
+	{ 0, 0.4, 1, 1 },      // Blue
+	{ 0.4, 0.9, 0.4, 1 },  // Green
+	{ 0, 0.85, 1, 1 },     // Cyan
+	{ 0.9, 0, 0.4, 1 },    // Red
+	{ 0.6, 0, 0.9, 1 },    // Purple
+	{ 1, 1, 0, 1 },        // Yellow
+	{ 0.7, 0.7, 0.7, 1 },  // Gray
+};
+
+
+static_assert( ( CH_ARR_SIZE( g_log_color_str ) ) == (size_t)ELogColor_Count );
+static_assert( ( CH_ARR_SIZE( g_log_color_ansi ) ) == (size_t)ELogColor_Count );
+static_assert( ( CH_ARR_SIZE( g_log_color_rgba ) ) == (size_t)ELogColor_Count );
+
+
 const char* Log_ColorToStr( ELogColor color )
 {
-    switch ( color )
-    {
-        case ELogColor_Black:
-            return "Black";
-        case ELogColor_White:
-            return "White";
-
-        case ELogColor_DarkBlue:
-            return "Dark Blue";
-        case ELogColor_DarkGreen:
-            return "Dark Green";
-        case ELogColor_DarkCyan:
-            return "Dark Cyan";
-        case ELogColor_DarkRed:
-            return "Dark Red";
-		case ELogColor_DarkPurple:
-            return "Dark Purple";
-        case ELogColor_DarkYellow:
-            return "Dark Yellow";
-        case ELogColor_DarkGray:
-            return "Dark Gray";
-
-        case ELogColor_Blue:
-            return "Blue";
-        case ELogColor_Green:
-            return "Green";
-        case ELogColor_Cyan:
-            return "Cyan";
-        case ELogColor_Red:
-            return "Red";
-		case ELogColor_Purple:
-            return "Purple";
-        case ELogColor_Yellow:
-            return "Yellow";
-        case ELogColor_Gray:
-            return "Gray";
-
-        case ELogColor_Default:
-		case ELogColor_Count:
-        default:
-            return "Default";
-    }
+	return g_log_color_str[ static_cast< int >( color ) ];
 }
 
 
 const char* Log_ColorToUnix( ELogColor color )
 {
-	switch ( color )
-	{
-		case ELogColor_Default:
-		case ELogColor_Count:
-		default:
-			return ANSI_CLR_DEFAULT;
-
-		case ELogColor_Black:
-			return ANSI_CLR_BLACK;
-		case ELogColor_White:
-			return ANSI_CLR_WHITE;
-
-		case ELogColor_DarkBlue:
-			return ANSI_CLR_DARK_BLUE;
-		case ELogColor_DarkGreen:
-			return ANSI_CLR_DARK_GREEN;
-		case ELogColor_DarkCyan:
-			return ANSI_CLR_DARK_CYAN;
-		case ELogColor_DarkRed:
-			return ANSI_CLR_DARK_RED;
-		case ELogColor_DarkPurple:
-			return ANSI_CLR_DARK_PURPLE;
-		case ELogColor_DarkYellow:
-			return ANSI_CLR_DARK_YELLOW;
-		case ELogColor_DarkGray:
-			return ANSI_CLR_DARK_GRAY;
-
-		case ELogColor_Blue:
-			return ANSI_CLR_BLUE;
-		case ELogColor_Green:
-			return ANSI_CLR_GREEN;
-		case ELogColor_Cyan:
-			return ANSI_CLR_CYAN;
-		case ELogColor_Red:
-			return ANSI_CLR_RED;
-		case ELogColor_Purple:
-			return ANSI_CLR_PURPLE;
-		case ELogColor_Yellow:
-			return ANSI_CLR_YELLOW;
-		case ELogColor_Gray:
-			return ANSI_CLR_GRAY;
-	}
+	return g_log_color_ansi[ static_cast< int >( color ) ];
 }
 
 
@@ -305,6 +272,67 @@ void UnixSetColor( ELogColor color )
 }
 
 
+// copied from graphics/gui/consoleui.cpp
+constexpr glm::vec4 GetColorRGBA( ELogColor col )
+{
+	return g_log_color_rgba[ static_cast< int >( std::max( (u8)col, (u8)ELogColor_Count ) ) ];
+}
+
+
+constexpr ELogColor GetColor( log_channel_t* channel, ELogType sType )
+{
+	switch ( sType )
+	{
+		default:
+		case ELogType_Normal:
+		case ELogType_Verbose:
+		case ELogType_Verbose2:
+		case ELogType_Verbose3:
+		case ELogType_Verbose4:
+		case ELogType_Raw:
+			return channel->color;
+
+		case ELogType_Warning:
+			return LOG_COLOR_WARNING;
+
+		case ELogType_Error:
+		case ELogType_Fatal:
+			return LOG_COLOR_ERROR;
+	}
+}
+
+
+constexpr glm::vec4 GetColorRGBA( log_channel_t* channel, const log_t& log )
+{
+	return GetColorRGBA( GetColor( channel, log.aType ) );
+}
+
+
+u32 GetColorU32( ELogColor sColor )
+{
+	// i don't like this
+	glm::vec4 colorVec     = GetColorRGBA( sColor );
+
+	u8        colorU8[ 4 ] = {
+        static_cast< u8 >( colorVec.x * 255 ),
+        static_cast< u8 >( colorVec.y * 255 ),
+        static_cast< u8 >( colorVec.z * 255 ),
+        static_cast< u8 >( colorVec.w * 255 ),
+	};
+
+	// what
+	u32 color = *( (u32*)colorU8 );
+
+	return color;
+}
+
+
+u32 GetColorU32( log_channel_t* channel, const log_t& log )
+{
+	return GetColorU32( GetColor( channel, log.aType ) );
+}
+
+
 void Log_Init()
 {
 	gLC_General = Log_RegisterChannel( "General", ELogColor_Default );
@@ -328,7 +356,7 @@ void Log_Shutdown()
 }
 
 
-LogChannel Log_RegisterChannel( const char *sName, ELogColor sColor )
+log_channel_h_t Log_RegisterChannel( const char *sName, ELogColor sColor )
 {
 	ch_string name;
 	name.data = (char*)sName;
@@ -342,38 +370,38 @@ LogChannel Log_RegisterChannel( const char *sName, ELogColor sColor )
 
 	for ( size_t i = 0; i < GetLogChannels().size(); i++ )
     {
-		LogChannelDef_t* channel = &GetLogChannels()[ i ];
-        if ( !ch_str_equals( channel->aName, name ) )
+		log_channel_t* channel = &GetLogChannels()[ i ];
+        if ( !ch_str_equals( channel->name, name ) )
             continue;
             
         return i;
     }
 
-    LogChannelDef_t& channel = GetLogChannels().emplace_back();
-	channel.aName            = name;
-	channel.aShown           = true;
-	channel.aColor           = sColor;
+    log_channel_t& channel = GetLogChannels().emplace_back();
+	channel.name            = name;
+	channel.shown           = true;
+	channel.color           = sColor;
 
-	return (LogChannel)GetLogChannels().size() - 1U;
+	return (log_channel_h_t)GetLogChannels().size() - 1U;
 }
 
 
-LogChannel Log_GetChannel( const char* sChannel )
+log_channel_h_t Log_GetChannel( const char* sChannel )
 {
 	for ( int i = 0; i < GetLogChannels().size(); i++ )
 	{
-		LogChannelDef_t* channel = &GetLogChannels()[ i ];
-		if ( !ch_str_equals( channel->aName, sChannel ) )
+		log_channel_t* channel = &GetLogChannels()[ i ];
+		if ( !ch_str_equals( channel->name, sChannel ) )
 			continue;
 
-		return (LogChannel)i;
+		return (log_channel_h_t)i;
 	}
 
 	return INVALID_LOG_CHANNEL;
 }
 
 
-LogChannelDef_t* Log_GetChannelData( LogChannel sChannel )
+log_channel_t* Log_GetChannelData( log_channel_h_t sChannel )
 {
 	if ( sChannel >= GetLogChannels().size() )
         return nullptr;
@@ -382,41 +410,18 @@ LogChannelDef_t* Log_GetChannelData( LogChannel sChannel )
 }
 
 
-LogChannelDef_t* Log_GetChannelByName( const char* sChannel )
+log_channel_t* Log_GetChannelByName( const char* sChannel )
 {
 	for ( int i = 0; i < GetLogChannels().size(); i++ )
     {
-		LogChannelDef_t* channel = &GetLogChannels()[ i ];
-		if ( !ch_str_equals( channel->aName, sChannel ) )
+		log_channel_t* channel = &GetLogChannels()[ i ];
+		if ( !ch_str_equals( channel->name, sChannel ) )
             continue;
 
         return channel;
     }
 
     return nullptr;
-}
-
-
-constexpr ELogColor GetColor( LogChannelDef_t* channel, ELogType sType )
-{
-	switch ( sType )
-	{
-		default:
-		case ELogType_Normal:
-		case ELogType_Dev:
-		case ELogType_Dev2:
-		case ELogType_Dev3:
-		case ELogType_Dev4:
-		case ELogType_Raw:
-			return channel->aColor;
-
-		case ELogType_Warning:
-			return LOG_COLOR_WARNING;
-
-		case ELogType_Error:
-		case ELogType_Fatal:
-			return LOG_COLOR_ERROR;
-	}
 }
 
 
@@ -433,20 +438,20 @@ static bool CheckConcatRealloc( ch_string& newOutput, ch_string& output )
 }
 
 
-static bool FormatLog_Dev( LogChannelDef_t* channel, ch_string& output, const char* devLevel, const char* last, size_t dist )
+static bool FormatLog_Dev( log_channel_t* channel, ch_string& output, const char* devLevel, const char* last, size_t dist )
 {
-	const char* strings[] = { "[", channel->aName.data, "] [DEV ", devLevel, "] ", last };
-	const u64   lengths[] = { 1,   channel->aName.size, 7,         1,        2,    dist };
+	const char* strings[] = { "[", channel->name.data, "] [DEV ", devLevel, "] ", last };
+	const u64   lengths[] = { 1,   channel->name.size, 7,         1,        2,    dist };
 	ch_string   newOutput = ch_str_concat( CH_STR_UR( output ), 6, strings, lengths );
 
 	return CheckConcatRealloc( newOutput, output );
 }
 
 
-static bool FormatLog_Dev( LogChannelDef_t* channel, ch_string& output, ch_string& color, const char* devLevel, const char* last, size_t dist )
+static bool FormatLog_Dev( log_channel_t* channel, ch_string& output, ch_string& color, const char* devLevel, const char* last, size_t dist )
 {
-	const char* strings[] = { color.data, "[", channel->aName.data, "] [DEV ", devLevel, "] ", last };
-	const u64   lengths[] = { color.size, 1,   channel->aName.size, 7,         1,        2,    dist };
+	const char* strings[] = { color.data, "[", channel->name.data, "] [DEV ", devLevel, "] ", last };
+	const u64   lengths[] = { color.size, 1,   channel->name.size, 7,         1,        2,    dist };
 	ch_string   newOutput = ch_str_concat( CH_STR_UR( output ), 7, strings, lengths );
 
 	return CheckConcatRealloc( newOutput, output );
@@ -454,7 +459,7 @@ static bool FormatLog_Dev( LogChannelDef_t* channel, ch_string& output, ch_strin
 
 
 // Format for system console output
-static ch_string FormatLog( LogChannelDef_t* channel, ELogType sType, const char* spMessage, s64 len )
+static ch_string FormatLog( log_channel_t* channel, ELogType sType, const char* spMessage, s64 len )
 {
     PROF_SCOPE();
 
@@ -489,34 +494,34 @@ static ch_string FormatLog( LogChannelDef_t* channel, ELogType sType, const char
 			default:
 			case ELogType_Normal:
 			{
-				const char* strings[] = { color.data, "[", channel->aName.data, "] ", last };
-				const u64   lengths[] = { color.size, 1, channel->aName.size, 2, dist };
+				const char* strings[] = { color.data, "[", channel->name.data, "] ", last };
+				const u64   lengths[] = { color.size, 1, channel->name.size, 2, dist };
 				ch_string   newOutput = ch_str_concat( CH_STR_UR( output ), 5, strings, lengths );
 
 				CheckConcatRealloc( newOutput, output );
 				break;
 			}
 
-			case ELogType_Dev:
+			case ELogType_Verbose:
 				FormatLog_Dev( channel, output, color, "1", last, dist );
 				break;
 
-			case ELogType_Dev2:
+			case ELogType_Verbose2:
 				FormatLog_Dev( channel, output, color, "2", last, dist );
 				break;
 
-			case ELogType_Dev3:
+			case ELogType_Verbose3:
 				FormatLog_Dev( channel, output, color, "3", last, dist );
 				break;
 
-			case ELogType_Dev4:
+			case ELogType_Verbose4:
 				FormatLog_Dev( channel, output, color, "4", last, dist );
 				break;
 
 			case ELogType_Warning:
 			{
-				const char* strings[] = { color.data, "[", channel->aName.data, "] [WARNING] ", last };
-				const u64   lengths[] = { color.size, 1, channel->aName.size, 12, dist };
+				const char* strings[] = { color.data, "[", channel->name.data, "] [WARNING] ", last };
+				const u64   lengths[] = { color.size, 1, channel->name.size, 12, dist };
 				ch_string   newOutput = ch_str_concat( CH_STR_UR( output ), 5, strings, lengths );
 
 				CheckConcatRealloc( newOutput, output );
@@ -525,8 +530,8 @@ static ch_string FormatLog( LogChannelDef_t* channel, ELogType sType, const char
 
 			case ELogType_Error:
 			{
-				const char* strings[] = { color.data, "[", channel->aName.data, "] [ERROR] ", last };
-				const u64   lengths[] = { color.size, 1, channel->aName.size, 10, dist };
+				const char* strings[] = { color.data, "[", channel->name.data, "] [ERROR] ", last };
+				const u64   lengths[] = { color.size, 1, channel->name.size, 10, dist };
 				ch_string   newOutput = ch_str_concat( CH_STR_UR( output ), 5, strings, lengths );
 
 				CheckConcatRealloc( newOutput, output );
@@ -535,8 +540,8 @@ static ch_string FormatLog( LogChannelDef_t* channel, ELogType sType, const char
 
 			case ELogType_Fatal:
 			{
-				const char* strings[] = { color.data, "[", channel->aName.data, "] [FATAL] ", last };
-				const u64   lengths[] = { color.size, 1, channel->aName.size, 10, dist };
+				const char* strings[] = { color.data, "[", channel->name.data, "] [FATAL] ", last };
+				const u64   lengths[] = { color.size, 1, channel->name.size, 10, dist };
 				ch_string   newOutput = ch_str_concat( CH_STR_UR( output ), 5, strings, lengths );
 
 				CheckConcatRealloc( newOutput, output );
@@ -645,14 +650,14 @@ static ch_string Log_StripColors( const ch_string& sBuffer )
 
 
 // Formats the log as normal, but strips all color codes from it
-static ch_string FormatLogNoColors( const Log& srLog )
+static ch_string FormatLogNoColors( const log_t& srLog )
 {
 	PROF_SCOPE();
 
 	// Split by New Line characters
 	ch_string     output;
 
-	LogChannelDef_t* channel = Log_GetChannelData( srLog.aChannel );
+	log_channel_t* channel = Log_GetChannelData( srLog.channel );
 	if ( !channel )
 	{
 		ch_printf( "\n *** LogSystem: Channel Not Found for message: \"%s\"\n", srLog.aMessage.data );
@@ -698,27 +703,27 @@ static ch_string FormatLogNoColors( const Log& srLog )
 			default:
 			case ELogType_Normal:
 			{
-				const char* strings[] = { "[", channel->aName.data, "] ", last };
-				const u64   lengths[] = { 1, channel->aName.size, 2, dist };
+				const char* strings[] = { "[", channel->name.data, "] ", last };
+				const u64   lengths[] = { 1, channel->name.size, 2, dist };
 				ch_string   newOutput = ch_str_concat( CH_STR_UR( output ), 4, strings, lengths );
 
 				CheckConcatRealloc( newOutput, output );
 				break;
 			}
 
-			case ELogType_Dev:
+			case ELogType_Verbose:
 				FormatLog_Dev( channel, output, "1", last, dist );
 				break;
 
-			case ELogType_Dev2:
+			case ELogType_Verbose2:
 				FormatLog_Dev( channel, output, "2", last, dist );
 				break;
 
-			case ELogType_Dev3:
+			case ELogType_Verbose3:
 				FormatLog_Dev( channel, output, "3", last, dist );
 				break;
 
-			case ELogType_Dev4:
+			case ELogType_Verbose4:
 				FormatLog_Dev( channel, output, "4", last, dist );
 				break;
 
@@ -731,8 +736,8 @@ static ch_string FormatLogNoColors( const Log& srLog )
 
 			case ELogType_Warning:
 			{
-				const char* strings[] = { "[", channel->aName.data, "] [WARNING] ", last };
-				const u64   lengths[] = { 1, channel->aName.size, 12, dist };
+				const char* strings[] = { "[", channel->name.data, "] [WARNING] ", last };
+				const u64   lengths[] = { 1, channel->name.size, 12, dist };
 				ch_string   newOutput = ch_str_concat( CH_STR_UR( output ), 4, strings, lengths );
 
 				CheckConcatRealloc( newOutput, output );
@@ -741,8 +746,8 @@ static ch_string FormatLogNoColors( const Log& srLog )
 
 			case ELogType_Error:
 			{
-				const char* strings[] = { "[", channel->aName.data, "] [ERROR] ", last };
-				const u64   lengths[] = { 1, channel->aName.size, 10, dist };
+				const char* strings[] = { "[", channel->name.data, "] [ERROR] ", last };
+				const u64   lengths[] = { 1, channel->name.size, 10, dist };
 				ch_string   newOutput = ch_str_concat( CH_STR_UR( output ), 4, strings, lengths );
 
 				CheckConcatRealloc( newOutput, output );
@@ -751,8 +756,8 @@ static ch_string FormatLogNoColors( const Log& srLog )
 
 			case ELogType_Fatal:
 			{
-				const char* strings[] = { "[", channel->aName.data, "] [FATAL] ", last };
-				const u64   lengths[] = { 1, channel->aName.size, 10, dist };
+				const char* strings[] = { "[", channel->name.data, "] [FATAL] ", last };
+				const u64   lengths[] = { 1, channel->name.size, 10, dist };
 				ch_string   newOutput = ch_str_concat( CH_STR_UR( output ), 4, strings, lengths );
 
 				CheckConcatRealloc( newOutput, output );
@@ -771,107 +776,27 @@ static ch_string FormatLogNoColors( const Log& srLog )
 }
 
 
-// copied from graphics/gui/consoleui.cpp
-constexpr glm::vec4 GetColorRGBA( ELogColor col )
-{
-    switch (col)
-    {
-        // hmm
-        case ELogColor_Black:
-            return {0.3, 0.3, 0.3, 1};
-        case ELogColor_White:
-            return {1, 1, 1, 1};
-
-        case ELogColor_DarkBlue:
-            return {0, 0.3, 0.8, 1};
-        case ELogColor_DarkGreen:
-            return {0.25, 0.57, 0.25, 1};
-        case ELogColor_DarkCyan:
-            return {0, 0.35, 0.75, 1};
-        case ELogColor_DarkRed:
-            return {0.7, 0, 0.25, 1};
-		case ELogColor_DarkPurple:
-            return {0.45, 0, 0.7, 1};
-        case ELogColor_DarkYellow:
-            return {0.6, 0.6, 0, 1};
-        case ELogColor_DarkGray:
-            return {0.45, 0.45, 0.45, 1};
-
-        case ELogColor_Blue:
-            return {0, 0.4, 1, 1};
-        case ELogColor_Green:
-            return {0.4, 0.9, 0.4, 1};
-        case ELogColor_Cyan:
-            return {0, 0.85, 1, 1};
-        case ELogColor_Red:
-            return {0.9, 0, 0.4, 1};
-		case ELogColor_Purple:
-            return {0.6, 0, 0.9, 1};
-        case ELogColor_Yellow:
-            return {1, 1, 0, 1};
-        case ELogColor_Gray:
-            return {0.7, 0.7, 0.7, 1};
-
-        case ELogColor_Default:
-        case ELogColor_Count:
-        default:
-            return {1, 1, 1, 1};
-    }
-}
-
-
-constexpr glm::vec4 GetColorRGBA( LogChannelDef_t *channel, const Log& log )
-{
-    return GetColorRGBA( GetColor( channel, log.aType ) );
-}
-
-
-u32 GetColorU32( ELogColor sColor )
-{
-	// i don't like this
-	glm::vec4 colorVec     = GetColorRGBA( sColor );
-
-	u8        colorU8[ 4 ] = {
-			   static_cast< u8 >( colorVec.x * 255 ),
-			   static_cast< u8 >( colorVec.y * 255 ),
-			   static_cast< u8 >( colorVec.z * 255 ),
-			   static_cast< u8 >( colorVec.w * 255 ),
-	};
-
-	// what
-	u32 color = *( (u32*)colorU8 );
-
-	return color;
-}
-
-    
-u32 GetColorU32( LogChannelDef_t *channel, const Log& log )
-{
-	return GetColorU32( GetColor( channel, log.aType ) );
-}
-
-
 // Is this ELogType one of the developer levels?
 inline bool Log_IsDevType( ELogType sType )
 {
-	return ( sType == ELogType_Dev ||
-	         sType == ELogType_Dev2 ||
-	         sType == ELogType_Dev3 ||
-	         sType == ELogType_Dev4 );
+	return ( sType == ELogType_Verbose ||
+	         sType == ELogType_Verbose2 ||
+	         sType == ELogType_Verbose3 ||
+	         sType == ELogType_Verbose4 );
 }
 
 
-inline bool Log_DevLevelVisible( const Log& log )
+inline bool Log_DevLevelVisible( const log_t& log )
 {
-	LogChannelDef_t* channel = Log_GetChannelData( log.aChannel );
+	log_channel_t* channel = Log_GetChannelData( log.channel );
 
 	if ( channel )
 	{
-		if ( channel->aDevLevel >= (int)log.aType && Log_IsDevType( log.aType ) )
+		if ( channel->verbosity_level >= (int)log.aType && Log_IsDevType( log.aType ) )
 			return true;
 	}
 
-	if ( log_dev_global < (int)log.aType && Log_IsDevType( log.aType ) )
+	if ( log_verbose_global < (int)log.aType && Log_IsDevType( log.aType ) )
 		return false;
 
 	return true;
@@ -1026,7 +951,7 @@ void Log_SplitStringColors( ELogColor sMainColor, const ch_string& sBuffer, ChVe
 	if ( find == nullptr )
 	{
 		LogColorBuf_t& colorBuf = srColorList.emplace_back();
-		colorBuf.aColor         = sMainColor;
+		colorBuf.color         = sMainColor;
 		colorBuf.aLen           = sBuffer.size;
 		colorBuf.apStr          = sBuffer.data;
 		return;
@@ -1036,7 +961,7 @@ void Log_SplitStringColors( ELogColor sMainColor, const ch_string& sBuffer, ChVe
 	if ( find != buf )
 	{
 		LogColorBuf_t& colorBuf = srColorList.emplace_back();
-		colorBuf.aColor         = sMainColor;
+		colorBuf.color         = sMainColor;
 		colorBuf.aLen           = find - buf;
 		colorBuf.apStr          = buf;
 	}
@@ -1070,7 +995,7 @@ void Log_SplitStringColors( ELogColor sMainColor, const ch_string& sBuffer, ChVe
 		colorBuf.apStr          = endColor;
 
 		if ( !sNoColors )
-			colorBuf.aColor = Log_UnixToColor( find, colorLength );
+			colorBuf.color = Log_UnixToColor( find, colorLength );
 
 		if ( nextFind == nullptr )
 		{
@@ -1089,7 +1014,7 @@ void Log_SplitStringColors( ELogColor sMainColor, const ch_string& sBuffer, ChVe
 
 
 // print to system console and tracy
-void Log_SysPrint( ELogColor sMainColor, const Log& srLog, FILE* spStream )
+void Log_SysPrint( ELogColor sMainColor, const log_t& srLog, FILE* spStream )
 {
 #ifdef _WIN32
 	
@@ -1099,7 +1024,7 @@ void Log_SysPrint( ELogColor sMainColor, const Log& srLog, FILE* spStream )
 
 	for ( LogColorBuf_t& colorBuffer : colorList )
 	{
-		Log_SetColor( colorBuffer.aColor );
+		Log_SetColor( colorBuffer.color );
 		fprintf( spStream, "%*.*s", colorBuffer.aLen, colorBuffer.aLen, colorBuffer.apStr );
 	}
 
@@ -1131,17 +1056,17 @@ void Log_SysPrint( ELogColor sMainColor, const Log& srLog, FILE* spStream )
 }
 
 
-CONCMD( log_test_colors )
+CONCMD_NAME( log_test_colors, "ch.log.test_colors" )
 {
 	Log_Msg( ANSI_CLR_DARK_GREEN "TEST " ANSI_CLR_CYAN "TEST CYAN " ANSI_CLR_DARK_PURPLE ANSI_CLR_DARK_BLUE "TEST DARK BLUE \n" );
 }
 
 
-void Log_AddLogInternal( Log& log )
+void Log_AddLogInternal( log_t& log )
 {
     PROF_SCOPE();
 
-    LogChannelDef_t* channel = Log_GetChannelData( log.aChannel );
+    log_channel_t* channel = Log_GetChannelData( log.channel );
     if ( !channel )
     {
         ch_printf( "\n *** LogSystem: Channel Not Found for message: \"%s\"\n", log.aMessage.data );
@@ -1150,24 +1075,24 @@ void Log_AddLogInternal( Log& log )
 
     log.aFormatted = FormatLog( channel, log.aType, CH_STR_UR( log.aMessage ) );
 
-    if ( channel->aShown )
+    if ( channel->shown )
 	{
         switch ( log.aType )
         {
             default:
             case ELogType_Normal:
             case ELogType_Raw:
-				Log_SysPrint( channel->aColor, log, stdout );
+				Log_SysPrint( channel->color, log, stdout );
                 break;
 
-            case ELogType_Dev:
-            case ELogType_Dev2:
-            case ELogType_Dev3:
-            case ELogType_Dev4:
+            case ELogType_Verbose:
+            case ELogType_Verbose2:
+            case ELogType_Verbose3:
+            case ELogType_Verbose4:
 				if ( !Log_DevLevelVisible( log ) )
                     break;
 
-				Log_SysPrint( channel->aColor, log, stdout );
+				Log_SysPrint( channel->color, log, stdout );
                 break;
 
             case ELogType_Warning:
@@ -1181,8 +1106,8 @@ void Log_AddLogInternal( Log& log )
             case ELogType_Fatal:
 				Log_SysPrint( LOG_COLOR_ERROR, log, stderr );
 
-				const char*    strings[]       = { "[", channel->aName.data, "] Fatal Error" };
-				const u64      lengths[]       = { 1, channel->aName.size, 13 };
+				const char*    strings[]       = { "[", channel->name.data, "] Fatal Error" };
+				const u64      lengths[]       = { 1, channel->name.size, 13 };
 				ch_string_auto messageBoxTitle = ch_str_join( 3, strings, lengths );
 
                 if ( ch_str_ends_with( log.aMessage, "\n", 1 ) )
@@ -1222,7 +1147,7 @@ ELogColor Log_GetColor()
 }
 
 
-LogChannel LogGetChannel( const char* name )
+log_channel_h_t LogGetChannel( const char* name )
 {
 	if ( !name )
 		return INVALID_LOG_CHANNEL;
@@ -1231,9 +1156,9 @@ LogChannel LogGetChannel( const char* name )
 
 	for ( size_t i = 0; const auto& channel : GetLogChannels() )
     {
-        // if ( GetLogSystem().aChannels[i].aName == name )
-        if ( ch_str_equals( channel.aName, name, nameLen ) )
-            return (LogChannel)i;
+        // if ( GetLogSystem().aChannels[i].name == name )
+        if ( ch_str_equals( channel.name, name, nameLen ) )
+            return (log_channel_h_t)i;
 
         i++;
     }
@@ -1242,23 +1167,23 @@ LogChannel LogGetChannel( const char* name )
 }
 
 
-ELogColor Log_GetChannelColor( LogChannel handle )
+ELogColor Log_GetChannelColor( log_channel_h_t handle )
 {
-	LogChannelDef_t* channel = Log_GetChannelData( handle );
+	log_channel_t* channel = Log_GetChannelData( handle );
     if ( !channel )
         return ELogColor_Default;
 
-    return channel->aColor;
+    return channel->color;
 }
 
 
-ch_string Log_GetChannelName( LogChannel handle )
+ch_string Log_GetChannelName( log_channel_h_t handle )
 {
-	LogChannelDef_t* channel = Log_GetChannelData( handle );
+	log_channel_t* channel = Log_GetChannelData( handle );
     if ( !channel )
         return gDefaultChannelName;
 
-    return channel->aName;
+    return channel->name;
 }
 
 
@@ -1268,36 +1193,36 @@ unsigned char Log_GetChannelCount()
 }
 
 
-const std::vector< Log >& Log_GetLogHistory()
+const std::vector< log_t >& Log_GetLogHistory()
 {
     return gLogHistory;
 }
 
 
-bool Log_ChannelIsShown( LogChannel handle )
+bool Log_ChannelIsShown( log_channel_h_t handle )
 {
-	LogChannelDef_t* channel = Log_GetChannelData( handle );
-	return channel && channel->aShown;
+	log_channel_t* channel = Log_GetChannelData( handle );
+	return channel && channel->shown;
 }
 
 
-int Log_GetChannelDevLevel( LogChannel handle )
+int Log_GetChannelDevLevel( log_channel_h_t handle )
 {
-	LogChannelDef_t* channel = Log_GetChannelData( handle );
+	log_channel_t* channel = Log_GetChannelData( handle );
 	if ( !channel )
-		return log_dev_global;
+		return log_verbose_global;
 
-	return std::max( log_dev_global, channel->aDevLevel );
+	return std::max( (u8)log_verbose_global, channel->verbosity_level );
 }
 
 
 int Log_GetDevLevel()
 {
-	return log_dev_global;
+	return log_verbose_global;
 }
 
 
-const Log* Log_GetLastLog()
+const log_t* Log_GetLastLog()
 {
     if ( gLogHistory.size() == 0 )
         return nullptr;
@@ -1306,12 +1231,12 @@ const Log* Log_GetLastLog()
 }
 
 
-bool Log_IsVisible( const Log& log )
+bool Log_IsVisible( const log_t& log )
 {
 	if ( !Log_DevLevelVisible( log ) )
         return false;
 
-    return Log_ChannelIsShown( log.aChannel );
+    return Log_ChannelIsShown( log.channel );
 }
 
 
@@ -1339,33 +1264,37 @@ void ch_print( const char* buffer )
 
 
 // ----------------------------------------------------------------
-// Log Group Functions
+// log_t Group Functions
 
 
-Log& Log_GroupBeginEx( LogChannel channel, ELogType type )
+log_t Log_GroupBeginEx( log_channel_h_t channel, ELogType type )
 {
-	Log log{
-		.aChannel = channel,
+	return {
+		.channel = channel,
 		.aType    = type,
 	};
-
-	return log;
 }
 
 
-Log& Log_GroupBegin( LogChannel channel )
+log_t Log_GroupBegin( log_channel_h_t channel )
 {
-	return Log_GroupBeginEx( channel, ELogType_Normal );
+	return {
+		.channel = channel,
+		.aType   = ELogType_Normal,
+	};
 }
 
 
-Log& Log_GroupBegin()
+log_t Log_GroupBegin()
 {
-	return Log_GroupBeginEx( gLC_General, ELogType_Normal );
+	return {
+		.channel = gLC_General,
+		.aType   = ELogType_Normal,
+	};
 }
 
 
-void Log_GroupEnd( Log& sGroup )
+void Log_GroupEnd( log_t& sGroup )
 {
 	gLogMutex.lock();
 
@@ -1377,7 +1306,7 @@ void Log_GroupEnd( Log& sGroup )
 }
 
 
-void Log_Group( Log& sGroup, const char* spBuf )
+void Log_Group( log_t& sGroup, const char* spBuf )
 {
 	PROF_SCOPE();
 
@@ -1390,7 +1319,7 @@ void Log_Group( Log& sGroup, const char* spBuf )
 }
 
 
-void Log_GroupF( Log& sGroup, const char* spFmt, ... )
+void Log_GroupF( log_t& sGroup, const char* spFmt, ... )
 {
 	va_list args;
 	va_start( args, spFmt );
@@ -1399,7 +1328,7 @@ void Log_GroupF( Log& sGroup, const char* spFmt, ... )
 }
 
 
-void Log_GroupV( Log& sGroup, const char* spFmt, va_list args )
+void Log_GroupV( log_t& sGroup, const char* spFmt, va_list args )
 {
 	PROF_SCOPE();
 
@@ -1429,31 +1358,31 @@ void Log_GroupV( Log& sGroup, const char* spFmt, va_list args )
     va_end( args )
 
 
-bool Log_ShouldAddLog( LogChannel sChannel, ELogType sLevel )
+bool Log_ShouldAddLog( log_channel_h_t sChannel, ELogType sLevel )
 {
 	// Is this a developer level?
 	if ( !Log_IsDevType( sLevel ) )
 		return true;
 
 	// Is the global dev level less than the log's developer level?
-	if ( log_dev_global < static_cast< int >( sLevel ) )
+	if ( log_verbose_global < static_cast< int >( sLevel ) )
 	{
 		// Check if the channel dev level is less than the log's developer level
-		LogChannelDef_t* channel = Log_GetChannelData( sChannel );
+		log_channel_t* channel = Log_GetChannelData( sChannel );
 		if ( !channel )
 		{
 			Log_Error( "Unable to find channel when checking developer level\n" );
 			return false;
 		}
 
-		// log_dev_global is the base value for every channel
-		if ( channel->aDevLevel <= log_dev_global )
+		// log_verbose_global is the base value for every channel
+		if ( channel->verbosity_level <= log_verbose_global )
 			return false;
 
 		// Don't even save this log, it's probably flooding the log history
 		// and slowing down perf with adding it, and the 2 vnsprintf calls
 		// TODO: maybe we can have an convar option to save this anyway?
-		if ( channel->aDevLevel < static_cast< int >( sLevel ) )
+		if ( channel->verbosity_level < static_cast< int >( sLevel ) )
 			return false;
 	}
 
@@ -1461,7 +1390,7 @@ bool Log_ShouldAddLog( LogChannel sChannel, ELogType sLevel )
 }
 
 
-void Log_Ex( LogChannel sChannel, ELogType sLevel, const char* spBuf )
+void Log_Ex( log_channel_h_t sChannel, ELogType sLevel, const char* spBuf )
 {
 	PROF_SCOPE();
 
@@ -1477,7 +1406,7 @@ void Log_Ex( LogChannel sChannel, ELogType sLevel, const char* spBuf )
 	ch_string message = ch_str_copy( spBuf );
 
 	gLogHistory.emplace_back( sChannel, sLevel, message );
-	Log& log = gLogHistory[ gLogHistory.size() - 1 ];
+	log_t& log = gLogHistory[ gLogHistory.size() - 1 ];
 
 	Log_AddLogInternal( log );
 
@@ -1485,13 +1414,13 @@ void Log_Ex( LogChannel sChannel, ELogType sLevel, const char* spBuf )
 }
 
 
-void Log_ExF( LogChannel sChannel, ELogType sLevel, const char* spFmt, ... )
+void Log_ExF( log_channel_h_t sChannel, ELogType sLevel, const char* spFmt, ... )
 {
 	LOG_SYS_MSG_VA( spFmt, sChannel, sLevel );
 }
 
 
-void Log_ExV( LogChannel sChannel, ELogType sLevel, const char* spFmt, va_list args )
+void Log_ExV( log_channel_h_t sChannel, ELogType sLevel, const char* spFmt, va_list args )
 {
 	PROF_SCOPE();
 
@@ -1505,7 +1434,7 @@ void Log_ExV( LogChannel sChannel, ELogType sLevel, const char* spFmt, va_list a
 	}
 
 	gLogHistory.emplace_back( sChannel, sLevel );
-	Log&    log = gLogHistory[ gLogHistory.size() - 1 ];
+	log_t&    log = gLogHistory[ gLogHistory.size() - 1 ];
 
 	va_list copy;
 	va_copy( copy, args );
@@ -1538,51 +1467,51 @@ void Log_ExV( LogChannel sChannel, ELogType sLevel, const char* spFmt, va_list a
 // Standard Logging Functions
 
 // Lowest severity.
-void CORE_API Log_Msg( LogChannel channel, const char* spBuf )
+void CORE_API Log_Msg( log_channel_h_t channel, const char* spBuf )
 {
 	Log_Ex( channel, ELogType_Normal, spBuf );
 }
 
-void CORE_API Log_MsgF( LogChannel channel, const char* spFmt, ... )
+void CORE_API Log_MsgF( log_channel_h_t channel, const char* spFmt, ... )
 {
 	LOG_SYS_MSG_VA( spFmt, channel, ELogType_Normal );
 }
 
 // Medium severity.
-void CORE_API Log_Warn( LogChannel channel, const char* spBuf )
+void CORE_API Log_Warn( log_channel_h_t channel, const char* spBuf )
 {
 	Log_Ex( channel, ELogType_Warning, spBuf );
 }
 
-void CORE_API Log_WarnF( LogChannel channel, const char* spFmt, ... )
+void CORE_API Log_WarnF( log_channel_h_t channel, const char* spFmt, ... )
 {
 	LOG_SYS_MSG_VA( spFmt, channel, ELogType_Warning );
 }
 
 // High severity.
-void CORE_API Log_Error( LogChannel channel, const char* spBuf )
+void CORE_API Log_Error( log_channel_h_t channel, const char* spBuf )
 {
 	Log_Ex( channel, ELogType_Error, spBuf );
 }
 
-void CORE_API Log_ErrorF( LogChannel channel, const char* spFmt, ... )
+void CORE_API Log_ErrorF( log_channel_h_t channel, const char* spFmt, ... )
 {
 	LOG_SYS_MSG_VA( spFmt, channel, ELogType_Error );
 }
 
 // Extreme severity.
-void CORE_API Log_Fatal( LogChannel channel, const char* spBuf )
+void CORE_API Log_Fatal( log_channel_h_t channel, const char* spBuf )
 {
 	Log_Ex( channel, ELogType_Fatal, spBuf );
 }
 
-void CORE_API Log_FatalF( LogChannel channel, const char* spFmt, ... )
+void CORE_API Log_FatalF( log_channel_h_t channel, const char* spFmt, ... )
 {
 	LOG_SYS_MSG_VA( spFmt, channel, ELogType_Fatal );
 }
 
 // Dev only.
-void CORE_API Log_Dev( LogChannel channel, u8 sLvl, const char* spBuf )
+void CORE_API Log_Dev( log_channel_h_t channel, u8 sLvl, const char* spBuf )
 {
 	if ( sLvl < 1 || sLvl > 4 )
 		sLvl = 4;
@@ -1590,7 +1519,7 @@ void CORE_API Log_Dev( LogChannel channel, u8 sLvl, const char* spBuf )
 	Log_Ex( channel, (ELogType)sLvl, spBuf );
 }
 
-void CORE_API Log_DevF( LogChannel channel, u8 sLvl, const char* spFmt, ... )
+void CORE_API Log_DevF( log_channel_h_t channel, u8 sLvl, const char* spFmt, ... )
 {
 	if ( sLvl < 1 || sLvl > 4 )
 		sLvl = 4;
@@ -1665,7 +1594,7 @@ void CORE_API Log_DevF( u8 sLvl, const char* spFmt, ... )
 
 
 // =====================================================================================
-// Log ConCommands
+// log_t ConCommands
 
 
 void log_channel_dropdown(
@@ -1675,50 +1604,50 @@ void log_channel_dropdown(
 {
 	for ( const auto& channel : GetLogChannels() )
 	{
-		if ( args.size() && !( ch_str_starts_with( channel.aName, args[ 0 ].data(), args[ 0 ].size() ) ) )
+		if ( args.size() && !( ch_str_starts_with( channel.name, args[ 0 ].data(), args[ 0 ].size() ) ) )
 			continue;
 
-		results.push_back( channel.aName.data );
+		results.push_back( channel.name.data );
 	}
 }
 
 
-CONCMD_DROP( log_channel_hide, log_channel_dropdown )
+CONCMD_NAME_DROP( log_channel_hide, "ch.log.channel.hide", log_channel_dropdown )
 {
     if ( args.size() == 0 )
         return;
 
-    LogChannelDef_t* channel = Log_GetChannelByName( args[0].c_str() );
+    log_channel_t* channel = Log_GetChannelByName( args[0].c_str() );
     if ( !channel )
         return;
 
-    channel->aShown = false;
+    channel->shown = false;
 
 	Log_RunCallbacksChannelShown();
 }
 
 
-CONCMD_DROP( log_channel_show, log_channel_dropdown )
+CONCMD_NAME_DROP( log_channel_show, "ch.log.channel.show", log_channel_dropdown )
 {
     if ( args.size() == 0 )
         return;
 
-    LogChannelDef_t* channel = Log_GetChannelByName( args[ 0 ].c_str() );
+    log_channel_t* channel = Log_GetChannelByName( args[ 0 ].c_str() );
     if ( !channel )
         return;
 
-    channel->aShown = true;
+    channel->shown = true;
 
 	Log_RunCallbacksChannelShown();
 }
 
 
 constexpr const char* LOG_CHANNEL_DUMP_HEADER     = "Channel Name%*s  | Shown  | Developer Level | Color\n";
-constexpr s64         LOG_CHANNEL_DUMP_HEADER_LEN = 53;
+constexpr size_t      LOG_CHANNEL_DUMP_HEADER_LEN = 53;
 
 
 // TODO: this is not very good, clean this up, adding developer levels broke it and i haven't fixed it yet
-CONCMD( log_channel_dump )
+CONCMD_NAME( log_channel_dump, "ch.log.dump.channels" )
 {
     // Calculate max name length
 	size_t           maxNameLength = 0;
@@ -1727,12 +1656,12 @@ CONCMD( log_channel_dump )
 
     for ( const auto& channel : GetLogChannels() )
 	{
-		maxNameLength = std::max( logNameLen, std::max( maxNameLength, channel.aName.size ) );
+		maxNameLength = std::max( logNameLen, std::max( maxNameLength, channel.name.size ) );
 		// maxLength = std::max( maxLength, maxNameLength + 23 );
 		maxLength = std::max( maxLength, maxNameLength + ( LOG_CHANNEL_DUMP_HEADER_LEN - logNameLen ) );
 	}
 
-	Log& group = Log_GroupBegin( gLC_Logging );
+	log_t group = Log_GroupBegin( gLC_Logging );
 
     // Log_GroupF( group, "Channel Name%*s  | Shown  | Color \n", maxNameLength > logNameLen ? maxNameLength - logNameLen : logNameLen, "" );
 	Log_GroupF( group, LOG_CHANNEL_DUMP_HEADER, maxNameLength > logNameLen ? maxNameLength - logNameLen : logNameLen, "" );
@@ -1756,26 +1685,26 @@ CONCMD( log_channel_dump )
 
     delete[] separator;
 
-    // Display Log Channels
+    // Display log_t Channels
     for ( const auto& channel : GetLogChannels() )
 	{
 		Log_GroupF(
 		  group,
 		  "%s%s%*s | %s | %d | %s\n",
-		  Log_ColorToUnix( channel.aColor ),
-		  channel.aName.data,
-		  maxNameLength - channel.aName.size,
+		  Log_ColorToUnix( channel.color ),
+		  channel.name.data,
+		  maxNameLength - channel.name.size,
 		  "",
-		  channel.aShown ? "Shown " : "Hidden",
-		  channel.aDevLevel,
-		  Log_ColorToStr( channel.aColor ) );
+		  channel.shown ? "Shown " : "Hidden",
+		  channel.verbosity_level,
+		  Log_ColorToStr( channel.color ) );
     }
 
 	Log_GroupEnd( group );
 }
 
 
-CONCMD( log_color_dump )
+CONCMD_NAME( log_color_dump, "ch.log.dump.colors" )
 {
 	Log_Msg( "Color Dump\n" );
 	Log_Msg( "------------\n" );
@@ -1812,7 +1741,7 @@ size_t Util_CurrentDateTime( char* spBuf, int sSize )
 }
 
 
-CONCMD_VA( log_dump, "Dump Logging History to file" )
+CONCMD_NAME_VA( log_dump, "ch.log.dump", "Dump Logging History to file" )
 {
 	std::string outputPath;
 
@@ -1859,38 +1788,38 @@ CONCMD_VA( log_dump, "Dump Logging History to file" )
 }
 
 
-static void log_dev_dropdown(
+static void log_verbose_dropdown(
   const std::vector< std::string >& args,         // arguments currently typed in by the user
   const std::string&                fullCommand,  // the full command line the user has typed in
   std::vector< std::string >&       results )     // results to populate the dropdown list with
 {
-	for ( const LogChannelDef_t& channel : GetLogChannels() )
+	for ( const log_channel_t& channel : GetLogChannels() )
 	{
-		// if ( args.size() && !channel.aName.starts_with( args[ 0 ] ) )
+		// if ( args.size() && !channel.name.starts_with( args[ 0 ] ) )
 		if ( args.size() )
 		{
-			if ( args[ 0 ].size() > channel.aName.size )
+			if ( args[ 0 ].size() > channel.name.size )
 				continue;
 
-			if ( ch_strncasecmp( channel.aName.data, args[ 0 ].data(), args[ 0 ].size() ) != 0 )
+			if ( ch_strncasecmp( channel.name.data, args[ 0 ].data(), args[ 0 ].size() ) != 0 )
 				continue;
 		}
 
-		std::string value = vstring( "%s %d", channel.aName.data, channel.aDevLevel );
+		std::string value = vstring( "%s %d", channel.name.data, channel.verbosity_level );
 		results.push_back( value );
 	}
 }
 
 
-CONCMD_DROP_VA( log_dev, log_dev_dropdown, 0, "Change Log Developer Level of a Channel" )
+CONCMD_NAME_DROP_VA( ch_log_verbose, "ch.log.verbosity", log_verbose_dropdown, 0, "Change Log Developer Level of a Channel" )
 {
 	if ( !args.size() )
 	{
-		Log_Msg( log_dev_cmd.GetPrintMessage().c_str() );
+		Log_Msg( ch_log_verbose_cmd.GetPrintMessage().c_str() );
 		return;
 	}
 
-	LogChannelDef_t* channel = Log_GetChannelByName( args[ 0 ].c_str() );
+	log_channel_t* channel = Log_GetChannelByName( args[ 0 ].c_str() );
 
 	if ( !channel )
 	{
@@ -1903,17 +1832,17 @@ CONCMD_DROP_VA( log_dev, log_dev_dropdown, 0, "Change Log Developer Level of a C
 		long out = 0;
 		if ( !ToLong2( args[ 1 ], out ) )
 		{
-			Log_ErrorF( "Failed to convert requested developer to int: %s\n", args[ 1 ].c_str() );
+			Log_ErrorF( "Failed to convert requested verbosity to int: %s\n", args[ 1 ].c_str() );
 		}
 		else
 		{
-			channel->aDevLevel = std::clamp( out, 0L, 4L );
-			Log_MsgF( "Set Developer Level of Log Channel \"%s\" to %d\n", channel->aName.data, channel->aDevLevel );
+			channel->verbosity_level = std::clamp( out, 0L, 4L );
+			Log_MsgF( "Set Verbosity Level of Log Channel \"%s\" to %d\n", channel->name.data, channel->verbosity_level );
 		}
 	}
 	else
 	{
-		Log_MsgF( "Log Channel \"%s\" - Developer Level: %d\n", channel->aName.data, channel->aDevLevel );
+		Log_MsgF( "Log Channel \"%s\" - Verbosity Level: %d\n", channel->name.data, channel->verbosity_level );
 	}
 }
 

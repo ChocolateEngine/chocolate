@@ -29,7 +29,7 @@ LOG_CHANNEL_REGISTER( GraphicsAPI, ELogColor_Cyan );
 LOG_CHANNEL_REGISTER( Vulkan, ELogColor_DarkYellow );
 LOG_CHANNEL_REGISTER( Validation, ELogColor_DarkYellow );
 
-LogChannel                                               gLC_Render = gLC_GraphicsAPI;
+log_channel_h_t                                               gLC_Render = gLC_GraphicsAPI;
 
 static VkCommandPool                                     gSingleTime;
 static VkCommandPool                                     gPrimary;
@@ -1437,8 +1437,8 @@ public:
 
 		info.aFormat   = VK_ToGraphicsFmt( tex->aFormat );
 
-		if ( tex->aName.data )
-			info.aName = ch_str_copy( tex->aName.data, tex->aName.size );
+		if ( tex->name.data )
+			info.name = ch_str_copy( tex->name.data, tex->name.size );
 
 		info.aSize         = tex->aSize;
 		info.aGpuIndex     = tex->aIndex;
@@ -1454,9 +1454,9 @@ public:
 			{
 				info.aPath = ch_str_copy( path.data(), path.size() );
 
-				if ( !info.aName.data )
+				if ( !info.name.data )
 				{
-					info.aName = FileSys_GetFileName( path.data(), path.size() );
+					info.name = FileSys_GetFileName( path.data(), path.size() );
 				}
 
 				break;
@@ -1468,8 +1468,8 @@ public:
 
 	void FreeTextureInfo( TextureInfo_t& srInfo ) override
 	{
-		if ( srInfo.aName.data )
-			ch_str_free( srInfo.aName.data );
+		if ( srInfo.name.data )
+			ch_str_free( srInfo.name.data );
 
 		if ( srInfo.aPath.data )
 			ch_str_free( srInfo.aPath.data );
@@ -1923,16 +1923,16 @@ public:
 			{
 				if ( srBegin.aClear[ i ].aIsDepth )
 				{
-					clearValues[ i ].depthStencil.depth   = srBegin.aClear[ i ].aColor.w;
+					clearValues[ i ].depthStencil.depth   = srBegin.aClear[ i ].color.w;
 					clearValues[ i ].depthStencil.stencil = srBegin.aClear[ i ].aStencil;
 				}
 				else
 				{
 					clearValues[ i ].color = {
-						srBegin.aClear[ i ].aColor.x,
-						srBegin.aClear[ i ].aColor.y,
-						srBegin.aClear[ i ].aColor.z,
-						srBegin.aClear[ i ].aColor.w
+						srBegin.aClear[ i ].color.x,
+						srBegin.aClear[ i ].color.y,
+						srBegin.aClear[ i ].color.z,
+						srBegin.aClear[ i ].color.w
 					};
 				}
 			}

@@ -65,7 +65,7 @@ using ConCommandDropdownFunc = void(
 // Callback function to add data to the config.cfg file written from CVARF_ARCHIVE
 using FArchive = void( std::string& srOutput );
 
-using ConVarFlag_t = size_t;
+using ConVarFlag_t = u64;
 
 
 struct ConVarFlagData_t
@@ -229,13 +229,9 @@ public:
 
 	ConCommandFunc*         apFunc;
 	ConCommandDropdownFunc* apDropDownFunc;
-	const char*             aName;
+	const char*             name;
 	const char*             aDesc;
 	ConVarFlag_t            aFlags;
-
-	const char*  GetName();
-	const char*  GetDesc();
-	ConVarFlag_t GetFlags();
 
 private:
 
@@ -249,20 +245,42 @@ private:
 	ConCommand name##_cmd( #name, name##_func );                                                      \
 	void       name##_func( const std::vector< std::string >& args, const std::string& fullCommand )
 
-#define CONCMD_VA( name, ... )                                                                 \
-	void       name( const std::vector< std::string >& args, const std::string& fullCommand ); \
-	ConCommand name##_cmd( #name, name, __VA_ARGS__ );                                         \
-	void       name( const std::vector< std::string >& args, const std::string& fullCommand )
+#define CONCMD_VA( name, ... )                                                                        \
+	void       name##_func( const std::vector< std::string >& args, const std::string& fullCommand ); \
+	ConCommand name##_cmd( #name, name##_func, __VA_ARGS__ );                                         \
+	void       name##_func( const std::vector< std::string >& args, const std::string& fullCommand )
 
-#define CONCMD_DROP( name, func )                                                              \
-	void       name( const std::vector< std::string >& args, const std::string& fullCommand ); \
-	ConCommand name##_cmd( #name, name, func );                                                \
-	void       name( const std::vector< std::string >& args, const std::string& fullCommand )
+#define CONCMD_DROP( name, drop_func )                                                                \
+	void       name##_func( const std::vector< std::string >& args, const std::string& fullCommand ); \
+	ConCommand name##_cmd( #name, name##_func, drop_func );                                           \
+	void       name##_func( const std::vector< std::string >& args, const std::string& fullCommand )
 
-#define CONCMD_DROP_VA( name, func, ... )                                                      \
-	void       name( const std::vector< std::string >& args, const std::string& fullCommand ); \
-	ConCommand name##_cmd( #name, name, __VA_ARGS__, func );                                   \
-	void       name( const std::vector< std::string >& args, const std::string& fullCommand )
+#define CONCMD_DROP_VA( name, drop_func, ... )                                                        \
+	void       name##_func( const std::vector< std::string >& args, const std::string& fullCommand ); \
+	ConCommand name##_cmd( #name, name##_func, __VA_ARGS__, drop_func );                              \
+	void       name##_func( const std::vector< std::string >& args, const std::string& fullCommand )
+
+
+#define CONCMD_NAME( var, name )                                                                     \
+	void       var##_func( const std::vector< std::string >& args, const std::string& fullCommand ); \
+	ConCommand var##_cmd( name, var##_func );                                                        \
+	void       var##_func( const std::vector< std::string >& args, const std::string& fullCommand )
+
+#define CONCMD_NAME_VA( var, name, ... )                                                             \
+	void       var##_func( const std::vector< std::string >& args, const std::string& fullCommand ); \
+	ConCommand var##_cmd( name, var##_func, __VA_ARGS__ );                                           \
+	void       var##_func( const std::vector< std::string >& args, const std::string& fullCommand )
+
+#define CONCMD_NAME_DROP( var, name, drop_func )                                                     \
+	void       var##_func( const std::vector< std::string >& args, const std::string& fullCommand ); \
+	ConCommand var##_cmd( name, var##_func, drop_func );                                             \
+	void       var##_func( const std::vector< std::string >& args, const std::string& fullCommand )
+
+#define CONCMD_NAME_DROP_VA( var, name, drop_func, ... )                                             \
+	void       var##_func( const std::vector< std::string >& args, const std::string& fullCommand ); \
+	ConCommand var##_cmd( name, var##_func, __VA_ARGS__, drop_func );                                \
+	void       var##_func( const std::vector< std::string >& args, const std::string& fullCommand )
+
 
 #define CON_COMMAND( name ) CONCMD( name )
 
@@ -272,7 +290,7 @@ private:
 
 struct ConVarDescriptor_t
 {
-	std::string_view aName;
+	std::string_view name;
 	bool             aIsConVar = false;
 	void*            apData    = nullptr;
 };

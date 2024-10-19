@@ -1460,7 +1460,7 @@ bool Con_ProcessConVar( ConVarData_t* cvar, const char* name, const std::vector<
 				float valueFl = 0.f;
 				if ( !ToFloat( args[ 0 ].data(), valueFl ) )
 				{
-					LogGroup group = Log_GroupBeginEx( gLC_Console, ELogType_Error );
+					log_t group = Log_GroupBeginEx( gLC_Console, ELogType_Error );
 
 					Log_GroupF( group, "ConVar \"%s\", Invalid argument \"%s\" for Bool type, expected a number, or any of these options:\n", name, args[ 0 ].data() );
 

@@ -129,7 +129,7 @@ PhysDebugDraw::Batch PhysDebugDraw::CreateTriangleBatch(
 		verts[ i ].aPos = fromJolt( inVertices[ i ].mPosition );
 		verts[ i ].aNorm = fromJolt( inVertices[ i ].mNormal );
 		verts[ i ].aUV = fromJolt( inVertices[ i ].mUV );
-		verts[ i ].aColor = fromJolt( inVertices[ i ].mColor.ToVec4() );
+		verts[ i ].color = fromJolt( inVertices[ i ].mColor.ToVec4() );
 	}
 
 	memcpy( ind.data(), inIndices, inIndexCount * sizeof( JPH::uint32 ) );

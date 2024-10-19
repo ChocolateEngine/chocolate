@@ -10,7 +10,7 @@ struct LoadedSystem_t
 {
 	ISystem*  apSystem;
 	Module    apModule;
-	ch_string aName;
+	ch_string name;
 	size_t    apVer;
 	bool      aRequired = true;
 	bool      aRunning  = false;
@@ -54,9 +54,9 @@ bool Mod_InitLoadedSystem( LoadedSystem_t& appModule )
 	}
 
 	if ( appModule.aRequired )
-		Log_ErrorF( "Failed to Init Required System: %s\n", appModule.aName.data );
+		Log_ErrorF( "Failed to Init Required System: %s\n", appModule.name.data );
 	else
-		Log_ErrorF( "Failed to Init Optional System: %s\n", appModule.aName.data );
+		Log_ErrorF( "Failed to Init Optional System: %s\n", appModule.name.data );
 
 	return false;
 }
@@ -97,8 +97,8 @@ void Mod_Shutdown()
 
 		LoadedSystem_t& appModule = gLoadedSystems[ i ];
 
-		if ( appModule.aName.data )
-			ch_str_free( appModule.aName.data );
+		if ( appModule.name.data )
+			ch_str_free( appModule.name.data );
 
 		if ( !appModule.apSystem )
 			continue;
@@ -279,7 +279,7 @@ EModLoadError Mod_LoadSystem( AppModule_t& srModule )
 	loadedModule.apSystem   = static_cast< ISystem* >( system );
 	loadedModule.aRequired  = srModule.aRequired;
 	loadedModule.apVer      = srModule.apInterfaceVer;
-	loadedModule.aName      = ch_str_copy( srModule.apInterfaceName );
+	loadedModule.name      = ch_str_copy( srModule.apInterfaceName );
 
 	// realloc loaded systems
 	LoadedSystem_t* newData = ch_realloc< LoadedSystem_t >( gLoadedSystems, gLoadedSystemsCount + 1 );
@@ -287,7 +287,7 @@ EModLoadError Mod_LoadSystem( AppModule_t& srModule )
 	if ( !newData )
 	{
 		Log_ErrorF( gLC_Module, "Failed to realloc loaded systems\n" );
-		ch_str_free( loadedModule.aName.data );
+		ch_str_free( loadedModule.name.data );
 		return EModLoadError_LoadModule;
 	}
 
@@ -348,7 +348,7 @@ bool Mod_InitSystem( AppModule_t& srModule )
 	{
 		LoadedSystem_t& loadedSystem = gLoadedSystems[ i ];
 
-		if ( ch_str_equals( loadedSystem.aName, srModule.apInterfaceName, nameLen ) )
+		if ( ch_str_equals( loadedSystem.name, srModule.apInterfaceName, nameLen ) )
 		{
 			return Mod_InitLoadedSystem( loadedSystem );
 		}
@@ -373,7 +373,7 @@ EModLoadError Mod_LoadAndInitSystem( AppModule_t& srModule )
 	{
 		LoadedSystem_t& loadedSystem = gLoadedSystems[ i ];
 
-		if ( ch_str_equals( loadedSystem.aName, srModule.apInterfaceName, nameLen ) )
+		if ( ch_str_equals( loadedSystem.name, srModule.apInterfaceName, nameLen ) )
 		{
 			Mod_InitLoadedSystem( loadedSystem );
 			return EModLoadError_Success;

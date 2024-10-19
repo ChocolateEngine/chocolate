@@ -138,7 +138,7 @@ struct Shader_SurfaceDraw_t
 // Light Types
 struct UBO_LightDirectional_t
 {
-	alignas( 16 ) glm::vec4 aColor{};
+	alignas( 16 ) glm::vec4 color{};
 	alignas( 16 ) glm::vec3 aDir{};
 	alignas( 16 ) glm::mat4 aProjView{};
 	int aShadow = -1;
@@ -147,7 +147,7 @@ struct UBO_LightDirectional_t
 
 struct UBO_LightPoint_t
 {
-	alignas( 16 ) glm::vec4 aColor{};
+	alignas( 16 ) glm::vec4 color{};
 	alignas( 16 ) glm::vec3 aPos{};
 	float aRadius = 0.f;
 	// int   aShadow = -1;
@@ -156,7 +156,7 @@ struct UBO_LightPoint_t
 
 struct UBO_LightCone_t
 {
-	alignas( 16 ) glm::vec4 aColor{};
+	alignas( 16 ) glm::vec4 color{};
 	alignas( 16 ) glm::vec3 aPos{};
 	alignas( 16 ) glm::vec3 aDir{};
 	alignas( 16 ) glm::vec2 aFov{};
@@ -167,7 +167,7 @@ struct UBO_LightCone_t
 
 struct UBO_LightCapsule_t
 {
-	alignas( 16 ) glm::vec4 aColor{};
+	alignas( 16 ) glm::vec4 color{};
 	alignas( 16 ) glm::vec3 aPos{};
 	alignas( 16 ) glm::vec3 aDir{};
 	float aLength    = 0.f;
@@ -259,7 +259,7 @@ struct ShaderSelect_Push
 	u32       aViewport    = 0;
 	u32       aVertexCount = 0;
 	u32       aDiffuse;
-	glm::vec4 aColor{};
+	glm::vec4 color{};
 	glm::vec2 aCursorPos{};
 };
 

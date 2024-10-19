@@ -76,7 +76,7 @@ struct JsonArray_t
 
 struct JsonObject_t
 {
-	ch_string aName;
+	ch_string name;
 	EJsonType aType = EJsonType_Invalid;
 
 	union

@@ -166,7 +166,7 @@ void            CORE_API    sys_debug_break();
 
 int CORE_API                sys_get_core_count();
 
-cpu_info_t CORE_API         sys_get_cpu_info();
+struct cpu_info_t CORE_API         sys_get_cpu_info();
 
 //uchar*                      Sys_ToWideChar( const char* spStr, int sSize );
 //char*                       Sys_ToMultiByte( const uchar* spStr, int sSize );

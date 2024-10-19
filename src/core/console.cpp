@@ -92,54 +92,40 @@ void Con_SetConVarRegisterFlags( ConVarFlag_t sFlags )
 
 void ConCommand::Init( const char* name, const char* desc, ConVarFlag_t flags, ConCommandFunc* func, ConCommandDropdownFunc* dropDownFunc )
 {
-	aName            = name;
-	aDesc            = desc;
-	aFlags           = flags;
+	this->name           = name;
+	this->aDesc          = desc;
+	this->aFlags         = flags;
 
-	apFunc           = func;
-	apDropDownFunc   = dropDownFunc;
+	this->apFunc         = func;
+	this->apDropDownFunc = dropDownFunc;
 
 	#pragma message( "TODO: OPTIMIZATION - ConCmds queue all other commands during init, and i imagine that can be a bit slow" );
 
-	ConCommand* cvar = Con_GetConCommand( aName );
+	ConCommand* cvar = Con_GetConCommand( name );
 
 	if ( cvar )
 	{
-		Log_WarnF( "Multiple ConCommands with the same name! \"%s\"", aName );
+		Log_WarnF( "Multiple ConCommands with the same name! \"%s\"", name );
 		return;
 	}
 
 	Con_GetConCommands().push_back( this );
-	Con_GetConVarNames().push_back( aName );
-	Con_GetConVarList().emplace_back( aName, false, this );
+	Con_GetConVarNames().push_back( name );
+	Con_GetConVarList().emplace_back( name, false, this );
 
 	if ( gConVarRegisterFlags )
 	{
-		aFlags |= gConVarRegisterFlags;
+		this->aFlags |= gConVarRegisterFlags;
 	}
 }
+
 
 std::string ConCommand::GetPrintMessage()
 {
 	if ( !aDesc )
-		return vstring( ANSI_CLR_DEFAULT "%s\n", aName );
+		return vstring( ANSI_CLR_DEFAULT "%s\n", name );
 
-	return vstring( ANSI_CLR_DEFAULT "%s\n\t" ANSI_CLR_CYAN "%s" ANSI_CLR_DEFAULT "\n", aName, aDesc );
-}
-
-const char* ConCommand::GetName()
-{
-	return aName;
-}
-
-const char* ConCommand::GetDesc()
-{
-	return aDesc;
-}
-
-ConVarFlag_t ConCommand::GetFlags()
-{
-	return aFlags;
+	return vstring( ANSI_CLR_DEFAULT "%s\n\t" ANSI_CLR_CYAN "%s" ANSI_CLR_DEFAULT "\n", name, aDesc );
 }
 
 
@@ -147,16 +133,17 @@ ConCommand* Con_GetConCommand( std::string_view name )
 {
 	for ( ConCommand* cmd : Con_GetConCommands() )
 	{
-		size_t nameLen = strlen( cmd->aName );
+		size_t nameLen = strlen( cmd->name );
 		if ( nameLen != name.size() )
 			continue;
 
-		if ( ch_strncasecmp( cmd->aName, name.data(), name.size() ) == 0 )
+		if ( ch_strncasecmp( cmd->name, name.data(), name.size() ) == 0 )
 			return cmd;
 	}
 
 	return nullptr;
 }
+
 
 // ================================================================================
 
@@ -216,7 +203,7 @@ void Con_SearchConVars( std::vector< std::string >& results, const char* search,
 
 struct ConVarSearchResult_t
 {
-	std::string_view aName;
+	std::string_view name;
 	ConVarData_t*    apData;
 };
 
@@ -270,13 +257,13 @@ void Con_SearchConVars( std::vector< ConVarDescriptor_t >& results, const char* 
 	for ( ConCommand* cmd : Con_GetConCommands() )
 	{
 		bool startsWith = false;
-		if ( !ConVarNameCheck( cmd->aName, search, size, &startsWith ) )
+		if ( !ConVarNameCheck( cmd->name, search, size, &startsWith ) )
 			continue;
 
 		if ( startsWith )
-			resultsStartWith.emplace_back( cmd->aName, false, cmd );
+			resultsStartWith.emplace_back( cmd->name, false, cmd );
 		else
-			resultsContain.emplace_back( cmd->aName, false, cmd );
+			resultsContain.emplace_back( cmd->name, false, cmd );
 	}
 
 	if ( resultsStartWith.size() )
@@ -305,10 +292,10 @@ ConVarDescriptor_t Con_SearchConVarCmd( const char* search, size_t size )
 	for ( ConCommand* cmd : Con_GetConCommands() )
 	{
 		bool startsWith = false;
-		if ( !ConVarNameCheck( cmd->aName, search, size, &startsWith ) )
+		if ( !ConVarNameCheck( cmd->name, search, size, &startsWith ) )
 			continue;
 
-		return ConVarDescriptor_t( cmd->aName, false, cmd );
+		return ConVarDescriptor_t( cmd->name, false, cmd );
 	}
 
 	return ConVarDescriptor_t();
@@ -400,7 +387,7 @@ void Con_PrintAllConVars()
 		conCommandMsgs.push_back( cmd->GetPrintMessage() );
 	}
 
-	LogGroup group = Log_GroupBegin( gLC_Console );
+	log_t group = Log_GroupBegin( gLC_Console );
 	Log_Group( group, "\nConVars:\n--------------------------------------\n" );
 	for ( const auto& msg : conVarMsgs )
 		Log_Group( group, msg.c_str() );
@@ -459,24 +446,24 @@ void Con_BuildAutoCompleteList( const std::string& srSearch, std::vector< std::s
 		bool startsWithString = false;
 
 		// this SHOULD be fine, if the convar doesn't exist in here, something is very wrong
-		if ( !ConVarNameCheck( cvar->aName, commandName.c_str(), commandName.size(), &startsWithString ) )
+		if ( !ConVarNameCheck( cvar->name, commandName.c_str(), commandName.size(), &startsWithString ) )
 			continue;
 
-		size_t cvarNameLen = strlen( cvar->aName );
+		size_t cvarNameLen = strlen( cvar->name );
 		
 		// if ( args.empty() )
 		if ( cvarNameLen >= srSearch.size() && commandName.size() >= srSearch.size() )
 		{
 			if ( startsWithString )
-				resultsStartWith.push_back( cvar->aName );
+				resultsStartWith.push_back( cvar->name );
 			else
-				resultsContain.push_back( cvar->aName );
+				resultsContain.push_back( cvar->name );
 
 			continue;
 		}
 
 		// make sure this actually matches
-		if ( cvarNameLen != commandName.size() || !ConVarNameCheck( cvar->aName, commandName.c_str(), cvarNameLen, nullptr ) )
+		if ( cvarNameLen != commandName.size() || !ConVarNameCheck( cvar->name, commandName.c_str(), cvarNameLen, nullptr ) )
 			continue;
 
 		// is this a concommand with a drop down function?
@@ -491,14 +478,14 @@ void Con_BuildAutoCompleteList( const std::string& srSearch, std::vector< std::s
 
 				for ( auto dropArg: dropDownArgs )
 				{
-					resultsStartWith.push_back( vstring( "%s %s", cvar->aName, dropArg.c_str() ) );
+					resultsStartWith.push_back( vstring( "%s %s", cvar->name, dropArg.c_str() ) );
 				}
 
 				break;
 			}
 		}
 
-		resultsStartWith.push_back( cvar->aName );
+		resultsStartWith.push_back( cvar->name );
 		break;
 	}
 
@@ -522,14 +509,14 @@ void Con_BuildAutoCompleteList( const std::string& srSearch, std::vector< std::s
 
 	for ( ConVarDescriptor_t& cvarResult : results )
 	{
-		if ( cvarResult.aName.size() >= srSearch.size() && commandName.size() >= srSearch.size() )
+		if ( cvarResult.name.size() >= srSearch.size() && commandName.size() >= srSearch.size() )
 		{
-			srResults.push_back( cvarResult.aName.data() );
+			srResults.push_back( cvarResult.name.data() );
 			continue;
 		}
 
 		// make sure this actually matches
-		if ( cvarResult.aName.size() != commandName.size() || !ConVarNameCheck( cvarResult.aName.data(), commandName.c_str(), cvarResult.aName.size(), nullptr ) )
+		if ( cvarResult.name.size() != commandName.size() || !ConVarNameCheck( cvarResult.name.data(), commandName.c_str(), cvarResult.name.size(), nullptr ) )
 			continue;
 
 		// is this a concommand with a drop down function?
@@ -544,14 +531,14 @@ void Con_BuildAutoCompleteList( const std::string& srSearch, std::vector< std::s
 
 				for ( auto dropArg: dropDownArgs )
 				{
-					srResults.push_back( vstring( "%s %s", cvarResult.aName.data(), dropArg.c_str() ) );
+					srResults.push_back( vstring( "%s %s", cvarResult.name.data(), dropArg.c_str() ) );
 				}
 
 				break;
 			}
 		}
 
-		srResults.push_back( cvarResult.aName.data() );
+		srResults.push_back( cvarResult.name.data() );
 		break;
 	}
 
@@ -641,16 +628,16 @@ bool Con_RunCommandArgs( const std::string& name, const std::vector< std::string
 
 	for ( ConCommand* cvar : Con_GetConCommands() )
 	{
-		size_t cvarNameLen = strlen( cvar->aName );
+		size_t cvarNameLen = strlen( cvar->name );
 
 		if ( name.size() != cvarNameLen )
 			continue;
 
-		if ( ch_strncasecmp( cvar->aName, name.c_str(), cvarNameLen ) != 0 )
+		if ( ch_strncasecmp( cvar->name, name.c_str(), cvarNameLen ) != 0 )
 			continue;
 
 		// Check Flag Callbacks
-		if ( !Con_CheckFlags( cvar->aFlags, cvar->aName, args, fullCommand ) )
+		if ( !Con_CheckFlags( cvar->aFlags, cvar->name, args, fullCommand ) )
 			continue;
 
 		cvar->apFunc( args, fullCommand );
@@ -797,7 +784,7 @@ ConVarFlag_t Con_CreateCvarFlag( const char* name )
 		return flag;
 	}
 
-	ConVarFlag_t newBitShift = (1 << gConVarFlags.size());
+	ConVarFlag_t newBitShift = (1 << (u64)gConVarFlags.size());
 	size_t len = strlen( name );
 	gConVarFlags.emplace_back( newBitShift, name, len );
 	return newBitShift;
@@ -814,6 +801,7 @@ const char* Con_GetCvarFlagName( ConVarFlag_t flag )
 	return nullptr;
 }
 
+
 ConVarFlag_t Con_GetCvarFlag( const char* name )
 {
 	size_t len = strlen( name );
@@ -829,6 +817,7 @@ ConVarFlag_t Con_GetCvarFlag( const char* name )
 
 	return CVARF_NONE;
 }
+
 
 size_t Con_GetCvarFlagCount()
 {
@@ -1336,10 +1325,10 @@ void FindStr( bool andSearch, ConVarDescriptor_t& cvar, const std::vector< std::
 {
 	for ( auto arg : args )
 	{
-		if ( strstr( cvar.aName.data(), arg.c_str() ) )
+		if ( strstr( cvar.name.data(), arg.c_str() ) )
 		{
 			if ( cvar.aIsConVar )
-				results.push_back( Con_GetConVarHelp( cvar.aName ) );
+				results.push_back( Con_GetConVarHelp( cvar.name ) );
 			else
 				results.push_back( static_cast< ConCommand* >( cvar.apData )->GetPrintMessage() );
 
@@ -1431,7 +1420,7 @@ CONCMD_VA( find, "Search if cvar name contains any of the search arguments" )
 {
 	if ( args.empty() )
 	{
-		Log_MsgF( gLC_Console, "%s\n", find_cmd.GetDesc() );
+		Log_MsgF( gLC_Console, "%s\n", find_cmd.aDesc );
 		return;
 	}
 
@@ -1443,7 +1432,7 @@ CONCMD_VA( findand, "Search if cvar name contains all of the search arguments" )
 {
 	if ( args.empty() )
 	{
-		Log_MsgF( gLC_Console, "%s\n", findand_cmd.GetDesc() );
+		Log_MsgF( gLC_Console, "%s\n", findand_cmd.aDesc );
 		return;
 	}
 
@@ -1463,7 +1452,7 @@ void reset_cvar_dropdown(
 
 	for ( ConVarSearchResult_t& cvar : searchResults )
 	{
-		results.push_back( cvar.aName.data() );
+		results.push_back( cvar.name.data() );
 	}
 }
 

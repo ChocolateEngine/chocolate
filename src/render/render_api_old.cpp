@@ -135,9 +135,9 @@ void Graphics_SelectionTexturePass( ch_handle_t sCmd, size_t sIndex )
 
 	RenderPassBegin_t renderPassBegin{};
 	renderPassBegin.aClear.resize( 2 );
-	renderPassBegin.aClear[ 0 ].aColor   = { 0.f, 0.f, 0.f, 1.f };
+	renderPassBegin.aClear[ 0 ].color   = { 0.f, 0.f, 0.f, 1.f };
 	renderPassBegin.aClear[ 0 ].aIsDepth = false;
-	renderPassBegin.aClear[ 1 ].aColor   = { 0.f, 0.f, 0.f, 1.f };
+	renderPassBegin.aClear[ 1 ].color   = { 0.f, 0.f, 0.f, 1.f };
 	renderPassBegin.aClear[ 1 ].aIsDepth = true;
 
 	renderPassBegin.aRenderPass          = gGraphicsData.aRenderPassSelect;
@@ -508,9 +508,9 @@ void RenderSystemOld::DoSelectionCompute( ch_handle_t cmd, u32 cmdIndex )
 		push.aRenderable  = CH_GET_HANDLE_INDEX( selectRenderable.renderable );
 		push.aViewport    = aSelectionViewport;
 		push.aVertexCount = model->apVertexData->aIndices.empty() ? model->apVertexData->aCount : model->apVertexData->aIndices.size();
-		push.aColor.x     = selectRenderable.color.x;
-		push.aColor.y     = selectRenderable.color.y;
-		push.aColor.z     = selectRenderable.color.z;
+		push.color.x     = selectRenderable.color.x;
+		push.color.y     = selectRenderable.color.y;
+		push.color.z     = selectRenderable.color.z;
 		push.aCursorPos   = aSelectionCursorPos;
 
 		render->CmdPushConstants( cmd, shaderSelectData->aLayout, ShaderStage_Compute, 0, sizeof( push ), &push );
@@ -618,9 +618,9 @@ void RenderSystemOld::Present( ch_handle_t window, u32* viewports, u32 viewportC
 		renderPassBegin.aRenderPass  = gGraphicsData.aRenderPassGraphics;
 		renderPassBegin.aFrameBuffer = backBuffer[ cmdIndex ];
 		renderPassBegin.aClear.resize( 2 );
-		renderPassBegin.aClear[ 0 ].aColor   = { 0.f, 0.f, 0.f, 0.f };
+		renderPassBegin.aClear[ 0 ].color   = { 0.f, 0.f, 0.f, 0.f };
 		renderPassBegin.aClear[ 0 ].aIsDepth = false;
-		renderPassBegin.aClear[ 1 ].aColor   = { 0.f, 0.f, 0.f, 1.f };
+		renderPassBegin.aClear[ 1 ].color   = { 0.f, 0.f, 0.f, 1.f };
 		renderPassBegin.aClear[ 1 ].aIsDepth = true;
 
 		render->BeginRenderPass( c, renderPassBegin );  // VK_SUBPASS_CONTENTS_INLINE

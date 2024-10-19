@@ -104,7 +104,7 @@ struct MeshBuilder
 {
 	struct BlendShape
 	{
-		std::string                   aName;
+		std::string                   name;
 		ChVector< MeshBuilderVertex > aVertices;
 	};
 

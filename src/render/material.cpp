@@ -628,9 +628,9 @@ bool Graphics_ParseMaterial( const ch_string& srName, const std::string& srPath,
 		JsonObject_t& cur = root.aObjects.apData[ i ];
 
 		// dumb
-		std::string   nameString( cur.aName.data, cur.aName.size );
+		std::string   nameString( cur.name.data, cur.name.size );
 
-		if ( cur.aName.data && ch_str_equals( cur.aName, "shader", 6 ) )
+		if ( cur.name.data && ch_str_equals( cur.name, "shader", 6 ) )
 		{
 			if ( shader != CH_INVALID_HANDLE )
 			{
@@ -764,13 +764,13 @@ bool Graphics_ParseMaterial( const ch_string& srName, const std::string& srPath,
 				// integer is here is an int64_t
 				if ( cur.aInt > INT_MAX )
 				{
-					Log_WarnF( gLC_ClientGraphics, "Overflowed Int Value for key \"%s\", clamping to INT_MAX - \"%s\"\n", cur.aName.data, srPath.c_str() );
+					Log_WarnF( gLC_ClientGraphics, "Overflowed Int Value for key \"%s\", clamping to INT_MAX - \"%s\"\n", cur.name.data, srPath.c_str() );
 					gGraphics.Mat_SetVar( handle, nameString, INT_MAX );
 					break;
 				}
 				else if ( cur.aInt < INT_MIN )
 				{
-					Log_WarnF( gLC_ClientGraphics, "Underflowed Int Value for key \"%s\", clamping to INT_MIN - \"%s\"\n", cur.aName.data, srPath.c_str() );
+					Log_WarnF( gLC_ClientGraphics, "Underflowed Int Value for key \"%s\", clamping to INT_MIN - \"%s\"\n", cur.name.data, srPath.c_str() );
 					gGraphics.Mat_SetVar( handle, nameString, INT_MIN );
 					break;
 				}
@@ -812,7 +812,7 @@ bool Graphics_ParseMaterial( const ch_string& srName, const std::string& srPath,
 					{
 						glm::vec2 value = {};
 						ParseMaterialVarArray( value, cur );
-						gGraphics.Mat_SetVar( handle, cur.aName.data, value );
+						gGraphics.Mat_SetVar( handle, cur.name.data, value );
 						break;
 					}
 
@@ -820,7 +820,7 @@ bool Graphics_ParseMaterial( const ch_string& srName, const std::string& srPath,
 					{
 						glm::vec3 value = {};
 						ParseMaterialVarArray( value, cur );
-						gGraphics.Mat_SetVar( handle, cur.aName.data, value );
+						gGraphics.Mat_SetVar( handle, cur.name.data, value );
 						break;
 					}
 
@@ -828,7 +828,7 @@ bool Graphics_ParseMaterial( const ch_string& srName, const std::string& srPath,
 					{
 						glm::vec4 value = {};
 						ParseMaterialVarArray( value, cur );
-						gGraphics.Mat_SetVar( handle, cur.aName.data, value );
+						gGraphics.Mat_SetVar( handle, cur.name.data, value );
 						break;
 					}
 				}

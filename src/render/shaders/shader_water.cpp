@@ -17,7 +17,7 @@ static CreateDescBinding_t gWater_Bindings[]      = {
 
 struct Water_Push_t
 {
-	glm::vec3 aColor;
+	glm::vec3 color;
 
 	u32       aRenderable = 0;
 	// u32       aMaterial   = 0;
@@ -27,7 +27,7 @@ struct Water_Push_t
 
 struct Water_Material_t
 {
-	glm::vec3 aColor;
+	glm::vec3 color;
 	u32       aNormalMap = 0;
 };
 
@@ -62,7 +62,7 @@ static void Shader_Water_PushConstants( ch_handle_t cmd, ch_handle_t sLayout, co
 	// push.aModelMatrix  = sPushData.apRenderable->aModelMatrix;
 	push.aRenderable = sPushData.apRenderable->aIndex;
 	push.aViewport   = sPushData.aViewportIndex;
-	push.aColor      = gWaterColor;
+	push.color      = gWaterColor;
 
 	render->CmdPushConstants( cmd, sLayout, ShaderStage_Vertex | ShaderStage_Fragment, 0, sizeof( Water_Push_t ), &push );
 }

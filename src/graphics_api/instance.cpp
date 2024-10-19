@@ -102,10 +102,10 @@ VKAPI_ATTR VkBool32 VKAPI_CALL VK_DebugCallback( VkDebugUtilsMessageSeverityFlag
 	if ( !gEnableValidationLayers || !vk_debug_messages )
 		return VK_FALSE;
 
-	const Log* log = Log_GetLastLog();
+	const log_t* log = Log_GetLastLog();
 
 	// blech
-	if ( log && log->aChannel != gLC_Vulkan )
+	if ( log && log->channel != gLC_Vulkan )
 		Log_Ex( gLC_Vulkan, ELogType_Raw, "\n" );
 
 	std::string formatted;
@@ -344,7 +344,7 @@ std::vector< const char* > VK_GetSDL2Extensions()
 	if ( !SDL_Vulkan_GetInstanceExtensions( gpWindow, &extensionCount, extensions.data() ) )
 		Log_Fatal( gLC_Render, "Unable to query the number of Vulkan instance extension names\n" );
 
-	LogGroup group = Log_GroupBeginEx( gLC_Render, ELogType_Dev );
+	log_t group = Log_GroupBeginEx( gLC_Render, ELogType_Verbose );
 
 	// Display names
 	Log_GroupF( group, "Found %d Vulkan extensions:\n", extensionCount );
@@ -1005,7 +1005,7 @@ CONCMD( vk_device_info )
 		return;
 	}
 
-	LogGroup group = Log_GroupBegin( gLC_Vulkan );
+	log_t group = Log_GroupBegin( gLC_Vulkan );
 
 	Log_GroupF( group, "Device Name:    %s\n", gPhysicalDeviceProperties.deviceName );
 
@@ -1051,7 +1051,7 @@ CONCMD_VA( vk_dump_limits, "Dump Device Limits and current usage of those limits
 		return;
 	}
 
-	LogGroup group = Log_GroupBegin( gLC_Vulkan );
+	log_t group = Log_GroupBegin( gLC_Vulkan );
 
 	VkPhysicalDeviceLimits& limits = gPhysicalDeviceProperties.limits;
 
