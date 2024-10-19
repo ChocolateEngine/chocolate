@@ -1320,7 +1320,7 @@ bool ParseVector( const char* spName, const std::vector< std::string >& args, VE
 
 	for ( size_t i = 0; i < args.size(); i++ )
 	{
-		if ( !ToFloat( args[ i ].data(), srVector[ i ] ) )
+		if ( !ch_to_float( args[ i ].data(), srVector[ i ] ) )
 		{
 			Log_ErrorF( gLC_Console, "ConVar \"%s\", Invalid argument %d \"%s\" for Vector type, expected a number\n", spName, i, args[ i ].data() );
 			return false;
@@ -1454,11 +1454,11 @@ bool Con_ProcessConVar( ConVarData_t* cvar, const char* name, const std::vector<
 
 			// Check to see if it's a number
 			long value = 0;
-			if ( !ToLong3( args[ 0 ].data(), value ) )
+			if ( !ch_to_long( args[ 0 ].data(), value ) )
 			{
 				// this might be useless, i think we only need to check for float actually
 				float valueFl = 0.f;
-				if ( !ToFloat( args[ 0 ].data(), valueFl ) )
+				if ( !ch_to_float( args[ 0 ].data(), valueFl ) )
 				{
 					log_t group = Log_GroupBeginEx( gLC_Console, ELogType_Error );
 
@@ -1495,7 +1495,7 @@ bool Con_ProcessConVar( ConVarData_t* cvar, const char* name, const std::vector<
 		case EConVarType_RangeInt:
 		{
 			long value = 0;
-			if ( !ToLong3( args[ 0 ].data(), value ) )
+			if ( !ch_to_long( args[ 0 ].data(), value ) )
 			{
 				Log_ErrorF( gLC_Console, "ConVar \"%s\", Invalid argument \"%s\" for Integer type, expected a number\n", name, args[ 0 ].data() );
 				break;
@@ -1508,7 +1508,7 @@ bool Con_ProcessConVar( ConVarData_t* cvar, const char* name, const std::vector<
 		case EConVarType_RangeFloat:
 		{
 			float value = 0.f;
-			if ( !ToFloat( args[ 0 ].data(), value ) )
+			if ( !ch_to_float( args[ 0 ].data(), value ) )
 			{
 				Log_ErrorF( gLC_Console, "ConVar \"%s\", Invalid argument \"%s\" for Float type, expected a number\n", name, args[ 0 ].data() );
 				break;

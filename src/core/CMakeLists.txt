@@ -24,7 +24,7 @@ set(
 	"platform_linux.cpp"
 	"profiler.cpp"
 	"resource.cpp"
-	"systemmanager.cpp"
+	"system_loader.cpp"
 	"string.cpp"
 	"util.cpp"
 	# "thread.cpp"
@@ -34,10 +34,6 @@ file(
 	GLOB_RECURSE PUBLIC_FILES CONFIGURE_DEPENDS
 	${CH_PUBLIC}/core/*.h
 	${CH_PUBLIC}/core/*.hpp
-)
-
-list( APPEND PUBLIC_FILES
-	${CH_PUBLIC}/util.h
 )
 
 add_compile_definitions( "CORE_DLL" "CORE_API=DLL_EXPORT" "TRACY_EXPORTS" )

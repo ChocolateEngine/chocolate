@@ -6,7 +6,6 @@
 
 #include <glm/vec3.hpp>
 #include "types/transform.h"
-#include "system.h"
 
 
 enum EPhysCullMode

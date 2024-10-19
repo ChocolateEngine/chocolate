@@ -256,7 +256,7 @@ ELogColor Log_UnixToColor( const char* spColor, size_t sLen )
 	char colorStr[ 3 ] = { spColor[ 4 ], spColor[ 5 ], '\0' };
 
 	long color         = 0;
-	if ( !ToLong3( colorStr, color ) )
+	if ( !ch_to_long( colorStr, color ) )
 	{
 		printf( " *** Failed get color code from string: %s (%s)\n", spColor, colorStr );
 		return ELogColor_Default;
@@ -1807,7 +1807,7 @@ CONCMD_NAME_DROP_VA( ch_log_verbose, "ch.log.verbosity", log_verbose_dropdown, 0
 	if ( args.size() > 1 )
 	{
 		long out = 0;
-		if ( !ToLong2( args[ 1 ], out ) )
+		if ( !ch_to_long( args[ 1 ].data(), out ) )
 		{
 			Log_ErrorF( "Failed to convert requested verbosity to int: %s\n", args[ 1 ].c_str() );
 		}

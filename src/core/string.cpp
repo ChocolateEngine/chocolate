@@ -1,6 +1,6 @@
 #include "string.h"
 #include "core/platform.h"
-#include "util.h"
+#include "core/util.h"
 
 #include <map>
 
@@ -2275,7 +2275,7 @@ CONCMD( ch_dump_string_allocations )
 		totalSize += track_data.size;
 	}
 
-	Log_MsgF( "%d Strings Allocated - %.6f KB\n", size, Util_BytesToKB( totalSize ) );
+	Log_MsgF( "%d Strings Allocated - %.6f KB\n", size, ch_bytes_to_kb( totalSize ) );
 #else
 	Log_Msg( "String allocation tracking is disabled!\n" );
 #endif
@@ -2314,7 +2314,7 @@ CONCMD( ch_dump_string_allocations_extended )
 	}
 
 	Log_MsgF( "\nDumped %d string allocations\n", size );
-	Log_MsgF( "Total string memory: %.6f KB\n", Util_BytesToKB( totalSize ) );
+	Log_MsgF( "Total string memory: %.6f KB\n", ch_bytes_to_kb( totalSize ) );
 #else
 	Log_Msg( "String allocation tracking is disabled!\n" );
 #endif

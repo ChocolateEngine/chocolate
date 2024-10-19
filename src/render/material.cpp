@@ -702,7 +702,7 @@ bool Graphics_ParseMaterial( const ch_string& srName, const std::string& srPath,
 					if ( strchr( cur.aString.data, '.' ) )
 					{
 						float value = 0.f;
-						if ( ToFloat( cur.aString.data, value ) )
+						if ( ch_to_float( cur.aString.data, value ) )
 						{
 							float value = static_cast< float >( atof( cur.aString.data ) );
 							gGraphics.Mat_SetVar( handle, nameString, value );
@@ -712,7 +712,7 @@ bool Graphics_ParseMaterial( const ch_string& srName, const std::string& srPath,
 
 					// Check if it's an int
 					long value = 0;
-					if ( ToLong3( cur.aString.data, value ) )
+					if ( ch_to_long( cur.aString.data, value ) )
 					{
 						gGraphics.Mat_SetVar( handle, nameString, (int)value );
 						break;

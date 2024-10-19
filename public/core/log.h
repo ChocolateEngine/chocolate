@@ -1,7 +1,7 @@
 #pragma once
 
 #include "platform.h"
-#include "util.h"
+#include "core/util.h"
 
 template< typename T >
 struct ChVector;

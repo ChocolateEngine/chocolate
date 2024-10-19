@@ -407,7 +407,7 @@ struct Mesh
 // they will never free themselves, only the system managing it will free it
 
 // A Model contains vertex and index buffers, vertex data, and a vector of meshes the model contains
-struct Model : public RefCounted
+struct Model : public ref_count_t
 {
 	ModelBuffers_t*  apBuffers    = nullptr;
 	VertexData_t*    apVertexData = nullptr;

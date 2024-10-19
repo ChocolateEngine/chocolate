@@ -1,7 +1,6 @@
 #pragma once
 
 #include "iaudio.h"
-#include "system.h"
 
 #include <SDL2/SDL.h>
 #include <phonon.h>

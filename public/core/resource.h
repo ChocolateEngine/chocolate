@@ -9,7 +9,7 @@
 #include "log.h"
 #include "mempool.h"
 #include "platform.h"
-#include "util.h"
+#include "core/util.h"
 #include "vector.hpp"
 
 namespace fs = std::filesystem;
@@ -629,7 +629,7 @@ struct ResourceList
 		CH_ASSERT( sMax <= aHandles.size() );
 		CH_ASSERT( sMin < sMax );
 
-		u32 value = RandomU32( sMin, sMax );
+		u32 value = rand_u32( sMin, sMax );
 		return aHandles[ value ];
 	}
 

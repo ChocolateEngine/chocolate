@@ -469,24 +469,24 @@ constexpr bool vec_contains(const std::vector<T> &vec, T item)
 // ==============================================================================
 // String Tools
 
-void CORE_API        str_upper( std::string& string );
-void CORE_API        str_lower( std::string& string );
+CORE_API void         str_upper( std::string& string );
+CORE_API void         str_lower( std::string& string );
 
 // would like better names for this, but oh well
-std::string CORE_API str_upper2( const std::string& in );
-std::string CORE_API str_lower2( const std::string& in );
+CORE_API std::string  str_upper2( const std::string& in );
+CORE_API std::string  str_lower2( const std::string& in );
 
 #ifdef _WIN32
 // Find the first occurrence of find in s while ignoring case
-char CORE_API* strcasestr( const char* s, const char* find );
+CORE_API char* strcasestr( const char* s, const char* find );
 #endif
 
 // don't need to worry about any resizing with these, but is a little slower
-void CORE_API        vstring( std::string& output, const char* format, ... );
-void CORE_API        vstringV( std::string& output, const char* format, va_list args );
+CORE_API void         vstring( std::string& output, const char* format, ... );
+CORE_API void         vstringV( std::string& output, const char* format, va_list args );
 
-std::string CORE_API vstring( const char* format, ... );
-std::string CORE_API vstringV( const char* format, va_list args );
+CORE_API std::string  vstring( const char* format, ... );
+CORE_API std::string  vstringV( const char* format, va_list args );
 
 
 #define VSTRING( out, format )     \
@@ -499,65 +499,52 @@ std::string CORE_API vstringV( const char* format, va_list args );
 // ==============================================================================
 // Assorted Number/String Functions
 
-std::string     CORE_API Vec2Str( const glm::vec3& in );
-std::string     CORE_API Quat2Str( const glm::quat& in );
+CORE_API std::string ch_vec3_to_str( const glm::vec3& in );
+CORE_API std::string ch_quat_to_str( const glm::quat& in );
 
 // TODO: write this
-// void     CORE_API ch_vec3_to_str( char* buffer, size_t buffer_size, const glm::vec3& in );
-// void     CORE_API ch_quat_to_str( char* buffer, size_t buffer_size, const glm::quat& in );
+// CORE_API void ch_vec3_to_str( char* buffer, size_t buffer_size, const glm::vec3& in );
+// CORE_API void ch_quat_to_str( char* buffer, size_t buffer_size, const glm::quat& in );
 
-double          CORE_API ToDouble( const char* value, double prev );
-long            CORE_API ToLong( const std::string& value, int prev );
+CORE_API bool        ch_to_float( const char* spValue, float& srOut );
+CORE_API bool        ch_to_double( const char* spValue, double& srOut );
+CORE_API bool        ch_to_long( const char* spValue, long& srOut );
 
-bool            CORE_API ToDouble2( const std::string &value, double &out );
-bool            CORE_API ToLong2( const std::string &value, long &out );
-
-bool CORE_API            ToFloat( const char* spValue, float& srOut );
-bool            CORE_API ToDouble3( const char* spValue, double &srOut );
-bool            CORE_API ToLong3( const char* spValue, long &srOut );
-
-std::string     CORE_API ToString( float value );
-
-std::string     CORE_API ch_to_string( float value );
+CORE_API std::string ch_to_string( float value );
 
 
-inline float Round( float val, u64 precision = 100 )
+inline int rand_int( int min, int max )
 {
-	return roundf( val * precision ) / precision;
+	return min + rand() % ( max + 1 - min );
 }
 
-inline int RandomInt( int sMin, int sMax )
+inline u8 rand_u8( u8 min, u8 max )
 {
-	return sMin + rand() % ( sMax + 1 - sMin );
+	return min + rand() % ( max + 1 - min );
 }
 
-inline u8 RandomU8( u8 sMin, u8 sMax )
+inline u16 rand_u16( u16 min, u16 max )
 {
-	return sMin + rand() % ( sMax + 1 - sMin );
+	return min + rand() % ( max + 1 - min );
 }
 
-inline u16 RandomU16( u16 sMin, u16 sMax )
+inline u32 rand_u32( u32 min, u32 max )
 {
-	return sMin + rand() % ( sMax + 1 - sMin );
+	return rand_int( min, max );
 }
 
-inline u32 RandomU32( u32 sMin, u32 sMax )
+inline u64 rand_u64( u64 min, u64 max )
 {
-	return sMin + rand() % ( sMax + 1 - sMin );
+	return min + rand() % ( max + 1 - min );
 }
 
-inline u64 RandomU64( u64 sMin, u64 sMax )
+inline float rand_float( float min, float max )
 {
-	return sMin + rand() % ( sMax + 1 - sMin );
-}
-
-inline float RandomFloat( float sMin, float sMax )
-{
-	return sMin + ( ( static_cast<float>( rand() ) / static_cast<float>( RAND_MAX ) ) * ( sMax - sMin ) );
+	return min + ( ( static_cast<float>( rand() ) / static_cast<float>( RAND_MAX ) ) * ( max - min ) );
 }
 
 template< typename KEY, typename VALUE >
-inline u64 Util_SizeOfUnordredMap( const std::unordered_map< KEY, VALUE >& srMap )
+inline u64 ch_size_of_umap( const std::unordered_map< KEY, VALUE >& srMap )
 {
 	return 0;
 
@@ -567,19 +554,19 @@ inline u64 Util_SizeOfUnordredMap( const std::unordered_map< KEY, VALUE >& srMap
 }
 
 
-inline float Util_BytesToMB( u64 bytes )
+inline float ch_bytes_to_mb( u64 bytes )
 {
 	return bytes * 0.000001;
 }
 
 
-inline float Util_BytesToKB( u64 bytes )
+inline float ch_bytes_to_kb( u64 bytes )
 {
 	return bytes * 0.001;
 }
 
 
-inline float Sys_BytesToMB( u64 bytes )
+inline float ch_bytes_to_mb_sys( u64 bytes )
 {
 #ifdef _WIN32
 	return bytes * 0.00000095367432;  // 1024 multiples for windows
@@ -589,7 +576,7 @@ inline float Sys_BytesToMB( u64 bytes )
 }
 
 
-inline float Sys_BytesToKB( u64 bytes )
+inline float ch_bytes_to_kb_sys( u64 bytes )
 {
 #ifdef _WIN32
 	return bytes * 0.000976563;  // 1024 multiples for windows
@@ -606,28 +593,23 @@ inline void print( const char* str )
 }
 
 
-struct RefCounted
+struct ref_count_t
 {
-	virtual ~RefCounted() = default;
+	virtual ~ref_count_t() = default;
 
-	inline RefCounted& operator=( const RefCounted& srRef )
+	inline ref_count_t& operator=( const ref_count_t& srRef )
 	{
 		return *this;
 	}
 
-	u32 GetRefCount() const
-	{
-		return aRefCount;
-	}
-
 	// Add or release a reference to this object
-	inline void AddRef() const
+	inline void add_ref() const
 	{
 		aRefCount++;
 	}
 
 	// Returns true if this was deleted
-	inline bool Release() const
+	inline bool release() const
 	{
 		if ( --aRefCount == 0 )
 		{

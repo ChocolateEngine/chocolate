@@ -134,19 +134,17 @@ CORE_API int         sys_get_core_count();
 
 CORE_API cpu_info_t  sys_get_cpu_info();
 
-// window management
 #ifdef _WIN32
-
 // TODO: use a struct for this probably
-CORE_API void* Sys_CreateWindow( const char* spWindowName, int sWidth, int sHeight, bool maximize );
-// CORE_API bool Sys_CreateWindow( void* native_window, SDL_Window* sdl_window, const char* spWindowName, int sWidth, int sHeight, bool maximize );
+CORE_API void* sys_create_window( const char* spWindowName, int sWidth, int sHeight, bool maximize );
+// CORE_API bool sys_create_window( void* native_window, SDL_Window* sdl_window, const char* spWindowName, int sWidth, int sHeight, bool maximize );
 
-CORE_API void  Sys_SetResizeCallback( FResizeCallback callback );
+CORE_API void  sys_set_resize_callback( FResizeCallback callback );
 
-CORE_API int   Sys_Execute( const char* spFile, const char* spArgs );
-CORE_API int   Sys_ExecuteV( const char* spFile, const char* spArgs, ... );
+CORE_API int   sys_execute( const char* spFile, const char* spArgs );
+CORE_API int   sys_execute_v( const char* spFile, const char* spArgs, ... );
 
-CORE_API void  Sys_CheckHeap();
+CORE_API void  sys_check_heap();
 #else
-	#define Sys_CheckHeap()
+	#define sys_check_heap()
 #endif

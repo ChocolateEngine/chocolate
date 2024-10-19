@@ -1,7 +1,6 @@
 #pragma once
 
 #include "core/resource.h"
-#include "system.h"
 
 #include <SDL2/SDL_audio.h>
 #include <glm/gtc/quaternion.hpp>

@@ -4,7 +4,7 @@ modelloader.cpp ( Authored by Demez )
 Class dedicated for loading models, and caches them too for multiple uses
 */
 
-#include "util.h"
+#include "core/util.h"
 #include "physics.h"
 #include "mesh_builder.h"
 

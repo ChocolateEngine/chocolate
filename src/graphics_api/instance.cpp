@@ -1,7 +1,7 @@
 #include "core/platform.h"
 #include "core/log.h"
 #include "core/commandline.h"
-#include "util.h"
+#include "core/util.h"
 
 #include "render/irender.h"
 #include "render_vk.h"

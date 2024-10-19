@@ -2,10 +2,10 @@
 #include "core/platform.h"
 #include "core/filesystem.h"
 #include "core/log.h"
-#include "core/systemmanager.h"
+#include "core/system_loader.h"
 #include "core/app_info.h"
 #include "core/build_number.h"
-#include "util.h"
+#include "core/util.h"
 
 #include "imgui_impl_sdl2.h"
 #include "imgui_impl_vulkan.h"
@@ -1760,7 +1760,7 @@ public:
 			}
 
 			if ( r_dbg_show_buffer_copy )
-				Log_DevF( gLC_Render, 1, "  Size: %.6f KB\n", Util_BytesToKB( size ) );
+				Log_DevF( gLC_Render, 1, "  Size: %.6f KB\n", ch_bytes_to_kb( size ) );
 
 			totalSize += size;
 		}
@@ -1768,7 +1768,7 @@ public:
 		VK_EndOneTimeTransferCommand( c );
 
 		if ( r_dbg_show_buffer_copy )
-			Log_DevF( gLC_Render, 1, "Total Copy Size: %.6f KB\n", Util_BytesToKB( totalSize ) );
+			Log_DevF( gLC_Render, 1, "Total Copy Size: %.6f KB\n", ch_bytes_to_kb( totalSize ) );
 
 		gTotalBufferCopyPerFrame += totalSize;
 
@@ -1799,7 +1799,7 @@ public:
 		VK_Present( windowHandle, window, sImageIndex );
 
 		if ( r_dbg_show_buffer_copy )
-			Log_DevF( gLC_Render, 1, "Total Buffer Copy Per Frame: %.6f KB\n", Util_BytesToKB( gTotalBufferCopyPerFrame ) );
+			Log_DevF( gLC_Render, 1, "Total Buffer Copy Per Frame: %.6f KB\n", ch_bytes_to_kb( gTotalBufferCopyPerFrame ) );
 
 		gTotalBufferCopyPerFrame = 0;
 	}

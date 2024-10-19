@@ -576,13 +576,13 @@ int sys_get_core_count()
 }
 
 
-void Sys_SetResizeCallback( FResizeCallback callback )
+void sys_set_resize_callback( FResizeCallback callback )
 {
 	gResizeCallbackFunc = callback;
 }
 
 
-void* Sys_CreateWindow( const char* spWindowName, int sWidth, int sHeight, bool sMaximize )
+void* sys_create_window( const char* spWindowName, int sWidth, int sHeight, bool sMaximize )
 {
 	const LPTSTR _ClassName( MAKEINTATOM( gWindowClass ) );
 
@@ -634,7 +634,7 @@ void* Sys_CreateWindow( const char* spWindowName, int sWidth, int sHeight, bool 
 
 
 // TODO: https://learn.microsoft.com/en-us/windows/win32/procthread/creating-a-child-process-with-redirected-input-and-output?redirectedfrom=MSDN
-int Sys_Execute( const char* spFile, const char* spArgs )
+int sys_execute( const char* spFile, const char* spArgs )
 {
 	SHELLEXECUTEINFO ShExecInfo = { 0 };
 	ShExecInfo.cbSize           = sizeof( SHELLEXECUTEINFO );
@@ -661,7 +661,7 @@ int Sys_Execute( const char* spFile, const char* spArgs )
 }
 
 
-int Sys_ExecuteV( const char* spFile, const char* spArgs, ... )
+int sys_execute_v( const char* spFile, const char* spArgs, ... )
 {
 	va_list args;
 	va_start( args, spArgs );
@@ -671,7 +671,7 @@ int Sys_ExecuteV( const char* spFile, const char* spArgs, ... )
 	if ( string.data == nullptr )
 		return -1;
 
-	int ret = Sys_Execute( spFile, string.data );
+	int ret = sys_execute( spFile, string.data );
 
 	ch_str_free( string.data );
 	return ret;
@@ -749,7 +749,7 @@ void Sys_FreeConvertedString( const char* spStr )
 #endif
 
 
-void Sys_CheckHeap()
+void sys_check_heap()
 {
 	int result = _heapchk();
 

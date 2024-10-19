@@ -8,7 +8,7 @@ File dedicated for loading gltf models
 #include "mesh_builder.h"
 #include "render/irender.h"
 
-#include "util.h"
+#include "core/util.h"
 #include "core/console.h"
 
 #define CGLTF_IMPLEMENTATION

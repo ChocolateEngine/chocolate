@@ -215,7 +215,7 @@ ch_handle_t Graphics::LoadModel( const std::string& srPath )
 			return CH_INVALID_HANDLE;
 		}
 
-		model->AddRef();
+		model->add_ref();
 		return it->second;
 	}
 
@@ -292,7 +292,7 @@ ch_handle_t Graphics::LoadModel( const std::string& srPath )
 
 	gGraphicsData.aModelPaths[ srPath ] = handle;
 
-	model->AddRef();
+	model->add_ref();
 
 	return handle;
 }
@@ -303,7 +303,7 @@ ch_handle_t Graphics::CreateModel( Model** spModel )
 	ch_handle_t handle = gGraphicsData.aModels.Create( spModel );
 
 	if ( handle != CH_INVALID_HANDLE )
-		( *spModel )->AddRef();
+		( *spModel )->add_ref();
 
 	return handle;
 }

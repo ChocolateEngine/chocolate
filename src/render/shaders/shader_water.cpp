@@ -1,6 +1,6 @@
 #include "graphics_int.h"
 #include "render/irender.h"
-#include "util.h"
+#include "core/util.h"
 
 
 constexpr const char*      gpFallbackNormalPath     = "materials/base/black.ktx";

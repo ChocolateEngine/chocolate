@@ -1,5 +1,5 @@
 #include "codec_libav.h"
-#include "util.h"
+#include "core/util.h"
 
 #if ENABLE_LIBAV
 

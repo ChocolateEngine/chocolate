@@ -4,7 +4,7 @@
 #include "core/platform.h"
 #include "core/log.h"
 #include "core/build_number.h"
-#include "util.h"
+#include "core/util.h"
 
 #include <cstring>
 #include <stdarg.h>
@@ -1588,7 +1588,7 @@ CONCMD_VA( con_cvar_mem_usage, "Print the memory usage usage of all convars" )
 	}
 
 	Log_MsgF( gLC_Console, "ConVar Count: %zu\n", Con_GetConVarMap().size() );
-	Log_MsgF( gLC_Console, "ConVar Memory Usage: %.6f KB\n", Util_BytesToKB( cvarHeapMemory + cvarStringMemory ) );
+	Log_MsgF( gLC_Console, "ConVar Memory Usage: %.6f KB\n", ch_bytes_to_kb( cvarHeapMemory + cvarStringMemory ) );
 
 	// for ( ConVarBase* current : Con_GetConVars() )
 	// {

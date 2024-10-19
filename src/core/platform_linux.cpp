@@ -75,7 +75,7 @@ int sys_get_core_count()
 }
 
 
-void* Sys_CreateWindow( const char* spWindowName, int sWidth, int sHeight, bool sMaximize )
+void* sys_create_window( const char* spWindowName, int sWidth, int sHeight, bool sMaximize )
 {
 #if 1
     // UNUSED AT THE MOMENT, WILL USE LATER

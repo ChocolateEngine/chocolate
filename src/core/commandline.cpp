@@ -4,7 +4,7 @@
 #include "core/filesystem.h"
 #include "core/log.h"
 #include "core/app_info.h"
-#include "util.h"
+#include "core/util.h"
 
 #include <stdarg.h>
 
@@ -217,7 +217,7 @@ static int Args_RegisterInt( Arg_t& srArg, int sDefault )
 				}
 
 				long out;
-				if ( ToLong3( gArgV[ i + 1 ].data, out ) )
+				if ( ch_to_long( gArgV[ i + 1 ].data, out ) )
 					value = out;
 				break;
 			}
@@ -246,7 +246,7 @@ static float Args_RegisterFloat( Arg_t& srArg, float sDefault )
 				}
 
 				double out;
-				if ( ToDouble3( gArgV[ i + 1 ].data, out ) )
+				if ( ch_to_double( gArgV[ i + 1 ].data, out ) )
 					value = out;
 				break;
 			}
@@ -596,7 +596,7 @@ int Args_GetInt( std::string_view search, int fallback )
 		return fallback;
 
 	long out;
-	if ( ToLong3( gArgV[ i + 1 ].data(), out ) )
+	if ( ch_to_long( gArgV[ i + 1 ].data(), out ) )
 		return out;
 
 	return fallback;

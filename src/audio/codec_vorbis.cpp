@@ -1,6 +1,6 @@
 #include "codec_vorbis.h"
 
-#include "util.h"
+#include "core/util.h"
 
 #include <SDL2/SDL.h>
 #include <filesystem>

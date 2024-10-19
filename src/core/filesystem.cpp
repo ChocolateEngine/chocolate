@@ -5,7 +5,7 @@
 #include "core/log.h"
 #include "core/json5.h"
 #include "core/app_info.h"
-#include "util.h"
+#include "core/util.h"
 
 #include <array>
 #include <fstream>

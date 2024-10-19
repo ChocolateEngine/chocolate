@@ -1,5 +1,5 @@
 #include "gui.h"
-#include "util.h"
+#include "core/util.h"
 #include "render/irender.h"
 // #include "rmlui.h"
 
