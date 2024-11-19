@@ -13,6 +13,4 @@
 [submodule "thirdparty/mimalloc"]
 	path = thirdparty/mimalloc
 	url = https://github.com/microsoft/mimalloc.git
-[submodule "thirdparty/ImGuizmo"]
-	path = thirdparty/ImGuizmo
-	url = https://github.com/CedricGuillemet/ImGuizmo
+	
