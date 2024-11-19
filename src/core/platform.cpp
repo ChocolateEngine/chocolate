@@ -5,80 +5,81 @@
 //#include <string>
 
 #include <direct.h>
-#include <wtypes.h>  // HWND
 #include <libloaderapi.h>
+#include <wtypes.h>  // HWND
 //#include <errhandlingapi.h>
 //#include <VersionHelpers.h>
 #include <winbase.h>  // FormatMessage
 
 // bruh: https://stackoverflow.com/questions/25267272/win32-enable-visual-styles-in-dll
-#pragma comment(linker,"\"/manifestdependency:type='win32' name='Microsoft.Windows.Common-Controls' version='6.0.0.0' processorArchitecture='*'    publicKeyToken='6595b64144ccf1df' language='*'\"")
+#pragma comment( linker, "\"/manifestdependency:type='win32' name='Microsoft.Windows.Common-Controls' version='6.0.0.0' processorArchitecture='*'    publicKeyToken='6595b64144ccf1df' language='*'\"" )
 
 
 #include "core/core.h"
 
 
-static bool     gExceptionDebugger = false;
+static bool     g_exception_debugger = false;
 
 
-bool            g_win_10_or_later  = false;
-OSVERSIONINFOEX gOSVer{};
+bool            g_win_10_or_later    = false;
+OSVERSIONINFOEX g_win_version{};
 
-HMODULE         ghInst   = 0;
-ATOM            gWindowClass = 0;
+HMODULE         g_instance       = 0;
+ATOM            g_window_class   = 0;
 
-HANDLE          gConOut  = INVALID_HANDLE_VALUE;
-HANDLE          gConIn   = INVALID_HANDLE_VALUE;
+HANDLE          g_con_out        = INVALID_HANDLE_VALUE;
+HANDLE          g_con_in         = INVALID_HANDLE_VALUE;
 
-HANDLE          ghActCtx = INVALID_HANDLE_VALUE;
-ACTCTX          gActCtx;
-ULONG_PTR       gActCookie;
+HANDLE          g_act_ctx_handle = INVALID_HANDLE_VALUE;
+ACTCTX          g_act_ctx;
+ULONG_PTR       g_act_cookie;
+
 
 #define CH_MEM_DEBUG 0
 
 
 // super based
-typedef void (WINAPI * RtlGetVersion_FUNC) (OSVERSIONINFOEXW *);
+typedef void( WINAPI* RtlGetVersion_FUNC )( OSVERSIONINFOEXW* );
 
 BOOL win32_get_version( OSVERSIONINFOEX* os )
 {
-	HMODULE hMod;
+	HMODULE            hMod;
 	RtlGetVersion_FUNC func;
 
-#ifdef UNICODE
-	OSVERSIONINFOEXW * osw = os;
-#else
-	OSVERSIONINFOEXW o;
-	OSVERSIONINFOEXW * osw = &o;
-#endif
+	#ifdef UNICODE
+	OSVERSIONINFOEXW* osw = os;
+	#else
+	OSVERSIONINFOEXW  o;
+	OSVERSIONINFOEXW* osw = &o;
+	#endif
 
-	hMod = LoadLibrary(TEXT("ntdll.dll"));
+	hMod = LoadLibrary( TEXT( "ntdll.dll" ) );
 
-	if (hMod)
+	if ( hMod )
 	{
-		func = (RtlGetVersion_FUNC)GetProcAddress(hMod, "RtlGetVersion");
-		if (func == 0) {
-			FreeLibrary(hMod);
+		func = (RtlGetVersion_FUNC)GetProcAddress( hMod, "RtlGetVersion" );
+		if ( func == 0 )
+		{
+			FreeLibrary( hMod );
 			return FALSE;
 		}
-		ZeroMemory(osw, sizeof (*osw));
-		osw->dwOSVersionInfoSize = sizeof (*osw);
-		func(osw);
+		ZeroMemory( osw, sizeof( *osw ) );
+		osw->dwOSVersionInfoSize = sizeof( *osw );
+		func( osw );
 
-#ifndef UNICODE
-		os->dwBuildNumber = osw->dwBuildNumber;
-		os->dwMajorVersion = osw->dwMajorVersion;
-		os->dwMinorVersion = osw->dwMinorVersion;
-		os->dwPlatformId = osw->dwPlatformId;
-		os->dwOSVersionInfoSize = sizeof (*os);
+	#ifndef UNICODE
+		os->dwBuildNumber       = osw->dwBuildNumber;
+		os->dwMajorVersion      = osw->dwMajorVersion;
+		os->dwMinorVersion      = osw->dwMinorVersion;
+		os->dwPlatformId        = osw->dwPlatformId;
+		os->dwOSVersionInfoSize = sizeof( *os );
 		// DWORD sz = sizeof (os->szCSDVersion);
-		WCHAR * src = osw->szCSDVersion;
-		unsigned char * dtc = (unsigned char *)os->szCSDVersion;
-		while (*src)
-			*dtc++ = (unsigned char)* src++;
+		WCHAR*         src      = osw->szCSDVersion;
+		unsigned char* dtc      = (unsigned char*)os->szCSDVersion;
+		while ( *src )
+			*dtc++ = (unsigned char)*src++;
 		*dtc = '\0';
-#endif
-
+	#endif
 	}
 	else
 	{
@@ -86,7 +87,7 @@ BOOL win32_get_version( OSVERSIONINFOEX* os )
 		return FALSE;
 	}
 
-	FreeLibrary(hMod);
+	FreeLibrary( hMod );
 	return TRUE;
 }
 
@@ -97,17 +98,17 @@ static const char* Win32_GetExceptionName( DWORD code )
 
 	switch ( code )
 	{
-		case EXCEPTION_ACCESS_VIOLATION:         return "ACCESS_VIOLATION";
-		case EXCEPTION_DATATYPE_MISALIGNMENT:    return "DATATYPE_MISALIGNMENT";
-		case EXCEPTION_ARRAY_BOUNDS_EXCEEDED:    return "ARRAY_BOUNDS_EXCEEDED";
-		case EXCEPTION_PRIV_INSTRUCTION:         return "PRIV_INSTRUCTION";
-		case EXCEPTION_IN_PAGE_ERROR:            return "IN_PAGE_ERROR";
-		case EXCEPTION_ILLEGAL_INSTRUCTION:      return "ILLEGAL_INSTRUCTION";
+		case EXCEPTION_ACCESS_VIOLATION: return "ACCESS_VIOLATION";
+		case EXCEPTION_DATATYPE_MISALIGNMENT: return "DATATYPE_MISALIGNMENT";
+		case EXCEPTION_ARRAY_BOUNDS_EXCEEDED: return "ARRAY_BOUNDS_EXCEEDED";
+		case EXCEPTION_PRIV_INSTRUCTION: return "PRIV_INSTRUCTION";
+		case EXCEPTION_IN_PAGE_ERROR: return "IN_PAGE_ERROR";
+		case EXCEPTION_ILLEGAL_INSTRUCTION: return "ILLEGAL_INSTRUCTION";
 		case EXCEPTION_NONCONTINUABLE_EXCEPTION: return "NONCONTINUABLE_EXCEPTION";
-		case EXCEPTION_STACK_OVERFLOW:           return "STACK_OVERFLOW";
-		case EXCEPTION_INVALID_DISPOSITION:      return "INVALID_DISPOSITION";
-		case EXCEPTION_GUARD_PAGE:               return "GUARD_PAGE";
-		case EXCEPTION_INVALID_HANDLE:           return "INVALID_HANDLE";
+		case EXCEPTION_STACK_OVERFLOW: return "STACK_OVERFLOW";
+		case EXCEPTION_INVALID_DISPOSITION: return "INVALID_DISPOSITION";
+		case EXCEPTION_GUARD_PAGE: return "GUARD_PAGE";
+		case EXCEPTION_INVALID_HANDLE: return "INVALID_HANDLE";
 		default: break;
 	}
 
@@ -143,7 +144,7 @@ static LONG WINAPI Win32_ExceptionFilter( struct _EXCEPTION_POINTERS* ExceptionI
 
 		Log_ErrorF( "Unhandled exception caught\n%s", msg );
 
-		if ( gExceptionDebugger )
+		if ( g_exception_debugger )
 			sys_wait_for_debugger();
 	}
 
@@ -234,8 +235,8 @@ char* sys_get_cwd()
 
 
 // https://stackoverflow.com/a/31411628/12778316
-static NTSTATUS(__stdcall *NtDelayExecution)(BOOL Alertable, PLARGE_INTEGER DelayInterval) = (NTSTATUS(__stdcall*)(BOOL, PLARGE_INTEGER)) GetProcAddress(GetModuleHandle("ntdll.dll"), "NtDelayExecution");
-static NTSTATUS(__stdcall *ZwSetTimerResolution)(IN ULONG RequestedResolution, IN BOOLEAN Set, OUT PULONG ActualResolution) = (NTSTATUS(__stdcall*)(ULONG, BOOLEAN, PULONG)) GetProcAddress(GetModuleHandle("ntdll.dll"), "ZwSetTimerResolution");
+static NTSTATUS( __stdcall* NtDelayExecution )( BOOL Alertable, PLARGE_INTEGER DelayInterval )                                  = (NTSTATUS( __stdcall* )( BOOL, PLARGE_INTEGER ))GetProcAddress( GetModuleHandle( "ntdll.dll" ), "NtDelayExecution" );
+static NTSTATUS( __stdcall* ZwSetTimerResolution )( IN ULONG RequestedResolution, IN BOOLEAN Set, OUT PULONG ActualResolution ) = (NTSTATUS( __stdcall* )( ULONG, BOOLEAN, PULONG ))GetProcAddress( GetModuleHandle( "ntdll.dll" ), "ZwSetTimerResolution" );
 
 
 // sleep for x milliseconds
@@ -258,7 +259,7 @@ void sys_sleep( float ms )
 bool win32_init_console( HANDLE conOut, HANDLE conIn )
 {
 	// DOESN'T WORK YET
-#if 0
+	#if 0
 	if ( !g_win_10_or_later )
 		return false;
 
@@ -286,11 +287,11 @@ bool win32_init_console( HANDLE conOut, HANDLE conIn )
 	if (!SetConsoleMode(conOut, dwOutMode))
 	{
 		// we failed to set both modes, try to step down mode gracefully.
-#if 0
+		#if 0
 		dwRequestedOutModes = ENABLE_VIRTUAL_TERMINAL_PROCESSING;
 		dwOutMode = dwOriginalOutMode | dwRequestedOutModes;
 		if (!SetConsoleMode(conOut, dwOutMode))
-#endif
+		#endif
 		{
 			// Failed to set any VT mode, can't do anything here.
 			return false;
@@ -303,7 +304,7 @@ bool win32_init_console( HANDLE conOut, HANDLE conIn )
 		// Failed to set VT input mode, can't do anything here.
 		return false;
 	}
-#endif
+	#endif
 	return true;
 }
 
@@ -312,20 +313,14 @@ bool win32_init_console( HANDLE conOut, HANDLE conIn )
 // on linux though, idk
 void* sys_get_console_window()
 {
-	return gConOut;
+	return g_con_out;
 }
 
 
 int sys_allow_console_input()
 {
-	if ( gConOut == INVALID_HANDLE_VALUE )
+	if ( g_con_out == INVALID_HANDLE_VALUE )
 		return false;
-
-
-
-	
-
-
 
 
 	//SetConsoleMode( con, );^
@@ -338,8 +333,8 @@ void sys_wait_for_debugger()
 {
 	Log_Dev( 1, "WAITING FOR DEBUGGER\n" );
 
-	while( !::IsDebuggerPresent() )
-		::Sleep( 100 ); // to avoid 100% CPU load
+	while ( !::IsDebuggerPresent() )
+		::Sleep( 100 );  // to avoid 100% CPU load
 
 	DebugBreak();
 }
@@ -411,41 +406,42 @@ void sys_init()
 	setlocale( LC_ALL, "en_US.UTF-8" );
 
 	// detect windows version
-	BOOL ret = win32_get_version( &gOSVer );
+	BOOL ret          = win32_get_version( &g_win_version );
 
-	g_win_10_or_later = gOSVer.dwMajorVersion >= 10;
+	g_win_10_or_later = g_win_version.dwMajorVersion >= 10;
 
 	// Get Module ch_handle_t because we don't use WinMain at the moment (probably should tbh, idk)
-	// ghInst = GetModuleHandle( 0 );
-	ghInst = GetModuleHandle( "ch_core.dll" );
+	// g_instance = GetModuleHandle( 0 );
+	g_instance        = GetModuleHandle( "ch_core.dll" );
 
 	SetUnhandledExceptionFilter( Win32_ExceptionFilter );
 
 	// Init Console
-	gConOut = GetStdHandle( STD_OUTPUT_HANDLE );
-	if ( gConOut == INVALID_HANDLE_VALUE )
+	g_con_out = GetStdHandle( STD_OUTPUT_HANDLE );
+	if ( g_con_out == INVALID_HANDLE_VALUE )
 	{
 		sys_print_last_error( "Failed to get stdout console\n" );
 		return;
 	}
 
-	gConIn = GetStdHandle( STD_INPUT_HANDLE );
-	if ( gConIn == INVALID_HANDLE_VALUE )
+	g_con_in = GetStdHandle( STD_INPUT_HANDLE );
+	if ( g_con_in == INVALID_HANDLE_VALUE )
 	{
 		sys_print_last_error( "Failed to get stdin console\n" );
 		return;
 	}
 
-	if ( !win32_init_console( gConOut, gConIn ) )
+	if ( !win32_init_console( g_con_out, g_con_in ) )
 		sys_print_last_error( "Failed to Init System Console\n" );
 
 	// very, very early windows 10
-	if ( gOSVer.dwMajorVersion == 6 && gOSVer.dwMinorVersion == 4 )
+	if ( g_win_version.dwMajorVersion == 6 && g_win_version.dwMinorVersion == 4 )
 	{
+		// funny secret message lol
 		Log_DevF( 1, "runnig windows 9 :D\n" );
 	}
 
-	Log_DevF( 1, "Windows Version: %d.%d.%d\n", gOSVer.dwMajorVersion, gOSVer.dwMinorVersion, gOSVer.dwBuildNumber );
+	Log_DevF( 1, "Windows Version: %d.%d.%d\n", g_win_version.dwMajorVersion, g_win_version.dwMinorVersion, g_win_version.dwBuildNumber );
 
 	// List CPU Version
 	cpu_info_t cpu_info = sys_get_cpu_info();
@@ -454,17 +450,22 @@ void sys_init()
 	Log_DevF( 1, "CPU Model Name: %s\n", cpu_info.model_name );
 
 	// Init Theme Context (why windows???)
-	ZeroMemory( &gActCtx, sizeof( gActCtx ) );
+	// This is needed so that standard win32 windows,
+	// like message boxes, are stylized, and don't look like windows 9x style
+	// a bit odd, maybe there's an easier way to do this, but this works so it doesn't really matter right now
+	// see this: https://stackoverflow.com/questions/25267272/win32-enable-visual-styles-in-dll
+	ZeroMemory( &g_act_ctx, sizeof( g_act_ctx ) );
 
-	gActCtx.cbSize = sizeof(gActCtx);
-	gActCtx.hModule = ghInst;
-	gActCtx.lpResourceName = MAKEINTRESOURCE(2);
-	gActCtx.dwFlags = ACTCTX_FLAG_HMODULE_VALID | ACTCTX_FLAG_RESOURCE_NAME_VALID;
+	g_act_ctx.cbSize         = sizeof( g_act_ctx );
+	g_act_ctx.hModule        = g_instance;
+	g_act_ctx.lpResourceName = MAKEINTRESOURCE( 2 );
+	g_act_ctx.dwFlags        = ACTCTX_FLAG_HMODULE_VALID | ACTCTX_FLAG_RESOURCE_NAME_VALID;
 
-	ghActCtx = CreateActCtx(&gActCtx);
-	if (ghActCtx != INVALID_HANDLE_VALUE)
+	g_act_ctx_handle         = CreateActCtx( &g_act_ctx );
+
+	if ( g_act_ctx_handle != INVALID_HANDLE_VALUE )
 	{
-		ActivateActCtx(ghActCtx, &gActCookie);
+		ActivateActCtx( g_act_ctx_handle, &g_act_cookie );
 		// MessageBox(NULL, TEXT("Styled message box"), NULL, MB_OK | MB_ICONERROR);
 	}
 	else
@@ -473,8 +474,8 @@ void sys_init()
 	}
 
 	// Set Process Priority
-	bool argPriorityHigh = Args_Register( "Set the engine to high priority", "-high" );
-	bool argPriorityLow  = Args_Register( "Set the engine to low priority", "-low" );
+	bool argPriorityHigh = args_register( "Set the engine to high priority", "--high" );
+	bool argPriorityLow  = args_register( "Set the engine to low priority", "--low" );
 
 	if ( argPriorityHigh && argPriorityLow )
 	{
@@ -510,7 +511,7 @@ void sys_init()
 		}
 	}
 
-	gExceptionDebugger = Args_Register( "Wait for debugger on catching a fatal exception", "-exception-debugger" );
+	g_exception_debugger = args_register( "Wait for debugger on catching a fatal exception", "--exception-debugger" );
 
 #if CH_MEM_DEBUG
 	// Get the current state of the flag
@@ -546,12 +547,12 @@ void sys_init()
 	wc.lpszMenuName  = 0;
 	wc.lpfnWndProc   = Win32_WindowProc;
 
-	gWindowClass = RegisterClassEx( &wc );
+	g_window_class   = RegisterClassEx( &wc );
 
-	if ( gWindowClass == 0 )
+	if ( g_window_class == 0 )
 	{
 		// somehow not running on windows nt?
-		Log_FatalF(" Failed to create window class\n" );
+		Log_FatalF( " Failed to create window class\n" );
 	}
 }
 
@@ -559,10 +560,10 @@ void sys_init()
 void sys_shutdown()
 {
 	// Close Theme Context (why windows???)
-	if (ghActCtx != INVALID_HANDLE_VALUE)
+	if ( g_act_ctx_handle != INVALID_HANDLE_VALUE )
 	{
-		DeactivateActCtx(0, gActCookie);
-		ReleaseActCtx(ghActCtx);
+		DeactivateActCtx( 0, g_act_cookie );
+		ReleaseActCtx( g_act_ctx_handle );
 	}
 }
 
@@ -584,7 +585,7 @@ void sys_set_resize_callback( FResizeCallback callback )
 
 void* sys_create_window( const char* spWindowName, int sWidth, int sHeight, bool sMaximize )
 {
-	const LPTSTR _ClassName( MAKEINTATOM( gWindowClass ) );
+	const LPTSTR _ClassName( MAKEINTATOM( g_window_class ) );
 
 	DWORD        dwStyle   = WS_VISIBLE | WS_OVERLAPPEDWINDOW | WS_EX_CONTROLPARENT;
 	DWORD        dwExStyle = 0;
@@ -599,7 +600,7 @@ void* sys_create_window( const char* spWindowName, int sWidth, int sHeight, bool
 	// According to the wiki, this function
 	// "Calculates the required size of the window rectangle, based on the desired size of the client rectangle.
 	// The window rectangle can then be passed to the CreateWindowEx function to create a window whose client area is the desired size."
-	// 
+	//
 	// Without that, the window ends up smaller than it actually should be
 	// ex. 1280x720 becomes 1266x713
 	// https://stackoverflow.com/questions/34583160/winapi-createwindow-function-creates-smaller-windows-than-set
@@ -647,7 +648,7 @@ int sys_execute( const char* spFile, const char* spArgs )
 	ShExecInfo.nShow            = SW_SHOW;
 	ShExecInfo.hInstApp         = NULL;
 
-	BOOL ret = ShellExecuteExA( &ShExecInfo );
+	BOOL ret                    = ShellExecuteExA( &ShExecInfo );
 
 	if ( ret == FALSE || ShExecInfo.hProcess == INVALID_HANDLE_VALUE )
 		return -1;
@@ -678,7 +679,7 @@ int sys_execute_v( const char* spFile, const char* spArgs, ... )
 }
 
 
-#if 0
+	#if 0
 uchar* Sys_ToWideChar( const char* spStr, int sSize )
 {
 	if ( spStr == nullptr )
@@ -746,7 +747,7 @@ void Sys_FreeConvertedString( const char* spStr )
 	ch_str_remove( spStr );
 	ch_free( (void*)spStr );
 }
-#endif
+	#endif
 
 
 void sys_check_heap()
@@ -810,4 +811,4 @@ CONCMD_VA( sys_stack_info, "Print the current stack usage" )
 }
 
 
-#endif // _WIN32
+#endif  // _WIN32

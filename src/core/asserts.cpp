@@ -19,8 +19,8 @@ CONVAR_BOOL_CMD( assert_show_box, !gNoAssertBox, 0, "Enable/Disable the Assertio
 
 void Assert_Init()
 {
-	gNoAsserts   = Args_Register( false, "Disable Asserts", "-no-asserts" );
-	gNoAssertBox = Args_Register( false, "Disable The Assert Window", "-no-assert-window" );
+	gNoAsserts   = args_register( false, "Disable Asserts", "--no-asserts" );
+	gNoAssertBox = args_register( false, "Disable The Assert Window", "--no-assert-window" );
 
     if ( gNoAsserts )
 		Con_SetConVarValue( "assert_show", false );

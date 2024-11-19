@@ -172,35 +172,6 @@ static bool ConVarNameCheck( const char* name, const char* search, size_t size, 
 }
 
 
-void Con_SearchConVars( std::vector< std::string >& results, const char* search, size_t size )
-{
-	std::vector< std::string > resultsStartWith;  // results that the convar name starts with the search
-	std::vector< std::string > resultsContain;    // results that contain the string somewhere in in a convar name
-
-	for ( std::string_view cvarName : Con_GetConVarNames() )
-	{
-		bool startsWith = false;
-		if ( !ConVarNameCheck( cvarName.data(), search, size, &startsWith ) )
-			continue;
-
-		if ( startsWith )
-			resultsStartWith.push_back( cvarName.data() );
-		else
-			resultsContain.push_back( cvarName.data() );
-	}
-
-	if ( resultsStartWith.size() )
-	{
-		results.insert( results.end(), resultsStartWith.begin(), resultsStartWith.end() );
-	}
-
-	if ( resultsContain.size() )
-	{
-		results.insert( results.end(), resultsContain.begin(), resultsContain.end() );
-	}
-}
-
-
 struct ConVarSearchResult_t
 {
 	std::string_view name;
@@ -677,6 +648,7 @@ bool Con_RunCommandArgs( const std::string& name, const std::vector< std::string
 {
 	// Join args together as one string with spaces
 	std::string fullCommand;
+	fullCommand.reserve( 128 );
 
 	for ( size_t i = 0; i < args.size(); i++ )
 	{
@@ -702,6 +674,7 @@ void Con_ParseCommandLineEx( std::string_view command, std::string& name, std::v
 	PROF_SCOPE();
 
 	std::string curArg;
+	curArg.reserve( 128 );
 
 	for ( ; i < command.size(); i++ )
 	{
@@ -968,10 +941,9 @@ void Con_Archive( const char* spFile )
 	{
 		filename = spFile;
 		ch_string_auto filenameExt = FileSys_GetFileExt( filename.data(), filename.size() );
-		if ( ch_str_equals( filenameExt, "cfg" ) )
-		{
+		if ( ch_str_equals( filenameExt, "cfg", 3 ) )
 			filename += ".cfg";
-		}
+
 		filename.insert( 0, "cfg" PATH_SEP_STR );
 	}
 	else
@@ -980,15 +952,19 @@ void Con_Archive( const char* spFile )
 	}
 
 	// TODO: have a better way to check for a parent path
-	fs::path filenamePath = filename.c_str();
-	
-	fs::path parentPath   = filenamePath.parent_path();
+	char* parentPath = FileSys_GetDirName( filename.data(), filename.size() ).data;
 
-	if ( !parentPath.empty() )
+	if ( parentPath )
 	{
-		const std::string& parentPathStr = parentPath.string();
-		FileSys_CreateDirectory( parentPathStr.data() );
+		if ( !FileSys_CreateDirectory( parentPath ) )
+		{
+			Log_ErrorF( "Failed to create directory: \"%s\"\n", parentPath );
+			ch_str_free( parentPath );
+			return;
+		}
 	}
+
+	ch_str_free( parentPath );
 
 	// Write the data
 	FILE* fp = fopen( filename.c_str(), "wb" );
@@ -1009,90 +985,38 @@ void Con_Archive( const char* spFile )
 // Set Default Console Archive File
 void Con_SetDefaultArchive( const char* spFile, const char* spDefaultFile )
 {
-	// Set the default file
+	ch_string file;
+	ch_string default_file;
 
 	if ( !spFile )
-	{
-		ch_string new_data = ch_str_realloc( gConArchiveFile.data, CON_ARCHIVE_FILE );
+		ch_string file = ch_str_realloc( gConArchiveFile.data, CON_ARCHIVE_FILE );
 
-		if ( !new_data.data )
-		{
-			Log_Error( gLC_Console, "Failed to allocate memory for default console config file path\n" );
-			return;
-		}
+	else if ( ch_str_starts_with( spFile, "cfg/" ) || ch_str_starts_with( spFile, "cfg\\" ) )
+		ch_string file = ch_str_realloc( gConArchiveFile.data, spFile );
 
-		gConArchiveFile = new_data;
-	}
 	else
-	{
-		if ( ch_str_starts_with( spFile, "cfg/" ) || ch_str_starts_with( spFile, "cfg\\" ) )
-		{
-			ch_string new_data = ch_str_realloc( gConArchiveFile.data, spFile );
-
-			if ( !new_data.data )
-			{
-				Log_Error( gLC_Console, "Failed to allocate memory for console config file path\n" );
-				return;
-			}
-
-			gConArchiveFile = new_data;
-		}
-		else
-		{
-			ch_string new_data = ch_str_join_arr( gConArchiveFile.data, 2, CFG_DIR, spFile );
-
-			if ( !new_data.data )
-			{
-				Log_Error( gLC_Console, "Failed to allocate memory for console config file path\n" );
-				return;
-			}
-
-			gConArchiveFile = new_data;
-		}
-	}
+		ch_string file = ch_str_join_arr( gConArchiveFile.data, 2, CFG_DIR, spFile );
 
 	// -----------------------------------------------------
 	// Set Default Console Archive File
 
 	if ( !spDefaultFile )
-	{
-		ch_string new_data = ch_str_realloc( gConArchiveDefault.data, CON_ARCHIVE_DEFAULT );
+		ch_string default_file = ch_str_realloc( gConArchiveDefault.data, CON_ARCHIVE_DEFAULT );
 
-		if ( !new_data.data )
-		{
-			Log_Error( gLC_Console, "Failed to allocate memory for default console config file path\n" );
-			return;
-		}
+	else if ( ch_str_starts_with( spDefaultFile, "cfg/" ) || ch_str_starts_with( spDefaultFile, "cfg\\" ) )
+		ch_string default_file = ch_str_realloc( gConArchiveDefault.data, spDefaultFile );
 
-		gConArchiveDefault = new_data;
-	}
 	else
+		ch_string default_file = ch_str_join_arr( gConArchiveDefault.data, 2, CFG_DIR, spDefaultFile );
+
+	if ( !file.data || !default_file.data )
 	{
-		if ( ch_str_starts_with( spDefaultFile, "cfg/" ) || ch_str_starts_with( spDefaultFile, "cfg\\" ) )
-		{
-			ch_string new_data = ch_str_realloc( gConArchiveDefault.data, spDefaultFile );
-
-			if ( !new_data.data )
-			{
-				Log_Error( gLC_Console, "Failed to allocate memory for default console config file path\n" );
-				return;
-			}
-
-			gConArchiveDefault = new_data;
-		}
-		else
-		{
-			ch_string new_data = ch_str_join_arr( gConArchiveDefault.data, 2, CFG_DIR, spDefaultFile );
-
-			if ( !new_data.data )
-			{
-				Log_Error( gLC_Console, "Failed to allocate memory for default console config file path\n" );
-				return;
-			}
-
-			gConArchiveDefault = new_data;
-		}
+		Log_Error( gLC_Console, "Failed to allocate memory for console config file path\n" );
+		return;
 	}
+
+	gConArchiveFile    = file;
+	gConArchiveDefault = default_file;
 }
 
 
@@ -1274,16 +1198,61 @@ void help_dropdown(
   std::vector< std::string >&       results )     // results to populate the dropdown list with
 {
 	std::string name = args.empty() ? "" : str_lower2(args[0]);
-	Con_SearchConVars( results, name.data(), name.size() );
+	// Con_SearchConVars( results, name.data(), name.size() );
+
+	std::vector< std::string > resultsStartWith;  // results that the convar name starts with the search
+	std::vector< std::string > resultsContain;    // results that contain the string somewhere in in a convar name
+
+	for ( std::string_view cvarName : Con_GetConVarNames() )
+	{
+		bool startsWith = false;
+		if ( !ConVarNameCheck( cvarName.data(), name.data(), name.size(), &startsWith ) )
+			continue;
+
+		if ( startsWith )
+			resultsStartWith.push_back( cvarName.data() );
+		else
+			resultsContain.push_back( cvarName.data() );
+	}
+
+	// Also Search Registered Arguments
+	for ( u32 i = 0; i < args_get_registered_count(); i++ )
+	{
+		const arg_t* arg = args_get_registered_data( i );
+
+		for ( u32 n = 0; n < arg->aNames.size(); n++ )
+		{
+			bool startsWith = false;
+			if ( !ConVarNameCheck( arg->aNames[ n ], name.data(), name.size(), &startsWith ) )
+				continue;
+
+			if ( startsWith )
+				resultsStartWith.push_back( arg->aNames[ n ] );
+			else
+				resultsContain.push_back( arg->aNames[ n ] );
+
+			break;
+		}
+	}
+
+	if ( resultsStartWith.size() )
+	{
+		results.insert( results.end(), resultsStartWith.begin(), resultsStartWith.end() );
+	}
+
+	if ( resultsContain.size() )
+	{
+		results.insert( results.end(), resultsContain.begin(), resultsContain.end() );
+	}
 }
 
 
-CONCMD_DROP_VA( help, help_dropdown, 0, "If no args specified, Print all Registered ConVars, otherwise, print information about this convar" )
+CONCMD_DROP_VA( help, help_dropdown, 0, "If no args specified, Print all Registered ConVars and Arguments, otherwise, print information about this convar/argument" )
 {
 	if ( args.empty() )
 	{
 		Con_PrintAllConVars();
-		Args_PrintRegistered();
+		args_print_registered();
 
 		Log_Msg( gLC_Console, "--------------------------------------\n" );
 		return;
@@ -1302,21 +1271,21 @@ CONCMD_DROP_VA( help, help_dropdown, 0, "If no args specified, Print all Registe
 	}
 	else
 	{
-		for ( u32 i = 0; i < Args_GetRegisteredCount(); i++ )
+		for ( u32 i = 0; i < args_get_registered_count(); i++ )
 		{
-			const Arg_t* arg = Args_GetRegisteredData( i );
+			const arg_t* arg = args_get_registered_data( i );
 
 			for ( u32 n = 0; n < arg->aNames.size(); n++ )
 			{
 				if ( arg->aNames[ n ] == args[ 0 ] )
 				{
-					Log_Msg( gLC_Console, Args_GetRegisteredPrint( arg ).data );
+					Log_MsgF( gLC_Console, "Argument: %s\n", args_get_registered_print( arg ).data );
 					return;
 				}
 			}
 		}
 
-		Log_WarnF( gLC_Console, "Convar not found: %s\n", args[0].c_str() );
+		Log_WarnF( gLC_Console, "Convar/Argument not found: %s\n", args[0].c_str() );
 	}
 }
 
@@ -1339,7 +1308,7 @@ void FindStr( bool andSearch, ConVarDescriptor_t& cvar, const std::vector< std::
 }
 
 
-static void FindStrArg( bool andSearch, const Arg_t* spArg, const std::vector< std::string >& args, std::vector< std::string >& results )
+static void FindStrArg( bool andSearch, const arg_t* spArg, const std::vector< std::string >& args, std::vector< std::string >& results )
 {
 	if ( !spArg )
 		return;
@@ -1350,7 +1319,7 @@ static void FindStrArg( bool andSearch, const Arg_t* spArg, const std::vector< s
 		{
 			if ( strstr( spArg->aNames[ n ], arg.c_str() ) )
 			{
-				ch_string_auto msg = Args_GetRegisteredPrint( spArg );
+				ch_string_auto msg = args_get_registered_print( spArg );
 				results.emplace_back( msg.data, msg.size );
 
 				if ( !andSearch )
@@ -1379,9 +1348,9 @@ void CmdFind( bool andSearch, const std::vector< std::string >& args )
 		}
 	}
 
-	for ( u32 i = 0; i < Args_GetRegisteredCount(); i++ )
+	for ( u32 i = 0; i < args_get_registered_count(); i++ )
 	{
-		FindStrArg( andSearch, Args_GetRegisteredData( i ), args, resultsArgs );
+		FindStrArg( andSearch, args_get_registered_data( i ), args, resultsArgs );
 	}
 
 	Log_MsgF( gLC_Console, "Search Results: %zu\n", resultsCvar.size() + resultsCCmd.size() );

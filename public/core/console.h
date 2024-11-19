@@ -467,7 +467,6 @@ CORE_API u32           Con_GetConVarCount();            // Get the number of Con
 
 CORE_API void          Con_ResetConVar( std::string_view name );  // Reset the ConVar to its default value
 
-CORE_API void          Con_SearchConVars( std::vector< std::string >& results, const char* search, size_t size );
 CORE_API void          Con_SearchConVars( std::vector< ConVarDescriptor_t >& results, const char* search, size_t size );
 
 // Search for a ConVar by name, Returns a ConVarDescriptor_t with a nullptr data if not found

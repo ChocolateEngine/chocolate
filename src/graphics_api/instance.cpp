@@ -11,11 +11,11 @@
 #include <set>
 
 
-static bool gListExts    = Args_Register( false, "List All Vulkan Extensions, marking what ones are loaded", "-vk-list-exts" );
-static bool gListQueues  = Args_Register( false, "List All Device Queues", "-vk-list-queues" );
-static int  gDeviceIndex = Args_Register( -1, "Manually select a GPU by the index in the device list", "-gpu" );
-static bool gListDevices = Args_RegisterF( false, "List Graphics Cards detected", 2, "-gpus", "-list-gpus" );
-static int  gDebugUtils  = Args_Register( true, "Vulkan Debug Tools", "-vk-no-debug" );
+static bool gListExts    = args_register( false, "List All Vulkan Extensions, marking what ones are loaded", "--vk-list-exts" );
+static bool gListQueues  = args_register( false, "List All Device Queues", "--vk-list-queues" );
+static int  gDeviceIndex = args_register( -1, "Manually select a GPU by the index in the device list", "--gpu" );
+static bool gListDevices = args_register_names( false, "List Graphics Cards detected", 2, "--gpus", "--list-gpus" );
+static int  gDebugUtils  = args_register( true, "Vulkan Debug Tools", "--vk-no-debug" );
 
 
 #if _DEBUG
@@ -34,7 +34,7 @@ CONVAR_BOOL( vk_debug_messages, 0, "" );
 	constexpr bool        vk_verbose              = false;
 	constexpr bool        vk_formatted            = false;
 #else
-	bool                  gEnableValidationLayers = Args_Register( false, "Enable Vulkan Validation Layers Extensions", "-vk-valid" );
+	bool                  gEnableValidationLayers = args_register( false, "Enable Vulkan Validation Layers Extensions", "--vk-valid" );
 	constexpr char const* gpValidationLayers[]    = { "VK_LAYER_KHRONOS_validation" };
 
 	CONVAR_BOOL( vk_verbose, 0, "" );

@@ -4,8 +4,8 @@
 constexpr const char* g_module_min            = "ch_physics_min";
 constexpr const char* g_module_avx2           = "ch_physics_avx2";
 
-bool                  g_force_load_module_min = Args_Register( "Load the physics dll compiled with the minimum cpu features", "-phys-min" );
-bool                  g_force_load_module_max = Args_Register( "Load the physics dll compiled with all cpu features it can use", "-phys-max" );
+bool                  g_force_load_module_min = args_register( "Load the physics dll compiled with the minimum cpu features", "--phys-min" );
+bool                  g_force_load_module_max = args_register( "Load the physics dll compiled with all cpu features it can use", "--phys-max" );
 
 
 ModuleInterface_t* load_physics_module( const char* moduleName, u8& count )

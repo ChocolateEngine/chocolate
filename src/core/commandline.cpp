@@ -13,11 +13,11 @@
 #endif
 
 
-// static std::vector< Arg_t > gArgList;
-static ChVector< Arg_t > gArgList;
+// static std::vector< arg_t > g_arg_list;
+static ChVector< arg_t > g_arg_list;
 
 extern void              Assert_Init();
-extern void              Args_Shutdown();
+extern void              args_shutdown();
 extern void              ch_str_free_all();
 
 static ch_string*        gArgV = nullptr;
@@ -37,7 +37,7 @@ extern "C"
 {
 	int DLL_EXPORT core_init( int argc, char* argv[], const char* desiredWorkingDir )
 	{
-		Args_Init( argc, argv );
+		args_init( argc, argv );
 		Log_Init();
 
 		if ( SDL_Init( SDL_INIT_VIDEO | SDL_INIT_EVENTS | SDL_INIT_AUDIO ) != 0 )
@@ -61,7 +61,7 @@ extern "C"
 		// handled by apps now, not required
 		// Core_LoadAppInfo();
 
-		Args_RegisterEx( "Execute Scripts on Engine Start", "-exec" );
+		args_register_ex( "Execute Scripts on Engine Start", "-exec" );
 		return 0;
 	}
 
@@ -83,7 +83,7 @@ extern "C"
 		// shutdown sdl
 		SDL_Quit();
 
-		Args_Shutdown();
+		args_shutdown();
 
 		Log_Shutdown();
 
@@ -123,7 +123,7 @@ void DLL_EXPORT core_post_load()
 	ch_string      execCfg;
 	int            arg = 0;
 
-	while ( Args_GetValueNext( arg, "-exec", execCfg ) )
+	while ( args_get_value_next( arg, "-exec", execCfg ) )
 	{
 		const char*    strings[] = { "exec ", execCfg.data };
 		const u64      lengths[] = { 5, execCfg.size };
@@ -136,9 +136,9 @@ void DLL_EXPORT core_post_load()
 // ================================================================================
 
 
-static Arg_t& Args_RegisterInternal( const char* spDesc, const char* spName, EArgType sType )
+static arg_t& args_register_internal( const char* spDesc, const char* spName, EArgType sType )
 {
-	Arg_t& arg = gArgList.emplace_back( true );
+	arg_t& arg = g_arg_list.emplace_back( true );
 	arg.apDesc = spDesc;
 	arg.aType  = sType;
 	arg.aNames.push_back( spName );
@@ -146,32 +146,34 @@ static Arg_t& Args_RegisterInternal( const char* spDesc, const char* spName, EAr
 }
 
 
-static Arg_t& Args_RegisterInternal( const char* spDesc, EArgType sType )
+static arg_t& args_register_internal( const char* spDesc, EArgType sType )
 {
-	Arg_t& arg = gArgList.emplace_back( true );
+	arg_t& arg = g_arg_list.emplace_back( true );
 	arg.apDesc = spDesc;
 	arg.aType  = sType;
 	return arg;
 }
 
 
-static bool Args_RegisterBool( Arg_t& srArg, bool sDefault )
+static bool args_register_bool( arg_t& srArg, bool sDefault )
 {
-	bool value = sDefault;
+	srArg.aBool        = sDefault;
+	srArg.aDefaultBool = sDefault;
+
 	for ( auto& name : srArg.aNames )
 	{
-		value = Args_Find( name );
-		if ( value )
-			break;
+		if ( args_find( name ) )
+		{
+			srArg.aBool = !sDefault;
+			return !sDefault;
+		}
 	}
 
-	srArg.aBool        = value;
-	srArg.aDefaultBool = sDefault;
-	return value;
+	return sDefault;
 }
 
 
-static const char* Args_RegisterString( Arg_t& srArg, const char* sDefault )
+static const char* args_register_string( arg_t& srArg, const char* sDefault )
 {
 	const char* value = sDefault;
 
@@ -200,7 +202,7 @@ static const char* Args_RegisterString( Arg_t& srArg, const char* sDefault )
 }
 
 
-static int Args_RegisterInt( Arg_t& srArg, int sDefault )
+static int args_register_int( arg_t& srArg, int sDefault )
 {
 	// Setup so the last argument gets the highest priority
 	int value = sDefault;
@@ -230,7 +232,7 @@ static int Args_RegisterInt( Arg_t& srArg, int sDefault )
 }
 
 
-static float Args_RegisterFloat( Arg_t& srArg, float sDefault )
+static float args_register_names_float( arg_t& srArg, float sDefault )
 {
 	float value = sDefault;
 	for ( int i = 0; i < gArgC; i++ )
@@ -262,49 +264,49 @@ static float Args_RegisterFloat( Arg_t& srArg, float sDefault )
 // ================================================================================
 
 
-void Args_RegisterEx( const char* spDesc, const char* spName )
+void args_register_ex( const char* spDesc, const char* spName )
 {
-	Args_RegisterInternal( spDesc, spName, EArgType_Custom );
+	args_register_internal( spDesc, spName, EArgType_Custom );
 }
 
 // Default to False
-bool Args_Register( const char* spDesc, const char* spName )
+bool args_register( const char* spDesc, const char* spName )
 {
-	Arg_t& arg = Args_RegisterInternal( spDesc, spName, EArgType_Bool );
-	return Args_RegisterBool( arg, false );
+	arg_t& arg = args_register_internal( spDesc, spName, EArgType_Bool );
+	return args_register_bool( arg, false );
 }
 
-bool Args_Register( bool sDefault, const char* spDesc, const char* spName )
+bool args_register( bool sDefault, const char* spDesc, const char* spName )
 {
-	Arg_t& arg = Args_RegisterInternal( spDesc, spName, EArgType_Bool );
-	return Args_RegisterBool( arg, sDefault );
+	arg_t& arg = args_register_internal( spDesc, spName, EArgType_Bool );
+	return args_register_bool( arg, sDefault );
 }
 
-const char* Args_Register( const char* sDefault, const char* spDesc, const char* spName )
+const char* args_register( const char* sDefault, const char* spDesc, const char* spName )
 {
-	Arg_t& arg = Args_RegisterInternal( spDesc, spName, EArgType_String );
-	return Args_RegisterString( arg, sDefault );
+	arg_t& arg = args_register_internal( spDesc, spName, EArgType_String );
+	return args_register_string( arg, sDefault );
 }
 
-int Args_Register( int sDefault, const char* spDesc, const char* spName )
+int args_register( int sDefault, const char* spDesc, const char* spName )
 {
-	Arg_t& arg = Args_RegisterInternal( spDesc, spName, EArgType_Int );
-	return Args_RegisterInt( arg, sDefault );
+	arg_t& arg = args_register_internal( spDesc, spName, EArgType_Int );
+	return args_register_int( arg, sDefault );
 }
 
-float Args_Register( float sDefault, const char* spDesc, const char* spName )
+float args_register( float sDefault, const char* spDesc, const char* spName )
 {
-	Arg_t& arg = Args_RegisterInternal( spDesc, spName, EArgType_Float );
-	return Args_RegisterFloat( arg, sDefault );
+	arg_t& arg = args_register_internal( spDesc, spName, EArgType_Float );
+	return args_register_names_float( arg, sDefault );
 }
 
 
 // ================================================================================
 
 
-void Args_RegisterExF( const char* spDesc, int sCount, const char* spName, ... )
+void args_register_ex_names( const char* spDesc, int sCount, const char* spName, ... )
 {
-	Arg_t&  arg = Args_RegisterInternal( spDesc, EArgType_Custom );
+	arg_t&  arg = args_register_internal( spDesc, EArgType_Custom );
 
 	va_list args;
 	va_start( args, spName );
@@ -317,9 +319,9 @@ void Args_RegisterExF( const char* spDesc, int sCount, const char* spName, ... )
 }
 
 // Default to False
-bool Args_RegisterF( const char* spDesc, int sCount, const char* spName, ... )
+bool args_register_names( const char* spDesc, int sCount, const char* spName, ... )
 {
-	Arg_t& arg = Args_RegisterInternal( spDesc, EArgType_Bool );
+	arg_t& arg = args_register_internal( spDesc, EArgType_Bool );
 
 	va_list args;
 	va_start( args, spName );
@@ -330,12 +332,12 @@ bool Args_RegisterF( const char* spDesc, int sCount, const char* spName, ... )
 
 	va_end( args );
 
-	return Args_RegisterBool( arg, false );
+	return args_register_bool( arg, false );
 }
 
-bool Args_RegisterF( bool sDefault, const char* spDesc, int sCount, const char* spName, ... )
+bool args_register_names( bool sDefault, const char* spDesc, int sCount, const char* spName, ... )
 {
-	Arg_t& arg = Args_RegisterInternal( spDesc, EArgType_Bool );
+	arg_t& arg = args_register_internal( spDesc, EArgType_Bool );
 
 	va_list args;
 	va_start( args, spName );
@@ -346,12 +348,12 @@ bool Args_RegisterF( bool sDefault, const char* spDesc, int sCount, const char* 
 
 	va_end( args );
 
-	return Args_RegisterBool( arg, sDefault );
+	return args_register_bool( arg, sDefault );
 }
 
-const char* Args_RegisterF( const char* sDefault, const char* spDesc, int sCount, const char* spName, ... )
+const char* args_register_names( const char* sDefault, const char* spDesc, int sCount, const char* spName, ... )
 {
-	Arg_t& arg = Args_RegisterInternal( spDesc, EArgType_String );
+	arg_t& arg = args_register_internal( spDesc, EArgType_String );
 
 	va_list args;
 	va_start( args, spName );
@@ -364,12 +366,12 @@ const char* Args_RegisterF( const char* sDefault, const char* spDesc, int sCount
 
 	va_end( args );
 
-	return Args_RegisterString( arg, sDefault );
+	return args_register_string( arg, sDefault );
 }
 
-int Args_RegisterF( int sDefault, const char* spDesc, int sCount, const char* spName, ... )
+int args_register_names( int sDefault, const char* spDesc, int sCount, const char* spName, ... )
 {
-	Arg_t& arg = Args_RegisterInternal( spDesc, EArgType_Int );
+	arg_t& arg = args_register_internal( spDesc, EArgType_Int );
 
 	va_list args;
 	va_start( args, spName );
@@ -380,12 +382,12 @@ int Args_RegisterF( int sDefault, const char* spDesc, int sCount, const char* sp
 
 	va_end( args );
 
-	return Args_RegisterInt( arg, sDefault );
+	return args_register_int( arg, sDefault );
 }
 
-float Args_RegisterF( float sDefault, const char* spDesc, int sCount, const char* spName, ... )
+float args_register_names( float sDefault, const char* spDesc, int sCount, const char* spName, ... )
 {
-	Arg_t& arg = Args_RegisterInternal( spDesc, EArgType_Float );
+	arg_t& arg = args_register_internal( spDesc, EArgType_Float );
 
 	va_list args;
 	va_start( args, spName );
@@ -396,38 +398,38 @@ float Args_RegisterF( float sDefault, const char* spDesc, int sCount, const char
 
 	va_end( args );
 
-	return Args_RegisterFloat( arg, sDefault );
+	return args_register_names_float( arg, sDefault );
 }
 
 
 // ================================================================================
 
 
-u32 Args_GetRegisteredCount()
+u32 args_get_registered_count()
 {
-	return gArgList.size();
+	return g_arg_list.size();
 }
 
 
-Arg_t* Args_GetRegisteredData( u32 sIndex )
+arg_t* args_get_registered_data( u32 sIndex )
 {
-	if ( sIndex >= gArgList.size() )
+	if ( sIndex >= g_arg_list.size() )
 	{
-		Log_WarnF( gLC_Console, "Argument Index Out of Bounds: %zd size, %d index\n", gArgList.size(), sIndex );
+		Log_WarnF( gLC_Console, "Argument Index Out of Bounds: %zd size, %d index\n", g_arg_list.size(), sIndex );
 		return nullptr;
 	}
 
-	return &gArgList[ sIndex ];
+	return &g_arg_list[ sIndex ];
 }
 
 
-// u32 Args_FindRegisteredIndex( std::string_view sString )
+// u32 args_findRegisteredIndex( std::string_view sString )
 // {
-// 	for ( u32 i = 0; i < gArgList.size(); i++ )
+// 	for ( u32 i = 0; i < g_arg_list.size(); i++ )
 // 	{
-// 		for ( u32 n = 0; n < gArgList[ i ].aNames.size(); n++ )
+// 		for ( u32 n = 0; n < g_arg_list[ i ].aNames.size(); n++ )
 // 		{
-// 			if ( gArgList[ i ].aNames[ n ] == sString )
+// 			if ( g_arg_list[ i ].aNames[ n ] == sString )
 // 				return i;
 // 		}
 // 	}
@@ -436,7 +438,7 @@ Arg_t* Args_GetRegisteredData( u32 sIndex )
 // }
 
 
-ch_string Args_GetRegisteredPrint( const Arg_t* spArg )
+ch_string args_get_registered_print( const arg_t* spArg )
 {
 	if ( !spArg )
 		return {};
@@ -499,10 +501,10 @@ ch_string Args_GetRegisteredPrint( const Arg_t* spArg )
 }
 
 
-void Args_PrintRegistered()
+void args_print_registered()
 {
 	Log_Msg( gLC_Console, "\nArguments:\n--------------------------------------\n" );
-	for ( const Arg_t& arg : gArgList )
+	for ( const arg_t& arg : g_arg_list )
 	{
 		if ( arg.aNames.empty() )
 		{
@@ -510,7 +512,7 @@ void Args_PrintRegistered()
 			continue;
 		}
 
-		ch_string_auto msg = Args_GetRegisteredPrint( &arg );
+		ch_string_auto msg = args_get_registered_print( &arg );
 
 		if ( !msg.data )
 			continue;
@@ -520,7 +522,7 @@ void Args_PrintRegistered()
 }
 
 
-void Args_Init( int argc, char* argv[] )
+void args_init( int argc, char* argv[] )
 {
 	gArgV = new ch_string[ argc ];
 	gArgC = argc;
@@ -536,7 +538,7 @@ void Args_Init( int argc, char* argv[] )
 }
 
 
-void Args_Shutdown()
+void args_shutdown()
 {
 	delete[] gArgV;
 	gArgV = nullptr;
@@ -544,13 +546,19 @@ void Args_Shutdown()
 }
 
 
-int Args_GetCount()
+int args_get_count()
 {
 	return gArgC;
 }
 
 
-bool Args_Find( const char* search, s32 len )
+ch_string* args_get_variables()
+{
+	return gArgV;
+}
+
+
+bool args_find( const char* search, s32 len )
 {
 	if ( !ch_str_check_empty( search, len ) )
 		return false;
@@ -626,7 +634,7 @@ double Args_GetDouble( std::string_view search, double fallback )
 
 // function to be able to find all values like this
 // returns true if it finds a value, false if it fails to
-bool Args_GetValueNext( int& i, const char* search, ch_string& ret )
+bool args_get_value_next( int& i, const char* search, ch_string& ret )
 {
 	if ( !search )
 		return false;

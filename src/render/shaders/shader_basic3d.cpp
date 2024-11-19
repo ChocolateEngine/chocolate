@@ -5,7 +5,7 @@
 
 // TODO: rename this file and shader to "standard" or "generic"?
 
-static bool                gArgPCF                  = false;  // Args_Register( "Enable PCF Shadow Filtering", "-pcf" );
+static bool                gArgPCF                  = false;  // args_register( "Enable PCF Shadow Filtering", "-pcf" );
 
 constexpr const char*      gpFallbackAOPath         = "materials/base/white.ktx";
 constexpr const char*      gpFallbackEmissivePath   = "materials/base/black.ktx";

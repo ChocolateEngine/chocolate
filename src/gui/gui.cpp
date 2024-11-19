@@ -116,7 +116,7 @@ void GuiSystem::StyleImGui()
 
 	return;
 
-	if ( Args_Find( "-no-vgui-style" ) )
+	if ( args_find( "-no-vgui-style" ) )
 		return;
 
 	// Classic VGUI2 Style Color Scheme
@@ -186,7 +186,7 @@ void GuiSystem::StyleImGui()
 
 ImFont* GuiSystem::BuildFont( const char* spPath, float sSizePixels, const ImFontConfig* spFontConfig )
 {
-	if ( Args_Find( "-no-imgui-font" ) )
+	if ( args_find( "-no-imgui-font" ) )
 		return nullptr;
 
 	ch_string_auto fontPath = FileSys_FindFile( spPath );
