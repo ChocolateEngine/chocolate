@@ -8,6 +8,16 @@
   #define JPH_DEBUG_RENDERER 1
 #endif
 
+// other Jolt Features
+#ifndef JPH_PROFILE_ENABLED
+	#define JPH_PROFILE_ENABLED 1
+#endif
+
+#ifndef JPH_FLOATING_POINT_EXCEPTIONS_ENABLED
+	#define JPH_FLOATING_POINT_EXCEPTIONS_ENABLED 1
+#endif
+
+
 #if 1
   // we also have JPH_PROFILE_ENABLED
   //#define JPH_EXTERNAL_PROFILE 1

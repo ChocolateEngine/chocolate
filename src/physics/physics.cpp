@@ -198,10 +198,10 @@ class Physics : public Ch_IPhysics
 public:
 	bool Init() override
 	{
-		//if ( !JPH::VerifyJoltVersionID() )
-		//{
-		//	return false;
-		//}
+		if ( !JPH::VerifyJoltVersionID() )
+		{
+			return false;
+		}
 
 		// Install callbacks
 		JPH::Trace = TraceCallback;
@@ -223,7 +223,7 @@ public:
 		// If you don't want to pre-allocate you can also use TempAllocatorMalloc to fall back to
 		// malloc / free.
 		// apAllocator = new JPH::TempAllocatorImpl( 10 * 1024 * 1024 );
-		apAllocator = new JPH::TempAllocatorImpl( 70 * 1024 * 1024 );
+		apAllocator = new JPH::TempAllocatorImpl( 25 * 1024 * 1024 );
 
 		// We need a job system that will execute physics jobs on multiple threads. Typically
 		// you would implement the JobSystem interface yourself and let Jolt Physics run on topbe
