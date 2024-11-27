@@ -125,7 +125,7 @@ void vk_transition_image( VkCommandBuffer c, VkImage image, VkImageLayout curren
 }
 
 
-static u32 vk_get_next_image( ChHandle_t window_handle, r_window_data_t* window )
+static u32 vk_get_next_image( ch_handle_t window_handle, r_window_data_t* window )
 {
 	u32 frame = window->frame_index;
 
@@ -297,7 +297,7 @@ static void vk_submit_command_buffer( r_window_data_t* window )
 }
 
 
-void vk_draw( ChHandle_t window_handle, r_window_data_t* window )
+void vk_draw( ch_handle_t window_handle, r_window_data_t* window )
 {
 	u32 frame = window->frame_index;
 
@@ -333,7 +333,7 @@ void vk_draw( ChHandle_t window_handle, r_window_data_t* window )
 }
 
 
-void vk_reset( ChHandle_t window_handle, r_window_data_t* window, e_render_reset_flags flags )
+void vk_reset( ch_handle_t window_handle, r_window_data_t* window, e_render_reset_flags flags )
 {
 	// recreate swapchain
 	vk_swapchain_recreate( window );

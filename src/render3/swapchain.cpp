@@ -5,7 +5,7 @@
 #include "render.h"
 
 
-CONVAR_EX_RANGE_INT( r_vk_present_mode, "r.vk.present.mode", 0, 0, 3, "Image Present Mode, 0 - " );
+CONVAR_RANGE_INT_NAME( r_vk_present_mode, "r.vk.present.mode", 0, 0, 3, "Image Present Mode, 0 - " );
 
 
 // desired surface format

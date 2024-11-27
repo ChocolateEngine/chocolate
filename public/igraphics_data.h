@@ -255,7 +255,7 @@ struct model_material_t
 	u32        index_offset;
 	u32        index_count;
 
-	ChHandle_t material;
+	ch_handle_t material;
 };
 
 
@@ -288,13 +288,13 @@ class IGraphicsData : public ISystem
 	// --------------------------------------------------------------------------------------------
 
 	// Loads a texture from disk
-	virtual ChHandle_t*    texture_load( const char** paths, const texture_load_info_t* create_infos, size_t count = 1 )                = 0;
-	virtual ChHandle_t*    texture_load( const char** paths, s64* pathLens, const texture_load_info_t* create_infos, size_t count = 1 ) = 0;
-	//virtual ChHandle_t     texture_load( ch_string* paths, const texture_load_info_t* create_infos, size_t count = 1 )   = 0;
-	virtual ChHandle_t     texture_load( const char* path, s64 pathLen, const texture_load_info_t& create_info )                        = 0;
+	virtual ch_handle_t*    texture_load( const char** paths, const texture_load_info_t* create_infos, size_t count = 1 )                = 0;
+	virtual ch_handle_t*    texture_load( const char** paths, s64* pathLens, const texture_load_info_t* create_infos, size_t count = 1 ) = 0;
+	//virtual ch_handle_t     texture_load( ch_string* paths, const texture_load_info_t* create_infos, size_t count = 1 )   = 0;
+	virtual ch_handle_t     texture_load( const char* path, s64 pathLen, const texture_load_info_t& create_info )                        = 0;
 
-	virtual void           texture_free( ChHandle_t* texture, size_t count = 1 )                                                            = 0;
-	virtual texture_data_t texture_get_data( ChHandle_t texture )                                                                           = 0;
+	virtual void           texture_free( ch_handle_t* texture, size_t count = 1 )                                                            = 0;
+	virtual texture_data_t texture_get_data( ch_handle_t texture )                                                                           = 0;
 
 	// --------------------------------------------------------------------------------------------
 	// Materials

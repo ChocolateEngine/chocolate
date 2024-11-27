@@ -357,9 +357,9 @@ struct r_window_data_t
 // --------------------------------------------------------------------------------------------
 
 
-LOG_CHANNEL_EXTERN( Render );
-LOG_CHANNEL_EXTERN( Vulkan );
-LOG_CHANNEL_EXTERN( Validation );
+LOG_CHANNEL( Render );
+LOG_CHANNEL( Vulkan );
+LOG_CHANNEL( Validation );
 
 
 CONVAR_BOOL_EXT( r_msaa_enabled );
@@ -387,7 +387,7 @@ extern VkSurfaceCapabilitiesKHR            g_vk_surface_capabilities;
 extern VkSurfaceFormatKHR                  g_vk_surface_format;
 
 extern ResourceList< r_window_data_t >     g_windows;
-extern ChHandle_t                          g_main_window;
+extern ch_handle_t                          g_main_window;
 
 extern handle_list_t< vk_image_t >         g_vk_images;
 
@@ -493,8 +493,8 @@ bool                                       vk_render_sync_create( r_window_data_
 void                                       vk_render_sync_destroy( r_window_data_t* window );
 void                                       vk_render_sync_reset( r_window_data_t* window );
 
-void                                       vk_draw( ChHandle_t window_handle, r_window_data_t* window );
-void                                       vk_reset( ChHandle_t window_handle, r_window_data_t* window, e_render_reset_flags flags );
+void                                       vk_draw( ch_handle_t window_handle, r_window_data_t* window );
+void                                       vk_reset( ch_handle_t window_handle, r_window_data_t* window, e_render_reset_flags flags );
 
 void                                       vk_blit_image_to_image( VkCommandBuffer c, VkImage src, VkImage dst, VkExtent2D src_size, VkExtent2D dst_size );
 

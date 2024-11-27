@@ -186,6 +186,9 @@ void GuiSystem::StyleImGui()
 
 ImFont* GuiSystem::BuildFont( const char* spPath, float sSizePixels, const ImFontConfig* spFontConfig )
 {
+	if ( !render )
+		return nullptr;
+
 	if ( args_find( "-no-imgui-font" ) )
 		return nullptr;
 

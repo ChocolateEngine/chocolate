@@ -9,17 +9,17 @@
 #include "render.h"
 
 
-static bool                         g_no_debug_utils        = Args_Register( false, "List All Vulkan Extensions, marking what ones are loaded", "--vk-no-debug-utils" );
-static bool                         g_list_exts             = Args_Register( false, "List All Vulkan Extensions, marking what ones are loaded", "--vk-list-exts" );
-static bool                         g_list_queues           = Args_Register( false, "List All Vulkan Device Queues", "--vk-list-queues" );
-static bool                         g_list_devices          = Args_RegisterF( false, "List Graphics Cards detected", 2, "--gpus", "--list-gpus" );
-static int                          g_device_index          = Args_Register( -1, "Manually select a GPU by the index in the device list", "--gpu" );
+static bool                         g_no_debug_utils           = args_register( false, "List All Vulkan Extensions, marking what ones are loaded", "--vk-no-debug-utils" );
+static bool                         g_list_exts                = args_register( false, "List All Vulkan Extensions, marking what ones are loaded", "--vk-list-exts" );
+static bool                         g_list_queues              = args_register( false, "List All Vulkan Device Queues", "--vk-list-queues" );
+static bool                         g_list_devices             = args_register_names( false, "List Graphics Cards detected", 2, "--gpus", "--list-gpus" );
+static int                          g_device_index             = args_register( -1, "Manually select a GPU by the index in the device list", "--gpu" );
 
-static bool                         g_has_debug_utils       = false;
+static bool                         g_has_debug_utils          = false;
 
-VkInstance                          g_vk_instance           = VK_NULL_HANDLE;
-VkDevice                            g_vk_device             = VK_NULL_HANDLE;
-VkPhysicalDevice                    g_vk_physical_device    = VK_NULL_HANDLE;
+VkInstance                          g_vk_instance              = VK_NULL_HANDLE;
+VkDevice                            g_vk_device                = VK_NULL_HANDLE;
+VkPhysicalDevice                    g_vk_physical_device       = VK_NULL_HANDLE;
 
 VkQueue                             g_vk_queue_graphics        = VK_NULL_HANDLE;
 VkQueue                             g_vk_queue_transfer        = VK_NULL_HANDLE;
@@ -46,7 +46,7 @@ PFN_vkCmdEndDebugUtilsLabelEXT      pfnCmdEndDebugUtilsLabel      = nullptr;
 PFN_vkCmdInsertDebugUtilsLabelEXT   pfnCmdInsertDebugUtilsLabel   = nullptr;
 
 
-constexpr char const* g_device_extensions[] = {
+constexpr char const*               g_device_extensions[]         = {
 	VK_KHR_SWAPCHAIN_EXTENSION_NAME,
 	"VK_EXT_descriptor_indexing",
     VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME,
@@ -67,13 +67,13 @@ extern void vk_swapchain_setup_info( device_info_t& info );
 	constexpr bool        r_vk_verbose            = false;
 	constexpr bool        r_vk_formatted          = false;
 #else
-	static bool           g_use_validation_layers = Args_Register( false, "Enable Vulkan Validation Layers Extensions", "--vk-valid" );
+	static bool           g_use_validation_layers = args_register( false, "Enable Vulkan Validation Layers Extensions", "--vk-valid" );
 	constexpr char const* g_validation_layers[]   = { "VK_LAYER_KHRONOS_validation" };
 	static bool           g_has_validation        = false;
 
-	CONVAR_EX_BOOL( r_vk_debug_messages, "r.vk.debug.enabled", true );
-	CONVAR_EX_BOOL( r_vk_verbose, "r.vk.debug.verbose", true );
-	CONVAR_EX_BOOL( r_vk_formatted, "r.vk.debug.formatted", true );
+	CONVAR_BOOL_NAME( r_vk_debug_messages, "r.vk.debug.enabled", true );
+	CONVAR_BOOL_NAME( r_vk_verbose, "r.vk.debug.verbose", true );
+	CONVAR_BOOL_NAME( r_vk_formatted, "r.vk.debug.formatted", true );
 #endif
 
 
@@ -96,11 +96,11 @@ VKAPI_ATTR VkBool32 VKAPI_CALL vk_debug_callback( VkDebugUtilsMessageSeverityFla
 	if ( !g_use_validation_layers || !r_vk_debug_messages )
 		return VK_FALSE;
 
-	const Log* log = Log_GetLastLog();
+	const log_t* log = Log_GetLastLog();
 
 	// blech
-	if ( log && log->aChannel != gLC_Vulkan )
-		Log_Ex( gLC_Vulkan, LogType::Raw, "\n" );
+	if ( log && log->channel != gLC_Vulkan )
+		Log_Ex( gLC_Vulkan, ELogType_Raw, "\n" );
 
 	std::string formatted;
 

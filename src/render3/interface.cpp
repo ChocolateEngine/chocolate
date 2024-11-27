@@ -137,10 +137,10 @@ struct Render3 final : public IRender3
 	// EACH ONE SHOULD HAVE THEIR OWN IMGUI CONTEXT !!!!
 	// --------------------------------------------------------------------------------------------
 
-	ChHandle_t window_create( SDL_Window* sdl_window, void* native_window = nullptr ) override
+	ch_handle_t window_create( SDL_Window* sdl_window, void* native_window = nullptr ) override
 	{
 		r_window_data_t* window        = nullptr;
-		ChHandle_t       window_handle = g_windows.Create( &window );
+		ch_handle_t       window_handle = g_windows.Create( &window );
 
 		const char*      title         = SDL_GetWindowTitle( sdl_window ) == nullptr ? SDL_GetWindowTitle( sdl_window ) : CH_DEFAULT_WINDOW_NAME;
 
@@ -250,7 +250,7 @@ struct Render3 final : public IRender3
 		return window_handle;
 	}
 
-	void window_free( ChHandle_t window ) override
+	void window_free( ch_handle_t window ) override
 	{
 		r_window_data_t* window_data = nullptr;
 		if ( !g_windows.Get( window, &window_data ) )
@@ -277,7 +277,7 @@ struct Render3 final : public IRender3
 		g_windows.Remove( window );
 	}
 
-	void window_set_reset_callback( ChHandle_t window, fn_render_on_reset_t func )
+	void window_set_reset_callback( ch_handle_t window, fn_render_on_reset_t func )
 	{
 		r_window_data_t* window_data = nullptr;
 		if ( !g_windows.Get( window, &window_data ) )
@@ -289,7 +289,7 @@ struct Render3 final : public IRender3
 		window_data->fn_on_reset = func;
 	}
 	
-	glm::uvec2 window_surface_size( ChHandle_t window ) override
+	glm::uvec2 window_surface_size( ch_handle_t window ) override
 	{
 		r_window_data_t* window_data = nullptr;
 		if ( !g_windows.Get( window, &window_data ) )
@@ -312,7 +312,7 @@ struct Render3 final : public IRender3
 		ImGui_ImplVulkan_NewFrame();
 	}
 
-	void reset( ChHandle_t window_handle ) override
+	void reset( ch_handle_t window_handle ) override
 	{
 		r_window_data_t* window = nullptr;
 		if ( !g_windows.Get( window_handle, &window ) )
@@ -324,7 +324,7 @@ struct Render3 final : public IRender3
 		vk_reset( window_handle, window, e_render_reset_flags_resize );
 	}
 
-	void present( ChHandle_t window_handle ) override
+	void present( ch_handle_t window_handle ) override
 	{
 		r_window_data_t* window = nullptr;
 		if ( !g_windows.Get( window_handle, &window ) )
@@ -339,6 +339,23 @@ struct Render3 final : public IRender3
 
 		vk_draw( window_handle, window );
 	}
+
+	// --------------------------------------------------------------------------------------------
+	// Test Rendering
+	// --------------------------------------------------------------------------------------------
+
+	bool test_init() override
+	{
+		return true;
+	}
+
+	void test_shutdown() override
+	{
+	}
+
+	void test_update( float frame_time, ch_handle_t window, glm::mat4 view, glm::mat4 projection ) override
+	{
+	}
 };
 
 
@@ -350,7 +367,7 @@ static ModuleInterface_t g_interfaces[] = {
 
 extern "C"
 {
-	DLL_EXPORT ModuleInterface_t* cframework_GetInterfaces( size_t& srCount )
+	DLL_EXPORT ModuleInterface_t* ch_get_interfaces( u8& srCount )
 	{
 		srCount = 1;
 		return g_interfaces;

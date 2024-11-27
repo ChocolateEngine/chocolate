@@ -132,7 +132,7 @@ void vk_check_f( VkResult sResult, char const* spArgs, ... )
 
 	if ( !str_data )
 	{
-		ch_print( "Failed to allocate memory for error string\n" );
+		print( "Failed to allocate memory for error string\n" );
 		return;
 	}
 
@@ -171,7 +171,7 @@ bool vk_check_ef( VkResult sResult, char const* spArgs, ... )
 
 	if ( !str_data )
 	{
-		ch_print( "Failed to allocate memory for error string\n" );
+		print( "Failed to allocate memory for error string\n" );
 		return false;
 	}
 
