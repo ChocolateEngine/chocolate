@@ -106,7 +106,7 @@ struct MeshBuilder
 {
 	struct BlendShape
 	{
-		std::string                   aName;
+		std::string                   name;
 		ChVector< MeshBuilderVertex > aVertices;
 	};
 
@@ -117,7 +117,7 @@ struct MeshBuilder
 
 		MeshBuilderVertex             aVertex;
 		VertexFormat                  aFormat   = VertexFormat_None;
-		ChHandle_t                    aMaterial = CH_INVALID_HANDLE;
+		ch_handle_t                    aMaterial = CH_INVALID_HANDLE;
 	};
 
 	MeshBuilder( IGraphics* spGraphics )
@@ -174,7 +174,7 @@ struct MeshBuilder
 
 	// ------------------------------------------------------------------------
 
-	void                     SetMaterial( Handle sMaterial );
+	void                     SetMaterial( ch_handle_t sMaterial );
 	void                     SetSurfaceCount( size_t sCount );
 	void                     SetCurrentSurface( size_t sIndex );
 	void                     AdvanceSurfaceIndex();
@@ -215,7 +215,7 @@ struct MeshBuildMaterial_t
 	glm::vec2*                        apUV;
 
 	u32                               aVertexCount;
-	ChHandle_t                        aMaterial = CH_INVALID_HANDLE;
+	ch_handle_t                        aMaterial = CH_INVALID_HANDLE;
 
 	ChVector< MeshBuildBlendShape_t > aBlendShapes;
 };
@@ -259,7 +259,7 @@ struct MeshBuildData_t
 
 
 // TODO: what if the model we're loading already has indices calculated for it? can't we just use that?
-bool MeshBuild_StartMesh( MeshBuildData_t& srMeshBuildData, u32 sMaterialCount, ChHandle_t* spMaterials );
+bool MeshBuild_StartMesh( MeshBuildData_t& srMeshBuildData, u32 sMaterialCount, ch_handle_t* spMaterials );
 void MeshBuild_FinishMesh( IGraphics* spGraphics, MeshBuildData_t& srMeshBuildData, Model* spModel, bool sCalculateIndices, bool sUploadMesh, const char* spDebugName = "" );
 
 void MeshBuild_AllocateVertices( MeshBuildData_t& srMeshBuildData, u32 sMaterial, u32 sCount );

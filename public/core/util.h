@@ -29,14 +29,8 @@
 // ==============================================================================
 // Helper Macros
 
-#define MALLOC_NEW( type ) (type*)malloc(sizeof(struct type))
-
 #define CH_ARR_SIZE( arr ) (sizeof(arr) / sizeof(arr[0]))
 #define ARR_SIZE           CH_ARR_SIZE
-
-// much faster alternative to dynamic_cast
-#define IS_TYPE( var1, var2 ) typeid(var1) == typeid(var2)
-#define IS_NOT_TYPE( var1, var2 ) typeid(var1) != typeid(var2)
 
 // need macro for constant expression
 #define CH_ALIGN_VALUE( val, alignment ) ( ( val + alignment - 1 ) & ~( alignment - 1 ) ) 
@@ -79,15 +73,15 @@
 // Short Types
 
 
-using u8  = unsigned char;
-using u16 = unsigned short;
-using u32 = unsigned int;
-using u64 = unsigned long long;
-
 using s8  = char;
 using s16 = short;
 using s32 = int;
 using s64 = long long;
+
+using u8  = unsigned char;
+using u16 = unsigned short;
+using u32 = unsigned int;
+using u64 = unsigned long long;
 
 using f32 = float;
 using f64 = double;
@@ -124,21 +118,15 @@ inline To* ch_pointer_cast( From* in )
 // TODO: add in memory tracking here
 inline void ch_free( void* data )
 {
-	if ( !data )
-		return;
-
 	free( data );
 }
 
 
-template< typename Type >
-inline void ch_free( Type* data )
-{
-	if ( !data )
-		return;
-
-	free( data );
-}
+//template< typename Type >
+//inline void ch_free( Type* data )
+//{
+//	free( data );
+//}
 
 
 // Allocate X Amount of a specific type, could be named better
@@ -161,9 +149,9 @@ inline To* ch_realloc( To* spData, u64 sCount )
 }
 
 
-// Reallocate X Amount of a specific type, could be named better
+// Reallocate X Amount of a specific type, automatically reassigns the pointer
 template< typename To >
-inline bool ch_realloc2( To*& spData, u64 sCount )
+inline bool ch_realloc_auto( To*& spData, u64 sCount )
 {
 	To* data = static_cast< To* >( realloc( spData, sizeof( To ) * sCount ) );
 	
@@ -197,18 +185,9 @@ inline To* ch_stack_alloc( u64 sCount )
 }
 
 
-// old names
-// TODO: replace this
-#define ch_malloc_count                 ch_malloc
-#define ch_calloc_count                 ch_calloc
-#define ch_realloc_count                ch_realloc
-#define ch_realloc_count2               ch_realloc2
-
 #define CH_MALLOC( type, count )        ch_malloc< type >( count )
 #define CH_CALLOC( type, count )        ch_calloc< type >( count )
-#define CH_REALLOC( type, data, count ) ch_realloc2< type >( data, count )
-
-#define CH_MALLOC2( type, count )       static_cast< Type* >( malloc( count * sizeof( type ) )
+#define CH_REALLOC( type, data, count ) ch_realloc< type >( data, count )
 
 
 // inline int ch_strcasecmp( const char* spStr1, const char* spStr2 )
@@ -248,23 +227,21 @@ CORE_API bool ch_str_equals( const char* str1, u64 str1Len, const char* str2 );
 #define CH_STR_UR( str ) str.data, str.size
 
 
-// using s64 would be so we can check for -1
-// and you're never going to have a string that is greater than 2^63, right?
 struct ch_string
 {
-	char* data = nullptr;
-	s64   size = 0;
+	char*  data = nullptr;
+	size_t size = 0;
 
 	constexpr ch_string()
 	{
 	}
 
-	constexpr ch_string( char* spData, s64 sSize )
+	constexpr ch_string( char* spData, size_t sSize )
 		: data( spData ), size( sSize )
 	{
 	}
 
-	constexpr ch_string( const char* spData, s64 sSize )
+	constexpr ch_string( const char* spData, size_t sSize )
 		: data( (char*)spData ), size( sSize )
 	{
 	}
@@ -286,8 +263,8 @@ inline bool operator==( const ch_string& srString, const ch_string& other )
 // this one automatically frees the memory upon destruction
 struct ch_string_auto
 {
-	char* data = nullptr;
-	s64   size = 0;
+	char*  data = nullptr;
+	size_t size = 0;
 
 	ch_string_auto()
 	{
@@ -296,7 +273,7 @@ struct ch_string_auto
 	// we don't have a const char* version,
 	// as that usually means the string is a literal,
 	// and we don't want to free that
-	ch_string_auto( char* spData, s64 sSize )
+	ch_string_auto( char* spData, size_t sSize )
 		: data( spData ), size( sSize )
 	{
 	}
@@ -374,9 +351,9 @@ struct hash< ch_string >
 {
 	size_t operator()( ch_string const& string ) const
 	{
-		size_t value = ( hash< s64 >()( string.size ) );
+		size_t value = ( hash< size_t >()( string.size ) );
 
-		for ( s64 i = 0; i < string.size; i++ )
+		for ( size_t i = 0; i < string.size; i++ )
 			value ^= ( hash< char >()( string.data[ i ] ) );
 
 		return value;
@@ -388,9 +365,9 @@ struct hash< ch_string_auto >
 {
 	size_t operator()( ch_string_auto const& string ) const
 	{
-		size_t value = ( hash< s64 >()( string.size ) );
+		size_t value = ( hash< size_t >()( string.size ) );
 
-		for ( s64 i = 0; i < string.size; i++ )
+		for ( size_t i = 0; i < string.size; i++ )
 			value ^= ( hash< char >()( string.data[ i ] ) );
 
 		return value;
@@ -414,14 +391,14 @@ struct hash< ch_string_auto >
 #define NEW_VEC_INDEX 1
 
 template <class T>
-constexpr u64 vec_index( std::vector<T> &vec, T item, u64 fallback = SIZE_MAX )
+constexpr size_t vec_index( std::vector< T >& vec, T item, size_t fallback = SIZE_MAX )
 {
 #if NEW_VEC_INDEX
 	auto it = std::find( vec.begin(), vec.end(), item );
 	if ( it != vec.end() )
 		return it - vec.begin();
 #else
-	for (u64 i = 0; i < vec.size(); i++)
+	for ( size_t i = 0; i < vec.size(); i++ )
 	{
 		if (vec[i] == item)
 			return i;
@@ -433,14 +410,14 @@ constexpr u64 vec_index( std::vector<T> &vec, T item, u64 fallback = SIZE_MAX )
 
 
 template <class T>
-constexpr u64 vec_index( const std::vector<T> &vec, T item, u64 fallback = SIZE_MAX )
+constexpr size_t vec_index( const std::vector< T >& vec, T item, size_t fallback = SIZE_MAX )
 {
 #if NEW_VEC_INDEX
 	auto it = std::find( vec.begin(), vec.end(), item );
 	if ( it != vec.end() )
 		return it - vec.begin();
 #else
-	for (u64 i = 0; i < vec.size(); i++)
+	for ( size_t i = 0; i < vec.size(); i++ )
 	{
 		if (vec[i] == item)
 			return i;
@@ -462,14 +439,14 @@ constexpr void vec_remove( std::vector<T> &vec, T item )
 template <class T>
 constexpr void vec_remove_if( std::vector<T> &vec, T item )
 {
-	u64 index = vec_index( vec, item );
+	size_t index = vec_index( vec, item );
 	if ( index != SIZE_MAX )
 		vec.erase( vec.begin() + index );
 }
 
 
 template <class T>
-constexpr void vec_remove_index( std::vector<T> &vec, u64 index )
+constexpr void vec_remove_index( std::vector< T >& vec, size_t index )
 {
 	vec.erase( vec.begin() + index );
 }
@@ -492,24 +469,24 @@ constexpr bool vec_contains(const std::vector<T> &vec, T item)
 // ==============================================================================
 // String Tools
 
-void CORE_API        str_upper( std::string& string );
-void CORE_API        str_lower( std::string& string );
+CORE_API void         str_upper( std::string& string );
+CORE_API void         str_lower( std::string& string );
 
 // would like better names for this, but oh well
-std::string CORE_API str_upper2( const std::string& in );
-std::string CORE_API str_lower2( const std::string& in );
+CORE_API std::string  str_upper2( const std::string& in );
+CORE_API std::string  str_lower2( const std::string& in );
 
 #ifdef _WIN32
 // Find the first occurrence of find in s while ignoring case
-char CORE_API* strcasestr( const char* s, const char* find );
+CORE_API char* strcasestr( const char* s, const char* find );
 #endif
 
 // don't need to worry about any resizing with these, but is a little slower
-void CORE_API        vstring( std::string& output, const char* format, ... );
-void CORE_API        vstringV( std::string& output, const char* format, va_list args );
+CORE_API void         vstring( std::string& output, const char* format, ... );
+CORE_API void         vstringV( std::string& output, const char* format, va_list args );
 
-std::string CORE_API vstring( const char* format, ... );
-std::string CORE_API vstringV( const char* format, va_list args );
+CORE_API std::string  vstring( const char* format, ... );
+CORE_API std::string  vstringV( const char* format, va_list args );
 
 
 #define VSTRING( out, format )     \
@@ -520,67 +497,54 @@ std::string CORE_API vstringV( const char* format, va_list args );
 
 
 // ==============================================================================
-// String Allocation System
-
-
-// ==============================================================================
 // Assorted Number/String Functions
 
-std::string     CORE_API Vec2Str( const glm::vec3& in );
-std::string     CORE_API Quat2Str( const glm::quat& in );
+CORE_API std::string ch_vec3_to_str( const glm::vec3& in );
+CORE_API std::string ch_quat_to_str( const glm::quat& in );
 
-double          CORE_API ToDouble( const char* value, double prev );
-long            CORE_API ToLong( const std::string& value, int prev );
+// TODO: write this
+// CORE_API void ch_vec3_to_str( char* buffer, size_t buffer_size, const glm::vec3& in );
+// CORE_API void ch_quat_to_str( char* buffer, size_t buffer_size, const glm::quat& in );
 
-bool            CORE_API ToDouble2( const std::string &value, double &out );
-bool            CORE_API ToLong2( const std::string &value, long &out );
+CORE_API bool        ch_to_float( const char* spValue, float& srOut );
+CORE_API bool        ch_to_double( const char* spValue, double& srOut );
+CORE_API bool        ch_to_long( const char* spValue, long& srOut );
 
-bool CORE_API            ToFloat( const char* spValue, float& srOut );
-bool            CORE_API ToDouble3( const char* spValue, double &srOut );
-bool            CORE_API ToLong3( const char* spValue, long &srOut );
-
-std::string     CORE_API ToString( float value );
-
-std::string     CORE_API ch_to_string( float value );
+CORE_API std::string ch_to_string( float value );
 
 
-inline float Round( float val, u64 precision = 100 )
+inline int rand_int( int min, int max )
 {
-	return roundf( val * precision ) / precision;
+	return min + rand() % ( max + 1 - min );
 }
 
-inline int RandomInt( int sMin, int sMax )
+inline u8 rand_u8( u8 min, u8 max )
 {
-	return sMin + rand() % ( sMax + 1 - sMin );
+	return min + rand() % ( max + 1 - min );
 }
 
-inline u8 RandomU8( u8 sMin, u8 sMax )
+inline u16 rand_u16( u16 min, u16 max )
 {
-	return sMin + rand() % ( sMax + 1 - sMin );
+	return min + rand() % ( max + 1 - min );
 }
 
-inline u16 RandomU16( u16 sMin, u16 sMax )
+inline u32 rand_u32( u32 min, u32 max )
 {
-	return sMin + rand() % ( sMax + 1 - sMin );
+	return rand_int( min, max );
 }
 
-inline u32 RandomU32( u32 sMin, u32 sMax )
+inline u64 rand_u64( u64 min, u64 max )
 {
-	return sMin + rand() % ( sMax + 1 - sMin );
+	return min + rand() % ( max + 1 - min );
 }
 
-inline u64 RandomU64( u64 sMin, u64 sMax )
+inline float rand_float( float min, float max )
 {
-	return sMin + rand() % ( sMax + 1 - sMin );
-}
-
-inline float RandomFloat( float sMin, float sMax )
-{
-	return sMin + ( ( static_cast<float>( rand() ) / static_cast<float>( RAND_MAX ) ) * ( sMax - sMin ) );
+	return min + ( ( static_cast<float>( rand() ) / static_cast<float>( RAND_MAX ) ) * ( max - min ) );
 }
 
 template< typename KEY, typename VALUE >
-inline u64 Util_SizeOfUnordredMap( const std::unordered_map< KEY, VALUE >& srMap )
+inline u64 ch_size_of_umap( const std::unordered_map< KEY, VALUE >& srMap )
 {
 	return 0;
 
@@ -590,19 +554,19 @@ inline u64 Util_SizeOfUnordredMap( const std::unordered_map< KEY, VALUE >& srMap
 }
 
 
-inline float Util_BytesToMB( u64 bytes )
+inline float ch_bytes_to_mb( u64 bytes )
 {
 	return bytes * 0.000001;
 }
 
 
-inline float Util_BytesToKB( u64 bytes )
+inline float ch_bytes_to_kb( u64 bytes )
 {
 	return bytes * 0.001;
 }
 
 
-inline float Sys_BytesToMB( u64 bytes )
+inline float ch_bytes_to_mb_sys( u64 bytes )
 {
 #ifdef _WIN32
 	return bytes * 0.00000095367432;  // 1024 multiples for windows
@@ -612,7 +576,7 @@ inline float Sys_BytesToMB( u64 bytes )
 }
 
 
-inline float Sys_BytesToKB( u64 bytes )
+inline float ch_bytes_to_kb_sys( u64 bytes )
 {
 #ifdef _WIN32
 	return bytes * 0.000976563;  // 1024 multiples for windows
@@ -622,46 +586,30 @@ inline float Sys_BytesToKB( u64 bytes )
 }
 
 
-// ==============================================================================
-// Helper Functions for SpeedyKeyV
-// mainly until speedykeyv can parse lists, one day
-
-std::vector< std::string >	CORE_API KV_GetVec( const std::string& value );
-
-std::vector< int >          CORE_API KV_GetVecInt( const std::string& value );
-std::vector< float >        CORE_API KV_GetVecFloat( const std::string& value );
-
-glm::vec2                   CORE_API KV_GetVec2( const std::string& value, const glm::vec2& fallback = {} );
-glm::vec3                   CORE_API KV_GetVec3( const std::string& value, const glm::vec3& fallback = {} );
-glm::vec4                   CORE_API KV_GetVec4( const std::string& value, const glm::vec4& fallback = {} );
-
-
-// ==============================================================================
-// Ref Counter Class
-
-
-struct RefCounted
+// print a string to stdout, shortcut to fputs( str, stdout );
+inline void print( const char* str )
 {
-	virtual ~RefCounted() = default;
+	fputs( str, stdout );
+}
 
-	inline RefCounted& operator=( const RefCounted& srRef )
+
+struct ref_count_t
+{
+	virtual ~ref_count_t() = default;
+
+	inline ref_count_t& operator=( const ref_count_t& srRef )
 	{
 		return *this;
 	}
 
-	u32 GetRefCount() const
-	{
-		return aRefCount;
-	}
-
 	// Add or release a reference to this object
-	inline void AddRef() const
+	inline void add_ref() const
 	{
 		aRefCount++;
 	}
 
 	// Returns true if this was deleted
-	inline bool Release() const
+	inline bool release() const
 	{
 		if ( --aRefCount == 0 )
 		{
@@ -674,32 +622,3 @@ struct RefCounted
 
 	mutable std::atomic< u32 > aRefCount = 0;  // Current reference count
 };
-
-
-template <class T>
-class RefTarget
-{
-public:
-	virtual            ~RefTarget() = default;
-
-	inline RefTarget&   operator=( const RefTarget &srRef )        { return *this; }
-	
-	u32                 GetRefCount() const                         { return aRefCount; }
-
-	// Add or release a reference to this object
-	inline void         AddRef() const                              { ++aRefCount; }
-	inline void         Release() const                             { if (--aRefCount == 0) delete static_cast<const T *>(this); }
-
-private:
-
-	mutable std::atomic< u32 > aRefCount = 0;  // Current reference count
-};
-
-
-// ==============================================================================
-// Assorted Functions
-
-
-
-
-

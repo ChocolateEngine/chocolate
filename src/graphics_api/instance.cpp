@@ -1,7 +1,7 @@
 #include "core/platform.h"
 #include "core/log.h"
 #include "core/commandline.h"
-#include "util.h"
+#include "core/util.h"
 
 #include "render/irender.h"
 #include "render_vk.h"
@@ -11,11 +11,11 @@
 #include <set>
 
 
-static bool gListExts    = Args_Register( false, "List All Vulkan Extensions, marking what ones are loaded", "-vk-list-exts" );
-static bool gListQueues  = Args_Register( false, "List All Device Queues", "-vk-list-queues" );
-static int  gDeviceIndex = Args_Register( -1, "Manually select a GPU by the index in the device list", "-gpu" );
-static int  gListDevices = Args_RegisterF( false, "List Graphics Cards detected", 2, "-gpus", "-list-gpus" );
-static int  gDebugUtils  = Args_Register( true, "Vulkan Debug Tools", "-vk-no-debug" );
+static bool gListExts    = args_register( false, "List All Vulkan Extensions, marking what ones are loaded", "--vk-list-exts" );
+static bool gListQueues  = args_register( false, "List All Device Queues", "--vk-list-queues" );
+static int  gDeviceIndex = args_register( -1, "Manually select a GPU by the index in the device list", "--gpu" );
+static bool gListDevices = args_register_names( false, "List Graphics Cards detected", 2, "--gpus", "--list-gpus" );
+static int  gDebugUtils  = args_register( true, "Vulkan Debug Tools", "--vk-no-debug" );
 
 
 #if _DEBUG
@@ -34,7 +34,7 @@ CONVAR_BOOL( vk_debug_messages, 0, "" );
 	constexpr bool        vk_verbose              = false;
 	constexpr bool        vk_formatted            = false;
 #else
-	bool                  gEnableValidationLayers = Args_Register( false, "Enable Vulkan Validation Layers Extensions", "-vk-valid" );
+	bool                  gEnableValidationLayers = args_register( false, "Enable Vulkan Validation Layers Extensions", "--vk-valid" );
 	constexpr char const* gpValidationLayers[]    = { "VK_LAYER_KHRONOS_validation" };
 
 	CONVAR_BOOL( vk_verbose, 0, "" );
@@ -102,11 +102,11 @@ VKAPI_ATTR VkBool32 VKAPI_CALL VK_DebugCallback( VkDebugUtilsMessageSeverityFlag
 	if ( !gEnableValidationLayers || !vk_debug_messages )
 		return VK_FALSE;
 
-	const Log* log = Log_GetLastLog();
+	const log_t* log = Log_GetLastLog();
 
 	// blech
-	if ( log && log->aChannel != gLC_Vulkan )
-		Log_Ex( gLC_Vulkan, LogType::Raw, "\n" );
+	if ( log && log->channel != gLC_Vulkan )
+		Log_Ex( gLC_Vulkan, ELogType_Raw, "\n" );
 
 	std::string formatted;
 
@@ -344,7 +344,7 @@ std::vector< const char* > VK_GetSDL2Extensions()
 	if ( !SDL_Vulkan_GetInstanceExtensions( gpWindow, &extensionCount, extensions.data() ) )
 		Log_Fatal( gLC_Render, "Unable to query the number of Vulkan instance extension names\n" );
 
-	LogGroup group = Log_GroupBeginEx( gLC_Render, LogType::Dev );
+	log_t group = Log_GroupBeginEx( gLC_Render, ELogType_Verbose );
 
 	// Display names
 	Log_GroupF( group, "Found %d Vulkan extensions:\n", extensionCount );
@@ -1005,7 +1005,7 @@ CONCMD( vk_device_info )
 		return;
 	}
 
-	LogGroup group = Log_GroupBegin( gLC_Vulkan );
+	log_t group = Log_GroupBegin( gLC_Vulkan );
 
 	Log_GroupF( group, "Device Name:    %s\n", gPhysicalDeviceProperties.deviceName );
 
@@ -1051,7 +1051,7 @@ CONCMD_VA( vk_dump_limits, "Dump Device Limits and current usage of those limits
 		return;
 	}
 
-	LogGroup group = Log_GroupBegin( gLC_Vulkan );
+	log_t group = Log_GroupBegin( gLC_Vulkan );
 
 	VkPhysicalDeviceLimits& limits = gPhysicalDeviceProperties.limits;
 

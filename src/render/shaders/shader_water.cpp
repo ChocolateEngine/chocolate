@@ -1,6 +1,6 @@
 #include "graphics_int.h"
 #include "render/irender.h"
-#include "util.h"
+#include "core/util.h"
 
 
 constexpr const char*      gpFallbackNormalPath     = "materials/base/black.ktx";
@@ -17,7 +17,7 @@ static CreateDescBinding_t gWater_Bindings[]      = {
 
 struct Water_Push_t
 {
-	glm::vec3 aColor;
+	glm::vec3 color;
 
 	u32       aRenderable = 0;
 	// u32       aMaterial   = 0;
@@ -27,7 +27,7 @@ struct Water_Push_t
 
 struct Water_Material_t
 {
-	glm::vec3 aColor;
+	glm::vec3 color;
 	u32       aNormalMap = 0;
 };
 
@@ -53,7 +53,7 @@ static void Shader_Water_GetGraphicsPipelineCreate( GraphicsPipelineCreate_t& sr
 }
 
 
-static void Shader_Water_PushConstants( Handle cmd, Handle sLayout, const ShaderPushData_t& sPushData )
+static void Shader_Water_PushConstants( ch_handle_t cmd, ch_handle_t sLayout, const ShaderPushData_t& sPushData )
 {
 	PROF_SCOPE();
 
@@ -62,7 +62,7 @@ static void Shader_Water_PushConstants( Handle cmd, Handle sLayout, const Shader
 	// push.aModelMatrix  = sPushData.apRenderable->aModelMatrix;
 	push.aRenderable = sPushData.apRenderable->aIndex;
 	push.aViewport   = sPushData.aViewportIndex;
-	push.aColor      = gWaterColor;
+	push.color      = gWaterColor;
 
 	render->CmdPushConstants( cmd, sLayout, ShaderStage_Vertex | ShaderStage_Fragment, 0, sizeof( Water_Push_t ), &push );
 }

@@ -1,4 +1,4 @@
-#include "util.h"
+#include "core/util.h"
 #include "render/irender.h"
 #include "graphics_int.h"
 
@@ -31,14 +31,14 @@ static void Shader_Skybox_GetGraphicsPipelineCreate( GraphicsPipelineCreate_t& s
 }
 
 
-static void Shader_Skybox_PushConstants( Handle cmd, Handle sLayout, const ShaderPushData_t& sPushData )
+static void Shader_Skybox_PushConstants( ch_handle_t cmd, ch_handle_t sLayout, const ShaderPushData_t& sPushData )
 {
 	PROF_SCOPE();
 
 	Skybox_Push push;
 
 	push.aModelMatrix = sPushData.apRenderable->aModelMatrix;
-	Handle mat        = sPushData.apRenderable->apMaterials[ sPushData.aSurfaceDraw.aSurface ];
+	ch_handle_t mat        = sPushData.apRenderable->apMaterials[ sPushData.aSurfaceDraw.aSurface ];
 	push.aSky         = gGraphics.Mat_GetTextureIndex( mat, "sky" );
 	push.aRenderable  = sPushData.aRenderableIndex;
 	push.aViewport    = sPushData.aViewportIndex;

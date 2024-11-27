@@ -1,4 +1,4 @@
-#include "util.h"
+#include "core/util.h"
 #include "render/irender.h"
 #include "graphics_int.h"
 
@@ -15,7 +15,7 @@ constexpr glm::vec4         gWireframeColor = { 0.f, 221.f / 255.f, 1.f, 1.f };
 struct Debug_Push
 {
 	alignas( 16 ) glm::mat4 aModelMatrix;
-	alignas( 16 ) glm::vec4 aColor;
+	alignas( 16 ) glm::vec4 color;
 	u32 aRenderable = 0;  // renderable index
 	u32 aViewport   = 0;  // viewport index
 };
@@ -64,11 +64,21 @@ static void Shader_Debug_GetGraphicsPipelineCreate( GraphicsPipelineCreate_t& sr
 }
 
 
-static void Shader_Debug_PushConstants( Handle cmd, Handle sLayout, const ShaderPushData_t& sPushData )
+static void Shader_Debug_PushConstants( ch_handle_t cmd, ch_handle_t sLayout, const ShaderPushData_t& sPushData )
 {
 	Debug_Push push{};
 	push.aModelMatrix = sPushData.apRenderable->aModelMatrix;
-	push.aColor       = sPushData.apMaterialData->vars[ COLOR_MAT_INDEX ].aVec4;
+
+	// this should never happen, but it is, need to fix
+	if ( sPushData.apMaterialData->vars.empty() )
+	{
+		push.color = glm::vec4( 1.f, 1.f, 1.f, 1.f );
+	}
+	else
+	{
+		push.color = sPushData.apMaterialData->vars[ COLOR_MAT_INDEX ].aVec4;
+	}
+
 	push.aRenderable  = sPushData.aRenderableIndex;
 	push.aViewport    = sPushData.aViewportIndex;
 
@@ -141,16 +151,16 @@ CH_REGISTER_SHADER( gShaderCreate_DebugLine );
 // Wireframe Shader is just the debug shader with a different push constant lol
 
 
-static void Shader_Wireframe_PushConstants( Handle cmd, Handle sLayout, const ShaderPushData_t& sPushData )
+static void Shader_Wireframe_PushConstants( ch_handle_t cmd, ch_handle_t sLayout, const ShaderPushData_t& sPushData )
 {
 	Debug_Push push{};
 	push.aModelMatrix = sPushData.apRenderable->aModelMatrix;
 
 	// this should never happen, but it is, need to fix
 	if ( sPushData.apMaterialData )
-		push.aColor = sPushData.apMaterialData->vars[ COLOR_MAT_INDEX ].aVec4;
+		push.color = sPushData.apMaterialData->vars[ COLOR_MAT_INDEX ].aVec4;
 	else
-		push.aColor = gWireframeColor;
+		push.color = gWireframeColor;
 
 	render->CmdPushConstants( cmd, sLayout, ShaderStage_Vertex | ShaderStage_Fragment, 0, sizeof( Debug_Push ), &push );
 }

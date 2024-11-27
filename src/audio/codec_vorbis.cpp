@@ -1,6 +1,6 @@
 #include "codec_vorbis.h"
 
-#include "util.h"
+#include "core/util.h"
 
 #include <SDL2/SDL.h>
 #include <filesystem>
@@ -11,7 +11,7 @@
   #include <vorbis/vorbisfile.h>
 
 
-LOG_REGISTER_CHANNEL( Vorbis, LogColor::Green );
+LOG_CHANNEL_REGISTER( Vorbis, ELogColor_Green );
 
 struct CodecVorbisData
 {
@@ -39,24 +39,24 @@ bool CodecVorbis::Open( const char* soundPath, AudioStream* stream )
 	FILE* soundFileHandle = fopen( soundPath, "rb" );
 	if ( !soundFileHandle )
 	{
-		Log_MsgF( gVorbisChannel, "File does not exist: \"%s\"\n", soundPath );
+		Log_MsgF( gLC_Vorbis, "File does not exist: \"%s\"\n", soundPath );
 		return false;
 	}
 
-	OggVorbis_File* oggFile = MALLOC_NEW( OggVorbis_File );
+	OggVorbis_File* oggFile = ch_malloc< OggVorbis_File >( 1 );
 	vorbis_info*    ovfInfo;
 
 	// check if valid
 	if ( ov_open_callbacks( soundFileHandle, oggFile, NULL, 0, OV_CALLBACKS_NOCLOSE ) < 0 )
 	{
-		Log_MsgF( gVorbisChannel, "Not a valid ogg file: \"%s\"\n", soundPath );
+		Log_MsgF( gLC_Vorbis, "Not a valid ogg file: \"%s\"\n", soundPath );
 		ov_clear( oggFile );
 		return false;
 	}
 
 	if ( !ov_seekable( oggFile ) )
 	{
-		Log_MsgF( gVorbisChannel, "Stream not seekable: \"%s\"\n", soundPath );
+		Log_MsgF( gLC_Vorbis, "Stream not seekable: \"%s\"\n", soundPath );
 		ov_clear( oggFile );
 		return false;
 	}
@@ -64,7 +64,7 @@ bool CodecVorbis::Open( const char* soundPath, AudioStream* stream )
 	ovfInfo = ov_info( oggFile, 0 );
 	if ( !ovfInfo )
 	{
-		Log_MsgF( gVorbisChannel, "Unable to get stream info: \"%s\".\n", soundPath );
+		Log_MsgF( gLC_Vorbis, "Unable to get stream info: \"%s\".\n", soundPath );
 		ov_clear( oggFile );
 		return false;
 	}
@@ -72,12 +72,12 @@ bool CodecVorbis::Open( const char* soundPath, AudioStream* stream )
 	long numStreams = ov_streams( oggFile );
 	if ( numStreams != 1 )
 	{
-		Log_MsgF( gVorbisChannel, "More than one (%s) stream in \"%s\".\n", numStreams, stream->name.c_str() );
+		Log_MsgF( gLC_Vorbis, "More than one (%s) stream in \"%s\".\n", numStreams, stream->name.c_str() );
 		ov_clear( oggFile );
 		return false;
 	}
 
-	CodecVorbisData* vorbisData = MALLOC_NEW( CodecVorbisData );
+	CodecVorbisData* vorbisData = ch_malloc< CodecVorbisData >( 1 );
 	vorbisData->file            = soundFileHandle;
 	vorbisData->oggFile         = oggFile;
 	vorbisData->buffer          = nullptr;
@@ -176,7 +176,7 @@ long CodecVorbis::Read( AudioStream* stream, size_t size, ChVector< float >& dat
 				if ( remain != 0 )
 					remain--;
 				else
-					Log_Msg( gVorbisChannel, "WHAT!!!\n" );
+					Log_Msg( gLC_Vorbis, "WHAT!!!\n" );
 			}
 		}
 

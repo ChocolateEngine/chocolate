@@ -4,7 +4,7 @@
 #include "core/platform.h"
 #include "core/log.h"
 #include "core/build_number.h"
-#include "util.h"
+#include "core/util.h"
 
 #include <cstring>
 #include <stdarg.h>
@@ -12,8 +12,7 @@
 #include <fstream>
 #include <mutex>
 
-LOG_REGISTER_CHANNEL( Console, LogColor::Gray );
-
+LOG_CHANNEL_REGISTER( Console, ELogColor_Gray );
 
 std::vector< std::string >      gQueue;
 std::vector< std::string >      gCommandHistory;
@@ -24,10 +23,11 @@ std::vector< FArchive* >        gArchiveCallbacks;
 
 constexpr const char*           CON_ARCHIVE_FILE    = "cfg/config.cfg";
 constexpr const char*           CON_ARCHIVE_DEFAULT = "cfg/config_default.cfg";
-ch_string                       gConArchiveFile     = ch_str_create( CON_ARCHIVE_FILE );
-ch_string                       gConArchiveDefault  = ch_str_create( CON_ARCHIVE_DEFAULT );
 
-constexpr const char*           CFG_DIR    = "cfg" CH_PATH_SEP_STR;
+ch_string                       gConArchiveFile{};
+ch_string                       gConArchiveDefault{};
+
+constexpr const char*           CFG_DIR             = "cfg" CH_PATH_SEP_STR;
 
 
 CONVAR_BOOL( con_remove_dup_input_history, true, "Remove duplicate user inputs from the history" );
@@ -92,54 +92,40 @@ void Con_SetConVarRegisterFlags( ConVarFlag_t sFlags )
 
 void ConCommand::Init( const char* name, const char* desc, ConVarFlag_t flags, ConCommandFunc* func, ConCommandDropdownFunc* dropDownFunc )
 {
-	aName            = name;
-	aDesc            = desc;
-	aFlags           = flags;
+	this->name           = name;
+	this->aDesc          = desc;
+	this->aFlags         = flags;
 
-	apFunc           = func;
-	apDropDownFunc   = dropDownFunc;
+	this->apFunc         = func;
+	this->apDropDownFunc = dropDownFunc;
 
 	#pragma message( "TODO: OPTIMIZATION - ConCmds queue all other commands during init, and i imagine that can be a bit slow" );
 
-	ConCommand* cvar = Con_GetConCommand( aName );
+	ConCommand* cvar = Con_GetConCommand( name );
 
 	if ( cvar )
 	{
-		Log_WarnF( "Multiple ConCommands with the same name! \"%s\"", aName );
+		Log_WarnF( "Multiple ConCommands with the same name! \"%s\"", name );
 		return;
 	}
 
 	Con_GetConCommands().push_back( this );
-	Con_GetConVarNames().push_back( aName );
-	Con_GetConVarList().emplace_back( aName, false, this );
+	Con_GetConVarNames().push_back( name );
+	Con_GetConVarList().emplace_back( name, false, this );
 
 	if ( gConVarRegisterFlags )
 	{
-		aFlags |= gConVarRegisterFlags;
+		this->aFlags |= gConVarRegisterFlags;
 	}
 }
+
 
 std::string ConCommand::GetPrintMessage()
 {
 	if ( !aDesc )
-		return vstring( ANSI_CLR_DEFAULT "%s\n", aName );
+		return vstring( ANSI_CLR_DEFAULT "%s\n", name );
 
-	return vstring( ANSI_CLR_DEFAULT "%s\n\t" ANSI_CLR_CYAN "%s" ANSI_CLR_DEFAULT "\n", aName, aDesc );
-}
-
-const char* ConCommand::GetName()
-{
-	return aName;
-}
-
-const char* ConCommand::GetDesc()
-{
-	return aDesc;
-}
-
-ConVarFlag_t ConCommand::GetFlags()
-{
-	return aFlags;
+	return vstring( ANSI_CLR_DEFAULT "%s\n\t" ANSI_CLR_CYAN "%s" ANSI_CLR_DEFAULT "\n", name, aDesc );
 }
 
 
@@ -147,16 +133,17 @@ ConCommand* Con_GetConCommand( std::string_view name )
 {
 	for ( ConCommand* cmd : Con_GetConCommands() )
 	{
-		size_t nameLen = strlen( cmd->aName );
+		size_t nameLen = strlen( cmd->name );
 		if ( nameLen != name.size() )
 			continue;
 
-		if ( ch_strncasecmp( cmd->aName, name.data(), name.size() ) == 0 )
+		if ( ch_strncasecmp( cmd->name, name.data(), name.size() ) == 0 )
 			return cmd;
 	}
 
 	return nullptr;
 }
+
 
 // ================================================================================
 
@@ -185,38 +172,9 @@ static bool ConVarNameCheck( const char* name, const char* search, size_t size, 
 }
 
 
-void Con_SearchConVars( std::vector< std::string >& results, const char* search, size_t size )
-{
-	std::vector< std::string > resultsStartWith;  // results that the convar name starts with the search
-	std::vector< std::string > resultsContain;    // results that contain the string somewhere in in a convar name
-
-	for ( std::string_view cvarName : Con_GetConVarNames() )
-	{
-		bool startsWith = false;
-		if ( !ConVarNameCheck( cvarName.data(), search, size, &startsWith ) )
-			continue;
-
-		if ( startsWith )
-			resultsStartWith.push_back( cvarName.data() );
-		else
-			resultsContain.push_back( cvarName.data() );
-	}
-
-	if ( resultsStartWith.size() )
-	{
-		results.insert( results.end(), resultsStartWith.begin(), resultsStartWith.end() );
-	}
-
-	if ( resultsContain.size() )
-	{
-		results.insert( results.end(), resultsContain.begin(), resultsContain.end() );
-	}
-}
-
-
 struct ConVarSearchResult_t
 {
-	std::string_view aName;
+	std::string_view name;
 	ConVarData_t*    apData;
 };
 
@@ -270,13 +228,13 @@ void Con_SearchConVars( std::vector< ConVarDescriptor_t >& results, const char* 
 	for ( ConCommand* cmd : Con_GetConCommands() )
 	{
 		bool startsWith = false;
-		if ( !ConVarNameCheck( cmd->aName, search, size, &startsWith ) )
+		if ( !ConVarNameCheck( cmd->name, search, size, &startsWith ) )
 			continue;
 
 		if ( startsWith )
-			resultsStartWith.emplace_back( cmd->aName, false, cmd );
+			resultsStartWith.emplace_back( cmd->name, false, cmd );
 		else
-			resultsContain.emplace_back( cmd->aName, false, cmd );
+			resultsContain.emplace_back( cmd->name, false, cmd );
 	}
 
 	if ( resultsStartWith.size() )
@@ -305,10 +263,10 @@ ConVarDescriptor_t Con_SearchConVarCmd( const char* search, size_t size )
 	for ( ConCommand* cmd : Con_GetConCommands() )
 	{
 		bool startsWith = false;
-		if ( !ConVarNameCheck( cmd->aName, search, size, &startsWith ) )
+		if ( !ConVarNameCheck( cmd->name, search, size, &startsWith ) )
 			continue;
 
-		return ConVarDescriptor_t( cmd->aName, false, cmd );
+		return ConVarDescriptor_t( cmd->name, false, cmd );
 	}
 
 	return ConVarDescriptor_t();
@@ -348,7 +306,7 @@ void Con_QueueCommand( const char* cmd, int len )
 
 	Con_AddToCommandHistory( cmdStr );
 
-	Log_Ex( gConsoleChannel, LogType::Input, cmd );
+	Log_ExF( gLC_Console, ELogType_Raw, "] %s\n", cmd );
 }
 
 
@@ -400,7 +358,7 @@ void Con_PrintAllConVars()
 		conCommandMsgs.push_back( cmd->GetPrintMessage() );
 	}
 
-	LogGroup group = Log_GroupBegin( gConsoleChannel );
+	log_t group = Log_GroupBegin( gLC_Console );
 	Log_Group( group, "\nConVars:\n--------------------------------------\n" );
 	for ( const auto& msg : conVarMsgs )
 		Log_Group( group, msg.c_str() );
@@ -422,7 +380,7 @@ void Con_PrintAllConVars()
 // 
 // 		if ( cvarRef->apRef == nullptr )
 // 		{
-// 			Log_WarnF( gConsoleChannel, "Found unlinked cvar ref: %s\n", cvarRef->GetName() );
+// 			Log_WarnF( gLC_Console, "Found unlinked cvar ref: %s\n", cvarRef->GetName() );
 // 			return nullptr;
 // 		}
 // 
@@ -459,24 +417,24 @@ void Con_BuildAutoCompleteList( const std::string& srSearch, std::vector< std::s
 		bool startsWithString = false;
 
 		// this SHOULD be fine, if the convar doesn't exist in here, something is very wrong
-		if ( !ConVarNameCheck( cvar->aName, commandName.c_str(), commandName.size(), &startsWithString ) )
+		if ( !ConVarNameCheck( cvar->name, commandName.c_str(), commandName.size(), &startsWithString ) )
 			continue;
 
-		size_t cvarNameLen = strlen( cvar->aName );
+		size_t cvarNameLen = strlen( cvar->name );
 		
 		// if ( args.empty() )
 		if ( cvarNameLen >= srSearch.size() && commandName.size() >= srSearch.size() )
 		{
 			if ( startsWithString )
-				resultsStartWith.push_back( cvar->aName );
+				resultsStartWith.push_back( cvar->name );
 			else
-				resultsContain.push_back( cvar->aName );
+				resultsContain.push_back( cvar->name );
 
 			continue;
 		}
 
 		// make sure this actually matches
-		if ( cvarNameLen != commandName.size() || !ConVarNameCheck( cvar->aName, commandName.c_str(), cvarNameLen, nullptr ) )
+		if ( cvarNameLen != commandName.size() || !ConVarNameCheck( cvar->name, commandName.c_str(), cvarNameLen, nullptr ) )
 			continue;
 
 		// is this a concommand with a drop down function?
@@ -491,14 +449,14 @@ void Con_BuildAutoCompleteList( const std::string& srSearch, std::vector< std::s
 
 				for ( auto dropArg: dropDownArgs )
 				{
-					resultsStartWith.push_back( vstring( "%s %s", cvar->aName, dropArg.c_str() ) );
+					resultsStartWith.push_back( vstring( "%s %s", cvar->name, dropArg.c_str() ) );
 				}
 
 				break;
 			}
 		}
 
-		resultsStartWith.push_back( cvar->aName );
+		resultsStartWith.push_back( cvar->name );
 		break;
 	}
 
@@ -522,14 +480,14 @@ void Con_BuildAutoCompleteList( const std::string& srSearch, std::vector< std::s
 
 	for ( ConVarDescriptor_t& cvarResult : results )
 	{
-		if ( cvarResult.aName.size() >= srSearch.size() && commandName.size() >= srSearch.size() )
+		if ( cvarResult.name.size() >= srSearch.size() && commandName.size() >= srSearch.size() )
 		{
-			srResults.push_back( cvarResult.aName.data() );
+			srResults.push_back( cvarResult.name.data() );
 			continue;
 		}
 
 		// make sure this actually matches
-		if ( cvarResult.aName.size() != commandName.size() || !ConVarNameCheck( cvarResult.aName.data(), commandName.c_str(), cvarResult.aName.size(), nullptr ) )
+		if ( cvarResult.name.size() != commandName.size() || !ConVarNameCheck( cvarResult.name.data(), commandName.c_str(), cvarResult.name.size(), nullptr ) )
 			continue;
 
 		// is this a concommand with a drop down function?
@@ -544,14 +502,14 @@ void Con_BuildAutoCompleteList( const std::string& srSearch, std::vector< std::s
 
 				for ( auto dropArg: dropDownArgs )
 				{
-					srResults.push_back( vstring( "%s %s", cvarResult.aName.data(), dropArg.c_str() ) );
+					srResults.push_back( vstring( "%s %s", cvarResult.name.data(), dropArg.c_str() ) );
 				}
 
 				break;
 			}
 		}
 
-		srResults.push_back( cvarResult.aName.data() );
+		srResults.push_back( cvarResult.name.data() );
 		break;
 	}
 
@@ -641,16 +599,16 @@ bool Con_RunCommandArgs( const std::string& name, const std::vector< std::string
 
 	for ( ConCommand* cvar : Con_GetConCommands() )
 	{
-		size_t cvarNameLen = strlen( cvar->aName );
+		size_t cvarNameLen = strlen( cvar->name );
 
 		if ( name.size() != cvarNameLen )
 			continue;
 
-		if ( ch_strncasecmp( cvar->aName, name.c_str(), cvarNameLen ) != 0 )
+		if ( ch_strncasecmp( cvar->name, name.c_str(), cvarNameLen ) != 0 )
 			continue;
 
 		// Check Flag Callbacks
-		if ( !Con_CheckFlags( cvar->aFlags, cvar->aName, args, fullCommand ) )
+		if ( !Con_CheckFlags( cvar->aFlags, cvar->name, args, fullCommand ) )
 			continue;
 
 		cvar->apFunc( args, fullCommand );
@@ -680,7 +638,7 @@ bool Con_RunCommandArgs( const std::string& name, const std::vector< std::string
 
 	// command wasn't used?
 	if ( !commandCalled )
-		Log_WarnF( gConsoleChannel, "Command \"%s\" is undefined\n", name.c_str() );
+		Log_WarnF( gLC_Console, "Command \"%s\" is undefined\n", name.c_str() );
 
 	return commandCalled;
 }
@@ -690,6 +648,7 @@ bool Con_RunCommandArgs( const std::string& name, const std::vector< std::string
 {
 	// Join args together as one string with spaces
 	std::string fullCommand;
+	fullCommand.reserve( 128 );
 
 	for ( size_t i = 0; i < args.size(); i++ )
 	{
@@ -715,6 +674,7 @@ void Con_ParseCommandLineEx( std::string_view command, std::string& name, std::v
 	PROF_SCOPE();
 
 	std::string curArg;
+	curArg.reserve( 128 );
 
 	for ( ; i < command.size(); i++ )
 	{
@@ -797,7 +757,7 @@ ConVarFlag_t Con_CreateCvarFlag( const char* name )
 		return flag;
 	}
 
-	ConVarFlag_t newBitShift = (1 << gConVarFlags.size());
+	ConVarFlag_t newBitShift = (1 << (u64)gConVarFlags.size());
 	size_t len = strlen( name );
 	gConVarFlags.emplace_back( newBitShift, name, len );
 	return newBitShift;
@@ -814,6 +774,7 @@ const char* Con_GetCvarFlagName( ConVarFlag_t flag )
 	return nullptr;
 }
 
+
 ConVarFlag_t Con_GetCvarFlag( const char* name )
 {
 	size_t len = strlen( name );
@@ -829,6 +790,7 @@ ConVarFlag_t Con_GetCvarFlag( const char* name )
 
 	return CVARF_NONE;
 }
+
 
 size_t Con_GetCvarFlagCount()
 {
@@ -855,6 +817,13 @@ ConVarFlagChangeFunc* Con_GetCvarFlagCallback( ConVarFlag_t sFlag )
 	}
 
 	return {};
+}
+
+
+void con_init()
+{
+	gConArchiveFile    = ch_str_copy( CON_ARCHIVE_FILE );
+	gConArchiveDefault = ch_str_copy( CON_ARCHIVE_DEFAULT );
 }
 
 
@@ -972,10 +941,9 @@ void Con_Archive( const char* spFile )
 	{
 		filename = spFile;
 		ch_string_auto filenameExt = FileSys_GetFileExt( filename.data(), filename.size() );
-		if ( ch_str_equals( filenameExt, "cfg" ) )
-		{
+		if ( ch_str_equals( filenameExt, "cfg", 3 ) )
 			filename += ".cfg";
-		}
+
 		filename.insert( 0, "cfg" PATH_SEP_STR );
 	}
 	else
@@ -984,119 +952,71 @@ void Con_Archive( const char* spFile )
 	}
 
 	// TODO: have a better way to check for a parent path
-	fs::path filenamePath = filename.c_str();
-	
-	fs::path parentPath   = filenamePath.parent_path();
+	char* parentPath = FileSys_GetDirName( filename.data(), filename.size() ).data;
 
-	if ( !parentPath.empty() )
+	if ( parentPath )
 	{
-		const std::string& parentPathStr = parentPath.string();
-		FileSys_CreateDirectory( parentPathStr.data() );
+		if ( !FileSys_CreateDirectory( parentPath ) )
+		{
+			Log_ErrorF( "Failed to create directory: \"%s\"\n", parentPath );
+			ch_str_free( parentPath );
+			return;
+		}
 	}
+
+	ch_str_free( parentPath );
 
 	// Write the data
 	FILE* fp = fopen( filename.c_str(), "wb" );
 
 	if ( fp == nullptr )
 	{
-		Log_ErrorF( gConsoleChannel, "Failed to open file handle: \"%s\"\n", filename.c_str() );
+		Log_ErrorF( gLC_Console, "Failed to open file handle: \"%s\"\n", filename.c_str() );
 		return;
 	}
 
 	fwrite( output.c_str(), sizeof( char ), output.size(), fp );
 	fclose( fp );
 
-	Log_DevF( gConsoleChannel, 1, "Wrote Config to File: \"%s\"\n", filename.c_str() );
+	Log_DevF( gLC_Console, 1, "Wrote Config to File: \"%s\"\n", filename.c_str() );
 }
 
 
 // Set Default Console Archive File
 void Con_SetDefaultArchive( const char* spFile, const char* spDefaultFile )
 {
-	// Set the default file
+	ch_string file;
+	ch_string default_file;
 
 	if ( !spFile )
-	{
-		ch_string new_data = ch_str_realloc( gConArchiveFile.data, CON_ARCHIVE_FILE );
+		ch_string file = ch_str_realloc( gConArchiveFile.data, CON_ARCHIVE_FILE );
 
-		if ( !new_data.data )
-		{
-			Log_Error( gConsoleChannel, "Failed to allocate memory for default console config file path\n" );
-			return;
-		}
+	else if ( ch_str_starts_with( spFile, "cfg/" ) || ch_str_starts_with( spFile, "cfg\\" ) )
+		ch_string file = ch_str_realloc( gConArchiveFile.data, spFile );
 
-		gConArchiveFile = new_data;
-	}
 	else
-	{
-		if ( ch_str_starts_with( spFile, "cfg/" ) || ch_str_starts_with( spFile, "cfg\\" ) )
-		{
-			ch_string new_data = ch_str_realloc( gConArchiveFile.data, spFile );
-
-			if ( !new_data.data )
-			{
-				Log_Error( gConsoleChannel, "Failed to allocate memory for console config file path\n" );
-				return;
-			}
-
-			gConArchiveFile = new_data;
-		}
-		else
-		{
-			ch_string new_data = ch_str_join_arr( gConArchiveFile.data, 2, CFG_DIR, spFile );
-
-			if ( !new_data.data )
-			{
-				Log_Error( gConsoleChannel, "Failed to allocate memory for console config file path\n" );
-				return;
-			}
-
-			gConArchiveFile = new_data;
-		}
-	}
+		ch_string file = ch_str_join_arr( gConArchiveFile.data, 2, CFG_DIR, spFile );
 
 	// -----------------------------------------------------
 	// Set Default Console Archive File
 
 	if ( !spDefaultFile )
-	{
-		ch_string new_data = ch_str_realloc( gConArchiveDefault.data, CON_ARCHIVE_DEFAULT );
+		ch_string default_file = ch_str_realloc( gConArchiveDefault.data, CON_ARCHIVE_DEFAULT );
 
-		if ( !new_data.data )
-		{
-			Log_Error( gConsoleChannel, "Failed to allocate memory for default console config file path\n" );
-			return;
-		}
+	else if ( ch_str_starts_with( spDefaultFile, "cfg/" ) || ch_str_starts_with( spDefaultFile, "cfg\\" ) )
+		ch_string default_file = ch_str_realloc( gConArchiveDefault.data, spDefaultFile );
 
-		gConArchiveDefault = new_data;
-	}
 	else
+		ch_string default_file = ch_str_join_arr( gConArchiveDefault.data, 2, CFG_DIR, spDefaultFile );
+
+	if ( !file.data || !default_file.data )
 	{
-		if ( ch_str_starts_with( spDefaultFile, "cfg/" ) || ch_str_starts_with( spDefaultFile, "cfg\\" ) )
-		{
-			ch_string new_data = ch_str_realloc( gConArchiveDefault.data, spDefaultFile );
-
-			if ( !new_data.data )
-			{
-				Log_Error( gConsoleChannel, "Failed to allocate memory for default console config file path\n" );
-				return;
-			}
-
-			gConArchiveDefault = new_data;
-		}
-		else
-		{
-			ch_string new_data = ch_str_join_arr( gConArchiveDefault.data, 2, CFG_DIR, spDefaultFile );
-
-			if ( !new_data.data )
-			{
-				Log_Error( gConsoleChannel, "Failed to allocate memory for default console config file path\n" );
-				return;
-			}
-
-			gConArchiveDefault = new_data;
-		}
+		Log_Error( gLC_Console, "Failed to allocate memory for console config file path\n" );
+		return;
 	}
+
+	gConArchiveFile    = file;
+	gConArchiveDefault = default_file;
 }
 
 
@@ -1132,7 +1052,7 @@ CONCMD_DROP_VA( exec, exec_dropdown, 0, "Execute a script full of console comman
 {
 	if ( args.size() == 0 )
 	{
-		Log_Msg( gConsoleChannel, "No Path Specified for exec!\n" );
+		Log_Msg( gLC_Console, "No Path Specified for exec!\n" );
 		return;
 	}
 
@@ -1164,7 +1084,7 @@ CONCMD_DROP_VA( exec, exec_dropdown, 0, "Execute a script full of console comman
 
 			if ( !new_data.data )
 			{
-				Log_Error( gConsoleChannel, "Failed to allocate memory for console config file path\n" );
+				Log_Error( gLC_Console, "Failed to allocate memory for console config file path\n" );
 				ch_str_free( path.data );
 				return;
 			}
@@ -1175,7 +1095,7 @@ CONCMD_DROP_VA( exec, exec_dropdown, 0, "Execute a script full of console comman
 
 	if ( !FileSys_IsFile( path.data, path.size ) )
 	{
-		Log_WarnF( gConsoleChannel, "File does not exist: \"%s\"\n", path.data );
+		Log_WarnF( gLC_Console, "File does not exist: \"%s\"\n", path.data );
 		ch_str_free( path.data );
 		return;
 	}
@@ -1184,7 +1104,7 @@ CONCMD_DROP_VA( exec, exec_dropdown, 0, "Execute a script full of console comman
 
 	if ( !fileStream.is_open() )
 	{
-		Log_ErrorF( gConsoleChannel, "Failed to open file for exec: \"%s\"\n", path.data );
+		Log_ErrorF( gLC_Console, "Failed to open file for exec: \"%s\"\n", path.data );
 		ch_str_free( path.data );
 		return;
 	}
@@ -1216,7 +1136,7 @@ CONCMD_DROP_VA( exec, exec_dropdown, 0, "Execute a script full of console comman
 			if ( line != "" )
 			{
 				if ( line == "exec " + args[0] )
-					Log_Warn( gConsoleChannel, "cfg file trying to exec itself and cause infinite recursion\n" );
+					Log_Warn( gLC_Console, "cfg file trying to exec itself and cause infinite recursion\n" );
 				else
 					Con_RunCommand( line.data(), line.size() );
 
@@ -1268,7 +1188,7 @@ CONCMD_VA( echo, "Print a string to the console" )
 
 	msg += "\n";
 
-	Log_Msg( gConsoleChannel, msg.c_str() );
+	Log_Msg( gLC_Console, msg.c_str() );
 }
 
 
@@ -1278,18 +1198,63 @@ void help_dropdown(
   std::vector< std::string >&       results )     // results to populate the dropdown list with
 {
 	std::string name = args.empty() ? "" : str_lower2(args[0]);
-	Con_SearchConVars( results, name.data(), name.size() );
+	// Con_SearchConVars( results, name.data(), name.size() );
+
+	std::vector< std::string > resultsStartWith;  // results that the convar name starts with the search
+	std::vector< std::string > resultsContain;    // results that contain the string somewhere in in a convar name
+
+	for ( std::string_view cvarName : Con_GetConVarNames() )
+	{
+		bool startsWith = false;
+		if ( !ConVarNameCheck( cvarName.data(), name.data(), name.size(), &startsWith ) )
+			continue;
+
+		if ( startsWith )
+			resultsStartWith.push_back( cvarName.data() );
+		else
+			resultsContain.push_back( cvarName.data() );
+	}
+
+	// Also Search Registered Arguments
+	for ( u32 i = 0; i < args_get_registered_count(); i++ )
+	{
+		const arg_t* arg = args_get_registered_data( i );
+
+		for ( u32 n = 0; n < arg->aNames.size(); n++ )
+		{
+			bool startsWith = false;
+			if ( !ConVarNameCheck( arg->aNames[ n ], name.data(), name.size(), &startsWith ) )
+				continue;
+
+			if ( startsWith )
+				resultsStartWith.push_back( arg->aNames[ n ] );
+			else
+				resultsContain.push_back( arg->aNames[ n ] );
+
+			break;
+		}
+	}
+
+	if ( resultsStartWith.size() )
+	{
+		results.insert( results.end(), resultsStartWith.begin(), resultsStartWith.end() );
+	}
+
+	if ( resultsContain.size() )
+	{
+		results.insert( results.end(), resultsContain.begin(), resultsContain.end() );
+	}
 }
 
 
-CONCMD_DROP_VA( help, help_dropdown, 0, "If no args specified, Print all Registered ConVars, otherwise, print information about this convar" )
+CONCMD_DROP_VA( help, help_dropdown, 0, "If no args specified, Print all Registered ConVars and Arguments, otherwise, print information about this convar/argument" )
 {
 	if ( args.empty() )
 	{
 		Con_PrintAllConVars();
-		Args_PrintRegistered();
+		args_print_registered();
 
-		Log_Msg( gConsoleChannel, "--------------------------------------\n" );
+		Log_Msg( gLC_Console, "--------------------------------------\n" );
 		return;
 	}
 
@@ -1298,29 +1263,29 @@ CONCMD_DROP_VA( help, help_dropdown, 0, "If no args specified, Print all Registe
 
 	if ( cmd )
 	{
-		Log_Msg( gConsoleChannel, cmd->GetPrintMessage().data() );
+		Log_Msg( gLC_Console, cmd->GetPrintMessage().data() );
 	}
 	else if ( cvar )
 	{
-		Log_Msg( gConsoleChannel, Con_GetConVarHelp( args[ 0 ] ).data() );
+		Log_Msg( gLC_Console, Con_GetConVarHelp( args[ 0 ] ).data() );
 	}
 	else
 	{
-		for ( u32 i = 0; i < Args_GetRegisteredCount(); i++ )
+		for ( u32 i = 0; i < args_get_registered_count(); i++ )
 		{
-			const Arg_t* arg = Args_GetRegisteredData( i );
+			const arg_t* arg = args_get_registered_data( i );
 
 			for ( u32 n = 0; n < arg->aNames.size(); n++ )
 			{
 				if ( arg->aNames[ n ] == args[ 0 ] )
 				{
-					Log_Msg( gConsoleChannel, Args_GetRegisteredPrint( arg ).data );
+					Log_MsgF( gLC_Console, "Argument: %s\n", args_get_registered_print( arg ).data );
 					return;
 				}
 			}
 		}
 
-		Log_WarnF( gConsoleChannel, "Convar not found: %s\n", args[0].c_str() );
+		Log_WarnF( gLC_Console, "Convar/Argument not found: %s\n", args[0].c_str() );
 	}
 }
 
@@ -1329,10 +1294,10 @@ void FindStr( bool andSearch, ConVarDescriptor_t& cvar, const std::vector< std::
 {
 	for ( auto arg : args )
 	{
-		if ( strstr( cvar.aName.data(), arg.c_str() ) )
+		if ( strstr( cvar.name.data(), arg.c_str() ) )
 		{
 			if ( cvar.aIsConVar )
-				results.push_back( Con_GetConVarHelp( cvar.aName ) );
+				results.push_back( Con_GetConVarHelp( cvar.name ) );
 			else
 				results.push_back( static_cast< ConCommand* >( cvar.apData )->GetPrintMessage() );
 
@@ -1343,7 +1308,7 @@ void FindStr( bool andSearch, ConVarDescriptor_t& cvar, const std::vector< std::
 }
 
 
-static void FindStrArg( bool andSearch, const Arg_t* spArg, const std::vector< std::string >& args, std::vector< std::string >& results )
+static void FindStrArg( bool andSearch, const arg_t* spArg, const std::vector< std::string >& args, std::vector< std::string >& results )
 {
 	if ( !spArg )
 		return;
@@ -1354,7 +1319,7 @@ static void FindStrArg( bool andSearch, const Arg_t* spArg, const std::vector< s
 		{
 			if ( strstr( spArg->aNames[ n ], arg.c_str() ) )
 			{
-				ch_string_auto msg = Args_GetRegisteredPrint( spArg );
+				ch_string_auto msg = args_get_registered_print( spArg );
 				results.emplace_back( msg.data, msg.size );
 
 				if ( !andSearch )
@@ -1383,37 +1348,37 @@ void CmdFind( bool andSearch, const std::vector< std::string >& args )
 		}
 	}
 
-	for ( u32 i = 0; i < Args_GetRegisteredCount(); i++ )
+	for ( u32 i = 0; i < args_get_registered_count(); i++ )
 	{
-		FindStrArg( andSearch, Args_GetRegisteredData( i ), args, resultsArgs );
+		FindStrArg( andSearch, args_get_registered_data( i ), args, resultsArgs );
 	}
 
-	Log_MsgF( gConsoleChannel, "Search Results: %zu\n", resultsCvar.size() + resultsCCmd.size() );
+	Log_MsgF( gLC_Console, "Search Results: %zu\n", resultsCvar.size() + resultsCCmd.size() );
 
-	Log_MsgF( gConsoleChannel,
+	Log_MsgF( gLC_Console,
 		"\nConVars: %zu"
 		"\n--------------------------------------\n", resultsCvar.size() );
 
 	for ( const auto& msg : resultsCvar )
-		Log_Msg( gConsoleChannel, msg.c_str() );
+		Log_Msg( gLC_Console, msg.c_str() );
 
-	Log_MsgF( gConsoleChannel,
+	Log_MsgF( gLC_Console,
 		"--------------------------------------\n"
 		"\nConCommands: %zu"
 		"\n--------------------------------------\n", resultsCCmd.size() );
 
 	for ( const auto& msg : resultsCCmd )
-		Log_Msg( gConsoleChannel, msg.c_str() );
+		Log_Msg( gLC_Console, msg.c_str() );
 
-	Log_MsgF( gConsoleChannel,
+	Log_MsgF( gLC_Console,
 		"--------------------------------------\n"
 		"\nArguments: %zu"
 		"\n--------------------------------------\n", resultsArgs.size() );
 
 	for ( const auto& msg : resultsArgs )
-		Log_Msg( gConsoleChannel, msg.c_str() );
+		Log_Msg( gLC_Console, msg.c_str() );
 
-	Log_Msg( gConsoleChannel, "--------------------------------------\n" );
+	Log_Msg( gLC_Console, "--------------------------------------\n" );
 }
 
 
@@ -1424,7 +1389,7 @@ CONCMD_VA( find, "Search if cvar name contains any of the search arguments" )
 {
 	if ( args.empty() )
 	{
-		Log_MsgF( gConsoleChannel, "%s\n", find_cmd.GetDesc() );
+		Log_MsgF( gLC_Console, "%s\n", find_cmd.aDesc );
 		return;
 	}
 
@@ -1436,7 +1401,7 @@ CONCMD_VA( findand, "Search if cvar name contains all of the search arguments" )
 {
 	if ( args.empty() )
 	{
-		Log_MsgF( gConsoleChannel, "%s\n", findand_cmd.GetDesc() );
+		Log_MsgF( gLC_Console, "%s\n", findand_cmd.aDesc );
 		return;
 	}
 
@@ -1456,7 +1421,7 @@ void reset_cvar_dropdown(
 
 	for ( ConVarSearchResult_t& cvar : searchResults )
 	{
-		results.push_back( cvar.aName.data() );
+		results.push_back( cvar.name.data() );
 	}
 }
 
@@ -1465,7 +1430,7 @@ CONCMD_DROP_VA( cvar_reset, reset_cvar_dropdown, 0, "reset a convar back to it's
 {
 	if ( args.empty() )
 	{
-		Log_Msg( gConsoleChannel, "No ConVar specified to reset!\n" );
+		Log_Msg( gLC_Console, "No ConVar specified to reset!\n" );
 		return;
 	}
 
@@ -1477,7 +1442,7 @@ CONCMD_DROP_VA( cvar_toggle, reset_cvar_dropdown, 0, "toggle a convar between tw
 {
 	if ( args.empty() )
 	{
-		Log_Msg( gConsoleChannel, "No ConVar specified to reset!\n" );
+		Log_Msg( gLC_Console, "No ConVar specified to reset!\n" );
 		return;
 	}
 
@@ -1508,13 +1473,13 @@ CONCMD_DROP_VA( cvar_toggle, reset_cvar_dropdown, 0, "toggle a convar between tw
 
 	if ( !cvar )
 	{
-		Log_WarnF( gConsoleChannel, "Convar not found: %s\n", args[ 0 ].c_str() );
+		Log_WarnF( gLC_Console, "Convar not found: %s\n", args[ 0 ].c_str() );
 		return;
 	}
 
 	if ( cvar->aType != EConVarType_Bool )
 	{
-		Log_WarnF( gConsoleChannel, "Cannot Toggle Non-Bool type Convar: %s\n", args[ 0 ].c_str() );
+		Log_WarnF( gLC_Console, "Cannot Toggle Non-Bool type Convar: %s\n", args[ 0 ].c_str() );
 		return;
 	}
 	
@@ -1535,8 +1500,8 @@ CONCMD_VA( host_writeconfig, "Write a config (can optionally specify a path) con
 #if 1
 CONCMD_VA( con_cvar_mem_usage, "Print the memory usage usage of all convars" )
 {
-	Log_MsgF( gConsoleChannel, "sizeof( ConVarData_t ): %zu\n", sizeof( ConVarData_t ) );
-	Log_MsgF( gConsoleChannel, "sizeof( ConCommand ):   %zu\n", sizeof( ConCommand ) );
+	Log_MsgF( gLC_Console, "sizeof( ConVarData_t ): %zu\n", sizeof( ConVarData_t ) );
+	Log_MsgF( gLC_Console, "sizeof( ConCommand ):   %zu\n", sizeof( ConCommand ) );
 
 	// Calculate the Amount of memory each value take up in the ConVarData_t
 	size_t cvarHeapMemory   = 0;
@@ -1591,8 +1556,8 @@ CONCMD_VA( con_cvar_mem_usage, "Print the memory usage usage of all convars" )
 		}
 	}
 
-	Log_MsgF( gConsoleChannel, "ConVar Count: %zu\n", Con_GetConVarMap().size() );
-	Log_MsgF( gConsoleChannel, "ConVar Memory Usage: %.6f KB\n", Util_BytesToKB( cvarHeapMemory + cvarStringMemory ) );
+	Log_MsgF( gLC_Console, "ConVar Count: %zu\n", Con_GetConVarMap().size() );
+	Log_MsgF( gLC_Console, "ConVar Memory Usage: %.6f KB\n", ch_bytes_to_kb( cvarHeapMemory + cvarStringMemory ) );
 
 	// for ( ConVarBase* current : Con_GetConVars() )
 	// {
@@ -1609,7 +1574,7 @@ CONCMD_VA( con_cvar_mem_usage, "Print the memory usage usage of all convars" )
 	// 		size += sizeof( *current );
 	// }
 	// 
-	// Log_DevF( gConsoleChannel, 1, "INCOMPLETE Convar Memory Usage: %zu bytes\n", size );
+	// Log_DevF( gLC_Console, 1, "INCOMPLETE Convar Memory Usage: %zu bytes\n", size );
 }
 #endif
 

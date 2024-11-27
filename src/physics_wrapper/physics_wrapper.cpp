@@ -1,14 +1,14 @@
 #include "core/commandline.h"
 
 
-constexpr const char* gModuleMIN          = "ch_physics_min";
-constexpr const char* gModuleAVX2         = "ch_physics_avx2";
+constexpr const char* g_module_min            = "ch_physics_min";
+constexpr const char* g_module_avx2           = "ch_physics_avx2";
 
-bool                  gForceLoadMinModule = Args_Register( "Load the physics dll compiled with the minimum cpu features", "-phys-min" );
-bool                  gForceLoadMaxModule = Args_Register( "Load the physics dll compiled with all cpu features it can use", "-phys-max" );
+bool                  g_force_load_module_min = args_register( "Load the physics dll compiled with the minimum cpu features", "--phys-min" );
+bool                  g_force_load_module_max = args_register( "Load the physics dll compiled with all cpu features it can use", "--phys-max" );
 
 
-ModuleInterface_t* LoadPhysicsModule( const char* moduleName, size_t& count )
+ModuleInterface_t* load_physics_module( const char* moduleName, u8& count )
 {
 	Log_MsgF( "Loading Physics Module: %s\n", moduleName );
 
@@ -18,38 +18,43 @@ ModuleInterface_t* LoadPhysicsModule( const char* moduleName, size_t& count )
 	if ( !phys_module )
 		return nullptr;
 
-	ModuleInterface_t* ( *getInterfacesF )( size_t& srCount ) = nullptr;
-	if ( !( *(void**)( &getInterfacesF ) = sys_load_func( phys_module, "cframework_GetInterfaces" ) ) )
+	ModuleInterface_t* ( *ch_get_interfaces )( u8& srCount ) = nullptr;
+	if ( !( *(void**)( &ch_get_interfaces ) = sys_load_func( phys_module, "ch_get_interfaces" ) ) )
 	{
-		Log_ErrorF( "Unable to load \"cframework_GetInterfaces\" function from library: %s - %s\n", moduleName, sys_get_error() );
+		Log_ErrorF( "Unable to load \"ch_get_interfaces\" function from library: %s - %s\n", moduleName, sys_get_error() );
 		return nullptr;
 	}
 
-	return getInterfacesF( count );
+	return ch_get_interfaces( count );
 }
 
 
 extern "C"
 {
-	DLL_EXPORT ModuleInterface_t* cframework_GetInterfaces( size_t& srCount )
+	DLL_EXPORT ModuleInterface_t* ch_get_interfaces( u8& srCount )
 	{
-		if ( gForceLoadMinModule )
+		if ( g_force_load_module_min )
 		{
-			return LoadPhysicsModule( gModuleMIN, srCount );
+			return load_physics_module( g_module_min, srCount );
 		}
 
-		if ( gForceLoadMaxModule )
+		if ( g_force_load_module_max )
 		{
-			return LoadPhysicsModule( gModuleAVX2, srCount );
+			return load_physics_module( g_module_avx2, srCount );
 		}
 
 		// check what cpu features we have
-		cpu_info_t cpu_info = Sys_GetCpuInfo();
+		bool use_avx2 = SDL_HasAVX2();
 
-		if ( cpu_info.features & ECPU_Feature_AVX2 )
-			return LoadPhysicsModule( gModuleAVX2, srCount );
+		// the avx2 dll also uses F16C, and min is not compiled with that
+		// so we need to check for that too
+
+		cpu_info_t cpu_info = sys_get_cpu_info();
+
+		if ( cpu_info.features & ( ECPU_Feature_AVX2 | ECPU_Feature_F16C ) )
+			return load_physics_module( g_module_avx2, srCount );
 		
-		return LoadPhysicsModule( gModuleMIN, srCount );
+		return load_physics_module( g_module_min, srCount );
 	}
 }
 

@@ -1,6 +1,5 @@
 #pragma once
 
-#include "system.h"
 #include <glm/vec2.hpp>
 
 #include <SDL2/SDL_scancode.h>
@@ -90,5 +89,5 @@ protected:
 
 
 #define IINPUTSYSTEM_NAME "InputSystem"
-#define IINPUTSYSTEM_HASH 2
+#define IINPUTSYSTEM_VER 2
 

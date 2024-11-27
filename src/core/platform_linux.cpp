@@ -14,44 +14,32 @@ void sys_init()
 
 Module sys_load_library( const char* path )
 {
-    auto pHandle = dlopen( path, RTLD_LAZY );
-    if ( !pHandle )
-    {
-        Log_DevF(  1, "Failed to load library: %s!\n", dlerror() );
-        return nullptr;
-    }
-    return ( Module )pHandle;
+	return (Module)dlopen( path, RTLD_NOW );
 }
 
 void sys_close_library( Module mod )
 {
-    if ( !mod )
-        return;
+	if ( !mod )
+		return;
 
-    dlclose( mod );
+	dlclose( mod );
 }
 
 void* sys_load_func( Module mod, const char* path )
 {
-    auto pFunc = dlsym( mod, path );
-    if ( !pFunc )
-    {
-        Log_DevF( 1, "Failed to load function: %s!\n", dlerror() );
-        return nullptr;
-    }
-    return pFunc;
+	return dlsym( mod, path );
 }
 
 const char* sys_get_error()
 {
-    return dlerror();
+	return dlerror();
 }
 
-void sys_print_last_error( const char* userErrorMessage )
+
+const char* sys_get_cwd()
 {
-    fprintf( stderr, "Error: %s\n%s\n", userErrorMessage, sys_get_error() );
+	return getcwd( 0, 0 );
 }
-
 
 // sleep for x milliseconds
 void sys_sleep( float ms )
@@ -62,14 +50,16 @@ void sys_sleep( float ms )
 
 void sys_wait_for_debugger()
 {
-    raise( SIGSTOP );
+	// TODO: look into this
+	// https://stackoverflow.com/a/24969863
+    // raise( SIGSTOP );
 }
 
 
 void sys_debug_break()
 {
-	printf( "\n *** NEED TO CHECK IF A DEBUGGER IS PRESENT TO NOT LOCK UP THE PROGRAM, IF NONE PRESENT, THEN DONT WAIT FOR ONE !!!\n\n" );
-    raise( SIGSTOP );
+	//printf( "\n *** NEED TO CHECK IF A DEBUGGER IS PRESENT TO NOT LOCK UP THE PROGRAM, IF NONE PRESENT, THEN DONT WAIT FOR ONE !!!\n\n" );
+    //raise( SIGSTOP );
 }
 
 
@@ -78,14 +68,14 @@ void sys_shutdown()
 }
 
 
-int Sys_GetCoreCount()
+int sys_get_core_count()
 {
     int numCPU = sysconf(_SC_NPROCESSORS_ONLN);
 	return numCPU;
 }
 
 
-void* Sys_CreateWindow( const char* spWindowName, int sWidth, int sHeight, bool sMaximize )
+void* sys_create_window( const char* spWindowName, int sWidth, int sHeight, bool sMaximize )
 {
 #if 1
     // UNUSED AT THE MOMENT, WILL USE LATER

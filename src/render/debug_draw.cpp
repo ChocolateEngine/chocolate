@@ -7,9 +7,9 @@
 
 
 // static MeshBuilder                               gDebugLineBuilder;
-static Handle                   gDebugLineModel    = InvalidHandle;
-static Handle                   gDebugLineDraw     = InvalidHandle;
-static Handle                   gDebugLineMaterial = InvalidHandle;
+static ch_handle_t                   gDebugLineModel    = CH_INVALID_HANDLE;
+static ch_handle_t                   gDebugLineDraw     = CH_INVALID_HANDLE;
+static ch_handle_t                   gDebugLineMaterial = CH_INVALID_HANDLE;
 ChVector< Shader_VertexData_t > gDebugLineVerts;
 static size_t                   gDebugLineBufferSize = 0;
 
@@ -47,7 +47,7 @@ void Graphics_DebugDrawNewFrame()
 		if ( gDebugLineModel )
 		{
 			gGraphics.FreeModel( gDebugLineModel );
-			gDebugLineModel = InvalidHandle;
+			gDebugLineModel = CH_INVALID_HANDLE;
 		}
 
 		if ( gDebugLineDraw )
@@ -59,7 +59,7 @@ void Graphics_DebugDrawNewFrame()
 
 			// gGraphics.FreeModel( renderable->aModel );
 			gGraphics.FreeRenderable( gDebugLineDraw );
-			gDebugLineDraw = InvalidHandle;
+			gDebugLineDraw = CH_INVALID_HANDLE;
 		}
 
 		return;
@@ -192,7 +192,7 @@ void Graphics_UpdateDebugDraw()
 		if ( !gGraphicsData.aModels.Get( gDebugLineModel, &model ) )
 		{
 			Log_Error( gLC_ClientGraphics, "Failed to get Debug Draw Model!\n" );
-			gDebugLineModel = InvalidHandle;
+			gDebugLineModel = CH_INVALID_HANDLE;
 			return;
 		}
 
@@ -266,15 +266,15 @@ void Graphics::DrawLine( const glm::vec3& sX, const glm::vec3& sY, const glm::ve
 
 #if 0
 	gDebugLineVerts[ index ].aPos     = sX;
-	gDebugLineVerts[ index ].aColor.x = sColor.x;
-	gDebugLineVerts[ index ].aColor.y = sColor.y;
-	gDebugLineVerts[ index ].aColor.z = sColor.z;
+	gDebugLineVerts[ index ].color.x = sColor.x;
+	gDebugLineVerts[ index ].color.y = sColor.y;
+	gDebugLineVerts[ index ].color.z = sColor.z;
 
 	index++;
 	gDebugLineVerts[ index ].aPos     = sY;
-	gDebugLineVerts[ index ].aColor.x = sColor.x;
-	gDebugLineVerts[ index ].aColor.y = sColor.y;
-	gDebugLineVerts[ index ].aColor.z = sColor.z;
+	gDebugLineVerts[ index ].color.x = sColor.x;
+	gDebugLineVerts[ index ].color.y = sColor.y;
+	gDebugLineVerts[ index ].color.z = sColor.z;
 
 #else
 
@@ -282,20 +282,20 @@ void Graphics::DrawLine( const glm::vec3& sX, const glm::vec3& sY, const glm::ve
 	gDebugLineVerts[ index ].aPosNormX.y = sX.y;
 	gDebugLineVerts[ index ].aPosNormX.z = sX.z;
 
-	gDebugLineVerts[ index ].aColor.x    = sColor.x;
-	gDebugLineVerts[ index ].aColor.y    = sColor.y;
-	gDebugLineVerts[ index ].aColor.z    = sColor.z;
-	gDebugLineVerts[ index ].aColor.w    = 1.f;
+	gDebugLineVerts[ index ].color.x    = sColor.x;
+	gDebugLineVerts[ index ].color.y    = sColor.y;
+	gDebugLineVerts[ index ].color.z    = sColor.z;
+	gDebugLineVerts[ index ].color.w    = 1.f;
 
 	index++;
 	gDebugLineVerts[ index ].aPosNormX.x = sY.x;
 	gDebugLineVerts[ index ].aPosNormX.y = sY.y;
 	gDebugLineVerts[ index ].aPosNormX.z = sY.z;
 
-	gDebugLineVerts[ index ].aColor.x    = sColor.x;
-	gDebugLineVerts[ index ].aColor.y    = sColor.y;
-	gDebugLineVerts[ index ].aColor.z    = sColor.z;
-	gDebugLineVerts[ index ].aColor.w    = 1.f;
+	gDebugLineVerts[ index ].color.x    = sColor.x;
+	gDebugLineVerts[ index ].color.y    = sColor.y;
+	gDebugLineVerts[ index ].color.z    = sColor.z;
+	gDebugLineVerts[ index ].color.w    = 1.f;
 #endif
 }
 
@@ -314,20 +314,20 @@ void Graphics::DrawLine( const glm::vec3& sX, const glm::vec3& sY, const glm::ve
 	gDebugLineVerts[ index ].aPosNormX.y = sX.y;
 	gDebugLineVerts[ index ].aPosNormX.z = sX.z;
 
-	gDebugLineVerts[ index ].aColor.x    = sColorX.x;
-	gDebugLineVerts[ index ].aColor.y    = sColorX.y;
-	gDebugLineVerts[ index ].aColor.z    = sColorX.z;
-	gDebugLineVerts[ index ].aColor.w    = 1.f;
+	gDebugLineVerts[ index ].color.x    = sColorX.x;
+	gDebugLineVerts[ index ].color.y    = sColorX.y;
+	gDebugLineVerts[ index ].color.z    = sColorX.z;
+	gDebugLineVerts[ index ].color.w    = 1.f;
 
 	index++;
 	gDebugLineVerts[ index ].aPosNormX.x = sY.x;
 	gDebugLineVerts[ index ].aPosNormX.y = sY.y;
 	gDebugLineVerts[ index ].aPosNormX.z = sY.z;
 
-	gDebugLineVerts[ index ].aColor.x    = sColorY.x;
-	gDebugLineVerts[ index ].aColor.y    = sColorY.y;
-	gDebugLineVerts[ index ].aColor.z    = sColorY.z;
-	gDebugLineVerts[ index ].aColor.w    = 1.f;
+	gDebugLineVerts[ index ].color.x    = sColorY.x;
+	gDebugLineVerts[ index ].color.y    = sColorY.y;
+	gDebugLineVerts[ index ].color.z    = sColorY.z;
+	gDebugLineVerts[ index ].color.w    = 1.f;
 }
 
 
@@ -344,13 +344,13 @@ void Graphics::DrawLine( const glm::vec3& sX, const glm::vec3& sY, const glm::ve
 	gDebugLineVerts[ index ].aPosNormX.x = sX.x;
 	gDebugLineVerts[ index ].aPosNormX.y = sX.y;
 	gDebugLineVerts[ index ].aPosNormX.z = sX.z;
-	gDebugLineVerts[ index ].aColor      = sColor;
+	gDebugLineVerts[ index ].color      = sColor;
 
 	index++;
 	gDebugLineVerts[ index ].aPosNormX.x = sY.x;
 	gDebugLineVerts[ index ].aPosNormX.y = sY.y;
 	gDebugLineVerts[ index ].aPosNormX.z = sY.z;
-	gDebugLineVerts[ index ].aColor      = sColor;
+	gDebugLineVerts[ index ].color      = sColor;
 }
 
 
@@ -500,7 +500,7 @@ void Graphics::DrawFrustum( const Frustum_t& srFrustum )
 }
 
 
-void Graphics::DrawNormals( Handle sModel, const glm::mat4& srMatrix )
+void Graphics::DrawNormals( ch_handle_t sModel, const glm::mat4& srMatrix )
 {
 	PROF_SCOPE();
 

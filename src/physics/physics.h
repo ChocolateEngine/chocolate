@@ -8,6 +8,16 @@
   #define JPH_DEBUG_RENDERER 1
 #endif
 
+// other Jolt Features
+#ifndef JPH_PROFILE_ENABLED
+	#define JPH_PROFILE_ENABLED 1
+#endif
+
+#ifndef JPH_FLOATING_POINT_EXCEPTIONS_ENABLED
+	#define JPH_FLOATING_POINT_EXCEPTIONS_ENABLED 1
+#endif
+
+
 #if 1
   // we also have JPH_PROFILE_ENABLED
   //#define JPH_EXTERNAL_PROFILE 1
@@ -61,6 +71,9 @@
 // #include <Renderer/DebugRenderer.h>
 
 #include "types/transform.h"
+
+
+LOG_CHANNEL( Physics );
 
 
 inline glm::mat4 fromJolt( const JPH::Mat44& from ) {
@@ -139,7 +152,7 @@ struct PhysicsSubShape
 	//u32*         indices     = nullptr;
 	u32          vertexCount = 0;
 	//u32          indexCount  = 0;
-	// ChHandle_t material;
+	// ch_handle_t material;
 
 	~PhysicsSubShape()
 	{

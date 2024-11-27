@@ -1,4 +1,4 @@
-#include "util.h"
+#include "core/util.h"
 #include "render/irender.h"
 #include "graphics_int.h"
 
@@ -25,7 +25,7 @@ static void Shader_ShaderSkinning_GetComputePipelineCreate( ComputePipelineCreat
 
 #if 0
 // this system does not work for compute shaders, all of them need unique data
-static void Shader_ShaderSkinning_SetupPushData( ChHandle_t srRenderableHandle, Renderable_t* spDrawData )
+static void Shader_ShaderSkinning_SetupPushData( ch_handle_t srRenderableHandle, Renderable_t* spDrawData )
 {
 	PROF_SCOPE();
 
@@ -41,7 +41,7 @@ static void Shader_ShaderSkinning_SetupPushData( ChHandle_t srRenderableHandle, 
 }
 
 
-static void Shader_ShaderSkinning_PushConstants( Handle cmd, Handle sLayout, ChHandle_t srRenderableHandle, Renderable_t* spDrawData )
+static void Shader_ShaderSkinning_PushConstants( ch_handle_t cmd, ch_handle_t sLayout, ch_handle_t srRenderableHandle, Renderable_t* spDrawData )
 {
 	PROF_SCOPE();
 

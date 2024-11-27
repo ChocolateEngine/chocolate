@@ -1,13 +1,12 @@
 #include "core/platform.h"
 #include "core/log.h"
-#include "util.h"
+#include "core/util.h"
 
 #include "render_vk.h"
 
-#include <algorithm>
-
 
 VkFormat                          gColorFormat = VK_FORMAT_B8G8R8A8_SRGB;
+//VkFormat                          gColorFormat = VK_FORMAT_B8G8R8A8_UNORM;
 VkColorSpaceKHR                   gColorSpace  = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR;
 
 
@@ -61,8 +60,8 @@ bool VK_CreateSwapchain( WindowVK* window, VkSwapchainKHR spOldSwapchain )
 	if ( spOldSwapchain )
 		vkDestroySwapchainKHR( VK_GetDevice(), spOldSwapchain, NULL );
 
-	window->swapImages     = ch_malloc_count< VkImage >( imageCount );
-	window->swapImageViews = ch_malloc_count< VkImageView >( imageCount );
+	window->swapImages     = ch_malloc< VkImage >( imageCount );
+	window->swapImageViews = ch_malloc< VkImageView >( imageCount );
 
 	VK_CheckResult( vkGetSwapchainImagesKHR( VK_GetDevice(), window->swapchain, &imageCount, window->swapImages ), "Failed to get swapchain images" );
 
@@ -87,7 +86,7 @@ bool VK_CreateSwapchain( WindowVK* window, VkSwapchainKHR spOldSwapchain )
 		VK_CheckResult( vkCreateImageView( VK_GetDevice(), &aImageViewInfo, nullptr, &window->swapImageViews[ i ] ), "Failed to create image view" );
 
 		VK_SetObjectName( VK_OBJECT_TYPE_IMAGE, (u64)window->swapImages[ i ], "Swapchain Image" );
-		VK_SetObjectName( VK_OBJECT_TYPE_IMAGE_VIEW, (u64)window->swapImageViews[ i ], "Swapcha^in Image View" );
+		VK_SetObjectName( VK_OBJECT_TYPE_IMAGE_VIEW, (u64)window->swapImageViews[ i ], "Swapchain Image View" );
 	}
 
 	return true;

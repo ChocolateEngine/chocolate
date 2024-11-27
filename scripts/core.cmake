@@ -272,7 +272,7 @@ if( MSVC )
 	)
 	
 	add_link_options(
-		# "/INCREMENTAL"
+		"/INCREMENTAL"
 	)
 	
 else()  # linux

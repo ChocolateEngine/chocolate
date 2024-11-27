@@ -4,7 +4,7 @@ modelloader.cpp ( Authored by Demez )
 Class dedicated for loading models, and caches them too for multiple uses
 */
 
-#include "util.h"
+#include "core/util.h"
 #include "physics.h"
 #include "mesh_builder.h"
 
@@ -50,7 +50,7 @@ bool LoadObj_Fast( const std::string &srPath, PhysicsModel* spModel, bool single
 			u32 currentVertex = shape.vertexCount;
 			shape.vertexCount += faceVertCount == 3 ? 3 : 6;
 
-			// JPH::Float3* newVerts = ch_realloc_count< JPH::Float3 >( shape.vertices, shape.vertexCount );
+			// JPH::Float3* newVerts = ch_realloc< JPH::Float3 >( shape.vertices, shape.vertexCount );
 			// 
 			// if ( newVerts == nullptr )
 			// {

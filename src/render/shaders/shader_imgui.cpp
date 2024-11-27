@@ -1,4 +1,4 @@
-#include "util.h"
+#include "core/util.h"
 #include "render/irender.h"
 #include "graphics_int.h"
 
@@ -6,8 +6,8 @@
 
 extern IRender*             render;
 
-static Handle               gPipeline       = InvalidHandle;
-static Handle               gPipelineLayout = InvalidHandle;
+static ch_handle_t               gPipeline       = CH_INVALID_HANDLE;
+static ch_handle_t               gPipelineLayout = CH_INVALID_HANDLE;
 
 // constexpr const char* gpVertShader    = "shaders/basic3d.vert.spv";
 // constexpr const char* gpFragShader    = "shaders/basic3d.frag.spv";
@@ -32,10 +32,10 @@ struct UI_Push
 // };
 
 
-static std::unordered_map< Handle, UI_Push > gPushData;
+static std::unordered_map< ch_handle_t, UI_Push > gPushData;
 
 
-Handle Shader_UI_Create( Handle sRenderPass, bool sRecreate )
+ch_handle_t Shader_UI_Create( ch_handle_t sRenderPass, bool sRecreate )
 {
 	PipelineLayoutCreate_t pipelineCreateInfo{};
 	pipelineCreateInfo.aLayouts.push_back( gUniformSampler.aLayout );
@@ -64,14 +64,14 @@ Handle Shader_UI_Create( Handle sRenderPass, bool sRecreate )
 	if ( !render->CreatePipelineLayout( gPipelineLayout, pipelineCreateInfo ) )
 	{
 		Log_Error( "Failed to create Pipeline Layout\n" );
-		return InvalidHandle;
+		return CH_INVALID_HANDLE;
 	}
 
 	pipelineInfo.aPipelineLayout = gPipelineLayout;
 	if ( !render->CreateGraphicsPipeline( gPipeline, pipelineInfo ) )
 	{
 		Log_Error( "Failed to create Graphics Pipeline\n" );
-		return InvalidHandle;
+		return CH_INVALID_HANDLE;
 	}
 
 	return gPipeline;
@@ -86,12 +86,12 @@ void Shader_UI_Destroy()
 	if ( gPipeline )
 		render->DestroyPipeline( gPipeline );
 
-	gPipelineLayout = InvalidHandle;
-	gPipeline       = InvalidHandle;
+	gPipelineLayout = CH_INVALID_HANDLE;
+	gPipeline       = CH_INVALID_HANDLE;
 }
 
 
-void Shader_UI_Draw( Handle cmd, size_t sCmdIndex, Handle shColor )
+void Shader_UI_Draw( ch_handle_t cmd, size_t sCmdIndex, ch_handle_t shColor )
 {
 	if ( !render->CmdBindPipeline( cmd, gPipeline ) )
 	{

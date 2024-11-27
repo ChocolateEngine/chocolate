@@ -5,7 +5,7 @@
 #include <stdlib.h>
 #include <initializer_list>
 
-#include "util.h"
+#include "core/util.h"
 
 
 
@@ -28,7 +28,7 @@
 
 #if CH_STRING_MEM_TRACKING
 	#define STR_FILE_LINE     __FILE__, __LINE__, CH_FUNC_NAME_CLASS,
-	#define STR_FILE_LINE_DEF const char *strtrack_file, u64 strtrack_line, const char *strtrack_func,
+	#define STR_FILE_LINE_DEF const char *strtrack_file, size_t strtrack_line, const char *strtrack_func,
 	#define STR_FILE_LINE_INT strtrack_file, strtrack_line, strtrack_func,
 #else
 	#define STR_FILE_LINE
@@ -36,20 +36,43 @@
 	#define STR_FILE_LINE_INT
 #endif
 
-// calculate length of a string
-CORE_API u64       ch_str_len( const char* s );
+// -----------------------------------------------------------------
 
-// calculate length of a string, but return false if the string is invalid
-CORE_API bool      ch_str_len_ex( const char* s, u64& length );
+// Get the total amount of strings allocated
+CORE_API size_t    ch_str_get_alloc_count();
+
+// Get the total amount of memory allocated for strings
+CORE_API size_t    ch_str_get_alloc_size();
+
+// Adds a string to the list of strings allocated
+// This only does something when string memory tracking is enabled
+CORE_API void      ch_str_add( STR_FILE_LINE_DEF const char* string );
+CORE_API void      ch_str_add( STR_FILE_LINE_DEF const char* string, size_t size );
+CORE_API void      ch_str_add( STR_FILE_LINE_DEF const ch_string& string );
+
+// Removes a string from the list of strings allocated, does not free the memory
+// This only does something when string memory tracking is enabled
+CORE_API void      ch_str_remove( const char* string );
+
+// -----------------------------------------------------------------
+
+// USE THIS AS STRING ALLOCATIONS ARE TRACKED!
+CORE_API void      ch_str_free( char* string );
+CORE_API void      ch_str_free( char** strings, size_t count );
+CORE_API void      ch_str_free( ch_string string );
+CORE_API void      ch_str_free( ch_string* strings, size_t count );
+CORE_API void      ch_str_free( std::vector< ch_string >& strings );
+
+// -----------------------------------------------------------------
 
 // Copies a string, useful for if you're copying a string from reading a file and then going to free that string later
 CORE_API ch_string ch_str_copy( STR_FILE_LINE_DEF const char* format );
-CORE_API ch_string ch_str_copy( STR_FILE_LINE_DEF const char* format, u64 len );
+CORE_API ch_string ch_str_copy( STR_FILE_LINE_DEF const char* format, size_t len );
 
 // Automatically appends a null terminator
-CORE_API ch_string ch_str_realloc( STR_FILE_LINE_DEF char* data, u64 len );
+CORE_API ch_string ch_str_realloc( STR_FILE_LINE_DEF char* data, size_t len );
 CORE_API ch_string ch_str_realloc( STR_FILE_LINE_DEF char* data, const char* string );
-CORE_API ch_string ch_str_realloc( STR_FILE_LINE_DEF char* data, const char* string, u64 len );
+CORE_API ch_string ch_str_realloc( STR_FILE_LINE_DEF char* data, const char* string, size_t len );
 
 // malloc a string with string formatting
 CORE_API ch_string ch_str_copy_f( STR_FILE_LINE_DEF const char* format, ... );
@@ -69,29 +92,29 @@ CORE_API ch_string ch_str_realloc_v( STR_FILE_LINE_DEF char* data, const char* f
 
 // Appends string onto the destination string
 CORE_API ch_string ch_str_concat( STR_FILE_LINE_DEF char* dest, const char* string );
-CORE_API ch_string ch_str_concat( STR_FILE_LINE_DEF char* dest, s64 destLen, const char* string, s64 stringLen );
+CORE_API ch_string ch_str_concat( STR_FILE_LINE_DEF char* dest, size_t destLen, const char* string, size_t stringLen );
 
 // Concatenates an array of strings together, and appends it to the destination
-CORE_API ch_string ch_str_concat( STR_FILE_LINE_DEF char* dest, s64 destLen, u64 count, const char** strings );
-CORE_API ch_string ch_str_concat( STR_FILE_LINE_DEF char* dest, s64 destLen, u64 count, const char** strings, const u64* lengths );
-CORE_API ch_string ch_str_concat( STR_FILE_LINE_DEF char* dest, s64 destLen, u64 count, const ch_string* strings );
+CORE_API ch_string ch_str_concat( STR_FILE_LINE_DEF char* dest, size_t destLen, size_t count, const char** strings );
+CORE_API ch_string ch_str_concat( STR_FILE_LINE_DEF char* dest, size_t destLen, size_t count, const char** strings, const size_t* lengths );
+CORE_API ch_string ch_str_concat( STR_FILE_LINE_DEF char* dest, size_t destLen, size_t count, const ch_string* strings );
 
 // Joins strings together, pass in data to realloc that instead of allocating new memory
 CORE_API ch_string ch_str_join( STR_FILE_LINE_DEF const char* strLeft, const char* strRight );
-CORE_API ch_string ch_str_join( STR_FILE_LINE_DEF const char* strLeft, s64 leftLen, const char* strRight, s64 rightLen );
+CORE_API ch_string ch_str_join( STR_FILE_LINE_DEF const char* strLeft, size_t leftLen, const char* strRight, size_t rightLen );
 
-CORE_API ch_string ch_str_join( STR_FILE_LINE_DEF u64 count, const char** strings, char* data = nullptr );
-CORE_API ch_string ch_str_join( STR_FILE_LINE_DEF u64 count, const char** strings, const u64* lengths, char* data = nullptr );
-CORE_API ch_string ch_str_join( STR_FILE_LINE_DEF u64 count, const ch_string* strings, char* data = nullptr );
+CORE_API ch_string ch_str_join( STR_FILE_LINE_DEF size_t count, const char** strings, char* data = nullptr );
+CORE_API ch_string ch_str_join( STR_FILE_LINE_DEF size_t count, const char** strings, const size_t* lengths, char* data = nullptr );
+CORE_API ch_string ch_str_join( STR_FILE_LINE_DEF size_t count, const ch_string* strings, char* data = nullptr );
 
 // Joins strings together with a space, or what ever string you want, in between each item
-CORE_API ch_string ch_str_join_space( STR_FILE_LINE_DEF u64 count, const char** strings, const char* space = " ", char* data = nullptr );
-CORE_API ch_string ch_str_join_space( STR_FILE_LINE_DEF u64 count, const char** strings, const u64* lengths, const char* space = " ", char* data = nullptr );
-CORE_API ch_string ch_str_join_space( STR_FILE_LINE_DEF u64 count, const ch_string* strings, const char* space = " ", char* data = nullptr );
+CORE_API ch_string ch_str_join_space( STR_FILE_LINE_DEF size_t count, const char** strings, const char* space = " ", char* data = nullptr );
+CORE_API ch_string ch_str_join_space( STR_FILE_LINE_DEF size_t count, const char** strings, const size_t* lengths, const char* space = " ", char* data = nullptr );
+CORE_API ch_string ch_str_join_space( STR_FILE_LINE_DEF size_t count, const ch_string* strings, const char* space = " ", char* data = nullptr );
 
 
 // hmm
-// CORE_API ch_string ch_str_join( u64 count, const std::vector< const char* >& strings, const std::vector< u64 >& lengths, char* data = nullptr );
+// CORE_API ch_string ch_str_join( size_t count, const std::vector< const char* >& strings, const std::vector< size_t >& lengths, char* data = nullptr );
 
 // what if you use std::initilizer_list? hmm
 
@@ -99,42 +122,26 @@ CORE_API ch_string ch_str_join_space( STR_FILE_LINE_DEF u64 count, const ch_stri
 // if it isn't it will realloc that memory
 // ONLY PASS IN const char* strings, no other types
 // takes in a variable size array of strings
-CORE_API ch_string ch_str_join_arr( STR_FILE_LINE_DEF char* data, u64 count, const char* string, ... );
+CORE_API ch_string ch_str_join_arr( STR_FILE_LINE_DEF char* data, size_t count, const char* string, ... );
 
 CORE_API ch_string ch_str_join_list( STR_FILE_LINE_DEF char* data, std::initializer_list< const char* > strings );
 CORE_API ch_string ch_str_join_list( STR_FILE_LINE_DEF char* data, std::initializer_list< ch_string > strings );
 
-// USE THIS AS STRING ALLOCATIONS ARE TRACKED!
-// also so the string is freed in the same dll, would probably cause issues otherwise
-CORE_API void      ch_str_free( char* string );
-CORE_API void      ch_str_free( char** strings, u64 count );
-CORE_API void      ch_str_free( ch_string* strings, u64 count );
-CORE_API void      ch_str_free( std::vector< ch_string >& files );
-
-// Adds a string to the list of strings allocated
-// This only does something when string memory tracking is enabled
-CORE_API void      ch_str_add( STR_FILE_LINE_DEF const char* string );
-CORE_API void      ch_str_add( STR_FILE_LINE_DEF const char* string, u64 size );
-CORE_API void      ch_str_add( STR_FILE_LINE_DEF const ch_string& string );
-
-// Removes a string from the list of strings allocated, does not free the memory
-// This only does something when string memory tracking is enabled
-CORE_API void      ch_str_remove( const char* string );
 
 // String equality functions
 CORE_API bool      ch_str_equals( const char* str1, const char* str2 );
-CORE_API bool      ch_str_equals( const char* str1, const char* str2, u64 count );
+CORE_API bool      ch_str_equals( const char* str1, const char* str2, size_t count );
 
-CORE_API bool      ch_str_equals( const char* str1, u64 str1Len, const char* str2 );
-CORE_API bool      ch_str_equals( const char* str1, u64 str1Len, const char* str2, u64 str2Len );
+CORE_API bool      ch_str_equals( const char* str1, size_t str1Len, const char* str2 );
+CORE_API bool      ch_str_equals( const char* str1, size_t str1Len, const char* str2, size_t str2Len );
 
 CORE_API bool      ch_str_equals( const ch_string& str1, const char* str2 );
-CORE_API bool      ch_str_equals( const ch_string& str1, const char* str2, u64 str2Len );
+CORE_API bool      ch_str_equals( const ch_string& str1, const char* str2, size_t str2Len );
 
 CORE_API bool      ch_str_equals( const ch_string& str1, const ch_string& str2 );
 
 CORE_API bool      ch_str_equals( const ch_string_auto& str1, const char* str2 );
-CORE_API bool      ch_str_equals( const ch_string_auto& str1, const char* str2, u64 str2Len );
+CORE_API bool      ch_str_equals( const ch_string_auto& str1, const char* str2, size_t str2Len );
 
 CORE_API bool      ch_str_equals( const ch_string_auto& str1, const ch_string_auto& str2 );
 CORE_API bool      ch_str_equals( const ch_string& str1, const ch_string_auto& str2 );
@@ -144,77 +151,56 @@ CORE_API bool      ch_str_equals( const ch_string& str1, const ch_string_auto& s
 
 
 // Compare a string to a list of strings
-CORE_API bool      ch_str_equals_any( const char* str1, u64 strLen, u64 count, const char** strings );
-CORE_API bool      ch_str_equals_any( const char* str1, u64 strLen, u64 count, const char** strings, u64* lengths );
+CORE_API bool      ch_str_equals_any( const char* str1, size_t strLen, size_t count, const char** strings );
+CORE_API bool      ch_str_equals_any( const char* str1, size_t strLen, size_t count, const char** strings, size_t* lengths );
 
-CORE_API bool      ch_str_equals_any( const ch_string& str1, u64 count, const char** strings );
-CORE_API bool      ch_str_equals_any( const ch_string& str1, u64 count, const char** strings, u64* lengths );
+CORE_API bool      ch_str_equals_any( const ch_string& str1, size_t count, const char** strings );
+CORE_API bool      ch_str_equals_any( const ch_string& str1, size_t count, const char** strings, size_t* lengths );
 
-CORE_API bool      ch_str_equals_any( const ch_string& str1, u64 count, const ch_string* strings );
+CORE_API bool      ch_str_equals_any( const ch_string& str1, size_t count, const ch_string* strings );
+
 
 // -----------------------------------------------------------------------------------------------------
 
-// Get the total amount of strings allocated
-CORE_API u64        ch_str_get_alloc_count();
 
-// Get the total amount of memory allocated for strings
-CORE_API u64        ch_str_get_alloc_size();
+// maybe change size_t to size_t, so you can pass in -1 to calc the string length in the function?
+CORE_API bool      ch_str_starts_with( const char* s, size_t len, const char* start );
+CORE_API bool      ch_str_starts_with( const char* s, size_t len, const char* start, size_t startLen );
 
-// -----------------------------------------------------------------------------------------------------
-// Creation and Destruction
+CORE_API bool      ch_str_starts_with( const char* s, const char* start );
+CORE_API bool      ch_str_starts_with( const char* s, const char* start, size_t startLen );
 
-CORE_API bool       ch_str_create( ch_string& s, const char* str );
-// CORE_API bool       ch_str_create( ch_ustring& s, const uchar* str );
+CORE_API bool      ch_str_starts_with( const ch_string& s, const char* start );
+CORE_API bool      ch_str_starts_with( const ch_string& s, const char* start, size_t startLen );
+CORE_API bool      ch_str_starts_with( const ch_string& s, const ch_string& start );
 
-CORE_API bool       ch_str_create( ch_string& s, const char* str, u64 len );
-// CORE_API bool       ch_str_create( ch_ustring& s, const uchar* str, u32 len );
+CORE_API bool      ch_str_ends_with( const char* s, size_t len, const char* end );
+CORE_API bool      ch_str_ends_with( const char* s, size_t len, const char* end, size_t endLen );
 
-// check if this has a nullptr in data to see if it was successful or not
-CORE_API ch_string  ch_str_create( const char* str );
-// CORE_API ch_ustring ch_str_create( const uchar* str );
+CORE_API bool      ch_str_ends_with( const char* s, const char* end );
+CORE_API bool      ch_str_ends_with( const char* s, const char* end, size_t endLen );
 
-CORE_API ch_string  ch_str_create( const char* str, u64 len );
-// CORE_API ch_ustring ch_str_create( const uchar* str, u32 len );
-
-
-// maybe change u64 to s64, so you can pass in -1 to calc the string length in the function?
-CORE_API bool ch_str_starts_with( const char* s, u64 len, const char* start );
-CORE_API bool ch_str_starts_with( const char* s, u64 len, const char* start, u64 startLen );
-
-CORE_API bool ch_str_starts_with( const char* s, const char* start );
-CORE_API bool ch_str_starts_with( const char* s, const char* start, u64 startLen );
-
-CORE_API bool ch_str_starts_with( const ch_string& s, const char* start );
-CORE_API bool ch_str_starts_with( const ch_string& s, const char* start, u64 startLen );
-CORE_API bool ch_str_starts_with( const ch_string& s, const ch_string& start );
-
-CORE_API bool ch_str_ends_with( const char* s, u64 len, const char* end );
-CORE_API bool ch_str_ends_with( const char* s, u64 len, const char* end, u64 endLen );
-
-CORE_API bool ch_str_ends_with( const char* s, const char* end );
-CORE_API bool ch_str_ends_with( const char* s, const char* end, u64 endLen );
-
-CORE_API bool ch_str_ends_with( const ch_string& s, const char* end );
-CORE_API bool ch_str_ends_with( const ch_string& s, const char* end, u64 endLen );
-CORE_API bool ch_str_ends_with( const ch_string& s, const ch_string& end );
+CORE_API bool      ch_str_ends_with( const ch_string& s, const char* end );
+CORE_API bool      ch_str_ends_with( const ch_string& s, const char* end, size_t endLen );
+CORE_API bool      ch_str_ends_with( const ch_string& s, const ch_string& end );
 
 // returns the index of the first instance of find in s
 // returns SIZE_MAX if not found
-CORE_API u64  ch_str_contains( const char* s, u64 len, const char* find );
-CORE_API u64  ch_str_contains( const char* s, u64 len, const char* find, u64 findLen );
+CORE_API size_t    ch_str_contains( const char* s, size_t len, const char* find );
+CORE_API size_t    ch_str_contains( const char* s, size_t len, const char* find, size_t findLen );
 
-CORE_API u64  ch_str_contains( const char* s, const char* find );
-CORE_API u64  ch_str_contains( const char* s, const char* find, u64 findLen );
+CORE_API size_t    ch_str_contains( const char* s, const char* find );
+CORE_API size_t    ch_str_contains( const char* s, const char* find, size_t findLen );
 
 
 // check if a string has characters in it
-inline bool   ch_str_check_empty( const char* s, s64& length )
+inline bool   ch_str_check_empty( const char* s, size_t& length )
 {
 	if ( !s )
 		return false;
 
 	if ( length <= 0 )
-		length = ch_str_len( s );
+		length = strlen( s );
 
 	return ( length > 0 );
 }
@@ -228,7 +214,7 @@ inline bool ch_str_check_empty( const char* s, s32& length )
 
 	if ( length <= 0 )
 	{
-		s64 bigLength = ch_str_len( s );
+		size_t bigLength = strlen( s );
 
 		if ( bigLength > INT32_MAX )
 			return false;
@@ -241,13 +227,13 @@ inline bool ch_str_check_empty( const char* s, s32& length )
 
 
 // ensures the length is correct, returns true if it's greater than 0, false if it's empty
-inline bool ch_str_check_len( const char* s, s64& length )
+inline bool ch_str_check_len( const char* s, size_t& length )
 {
 	if ( !s )
 		return false;
 
 	if ( length <= 0 )
-		length = ch_str_len( s );
+		length = strlen( s );
 
 	return ( length > 0 );
 }
@@ -261,7 +247,7 @@ inline bool ch_str_check_len( const char* s, s32& length )
 
 	if ( length <= 0 )
 	{
-		s64 bigLength = ch_str_len( s );
+		size_t bigLength = strlen( s );
 
 		if ( bigLength > INT32_MAX )
 			return false;

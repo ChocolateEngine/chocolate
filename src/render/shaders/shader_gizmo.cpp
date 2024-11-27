@@ -1,4 +1,4 @@
-#include "util.h"
+#include "core/util.h"
 #include "render/irender.h"
 #include "graphics_int.h"
 
@@ -19,7 +19,7 @@ enum EGizmoColorMode : u8
 struct Gizmo_Push
 {
 	alignas( 16 ) glm::mat4 aModelMatrix;
-	alignas( 16 ) glm::vec4 aColor;
+	alignas( 16 ) glm::vec4 color;
 	alignas( 16 ) u32 aViewport   = 0;  // viewport index
 	u32 aRenderable = 0;  // renderable index
 };
@@ -51,23 +51,23 @@ static glm::vec4 AdjustColor( glm::vec4 baseColor, glm::vec4 darkenColor )
 }
 
 
-static void Shader_Gizmo_PushConstants( Handle cmd, Handle sLayout, const ShaderPushData_t& sPushData )
+static void Shader_Gizmo_PushConstants( ch_handle_t cmd, ch_handle_t sLayout, const ShaderPushData_t& sPushData )
 {
 	Gizmo_Push push{};
 	push.aModelMatrix = sPushData.apRenderable->aModelMatrix;
-	Handle mat        = sPushData.apRenderable->apMaterials[ sPushData.aSurfaceDraw.aSurface ];
-	push.aColor       = gGraphics.Mat_GetVec4( mat, "color" );
+	ch_handle_t mat        = sPushData.apRenderable->apMaterials[ sPushData.aSurfaceDraw.aSurface ];
+	push.color       = gGraphics.Mat_GetVec4( mat, "color" );
 
 	if ( gGraphics.Mat_GetBool( mat, "hovered" ) )
 	{
-		// push.aColor = AdjustColor( push.aColor, { 0.3f, 0.3f, 0.3f, 1.f } );
-		push.aColor = { 1.f, 1.f, 0.f, 1.f };
+		// push.color = AdjustColor( push.color, { 0.3f, 0.3f, 0.3f, 1.f } );
+		push.color = { 1.f, 1.f, 0.f, 1.f };
 	}
 
 	if ( gGraphics.Mat_GetBool( mat, "selected" ) )
 	{
-		// push.aColor = AdjustColor( push.aColor, { 0.15f, 0.15f, 0.15f, 1.f } );
-		push.aColor = { 1.f, 1.f, 1.f, 1.f };
+		// push.color = AdjustColor( push.color, { 0.15f, 0.15f, 0.15f, 1.f } );
+		push.color = { 1.f, 1.f, 1.f, 1.f };
 	}
 
 	push.aRenderable = sPushData.aRenderableIndex;

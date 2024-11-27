@@ -1,36 +1,37 @@
 #pragma once
 
 #include "platform.h"
-#include "util.h"
+#include "core/util.h"
 
 template< typename T >
 struct ChVector;
 
-enum class LogColor: unsigned char
+using ELogColor = u8;
+enum ELogColor_ : ELogColor
 {
-	Default,
+	ELogColor_Default,
 
-	Black,
-	White,
+	ELogColor_Black,
+	ELogColor_White,
 
-	DarkBlue,
-	DarkGreen,
-	DarkCyan,
-	DarkRed,
-	DarkPurple,
-	DarkYellow,
-	DarkGray,
+	ELogColor_DarkBlue,
+	ELogColor_DarkGreen,
+	ELogColor_DarkCyan,
+	ELogColor_DarkRed,
+	ELogColor_DarkPurple,
+	ELogColor_DarkYellow,
+	ELogColor_DarkGray,
 
-	Blue,
-	Green,
-	Cyan,
-	Red,
-	Purple,
-	Yellow,
-	Gray,
+	ELogColor_Blue,
+	ELogColor_Green,
+	ELogColor_Cyan,
+	ELogColor_Red,
+	ELogColor_Purple,
+	ELogColor_Yellow,
+	ELogColor_Gray,
 
-	Max = Gray,
-	Count,
+	ELogColor_Max = ELogColor_Gray,
+	ELogColor_Count,
 };
 
 
@@ -55,206 +56,177 @@ enum class LogColor: unsigned char
 #define ANSI_CLR_YELLOW      "\033[1;33m"
 #define ANSI_CLR_GRAY        "\033[1;30m"
 
-// ch_string versions :D
-#define STR_ANSI_CLR_DEFAULT     ch_string( "\033[0m", 4 )
-#define STR_ANSI_CLR_BLACK       ch_string( "\033[0;30m", 7 )
-#define STR_ANSI_CLR_WHITE       ch_string( "\033[1;37m", 7 )
 
-#define STR_ANSI_CLR_DARK_BLUE   ch_string( "\033[0;34m", 7 )
-#define STR_ANSI_CLR_DARK_GREEN  ch_string( "\033[0;32m", 7 )
-#define STR_ANSI_CLR_DARK_CYAN   ch_string( "\033[0;36m", 7 )
-#define STR_ANSI_CLR_DARK_RED    ch_string( "\033[0;31m", 7 )
-#define STR_ANSI_CLR_DARK_PURPLE ch_string( "\033[0;35m", 7 )
-#define STR_ANSI_CLR_DARK_YELLOW ch_string( "\033[0;33m", 7 )
-#define STR_ANSI_CLR_DARK_GRAY   ch_string( "\033[0;30m", 7 )
-
-#define STR_ANSI_CLR_BLUE        ch_string( "\033[1;34m", 7 )
-#define STR_ANSI_CLR_GREEN       ch_string( "\033[1;32m", 7 )
-#define STR_ANSI_CLR_CYAN        ch_string( "\033[1;36m", 7 )
-#define STR_ANSI_CLR_RED         ch_string( "\033[1;31m", 7 )
-#define STR_ANSI_CLR_PURPLE      ch_string( "\033[1;35m", 7 )
-#define STR_ANSI_CLR_YELLOW      ch_string( "\033[1;33m", 7 )
-#define STR_ANSI_CLR_GRAY        ch_string( "\033[1;30m", 7 )
-
-
-enum class LogType: unsigned char
+using ELogType = u8;
+enum ELogType_: ELogType
 {
-	Normal = 0,
-	Dev,
-	Dev2,
-	Dev3,
-	Dev4,
-	Input,    // "] %s" - user console input
-	Raw,      // "%s" - kind of a hack for quick new line printing
-	Warning,  // "[Channel] [WARNING] "%s"
-	Error,    // "[Channel] [ERROR] %s"
-	Fatal     // "[Channel] [FATAL] %s"
+	ELogType_Normal = 0,  // [Channel] %s
+	ELogType_Verbose,     // [Channel] [V1] %s
+	ELogType_Verbose2,    // [Channel] [V2] %s
+	ELogType_Verbose3,    // [Channel] [V3] %s
+	ELogType_Verbose4,    // [Channel] [V4] %s
+	ELogType_Raw,         // %s
+	ELogType_Warning,     // [Channel] [WARNING] %s
+	ELogType_Error,       // [Channel] [ERROR] %s
+	ELogType_Fatal,       // [Channel] [FATAL] %s
+	ELogType_Count
 };
 
 
-struct LogChannel_t
+struct log_channel_t
 {
-	ch_string aName;
-	bool      aShown;
-	LogColor  aColor;
-	int       aDevLevel;
+	ch_string name;
+	bool      shown;
+	ELogColor color;
+	u8        verbosity_level;
 };
 
-using LogChannel = unsigned char;
-using LogGroup   = unsigned int;
+
+// log channel handle - max of 255 log channels
+using log_channel_h_t = u8;
 
 
-struct Log
+struct log_t
 {
-	LogChannel aChannel;
-	LogType    aType;
-	ch_string  aMessage;
-	ch_string  aFormatted;
+	log_channel_h_t channel;
+	ELogType        aType;
+	ch_string       aMessage;
+	ch_string       aFormatted;
 };
 
 
 struct LogColorBuf_t
 {
-	LogColor    aColor;
+	ELogColor   color;
 	const char* apStr;
 	u32         aLen;
 };
 
 
 /*ReBuildConsoleOutput*/
-typedef void ( *LogChannelShownCallbackF )();
+typedef void           ( *LogChannelShownCallbackF )();
 
 
-constexpr LogColor   LOG_COLOR_WARNING   = LogColor::Yellow;
-constexpr LogColor   LOG_COLOR_ERROR     = LogColor::Red;
-constexpr LogChannel INVALID_LOG_CHANNEL = 255;
+constexpr ELogColor    LOG_COLOR_WARNING   = ELogColor_Yellow;
+constexpr ELogColor    LOG_COLOR_ERROR     = ELogColor_Red;
+constexpr log_channel_h_t   INVALID_LOG_CHANNEL = 255;
 
 // ----------------------------------------------------------------
 // Logging API
 
-void                     CORE_API  Log_Init();
-void                     CORE_API  Log_Shutdown();
+CORE_API void               Log_Init();
+CORE_API void               Log_Shutdown();
 
 // Manage Console Color
-void                     CORE_API  Log_SetColor( LogColor color );
-LogColor                 CORE_API  Log_GetColor();
-const char               CORE_API *Log_ColorToStr( LogColor color );
+CORE_API void               Log_SetColor( ELogColor color );
+CORE_API ELogColor          Log_GetColor();
+CORE_API const char*        Log_ColorToStr( ELogColor color );
 
 // Split a string by unix colors into a vector of LogColorBuf_t
 // does no new memory allocations, only stores color, a starting char pointer, and a length
-void                     CORE_API  Log_SplitStringColors( LogColor sMainColor, const ch_string& sBuffer, ChVector< LogColorBuf_t >& srColorList, bool sNoColors = false );
+CORE_API void               Log_SplitStringColors( ELogColor sMainColor, const ch_string& sBuffer, ChVector< LogColorBuf_t >& srColorList, bool sNoColors = false );
 
-const char               CORE_API *Log_ColorToUnix( LogColor color );
-ch_string                CORE_API  Log_ColorToUnixStr( LogColor color );
-LogColor                 CORE_API  Log_UnixCodeToColor( bool sIsLight, int sColor );
-LogColor                 CORE_API  Log_UnixToColor( const char* spColor, size_t sLen );
+CORE_API const char*        Log_ColorToUnix( ELogColor color );
+CORE_API ch_string          Log_ColorToUnixStr( ELogColor color );
+CORE_API ELogColor          Log_UnixCodeToColor( bool sIsLight, int sColor );
+CORE_API ELogColor          Log_UnixToColor( const char* spColor, size_t sLen );
 
-// Manage Log Channels
-CORE_API LogChannel                Log_RegisterChannel( const char* sName, LogColor sColor = LogColor::Default );
-LogChannel               CORE_API  Log_GetChannel( const char *sName );
-LogColor                 CORE_API  Log_GetChannelColor( LogChannel handle );
-ch_string                CORE_API  Log_GetChannelName( LogChannel handle );
-bool                     CORE_API  Log_ChannelIsShown( LogChannel handle );
-int                      CORE_API  Log_GetChannelDevLevel( LogChannel handle );
-unsigned char            CORE_API  Log_GetChannelCount();
+// Manage log_t Channels
+CORE_API log_channel_h_t    Log_RegisterChannel( const char* sName, ELogColor sColor = ELogColor_Default );
+CORE_API log_channel_h_t    Log_GetChannel( const char* sName );
+CORE_API ELogColor          Log_GetChannelColor( log_channel_h_t handle );
+CORE_API ch_string          Log_GetChannelName( log_channel_h_t handle );
+CORE_API bool               Log_ChannelIsShown( log_channel_h_t handle );
+CORE_API int                Log_GetChannelDevLevel( log_channel_h_t handle );
+CORE_API unsigned char      Log_GetChannelCount();
 
-// Log Information
-ch_string                CORE_API  Log_BuildHistoryString( int sMaxSize = -1 );
-const std::vector< Log > CORE_API &Log_GetLogHistory();
-const Log                CORE_API *Log_GetLastLog();
-bool                     CORE_API  Log_IsVisible( const Log& log );
-int                      CORE_API  Log_GetDevLevel();
+// log_t Information
+CORE_API ch_string          Log_BuildHistoryString( int sMaxSize = -1 );
+CORE_API const std::vector< log_t >& Log_GetLogHistory();
+CORE_API const log_t*                Log_GetLastLog();
+CORE_API bool                        Log_IsVisible( const log_t& log );
+CORE_API int                         Log_GetDevLevel();
 
-void                     CORE_API  Log_AddChannelShownCallback( LogChannelShownCallbackF callback );
-
-// ----------------------------------------------------------------
-// System printing, skip logging
-
-void CORE_API                      ch_printf( const char* str, ... );
-void CORE_API                      ch_print( const char* str );
+CORE_API void                        Log_AddChannelShownCallback( LogChannelShownCallbackF callback );
 
 // ----------------------------------------------------------------
-// Log Group Functions
+// log_t Group Functions
 
-// Returns a Handle to the current log group
-LogGroup CORE_API                  Log_GroupBeginEx( LogChannel channel, LogType sType );
-LogGroup CORE_API                  Log_GroupBegin( LogChannel channel );
-LogGroup CORE_API                  Log_GroupBegin();
+// Returns a ch_handle_t to the current log group
+CORE_API log_t                       Log_GroupBeginEx( log_channel_h_t channel, ELogType sType );
+CORE_API log_t                       Log_GroupBegin( log_channel_h_t channel );
+CORE_API log_t                       Log_GroupBegin();
 
-void CORE_API                      Log_GroupEnd( LogGroup sGroup );
+CORE_API void                        Log_GroupEnd( log_t& sGroup );
 
-void CORE_API                      Log_Group( LogGroup sGroup, const char* spBuf );
-void CORE_API                      Log_GroupF( LogGroup sGroup, const char* spFmt, ... );
-void CORE_API                      Log_GroupV( LogGroup sGroup, const char* spFmt, va_list args );
+// change to Log_Build
+CORE_API void                        Log_Group( log_t& sGroup, const char* spBuf );
+CORE_API void                        Log_GroupF( log_t& sGroup, const char* spFmt, ... );
+CORE_API void                        Log_GroupV( log_t& sGroup, const char* spFmt, va_list args );
 
 // ----------------------------------------------------------------
 // Extended Logging Functions
 
-void CORE_API                      Log_Ex( LogChannel channel, LogType sLevel, const char* spBuf );
-void CORE_API                      Log_ExF( LogChannel channel, LogType sLevel, const char* spFmt, ... );
-void CORE_API                      Log_ExV( LogChannel channel, LogType sLevel, const char* spFmt, va_list args );
+CORE_API void                        Log_Ex( log_channel_h_t channel, ELogType sLevel, const char* spBuf );
+CORE_API void                        Log_ExF( log_channel_h_t channel, ELogType sLevel, const char* spFmt, ... );
+CORE_API void                        Log_ExV( log_channel_h_t channel, ELogType sLevel, const char* spFmt, va_list args );
 
 // ----------------------------------------------------------------
 // Standard Logging Functions
 // TODO: change to ch_log_msg, ch_log_warn, etc.?
 
 // Lowest severity.
-void CORE_API                      Log_Msg( LogChannel channel, const char* spBuf );
-void CORE_API                      Log_MsgF( LogChannel channel, const char* spFmt, ... );
+CORE_API void                        Log_Msg( log_channel_h_t channel, const char* spBuf );
+CORE_API void                        Log_MsgF( log_channel_h_t channel, const char* spFmt, ... );
 
 // Medium severity.
-void CORE_API                      Log_Warn( LogChannel channel, const char* spBuf );
-void CORE_API                      Log_WarnF( LogChannel channel, const char* spFmt, ... );
+CORE_API void                        Log_Warn( log_channel_h_t channel, const char* spBuf );
+CORE_API void                        Log_WarnF( log_channel_h_t channel, const char* spFmt, ... );
 
 // High severity.
-void CORE_API                      Log_Error( LogChannel channel, const char* spBuf );
-void CORE_API                      Log_ErrorF( LogChannel channel, const char* spFmt, ... );
+CORE_API void                        Log_Error( log_channel_h_t channel, const char* spBuf );
+CORE_API void                        Log_ErrorF( log_channel_h_t channel, const char* spFmt, ... );
 
 // Extreme severity.
-void CORE_API                      Log_Fatal( LogChannel channel, const char* spBuf );
-void CORE_API                      Log_FatalF( LogChannel channel, const char* spFmt, ... );
+CORE_API void                        Log_Fatal( log_channel_h_t channel, const char* spBuf );
+CORE_API void                        Log_FatalF( log_channel_h_t channel, const char* spFmt, ... );
 
 // Dev only.
-void CORE_API                      Log_Dev( LogChannel channel, u8 sLvl, const char* spBuf );
-void CORE_API                      Log_DevF( LogChannel channel, u8 sLvl, const char* spFmt, ... );
+CORE_API void                        Log_Dev( log_channel_h_t channel, u8 sLvl, const char* spBuf );
+CORE_API void                        Log_DevF( log_channel_h_t channel, u8 sLvl, const char* spFmt, ... );
 
 // ----------------------------------------------------------------
 // Default to general channel.
 
 // Lowest severity.
-void CORE_API                      Log_Msg( const char* spFmt );
-void CORE_API                      Log_MsgF( const char* spFmt, ... );
+CORE_API void                        Log_Msg( const char* spFmt );
+CORE_API void                        Log_MsgF( const char* spFmt, ... );
 
 // Medium severity.
-void CORE_API                      Log_Warn( const char* spFmt );
-void CORE_API                      Log_WarnF( const char* spFmt, ... );
+CORE_API void                        Log_Warn( const char* spFmt );
+CORE_API void                        Log_WarnF( const char* spFmt, ... );
 
 // High severity.
-void CORE_API                      Log_Error( const char* spFmt );
-void CORE_API                      Log_ErrorF( const char* spFmt, ... );
+CORE_API void                        Log_Error( const char* spFmt );
+CORE_API void                        Log_ErrorF( const char* spFmt, ... );
 
 // Extreme severity.
-void CORE_API                      Log_Fatal( const char* spFmt );
-void CORE_API                      Log_FatalF( const char* spFmt, ... );
+CORE_API void                        Log_Fatal( const char* spFmt );
+CORE_API void                        Log_FatalF( const char* spFmt, ... );
 
 // Dev only.
-void CORE_API                      Log_Dev( u8 sLvl, const char* spFmt );
-void CORE_API                      Log_DevF( u8 sLvl, const char* spFmt, ... );
+CORE_API void                        Log_Dev( u8 sLvl, const char* spFmt );
+CORE_API void                        Log_DevF( u8 sLvl, const char* spFmt, ... );
+
 
 // ----------------------------------------------------------------
 // Helper Macros
 
-#define LOG_REGISTER_CHANNEL( name, ... )         LogChannel g##name##Channel = Log_RegisterChannel( #name, __VA_ARGS__ );
-#define LOG_REGISTER_CHANNEL2( name, ... )        LogChannel gLC_##name = Log_RegisterChannel( #name, __VA_ARGS__ );
-#define LOG_REGISTER_CHANNEL_EX( var, name, ... ) LogChannel var = Log_RegisterChannel( name, __VA_ARGS__ );
+// register log channel with a custom name
+#define LOG_CHANNEL_REGISTER_EX( var, name, ... ) log_channel_h_t var = Log_RegisterChannel( name, __VA_ARGS__ );
 
-#define LOG_CHANNEL( name )                       extern LogChannel g##name##Channel;
-#define LOG_CHANNEL2( name )                      extern LogChannel gLC_##name;
+// register a log channel prefixed with gLC_, for global log channel
+#define LOG_CHANNEL_REGISTER( name, ... )         log_channel_h_t gLC_##name = Log_RegisterChannel( #name, __VA_ARGS__ );
 
-// better names
-#define LOG_CHANNEL_REGISTER( name, ... )         LogChannel gLC_##name = Log_RegisterChannel( #name, __VA_ARGS__ );
-#define LOG_CHANNEL_REGISTER_EX( var, name, ... ) LogChannel var = Log_RegisterChannel( #name, __VA_ARGS__ );
-
-#define LOG_CHANNEL_EXTERN( name )                extern LogChannel gLC_##name;
-#define EXTERN_LOG_CHANNEL( name )                extern LogChannel gLC_##name;
-
+// extern log channel
+#define LOG_CHANNEL( name )                       extern log_channel_h_t gLC_##name;

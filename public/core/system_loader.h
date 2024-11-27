@@ -1,5 +1,5 @@
 /*
-systemmanager.h ( Authored by Demez )
+system_loader.h ( Authored by Demez )
 
 Declares and defines the SystemManager, 
 an interface for getting systems from the engine 
@@ -9,7 +9,21 @@ an interface for getting systems from the engine
 #include "core/platform.h"
 
 
-class ISystem;
+class ISystem
+{
+   public:
+	// Main Update Function for this system (remove this? all systems usually have their own update function)
+	virtual void Update( float sDT ){};
+
+	// Initialize System
+	virtual bool Init() { return true; };
+
+	// Shutdown This System
+	virtual void Shutdown(){};
+
+	// Destructs the system, freeing any used memory
+	virtual ~ISystem() = default;
+};
 
 
 struct ModuleInterface_t
@@ -26,7 +40,7 @@ struct AppModule_t
 	ISystem**   apSystem;  // TODO: try ISystem*&
 	const char* apModuleName;
 	const char* apInterfaceName;
-	size_t      apInterfaceVer;
+	u16         apInterfaceVer;
 	bool        aRequired = true;
 };
 
@@ -40,7 +54,7 @@ enum EModLoadError
 };
 
 
-typedef ModuleInterface_t* ( *cframework_GetInterfacesF )( size_t& srCount );
+typedef ModuleInterface_t* ( *fn_ch_get_interfaces_t )( u8& srCount );
 
 
 extern "C"

@@ -2,10 +2,10 @@
 #include "core/platform.h"
 #include "core/filesystem.h"
 #include "core/log.h"
-#include "core/systemmanager.h"
+#include "core/system_loader.h"
 #include "core/app_info.h"
 #include "core/build_number.h"
-#include "util.h"
+#include "core/util.h"
 
 #include "imgui_impl_sdl2.h"
 #include "imgui_impl_vulkan.h"
@@ -25,11 +25,11 @@
 
 #include "render_vk.h"
 
-LOG_REGISTER_CHANNEL2( GraphicsAPI, LogColor::Cyan );
-LOG_REGISTER_CHANNEL2( Vulkan, LogColor::DarkYellow );
-LOG_REGISTER_CHANNEL2( Validation, LogColor::DarkYellow );
+LOG_CHANNEL_REGISTER( GraphicsAPI, ELogColor_Cyan );
+LOG_CHANNEL_REGISTER( Vulkan, ELogColor_DarkYellow );
+LOG_CHANNEL_REGISTER( Validation, ELogColor_DarkYellow );
 
-LogChannel                                               gLC_Render = gLC_GraphicsAPI;
+log_channel_h_t                                               gLC_Render = gLC_GraphicsAPI;
 
 static VkCommandPool                                     gSingleTime;
 static VkCommandPool                                     gPrimary;
@@ -41,7 +41,7 @@ struct ImGuiTexture
 	u32             refCount = 1;
 };
 
-static std::unordered_map< ChHandle_t, ImGuiTexture >    gImGuiTextures;
+static std::unordered_map< ch_handle_t, ImGuiTexture >    gImGuiTextures;
 
 static std::vector< VkBuffer >                           gBuffers;
 
@@ -49,8 +49,8 @@ ResourceList< BufferVK >                                 gBufferHandles;
 ResourceList< TextureVK* >                               gTextureHandles;
 // static ResourceManager< BufferVK >        gBufferHandles;
 
-static std::unordered_map< std::string, Handle >         gTexturePaths;
-static std::unordered_map< Handle, TextureCreateData_t > gTextureInfo;
+static std::unordered_map< std::string, ch_handle_t >         gTexturePaths;
+static std::unordered_map< ch_handle_t, TextureCreateData_t > gTextureInfo;
 
 // Static Memory Pools for Vulkan Commands
 static VkViewport*                                       gpViewports                = nullptr;
@@ -544,6 +544,12 @@ bool Render_Init()
 		return false;
 	}
 
+	if ( !KTX_Init() )
+	{
+		Log_Error( "Failed to init KTX Texture Loader\n" );
+		return false;
+	}
+
 	Log_Msg( gLC_Render, "Loaded Vulkan Renderer\n" );
 
 	return true;
@@ -554,6 +560,8 @@ void Render_Shutdown()
 {
 	if ( gpViewports )
 		delete gpViewports;
+
+	KTX_Shutdown();
 
 	VK_DestroyShaders();
 
@@ -573,7 +581,7 @@ void Render_Shutdown()
 }
 
 
-void VK_Reset( ChHandle_t windowHandle, WindowVK* window, ERenderResetFlags sFlags )
+void VK_Reset( ch_handle_t windowHandle, WindowVK* window, ERenderResetFlags sFlags )
 {
 	VK_RecreateSwapchain( window );
 
@@ -602,7 +610,7 @@ void VK_ResetAll( ERenderResetFlags sFlags )
 
 	for ( u32 i = 0; i < gGraphicsAPIData.windows.GetHandleCount(); i++ )
 	{
-		ChHandle_t handle = gGraphicsAPIData.windows.GetHandleByIndex( i );
+		ch_handle_t handle = gGraphicsAPIData.windows.GetHandleByIndex( i );
 		WindowVK*  window = gGraphicsAPIData.windows.Get( handle );
 
 		VK_Reset( handle, window, sFlags );
@@ -624,7 +632,7 @@ void VK_SetCheckpoint( VkCommandBuffer c, const char* spName )
 // ----------------------------------------------------------------------------------
 // Chocolate Engine Render Abstraction
 
-static ImWchar gFontRanges[] = { 0x1, 0x1FFFF, 0 };
+static ImWchar gFontRanges[] = { 0x1, 0xFFFF, 0 };
 
 
 class RenderVK : public IRender
@@ -687,7 +695,7 @@ public:
 	// --------------------------------------------------------------------------------------------
 
 	// very odd
-	bool InitImGui( Handle shRenderPass ) override
+	bool InitImGui( ch_handle_t shRenderPass ) override
 	{
 		VkRenderPass renderPass = VK_GetRenderPass( shRenderPass );
 
@@ -713,7 +721,7 @@ public:
 		ImGui_ImplVulkan_Shutdown();
 	}
 
-	void GetSurfaceSize( ChHandle_t windowHandle, int& srWidth, int& srHeight ) override
+	void GetSurfaceSize( ch_handle_t windowHandle, int& srWidth, int& srHeight ) override
 	{
 		WindowVK* window = nullptr;
 		if ( !gGraphicsAPIData.windows.Get( windowHandle, &window ) )
@@ -728,7 +736,7 @@ public:
 		// SDL_GetWindowSize( window->window, &srWidth, &srHeight );
 	}
 
-	ImTextureID AddTextureToImGui( ChHandle_t sHandle ) override
+	ImTextureID AddTextureToImGui( ch_handle_t sHandle ) override
 	{
 		// User wants the Missing Texture
 		if ( sHandle == CH_INVALID_HANDLE )
@@ -770,7 +778,7 @@ public:
 		return nullptr;
 	}
 
-	void FreeTextureFromImGui( ChHandle_t sHandle ) override
+	void FreeTextureFromImGui( ch_handle_t sHandle ) override
 	{
 		if ( sHandle == CH_INVALID_HANDLE )
 		{
@@ -826,10 +834,10 @@ public:
 	// Windows
 	// --------------------------------------------------------------------------------------------
 
-	virtual ChHandle_t CreateWindow( SDL_Window* window, void* sysWindow ) override
+	virtual ch_handle_t CreateWindow( SDL_Window* window, void* sysWindow ) override
 	{
 		WindowVK*   windowVK     = nullptr;
-		ChHandle_t  windowHandle = gGraphicsAPIData.windows.Create( &windowVK );
+		ch_handle_t  windowHandle = gGraphicsAPIData.windows.Create( &windowVK );
 
 		const char* title        = SDL_GetWindowTitle( window ) == nullptr ? SDL_GetWindowTitle( window ) : CH_DEFAULT_WINDOW_NAME;
 
@@ -916,7 +924,7 @@ public:
 		ImGui::SetCurrentContext( origContext );
 	}
 
-	virtual void DestroyWindow( ChHandle_t windowHandle ) override
+	virtual void DestroyWindow( ch_handle_t windowHandle ) override
 	{
 		WindowVK* window = nullptr;
 		if ( !gGraphicsAPIData.windows.Get( windowHandle, &window ) )
@@ -933,12 +941,12 @@ public:
 	// Buffers
 	// --------------------------------------------------------------------------------------------
 	
-	Handle CreateBuffer( const char* spName, u32 sSize, EBufferFlags sBufferFlags, EBufferMemory sBufferMem ) override
+	ch_handle_t CreateBuffer( const char* spName, u32 sSize, EBufferFlags sBufferFlags, EBufferMemory sBufferMem ) override
 	{
 		PROF_SCOPE();
 
 		BufferVK* buffer = nullptr;
-		Handle    handle = gBufferHandles.Create( &buffer );
+		ch_handle_t    handle = gBufferHandles.Create( &buffer );
 
 		buffer->aBuffer  = VK_NULL_HANDLE;
 		buffer->aMemory  = VK_NULL_HANDLE;
@@ -993,12 +1001,12 @@ public:
 		return handle;
 	}
 	
-	ChHandle_t CreateBuffer( u32 sSize, EBufferFlags sBufferFlags, EBufferMemory sBufferMem ) override
+	ch_handle_t CreateBuffer( u32 sSize, EBufferFlags sBufferFlags, EBufferMemory sBufferMem ) override
 	{
 		return CreateBuffer( nullptr, sSize, sBufferFlags, sBufferMem );
 	}
 
-	void DestroyBuffer( ChHandle_t buffer ) override
+	void DestroyBuffer( ch_handle_t buffer ) override
 	{
 		BufferVK* bufVK = gBufferHandles.Get( buffer );
 
@@ -1013,13 +1021,13 @@ public:
 		gBufferHandles.Remove( buffer );
 	}
 
-	void DestroyBuffers( ChHandle_t* spBuffers, u32 sCount ) override
+	void DestroyBuffers( ch_handle_t* spBuffers, u32 sCount ) override
 	{
 		for ( u32 i = 0; i < sCount; i++ )
 			DestroyBuffer( spBuffers[ i ] );
 	}
 
-	virtual u32 BufferWrite( Handle buffer, u32 sSize, void* spData ) override
+	virtual u32 BufferWrite( ch_handle_t buffer, u32 sSize, void* spData ) override
 	{
 		PROF_SCOPE();
 
@@ -1043,7 +1051,7 @@ public:
 		return bufVK->aSize;
 	}
 
-	virtual u32 BufferRead( Handle buffer, u32 sSize, void* spData ) override
+	virtual u32 BufferRead( ch_handle_t buffer, u32 sSize, void* spData ) override
 	{
 		PROF_SCOPE();
 
@@ -1066,7 +1074,7 @@ public:
 		return bufVK->aSize;
 	}
 
-	virtual bool BufferCopy( Handle shSrc, Handle shDst, BufferRegionCopy_t* spRegions, u32 sRegionCount ) override
+	virtual bool BufferCopy( ch_handle_t shSrc, ch_handle_t shDst, BufferRegionCopy_t* spRegions, u32 sRegionCount ) override
 	{
 		PROF_SCOPE();
 
@@ -1125,7 +1133,7 @@ public:
 		return true;
 	}
 
-	virtual bool BufferCopyQueued( Handle shSrc, Handle shDst, BufferRegionCopy_t* spRegions, u32 sRegionCount ) override
+	virtual bool BufferCopyQueued( ch_handle_t shSrc, ch_handle_t shDst, BufferRegionCopy_t* spRegions, u32 sRegionCount ) override
 	{
 		PROF_SCOPE();
 
@@ -1163,7 +1171,7 @@ public:
 		bufferCopy.aRegionCount = sRegionCount;
 
 		if ( !bufferCopy.apRegions )
-			bufferCopy.apRegions = ch_malloc_count< VkBufferCopy >( sRegionCount );
+			bufferCopy.apRegions = ch_malloc< VkBufferCopy >( sRegionCount );
 
 		for ( u32 i = 0; i < sRegionCount; i++ )
 		{
@@ -1188,7 +1196,7 @@ public:
 		return true;
 	}
 
-	const char* BufferGetName( ChHandle_t bufferHandle ) override
+	const char* BufferGetName( ch_handle_t bufferHandle ) override
 	{
 		BufferVK* buffer = gBufferHandles.Get( bufferHandle );
 		if ( !buffer )
@@ -1204,7 +1212,7 @@ public:
 	// Materials and Textures
 	// --------------------------------------------------------------------------------------------
 
-	ChHandle_t LoadTexture( ChHandle_t& srHandle, const std::string& srTexturePath, const TextureCreateData_t& srCreateData ) override
+	ch_handle_t LoadTexture( ch_handle_t& srHandle, const std::string& srTexturePath, const TextureCreateData_t& srCreateData ) override
 	{
 		// wants missing texture
 		if ( srTexturePath.empty() )
@@ -1213,10 +1221,10 @@ public:
 			return CH_INVALID_HANDLE;
 		}
 
-		if ( srHandle == InvalidHandle )
+		if ( srHandle == CH_INVALID_HANDLE )
 		{
 			auto it = gTexturePaths.find( srTexturePath );
-			if ( it != gTexturePaths.end() && it->second != InvalidHandle )
+			if ( it != gTexturePaths.end() && it->second != CH_INVALID_HANDLE )
 			{
 				srHandle = it->second;
 				gGraphicsAPIData.aTextureRefs[ srHandle ]++;
@@ -1245,9 +1253,9 @@ public:
 			// add it to the paths anyway, if you do a texture reload, then maybe the texture will have been added
 			// TODO: We should probably allocate a handle and a new texture anyway,
 			// so if it appears on the disk, we can use it in hotloading later
-			gTexturePaths[ srTexturePath ] = InvalidHandle;
+			gTexturePaths[ srTexturePath ] = CH_INVALID_HANDLE;
 			Log_ErrorF( gLC_Render, "Failed to find Texture: \"%s\"\n", srTexturePath.c_str() );
-			return InvalidHandle;
+			return CH_INVALID_HANDLE;
 		}
 
 		if ( srHandle )
@@ -1260,7 +1268,7 @@ public:
 			{
 				Log_Error( gLC_Render, "Failed to find old texture\n" );
 				ch_str_free( fullPath.data );
-				return InvalidHandle;
+				return CH_INVALID_HANDLE;
 			}
 
 			if ( tex->aImageView )
@@ -1278,7 +1286,7 @@ public:
 			{
 				VK_DestroyTexture( srHandle );
 				ch_str_free( fullPath.data );
-				return InvalidHandle;
+				return CH_INVALID_HANDLE;
 			}
 
 			// write new texture data
@@ -1287,7 +1295,7 @@ public:
 				Log_ErrorF( gLC_Render, "Failed to Update Texture Handle: \"%s\"\n", srTexturePath.c_str() );
 				gGraphicsAPIData.aTextureRefs.erase( srHandle );
 				ch_str_free( fullPath.data );
-				return InvalidHandle;
+				return CH_INVALID_HANDLE;
 			}
 		}
 		else
@@ -1297,7 +1305,7 @@ public:
 			{
 				VK_DestroyTexture( srHandle );
 				ch_str_free( fullPath.data );
-				return InvalidHandle;
+				return CH_INVALID_HANDLE;
 			}
 
 			gTexturePaths[ srTexturePath ]            = srHandle;
@@ -1309,19 +1317,19 @@ public:
 		return srHandle;
 	}
 
-	ChHandle_t CreateTexture( const TextureCreateInfo_t& srTextureCreateInfo, const TextureCreateData_t& srCreateData ) override
+	ch_handle_t CreateTexture( const TextureCreateInfo_t& srTextureCreateInfo, const TextureCreateData_t& srCreateData ) override
 	{
-		ChHandle_t handle = CH_INVALID_HANDLE;
+		ch_handle_t handle = CH_INVALID_HANDLE;
 		TextureVK* tex    = VK_CreateTexture( handle, srTextureCreateInfo, srCreateData );
 		if ( tex == nullptr )
-			return InvalidHandle;
+			return CH_INVALID_HANDLE;
 
 		gTextureInfo[ handle ]                  = srCreateData;
 		gGraphicsAPIData.aTextureRefs[ handle ] = 1;
 		return handle;
 	}
 
-	void FreeTexture( ChHandle_t sTexture ) override
+	void FreeTexture( ch_handle_t sTexture ) override
 	{
 		if ( sTexture == gMissingTexHandle )
 			return;
@@ -1344,16 +1352,16 @@ public:
 		}
 	}
 
-	// EImageUsage GetTextureUsage( ChHandle_t shTexture ) override
+	// EImageUsage GetTextureUsage( ch_handle_t shTexture ) override
 	// {
 	// 	VK_ToImageUsage();
 	// }
 
-	int GetTextureIndex( ChHandle_t shTexture ) override
+	int GetTextureIndex( ch_handle_t shTexture ) override
 	{
 		PROF_SCOPE();
 
-		if ( shTexture == InvalidHandle )
+		if ( shTexture == CH_INVALID_HANDLE )
 			return 0;
 
 		TextureVK* tex = nullptr;
@@ -1371,7 +1379,7 @@ public:
 		return tex->aIndex;
 	}
 
-	GraphicsFmt GetTextureFormat( ChHandle_t shTexture ) override
+	GraphicsFmt GetTextureFormat( ch_handle_t shTexture ) override
 	{
 		PROF_SCOPE();
 
@@ -1384,7 +1392,7 @@ public:
 		return GraphicsFmt::INVALID;
 	}
 	
-	glm::uvec2 GetTextureSize( ChHandle_t shTexture ) override
+	glm::uvec2 GetTextureSize( ch_handle_t shTexture ) override
 	{
 		TextureVK* tex = VK_GetTexture( shTexture );
 
@@ -1406,12 +1414,12 @@ public:
 		}
 	}
 	
-	const std::vector< ChHandle_t >& GetTextureList() override
+	const std::vector< ch_handle_t >& GetTextureList() override
 	{
 		return gTextureHandles.aHandles;
 	}
 	
-	TextureInfo_t GetTextureInfo( ChHandle_t sTexture ) override
+	TextureInfo_t GetTextureInfo( ch_handle_t sTexture ) override
 	{
 		TextureInfo_t info;
 
@@ -1429,8 +1437,8 @@ public:
 
 		info.aFormat   = VK_ToGraphicsFmt( tex->aFormat );
 
-		if ( tex->aName.data )
-			info.aName = ch_str_copy( tex->aName.data, tex->aName.size );
+		if ( tex->name.data )
+			info.name = ch_str_copy( tex->name.data, tex->name.size );
 
 		info.aSize         = tex->aSize;
 		info.aGpuIndex     = tex->aIndex;
@@ -1446,9 +1454,9 @@ public:
 			{
 				info.aPath = ch_str_copy( path.data(), path.size() );
 
-				if ( !info.aName.data )
+				if ( !info.name.data )
 				{
-					info.aName = FileSys_GetFileName( path.data(), path.size() );
+					info.name = FileSys_GetFileName( path.data(), path.size() );
 				}
 
 				break;
@@ -1460,8 +1468,8 @@ public:
 
 	void FreeTextureInfo( TextureInfo_t& srInfo ) override
 	{
-		if ( srInfo.aName.data )
-			ch_str_free( srInfo.aName.data );
+		if ( srInfo.name.data )
+			ch_str_free( srInfo.name.data );
 
 		if ( srInfo.aPath.data )
 			ch_str_free( srInfo.aPath.data );
@@ -1478,7 +1486,7 @@ public:
 		// VK_EndOneTimeCommand( c );
 	}
 
-	ReadTexture ReadTextureFromDevice( ChHandle_t textureHandle ) override
+	ReadTexture ReadTextureFromDevice( ch_handle_t textureHandle ) override
 	{
 		TextureVK*  tex = VK_GetTexture( textureHandle );
 
@@ -1496,7 +1504,7 @@ public:
 		readTexture.pData            = new u32[ tex->aSize.x * tex->aSize.y ];
 
 		// Copy to a buffer
-		ChHandle_t        tempBuffer = CreateBuffer( "READ TEXTURE BUFFER", readTexture.dataSize, EBufferFlags_TransferDst, EBufferMemory_Host );
+		ch_handle_t        tempBuffer = CreateBuffer( "READ TEXTURE BUFFER", readTexture.dataSize, EBufferFlags_TransferDst, EBufferMemory_Host );
 		BufferVK*         bufVK      = gBufferHandles.Get( tempBuffer );
 
 		// Get layout of the image (including row pitch)
@@ -1553,28 +1561,28 @@ public:
 		delete[] pData->pData;
 	}
 
-	Handle CreateFramebuffer( const CreateFramebuffer_t& srCreate ) override
+	ch_handle_t CreateFramebuffer( const CreateFramebuffer_t& srCreate ) override
 	{
 		return VK_CreateFramebuffer( srCreate );
 	}
 
-	void DestroyFramebuffer( Handle shTarget ) override
+	void DestroyFramebuffer( ch_handle_t shTarget ) override
 	{
-		if ( shTarget == InvalidHandle )
+		if ( shTarget == CH_INVALID_HANDLE )
 			return;
 
 		VK_DestroyFramebuffer( shTarget );
 	}
 
-	glm::uvec2 GetFramebufferSize( Handle shFramebuffer ) override
+	glm::uvec2 GetFramebufferSize( ch_handle_t shFramebuffer ) override
 	{
-		if ( shFramebuffer == InvalidHandle )
+		if ( shFramebuffer == CH_INVALID_HANDLE )
 			return {};
 
 		return VK_GetFramebufferSize( shFramebuffer );
 	}
 
-	void SetTextureDescSet( ChHandle_t* spDescSets, int sCount, u32 sBinding ) override
+	void SetTextureDescSet( ch_handle_t* spDescSets, int sCount, u32 sBinding ) override
 	{
 		VK_SetImageSets( spDescSets, sCount, sBinding );
 	}
@@ -1583,27 +1591,27 @@ public:
 	// Shader System
 	// --------------------------------------------------------------------------------------------
 
-	bool CreatePipelineLayout( ChHandle_t& sHandle, PipelineLayoutCreate_t& srPipelineCreate ) override
+	bool CreatePipelineLayout( ch_handle_t& sHandle, PipelineLayoutCreate_t& srPipelineCreate ) override
 	{
 		return VK_CreatePipelineLayout( sHandle, srPipelineCreate );
 	}
 
-	bool CreateGraphicsPipeline( ChHandle_t& sHandle, GraphicsPipelineCreate_t& srGraphicsCreate ) override
+	bool CreateGraphicsPipeline( ch_handle_t& sHandle, GraphicsPipelineCreate_t& srGraphicsCreate ) override
 	{
 		return VK_CreateGraphicsPipeline( sHandle, srGraphicsCreate );
 	}
 
-	bool CreateComputePipeline( ChHandle_t& sHandle, ComputePipelineCreate_t& srComputeCreate ) override
+	bool CreateComputePipeline( ch_handle_t& sHandle, ComputePipelineCreate_t& srComputeCreate ) override
 	{
 		return VK_CreateComputePipeline( sHandle, srComputeCreate );
 	}
 
-	void DestroyPipeline( ChHandle_t sPipeline ) override
+	void DestroyPipeline( ch_handle_t sPipeline ) override
 	{
 		VK_DestroyPipeline( sPipeline );
 	}
 
-	void DestroyPipelineLayout( Handle sPipeline ) override
+	void DestroyPipelineLayout( ch_handle_t sPipeline ) override
 	{
 		VK_DestroyPipelineLayout( sPipeline );
 	}
@@ -1612,7 +1620,7 @@ public:
 	// Descriptor Pool
 	// --------------------------------------------------------------------------------------------
 
-	Handle CreateDescLayout( const CreateDescLayout_t& srCreate ) override
+	ch_handle_t CreateDescLayout( const CreateDescLayout_t& srCreate ) override
 	{
 		return VK_CreateDescLayout( srCreate );
 	}
@@ -1622,12 +1630,12 @@ public:
 		VK_UpdateDescSets( spUpdate, sCount );
 	}
 	
-	bool AllocateVariableDescLayout( const AllocVariableDescLayout_t& srCreate, Handle* handles ) override
+	bool AllocateVariableDescLayout( const AllocVariableDescLayout_t& srCreate, ch_handle_t* handles ) override
 	{
 		return VK_AllocateVariableDescLayout( srCreate, handles );
 	}
 	
-	bool AllocateDescLayout( const AllocDescLayout_t& srCreate, Handle* handles ) override
+	bool AllocateDescLayout( const AllocDescLayout_t& srCreate, ch_handle_t* handles ) override
 	{
 		return VK_AllocateDescLayout( srCreate, handles );
 	}
@@ -1636,7 +1644,7 @@ public:
 	// Back Buffer Info
 	// --------------------------------------------------------------------------------------------
 
-	GraphicsFmt GetSwapFormatColor( ChHandle_t windowHandle ) override
+	GraphicsFmt GetSwapFormatColor( ch_handle_t windowHandle ) override
 	{
 		WindowVK* window = nullptr;
 		if ( !gGraphicsAPIData.windows.Get( windowHandle, &window ) )
@@ -1653,7 +1661,7 @@ public:
 		return VK_ToGraphicsFmt( VK_FORMAT_D32_SFLOAT );
 	}
 
-	Handle GetBackBufferColor( ChHandle_t windowHandle ) override
+	ch_handle_t GetBackBufferColor( ch_handle_t windowHandle ) override
 	{
 		WindowVK* window = nullptr;
 		if ( !gGraphicsAPIData.windows.Get( windowHandle, &window ) )
@@ -1671,7 +1679,7 @@ public:
 		return VK_GetFramebufferHandle( window->backbuffer->aFrameBuffers[ 0 ].aBuffer );
 	}
 
-	Handle GetBackBufferDepth( ChHandle_t windowHandle ) override
+	ch_handle_t GetBackBufferDepth( ch_handle_t windowHandle ) override
 	{
 		WindowVK* window = nullptr;
 		if ( !gGraphicsAPIData.windows.Get( windowHandle, &window ) )
@@ -1693,7 +1701,7 @@ public:
 	// Rendering
 	// --------------------------------------------------------------------------------------------
 
-	void SetResetCallback( ChHandle_t windowHandle, Render_OnReset_t sFunc ) override
+	void SetResetCallback( ch_handle_t windowHandle, Render_OnReset_t sFunc ) override
 	{
 		WindowVK* window = nullptr;
 		if ( !gGraphicsAPIData.windows.Get( windowHandle, &window ) )
@@ -1715,7 +1723,7 @@ public:
 		ImGui_ImplVulkan_NewFrame();
 	}
 
-	void Reset( ChHandle_t windowHandle ) override
+	void Reset( ch_handle_t windowHandle ) override
 	{
 		WindowVK* window = nullptr;
 		if ( !gGraphicsAPIData.windows.Get( windowHandle, &window ) )
@@ -1752,7 +1760,7 @@ public:
 			}
 
 			if ( r_dbg_show_buffer_copy )
-				Log_DevF( gLC_Render, 1, "  Size: %.6f KB\n", Util_BytesToKB( size ) );
+				Log_DevF( gLC_Render, 1, "  Size: %.6f KB\n", ch_bytes_to_kb( size ) );
 
 			totalSize += size;
 		}
@@ -1760,14 +1768,14 @@ public:
 		VK_EndOneTimeTransferCommand( c );
 
 		if ( r_dbg_show_buffer_copy )
-			Log_DevF( gLC_Render, 1, "Total Copy Size: %.6f KB\n", Util_BytesToKB( totalSize ) );
+			Log_DevF( gLC_Render, 1, "Total Copy Size: %.6f KB\n", ch_bytes_to_kb( totalSize ) );
 
 		gTotalBufferCopyPerFrame += totalSize;
 
 		gGraphicsAPIData.aBufferCopies.clear();
 	}
 
-	u32 GetFlightImageIndex( ChHandle_t windowHandle ) override
+	u32 GetFlightImageIndex( ch_handle_t windowHandle ) override
 	{
 		WindowVK* window = nullptr;
 		if ( !gGraphicsAPIData.windows.Get( windowHandle, &window ) )
@@ -1779,7 +1787,7 @@ public:
 		return VK_GetNextImage( windowHandle, window );
 	}
 
-	void Present( ChHandle_t windowHandle, u32 sImageIndex ) override
+	void Present( ch_handle_t windowHandle, u32 sImageIndex ) override
 	{
 		WindowVK* window = nullptr;
 		if ( !gGraphicsAPIData.windows.Get( windowHandle, &window ) )
@@ -1791,7 +1799,7 @@ public:
 		VK_Present( windowHandle, window, sImageIndex );
 
 		if ( r_dbg_show_buffer_copy )
-			Log_DevF( gLC_Render, 1, "Total Buffer Copy Per Frame: %.6f KB\n", Util_BytesToKB( gTotalBufferCopyPerFrame ) );
+			Log_DevF( gLC_Render, 1, "Total Buffer Copy Per Frame: %.6f KB\n", ch_bytes_to_kb( gTotalBufferCopyPerFrame ) );
 
 		gTotalBufferCopyPerFrame = 0;
 	}
@@ -1812,7 +1820,7 @@ public:
 	}
 
 	// blech again
-	u32 GetCommandBufferHandles( ChHandle_t windowHandle, Handle* spHandles ) override
+	u32 GetCommandBufferHandles( ch_handle_t windowHandle, ch_handle_t* spHandles ) override
 	{
 		WindowVK* window = nullptr;
 		if ( !gGraphicsAPIData.windows.Get( windowHandle, &window ) )
@@ -1833,17 +1841,17 @@ public:
 	}
 
 #if 0
-	Handle AllocCommandBuffer() override
+	ch_handle_t AllocCommandBuffer() override
 	{
-		return InvalidHandle;
+		return CH_INVALID_HANDLE;
 	}
 
-	void FreeCommandBuffer( Handle cmd ) override
+	void FreeCommandBuffer( ch_handle_t cmd ) override
 	{
 	}
 #endif
 
-	void BeginCommandBuffer( Handle cmd ) override
+	void BeginCommandBuffer( ch_handle_t cmd ) override
 	{
 		PROF_SCOPE();
 
@@ -1852,7 +1860,7 @@ public:
 		// TODO: expose this
 		VkCommandBufferBeginInfo begin{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
 		begin.pNext            = nullptr;
-		begin.flags            = 0;
+		begin.flags            = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
 		begin.pInheritanceInfo = nullptr;
 
 		VK_CheckResult( vkBeginCommandBuffer( c, &begin ), "Failed to begin command buffer" );
@@ -1860,7 +1868,7 @@ public:
 		// gTracyCtx[ c ] = TracyVkContext( VK_GetPhysicalDevice(), VK_GetDevice(), VK_GetGraphicsQueue(), c );
 	}
 
-	void EndCommandBuffer( Handle cmd ) override
+	void EndCommandBuffer( ch_handle_t cmd ) override
 	{
 		PROF_SCOPE();
 
@@ -1876,17 +1884,17 @@ public:
 		// gTracyCtx.erase( it );
 	}
 
-	Handle CreateRenderPass( const RenderPassCreate_t& srCreate ) override
+	ch_handle_t CreateRenderPass( const RenderPassCreate_t& srCreate ) override
 	{
 		return VK_CreateRenderPass( srCreate );
 	}
 
-	void DestroyRenderPass( Handle shPass ) override
+	void DestroyRenderPass( ch_handle_t shPass ) override
 	{
 		VK_DestroyRenderPass( shPass );
 	}
 
-	void BeginRenderPass( Handle cmd, const RenderPassBegin_t& srBegin ) override
+	void BeginRenderPass( ch_handle_t cmd, const RenderPassBegin_t& srBegin ) override
 	{
 		PROF_SCOPE();
 
@@ -1915,16 +1923,16 @@ public:
 			{
 				if ( srBegin.aClear[ i ].aIsDepth )
 				{
-					clearValues[ i ].depthStencil.depth   = srBegin.aClear[ i ].aColor.w;
+					clearValues[ i ].depthStencil.depth   = srBegin.aClear[ i ].color.w;
 					clearValues[ i ].depthStencil.stencil = srBegin.aClear[ i ].aStencil;
 				}
 				else
 				{
 					clearValues[ i ].color = {
-						srBegin.aClear[ i ].aColor.x,
-						srBegin.aClear[ i ].aColor.y,
-						srBegin.aClear[ i ].aColor.z,
-						srBegin.aClear[ i ].aColor.w
+						srBegin.aClear[ i ].color.x,
+						srBegin.aClear[ i ].color.y,
+						srBegin.aClear[ i ].color.z,
+						srBegin.aClear[ i ].color.w
 					};
 				}
 			}
@@ -1941,7 +1949,7 @@ public:
 		vkCmdBeginRenderPass( c, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE );
 	}
 
-	void EndRenderPass( Handle cmd ) override
+	void EndRenderPass( ch_handle_t cmd ) override
 	{
 		PROF_SCOPE();
 
@@ -1956,7 +1964,7 @@ public:
 		vkCmdEndRenderPass( c );
 	}
 
-	void DrawImGui( ImDrawData* spDrawData, Handle cmd ) override
+	void DrawImGui( ImDrawData* spDrawData, ch_handle_t cmd ) override
 	{
 		PROF_SCOPE();
 
@@ -1968,7 +1976,7 @@ public:
 	// Vulkan Commands
 	// --------------------------------------------------------------------------------------------
 
-	void CmdSetViewport( Handle cmd, u32 sOffset, const Viewport_t* spViewports, u32 sCount ) override
+	void CmdSetViewport( ch_handle_t cmd, u32 sOffset, const Viewport_t* spViewports, u32 sCount ) override
 	{
 		PROF_SCOPE();
 
@@ -1999,7 +2007,7 @@ public:
 		vkCmdSetViewport( c, sOffset, sCount, gpViewports );
 	}
 
-	void CmdSetScissor( Handle cmd, u32 sOffset, const Rect2D_t* spScissors, u32 sCount ) override
+	void CmdSetScissor( ch_handle_t cmd, u32 sOffset, const Rect2D_t* spScissors, u32 sCount ) override
 	{
 		PROF_SCOPE();
 
@@ -2024,7 +2032,7 @@ public:
 		vkCmdSetScissor( c, sOffset, vkScissors.size(), vkScissors.data() );
 	}
 
-	void CmdSetDepthBias( Handle cmd, float sConstantFactor, float sClamp, float sSlopeFactor ) override
+	void CmdSetDepthBias( ch_handle_t cmd, float sConstantFactor, float sClamp, float sSlopeFactor ) override
 	{
 		PROF_SCOPE();
 
@@ -2039,7 +2047,7 @@ public:
 		vkCmdSetDepthBias( c, sConstantFactor, sClamp, sSlopeFactor );
 	}
 
-	void CmdSetLineWidth( Handle cmd, float sLineWidth ) override
+	void CmdSetLineWidth( ch_handle_t cmd, float sLineWidth ) override
 	{
 		PROF_SCOPE();
 
@@ -2068,7 +2076,7 @@ public:
 		vkCmdSetLineWidth( c, sLineWidth );
 	}
 
-	bool CmdBindPipeline( Handle cmd, Handle shader ) override
+	bool CmdBindPipeline( ch_handle_t cmd, ch_handle_t shader ) override
 	{
 		PROF_SCOPE();
 
@@ -2083,8 +2091,8 @@ public:
 		return VK_BindShader( c, shader );
 	}
 
-	void CmdPushConstants( Handle      cmd,
-	                       Handle      shPipelineLayout,
+	void CmdPushConstants( ch_handle_t      cmd,
+	                       ch_handle_t      shPipelineLayout,
 	                       ShaderStage sShaderStage,
 	                       u32         sOffset,
 	                       u32         sSize,
@@ -2111,7 +2119,7 @@ public:
 
 #if 0
 	// IDEA (from Godot)
-	void CmdPushConstants( Handle      sDrawList,
+	void CmdPushConstants( ch_handle_t      sDrawList,
 	                       u32         sOffset,
 	                       u32         sSize,
 	                       void*       spValues )
@@ -2129,11 +2137,11 @@ public:
 #endif
 
 	// will most likely change
-	void CmdBindDescriptorSets( Handle             cmd,
+	void CmdBindDescriptorSets( ch_handle_t             cmd,
 	                            size_t             sCmdIndex,
 	                            EPipelineBindPoint sBindPoint,
-	                            Handle             shPipelineLayout,
-	                            Handle*            spSets,
+	                            ch_handle_t             shPipelineLayout,
+	                            ch_handle_t*            spSets,
 	                            u32                sSetCount ) override
 	{
 		PROF_SCOPE();
@@ -2183,7 +2191,7 @@ public:
 		CH_STACK_FREE( vkDescSets );
 	}
 
-	void CmdBindVertexBuffers( Handle cmd, u32 sFirstBinding, u32 sCount, const Handle* spBuffers, const uint64_t* spOffsets ) override
+	void CmdBindVertexBuffers( ch_handle_t cmd, u32 sFirstBinding, u32 sCount, const ch_handle_t* spBuffers, const uint64_t* spOffsets ) override
 	{
 		PROF_SCOPE();
 
@@ -2215,7 +2223,7 @@ public:
 		ch_free( vkBuffers );
 	}
 
-	void CmdBindIndexBuffer( Handle cmd, Handle shBuffer, size_t offset, EIndexType indexType ) override
+	void CmdBindIndexBuffer( ch_handle_t cmd, ch_handle_t shBuffer, size_t offset, EIndexType indexType ) override
 	{
 		PROF_SCOPE();
 
@@ -2252,7 +2260,7 @@ public:
 		vkCmdBindIndexBuffer( c, bufVK->aBuffer, offset, vkIndexType );
 	}
 	
-	void CmdDraw( Handle cmd, u32 sVertCount, u32 sInstanceCount, u32 sFirstVert, u32 sFirstInstance ) override
+	void CmdDraw( ch_handle_t cmd, u32 sVertCount, u32 sInstanceCount, u32 sFirstVert, u32 sFirstInstance ) override
 	{
 		PROF_SCOPE();
 
@@ -2267,7 +2275,7 @@ public:
 		vkCmdDraw( c, sVertCount, sInstanceCount, sFirstVert, sFirstInstance );
 	}
 
-	void CmdDrawIndexed( Handle cmd, u32 sIndexCount, u32 sInstanceCount, u32 sFirstIndex, int sVertOffset, u32 sFirstInstance ) override
+	void CmdDrawIndexed( ch_handle_t cmd, u32 sIndexCount, u32 sInstanceCount, u32 sFirstIndex, int sVertOffset, u32 sFirstInstance ) override
 	{
 		PROF_SCOPE();
 
@@ -2282,7 +2290,7 @@ public:
 		vkCmdDrawIndexed( c, sIndexCount, sInstanceCount, sFirstIndex, sVertOffset, sFirstInstance );
 	}
 
-	void CmdDispatch( ChHandle_t sCmd, u32 sGroupCountX, u32 sGroupCountY, u32 sGroupCountZ ) override
+	void CmdDispatch( ch_handle_t sCmd, u32 sGroupCountX, u32 sGroupCountY, u32 sGroupCountZ ) override
 	{
 		PROF_SCOPE();
 
@@ -2297,7 +2305,7 @@ public:
 		vkCmdDispatch( c, sGroupCountX, sGroupCountY, sGroupCountZ );
 	}
 
-	void CmdPipelineBarrier( ChHandle_t sCmd, PipelineBarrier_t& srBarrier ) override
+	void CmdPipelineBarrier( ch_handle_t sCmd, PipelineBarrier_t& srBarrier ) override
 	{
 		PROF_SCOPE();
 	
@@ -2373,7 +2381,7 @@ static ModuleInterface_t gInterfaces[] = {
 
 extern "C"
 {
-	DLL_EXPORT ModuleInterface_t* cframework_GetInterfaces( size_t& srCount )
+	DLL_EXPORT ModuleInterface_t* ch_get_interfaces( u8& srCount )
 	{
 		srCount = 1;
 		return gInterfaces;

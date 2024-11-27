@@ -7,7 +7,7 @@
 #endif
 
 
-LOG_REGISTER_CHANNEL( Physics, LogColor::DarkGreen );
+LOG_CHANNEL_REGISTER( Physics, ELogColor_DarkGreen );
 
 
 CONVAR_BOOL_EXT( phys_dbg );
@@ -33,7 +33,7 @@ static void TraceCallback( const char *pFmt, ... )
 	char buffer[1024];
 	vsnprintf( buffer, sizeof(buffer), pFmt, list );
 
-	Log_MsgF( gPhysicsChannel, "%s\n", pFmt );
+	Log_MsgF( gLC_Physics, "%s\n", pFmt );
 }
 
 
@@ -125,7 +125,7 @@ public:
 	// See: ContactListener
 	virtual JPH::ValidateResult	OnContactValidate( const JPH::Body &inBody1, const JPH::Body &inBody2, JPH::RVec3Arg inBaseOffset, const JPH::CollideShapeResult &inCollisionResult ) override
 	{
-		// LogDev( gPhysicsChannel, 1, "Contact validate callback\n" );
+		// LogDev( gLC_Physics, 1, "Contact validate callback\n" );
 
 		// Allows you to ignore a contact before it is created (using layers to not make objects collide is cheaper!)
 		return JPH::ValidateResult::AcceptAllContactsForThisBodyPair;
@@ -133,17 +133,17 @@ public:
 
 	virtual void OnContactAdded( const JPH::Body &inBody1, const JPH::Body &inBody2, const JPH::ContactManifold &inManifold, JPH::ContactSettings &ioSettings ) override
 	{
-		// LogDev( gPhysicsChannel, 1, "A contact was added\n" );
+		// LogDev( gLC_Physics, 1, "A contact was added\n" );
 	}
 
 	virtual void OnContactPersisted( const JPH::Body &inBody1, const JPH::Body &inBody2, const JPH::ContactManifold &inManifold, JPH::ContactSettings &ioSettings ) override
 	{
-		// LogDev( gPhysicsChannel, 1, "A contact was persisted\n" );
+		// LogDev( gLC_Physics, 1, "A contact was persisted\n" );
 	}
 
 	virtual void OnContactRemoved( const JPH::SubShapeIDPair &inSubShapePair) override
 	{ 
-		// LogDev( gPhysicsChannel, 1, "A contact was removed\n" );
+		// LogDev( gLC_Physics, 1, "A contact was removed\n" );
 	}
 };
 
@@ -154,12 +154,12 @@ class BodyActivationListener : public JPH::BodyActivationListener
 public:
 	virtual void OnBodyActivated( const JPH::BodyID &inBodyID, JPH::uint64 inBodyUserData ) override
 	{
-		// LogDev( gPhysicsChannel, 1, "A body got activated\n" );
+		// LogDev( gLC_Physics, 1, "A body got activated\n" );
 	}
 
 	virtual void OnBodyDeactivated( const JPH::BodyID &inBodyID, JPH::uint64 inBodyUserData ) override
 	{
-		// LogDev( gPhysicsChannel, 1, "A body went to sleep\n" );
+		// LogDev( gLC_Physics, 1, "A body went to sleep\n" );
 	}
 };
 
@@ -198,10 +198,10 @@ class Physics : public Ch_IPhysics
 public:
 	bool Init() override
 	{
-		//if ( !JPH::VerifyJoltVersionID() )
-		//{
-		//	return false;
-		//}
+		if ( !JPH::VerifyJoltVersionID() )
+		{
+			return false;
+		}
 
 		// Install callbacks
 		JPH::Trace = TraceCallback;
@@ -223,7 +223,7 @@ public:
 		// If you don't want to pre-allocate you can also use TempAllocatorMalloc to fall back to
 		// malloc / free.
 		// apAllocator = new JPH::TempAllocatorImpl( 10 * 1024 * 1024 );
-		apAllocator = new JPH::TempAllocatorImpl( 70 * 1024 * 1024 );
+		apAllocator = new JPH::TempAllocatorImpl( 25 * 1024 * 1024 );
 
 		// We need a job system that will execute physics jobs on multiple threads. Typically
 		// you would implement the JobSystem interface yourself and let Jolt Physics run on topbe
@@ -297,12 +297,12 @@ Physics phys;
 
 
 static ModuleInterface_t gInterfaces[] = {
-	{ &phys, IPHYSICS_NAME, IPHYSICS_HASH }
+	{ &phys, IPHYSICS_NAME, IPHYSICS_VER }
 };
 
 extern "C"
 {
-	DLL_EXPORT ModuleInterface_t* cframework_GetInterfaces( size_t& srCount )
+	DLL_EXPORT ModuleInterface_t* ch_get_interfaces( u8& srCount )
 	{
 		srCount = 1;
 		return gInterfaces;
@@ -576,7 +576,7 @@ IPhysicsShape* PhysicsEnvironment::CreateShape( const PhysicsShapeInfo& physInfo
 		// 	break;
 
 		default:
-			Log_ErrorF( gPhysicsChannel, "Physics Shape Type Not Currently Supported: %s\n", PhysShapeType2Str( physInfo.aShapeType ) );
+			Log_ErrorF( gLC_Physics, "Physics Shape Type Not Currently Supported: %s\n", PhysShapeType2Str( physInfo.aShapeType ) );
 			return nullptr;
 	}
 
@@ -589,14 +589,14 @@ IPhysicsShape* PhysicsEnvironment::CreateShape( const PhysicsShapeInfo& physInfo
 	{
 		if ( result.HasError() )
 		{
-			Log_ErrorF( gPhysicsChannel, "Failed to create \"%s\" Physics Shape - %s\n",
+			Log_ErrorF( gLC_Physics, "Failed to create \"%s\" Physics Shape - %s\n",
 				PhysShapeType2Str( physInfo.aShapeType ),
 				result.GetError().c_str()
 			);
 		}
 		else
 		{
-			Log_ErrorF( gPhysicsChannel, "Failed to create \"%s\" Physics Shape\n", PhysShapeType2Str( physInfo.aShapeType ) );
+			Log_ErrorF( gLC_Physics, "Failed to create \"%s\" Physics Shape\n", PhysShapeType2Str( physInfo.aShapeType ) );
 		}
 
 		delete shapeSettings;
@@ -646,11 +646,11 @@ JPH::Ref< JPH::Shape > ConvexShapeFromSubShape( PhysicsSubShape& shape )
 	{
 		if ( result.HasError() )
 		{
-			Log_ErrorF( gPhysicsChannel, "Failed to create ConvexShape - %s\n", result.GetError().c_str() );
+			Log_ErrorF( gLC_Physics, "Failed to create ConvexShape - %s\n", result.GetError().c_str() );
 		}
 		else
 		{
-			Log_Error( gPhysicsChannel, "Failed to create ConvexShape\n" );
+			Log_Error( gLC_Physics, "Failed to create ConvexShape\n" );
 		}
 
 		return nullptr;
@@ -667,7 +667,7 @@ IPhysicsShape* PhysicsEnvironment::LoadShape( const char* path, PhysShapeType sh
 {
 	if ( !path )
 	{
-		Log_Error( gPhysicsChannel, "No Path Specified for Physics Shape\n" );
+		Log_Error( gLC_Physics, "No Path Specified for Physics Shape\n" );
 		return nullptr;
 	}
 
@@ -675,7 +675,7 @@ IPhysicsShape* PhysicsEnvironment::LoadShape( const char* path, PhysShapeType sh
 
 	if ( pathLen == 0 )
 	{
-		Log_Error( gPhysicsChannel, "No Path Specified for Physics Shape\n" );
+		Log_Error( gLC_Physics, "No Path Specified for Physics Shape\n" );
 		return nullptr;
 	}
 
@@ -695,7 +695,7 @@ IPhysicsShape* PhysicsEnvironment::LoadShape( const char* path, s64 pathLen, Phy
 		case PhysShapeType::Cylinder:
 		case PhysShapeType::HeightField:
 		{
-			Log_ErrorF( gPhysicsChannel,
+			Log_ErrorF( gLC_Physics,
 			            "Unsupported Shape Type for Loading a Model \"%s\"\n"
 			            "Only these are supported: Convex, Mesh, StaticCompound, MutableCompound\n",
 			            PhysShapeType2Str( shapeType ) );
@@ -703,7 +703,7 @@ IPhysicsShape* PhysicsEnvironment::LoadShape( const char* path, s64 pathLen, Phy
 		}
 		case PhysShapeType::MutableCompound:
 		{
-			Log_Error( gPhysicsChannel, "sorry MutableCompound will be supported soon lool\n" );
+			Log_Error( gLC_Physics, "sorry MutableCompound will be supported soon lool\n" );
 			return nullptr;
 		}
 
@@ -736,7 +736,7 @@ IPhysicsShape* PhysicsEnvironment::LoadShape( const char* path, s64 pathLen, Phy
 	PhysicsModel* model = new PhysicsModel;
 	if ( !LoadObj_Fast( absPath.data, model, singleShape ) )
 	{
-		Log_ErrorF( gPhysicsChannel, "Failed to Load Model for Physics Shape: \"%s\"\n", path );
+		Log_ErrorF( gLC_Physics, "Failed to Load Model for Physics Shape: \"%s\"\n", path );
 		delete model;
 		return nullptr;
 	}
@@ -817,13 +817,13 @@ IPhysicsShape* PhysicsEnvironment::LoadShape( const char* path, s64 pathLen, Phy
 	{
 		if ( result.HasError() )
 		{
-			Log_ErrorF( gPhysicsChannel, "Failed to create \"%s\" Physics Shape - %s\n",
+			Log_ErrorF( gLC_Physics, "Failed to create \"%s\" Physics Shape - %s\n",
 			            PhysShapeType2Str( shapeType ),
 			            result.GetError().c_str() );
 		}
 		else
 		{
-			Log_ErrorF( gPhysicsChannel, "Failed to create \"%s\" Physics Shape\n", PhysShapeType2Str( shapeType ) );
+			Log_ErrorF( gLC_Physics, "Failed to create \"%s\" Physics Shape\n", PhysShapeType2Str( shapeType ) );
 		}
 
 		delete shapeSettings;
@@ -899,7 +899,7 @@ IPhysicsObject* PhysicsEnvironment::CreateObject( IPhysicsShape* spShape, const 
 
 	if ( body == nullptr )
 	{
-		Log_Error( gPhysicsChannel, "Failed to create physics body\n" );
+		Log_Error( gLC_Physics, "Failed to create physics body\n" );
 		return nullptr;
 	}
 
@@ -1184,8 +1184,8 @@ JPH::ShapeSettings* PhysicsEnvironment::LoadModel( const PhysicsShapeInfo& physI
 
 			if ( vertices.empty() )
 			{
-				// Log_Warn( gPhysicsChannel, "No vertices in model? - \"%s\"\n", physInfo.aMeshData.apModel->aPath.c_str() );
-				Log_Warn( gPhysicsChannel, "No vertices in model?\n" );
+				// Log_Warn( gLC_Physics, "No vertices in model? - \"%s\"\n", physInfo.aMeshData.apModel->aPath.c_str() );
+				Log_Warn( gLC_Physics, "No vertices in model?\n" );
 				return nullptr;
 			}
 
@@ -1223,7 +1223,7 @@ JPH::ShapeSettings* PhysicsEnvironment::LoadModel( const PhysicsShapeInfo& physI
 
 			// if ( ind.empty() )
 			// {
-			// 	Log_WarnF( gPhysicsChannel, "No vertices in model? - \"%s\"\n", graphics->GetModelPath( physInfo.aMeshData.apModel ).c_str() );
+			// 	Log_WarnF( gLC_Physics, "No vertices in model? - \"%s\"\n", graphics->GetModelPath( physInfo.aMeshData.apModel ).c_str() );
 			// 	return nullptr;
 			// }
 
@@ -1235,7 +1235,7 @@ JPH::ShapeSettings* PhysicsEnvironment::LoadModel( const PhysicsShapeInfo& physI
 
 			if ( tris.empty() )
 			{
-				Log_Warn( gPhysicsChannel, "No vertices in model? - \"%s\"\n", graphics->GetModelPath( physInfo.aMeshData.apModel ).c_str() );
+				Log_Warn( gLC_Physics, "No vertices in model? - \"%s\"\n", graphics->GetModelPath( physInfo.aMeshData.apModel ).c_str() );
 				return nullptr;
 			}
 
@@ -1244,7 +1244,7 @@ JPH::ShapeSettings* PhysicsEnvironment::LoadModel( const PhysicsShapeInfo& physI
 		}
 
 		default:
-			Log_ErrorF( gPhysicsChannel, "Invalid Shape Type Being Passed into PhysicsEnvironment::LoadModel: %s\n", PhysShapeType2Str( physInfo.aShapeType ) );
+			Log_ErrorF( gLC_Physics, "Invalid Shape Type Being Passed into PhysicsEnvironment::LoadModel: %s\n", PhysShapeType2Str( physInfo.aShapeType ) );
 			return nullptr;
 	}
 #endif

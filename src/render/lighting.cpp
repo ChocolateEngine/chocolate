@@ -48,7 +48,7 @@ static_assert( CH_ARR_SIZE( gLightTypeStr ) == ELightType_Count );
 
 void Graphics_DestroyShadowRenderPass()
 {
-	if ( gGraphicsData.aRenderPassShadow != InvalidHandle )
+	if ( gGraphicsData.aRenderPassShadow != CH_INVALID_HANDLE )
 		render->DestroyRenderPass( gGraphicsData.aRenderPassShadow );
 }
 
@@ -122,7 +122,7 @@ void Graphics_AddShadowMap( Light_t* spLight )
 	frameBufCreate.aPass.aAttachDepth = shadowMap->aTexture;
 	shadowMap->aFramebuffer           = render->CreateFramebuffer( frameBufCreate );
 
-	if ( shadowMap->aFramebuffer == InvalidHandle )
+	if ( shadowMap->aFramebuffer == CH_INVALID_HANDLE )
 	{
 		Log_Error( gLC_ClientGraphics, "Failed to create shadow map!\n" );
 		delete shadowMap;
@@ -257,15 +257,15 @@ void Graphics_FreeLightSlot( Light_t* spLight )
 
 
 #if 0
-Handle Graphics_AddLightBuffer( const char* spBufferName, size_t sBufferSize, Light_t* spLight )
+ch_handle_t Graphics_AddLightBuffer( const char* spBufferName, size_t sBufferSize, Light_t* spLight )
 {
 #if 0
-	Handle buffer = render->CreateBuffer( spBufferName, sBufferSize, EBufferFlags_Uniform, EBufferMemory_Host );
+	ch_handle_t buffer = render->CreateBuffer( spBufferName, sBufferSize, EBufferFlags_Uniform, EBufferMemory_Host );
 
-	if ( buffer == InvalidHandle )
+	if ( buffer == CH_INVALID_HANDLE )
 	{
 		Log_Error( gLC_ClientGraphics, "Failed to Create Light Uniform Buffer\n" );
-		return InvalidHandle;
+		return CH_INVALID_HANDLE;
 	}
 
 	gLightBuffers[ spLight ] = buffer;
@@ -394,10 +394,10 @@ void Graphics_UpdateLightBuffer( Light_t* spLight )
 		{
 			u32                     index = Graphics_GetCoreSlot( EShaderCoreArray_LightWorld, spLight->aShaderIndex );
 			UBO_LightDirectional_t& light = gGraphicsData.aCoreData.aLightWorld[ index ];
-			light.aColor.x                = spLight->aColor.x;
-			light.aColor.y                = spLight->aColor.y;
-			light.aColor.z                = spLight->aColor.z;
-			light.aColor.w                = spLight->aEnabled ? spLight->aColor.w : 0.f;
+			light.color.x                = spLight->color.x;
+			light.color.y                = spLight->color.y;
+			light.color.z                = spLight->color.z;
+			light.color.w                = spLight->aEnabled ? spLight->color.w : 0.f;
 
 			glm::mat4 matrix;
 			Util_ToMatrix( matrix, &spLight->aPos, &spLight->aRot );
@@ -447,7 +447,7 @@ void Graphics_UpdateLightBuffer( Light_t* spLight )
 			shadowMap.aViewInfo.aNearZ      = view.aNearZ;
 			shadowMap.aViewInfo.aFarZ       = view.aFarZ;
 
-			Handle shadowBuffer             = gViewportBuffers[ shadowMap.aViewInfoIndex ];
+			ch_handle_t shadowBuffer             = gViewportBuffers[ shadowMap.aViewInfoIndex ];
 			render->MemWriteBuffer( shadowBuffer, sizeof( UBO_Viewport_t ), &shadowMap.aViewInfo );
 
 			// get shadow map view info
@@ -465,10 +465,10 @@ void Graphics_UpdateLightBuffer( Light_t* spLight )
 		{
 			u32               index = Graphics_GetCoreSlot( EShaderCoreArray_LightPoint, spLight->aShaderIndex );
 			UBO_LightPoint_t& light = gGraphicsData.aCoreData.aLightPoint[ index ];
-			light.aColor.x          = spLight->aColor.x;
-			light.aColor.y          = spLight->aColor.y;
-			light.aColor.z          = spLight->aColor.z;
-			light.aColor.w          = spLight->aEnabled ? spLight->aColor.w : 0.f;
+			light.color.x          = spLight->color.x;
+			light.color.y          = spLight->color.y;
+			light.color.z          = spLight->color.z;
+			light.color.w          = spLight->aEnabled ? spLight->color.w : 0.f;
 
 			light.aPos              = spLight->aPos;
 			light.aRadius           = spLight->aRadius;
@@ -479,10 +479,10 @@ void Graphics_UpdateLightBuffer( Light_t* spLight )
 		{
 			u32              index = Graphics_GetCoreSlot( EShaderCoreArray_LightCone, spLight->aShaderIndex );
 			UBO_LightCone_t& light = gGraphicsData.aCoreData.aLightCone[ index ];
-			light.aColor.x         = spLight->aColor.x;
-			light.aColor.y         = spLight->aColor.y;
-			light.aColor.z         = spLight->aColor.z;
-			light.aColor.w         = spLight->aEnabled ? spLight->aColor.w : 0.f;
+			light.color.x         = spLight->color.x;
+			light.color.y         = spLight->color.y;
+			light.color.z         = spLight->color.z;
+			light.color.w         = spLight->aEnabled ? spLight->color.w : 0.f;
 
 			light.aPos             = spLight->aPos;
 			light.aFov.x           = glm::radians( spLight->aInnerFov );
@@ -537,7 +537,7 @@ void Graphics_UpdateLightBuffer( Light_t* spLight )
 				viewportData.aSize                    = shadowMap->aSize;
 
 				gGraphicsData.aViewportStaging.aDirty = true;
-				// Handle shadowBuffer                               = gViewportBuffers[ shadowMap->aViewInfoIndex ];
+				// ch_handle_t shadowBuffer                               = gViewportBuffers[ shadowMap->aViewInfoIndex ];
 				// render->BufferWrite( shadowBuffer, sizeof( Shader_Viewport_t ), &gViewport[ shadowMap->aViewInfoIndex ] );
 
 				// get shadow map view info
@@ -557,10 +557,10 @@ void Graphics_UpdateLightBuffer( Light_t* spLight )
 		// case ELightType_Capsule:
 		// {
 		// 	UBO_LightCapsule_t light;
-		// 	light.aColor.x   = spLight->aColor.x;
-		// 	light.aColor.y   = spLight->aColor.y;
-		// 	light.aColor.z   = spLight->aColor.z;
-		// 	light.aColor.w   = spLight->aEnabled ? spLight->aColor.w : 0.f;
+		// 	light.color.x   = spLight->color.x;
+		// 	light.color.y   = spLight->color.y;
+		// 	light.color.z   = spLight->color.z;
+		// 	light.color.w   = spLight->aEnabled ? spLight->color.w : 0.f;
 		// 
 		// 	light.aPos       = spLight->aPos;
 		// 	light.aLength    = spLight->aLength;
@@ -581,7 +581,7 @@ void Graphics_UpdateLightBuffer( Light_t* spLight )
 }
 
 
-// TODO: this should be returning Handle's
+// TODO: this should be returning ch_handle_t's
 Light_t* Graphics::CreateLight( ELightType sType )
 {
 	Light_t* light = new Light_t;
@@ -662,7 +662,7 @@ Light_t* Graphics::GetLightByIndex( u32 index )
 
 void Graphics_PrepareShadowRenderLists()
 {
-	ChVector< ChVector< ChHandle_t > > shadowRenderables;
+	ChVector< ChVector< ch_handle_t > > shadowRenderables;
 	ChVector< u32 >                    shadowViewports;
 	shadowViewports.reserve( gLights.size() );
 
@@ -678,7 +678,7 @@ void Graphics_PrepareShadowRenderLists()
 
 	for ( size_t v = 0; v < viewportCount; v++ )
 	{
-		static ChVector< ChHandle_t > shadowRenderables;
+		static ChVector< ch_handle_t > shadowRenderables;
 		shadowRenderables.clear();
 		shadowRenderables.reserve( gGraphicsData.aRenderables.size() );
 
@@ -762,7 +762,7 @@ bool Graphics_IsUsingShadowMaps()
 }
 
 
-void Graphics_RenderShadowMap( Handle cmd, size_t sIndex, Light_t* spLight, ShadowMap_t* shadowMap )
+void Graphics_RenderShadowMap( ch_handle_t cmd, size_t sIndex, Light_t* spLight, ShadowMap_t* shadowMap )
 {
 	PROF_SCOPE();
 
@@ -812,7 +812,7 @@ void Graphics_ResetShadowMapsRenderList()
 }
 
 
-void Graphics_DrawShadowMaps( Handle sCmd, size_t sIndex, u32* viewports, u32 viewportCount )
+void Graphics_DrawShadowMaps( ch_handle_t sCmd, size_t sIndex, u32* viewports, u32 viewportCount )
 {
 	PROF_SCOPE();
 
@@ -821,7 +821,7 @@ void Graphics_DrawShadowMaps( Handle sCmd, size_t sIndex, u32* viewports, u32 vi
 
 	RenderPassBegin_t renderPassBegin{};
 	renderPassBegin.aClear.resize( 1 );
-	renderPassBegin.aClear[ 0 ].aColor   = { 0.f, 0.f, 0.f, 1.f };
+	renderPassBegin.aClear[ 0 ].color   = { 0.f, 0.f, 0.f, 1.f };
 	renderPassBegin.aClear[ 0 ].aIsDepth = true;
 	
 	ViewportShader_t** viewportList = ch_malloc< ViewportShader_t* >( viewportCount );
@@ -885,7 +885,7 @@ void Graphics_DrawShadowMaps( Handle sCmd, size_t sIndex, u32* viewports, u32 vi
 		renderPassBegin.aRenderPass  = gGraphicsData.aRenderPassShadow;
 		renderPassBegin.aFrameBuffer = light->apShadowMap->aFramebuffer;
 
-		if ( renderPassBegin.aFrameBuffer == InvalidHandle )
+		if ( renderPassBegin.aFrameBuffer == CH_INVALID_HANDLE )
 			continue;
 
 		render->BeginRenderPass( sCmd, renderPassBegin );

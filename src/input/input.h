@@ -1,6 +1,5 @@
 #pragma once
 
-#include "system.h"
 #include "iinput.h"
 
 #include "imgui/imgui.h"

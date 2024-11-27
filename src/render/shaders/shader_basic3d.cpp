@@ -1,11 +1,11 @@
-#include "util.h"
+#include "core/util.h"
 #include "render/irender.h"
 #include "graphics_int.h"
 
 
 // TODO: rename this file and shader to "standard" or "generic"?
 
-static bool                gArgPCF                  = false;  // Args_Register( "Enable PCF Shadow Filtering", "-pcf" );
+static bool                gArgPCF                  = false;  // args_register( "Enable PCF Shadow Filtering", "-pcf" );
 
 constexpr const char*      gpFallbackAOPath         = "materials/base/white.ktx";
 constexpr const char*      gpFallbackEmissivePath   = "materials/base/black.ktx";
@@ -92,7 +92,7 @@ static void Shader_Basic3D_GetGraphicsPipelineCreate( GraphicsPipelineCreate_t& 
 }
 
 
-static void Shader_Basic3D_PushConstants( Handle cmd, Handle sLayout, const ShaderPushData_t& sPushData )
+static void Shader_Basic3D_PushConstants( ch_handle_t cmd, ch_handle_t sLayout, const ShaderPushData_t& sPushData )
 {
 	PROF_SCOPE();
 

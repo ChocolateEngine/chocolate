@@ -5,7 +5,7 @@
 #include "core/log.h"
 #include "core/json5.h"
 #include "core/app_info.h"
-#include "util.h"
+#include "core/util.h"
 
 #include <array>
 #include <fstream>
@@ -56,7 +56,7 @@
 #undef FileSys_FindFileEx
 
 
-LOG_REGISTER_CHANNEL( FileSystem, LogColor::DarkGray );
+LOG_CHANNEL_REGISTER( FileSystem, ELogColor_DarkGray );
 
 static ch_string                g_working_dir;
 static ch_string                g_exe_path;
@@ -80,7 +80,7 @@ CONCMD( fs_reload_paths )
 
 void FileSys_WhereIsCmd( const std::string& path, ESearchPathType type )
 {
-	ch_string fullPath = FileSys_FindFileEx( CH_FS_FILE_LINE path.data(), path.size(), type );
+	ch_string fullPath = FileSys_FindFileEx( STR_FILE_LINE path.data(), path.size(), type );
 
     if ( !fullPath.data )
 	{
@@ -174,18 +174,22 @@ ch_string FileSys_GetWorkingDir()
 }
 
 
-void FileSys_SetWorkingDir( const char* spPath, s32 pathLen )
+bool FileSys_SetWorkingDir( const char* spPath )
 {
 	if ( !spPath )
-		return;
+		return false;
+
+	if ( chdir( spPath ) != 0 )
+	{
+		Log_ErrorF( "Failed to Change Directory - %s", sys_get_error() );
+		return false;
+	}
 
     if ( g_working_dir.data )
         ch_str_free( g_working_dir.data );
 
-    if ( pathLen == -1 )
-		pathLen = strlen( spPath );
-
 	g_working_dir = ch_str_copy( spPath );
+	return true;
 }
 
 
@@ -342,7 +346,7 @@ void FileSys_DefaultSearchPaths()
 }
 
 
-static void log_group_search_paths( LogGroup group, const char* msg, ESearchPathType type )
+static void log_group_search_paths( log_t group, const char* msg, ESearchPathType type )
 {
 	Log_Group( group, msg );
 	for ( u32 i = 0; i < g_paths_count[ type ]; i++ )
@@ -354,10 +358,10 @@ static void log_group_search_paths( LogGroup group, const char* msg, ESearchPath
 
 void FileSys_PrintSearchPaths()
 {
-	LogGroup group = Log_GroupBegin( gFileSystemChannel );
+	log_t group = Log_GroupBegin( gLC_FileSystem );
 
-	log_group_search_paths( group, "Binary Paths:\n", ESearchPathType_Path );
-	log_group_search_paths( group, "\nSearch Paths:\n", ESearchPathType_Binary );
+	log_group_search_paths( group, "Search Paths:\n", ESearchPathType_Path );
+	log_group_search_paths( group, "\nBinary Paths:\n", ESearchPathType_Binary );
 	log_group_search_paths( group, "\nSource Asset Paths:\n", ESearchPathType_SourceAssets );
 
     Log_GroupEnd( group );
@@ -583,7 +587,7 @@ inline bool exists( const char* path )
 inline bool is_dir( const char* path )
 {
     struct stat s;
-    if ( ch_stat( path, &s ) == 0 )
+    if ( stat( path, &s ) == 0 )
         return (s.st_mode & S_IFDIR);
 
     return false;
@@ -592,14 +596,14 @@ inline bool is_dir( const char* path )
 
 #undef ch_str_copy
 
-inline ch_string FileSys_FindFileAbs( CH_FS_FILE_LINE_DEF const char* file, s32 fileLen )
+inline ch_string FileSys_FindFileAbs( STR_FILE_LINE_DEF const char* file, s32 fileLen )
 {
 	ch_string out;
 	out.data = nullptr;
 	out.size = 0;
 
 	if ( exists( file ) )
-		out = ch_str_copy( CH_FS_FILE_LINE_INT file, fileLen );
+		out = ch_str_copy( STR_FILE_LINE_INT file, fileLen );
 
 	return out;
 }
@@ -635,7 +639,7 @@ ch_string FileSys_FindFileBaseSearchPath( const ch_string& searchPath, const cha
 #endif
 
 
-ch_string FileSys_FindFileBase( CH_FS_FILE_LINE_DEF ESearchPathType type, const char* filePath, s32 fileLen )
+ch_string FileSys_FindFileBase( STR_FILE_LINE_DEF ESearchPathType type, const char* filePath, s32 fileLen )
 {
 	PROF_SCOPE();
 
@@ -646,7 +650,7 @@ ch_string FileSys_FindFileBase( CH_FS_FILE_LINE_DEF ESearchPathType type, const 
 	}
 
 	if ( FileSys_IsAbsolute( filePath, fileLen ) )
-		return FileSys_FindFileAbs( CH_FS_FILE_LINE_INT filePath, fileLen );
+		return FileSys_FindFileAbs( STR_FILE_LINE_INT filePath, fileLen );
 
 	for ( u32 i = 0; i < g_paths_count[ type ]; i++ )
 	{
@@ -684,25 +688,25 @@ ch_string FileSys_FindFileBase( CH_FS_FILE_LINE_DEF ESearchPathType type, const 
 }
 
 
-ch_string FileSys_FindBinFile( CH_FS_FILE_LINE_DEF const char* filePath, s32 pathLen )
+ch_string FileSys_FindBinFile( STR_FILE_LINE_DEF const char* filePath, s32 pathLen )
 {
-	return FileSys_FindFileBase( CH_FS_FILE_LINE_INT ESearchPathType_Binary, filePath, pathLen );
+	return FileSys_FindFileBase( STR_FILE_LINE_INT ESearchPathType_Binary, filePath, pathLen );
 }
 
 
-ch_string FileSys_FindSourceFile( CH_FS_FILE_LINE_DEF const char* filePath, s32 pathLen )
+ch_string FileSys_FindSourceFile( STR_FILE_LINE_DEF const char* filePath, s32 pathLen )
 {
-	return FileSys_FindFileBase( CH_FS_FILE_LINE_INT ESearchPathType_SourceAssets, filePath, pathLen );
+	return FileSys_FindFileBase( STR_FILE_LINE_INT ESearchPathType_SourceAssets, filePath, pathLen );
 }
 
 
-ch_string FileSys_FindFile( CH_FS_FILE_LINE_DEF const char* filePath, s32 pathLen )
+ch_string FileSys_FindFile( STR_FILE_LINE_DEF const char* filePath, s32 pathLen )
 {
-	return FileSys_FindFileBase( CH_FS_FILE_LINE_INT ESearchPathType_Path, filePath, pathLen );
+	return FileSys_FindFileBase( STR_FILE_LINE_INT ESearchPathType_Path, filePath, pathLen );
 }
 
 
-ch_string FileSys_FindFileEx( CH_FS_FILE_LINE_DEF const char* filePath, s32 pathLen, ESearchPathType sType )
+ch_string FileSys_FindFileEx( STR_FILE_LINE_DEF const char* filePath, s32 pathLen, ESearchPathType sType )
 {
 	if ( sType > ESearchPathType_Count )
 	{
@@ -710,14 +714,14 @@ ch_string FileSys_FindFileEx( CH_FS_FILE_LINE_DEF const char* filePath, s32 path
 		return {};
 	}
 
-	return FileSys_FindFileBase( CH_FS_FILE_LINE_INT sType, filePath, pathLen );
+	return FileSys_FindFileBase( STR_FILE_LINE_INT sType, filePath, pathLen );
 }
 
 
-#define FileSys_FindBinFile( ... )    FileSys_FindBinFile( CH_FS_FILE_LINE __VA_ARGS__ )
-#define FileSys_FindSourceFile( ... ) FileSys_FindSourceFile( CH_FS_FILE_LINE __VA_ARGS__ )
-#define FileSys_FindFile( ... )       FileSys_FindFile( CH_FS_FILE_LINE __VA_ARGS__ )
-#define FileSys_FindFileEx( ... )     FileSys_FindFileEx( CH_FS_FILE_LINE __VA_ARGS__ )
+#define FileSys_FindBinFile( ... )    FileSys_FindBinFile( STR_FILE_LINE __VA_ARGS__ )
+#define FileSys_FindSourceFile( ... ) FileSys_FindSourceFile( STR_FILE_LINE __VA_ARGS__ )
+#define FileSys_FindFile( ... )       FileSys_FindFile( STR_FILE_LINE __VA_ARGS__ )
+#define FileSys_FindFileEx( ... )     FileSys_FindFileEx( STR_FILE_LINE __VA_ARGS__ )
 
 #if CH_STRING_MEM_TRACKING
 	#define ch_str_copy( ... ) ch_str_copy( STR_FILE_LINE __VA_ARGS__ )
@@ -775,7 +779,7 @@ ch_string FileSys_ReadFile( const char* path, s32 pathLen )
 	ch_string fullPath = FileSys_FindFile( path, pathLen );
 	if ( !fullPath.data )
 	{
-		Log_ErrorF( gFileSystemChannel, "Failed to find file: %s\n", path );
+		Log_ErrorF( gLC_FileSystem, "Failed to find file: %s\n", path );
 		return {};
 	}
 
@@ -783,7 +787,7 @@ ch_string FileSys_ReadFile( const char* path, s32 pathLen )
     std::ifstream file( fullPath.data, std::ios::ate | std::ios::binary );
     if ( !file.is_open() )
 	{
-		Log_ErrorF( gFileSystemChannel, "Failed to open file: %s\n", path );
+		Log_ErrorF( gLC_FileSystem, "Failed to open file: %s\n", path );
 		ch_str_free( fullPath.data );
 		return {};
     }
@@ -821,7 +825,7 @@ ch_string FileSys_ReadFileEx( const char* path, s32 pathLen, ESearchPathType sTy
 	ch_string_auto fullPath = FileSys_FindFileEx( path, pathLen, sType );
     if ( !fullPath.data )
     {
-        Log_ErrorF( gFileSystemChannel, "Failed to find file: %s\n", path );
+        Log_ErrorF( gLC_FileSystem, "Failed to find file: %s\n", path );
         return {};
     }
 
@@ -829,7 +833,7 @@ ch_string FileSys_ReadFileEx( const char* path, s32 pathLen, ESearchPathType sTy
 	std::ifstream file( fullPath.data, std::ios::ate | std::ios::binary );
     if ( !file.is_open() )
 	{
-        Log_ErrorF( gFileSystemChannel, "Failed to open file: %s\n", path );
+        Log_ErrorF( gLC_FileSystem, "Failed to open file: %s\n", path );
         return {};
     }
 
@@ -868,7 +872,7 @@ bool FileSys_SaveFile( const char* path, std::vector< char >& srData, s32 pathLe
 		// if it's a directory, don't save and return false
 		if ( FileSys_IsDir( path, pathLen ) )
 		{
-			Log_ErrorF( gFileSystemChannel, "Can't Save file, file exists as directory already - \"%s\"\n", path );
+			Log_ErrorF( gLC_FileSystem, "Can't Save file, file exists as directory already - \"%s\"\n", path );
 			return false;
 		}
 		else
@@ -878,7 +882,7 @@ bool FileSys_SaveFile( const char* path, std::vector< char >& srData, s32 pathLe
 
 			if ( !FileSys_Rename( path, oldFile.data ) )
 			{
-				Log_ErrorF( gFileSystemChannel, "Failed to rename file to backup file - \"%s\"", path );
+				Log_ErrorF( gLC_FileSystem, "Failed to rename file to backup file - \"%s\"", path );
 				ch_str_free( oldFile.data );
 				return false;
 			}
@@ -890,7 +894,7 @@ bool FileSys_SaveFile( const char* path, std::vector< char >& srData, s32 pathLe
 
 	if ( fp == nullptr )
 	{
-		Log_ErrorF( gFileSystemChannel, "Failed to open file handle to save file: \"%s\"\n", path );
+		Log_ErrorF( gLC_FileSystem, "Failed to open file handle to save file: \"%s\"\n", path );
 		return false;
 	}
 
@@ -949,7 +953,7 @@ static bool FileSys_CheckStatFlags( const char* path, s32 pathLen, bool noPaths,
 
     if ( noPaths || FileSys_IsAbsolute( path, pathLen ) )
     {
-		if ( ch_stat( path, &s ) == 0 )
+		if ( stat( path, &s ) == 0 )
 			return ( s.st_mode & flags );
     }
     else
@@ -959,7 +963,7 @@ static bool FileSys_CheckStatFlags( const char* path, s32 pathLen, bool noPaths,
 		if ( !fullPath.data )
 			return false;
 
-		if ( ch_stat( fullPath.data, &s ) == 0 )
+		if ( stat( fullPath.data, &s ) == 0 )
 		{
 			bool hasFlag = ( s.st_mode & flags );
 			ch_str_free( fullPath.data );
@@ -1012,12 +1016,6 @@ bool FileSys_Exists( const char* path, s32 pathLen, bool noPaths )
 int FileSys_Access( const char* path, int mode )
 {
     return access( path, mode );
-}
-
-
-int FileSys_Stat( const char* path, struct stat* info )
-{
-    return ch_stat( path, info );
 }
 
 
@@ -1098,7 +1096,7 @@ const char* filesys_get_last_slash( const char* path )
 }
 
 
-ch_string FileSys_GetFileName( CH_FS_FILE_LINE_DEF const char* path, s32 pathLen )
+ch_string FileSys_GetFileName( STR_FILE_LINE_DEF const char* path, s32 pathLen )
 {
 	if ( !ch_str_check_empty( path, pathLen ) )
 		return {};
@@ -1119,15 +1117,15 @@ ch_string FileSys_GetFileName( CH_FS_FILE_LINE_DEF const char* path, s32 pathLen
     if ( startIndex == pathLen )
 		return {};
 
-	ch_string output = ch_str_copy( CH_FS_FILE_LINE_INT & path[ startIndex ], pathLen - startIndex );
+	ch_string output = ch_str_copy( STR_FILE_LINE_INT & path[ startIndex ], pathLen - startIndex );
 	return output;
 }
 
 
-ch_string FileSys_GetFileExt( CH_FS_FILE_LINE_DEF const char* path, s32 pathLen )
+ch_string FileSys_GetFileExt( STR_FILE_LINE_DEF const char* path, s32 pathLen )
 {
 	// this is done so we elimate cases of a '.' in the file path, like "D:\user\cool.folder.name\file"
-	ch_string fileName = FileSys_GetFileName( CH_FS_FILE_LINE_INT path, pathLen );
+	ch_string fileName = FileSys_GetFileName( STR_FILE_LINE_INT path, pathLen );
 	if ( !fileName.data )
 		return {};
 
@@ -1140,15 +1138,15 @@ ch_string FileSys_GetFileExt( CH_FS_FILE_LINE_DEF const char* path, s32 pathLen 
 		return {};
 	}
 
-	ch_string output = ch_str_copy( CH_FS_FILE_LINE_INT dot + 1 );
+	ch_string output = ch_str_copy( STR_FILE_LINE_INT dot + 1 );
 	ch_str_free( fileName.data );
 	return output;
 }
 
 
-ch_string FileSys_GetFileNameNoExt( CH_FS_FILE_LINE_DEF const char* path, s32 pathLen )
+ch_string FileSys_GetFileNameNoExt( STR_FILE_LINE_DEF const char* path, s32 pathLen )
 {
-	ch_string name = FileSys_GetFileName( CH_FS_FILE_LINE_INT path, pathLen );
+	ch_string name = FileSys_GetFileName( STR_FILE_LINE_INT path, pathLen );
 
 	if ( !name.data )
 		return {};
@@ -1158,13 +1156,13 @@ ch_string FileSys_GetFileNameNoExt( CH_FS_FILE_LINE_DEF const char* path, s32 pa
 	if ( !dot || dot == name.data )
 		return name;
 
-	ch_string output = ch_str_copy( CH_FS_FILE_LINE_INT name.data, dot - name.data );
+	ch_string output = ch_str_copy( STR_FILE_LINE_INT name.data, dot - name.data );
 	ch_str_free( name.data );
 	return output;
 }
 
 
-ch_string FileSys_CleanPath( CH_FS_FILE_LINE_DEF const char* path, const s32 pathLen, char* data )
+ch_string FileSys_CleanPath( STR_FILE_LINE_DEF const char* path, const s32 pathLen, char* data )
 {
     PROF_SCOPE();
 
@@ -1223,7 +1221,7 @@ ch_string FileSys_CleanPath( CH_FS_FILE_LINE_DEF const char* path, const s32 pat
 			segment.data = nullptr;
 			segment.size = 0;
 
-			segment = ch_str_copy( CH_FS_FILE_LINE &path[ startIndex ], endIndex - startIndex );
+			segment = ch_str_copy( STR_FILE_LINE &path[ startIndex ], endIndex - startIndex );
 
 			if ( !segment.data )
 			{
@@ -1239,7 +1237,7 @@ ch_string FileSys_CleanPath( CH_FS_FILE_LINE_DEF const char* path, const s32 pat
 	}
 
 	// build the cleaned path
-	ch_string finalString = ch_str_join_space( CH_FS_FILE_LINE_INT pathSegments.size(), pathSegments.data(), CH_PATH_SEP_STR, data );
+	ch_string finalString = ch_str_join_space( STR_FILE_LINE_INT pathSegments.size(), pathSegments.data(), CH_PATH_SEP_STR, data );
 
 	// free the path segments
 	ch_str_free( pathSegments.data(), pathSegments.size() );
@@ -1285,14 +1283,14 @@ bool FileSys_GetFileTimes( const char* spPath, float* spCreated, float* spModifi
     // Check if this is a valid file
     if ( file == INVALID_HANDLE_VALUE )
 	{
-		Log_ErrorF( gFileSystemChannel, "Failed to open file handle: \"%s\" - error %d\n", spPath, sys_get_error() );
+		Log_ErrorF( gLC_FileSystem, "Failed to open file handle: \"%s\" - error %d\n", spPath, sys_get_error() );
 		return false;
 	}
 
     FILETIME create, modified;
 	if ( !GetFileTime( file, &create, nullptr, &modified ) )
 	{
-		Log_ErrorF( gFileSystemChannel, "Failed to get file times of file: \"%s\" - error %d\n", spPath, sys_get_error() );
+		Log_ErrorF( gLC_FileSystem, "Failed to get file times of file: \"%s\" - error %d\n", spPath, sys_get_error() );
 		return false;
 	}
 
@@ -1322,7 +1320,7 @@ bool FileSys_SetFileTimes( std::string_view srPath, float* spCreated, float* spM
 bool FileSys_CreateDirectory( const char* path )
 {
 	int ret = mkdir( path );
-	return ret != 0;
+	return ret == 0;
 }
 
 
@@ -1390,7 +1388,7 @@ bool FileSys_ReadNext( DirHandle dirh, std::string &file )
     }
     else
     {
-        Log_Warn( gFileSystemChannel, "handle not in handle list??\n" );
+        Log_Warn( gLC_FileSystem, "handle not in handle list??\n" );
         return false;
     }
 
@@ -1451,7 +1449,7 @@ bool sys_scandir( const char* root, size_t rootLen, const char* path, size_t pat
     if ( INVALID_HANDLE_VALUE == hFind )
 	{
 		ch_str_free( scanDir.data );
-		Log_ErrorF( gFileSystemChannel, "Failed to find first file in directory: \"%s\"\n", path );
+		Log_ErrorF( gLC_FileSystem, "Failed to find first file in directory: \"%s\"\n", path );
 		return false;
 	}
 

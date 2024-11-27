@@ -5,7 +5,6 @@
 #include <vector>
 #include <string>
 
-#include "system.h"
 #include "igui.h"
 
 extern double gRealTime;

@@ -16,7 +16,6 @@ set(
 	SRC_FILES
 	
 	consoleui.cpp
-	consoleui.h
 	convar_list.cpp
 	gui.cpp
 	gui.h

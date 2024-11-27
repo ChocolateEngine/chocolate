@@ -2,6 +2,8 @@ message( "Current Project: Core" )
 
 add_custom_target(
 	BuildNumberUpdater
+	# this updates the date modified and accessed of the file, so visual studio will compile this source file again,
+	# and then cause the core dll to compile again
     COMMAND ${CMAKE_COMMAND} -E touch_nocreate "${CMAKE_CURRENT_SOURCE_DIR}/build_number.cpp"
 )
 
@@ -22,9 +24,10 @@ set(
 	"platform_linux.cpp"
 	"profiler.cpp"
 	"resource.cpp"
-	"systemmanager.cpp"
+	"system_loader.cpp"
 	"string.cpp"
 	"util.cpp"
+	# "thread.cpp"
 )
 
 file(
@@ -33,11 +36,7 @@ file(
 	${CH_PUBLIC}/core/*.hpp
 )
 
-list( APPEND PUBLIC_FILES
-	${CH_PUBLIC}/util.h
-)
-
-add_compile_definitions( "CORE_DLL" "TRACY_EXPORTS" )
+add_compile_definitions( "CORE_DLL" "CORE_API=DLL_EXPORT" "TRACY_EXPORTS" )
 
 link_libraries( SDL2 )
 

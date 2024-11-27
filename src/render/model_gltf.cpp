@@ -8,7 +8,7 @@ File dedicated for loading gltf models
 #include "mesh_builder.h"
 #include "render/irender.h"
 
-#include "util.h"
+#include "core/util.h"
 #include "core/console.h"
 
 #define CGLTF_IMPLEMENTATION
@@ -249,26 +249,25 @@ void Graphics_LoadGltf( const std::string& srBasePath, const std::string& srPath
 	// --------------------------------------------------------
 	// Parse Materials
 
-	Handle defaultShader = gGraphics.GetShader( gDefaultShader );
+	ch_handle_t defaultShader = gGraphics.GetShader( gDefaultShader );
 
 	for ( size_t i = 0; i < gltf->materials_count; ++i )
 	{
 		cgltf_material& gltfMat = gltf->materials[i];
 
 		std::string     matName  = baseDir2 + "/" + gltfMat.name;
-		Handle          material = gGraphics.FindMaterial( matName.c_str() );
+		ch_handle_t          material = gGraphics.FindMaterial( matName.c_str() );
 
-		if ( material == InvalidHandle )
+		if ( material == CH_INVALID_HANDLE )
 		{
-			const ch_string strings[] = { { matName.data(), (s64)matName.size() }, { (char*)".cmt", 4 } };
-			ch_string       matPath = ch_str_join( 2, strings );
+			ch_string_auto matPath = ch_str_join( matName.data(), matName.size(), ".cmt", 4 );
 
 			if ( FileSys_IsFile( matPath.data, matPath.size ) )
 				material = gGraphics.LoadMaterial( matPath.data, matPath.size );
 		}
 
 		// fallback if there is no cmt file
-		if ( material == InvalidHandle )
+		if ( material == CH_INVALID_HANDLE )
 		{
 			material = gGraphics.CreateMaterial( gltfMat.name, defaultShader );
 
@@ -284,7 +283,7 @@ void Graphics_LoadGltf( const std::string& srBasePath, const std::string& srPath
 
 				// TODO: use std::string_view
 				std::string texName = texture->image->uri;
-				Handle handle = InvalidHandle;
+				ch_handle_t handle = CH_INVALID_HANDLE;
 
 				if ( FileSys_IsRelative( texName.data() ) )
 					gGraphics.LoadTexture( handle, baseDir2 + "/" + texName, createData );
@@ -672,9 +671,9 @@ void Graphics_LoadGltfNew( const std::string& srBasePath, const std::string& srP
 	// --------------------------------------------------------
 	// Parse Materials
 
-	Handle defaultShader = gGraphics.GetShader( gDefaultShader );
+	ch_handle_t defaultShader = gGraphics.GetShader( gDefaultShader );
 
-	ChVector< ChHandle_t > materials;
+	ChVector< ch_handle_t > materials;
 	materials.resize( gltf->materials_count );
 
 	for ( size_t i = 0; i < gltf->materials_count; ++i )
@@ -682,19 +681,18 @@ void Graphics_LoadGltfNew( const std::string& srBasePath, const std::string& srP
 		cgltf_material& gltfMat = gltf->materials[i];
 
 		std::string     matName  = baseDir2 + "/" + gltfMat.name;
-		Handle          material = gGraphics.FindMaterial( matName.c_str() );
+		ch_handle_t          material = gGraphics.FindMaterial( matName.c_str() );
 
-		if ( material == InvalidHandle )
+		if ( material == CH_INVALID_HANDLE )
 		{
-			const ch_string strings[] = { { matName.data(), (s64)matName.size() }, { (char*)".cmt", 4 } };
-			ch_string       matPath   = ch_str_join( 2, strings );
+			ch_string_auto matPath = ch_str_join( matName.data(), (s64)matName.size(), ".cmt", 4 );
 
 			if ( FileSys_IsFile( matPath.data, matPath.size ) )
 				material = gGraphics.LoadMaterial( matPath.data, matPath.size );
 		}
 
 		// fallback if there is no cmt file
-		if ( material == InvalidHandle )
+		if ( material == CH_INVALID_HANDLE )
 		{
 			material = gGraphics.CreateMaterial( gltfMat.name, defaultShader );
 
@@ -710,7 +708,7 @@ void Graphics_LoadGltfNew( const std::string& srBasePath, const std::string& srP
 
 				// TODO: use std::string_view
 				std::string texName = texture->image->uri;
-				Handle handle = InvalidHandle;
+				ch_handle_t handle = CH_INVALID_HANDLE;
 
 				if ( FileSys_IsRelative( texName.data() ) )
 					gGraphics.LoadTexture( handle, baseDir2 + "/" + texName, createData );

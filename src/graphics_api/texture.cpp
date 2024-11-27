@@ -1,6 +1,6 @@
 #include "core/platform.h"
 #include "core/log.h"
-#include "util.h"
+#include "core/util.h"
 
 #include "render/irender.h"
 #include "render_vk.h"
@@ -14,18 +14,18 @@ VkSampler                                          gSamplers[ 2 ][ 5 ][ 2 ];
 static std::vector< RenderTarget* >                gRenderTargets;
 
 static ResourceList< VkFramebuffer >               gFramebuffers;
-static std::unordered_map< Handle, glm::uvec2 >    gFramebufferSize;
+static std::unordered_map< ch_handle_t, glm::uvec2 >    gFramebufferSize;
 
 extern ResourceList< TextureVK* >                  gTextureHandles;
 extern ResourceList< BufferVK >                    gBufferHandles;
-// extern std::vector< Handle >                       gSwapImageHandles;
+// extern std::vector< ch_handle_t >                       gSwapImageHandles;
 
 // kind of a hack
-static std::unordered_map< VkFramebuffer, Handle > gFramebufferHandles;
-// std::unordered_map< TextureVK*, Handle >           gBackbufferHandles;
+static std::unordered_map< VkFramebuffer, ch_handle_t > gFramebufferHandles;
+// std::unordered_map< TextureVK*, ch_handle_t >           gBackbufferHandles;
 
 // the true handle of the missing texture, but handle of 0 will also give the missing texture
-ChHandle_t                                         gMissingTexHandle = CH_INVALID_HANDLE;
+ch_handle_t                                         gMissingTexHandle = CH_INVALID_HANDLE;
 
 extern bool                                        gNeedTextureUpdate;
 
@@ -489,7 +489,7 @@ void VK_CalcTextureMemoryUsage( TextureVK* spTexture )
 }
 
 
-TextureVK* VK_NewTexture( ChHandle_t& srHandle )
+TextureVK* VK_NewTexture( ch_handle_t& srHandle )
 {
 	TextureVK* tex = new TextureVK;
 	tex->aIndex    = -1;
@@ -498,7 +498,7 @@ TextureVK* VK_NewTexture( ChHandle_t& srHandle )
 }
 
 
-bool VK_LoadTexture( ChHandle_t& srHandle, TextureVK* tex, const ch_string& srPath, const TextureCreateData_t& srCreateData )
+bool VK_LoadTexture( ch_handle_t& srHandle, TextureVK* tex, const ch_string& srPath, const TextureCreateData_t& srCreateData )
 {
 	if ( !KTX_LoadTexture( tex, srPath.data ) )
 	{
@@ -509,7 +509,7 @@ bool VK_LoadTexture( ChHandle_t& srHandle, TextureVK* tex, const ch_string& srPa
 	tex->aFilter         = VK_ToVkFilter( srCreateData.aFilter );
 	tex->aSamplerAddress = VK_ToVkSamplerAddress( srCreateData.aSamplerAddress );
 	tex->aDepthCompare   = srCreateData.aDepthCompare;	// Does this need a dedicated function?
-	tex->aName           = ch_str_copy( srPath.data, srPath.size );
+	tex->name           = ch_str_copy( srPath.data, srPath.size );
 
 	// textures loaded through KTX are always sampled currently
 	if ( tex->aUsage & VK_IMAGE_USAGE_SAMPLED_BIT )
@@ -528,7 +528,7 @@ bool VK_LoadTexture( ChHandle_t& srHandle, TextureVK* tex, const ch_string& srPa
 }
 
 
-TextureVK* VK_CreateTexture( ChHandle_t& srHandle, const TextureCreateInfo_t& srCreate, const TextureCreateData_t& srCreateData )
+TextureVK* VK_CreateTexture( ch_handle_t& srHandle, const TextureCreateInfo_t& srCreate, const TextureCreateData_t& srCreateData )
 {
 	if ( srCreate.aSize.x == 0 || srCreate.aSize.y == 0 )
 	{
@@ -541,7 +541,7 @@ TextureVK* VK_CreateTexture( ChHandle_t& srHandle, const TextureCreateInfo_t& sr
 	tex->aSize           = srCreate.aSize;
 	tex->aFormat         = VK_ToVkFormat( srCreate.aFormat );
 	tex->aUsage          = VK_ToVkImageUsage( srCreateData.aUsage );
-	tex->aName           = ch_str_copy( srCreate.apName );
+	tex->name           = ch_str_copy( srCreate.apName );
 	tex->aFilter         = VK_ToVkFilter( srCreateData.aFilter );
 	tex->aSamplerAddress = VK_ToVkSamplerAddress( srCreateData.aSamplerAddress );
 	tex->aDepthCompare   = srCreateData.aDepthCompare;
@@ -715,7 +715,7 @@ TextureVK* VK_CreateTexture( ChHandle_t& srHandle, const TextureCreateInfo_t& sr
 
 	VK_CheckResult( vkCreateImageView( VK_GetDevice(), &viewInfo, nullptr, &tex->aImageView ), "Failed to create Image View" );
 
-	VK_SetObjectName( VK_OBJECT_TYPE_IMAGE, (u64)tex->aImage, tex->aName.data ? tex->aName.data : "MANUALLY CREATED TEXTURE" );
+	VK_SetObjectName( VK_OBJECT_TYPE_IMAGE, (u64)tex->aImage, tex->name.data ? tex->name.data : "MANUALLY CREATED TEXTURE" );
 
 	VK_CalcTextureIndices();
 
@@ -727,7 +727,7 @@ TextureVK* VK_CreateTexture( ChHandle_t& srHandle, const TextureCreateInfo_t& sr
 }
 
 
-void VK_DestroyTexture( ChHandle_t sTexture )
+void VK_DestroyTexture( ch_handle_t sTexture )
 {
 	TextureVK* texture = VK_GetTextureNoMissing( sTexture );
 
@@ -737,8 +737,8 @@ void VK_DestroyTexture( ChHandle_t sTexture )
 		return;
 	}
 
-	if ( texture->aName.data )
-		ch_str_free( texture->aName.data );
+	if ( texture->name.data )
+		ch_str_free( texture->name.data );
 
 	// big hack, blech
 	if ( !texture->aSwapChain )
@@ -770,7 +770,7 @@ void VK_DestroyAllTextures()
 {
 	for ( u32 i = 0; i < gTextureHandles.aHandles.size(); i++ )
 	{
-		ChHandle_t texHandle = gTextureHandles.aHandles[ i ];
+		ch_handle_t texHandle = gTextureHandles.aHandles[ i ];
 		TextureVK* tex       = nullptr;
 		if ( !gTextureHandles.Get( texHandle, &tex ) )
 		{
@@ -796,7 +796,7 @@ void VK_DestroyAllTextures()
 }
 
 
-TextureVK* VK_GetTexture( ChHandle_t sTexture )
+TextureVK* VK_GetTexture( ch_handle_t sTexture )
 {
 	TextureVK* find = nullptr;
 
@@ -817,7 +817,7 @@ TextureVK* VK_GetTexture( ChHandle_t sTexture )
 }
 
 
-TextureVK* VK_GetTextureNoMissing( ChHandle_t sTexture )
+TextureVK* VK_GetTextureNoMissing( ch_handle_t sTexture )
 {
 	TextureVK* find = nullptr;
 	if ( gTextureHandles.Get( sTexture, &find ) )
@@ -827,7 +827,7 @@ TextureVK* VK_GetTextureNoMissing( ChHandle_t sTexture )
 }
 
 
-Handle VK_CreateFramebuffer( const char* name, VkRenderPass sRenderPass, u16 sWidth, u16 sHeight, const VkImageView* spAttachments, u32 sCount )
+ch_handle_t VK_CreateFramebuffer( const char* name, VkRenderPass sRenderPass, u16 sWidth, u16 sHeight, const VkImageView* spAttachments, u32 sCount )
 {
 	VkFramebufferCreateInfo framebufferInfo{ VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO };
 	framebufferInfo.renderPass      = sRenderPass;
@@ -845,7 +845,7 @@ Handle VK_CreateFramebuffer( const char* name, VkRenderPass sRenderPass, u16 sWi
 }
 
 
-Handle VK_CreateFramebuffer( const char* name, const VkFramebufferCreateInfo& sCreateInfo )
+ch_handle_t VK_CreateFramebuffer( const char* name, const VkFramebufferCreateInfo& sCreateInfo )
 {
 	VkFramebuffer buffer = VK_NULL_HANDLE;
 	VK_CheckResultF( vkCreateFramebuffer( VK_GetDevice(), &sCreateInfo, nullptr, &buffer ), "Failed to create framebuffer \"%s\"", name ? name : "unnamed" );
@@ -855,13 +855,13 @@ Handle VK_CreateFramebuffer( const char* name, const VkFramebufferCreateInfo& sC
 }
 
 
-Handle VK_CreateFramebuffer( const CreateFramebuffer_t& srCreate )
+ch_handle_t VK_CreateFramebuffer( const CreateFramebuffer_t& srCreate )
 {
 	VkRenderPass renderPass = VK_GetRenderPass( srCreate.aRenderPass );
 	if ( renderPass == VK_NULL_HANDLE )
 	{
 		Log_Error( gLC_Render, "Failed to create Framebuffer: RenderPass not found!\n" );
-		return InvalidHandle;
+		return CH_INVALID_HANDLE;
 	}
 
 	size_t count = srCreate.aPass.aAttachColors.size();
@@ -876,7 +876,7 @@ Handle VK_CreateFramebuffer( const CreateFramebuffer_t& srCreate )
 	{
 		Log_ErrorF( gLC_Render, "STACK OVERFLOW: Failed to allocate stack for Framebuffer attachments (%zu bytes)\n", sizeof( VkImageView ) * count );
 		ch_free( attachments );
-		return InvalidHandle;
+		return CH_INVALID_HANDLE;
 	}
 
 	count = 0;
@@ -887,20 +887,20 @@ Handle VK_CreateFramebuffer( const CreateFramebuffer_t& srCreate )
 		{
 			Log_ErrorF( gLC_Render, "Failed to find color texture %u while creating Framebuffer\n", i );
 			ch_free( attachments );
-			return InvalidHandle;
+			return CH_INVALID_HANDLE;
 		}
 
 		attachments[ count++ ] = tex->aImageView;
 	}
 
-	if ( srCreate.aPass.aAttachDepth != InvalidHandle )
+	if ( srCreate.aPass.aAttachDepth != CH_INVALID_HANDLE )
 	{
 		TextureVK* tex = nullptr;
 		if ( !gTextureHandles.Get( srCreate.aPass.aAttachDepth, &tex ) )
 		{
 			Log_Error( gLC_Render, "Failed to find depth texture while creating Framebuffer\n" );
 			ch_free( attachments );
-			return InvalidHandle;
+			return CH_INVALID_HANDLE;
 		}
 
 		attachments[ count++ ] = tex->aImageView;
@@ -913,15 +913,15 @@ Handle VK_CreateFramebuffer( const CreateFramebuffer_t& srCreate )
 		{
 			Log_ErrorF( gLC_Render, "Failed to find resolve texture %u while creating Framebuffer\n", i );
 			ch_free( attachments );
-			return InvalidHandle;
+			return CH_INVALID_HANDLE;
 		}
 
 		attachments[ count++ ] = tex->aImageView;
 	}
 
-	Handle handle = VK_CreateFramebuffer( srCreate.apName, renderPass, srCreate.aSize.x, srCreate.aSize.y, attachments, count );
+	ch_handle_t handle = VK_CreateFramebuffer( srCreate.apName, renderPass, srCreate.aSize.x, srCreate.aSize.y, attachments, count );
 
-	if ( handle != InvalidHandle )
+	if ( handle != CH_INVALID_HANDLE )
 	{
 		gFramebufferSize[ handle ] = srCreate.aSize;
 	}
@@ -931,7 +931,7 @@ Handle VK_CreateFramebuffer( const CreateFramebuffer_t& srCreate )
 }
 
 
-Handle VK_CreateFramebufferVK( const CreateFramebufferVK& srCreate )
+ch_handle_t VK_CreateFramebufferVK( const CreateFramebufferVK& srCreate )
 {
 	size_t count = srCreate.aAttachColors.size();
 	count += srCreate.aAttachResolve.size();
@@ -945,7 +945,7 @@ Handle VK_CreateFramebufferVK( const CreateFramebufferVK& srCreate )
 	{
 		Log_ErrorF( gLC_Render, "STACK OVERFLOW: Failed to allocate stack for Framebuffer attachments (%zu bytes)\n", sizeof( VkImageView ) * count );
 		ch_free( attachments );
-		return InvalidHandle;
+		return CH_INVALID_HANDLE;
 	}
 
 	count = 0;
@@ -964,9 +964,9 @@ Handle VK_CreateFramebufferVK( const CreateFramebufferVK& srCreate )
 		attachments[ count++ ] = srCreate.aAttachResolve[ i ];
 	}
 
-	Handle handle = VK_CreateFramebuffer( srCreate.apName, srCreate.aRenderPass, srCreate.aSize.x, srCreate.aSize.y, attachments, count );
+	ch_handle_t handle = VK_CreateFramebuffer( srCreate.apName, srCreate.aRenderPass, srCreate.aSize.x, srCreate.aSize.y, attachments, count );
 
-	if ( handle != InvalidHandle )
+	if ( handle != CH_INVALID_HANDLE )
 	{
 		gFramebufferSize[ handle ] = srCreate.aSize;
 	}
@@ -976,7 +976,7 @@ Handle VK_CreateFramebufferVK( const CreateFramebufferVK& srCreate )
 }
 
 
-void VK_DestroyFramebuffer( Handle shHandle )
+void VK_DestroyFramebuffer( ch_handle_t shHandle )
 {
 	VkFramebuffer buffer = VK_NULL_HANDLE;
 	if ( !gFramebuffers.Get( shHandle, &buffer ) )
@@ -991,7 +991,7 @@ void VK_DestroyFramebuffer( Handle shHandle )
 }
 
 
-VkFramebuffer VK_GetFramebuffer( Handle shHandle )
+VkFramebuffer VK_GetFramebuffer( ch_handle_t shHandle )
 {
 	VkFramebuffer buffer = VK_NULL_HANDLE;
 	if ( !gFramebuffers.Get( shHandle, &buffer ) )
@@ -1003,7 +1003,7 @@ VkFramebuffer VK_GetFramebuffer( Handle shHandle )
 	return buffer;
 }
 
-glm::uvec2 VK_GetFramebufferSize( Handle shHandle )
+glm::uvec2 VK_GetFramebufferSize( ch_handle_t shHandle )
 {
 	auto it = gFramebufferSize.find( shHandle );
 	if ( it == gFramebufferSize.end() )
@@ -1109,13 +1109,13 @@ void VK_DestroyRenderTargets()
 }
 
 
-static TextureVK* CreateBackBufferColor( WindowVK* window, const char* title, u64 titleLen, ChHandle_t& srHandle )
+static TextureVK* CreateBackBufferColor( WindowVK* window, const char* title, u64 titleLen, ch_handle_t& srHandle )
 {
 	TextureVK*  colorTex         = VK_NewTexture( srHandle );
 
 	const char* backbufStrings[] = { "Backbuffer Color - ", title };
 	const u64   backbufLengths[] = { 19, titleLen };
-	colorTex->aName              = ch_str_join( 2, backbufStrings, backbufLengths );
+	colorTex->name              = ch_str_join( 2, backbufStrings, backbufLengths );
 	colorTex->aRenderTarget      = true;
 
 	VkImageCreateInfo color{ VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO };
@@ -1196,8 +1196,8 @@ void VK_CreateBackBuffer( WindowVK* window )
 
 	u64        titleLen    = strlen( title );
 
-	ChHandle_t colorHandle = CH_INVALID_HANDLE;
-	ChHandle_t depthHandle = CH_INVALID_HANDLE;
+	ch_handle_t colorHandle = CH_INVALID_HANDLE;
+	ch_handle_t depthHandle = CH_INVALID_HANDLE;
 
 	// ------------------------------------------------------
 	// Create Depth Texture
@@ -1206,7 +1206,7 @@ void VK_CreateBackBuffer( WindowVK* window )
 
 	const char* depthStrings[] = { "Backbuffer Depth - ", title };
 	const u64   depthLengths[] = { 19, titleLen };
-	depthTex->aName            = ch_str_join( 2, depthStrings, depthLengths );
+	depthTex->name            = ch_str_join( 2, depthStrings, depthLengths );
 	depthTex->aRenderTarget = true;
 
 	VkImageCreateInfo depth;
@@ -1290,12 +1290,12 @@ void VK_CreateBackBuffer( WindowVK* window )
 	}
 	else
 	{
-		ChHandle_t texHandle  = CH_INVALID_HANDLE;
+		ch_handle_t texHandle  = CH_INVALID_HANDLE;
 		TextureVK* tex        = VK_NewTexture( texHandle );
 
 		const char* strings[] = { "Backbuffer Color - ", title };
 		const u64   lengths[] = { 19, titleLen };
-		tex->aName            = ch_str_join( 2, strings, lengths );
+		tex->name            = ch_str_join( 2, strings, lengths );
 
 		tex->aFormat          = gColorFormat;
 		tex->aFrames          = 1;
@@ -1316,12 +1316,12 @@ void VK_CreateBackBuffer( WindowVK* window )
 
 	if ( VK_UseMSAA() )
 	{
-		ChHandle_t resolveHandle = CH_INVALID_HANDLE;
+		ch_handle_t resolveHandle = CH_INVALID_HANDLE;
 		TextureVK* tex           = VK_NewTexture( resolveHandle );
 
 		const char* strings[]    = { "Backbuffer Resolve - ", title };
 		const u64   lengths[]    = { 21, titleLen };
-		tex->aName               = ch_str_join( 2, strings, lengths );
+		tex->name               = ch_str_join( 2, strings, lengths );
 
 		tex->aFormat             = gColorFormat;
 		tex->aFrames             = 1;
@@ -1358,7 +1358,7 @@ void VK_CreateBackBuffer( WindowVK* window )
 		createBuffer.aAttachColors.push_back( window->swapImageViews[ 0 ] );
 	}
 
-	Handle frameBufColorHandle = VK_CreateFramebufferVK( createBuffer );
+	ch_handle_t frameBufColorHandle = VK_CreateFramebufferVK( createBuffer );
 
 	if ( VK_UseMSAA() )
 	{
@@ -1373,15 +1373,15 @@ void VK_CreateBackBuffer( WindowVK* window )
 		ch_str_free( (char*)createBuffer.apName );
 
 	// createBuffer.apName             = ch_str_join( 2, depthStrings, depthLengths, (char*)createBuffer.apName ).data;
-	createBuffer.apName        = depthTex->aName.data;
+	createBuffer.apName        = depthTex->name.data;
 
-	Handle frameBufDepthHandle = VK_CreateFramebufferVK( createBuffer );
+	ch_handle_t frameBufDepthHandle = VK_CreateFramebufferVK( createBuffer );
 
 	target->aFrameBuffers.resize( 2 );
 	target->aFrameBuffers[ 0 ].aBuffer                        = VK_GetFramebuffer( frameBufColorHandle );
 	target->aFrameBuffers[ 1 ].aBuffer                        = VK_GetFramebuffer( frameBufDepthHandle );
 	target->aFrameBuffers[ 0 ].aType                          = EAttachmentType_Color;
-	target->aFrameBuffers[ 1 ].aType                          = EAttachmentType_Color;
+	target->aFrameBuffers[ 1 ].aType                          = EAttachmentType_Depth;
 
 	gFramebufferHandles[ target->aFrameBuffers[ 0 ].aBuffer ] = frameBufColorHandle;
 	gFramebufferHandles[ target->aFrameBuffers[ 1 ].aBuffer ] = frameBufDepthHandle;
@@ -1432,7 +1432,7 @@ void VK_CreateBackBuffer( WindowVK* window )
 }
 
 
-Handle VK_GetFramebufferHandle( VkFramebuffer sFrameBuffer )
+ch_handle_t VK_GetFramebufferHandle( VkFramebuffer sFrameBuffer )
 {
 	auto it = gFramebufferHandles.find( sFrameBuffer );
 	if ( it != gFramebufferHandles.end() )
@@ -1441,7 +1441,7 @@ Handle VK_GetFramebufferHandle( VkFramebuffer sFrameBuffer )
 	}
 
 	Log_Error( gLC_Render, "Framebuffer Handle not found!\n" );
-	return InvalidHandle;
+	return CH_INVALID_HANDLE;
 }
 
 
@@ -1455,7 +1455,7 @@ void VK_CreateImage( VkImageCreateInfo& srCreateInfo, TextureVK* spTexture )
 
 	VK_CheckResult( vkCreateImage( VK_GetDevice(), &srCreateInfo, nullptr, &spTexture->aImage ), "Failed to create image!" );
 
-	VK_SetObjectName( VK_OBJECT_TYPE_IMAGE, (u64)spTexture->aImage, spTexture->aName.data );
+	VK_SetObjectName( VK_OBJECT_TYPE_IMAGE, (u64)spTexture->aImage, spTexture->name.data );
 
 	VkMemoryRequirements memReqs;
 	vkGetImageMemoryRequirements( VK_GetDevice(), spTexture->aImage, &memReqs );
@@ -1477,7 +1477,7 @@ void VK_CreateImage( VkImageCreateInfo& srCreateInfo, TextureVK* spTexture )
 	VK_CheckResult( vkAllocateMemory( VK_GetDevice(), &allocInfo, nullptr, &spTexture->aMemory ), "Failed to allocate image memory!" );
 	VK_CheckResult( vkBindImageMemory( VK_GetDevice(), spTexture->aImage, spTexture->aMemory, 0 ), "Failed to bind image memory" );
 
-	VK_SetObjectName( VK_OBJECT_TYPE_DEVICE_MEMORY, (u64)spTexture->aMemory, spTexture->aName.data );
+	VK_SetObjectName( VK_OBJECT_TYPE_DEVICE_MEMORY, (u64)spTexture->aMemory, spTexture->name.data );
 }
 
 

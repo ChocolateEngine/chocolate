@@ -1,7 +1,6 @@
 #pragma once
 
 #include "core/resource.h"
-#include "system.h"
 
 #include <SDL2/SDL_audio.h>
 #include <glm/gtc/quaternion.hpp>
@@ -113,112 +112,112 @@ class IAudioSystem : public ISystem
 	// -------------------------------------------------------------------------------------
 
 	// Create a new audio channel, if one with the same name is already taken, it will return the existing channel
-	virtual Handle             RegisterChannel( const char* spName )                                             = 0;
+	virtual ch_handle_t             RegisterChannel( const char* spName )                                             = 0;
 
-	// Get's an Audio Channel Handle by the name of it
-	virtual Handle             GetChannel( std::string_view sName )                                              = 0;
+	// Get's an Audio Channel ch_handle_t by the name of it
+	virtual ch_handle_t             GetChannel( std::string_view sName )                                              = 0;
 
 	// Get's an Audio Channel's Name
-	virtual const std::string& GetChannelName( Handle sChannel )                                                 = 0;
+	virtual const std::string& GetChannelName( ch_handle_t sChannel )                                                 = 0;
 
 	// Get and Set the Volume of this Audio Channel
-	virtual float              GetChannelVolume( Handle sChannel )                                               = 0;
-	virtual void               SetChannelVolume( Handle sChannel, float sVol )                                   = 0;
+	virtual float              GetChannelVolume( ch_handle_t sChannel )                                               = 0;
+	virtual void               SetChannelVolume( ch_handle_t sChannel, float sVol )                                   = 0;
 
 	// Get and Set whether all sounds playing on this channel are paused or not
-	virtual bool               GetChannelPaused( Handle sChannel )                                               = 0;
-	virtual void               SetChannelPaused( Handle sChannel, bool sPaused )                                 = 0;
+	virtual bool               GetChannelPaused( ch_handle_t sChannel )                                               = 0;
+	virtual void               SetChannelPaused( ch_handle_t sChannel, bool sPaused )                                 = 0;
 
 	// -------------------------------------------------------------------------------------
 	// Sound Playback
 	// -------------------------------------------------------------------------------------
 
 	// Preload a entire sound for playback, useful for playing a sound multiple times in a row
-	// virtual Handle             PrecacheSound( std::string_view sSoundPath )                                      = 0;
+	// virtual ch_handle_t             PrecacheSound( std::string_view sSoundPath )                                      = 0;
 
 	// Free a Preloaded sound
-	// virtual void               FreePrecachedSound( Handle sSound )                                               = 0;
+	// virtual void               FreePrecachedSound( ch_handle_t sSound )                                               = 0;
 
 	// Load a sound from a path, usable for one time playback only
-	virtual Handle             OpenSound( std::string_view sSoundPath )                                           = 0;
+	virtual ch_handle_t             OpenSound( std::string_view sSoundPath )                                           = 0;
 
 	// Load a sound from a precached sound handle
-	// virtual Handle             OpenSound( Handle sSound )                                                        = 0;
+	// virtual ch_handle_t             OpenSound( ch_handle_t sSound )                                                        = 0;
 
 	// Read an entire opened sound for playback
-	virtual bool               PreloadSound( Handle sSound )                                                      = 0;
+	virtual bool               PreloadSound( ch_handle_t sSound )                                                      = 0;
 
 	// Load a sound from audio data from a SoundInfo struct (is this worth setting up?)
-	// virtual Handle               LoadSoundFromData( const SoundInfo& soundInfo ) = 0;
+	// virtual ch_handle_t               LoadSoundFromData( const SoundInfo& soundInfo ) = 0;
 
 	// Play an instance of a sound, you can play a handle multiple times
-	virtual bool               PlaySound( Handle sSound )                                                        = 0;
+	virtual bool               PlaySound( ch_handle_t sSound )                                                        = 0;
 
 	// Free a sound */
-	virtual void               FreeSound( Handle sSound )                                                        = 0;
+	virtual void               FreeSound( ch_handle_t sSound )                                                        = 0;
 
 	// Is This a Valid Audio Stream? */
-	virtual bool               IsValid( Handle sSound )                                                          = 0;
+	virtual bool               IsValid( ch_handle_t sSound )                                                          = 0;
 
 	// Audio Stream Volume ranges from 0.0f to 1.0f
-	virtual void               SetVolume( Handle sSound, float vol )                                             = 0;
-	virtual float              GetVolume( Handle sSound )                                                        = 0;
+	virtual void               SetVolume( ch_handle_t sSound, float vol )                                             = 0;
+	virtual float              GetVolume( ch_handle_t sSound )                                                        = 0;
 
 	// Audio Stream Volume ranges from 0.0f to 1.0f
-	//virtual bool                    SetSampleRate( Handle stream, float vol ) = 0;
-	//virtual float                   GetSampleRate( Handle stream ) = 0;
+	//virtual bool                    SetSampleRate( ch_handle_t stream, float vol ) = 0;
+	//virtual float                   GetSampleRate( ch_handle_t stream ) = 0;
 
 	// Audio Volume Channels (ex. General, Music, Voices, Commentary, etc.)
-	virtual void               SetChannel( Handle sSound, Handle sChannel )                                       = 0;
-	virtual Handle             GetChannel( Handle sSound )                                                       = 0;
+	virtual void               SetChannel( ch_handle_t sSound, ch_handle_t sChannel )                                       = 0;
+	virtual ch_handle_t             GetChannel( ch_handle_t sSound )                                                       = 0;
 
 	// UNTESTED: seek to different point in the audio file
-	virtual bool               Seek( Handle sSound, double sPos )                                                = 0;
+	virtual bool               Seek( ch_handle_t sSound, double sPos )                                                = 0;
 
 	// -------------------------------------------------------------------------------------
 	// Audio Effects
 	// -------------------------------------------------------------------------------------
 
-	virtual void               AddEffects( Handle stream, AudioEffect effect )                                   = 0;
-	virtual void               RemoveEffects( Handle stream, AudioEffect effect )                                = 0;
-	virtual bool               HasEffects( Handle stream, AudioEffect effect )                                   = 0;
+	virtual void               AddEffects( ch_handle_t stream, AudioEffect effect )                                   = 0;
+	virtual void               RemoveEffects( ch_handle_t stream, AudioEffect effect )                                = 0;
+	virtual bool               HasEffects( ch_handle_t stream, AudioEffect effect )                                   = 0;
 
-	virtual bool               SetEffectData( Handle stream, EAudioEffectData sDataType, int data )              = 0;
-	virtual bool               SetEffectData( Handle stream, EAudioEffectData sDataType, float data )            = 0;
-	virtual bool               SetEffectData( Handle stream, EAudioEffectData sDataType, const glm::vec3& data ) = 0;
+	virtual bool               SetEffectData( ch_handle_t stream, EAudioEffectData sDataType, int data )              = 0;
+	virtual bool               SetEffectData( ch_handle_t stream, EAudioEffectData sDataType, float data )            = 0;
+	virtual bool               SetEffectData( ch_handle_t stream, EAudioEffectData sDataType, const glm::vec3& data ) = 0;
 
-	virtual bool               GetEffectData( Handle stream, EAudioEffectData sDataType, int& data )             = 0;
-	virtual bool               GetEffectData( Handle stream, EAudioEffectData sDataType, float& data )           = 0;
-	virtual bool               GetEffectData( Handle stream, EAudioEffectData sDataType, glm::vec3& data )       = 0;
+	virtual bool               GetEffectData( ch_handle_t stream, EAudioEffectData sDataType, int& data )             = 0;
+	virtual bool               GetEffectData( ch_handle_t stream, EAudioEffectData sDataType, float& data )           = 0;
+	virtual bool               GetEffectData( ch_handle_t stream, EAudioEffectData sDataType, glm::vec3& data )       = 0;
 
 #if 0
 	// -------------------------
 	// World Effect
-	virtual bool                    SetWorldPos( Handle stream, const glm::vec3& data ) = 0;
-	virtual bool                    GetWorldPos( Handle stream, glm::vec3& data ) = 0;
+	virtual bool                    SetWorldPos( ch_handle_t stream, const glm::vec3& data ) = 0;
+	virtual bool                    GetWorldPos( ch_handle_t stream, glm::vec3& data ) = 0;
 
-	virtual bool                    SetWorldPos( Handle stream, const glm::vec3& data ) = 0;
-	virtual bool                    GetWorldPos( Handle stream, glm::vec3& data ) = 0;
+	virtual bool                    SetWorldPos( ch_handle_t stream, const glm::vec3& data ) = 0;
+	virtual bool                    GetWorldPos( ch_handle_t stream, glm::vec3& data ) = 0;
 
 	// -------------------------
 	// Loop Effect
-	virtual bool                    SetLoopEnabled( Handle stream, bool enabled ) = 0;
-	virtual bool                    GetLoopEnabled( Handle stream ) = 0;
+	virtual bool                    SetLoopEnabled( ch_handle_t stream, bool enabled ) = 0;
+	virtual bool                    GetLoopEnabled( ch_handle_t stream ) = 0;
 
-	virtual bool                    SetLoopStartTime( Handle stream, float time ) = 0;
-	virtual float                   GetLoopStartTime( Handle stream ) = 0;
+	virtual bool                    SetLoopStartTime( ch_handle_t stream, float time ) = 0;
+	virtual float                   GetLoopStartTime( ch_handle_t stream ) = 0;
 
-	virtual bool                    SetLoopEndTime( Handle stream, float time ) = 0;
-	virtual float                   GetLoopEndTime( Handle stream ) = 0;
+	virtual bool                    SetLoopEndTime( ch_handle_t stream, float time ) = 0;
+	virtual float                   GetLoopEndTime( ch_handle_t stream ) = 0;
 
 	// -------------------------
 	// Panning Effect
-	virtual bool                    SetPanningEnabled( Handle stream, bool enabled ) = 0;
-	virtual bool                    GetPanningEnabled( Handle stream ) = 0;
+	virtual bool                    SetPanningEnabled( ch_handle_t stream, bool enabled ) = 0;
+	virtual bool                    GetPanningEnabled( ch_handle_t stream ) = 0;
 
 	// -1.f: All Left Channel, 1.f: All Right Channel
-	virtual bool                    SetPanningAmount( Handle stream, float amount ) = 0;
-	virtual float                   GetPanningAmount( Handle stream ) = 0;
+	virtual bool                    SetPanningAmount( ch_handle_t stream, float amount ) = 0;
+	virtual float                   GetPanningAmount( ch_handle_t stream ) = 0;
 #endif
 };
 

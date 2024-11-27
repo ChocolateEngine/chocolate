@@ -15,7 +15,7 @@
 // debugging
 #include "igui.h"
 
-LOG_REGISTER_CHANNEL2( Aduio, LogColor::Green );
+LOG_CHANNEL_REGISTER( Aduio, ELogColor_Green );
 
 AudioSystem* audio = new AudioSystem;
 
@@ -35,7 +35,7 @@ CONVAR_FLOAT( snd_phonon_directivity, 1.f, "" );
 //IPLAudioFormat g_formatMono = {};
 //IPLAudioFormat g_formatStereo = {};
 
-Handle                   gDefaultChannel = audio->RegisterChannel( "Default" );
+ch_handle_t                   gDefaultChannel = audio->RegisterChannel( "Default" );
 
 static ModuleInterface_t gInterfaces[] = {
 	{ audio, IADUIO_NAME, IADUIO_VER }
@@ -43,7 +43,7 @@ static ModuleInterface_t gInterfaces[] = {
 
 extern "C"
 {
-	DLL_EXPORT ModuleInterface_t* cframework_GetInterfaces( size_t& srCount )
+	DLL_EXPORT ModuleInterface_t* ch_get_interfaces( u8& srCount )
 	{
 		srCount = 1;
 		return gInterfaces;
@@ -347,7 +347,7 @@ bool AudioSystem::InitSteamAudio()
 
 
 // OpenSound?
-Handle AudioSystem::OpenSound( std::string_view sSoundPath )
+ch_handle_t AudioSystem::OpenSound( std::string_view sSoundPath )
 {
 	// check for too many streams
 	/*if ( aStreams.size() == MAX_STREAMS )
@@ -384,11 +384,11 @@ Handle AudioSystem::OpenSound( std::string_view sSoundPath )
 		{
 			Log_ErrorF( gLC_Aduio, "Could not load sound: \"%s\"\n", sSoundPath.data() );
 			delete stream;
-			return InvalidHandle;
+			return CH_INVALID_HANDLE;
 		}
 		else
 		{
-			Handle h = aStreams.Add( stream );
+			ch_handle_t h = aStreams.Add( stream );
 			return h;
 		}
 	}
@@ -679,19 +679,19 @@ int AudioSystem::ApplySpatialEffects( AudioStream* stream, float* data, size_t f
 
 // probably fine to just set the const char directly
 // but how do i limit the channel name size?
-Handle AudioSystem::RegisterChannel( const char* name )
+ch_handle_t AudioSystem::RegisterChannel( const char* name )
 {
 	// TODO: probably use the memory pool for this
 	AudioChannel* channel = new AudioChannel;
-	channel->aName        = name;
+	channel->name        = name;
 	channel->aVol         = 1.f;
 
-	Handle handle         = aChannels.Add( channel );
+	ch_handle_t handle         = aChannels.Add( channel );
 	return handle;
 }
 
 
-Handle AudioSystem::GetChannel( std::string_view name )
+ch_handle_t AudioSystem::GetChannel( std::string_view name )
 {
 	for ( size_t i = 0; i < aChannels.aHandles.size(); i++ )
 	{
@@ -702,26 +702,26 @@ Handle AudioSystem::GetChannel( std::string_view name )
 			continue;
 		}
 
-		if ( channel->aName == name )
+		if ( channel->name == name )
 			return aChannels.aHandles[ i ];
 	}
 
-	return InvalidHandle;
+	return CH_INVALID_HANDLE;
 }
 
 static std::string gInvalidChannelName = "INVALID_AUDIO_CHANNEL";
 
-const std::string& AudioSystem::GetChannelName( Handle handle )
+const std::string& AudioSystem::GetChannelName( ch_handle_t handle )
 {
 	AudioChannel* channel = GetChannelData( handle );
 	if ( !channel )
 		return gInvalidChannelName;
 
-	return channel->aName;
+	return channel->name;
 }
 
 
-float AudioSystem::GetChannelVolume( Handle handle )
+float AudioSystem::GetChannelVolume( ch_handle_t handle )
 {
 	AudioChannel* channel = GetChannelData( handle );
 	if ( !channel )
@@ -731,7 +731,7 @@ float AudioSystem::GetChannelVolume( Handle handle )
 }
 
 
-void AudioSystem::SetChannelVolume( Handle handle, float vol )
+void AudioSystem::SetChannelVolume( ch_handle_t handle, float vol )
 {
 	AudioChannel* channel = GetChannelData( handle );
 	if ( !channel )
@@ -741,7 +741,7 @@ void AudioSystem::SetChannelVolume( Handle handle, float vol )
 }
 
 
-bool AudioSystem::GetChannelPaused( Handle handle )
+bool AudioSystem::GetChannelPaused( ch_handle_t handle )
 {
 	AudioChannel* channel = GetChannelData( handle );
 	if ( !channel )
@@ -751,7 +751,7 @@ bool AudioSystem::GetChannelPaused( Handle handle )
 }
 
 
-void AudioSystem::SetChannelPaused( Handle handle, bool sPaused )
+void AudioSystem::SetChannelPaused( ch_handle_t handle, bool sPaused )
 {
 	AudioChannel* channel = GetChannelData( handle );
 	if ( !channel )
@@ -761,9 +761,9 @@ void AudioSystem::SetChannelPaused( Handle handle, bool sPaused )
 }
 
 
-AudioChannel* AudioSystem::GetChannelData( Handle handle )
+AudioChannel* AudioSystem::GetChannelData( ch_handle_t handle )
 {
-	if ( handle == InvalidHandle )
+	if ( handle == CH_INVALID_HANDLE )
 		return nullptr;
 
 	AudioChannel* channel = nullptr;
@@ -782,7 +782,7 @@ AudioChannel* AudioSystem::GetChannelData( Handle handle )
 // -------------------------------------------------------------------------------------
 
 
-void AudioSystem::AddEffects( Handle sHandle, AudioEffect sEffects )
+void AudioSystem::AddEffects( ch_handle_t sHandle, AudioEffect sEffects )
 {
 	AudioStream* stream = GetStream( sHandle );
 	if ( !stream )
@@ -812,7 +812,7 @@ void AudioSystem::AddEffects( Handle sHandle, AudioEffect sEffects )
 }
 
 
-void AudioSystem::RemoveEffects( Handle sHandle, AudioEffect sEffects )
+void AudioSystem::RemoveEffects( ch_handle_t sHandle, AudioEffect sEffects )
 {
 	AudioStream* stream = GetStream( sHandle );
 	if ( !stream )
@@ -843,7 +843,7 @@ void AudioSystem::RemoveEffects( Handle sHandle, AudioEffect sEffects )
 }
 
 
-bool AudioSystem::HasEffects( Handle handle, AudioEffect effect )
+bool AudioSystem::HasEffects( ch_handle_t handle, AudioEffect effect )
 {
 	AudioStream* stream = GetStream( handle );
 	if ( !stream )
@@ -859,7 +859,7 @@ bool AudioSystem::HasEffects( Handle handle, AudioEffect effect )
 // i don't like this aaaa
 // maybe all return types will be bool, false if effect is not there? idk
 // also, how do we know what part of the effect to apply this data to? hmm
-bool AudioSystem::SetEffectData( Handle handle, EAudioEffectData sDataType, int data )
+bool AudioSystem::SetEffectData( ch_handle_t handle, EAudioEffectData sDataType, int data )
 {
 	AudioStream* stream = GetStream( handle );
 	if ( !stream )
@@ -870,7 +870,7 @@ bool AudioSystem::SetEffectData( Handle handle, EAudioEffectData sDataType, int 
 }
 
 
-bool AudioSystem::SetEffectData( Handle handle, EAudioEffectData sDataType, float data )
+bool AudioSystem::SetEffectData( ch_handle_t handle, EAudioEffectData sDataType, float data )
 {
 	AudioStream* stream = GetStream( handle );
 	if ( !stream )
@@ -881,7 +881,7 @@ bool AudioSystem::SetEffectData( Handle handle, EAudioEffectData sDataType, floa
 }
 
 
-bool AudioSystem::SetEffectData( Handle handle, EAudioEffectData sDataType, const glm::vec3& data )
+bool AudioSystem::SetEffectData( ch_handle_t handle, EAudioEffectData sDataType, const glm::vec3& data )
 {
 	AudioStream* stream = GetStream( handle );
 	if ( !stream )
@@ -895,7 +895,7 @@ bool AudioSystem::SetEffectData( Handle handle, EAudioEffectData sDataType, cons
 // --------------------------------------------------------------------
 
 
-bool AudioSystem::GetEffectData( Handle handle, EAudioEffectData sDataType, int& data )
+bool AudioSystem::GetEffectData( ch_handle_t handle, EAudioEffectData sDataType, int& data )
 {
 	AudioStream* stream = GetStream( handle );
 	if ( !stream )
@@ -906,7 +906,7 @@ bool AudioSystem::GetEffectData( Handle handle, EAudioEffectData sDataType, int&
 }
 
 
-bool AudioSystem::GetEffectData( Handle handle, EAudioEffectData sDataType, float& data )
+bool AudioSystem::GetEffectData( ch_handle_t handle, EAudioEffectData sDataType, float& data )
 {
 	AudioStream* stream = GetStream( handle );
 	if ( !stream )
@@ -917,7 +917,7 @@ bool AudioSystem::GetEffectData( Handle handle, EAudioEffectData sDataType, floa
 }
 
 
-bool AudioSystem::GetEffectData( Handle handle, EAudioEffectData sDataType, glm::vec3& data )
+bool AudioSystem::GetEffectData( ch_handle_t handle, EAudioEffectData sDataType, glm::vec3& data )
 {
 	AudioStream* stream = GetStream( handle );
 	if ( !stream )

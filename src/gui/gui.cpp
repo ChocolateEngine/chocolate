@@ -1,6 +1,6 @@
 #include "gui.h"
-#include "util.h"
-#include "irender3.h"
+#include "core/util.h"
+#include "render/irender.h"
 // #include "rmlui.h"
 
 #include "imgui/imgui_impl_sdl2.h"
@@ -10,7 +10,7 @@
 #endif
 
 GuiSystem*               gui           = new GuiSystem;
-IRender3*                render        = nullptr;
+IRender*                 render        = nullptr;
 
 ImFont*                  gBuiltInFont  = nullptr;
 
@@ -26,7 +26,7 @@ static ModuleInterface_t gInterfaces[] = {
 
 extern "C"
 {
-	DLL_EXPORT ModuleInterface_t* cframework_GetInterfaces( size_t& srCount )
+	DLL_EXPORT ModuleInterface_t* ch_get_interfaces( u8& srCount )
 	{
 		srCount = 1;
 		return gInterfaces;
@@ -40,7 +40,7 @@ void GuiSystem::Update( float sDT )
 	// if ( gRmlContext )
 	// 	gRmlContext->Update();
 
-//	DrawGui();
+	DrawGui();
 }
 
 void GuiSystem::DrawGui()
@@ -116,7 +116,7 @@ void GuiSystem::StyleImGui()
 
 	return;
 
-	if ( Args_Find( "-no-vgui-style" ) )
+	if ( args_find( "-no-vgui-style" ) )
 		return;
 
 	// Classic VGUI2 Style Color Scheme
@@ -186,27 +186,27 @@ void GuiSystem::StyleImGui()
 
 ImFont* GuiSystem::BuildFont( const char* spPath, float sSizePixels, const ImFontConfig* spFontConfig )
 {
-	if ( Args_Find( "-no-imgui-font" ) )
+	if ( args_find( "-no-imgui-font" ) )
 		return nullptr;
 
-//	ch_string_auto fontPath = FileSys_FindFile( spPath );
-//	if ( !fontPath.data )
-//		return nullptr;
-//
-//	ImFont* font = ImGui::GetIO().Fonts->AddFontFromFileTTF( fontPath.data, sSizePixels, spFontConfig );
-//
-//	render->BuildFonts();
-//
-//	#if 0
-//	// AWFUL
-//	VkCommandBuffer c = gpDevice->BeginSingleTimeCommands(  );
-//	ImGui_ImplVulkan_CreateFontsTexture( c );
-//	gpDevice->EndSingleTimeCommands( c );
-//	#endif
-//
-//	// ImGui_ImplVulkan_DestroyFontUploadObjects(  );
-//
-//	return font;
+	ch_string_auto fontPath = FileSys_FindFile( spPath );
+	if ( !fontPath.data )
+		return nullptr;
+
+	ImFont* font = ImGui::GetIO().Fonts->AddFontFromFileTTF( fontPath.data, sSizePixels, spFontConfig );
+
+	render->BuildFonts();
+
+	#if 0
+	// AWFUL
+	VkCommandBuffer c = gpDevice->BeginSingleTimeCommands(  );
+	ImGui_ImplVulkan_CreateFontsTexture( c );
+	gpDevice->EndSingleTimeCommands( c );
+	#endif
+
+	// ImGui_ImplVulkan_DestroyFontUploadObjects(  );
+
+	return font;
 }
 
 constexpr int MAX_DEBUG_MESSAGE_SIZE = 512;
@@ -264,7 +264,7 @@ void GuiSystem::StartFrame()
 
 bool GuiSystem::Init()
 {
-	render = Mod_GetSystemCast< IRender3 >( CH_RENDER3, CH_RENDER3_VER );
+	render = Mod_GetSystemCast< IRender >( IRENDER_NAME, IRENDER_VER );
 
 	InitConsole();
 	InitConVarList();
@@ -275,6 +275,8 @@ bool GuiSystem::Init()
 	// Rml::Initialise();
 
 	// SDL_GetWindowSize();
+#pragma message( "DETECT RMLUI CONTEXT WINDOW SIZE" )
+	// gRmlContext = Rml::CreateContext( "default", Rml::Vector2i( 1280, 720 ) );
 
 	return true;
 }

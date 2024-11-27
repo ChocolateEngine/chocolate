@@ -1,6 +1,6 @@
 #include "core/platform.h"
 #include "core/log.h"
-#include "util.h"
+#include "core/util.h"
 
 #include "render_vk.h"
 
@@ -40,7 +40,7 @@ static VkDescriptorPool                                             gVkDescripto
 
 static DescriptorPoolStats_t                                        gDescriptorPoolStats;
 
-// static std::unordered_map< Handle, std::vector< VkDescriptorSet > > gUniformSets;
+// static std::unordered_map< ch_handle_t, std::vector< VkDescriptorSet > > gUniformSets;
 
 // static std::vector< BufferVK* >                                     gUniformBuffers;
 // constexpr u32                                                       MAX_UNIFORM_BUFFERS = 1000;
@@ -51,7 +51,7 @@ static ResourceList< VkDescriptorSet >                              gDescSets;
 extern ResourceList< TextureVK* >                                   gTextureHandles;
 extern ResourceList< BufferVK >                                     gBufferHandles;
 
-static std::vector< ChHandle_t >                                    gImageSets;
+static std::vector< ch_handle_t >                                    gImageSets;
 static u32                                                          gImageBinding = 0;
 
 extern Render_OnTextureIndexUpdate*                                 gpOnTextureIndexUpdateFunc;
@@ -187,14 +187,14 @@ void VK_UpdateImageSets()
 	write.apDescSets    = gImageSets.data();
 
 	write.aBindingCount = 1;
-	write.apBindings    = ch_calloc_count< WriteDescSetBinding_t >( 1 );
+	write.apBindings    = ch_calloc< WriteDescSetBinding_t >( 1 );
 
-	ChVector< ChHandle_t > imageData;
+	ChVector< ch_handle_t > imageData;
 	imageData.reserve( gGraphicsAPIData.aSampledTextures.size() );
 
 	size_t index = 0;
 	// for ( uint32_t j = 0; j < gGraphicsAPIData.aSampledTextures.size(); j++ )
-	for ( ChHandle_t texHandle : gGraphicsAPIData.aSampledTextures )
+	for ( ch_handle_t texHandle : gGraphicsAPIData.aSampledTextures )
 	{
 		TextureVK* tex = VK_GetTexture( texHandle );
 
@@ -226,7 +226,7 @@ void VK_UpdateImageSets()
 #endif
 
 
-void VK_SetImageSets( ChHandle_t* spDescSets, int sCount, u32 sBinding )
+void VK_SetImageSets( ch_handle_t* spDescSets, int sCount, u32 sBinding )
 {
 	gImageBinding = sBinding;
 	gImageSets.resize( sCount );
@@ -254,7 +254,7 @@ void VK_DestroyDescSets()
 // --------------------------------------------------------------------------------------------
 
 
-Handle VK_CreateDescLayout( const CreateDescLayout_t& srCreate )
+ch_handle_t VK_CreateDescLayout( const CreateDescLayout_t& srCreate )
 {
 	std::vector< VkDescriptorBindingFlagsEXT >  layoutBindingFlags;
 	std::vector< VkDescriptorSetLayoutBinding > layoutBindings;
@@ -312,7 +312,7 @@ Handle VK_CreateDescLayout( const CreateDescLayout_t& srCreate )
 }
 
 
-bool VK_AllocateDescLayout( const AllocDescLayout_t& srCreate, Handle* handles )
+bool VK_AllocateDescLayout( const AllocDescLayout_t& srCreate, ch_handle_t* handles )
 {
 	if ( handles == nullptr )
 		return false;
@@ -359,7 +359,7 @@ bool VK_AllocateDescLayout( const AllocDescLayout_t& srCreate, Handle* handles )
 }
 
 
-void VK_FreeDescLayout( Handle sLayout )
+void VK_FreeDescLayout( ch_handle_t sLayout )
 {
 }
 
@@ -368,7 +368,7 @@ void VK_FreeDescLayout( Handle sLayout )
 
 
 // currently usused
-bool VK_AllocateVariableDescLayout( const AllocVariableDescLayout_t& srCreate, Handle* handles )
+bool VK_AllocateVariableDescLayout( const AllocVariableDescLayout_t& srCreate, ch_handle_t* handles )
 {
 	VkDescriptorSetLayout layout = VK_GetDescLayout( srCreate.aLayout );
 	if ( layout == VK_NULL_HANDLE )
@@ -411,7 +411,7 @@ bool VK_AllocateVariableDescLayout( const AllocVariableDescLayout_t& srCreate, H
 }
 
 
-void VK_FreeVariableDescLayout( Handle sLayout )
+void VK_FreeVariableDescLayout( ch_handle_t sLayout )
 {
 }
 
@@ -477,7 +477,8 @@ void VK_UpdateDescSets( WriteDescSet_t* spUpdate, u32 sCount )
 					case EDescriptorType_SampledImage:
 					case EDescriptorType_StorageImage:
 					{
-						auto images = ch_malloc_count< VkDescriptorImageInfo >( binding.aCount );
+						auto images = ch_malloc< VkDescriptorImageInfo >( binding.aCount );
+						write.pImageInfo = images;
 
 						for ( uint32_t j = 0; j < binding.aCount; j++ )
 						{
@@ -493,7 +494,6 @@ void VK_UpdateDescSets( WriteDescSet_t* spUpdate, u32 sCount )
 							images[ j ].sampler     = VK_GetSampler( tex->aFilter, tex->aSamplerAddress, tex->aDepthCompare );
 						}
 
-						write.pImageInfo = images;
 						break;
 					}
 
@@ -502,7 +502,8 @@ void VK_UpdateDescSets( WriteDescSet_t* spUpdate, u32 sCount )
 					case EDescriptorType_UniformBufferDynamic:
 					case EDescriptorType_StorageBufferDynamic:
 					{
-						auto buffers = ch_malloc_count< VkDescriptorBufferInfo >( binding.aCount );
+						auto buffers = ch_malloc< VkDescriptorBufferInfo >( binding.aCount );
+						write.pBufferInfo = buffers;
 
 						for ( u32 j = 0; j < binding.aCount; j++ )
 						{
@@ -519,7 +520,6 @@ void VK_UpdateDescSets( WriteDescSet_t* spUpdate, u32 sCount )
 							buffers[ j ].range  = buffer->aSize;
 						}
 
-						write.pBufferInfo = buffers;
 						break;
 					}
 				}
@@ -561,7 +561,7 @@ VkDescriptorPool VK_GetDescPool()
 }
 
 
-VkDescriptorSetLayout VK_GetDescLayout( Handle sHandle )
+VkDescriptorSetLayout VK_GetDescLayout( ch_handle_t sHandle )
 {
 	VkDescriptorSetLayout layout = VK_NULL_HANDLE;
 	if ( !gDescLayouts.Get( sHandle, &layout ) )
@@ -571,7 +571,7 @@ VkDescriptorSetLayout VK_GetDescLayout( Handle sHandle )
 }
 
 
-VkDescriptorSet VK_GetDescSet( Handle sHandle )
+VkDescriptorSet VK_GetDescSet( ch_handle_t sHandle )
 {
 	VkDescriptorSet descSet = VK_NULL_HANDLE;
 	if ( !gDescSets.Get( sHandle, &descSet ) )

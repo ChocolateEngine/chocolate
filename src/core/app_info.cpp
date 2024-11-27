@@ -65,21 +65,21 @@ bool Core_ParseSearchPaths( JsonObject_t& root )
 	{
 		JsonObject_t& cur = root.aObjects.apData[ i ];
 
-		if ( ch_str_equals( cur.aName, "binPaths", 8 ) )
+		if ( ch_str_equals( cur.name, "binPaths", 8 ) )
 		{
 			Core_HandleSearchPathType( cur, ESearchPathType_Binary );
 		}
-		else if ( ch_str_equals( cur.aName, "paths", 5 ) )
+		else if ( ch_str_equals( cur.name, "paths", 5 ) )
 		{
 			Core_HandleSearchPathType( cur, ESearchPathType_Path );
 		}
-		else if ( ch_str_equals( cur.aName, "sourceAssets", 12 ) )
+		else if ( ch_str_equals( cur.name, "sourceAssets", 12 ) )
 		{
 			Core_HandleSearchPathType( cur, ESearchPathType_SourceAssets );
 		}
 		else
 		{
-			Log_WarnF( "Unknown Search Path Key in app_info.json5: \"%s\"\n", cur.aName.data );
+			Log_WarnF( "Unknown Search Path Key in app_info.json5: \"%s\"\n", cur.name.data );
 			continue;
 		}
 	}
@@ -152,7 +152,7 @@ bool Core_LoadAppInfo()
 	{
 		JsonObject_t& cur = root.aObjects.apData[ i ];
 
-		if ( ch_str_equals( cur.aName, "name", 4 ) )
+		if ( ch_str_equals( cur.name, "name", 4 ) )
 		{
 			if ( cur.aType != EJsonType_String )
 			{
@@ -171,7 +171,7 @@ bool Core_LoadAppInfo()
 
 			continue;
 		}
-		else if ( ch_str_equals( cur.aName, "windowTitle", 11 ) )
+		else if ( ch_str_equals( cur.name, "windowTitle", 11 ) )
 		{
 			if ( cur.aType != EJsonType_String )
 			{
@@ -190,7 +190,7 @@ bool Core_LoadAppInfo()
 
 			continue;
 		}
-		else if ( ch_str_equals( cur.aName, "searchPaths", 11 ) )
+		else if ( ch_str_equals( cur.name, "searchPaths", 11 ) )
 		{
 			if ( cur.aType != EJsonType_Object )
 			{
@@ -207,7 +207,7 @@ bool Core_LoadAppInfo()
 		}
 		else
 		{
-			Log_WarnF( "Unknown Key in app_info.json5: \"%s\"\n", cur.aName );
+			Log_WarnF( "Unknown Key in app_info.json5: \"%s\"\n", cur.name );
 			continue;
 		}
 	}
@@ -285,7 +285,7 @@ bool Core_AddAppInfo( const char* appPath, s64 appPathLen )
 	{
 		JsonObject_t& cur = root.aObjects.apData[ i ];
 
-		if ( ch_str_equals( cur.aName, "searchPaths", 11 ) )
+		if ( ch_str_equals( cur.name, "searchPaths", 11 ) )
 		{
 			if ( cur.aType != EJsonType_Object )
 			{
@@ -328,7 +328,7 @@ void Core_ReloadSearchPaths()
 		{
 			JsonObject_t& cur = root.aObjects.apData[ i ];
 
-			if ( ch_str_equals( cur.aName, "searchPaths", 11 ) )
+			if ( ch_str_equals( cur.name, "searchPaths", 11 ) )
 			{
 				if ( cur.aType != EJsonType_Object )
 				{

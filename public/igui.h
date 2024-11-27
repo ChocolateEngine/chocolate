@@ -1,7 +1,5 @@
 #pragma once
 
-#include "system.h"
-
 struct ImFont;
 struct ImFontConfig;
 

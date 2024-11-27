@@ -1,4 +1,4 @@
-#include "util.h"
+#include "core/util.h"
 #include "render/irender.h"
 #include "graphics_int.h"
 
@@ -30,7 +30,7 @@ static void Shader_ShaderUnlit_GetGraphicsPipelineCreate( GraphicsPipelineCreate
 }
 
 
-static void Shader_ShaderUnlit_PushConstants( Handle cmd, Handle sLayout, const ShaderPushData_t& sPushData )
+static void Shader_ShaderUnlit_PushConstants( ch_handle_t cmd, ch_handle_t sLayout, const ShaderPushData_t& sPushData )
 {
 	PROF_SCOPE();
 
@@ -38,7 +38,7 @@ static void Shader_ShaderUnlit_PushConstants( Handle cmd, Handle sLayout, const 
 	push.aModelMatrix = sPushData.apRenderable->aModelMatrix;
 	push.aViewport    = sPushData.aViewportIndex;
 
-	Handle mat        = sPushData.apRenderable->apMaterials[ sPushData.aSurfaceDraw.aSurface ];
+	ch_handle_t mat        = sPushData.apRenderable->apMaterials[ sPushData.aSurfaceDraw.aSurface ];
 
 	if ( mat == CH_INVALID_HANDLE )
 		return;

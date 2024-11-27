@@ -19,7 +19,7 @@
 // then the callback is run to tell whatever type it is to reload this file
 // -----------------------------------------------------------------------
 
-LOG_REGISTER_CHANNEL2( ResourceSystem, LogColor::DarkYellow );
+LOG_CHANNEL_REGISTER( ResourceSystem, ELogColor_DarkYellow );
 
 
 struct ResourceData_t
@@ -57,7 +57,7 @@ struct ResourceData_t
 
 
 // std::unordered_map< std::string, ResourceData_t > gResources;
-std::unordered_map< ChHandle_t, ResourceList< ResourceData_t > > gResources;
+std::unordered_map< ch_handle_t, ResourceList< ResourceData_t > > gResources;
 ResourceList< ResourceType_t >                                   gResourceTypes;
 
 
@@ -84,7 +84,7 @@ void Resource_Update()
 
 		for ( u32 i = 0; i < resourceList.GetHandleCount(); )
 		{
-			ChHandle_t      resourceHandle = resourceList.GetHandleByIndex( i );
+			ch_handle_t      resourceHandle = resourceList.GetHandleByIndex( i );
 			ResourceData_t* data = nullptr;
 
 			if ( !resourceList.Get( resourceHandle, &data ) )
@@ -99,7 +99,7 @@ void Resource_Update()
 			struct stat fileStat
 			{
 			};
-			int ret = FileSys_Stat( data->aPath.c_str(), &fileStat );
+			int ret = stat( data->aPath.c_str(), &fileStat );
 
 			if ( ret != 0 )
 			{
@@ -149,14 +149,14 @@ void Resource_Shutdown()
 }
 
 
-ChHandle_t Resource_RegisterType( const ResourceType_t& srType )
+ch_handle_t Resource_RegisterType( const ResourceType_t& srType )
 {
 	return gResourceTypes.Add( srType );
 }
 
 
 #if 0
-bool Resource_Add( ChHandle_t shType, ChHandle_t shResource, const std::string& srPath )
+bool Resource_Add( ch_handle_t shType, ch_handle_t shResource, const std::string& srPath )
 {
 	auto it = gResources.find( shResource );
 
@@ -177,7 +177,7 @@ bool Resource_Add( ChHandle_t shType, ChHandle_t shResource, const std::string& 
 	struct stat fileStat
 	{
 	};
-	int ret = FileSys_Stat( srPath.c_str(), &fileStat );
+	int ret = stat( srPath.c_str(), &fileStat );
 
 	if ( ret != 0 )
 	{
@@ -197,7 +197,7 @@ bool Resource_Add( ChHandle_t shType, ChHandle_t shResource, const std::string& 
 }
 
 
-void Resource_Remove( ChHandle_t shResource )
+void Resource_Remove( ch_handle_t shResource )
 {
 	auto it = gResources.find( shResource );
 
@@ -213,34 +213,34 @@ void Resource_Remove( ChHandle_t shResource )
 
 
 // Load's this resource from disk
-bool Resource_Load( ChHandle_t shType, ChHandle_t& shResource, const fs::path& srPath )
+bool Resource_Load( ch_handle_t shType, ch_handle_t& shResource, const fs::path& srPath )
 {
 	return false;
 }
 
 
 // Create's a resource from memory
-bool Resource_Create( ChHandle_t shType, ChHandle_t& shResource, const fs::path& srInternalPath, void* spData )
+bool Resource_Create( ch_handle_t shType, ch_handle_t& shResource, const fs::path& srInternalPath, void* spData )
 {
 	return false;
 }
 
 
 // Add's an already created resource externally
-bool Resource_Add( ChHandle_t shType, ChHandle_t& shResource, const fs::path& srPath )
+bool Resource_Add( ch_handle_t shType, ch_handle_t& shResource, const fs::path& srPath )
 {
 	return false;
 }
 
 
 // Queue's a Resource for Deletion
-void Resource_Free( ChHandle_t shType, ChHandle_t shResource )
+void Resource_Free( ch_handle_t shType, ch_handle_t shResource )
 {
 }
 
 
 // Pause or Resume Updating of this Resource Type
-void Resource_SetTypePaused( ChHandle_t sType, bool sPaused )
+void Resource_SetTypePaused( ch_handle_t sType, bool sPaused )
 {
 }
 
@@ -249,18 +249,18 @@ void Resource_SetTypePaused( ChHandle_t sType, bool sPaused )
 // instead, we can queue that resource reload, and wait for the resource to be unlocked, and then do that reload
 // you can also lock a resource multiple times
 // returns a handle to a lock, this will be
-ChHandle_t Resource_Lock( ChHandle_t sType, ChHandle_t sResource )
+ch_handle_t Resource_Lock( ch_handle_t sType, ch_handle_t sResource )
 {
 	return CH_INVALID_HANDLE;
 }
 
 
-void Resource_Unlock( ChHandle_t sLock )
+void Resource_Unlock( ch_handle_t sLock )
 {
 }
 
 
-void Resource_IncrementRef( ChHandle_t sType, ChHandle_t sResource )
+void Resource_IncrementRef( ch_handle_t sType, ch_handle_t sResource )
 {
 	auto it = gResources.find( sType );
 
@@ -274,7 +274,7 @@ void Resource_IncrementRef( ChHandle_t sType, ChHandle_t sResource )
 }
 
 
-void Resource_DecrementRef( ChHandle_t sType, ChHandle_t sResource )
+void Resource_DecrementRef( ch_handle_t sType, ch_handle_t sResource )
 {
 	auto it = gResources.find( sResource );
 
