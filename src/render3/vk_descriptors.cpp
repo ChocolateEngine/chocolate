@@ -38,6 +38,11 @@ static DescriptorPoolStats_t gDescriptorPoolStats;
 VkDescriptorPool             g_vk_imgui_desc_pool        = VK_NULL_HANDLE;
 VkDescriptorSetLayout        g_vk_imgui_desc_layout      = VK_NULL_HANDLE;
 
+// temp
+VkDescriptorPool             g_vk_desc_pool_graphics     = VK_NULL_HANDLE;
+VkDescriptorSetLayout        g_vk_desc_layout_graphics   = VK_NULL_HANDLE;
+
+// temp
 VkDescriptorPool             g_vk_desc_pool              = VK_NULL_HANDLE;
 VkDescriptorSetLayout        g_vk_desc_draw_image_layout = VK_NULL_HANDLE;
 
@@ -135,6 +140,62 @@ bool vk_descriptor_init()
 		layout_info.pBindings    = bindings;
 
 		if ( vk_check_e( vkCreateDescriptorSetLayout( g_vk_device, &layout_info, nullptr, &g_vk_desc_draw_image_layout ), "Failed to create descriptor set layout" ) )
+			return false;
+	}
+
+	// create temp graphics pool
+	{
+		VkDescriptorPoolSize       pool_sizes[] = { { VK_DESCRIPTOR_TYPE_SAMPLER, 1000 },
+			                                        { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1000 },
+			                                        { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1000 },
+			                                        { VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1 },
+			                                        { VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER, 1 },
+			                                        { VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, 1 },
+			                                        { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 10 },
+			                                        { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1000 },
+			                                        { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 1 },
+			                                        { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, 1 },
+			                                        { VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 1000 } };
+
+		VkDescriptorPoolCreateInfo pool_info{ VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO };
+		pool_info.flags         = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
+		pool_info.maxSets       = 1000;
+		pool_info.poolSizeCount = ARR_SIZE( pool_sizes );
+		pool_info.pPoolSizes    = pool_sizes;
+
+		if ( vk_check_e( vkCreateDescriptorPool( g_vk_device, &pool_info, nullptr, &g_vk_desc_pool_graphics ), "Failed to create graphics Descriptor Pool" ) )
+			return false;
+
+		vk_set_name( VK_OBJECT_TYPE_DESCRIPTOR_POOL, (u64)g_vk_desc_pool_graphics, "Graphics" );
+
+		// now descriptor set layout for graphics draw
+
+		VkDescriptorSetLayoutBinding bindings[] = {
+			{
+			  .binding         = 0,
+			  .descriptorType  = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+			  .descriptorCount = 1,
+			  .stageFlags      = VK_SHADER_STAGE_FRAGMENT_BIT,
+			},
+		};
+
+		VkDescriptorSetLayoutCreateInfo layout_info{ VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO };
+		layout_info.bindingCount = 1;
+		layout_info.pBindings    = bindings;
+
+		if ( vk_check_e( vkCreateDescriptorSetLayout( g_vk_device, &layout_info, nullptr, &g_vk_desc_layout_graphics ), "Failed to create descriptor set layout" ) )
+			return false;
+
+		vk_set_name( VK_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT, (u64)g_vk_desc_layout_graphics, "Graphics" );
+
+		// allocate descriptor sets
+		VkDescriptorSetAllocateInfo alloc_info{ VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO };
+		alloc_info.descriptorPool = g_vk_desc_pool_graphics;
+		alloc_info.descriptorSetCount = 1;
+		alloc_info.pSetLayouts = &g_vk_desc_layout_graphics;
+
+		VkDescriptorSet desc_set;
+		if ( vk_check_e( vkAllocateDescriptorSets( g_vk_device, &alloc_info, &desc_set ), "Failed to allocate descriptor set" ) )
 			return false;
 	}
 

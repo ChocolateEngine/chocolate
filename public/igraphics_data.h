@@ -8,7 +8,8 @@
 
 
 #include "core/core.h"
-#include "system.h"
+
+#include "core/handles.hpp"
 
 
 // ------------------------------------------------------------------------------------
@@ -131,16 +132,40 @@ constexpr glm::vec4 gFrustumFaceData[ 8u ] = {
 };
 
 
-enum EFrustum
+enum e_frustum
 {
-	EFrustum_Top,
-	EFrustum_Bottom,
-	EFrustum_Right,
-	EFrustum_Left,
-	EFrustum_Near,
-	EFrustum_Far,
-	EFrustum_Count,
+	e_frustum_top,
+	e_frustum_bottom,
+	e_frustum_right,
+	e_frustum_left,
+	e_frustum_near,
+	e_frustum_far,
+	e_frustum_count,
 };
+
+
+using e_mat_var = u8;
+enum : e_mat_var
+{
+	e_mat_var_invalid,
+	e_mat_var_texture,
+	e_mat_var_float,
+	e_mat_var_int,
+	e_mat_var_true,
+	e_mat_var_false,
+	e_mat_var_vec2,
+	e_mat_var_vec3,
+	e_mat_var_vec4,
+	e_mat_var_count,
+};
+
+
+// ------------------------------------------------------------------------------------
+
+
+CH_HANDLE_32( ch_model_h );
+CH_HANDLE_32( ch_material_h );
+CH_HANDLE_32( ch_texture_h );
 
 
 // ------------------------------------------------------------------------------------
@@ -171,7 +196,7 @@ struct texture_data_t
 
 struct frustum_t
 {
-	glm::vec4 planes[ EFrustum_Count ];
+	glm::vec4 planes[ e_frustum_count ];
 	glm::vec3 points[ 8 ];  // 4 Positions for the near plane corners, last 4 are the far plane corner positions
 
 	// https://iquilezles.org/articles/frustumcorrect/
@@ -180,7 +205,7 @@ struct frustum_t
 		PROF_SCOPE();
 
 		// Check Box Outside/Inside of Frustum
-		for ( int i = 0; i < EFrustum_Count; i++ )
+		for ( int i = 0; i < e_frustum_count; i++ )
 		{
 			if ( ( glm::dot( planes[ i ], glm::vec4( sMin.x, sMin.y, sMin.z, 1.0f ) ) < 0.0 ) &&
 			     ( glm::dot( planes[ i ], glm::vec4( sMax.x, sMin.y, sMin.z, 1.0f ) ) < 0.0 ) &&
@@ -247,26 +272,22 @@ struct frustum_t
 };
 
 
-struct model_material_t
+struct ch_model_materials_old
 {
-	u32        vertex_offset;
-	u32        vertex_count;
+	u32         vertex_offset;
+	u32         vertex_count;
 
-	u32        index_offset;
-	u32        index_count;
+	u32         index_offset;
+	u32         index_count;
 
-	ch_handle_t material;
+	ch_handle_t mat;
 };
 
 
-struct model_t
+struct ch_model_materials
 {
-	u32               ref_count;
-
-	
-
-	model_material_t* materials;
-	u32               material_count;  // could this be u16? is there ever a need for more than 65535 materials on a model?
+	ch_material_h* mat;
+	u32            mat_count;  // could this be u16? is there ever a need for more than 65535 materials on a model?
 };
 
 
@@ -275,34 +296,41 @@ struct model_t
 
 class IGraphicsData : public ISystem
 {
-   public:
+  public:
 	// --------------------------------------------------------------------------------------------
 	// General
 	// --------------------------------------------------------------------------------------------
 
 	// Creates a new frustum
-	virtual frustum_t      frustum_create( const glm::mat4& proj_view )                                                                     = 0;
-	
+	virtual frustum_t            frustum_create( const glm::mat4& proj_view )                                                                 = 0;
+
 	// --------------------------------------------------------------------------------------------
 	// Textures
 	// --------------------------------------------------------------------------------------------
 
 	// Loads a texture from disk
-	virtual ch_handle_t*    texture_load( const char** paths, const texture_load_info_t* create_infos, size_t count = 1 )                = 0;
-	virtual ch_handle_t*    texture_load( const char** paths, s64* pathLens, const texture_load_info_t* create_infos, size_t count = 1 ) = 0;
-	//virtual ch_handle_t     texture_load( ch_string* paths, const texture_load_info_t* create_infos, size_t count = 1 )   = 0;
-	virtual ch_handle_t     texture_load( const char* path, s64 pathLen, const texture_load_info_t& create_info )                        = 0;
+	virtual ch_handle_t*         texture_load( const char** paths, const texture_load_info_t* create_infos, size_t count = 1 )                = 0;
+	virtual ch_handle_t*         texture_load( const char** paths, s64* pathLens, const texture_load_info_t* create_infos, size_t count = 1 ) = 0;
+	//virtual ChHandle_t     texture_load( ch_string* paths, const texture_load_info_t* create_infos, size_t count = 1 )   = 0;
+	virtual ch_handle_t          texture_load( const char* path, s64 pathLen, const texture_load_info_t& create_info )                        = 0;
 
-	virtual void           texture_free( ch_handle_t* texture, size_t count = 1 )                                                            = 0;
-	virtual texture_data_t texture_get_data( ch_handle_t texture )                                                                           = 0;
+	virtual void                 texture_free( ch_handle_t* texture, size_t count = 1 )                                                       = 0;
+//	virtual texture_data_t       texture_get_data( ch_handle_t texture )                                                                      = 0;
 
 	// --------------------------------------------------------------------------------------------
 	// Materials
 	// --------------------------------------------------------------------------------------------
-	
+
 	// --------------------------------------------------------------------------------------------
 	// Models
 	// --------------------------------------------------------------------------------------------
+
+	virtual ch_model_h           model_load( const char* path )                                                                               = 0;
+
+	//	virtual const ch_model_materials* model_get_material_array( ch_model_h handle )                                                                = 0;
+
+	virtual const u16            model_get_material_count( ch_model_h handle )                                                                = 0;
+	virtual const ch_material_h* model_get_material_array( ch_model_h handle )                                                                = 0;
 	
 	// --------------------------------------------------------------------------------------------
 	// Model Building - useful for importing custom models, like .obj or .gltf files

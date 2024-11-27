@@ -9,10 +9,6 @@ bool vk_render_sync_create( r_window_data_t* window )
 	fence_info.flags = VK_FENCE_CREATE_SIGNALED_BIT;  // we want to start signaled, so we dont just end up in a deadlock waiting on the gpu when the gpu isn't doing anything
 
 	VkSemaphoreCreateInfo semaphore_info{ VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO };
-
-	window->fence_render        = ch_malloc< VkFence >( window->swap_image_count );
-	window->semaphore_swapchain = ch_malloc< VkSemaphore >( window->swap_image_count );
-	window->semaphore_render    = ch_malloc< VkSemaphore >( window->swap_image_count );
 	
 	for ( u32 i = 0; i < window->swap_image_count; ++i )
 	{
@@ -38,14 +34,6 @@ void vk_render_sync_destroy( r_window_data_t* window )
 		if ( window->semaphore_render[ i ] != VK_NULL_HANDLE )
 			vkDestroySemaphore( g_vk_device, window->semaphore_render[ i ], nullptr );
 	}
-
-	ch_free( window->fence_render );
-	ch_free( window->semaphore_swapchain );
-	ch_free( window->semaphore_render );
-
-	window->fence_render        = nullptr;
-	window->semaphore_swapchain = nullptr;
-	window->semaphore_render    = nullptr;
 }
 
 
@@ -132,8 +120,6 @@ static u32 vk_get_next_image( ch_handle_t window_handle, r_window_data_t* window
 	// wait for the last frame to finish rendering, timeout of 1 second, blocks the thread
 	vk_check( vkWaitForFences( g_vk_device, 1, &window->fence_render[ frame ], VK_TRUE, 1000000000 ), "Failed to wait for render fence" );
 
-	window->delete_queue.flush();
-
 	vk_check( vkResetFences( g_vk_device, 1, &window->fence_render[ frame ] ), "Failed to reset render fence" );
 
 	// request an image from the swapchain, blocks the thread
@@ -200,6 +186,12 @@ static void vk_record_commands_window( r_window_data_t* window, u32 swap_index )
 
 	// bind the descriptor set containing the draw image for the compute pipeline
 	vkCmdBindDescriptorSets( c, VK_PIPELINE_BIND_POINT_COMPUTE, g_pipeline_gradient_layout, 0, 1, &window->desc_draw_image, 0, nullptr );
+
+	test_compute_push_t push_data;
+	push_data.data1 = glm::vec4( 1, 0, 0, 1 );
+	push_data.data2 = glm::vec4( 0, 0, 1, 1 );
+
+	vkCmdPushConstants( c, g_pipeline_gradient_layout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof( test_compute_push_t ), &push_data );
 
 	// execute the compute pipeline dispatch. We are using 16x16 workgroup size so we need to divide by it
 	vkCmdDispatch( c, std::ceil( window->swap_extent.width / 16.0 ), std::ceil( window->swap_extent.height / 16.0 ), 1 );

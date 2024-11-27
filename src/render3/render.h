@@ -265,6 +265,18 @@ struct vk_texture_t
 };
 
 
+// --------------------------------------------------------------------------------------------
+// shaders
+
+
+struct vk_shader_push_data_t
+{
+};
+
+
+typedef void ( *fn_vk_push_constants_t )( VkCommandBuffer cmd, VkPipelineLayout layout, const vk_shader_push_data_t& push_data );
+
+
 struct vk_shader_module_create_t
 {
 	VkShaderStageFlagBits stage;
@@ -272,6 +284,53 @@ struct vk_shader_module_create_t
 	const char* 		  entry;
 };
 
+
+struct vk_shader_create_graphics_t
+{
+	const char*               name;
+	vk_shader_module_create_t modules[ 2 ];  // vertex and fragment
+
+	VkPrimitiveTopology       topology;
+	VkCullModeFlags           cull_mode;
+	VkPolygonMode             polygon_mode;
+
+	// dynamic state, why are these not flags in vulkan
+	VkDynamicState*           dynamic_state;
+	u8                        dynamic_state_count;
+
+	// push constants
+	fn_vk_push_constants_t    fn_push_constants;
+	VkPushConstantRange	      push_constant_range;
+
+
+	// descriptor set bindings
+
+	// material data (maybe use encoding pattern for this?)
+	// vk_shader_create_material_t material;
+};
+
+
+struct vk_shader_data_graphics_t
+{
+	VkPipeline          pipeline;
+	VkPipelineBindPoint bind_point;
+};
+
+
+struct shader_static_register_graphics_t
+{
+	shader_static_register_graphics_t( vk_shader_create_graphics_t& srCreate )
+	{
+		// vk_shaders_register_graphics( &srCreate );
+	}
+};
+
+
+#define CH_SHADER_REGISTER_GRAPHICS( shader_create_struct ) \
+	static shader_static_register_graphics_t g_shader_register_##shader_create_struct( shader_create_struct );
+
+
+// --------------------------------------------------------------------------------------------
 
 struct backbuffer_image_t
 {
@@ -302,34 +361,42 @@ struct r_window_data_t
 
 	// only allocates to swap_image_count for the main window buffers
 	// probably could be moved elsewhere as well
-	VkCommandBuffer*      command_buffers;
+	VkCommandBuffer       command_buffers[ 2 ];
 
 	// amount allocated is swap_image_count
-	VkSemaphore*          semaphore_swapchain;  // signals that we have finished presenting the last image
-	VkSemaphore*          semaphore_render;     // signals that we have finished executing the last command buffer
+	VkSemaphore           semaphore_swapchain[ 2 ];  // signals that we have finished presenting the last image
+	VkSemaphore           semaphore_render[ 2 ];     // signals that we have finished executing the last command buffer
 
 	// amount allocated is swap_image_count
-	VkFence*              fence_render;
+	VkFence               fence_render[ 2 ];
 
 	// swapchain info - this could be moved elsewhere, as these are only used during window creation and destruction
 	// also getting the surface size with swap_extent, to avoid having to call SDL_GetWindowSize, but is it worth it?
 	// also backbuffer has a size parameter currently so this is kinda useless
 	VkExtent2D            swap_extent;
-	VkImage*              swap_images;
-	VkImageView*          swap_image_views;
+	VkImage               swap_images[ 2 ];
+	VkImageView           swap_image_views[ 2 ];
 
 	// Contains the framebuffers which are to be drawn to during command buffer recording.
 	// backbuffer_t       backbuffer;
 	vk_image_t            draw_image;
 	VkDescriptorSet       desc_draw_image = VK_NULL_HANDLE;
 
-	delete_queue_t        delete_queue;
-
 	fn_render_on_reset_t  fn_on_reset = nullptr;
 
 	// here because of mem alignment, 2 unused bytes at the end
 	u8                    frame_index = 0;
 	u8                    swap_image_count;
+};
+
+
+// temporary testing
+struct test_compute_push_t
+{
+	glm::vec4 data1;
+	glm::vec4 data2;
+	glm::vec4 data3;
+	glm::vec4 data4;
 };
 
 
@@ -402,6 +469,10 @@ extern VkCommandBuffer                     g_vk_command_buffer_transfer;
 
 extern VkDescriptorPool                    g_vk_imgui_desc_pool;
 extern VkDescriptorSetLayout               g_vk_imgui_desc_layout;
+
+// temp
+extern VkDescriptorPool                    g_vk_desc_pool_graphics;
+extern VkDescriptorSetLayout               g_vk_desc_layout_graphics;
 
 extern VkDescriptorPool                    g_vk_desc_pool;
 extern VkDescriptorSetLayout               g_vk_desc_draw_image_layout;
@@ -500,6 +571,8 @@ void                                       vk_blit_image_to_image( VkCommandBuff
 
 bool                                       vk_shaders_init();
 void                                       vk_shaders_shutdown();
+void                                       vk_shaders_update_push_constants();
+void                                       vk_shaders_register_graphics( vk_shader_create_graphics_t* shader_create );
 
 VkDescriptorPool                           vk_descriptor_pool_create( const char* name, u32 max_sets, vk_desc_pool_size_ratio_t* pool_sizes, u32 pool_size_count );
 bool                                       vk_descriptor_init();

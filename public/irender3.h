@@ -98,7 +98,14 @@ struct IRender3 : public ISystem
 	//     actually we might, because any debug draw commands go to the currently active physics environment, and we would know what views have the physics objects visible in the app code
 	//
 	//   - how would debug drawing work? you want to be able to do debug drawing to specific views, but also to the main window
-	//
+	// 
+	//   - what about material selction under cursor?
+	//   - what about renderables with vis testing disabled?
+	//   - what about renderables with shadow casting or receiving disabled?
+	// 
+	//   - what if you have a third person player model, and you don't want that rendered in the main view, but want a shadow casted on the world from it?
+	//     maybe have a cmd_set_shadow_renderables() function?
+	// 
 
 	/*
 	* // idea for basic render loop
@@ -131,7 +138,12 @@ struct IRender3 : public ISystem
 	* 
 	* // viewmodel rendering?
 	* render->cmd_set_viewport( c, viewmodel_view );
+	* render->cmd_enable_vis( c, false );
+	* render->cmd_enable_shadow_casting( c, false );
 	* render->cmd_draw_renderables( c, &viewmodel, 1 );
+	* render->cmd_enable_vis( c, true );
+	* render->cmd_enable_shadow_casting( c, true );
+	* 
 	* // do we need to render lights, particles, or other stuff here?
 	* render->cmd_set_viewport( c, main_view );
 	* 
@@ -144,11 +156,25 @@ struct IRender3 : public ISystem
 	* 
 	* render->cmd_render_finish( c );
 	* 
+	* // maybe have a callback for when this is done so the game code can do something with it? 
+	* render->take_screenshot( backbuffer, "screenshot.png" );
+	* 
 	* 
 	* // end of frame
 	* render->cmd_draw_target_to_window( target, window, params );  // only needed if using a custom rendertarget, and not backbuffer
 	* render->present( window );
 	*
+	* // other cmd functions
+	* render->cmd_enable_vis( c, false );
+	* render->cmd_draw_renderables( c, renderables, renderable_count );
+	* render->cmd_enable_vis( c, true );
+	* 
+	* render->cmd_enable_shadow_casting( c, false );
+	* render->cmd_draw_renderables( c, renderables, renderable_count );
+	* render->cmd_enable_shadow_casting( c, true );
+	* 
+	* render->cmd_enable_shadow_receiving( c, bool );
+	* 
 	*/
 
 	// --------------------------------------------------------------------------------------------

@@ -82,14 +82,6 @@ void vk_cmd_transfer_end( VkCommandBuffer command_buffer )
 // and when we render a window, we just pick some secondary command buffers or something? idk yet
 bool vk_command_buffers_create( r_window_data_t* window )
 {
-	window->command_buffers = ch_malloc< VkCommandBuffer >( window->swap_image_count );
-
-	if ( !window->command_buffers )
-	{
-		Log_Error( "Failed to allocate command buffers!" );
-		return false;
-	}
-
 	VkCommandBufferAllocateInfo alloc_info{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO };
 	alloc_info.commandPool        = g_vk_command_pool_graphics;
 	alloc_info.level              = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
@@ -104,9 +96,6 @@ void vk_command_buffers_destroy( r_window_data_t* window )
 	if ( window->command_buffers )
 	{
 		vkFreeCommandBuffers( g_vk_device, g_vk_command_pool_graphics, window->swap_image_count, window->command_buffers );
-		ch_free( window->command_buffers );
 	}
-
-	window->command_buffers = nullptr;
 }
 

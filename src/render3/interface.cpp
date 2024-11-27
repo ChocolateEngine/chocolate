@@ -261,8 +261,6 @@ struct Render3 final : public IRender3
 
 		vk_queue_wait_graphics();
 
-		window_data->delete_queue.flush();
-
 		// free vulkan resources
 		vk_render_sync_destroy( window_data );
 		vk_backbuffer_destroy( window_data );

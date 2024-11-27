@@ -165,9 +165,6 @@ bool vk_swapchain_create( r_window_data_t* window, VkSwapchainKHR old_swapchain 
 	if ( old_swapchain )
 		vkDestroySwapchainKHR( g_vk_device, old_swapchain, NULL );
 
-	window->swap_images      = ch_realloc( window->swap_images, image_count );
-	window->swap_image_views = ch_realloc( window->swap_image_views, image_count );
-
 	vk_check( vkGetSwapchainImagesKHR( g_vk_device, window->swapchain, &image_count, window->swap_images ), "Failed to get swapchain images" );
 
 	for ( u32 i = 0; i < image_count; ++i )
@@ -209,22 +206,12 @@ void vk_swapchain_destroy( r_window_data_t* window )
 		{
 			vkDestroyImageView( g_vk_device, window->swap_image_views[ i ], nullptr );
 		}
-
-		ch_free( window->swap_image_views );
-	}
-
-	// destroyed with vkDestroySwapchainKHR
-	if ( window->swap_images )
-	{
-		ch_free( window->swap_images );
 	}
 
 	if ( window->swapchain )
 		vkDestroySwapchainKHR( g_vk_device, window->swapchain, NULL );
 
-	window->swap_image_views = nullptr;
-	window->swap_images      = nullptr;
-	window->swapchain        = VK_NULL_HANDLE;
+	window->swapchain = VK_NULL_HANDLE;
 }
 
 
