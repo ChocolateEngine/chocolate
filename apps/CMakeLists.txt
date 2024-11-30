@@ -1,6 +1,6 @@
 
 option( STEAM "Build the steam abstraction" OFF )
-# option( GAME_OLD "Build the old game code" OFF )
+# option( DEATHMATCH "Build deathmatch game" OFF )
 option( GAME "Build the game code" ON )
 option( TOOLKIT "Build the toolkit" ON )
 option( RENDER_TEST "Build Render 3 Test App" ON )
@@ -17,24 +17,25 @@ get_property( CH_ROOT GLOBAL PROPERTY CH_ROOT )
 get_property( CH_PUBLIC GLOBAL PROPERTY CH_PUBLIC )
 get_property( CH_THIRDPARTY GLOBAL PROPERTY CH_THIRDPARTY )
 
+# TODO: Move this to the root cmake include?
 include( ${CH_ROOT}/scripts/core.cmake )
 
 # Now Add Sidury Projects
-add_subdirectory( src/launcher )
+add_subdirectory( launcher )
 
 if ( GAME )
-	add_subdirectory( src/game )
+	add_subdirectory( game )
 endif( GAME )
 
 if( TOOLKIT )
-	add_subdirectory( src/toolkit )
+	add_subdirectory( toolkit )
 endif( TOOLKIT )
 
 if ( RENDER_TEST )
- 	add_subdirectory( src/render_test )
+ 	add_subdirectory( render_test )
 endif( RENDER_TEST )
 
 if( STEAM )
-	add_subdirectory( src/steam )
+	add_subdirectory( steam )
 endif( STEAM )
 

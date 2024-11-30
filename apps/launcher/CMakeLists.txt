@@ -12,9 +12,9 @@ set( SIDURY_LAUNCHER_NAME sidury )
 set_target_properties(
 	LauncherSidury PROPERTIES
 	OUTPUT_NAME ${SIDURY_LAUNCHER_NAME}_${PLAT_FOLDER}
-	RUNTIME_OUTPUT_DIRECTORY ${CH_BUILD}
+	RUNTIME_OUTPUT_DIRECTORY ${CH_OUTPUT}
 	
-	VS_DEBUGGER_WORKING_DIRECTORY ${CH_BUILD}
+	VS_DEBUGGER_WORKING_DIRECTORY ${CH_OUTPUT}
 )
 
 # set output directories for all builds (Debug, Release, etc.)
@@ -22,7 +22,7 @@ foreach( OUTPUTCONFIG ${CMAKE_CONFIGURATION_TYPES} )
     string( TOUPPER ${OUTPUTCONFIG} OUTPUTCONFIG )
     set_target_properties(
     	LauncherSidury PROPERTIES
-    	RUNTIME_OUTPUT_DIRECTORY_${OUTPUTCONFIG} ${CH_BUILD}
+    	RUNTIME_OUTPUT_DIRECTORY_${OUTPUTCONFIG} ${CH_OUTPUT}
     )
 endforeach( OUTPUTCONFIG CMAKE_CONFIGURATION_TYPES )
 
@@ -34,7 +34,7 @@ if (MSVC)
 	add_custom_command(
 		TARGET LauncherSidury POST_BUILD
         # COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_LIST_DIR}/launcher.exe.manifest" "${CH_BIN}/${SIDURY_LAUNCHER_NAME}_${PLAT_FOLDER}.exe.manifest"
-        COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_LIST_DIR}/launcher.exe.manifest" "${CH_BUILD}/${SIDURY_LAUNCHER_NAME}_${PLAT_FOLDER}.exe.manifest"
+        COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_LIST_DIR}/launcher.exe.manifest" "${CH_OUTPUT}/${SIDURY_LAUNCHER_NAME}_${PLAT_FOLDER}.exe.manifest"
 		COMMAND_EXPAND_LISTS
         COMMENT "Copying ${SIDURY_LAUNCHER_NAME}.exe.manifest to launcher directory"
     )
@@ -53,9 +53,9 @@ set( TOOLKIT_LAUNCHER_NAME toolkit )
 set_target_properties(
 	LauncherToolkit PROPERTIES
 	OUTPUT_NAME ${TOOLKIT_LAUNCHER_NAME}_${PLAT_FOLDER}
-	RUNTIME_OUTPUT_DIRECTORY ${CH_BUILD}
+	RUNTIME_OUTPUT_DIRECTORY ${CH_OUTPUT}
 	
-	VS_DEBUGGER_WORKING_DIRECTORY ${CH_BUILD}
+	VS_DEBUGGER_WORKING_DIRECTORY ${CH_OUTPUT}
 )
 
 # set output directories for all builds (Debug, Release, etc.)
@@ -63,7 +63,7 @@ foreach( OUTPUTCONFIG ${CMAKE_CONFIGURATION_TYPES} )
     string( TOUPPER ${OUTPUTCONFIG} OUTPUTCONFIG )
     set_target_properties(
     	LauncherToolkit PROPERTIES
-    	RUNTIME_OUTPUT_DIRECTORY_${OUTPUTCONFIG} ${CH_BUILD}
+    	RUNTIME_OUTPUT_DIRECTORY_${OUTPUTCONFIG} ${CH_OUTPUT}
     )
 endforeach( OUTPUTCONFIG CMAKE_CONFIGURATION_TYPES )
 
@@ -75,7 +75,7 @@ if (MSVC)
 	add_custom_command(
 		TARGET LauncherToolkit POST_BUILD
         # COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_LIST_DIR}/launcher.exe.manifest" "${CH_BIN}/${TOOLKIT_LAUNCHER_NAME}_${PLAT_FOLDER}.exe.manifest"
-        COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_LIST_DIR}/launcher.exe.manifest" "${CH_BUILD}/${TOOLKIT_LAUNCHER_NAME}_${PLAT_FOLDER}.exe.manifest"
+        COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_LIST_DIR}/launcher.exe.manifest" "${CH_OUTPUT}/${TOOLKIT_LAUNCHER_NAME}_${PLAT_FOLDER}.exe.manifest"
 		COMMAND_EXPAND_LISTS
         COMMENT "Copying ${TOOLKIT_LAUNCHER_NAME}.exe.manifest to launcher directory"
     )
@@ -94,9 +94,9 @@ set( RENDER_TEST_LAUNCHER_NAME render3_test_launch )
 set_target_properties(
 	ch_render3_test_launch PROPERTIES
 	OUTPUT_NAME ${RENDER_TEST_LAUNCHER_NAME}_${PLAT_FOLDER}
-	RUNTIME_OUTPUT_DIRECTORY ${CH_BUILD}
+	RUNTIME_OUTPUT_DIRECTORY ${CH_OUTPUT}
 	
-	VS_DEBUGGER_WORKING_DIRECTORY ${CH_BUILD}
+	VS_DEBUGGER_WORKING_DIRECTORY ${CH_OUTPUT}
 )
 
 # set output directories for all builds (Debug, Release, etc.)
@@ -104,7 +104,7 @@ foreach( OUTPUTCONFIG ${CMAKE_CONFIGURATION_TYPES} )
     string( TOUPPER ${OUTPUTCONFIG} OUTPUTCONFIG )
     set_target_properties(
     	ch_render3_test_launch PROPERTIES
-    	RUNTIME_OUTPUT_DIRECTORY_${OUTPUTCONFIG} ${CH_BUILD}
+    	RUNTIME_OUTPUT_DIRECTORY_${OUTPUTCONFIG} ${CH_OUTPUT}
     )
 endforeach( OUTPUTCONFIG CMAKE_CONFIGURATION_TYPES )
 
@@ -116,7 +116,7 @@ if (MSVC)
 	add_custom_command(
 		TARGET ch_render3_test_launch POST_BUILD
         # COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_LIST_DIR}/launcher.exe.manifest" "${CH_BIN}/${RENDER_TEST_LAUNCHER_NAME}_${PLAT_FOLDER}.exe.manifest"
-        COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_LIST_DIR}/launcher.exe.manifest" "${CH_BUILD}/${RENDER_TEST_LAUNCHER_NAME}_${PLAT_FOLDER}.exe.manifest"
+        COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_LIST_DIR}/launcher.exe.manifest" "${CH_OUTPUT}/${RENDER_TEST_LAUNCHER_NAME}_${PLAT_FOLDER}.exe.manifest"
 		COMMAND_EXPAND_LISTS
         COMMENT "Copying ${RENDER_TEST_LAUNCHER_NAME}.exe.manifest to launcher directory"
     )

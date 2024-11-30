@@ -37,8 +37,8 @@ set_target_properties(
 	RUNTIME_OUTPUT_NAME ch_render_3_test
 	LIBRARY_OUTPUT_NAME ch_render_3_test
 
-	RUNTIME_OUTPUT_DIRECTORY ${CH_BUILD}/render_test/bin/${PLAT_FOLDER}
-	LIBRARY_OUTPUT_DIRECTORY ${CH_BUILD}/render_test/bin/${PLAT_FOLDER}
+	RUNTIME_OUTPUT_DIRECTORY ${CH_OUTPUT}/render_test/bin/${PLAT_FOLDER}
+	LIBRARY_OUTPUT_DIRECTORY ${CH_OUTPUT}/render_test/bin/${PLAT_FOLDER}
 )
 
 # set output directories for all builds (Debug, Release, etc.)
@@ -46,8 +46,8 @@ foreach( OUTPUTCONFIG ${CMAKE_CONFIGURATION_TYPES} )
     string( TOUPPER ${OUTPUTCONFIG} OUTPUTCONFIG )
     set_target_properties(
     	ch_render_3_test PROPERTIES
-    	RUNTIME_OUTPUT_DIRECTORY_${OUTPUTCONFIG} ${CH_BUILD}/render_test/bin/${PLAT_FOLDER}
-    	LIBRARY_OUTPUT_DIRECTORY_${OUTPUTCONFIG} ${CH_BUILD}/render_test/bin/${PLAT_FOLDER}
+    	RUNTIME_OUTPUT_DIRECTORY_${OUTPUTCONFIG} ${CH_OUTPUT}/render_test/bin/${PLAT_FOLDER}
+    	LIBRARY_OUTPUT_DIRECTORY_${OUTPUTCONFIG} ${CH_OUTPUT}/render_test/bin/${PLAT_FOLDER}
     )
 endforeach( OUTPUTCONFIG CMAKE_CONFIGURATION_TYPES )
 

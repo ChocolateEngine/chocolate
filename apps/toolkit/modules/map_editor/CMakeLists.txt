@@ -50,8 +50,8 @@ set_target_properties(
 	RUNTIME_OUTPUT_NAME ch_map_editor
 	LIBRARY_OUTPUT_NAME ch_map_editor
 
-	RUNTIME_OUTPUT_DIRECTORY ${CH_BUILD}/toolkit/bin/${PLAT_FOLDER}/modules
-	LIBRARY_OUTPUT_DIRECTORY ${CH_BUILD}/toolkit/bin/${PLAT_FOLDER}/modules
+	RUNTIME_OUTPUT_DIRECTORY ${CH_OUTPUT}/toolkit/bin/${PLAT_FOLDER}/modules
+	LIBRARY_OUTPUT_DIRECTORY ${CH_OUTPUT}/toolkit/bin/${PLAT_FOLDER}/modules
 )
 
 # set output directories for all builds (Debug, Release, etc.)
@@ -59,8 +59,8 @@ foreach( OUTPUTCONFIG ${CMAKE_CONFIGURATION_TYPES} )
     string( TOUPPER ${OUTPUTCONFIG} OUTPUTCONFIG )
     set_target_properties(
     	Tool_MapEditor PROPERTIES
-    	RUNTIME_OUTPUT_DIRECTORY_${OUTPUTCONFIG} ${CH_BUILD}/toolkit/bin/${PLAT_FOLDER}/modules
-    	LIBRARY_OUTPUT_DIRECTORY_${OUTPUTCONFIG} ${CH_BUILD}/toolkit/bin/${PLAT_FOLDER}/modules
+    	RUNTIME_OUTPUT_DIRECTORY_${OUTPUTCONFIG} ${CH_OUTPUT}/toolkit/bin/${PLAT_FOLDER}/modules
+    	LIBRARY_OUTPUT_DIRECTORY_${OUTPUTCONFIG} ${CH_OUTPUT}/toolkit/bin/${PLAT_FOLDER}/modules
     )
 endforeach( OUTPUTCONFIG CMAKE_CONFIGURATION_TYPES )
 

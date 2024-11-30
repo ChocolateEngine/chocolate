@@ -38,6 +38,9 @@ chocolate/thirdparty/SDL2
 chocolate/thirdparty/steamaudio
 chocolate/thirdparty/tracy
 
+# don't add the steam sdk
+apps/steam/steamworks_sdk_157
+
 #qpc generated files
 scripts/*.mak
 

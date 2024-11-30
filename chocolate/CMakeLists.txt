@@ -1,10 +1,13 @@
 cmake_minimum_required( VERSION 3.18 FATAL_ERROR )
 
+message( "----------------------- Chocolate Engine -----------------------" )
+
 # make these global for all projects, though they need to use get_property to get these
-set_property( GLOBAL PROPERTY CH_ROOT           ${CMAKE_CURRENT_LIST_DIR} )
+set_property( GLOBAL PROPERTY CH_ROOT           ${CMAKE_CURRENT_LIST_DIR} )  # Engine Root
 set_property( GLOBAL PROPERTY CH_PUBLIC         ${CMAKE_CURRENT_LIST_DIR}/public )
 set_property( GLOBAL PROPERTY CH_THIRDPARTY     ${CMAKE_CURRENT_LIST_DIR}/thirdparty )
-set_property( GLOBAL PROPERTY CH_BUILD          ${CMAKE_CURRENT_LIST_DIR}/../output )
+set_property( GLOBAL PROPERTY CH_OUTPUT         ${CMAKE_CURRENT_LIST_DIR}/../../chocolate_output )  # Final Output Folder
+set_property( GLOBAL PROPERTY CH_BUILD          ${CMAKE_CURRENT_LIST_DIR}/../obj )  # Build Objects
 
 option( RENDER3 "Build Render 3" ON )
 option( RENDER2 "Build Render 2" ON )
@@ -15,6 +18,7 @@ set( CH_SRC ${CMAKE_CURRENT_LIST_DIR}/src )
 get_property( CH_ROOT GLOBAL PROPERTY CH_ROOT )
 get_property( CH_PUBLIC GLOBAL PROPERTY CH_PUBLIC )
 get_property( CH_THIRDPARTY GLOBAL PROPERTY CH_THIRDPARTY )
+get_property( CH_OUTPUT GLOBAL PROPERTY CH_OUTPUT )
 get_property( CH_BUILD GLOBAL PROPERTY CH_BUILD )
 
 
@@ -41,8 +45,8 @@ endif( RENDER2 )
 
 add_subdirectory( ${CH_SRC}/gui )
 add_subdirectory( ${CH_SRC}/input )
-# add_subdirectory( ${CH_SRC}/physics )
-# add_subdirectory( ${CH_SRC}/physics_wrapper )
+add_subdirectory( ${CH_SRC}/physics )
+add_subdirectory( ${CH_SRC}/physics_wrapper )
 # add_subdirectory( ${CH_SRC}/asset_system )
 
 # Public Files

@@ -79,8 +79,8 @@ source_group(
 # 	set( MIMALLOC_COPY_CMD_DEBUG   ${CMAKE_COMMAND} -E copy "${MIMALLOC_BUILD}/Debug/mimalloc-override.dll" "${CH_BIN}/mimalloc-override.dll" )
 # 	set( MIMALLOC_COPY_CMD_RELEASE ${CMAKE_COMMAND} -E copy "${MIMALLOC_BUILD}/Release/mimalloc-override.dll" "${CH_BIN}/mimalloc-override.dll" )
 # 	
-# 	# set( MIMALLOC_COPY_CMD_DEBUG   xcopy /D /Y $<1:"${MIMALLOC_BUILD}/Debug/mimalloc-override.dll"> $<1:"${CH_BUILD}/mimalloc-override.dll"> )
-# 	# set( MIMALLOC_COPY_CMD_RELEASE xcopy /D /Y $<1:"${MIMALLOC_BUILD}/Release/mimalloc-override.dll"> $<1:"${CH_BUILD}/mimalloc-override.dll"> )
+# 	# set( MIMALLOC_COPY_CMD_DEBUG   xcopy /D /Y $<1:"${MIMALLOC_BUILD}/Debug/mimalloc-override.dll"> $<1:"${CH_OUTPUT}/mimalloc-override.dll"> )
+# 	# set( MIMALLOC_COPY_CMD_RELEASE xcopy /D /Y $<1:"${MIMALLOC_BUILD}/Release/mimalloc-override.dll"> $<1:"${CH_OUTPUT}/mimalloc-override.dll"> )
 # 	
 # 	add_custom_command(
 # 		TARGET Core POST_BUILD
