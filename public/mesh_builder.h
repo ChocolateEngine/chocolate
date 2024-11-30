@@ -1,9 +1,9 @@
 #pragma once
 
-#if 0
+#if !USING_RENDER3
 
 #include "core/core.h"
-#include "irender.h"
+#include "igraphics.h"
 
 
 // Vertex containing all possible values

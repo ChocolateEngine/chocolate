@@ -6,6 +6,9 @@ set_property( GLOBAL PROPERTY CH_PUBLIC         ${CMAKE_CURRENT_LIST_DIR}/public
 set_property( GLOBAL PROPERTY CH_THIRDPARTY     ${CMAKE_CURRENT_LIST_DIR}/thirdparty )
 set_property( GLOBAL PROPERTY CH_BUILD          ${CMAKE_CURRENT_LIST_DIR}/../output )
 
+option( RENDER3 "Build Render 3" ON )
+option( RENDER2 "Build Render 2" ON )
+
 set( CH_SRC ${CMAKE_CURRENT_LIST_DIR}/src )
 
 # grab the globals and put them here for chocolate's projects
@@ -26,11 +29,15 @@ add_subdirectory( ${CH_SRC}/core )
 add_subdirectory( ${CH_SRC}/imgui )
 add_subdirectory( ${CH_SRC}/audio )
 
-add_subdirectory( ${CH_SRC}/render3 )
-# add_subdirectory( ${CH_SRC}/graphics_data )
+if ( RENDER3 )
+	add_subdirectory( ${CH_SRC}/render3 )
+	# add_subdirectory( ${CH_SRC}/graphics_data )
+endif( RENDER3 )
 
-# add_subdirectory( ${CH_SRC}/render )
-# add_subdirectory( ${CH_SRC}/graphics_api )
+if ( RENDER2 )
+	add_subdirectory( ${CH_SRC}/render )
+	add_subdirectory( ${CH_SRC}/graphics_api )
+endif( RENDER2 )
 
 add_subdirectory( ${CH_SRC}/gui )
 add_subdirectory( ${CH_SRC}/input )

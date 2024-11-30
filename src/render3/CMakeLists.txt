@@ -33,6 +33,11 @@ target_link_libraries(
 	SDL2
 )
 
+target_compile_definitions(
+	ch_render_3 PRIVATE
+	USING_RENDER3=1
+)
+
 target_include_directories(
 	ch_render_3 PRIVATE
 	${CH_PUBLIC}/imgui

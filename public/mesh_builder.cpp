@@ -1,8 +1,8 @@
-#if 0
+#if !USING_RENDER3
 
 #include "core/core.h"
 #include "types/transform.h"
-#include "irender.h"
+#include "igraphics.h"
 #include "mesh_builder.h"
 
 #include <glm/vec3.hpp>
@@ -90,7 +90,6 @@ void MeshBuilder::End( bool sCreateBuffers )
 {
 	PROF_SCOPE();
 
-#if 0
 	if ( apMesh->aMeshes.size() )
 	{
 		Log_WarnF( gLC_MeshBuilder, "Meshes already created for Model: \"%s\"\n", apDebugName ? apDebugName : "internal" );
@@ -255,7 +254,6 @@ void MeshBuilder::End( bool sCreateBuffers )
 
 #if MESH_BUILDER_USE_IND
 	apGraphics->CreateIndexBuffer( apMesh->apBuffers, vertData, apDebugName );
-#endif
 #endif
 }
 
@@ -620,7 +618,7 @@ static bool realloc_free_cast( T*& spData, size_t sCount )
 }
 
 
-void MeshBuild_FinishMesh( IRender3* render_api, MeshBuildData_t& srMeshBuildData, Model* spModel, bool sCalculateIndices, bool sUploadMesh, const char* spDebugName )
+void MeshBuild_FinishMesh( IGraphics* spGraphics, MeshBuildData_t& srMeshBuildData, Model* spModel, bool sCalculateIndices, bool sUploadMesh, const char* spDebugName )
 {
 	if ( spModel->aMeshes.size() )
 	{
