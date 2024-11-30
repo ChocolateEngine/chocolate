@@ -1,7 +1,7 @@
 #pragma once
 
 #include "physics/iphysics.h"
-#include "irender3.h"
+#include "igraphics.h"
 
 #ifndef JPH_DEBUG_RENDERER
 	// Hack to compile DebugRenderer
@@ -306,10 +306,6 @@ public:
 };
 
 
-// for debugging
-extern IRender3* render;
-
-
 // Layer that objects can be in, determines which other objects it can collide with
 // Typically you at least want to have 1 layer for moving bodies and 1 layer for static bodies, but you can have more
 // layers if you want. E.g. you could have a layer for high detail collision (which is not used by the physics simulation
@@ -335,4 +331,4 @@ extern JPH::BroadPhaseLayer BroadPhase_Stationary;
 extern JPH::BroadPhaseLayer BroadPhase_Moving;
 extern JPH::BroadPhaseLayer BroadPhase_NoCollide;
 
-
+extern IRender*             render;

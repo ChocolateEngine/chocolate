@@ -106,9 +106,14 @@ void LoadObj_Fast( const std::string &srBasePath, const std::string &srPath, Mod
 			createData.aUsage  = EImageUsage_Sampled;
 			createData.aFilter = EImageFilter_Linear;
 
-			auto SetTexture    = [ & ]( const std::string& param, fastObjTexture& fastTexture )
+			auto SetTexture    = [ & ]( const std::string& param, u32 tex_index )
 			{
-				if ( fastTexture.path == nullptr )
+				if ( tex_index > obj->texture_count )
+					return;
+
+				fastObjTexture& obj_texture = obj->textures[ tex_index ];
+
+				if ( obj_texture.path == nullptr )
 					return;
 
 				ch_handle_t texture = CH_INVALID_HANDLE;
@@ -118,11 +123,11 @@ void LoadObj_Fast( const std::string &srBasePath, const std::string &srPath, Mod
 				
 				//if ( FileSys_IsAbsolute( fastTexture.name ) )
 				//{
-				//	texName = fastTexture.name;
+				//	texName = obj_texture.name;
 				//}
 				//else
 				//{
-					texName = fastTexture.path;
+				texName             = obj_texture.path;
 				//}
 
 				if ( FileSys_IsRelative( texName ) )
@@ -284,23 +289,28 @@ void Graphics_LoadSceneObj( const std::string& srBasePath, const std::string& sr
 			createData.aUsage  = EImageUsage_Sampled;
 			createData.aFilter = EImageFilter_Linear;
 
-			auto SetTexture    = [ & ]( const std::string& param, const char* texname )
+			auto SetTexture    = [ & ]( const std::string& param, u32 tex_index )
 			{
-				if ( texname == nullptr )
+				if ( tex_index > obj->texture_count )
+					return;
+
+				fastObjTexture& obj_texture = obj->textures[ tex_index ];
+
+				if ( obj_texture.name == nullptr )
 					return;
 
 				ch_handle_t texture = CH_INVALID_HANDLE;
 
-				if ( FileSys_IsRelative( texname ) )
-					gGraphics.LoadTexture( texture, baseDir2 + "/" + texname, createData );
+				if ( FileSys_IsRelative( obj_texture.name ) )
+					gGraphics.LoadTexture( texture, baseDir2 + "/" + obj_texture.name, createData );
 				else
-					gGraphics.LoadTexture( texture, texname, createData );
+					gGraphics.LoadTexture( texture, obj_texture.name, createData );
 
 				gGraphics.Mat_SetVar( material, param, texture );
 			};
 
-			SetTexture( MatVar_Diffuse, objMat.map_Kd.path );
-			SetTexture( MatVar_Emissive, objMat.map_Ke.path );
+			SetTexture( MatVar_Diffuse, objMat.map_Kd );
+			SetTexture( MatVar_Emissive, objMat.map_Ke );
 		}
 
 		materials.push_back( material );
