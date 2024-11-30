@@ -24,7 +24,7 @@ SHADER_FAIL_LIST = []
 def parse_args() -> argparse.Namespace:
     arg_parser = argparse.ArgumentParser()
     arg_parser.add_argument("-a", "--args", help="shader compiling arguments", default="")
-    arg_parser.add_argument("-o", "--output", help="shader output directory", default="../../../../output/core")
+    arg_parser.add_argument("-o", "--output", help="shader output directory", default="../../../../../chocolate_output/core")
     return arg_parser.parse_args()
 
 
