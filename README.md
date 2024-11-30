@@ -23,8 +23,8 @@
 - OPTIONAL - If you want to run render3, compile render3 shaders here as well: `chocolate/src/render3/shaders_glsl/_compile.bat`
 - Make a folder called `build` in the `chocolate` folder (`chocolate/build`)
 - Enter that folder and in cmd/terminal, run `cmake ..` on Windows, or `cmake -DCMAKE_BUILD_TYPE=Debug ..` on Linux (also Release is an option)
-- Finish with standard cmake build stuff (VS2022 on Windows, `make -j 8` on linux)
-- Run `output/sidurylauncher.exe` to run the engine
+- Finish with standard cmake build stuff (Open ChocolateEngine.sln on Windows and build, `make -j8` on linux, -j selects the number of threads to use for building)
+- Run any of the exe's in `chocolate_output` to run an app (toolkit_win64.exe requires --game sidury as a launch option, as it's an editor for games on the engine, so this option selects a game to use)
 
 
 Current CMake Options:
