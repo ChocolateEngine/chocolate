@@ -1,16 +1,16 @@
-[submodule "thirdparty/speedykeyv"]
-	path = thirdparty/speedykeyv
+[submodule "chocolate/thirdparty/speedykeyv"]
+	path = chocolate/thirdparty/speedykeyv
 	url = https://github.com/ozxybox/SpeedyKeyV
-[submodule "thirdparty/cgltf"]
-	path = thirdparty/cgltf
+[submodule "chocolate/thirdparty/cgltf"]
+	path = chocolate/thirdparty/cgltf
 	url = https://github.com/jkuhlmann/cgltf
-[submodule "thirdparty/KTX-Software"]
-	path = thirdparty/KTX-Software
+[submodule "chocolate/thirdparty/KTX-Software"]
+	path = chocolate/thirdparty/KTX-Software
 	url = https://github.com/KhronosGroup/KTX-Software.git
-[submodule "thirdparty/fast_obj"]
-	path = thirdparty/fast_obj
+[submodule "chocolate/thirdparty/fast_obj"]
+	path = chocolate/thirdparty/fast_obj
 	url = https://github.com/thisistherk/fast_obj.git
-[submodule "thirdparty/mimalloc"]
-	path = thirdparty/mimalloc
+[submodule "chocolate/thirdparty/mimalloc"]
+	path = chocolate/thirdparty/mimalloc
 	url = https://github.com/microsoft/mimalloc.git
 	

@@ -30,13 +30,13 @@ out/
 *.tlog
 
 # downloaded from thirdparty.py
-thirdparty/glm
-thirdparty/libvorbis
-thirdparty/libogg
-thirdparty/JoltPhysics
-thirdparty/SDL2
-thirdparty/steamaudio
-thirdparty/tracy
+chocolate/thirdparty/glm
+chocolate/thirdparty/libvorbis
+chocolate/thirdparty/libogg
+chocolate/thirdparty/JoltPhysics
+chocolate/thirdparty/SDL2
+chocolate/thirdparty/steamaudio
+chocolate/thirdparty/tracy
 
 #qpc generated files
 scripts/*.mak
