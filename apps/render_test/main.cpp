@@ -16,11 +16,11 @@ CONVAR_RANGE_FLOAT_NAME( host_fps_max, "app.fps.max", 300, 0, 5000, "Maximum FPS
 CONVAR_RANGE_FLOAT_NAME( host_timescale, "app.time.scale", 1, 0, FLT_MAX, "Scaled Frametime of the App" );
 CONVAR_RANGE_FLOAT_NAME( host_max_frametime, "app.max.frametime", 0.1, 0, FLT_MAX, "Max time in seconds a frame can be" );
 
-CONVAR_FLOAT_NAME( g_move_speed, "view.move.speed", 1, "Move Speed" );
+CONVAR_FLOAT_NAME( g_move_speed, "input.move.speed", 1, "Move Speed" );
 
-CONVAR_FLOAT_NAME( g_mouse_pitch, "view.mouse.sensitivity.pitch", 0.022, CVARF_ARCHIVE, "Mouse Pitch" );
-CONVAR_FLOAT_NAME( g_mouse_yaw, "view.mouse.sensitivity.yaw", 0.022, CVARF_ARCHIVE, "Mouse Yaw" );
-CONVAR_FLOAT_NAME( g_mouse_sensitivity, "view.mouse.sensitivity", 1.0, CVARF_ARCHIVE, "Mouse Sensitivity" );
+CONVAR_FLOAT_NAME( g_mouse_pitch, "input.mouse.sensitivity.pitch", 0.022, CVARF_ARCHIVE, "Mouse Pitch" );
+CONVAR_FLOAT_NAME( g_mouse_yaw, "input.mouse.sensitivity.yaw", 0.022, CVARF_ARCHIVE, "Mouse Yaw" );
+CONVAR_FLOAT_NAME( g_mouse_sensitivity, "input.mouse.sensitivity", 1.0, CVARF_ARCHIVE, "Mouse Sensitivity" );
 
 CONVAR_FLOAT_NAME( g_view_nearz, "view.nearz", 0.05f, CVARF_ARCHIVE, "Near Z" );
 CONVAR_FLOAT_NAME( g_view_farz, "view.farz", 1000.f, CVARF_ARCHIVE, "Far Z" );
