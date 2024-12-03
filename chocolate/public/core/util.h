@@ -174,6 +174,18 @@ inline To* ch_calloc( u64 sCount )
 }
 
 
+template< typename T >
+T* ch_recalloc( T* data, size_t count, size_t add_count )
+{
+	T* new_data = (T*)realloc( data, ( count + add_count ) * sizeof( T ) );
+
+	if ( new_data )
+		memset( &new_data[ count ], 0, add_count * sizeof( T ) );
+
+	return new_data;
+}
+
+
 // Allocate X Amount of a specific type on the stack
 template< typename To >
 inline To* ch_stack_alloc( u64 sCount )
@@ -208,6 +220,84 @@ inline To* ch_stack_alloc( u64 sCount )
 //	return strncasecmp( spStr1, spStr1, sCount );
 //#endif
 //}
+
+
+// removes the element and shifts everything back, and memsets the last item with 0
+template< typename T, typename COUNT_TYPE >
+void util_array_remove_element( T* data, COUNT_TYPE& count, COUNT_TYPE index )
+{
+	if ( index >= count )
+		return;
+
+	memcpy( &data[ index ], &data[ index + 1 ], sizeof( T ) * ( count - index ) );
+	count--;
+
+	if ( count == 0 )
+		return;
+
+	memset( &data[ count ], 0, sizeof( T ) );
+}
+
+
+template< typename T >
+bool util_array_append( T*& data, u32 count )
+{
+#if 1
+	T* new_data = ch_recalloc< T >( data, count, 1 );
+
+	if ( !new_data )
+		return true;
+
+	data = new_data;
+#else
+	T* new_data = ch_realloc< T >( data, count + 1 );
+
+	if ( !new_data )
+		return true;
+
+	data = new_data;
+	memset( &data[ count ], 0, sizeof( T ) );
+#endif
+
+	return false;
+}
+
+
+template< typename T >
+bool util_array_append_err( T*& data, u32 count, const char* msg )
+{
+#if 1
+	T* new_data = ch_recalloc< T >( data, count, 1 );
+
+	if ( !new_data )
+	{
+		fputs( msg, stdout );
+		return true;
+	}
+
+	data = new_data;
+#else
+	T* new_data = ch_realloc< T >( data, count + 1 );
+
+	if ( !new_data )
+		return true;
+
+	data = new_data;
+	memset( &data[ count ], 0, sizeof( T ) );
+#endif
+
+	return false;
+}
+
+
+template< typename T >
+void util_zeromem( T* data )
+{
+	if ( !data )
+		return;
+
+	memset( data, 0, sizeof( T ) );
+}
 
 
 // ==============================================================================
@@ -513,35 +603,48 @@ CORE_API bool        ch_to_long( const char* spValue, long& srOut );
 CORE_API std::string ch_to_string( float value );
 
 
+template< typename T >
+inline T rand_num( T min, T max )
+{
+	return min + rand() % ( max + 1 - min );
+}
+
+
 inline int rand_int( int min, int max )
 {
 	return min + rand() % ( max + 1 - min );
 }
+
 
 inline u8 rand_u8( u8 min, u8 max )
 {
 	return min + rand() % ( max + 1 - min );
 }
 
+
 inline u16 rand_u16( u16 min, u16 max )
 {
 	return min + rand() % ( max + 1 - min );
 }
 
+
 inline u32 rand_u32( u32 min, u32 max )
 {
-	return rand_int( min, max );
+	return min + rand() % ( max + 1 - min );
 }
+
 
 inline u64 rand_u64( u64 min, u64 max )
 {
 	return min + rand() % ( max + 1 - min );
 }
 
+
 inline float rand_float( float min, float max )
 {
-	return min + ( ( static_cast<float>( rand() ) / static_cast<float>( RAND_MAX ) ) * ( max - min ) );
+	return min + ( ( static_cast< float >( rand() ) / static_cast< float >( RAND_MAX ) ) * ( max - min ) );
 }
+
 
 template< typename KEY, typename VALUE >
 inline u64 ch_size_of_umap( const std::unordered_map< KEY, VALUE >& srMap )
