@@ -7,6 +7,7 @@
   #include "mimalloc-new-delete.h"
 #endif
 
+Module sdl2  = 0;
 Module core  = 0;
 Module imgui = 0;
 Module app   = 0;
@@ -98,9 +99,10 @@ const char* sys_get_error()
 
 void unload_objects()
 {
+	if ( app ) sys_close_library( app );
 	if ( core ) sys_close_library( core );
 	if ( imgui ) sys_close_library( imgui );
-	if ( app ) sys_close_library( app );
+	if ( sdl2 ) sys_close_library( sdl2 );
 }
 
 
@@ -170,6 +172,9 @@ int start( int argc, char *argv[], const char* app_path, const char* module_name
 	int  ( *app_init )()                                                = 0;
 	int  ( *core_init )( int argc, char* argv[], const char* app_path ) = 0;
 	void ( *core_exit )( bool write_archive )                           = 0;
+
+	if ( load_object( &sdl2, "bin/" CH_PLAT_FOLDER "/SDL2" EXT_DLL ) == -1 )
+		return -1;
 
 	if ( load_object( &core, "bin/" CH_PLAT_FOLDER "/ch_core" EXT_DLL ) == -1 )
 		return -1;
