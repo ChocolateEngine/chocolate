@@ -3,5 +3,5 @@
 
 int main( int argc, char* argv[] )
 {
-	return start( argc, argv, "render_test", "ch_render3_test" );
+	return start( argc, argv, "render_test", "ch_render_3_test" );
 }
