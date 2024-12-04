@@ -308,8 +308,8 @@ void util_zeromem( T* data )
 
 
 CORE_API void ch_str_free( char* string );
-CORE_API bool ch_str_equals( const char* str1, u64 str1Len, const char* str2, u64 str2Len );
-CORE_API bool ch_str_equals( const char* str1, u64 str1Len, const char* str2 );
+CORE_API bool ch_str_equals( const char* str1, size_t str1Len, const char* str2, size_t str2Len );
+CORE_API bool ch_str_equals( const char* str1, size_t str1Len, const char* str2 );
 
 
 // This is an easy way to pass ch_string to functions that take a char* and a size
