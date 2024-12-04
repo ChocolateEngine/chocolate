@@ -28,7 +28,7 @@ static bool               gSingleWindow   = args_register( "Single Window Mode, 
 
 
 SDL_Window*               gpWindow        = nullptr;
-void*                     gpSysWindow     = nullptr;
+void*                     gpSysWindow     = nullptr;  // Only Used on WIN32
 ch_handle_t                gGraphicsWindow = CH_INVALID_HANDLE;
 
 Toolkit                   toolkit;
@@ -633,34 +633,14 @@ void WindowResizeCallback( void* hwnd )
 bool App_CreateMainWindow()
 {
 	// Create Main Window
-	std::string windowName;
+	std::string window_name;
 
-	windowName = ( Core_GetAppInfo().apWindowTitle ) ? Core_GetAppInfo().apWindowTitle : "Chocolate Engine";
-	windowName += vstring( " - Build %zd - Compiled On - %s %s", Core_GetBuildNumber(), Core_GetBuildDate(), Core_GetBuildTime() );
+	window_name = ( Core_GetAppInfo().apWindowTitle ) ? Core_GetAppInfo().apWindowTitle : "Chocolate Engine";
+	window_name += vstring( " - Build %zd - Compiled On - %s %s", Core_GetBuildNumber(), Core_GetBuildDate(), Core_GetBuildTime() );
 
-#ifdef _WIN32
-	gpSysWindow = sys_create_window( windowName.c_str(), gWidth, gHeight, gMaxWindow );
-
-	if ( !gpSysWindow )
+	if ( !sys_create_window( gpSysWindow, gpWindow, window_name.c_str(), gWidth, gHeight, gMaxWindow ) )
 	{
 		Log_Error( "Failed to create toolkit window\n" );
-		return false;
-	}
-
-	gpWindow = SDL_CreateWindowFrom( gpSysWindow );
-#else
-	int flags = SDL_WINDOW_VULKAN | SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI;
-
-	if ( gMaxWindow )
-		flags |= SDL_WINDOW_MAXIMIZED;
-
-	gpWindow = SDL_CreateWindow( windowName.c_str(), SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
-	                             gWidth, gHeight, flags );
-#endif
-
-	if ( !gpWindow )
-	{
-		Log_Error( "Failed to create SDL2 Window\n" );
 		return false;
 	}
 

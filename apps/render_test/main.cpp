@@ -38,7 +38,7 @@ static bool   g_wait_for_debugger = args_register( "Upon Program Startup, Wait f
 static bool   g_running           = true;
 
 SDL_Window*   g_window            = nullptr;
-void*         g_window_native     = nullptr;
+void*         g_window_native     = nullptr;  // Only Used on WIN32
 ch_handle_t   g_graphics_window   = CH_INVALID_HANDLE;
 
 glm::mat4     g_view{};
@@ -117,29 +117,9 @@ bool create_main_window()
 	window_name = ( Core_GetAppInfo().apWindowTitle ) ? Core_GetAppInfo().apWindowTitle : "Chocolate Engine";
 	window_name += vstring( " - Build %zd - Compiled On - %s %s", Core_GetBuildNumber(), Core_GetBuildDate(), Core_GetBuildTime() );
 
-#ifdef _WIN32
-	g_window_native = sys_create_window( window_name.c_str(), g_width, g_height, g_maximize );
-
-	if ( !g_window_native )
+	if ( !sys_create_window( g_window_native, g_window, window_name.c_str(), g_width, g_height, g_maximize ) )
 	{
-		Log_Error( "Failed to create game window\n" );
-		return false;
-	}
-
-	g_window = SDL_CreateWindowFrom( g_window_native );
-#else
-	int flags = SDL_WINDOW_VULKAN | SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI;
-
-	if ( g_maximize )
-		flags |= SDL_WINDOW_MAXIMIZED;
-
-	g_window = SDL_CreateWindow( window_name.c_str(), SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
-	                             g_width, g_height, flags );
-#endif
-
-	if ( !g_window )
-	{
-		Log_Error( "Failed to create SDL2 Window\n" );
+		Log_Error( "Failed to create render test window\n" );
 		return false;
 	}
 

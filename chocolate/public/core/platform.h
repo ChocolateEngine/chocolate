@@ -1,6 +1,7 @@
 #pragma once
 
-typedef void* Module;
+typedef void*             Module;
+typedef struct SDL_Window SDL_Window;
 
 
 #ifdef _WIN32
@@ -134,11 +135,10 @@ CORE_API int         sys_get_core_count();
 
 CORE_API cpu_info_t  sys_get_cpu_info();
 
-#ifdef _WIN32
 // TODO: use a struct for this probably
-CORE_API void* sys_create_window( const char* spWindowName, int sWidth, int sHeight, bool maximize );
-// CORE_API bool sys_create_window( void* native_window, SDL_Window* sdl_window, const char* spWindowName, int sWidth, int sHeight, bool maximize );
+CORE_API bool        sys_create_window( void*& native_window, SDL_Window*& sdl_window, const char* window_name, int width, int height, bool maximize );
 
+#ifdef _WIN32
 CORE_API void  sys_set_resize_callback( FResizeCallback callback );
 
 CORE_API int   sys_execute( const char* spFile, const char* spArgs );

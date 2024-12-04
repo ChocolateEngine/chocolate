@@ -1,7 +1,10 @@
+#if __unix__
+
 #include "core/platform.h"
 #include "core/log.h"
 
-#if __unix__
+#include "SDL_video.h"
+
 
 #include <stdio.h>
 #include <dlfcn.h>
@@ -75,23 +78,18 @@ int sys_get_core_count()
 }
 
 
-void* sys_create_window( const char* spWindowName, int sWidth, int sHeight, bool sMaximize )
+bool sys_create_window( void*& native_window, SDL_Window*& sdl_window, const char* window_name, int width, int height, bool maximize )
 {
-#if 1
-    // UNUSED AT THE MOMENT, WILL USE LATER
-	return nullptr;
-#else
     // lmao just pass in vulkan here
 	int flags = SDL_WINDOW_VULKAN | SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI;
 
-	if ( sMaximize )
+	if ( maximize )
 		flags |= SDL_WINDOW_MAXIMIZED;
 
-	SDL_Window window = SDL_CreateWindow( spWindowName, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
-	                                  sWidth, sHeight, flags );
+	sdl_window = SDL_CreateWindow( window_name, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
+	                                       width, height, flags );
 
-	return window;
-#endif
+	return sdl_window;
 }
 
 

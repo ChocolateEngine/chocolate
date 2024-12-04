@@ -583,7 +583,7 @@ void sys_set_resize_callback( FResizeCallback callback )
 }
 
 
-void* sys_create_window( const char* spWindowName, int sWidth, int sHeight, bool sMaximize )
+bool sys_create_window( void*& native_window, SDL_Window*& sdl_window, const char* window_name, int width, int height, bool maximize )
 {
 	const LPTSTR _ClassName( MAKEINTATOM( g_window_class ) );
 
@@ -593,8 +593,8 @@ void* sys_create_window( const char* spWindowName, int sWidth, int sHeight, bool
 	RECT         rect;
 	rect.left   = 0;
 	rect.top    = 0;
-	rect.right  = sWidth;
-	rect.bottom = sHeight;
+	rect.right  = width;
+	rect.bottom = height;
 
 	// thanks win32
 	// According to the wiki, this function
@@ -610,7 +610,7 @@ void* sys_create_window( const char* spWindowName, int sWidth, int sHeight, bool
 	HWND window = CreateWindowExA(
 	  dwExStyle,
 	  _ClassName,
-	  spWindowName,
+	  window_name,
 	  dwStyle,
 	  CW_USEDEFAULT,
 	  CW_USEDEFAULT,
@@ -622,15 +622,23 @@ void* sys_create_window( const char* spWindowName, int sWidth, int sHeight, bool
 	if ( !window )
 	{
 		sys_print_last_error( "Failed to create window\n" );
-		return nullptr;
+		return false;
 	}
 
-	if ( sMaximize )
+	if ( maximize )
 	{
 		ShowWindow( window, SW_MAXIMIZE );
 	}
 
-	return window;
+	native_window = window;
+
+	// Now make this an SDL2 Window
+	sdl_window    = SDL_CreateWindowFrom( window );
+
+	if ( sdl_window )
+		return true;
+
+	return false;
 }
 
 

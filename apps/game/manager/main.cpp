@@ -38,7 +38,7 @@ static bool                gDedicatedServer   = args_register( "Host a Dedicated
 static bool                gRunning           = true;
 
 SDL_Window*                gpWindow           = nullptr;
-void*                      gpSysWindow        = nullptr;
+void*                      gpSysWindow        = nullptr;    // Only Used on WIN32
 ch_handle_t                 gGraphicsWindow    = CH_INVALID_HANDLE;
 
 u32                        gDedicatedViewport = UINT32_MAX;
@@ -339,29 +339,9 @@ bool CreateMainWindow()
 	windowName = ( Core_GetAppInfo().apWindowTitle ) ? Core_GetAppInfo().apWindowTitle : "Chocolate Engine";
 	windowName += vstring( " - Build %zd - Compiled On - %s %s", Core_GetBuildNumber(), Core_GetBuildDate(), Core_GetBuildTime() );
 
-#ifdef _WIN32
-	gpSysWindow = sys_create_window( windowName.c_str(), gWidth, gHeight, gMaxWindow );
-
-	if ( !gpSysWindow )
+	if ( !sys_create_window( gpSysWindow, gpWindow, windowName.c_str(), gWidth, gHeight, gMaxWindow ) )
 	{
 		Log_Error( "Failed to create game window\n" );
-		return false;
-	}
-
-	gpWindow = SDL_CreateWindowFrom( gpSysWindow );
-#else
-	int flags = SDL_WINDOW_VULKAN | SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI;
-
-	if ( gMaxWindow )
-		flags |= SDL_WINDOW_MAXIMIZED;
-
-	gpWindow = SDL_CreateWindow( windowName.c_str(), SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
-	                             gWidth, gHeight, flags );
-#endif
-
-	if ( !gpWindow )
-	{
-		Log_Error( "Failed to create SDL2 Window\n" );
 		return false;
 	}
 

@@ -12,27 +12,11 @@ void Window_Focus( AppWindow* window )
 AppWindow* Window_Create( const char* windowName )
 {
 	AppWindow* appWindow = new AppWindow;
-
-#ifdef _WIN32
-	appWindow->sysWindow = sys_create_window( windowName, 800, 600, false );
-
-	if ( !appWindow->sysWindow )
+	
+	if ( !sys_create_window( appWindow->sysWindow, appWindow->window, windowName, 1280, 720, false ) )
 	{
 		Log_Error( "Failed to create tool window\n" );
-		return nullptr;
-	}
-
-	appWindow->window = SDL_CreateWindowFrom( appWindow->sysWindow );
-#else
-	int flags         = SDL_WINDOW_VULKAN | SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI;
-
-	appWindow->window = SDL_CreateWindow( windowName, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
-	                                      800, 600, flags );
-#endif
-
-	if ( !appWindow->window )
-	{
-		Log_Error( "Failed to create SDL2 Window\n" );
+		delete appWindow;
 		return nullptr;
 	}
 
