@@ -1036,21 +1036,21 @@ void Log_SysPrint( ELogColor sMainColor, const log_t& srLog, FILE* spStream )
 		return;
   #endif
 
-	ch_string_auto debugString = FormatLogNoColors( srLog );
-	OutputDebugStringA( debugString.data );
+	ch_string_auto debug_string = FormatLogNoColors( srLog );
+	OutputDebugStringA( debug_string.data );
 
 	if ( Log_TracyEnabled() )
-		Log_Tracy( sMainColor, CH_STR_UR( debugString ) );
+		Log_Tracy( sMainColor, CH_STR_UR( debug_string ) );
 #else
 	Log_SetColor( sMainColor );
-	fputs( srLog.aFormatted.c_str(), spStream );
+	fputs( srLog.aFormatted.data, spStream );
 	Log_SetColor( ELogColor_Default );
 	fflush( spStream );
 
 	if ( Log_TracyEnabled() )
 	{
-		std::string debugString = FormatLogNoColors( srLog );
-		Log_Tracy( sMainColor, debugString );
+		ch_string_auto debug_string = FormatLogNoColors( srLog );
+		Log_Tracy( sMainColor, CH_STR_UR( debug_string ) );
 	}
 #endif
 }
