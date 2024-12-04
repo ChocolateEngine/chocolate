@@ -26,7 +26,7 @@ struct handle_list_t
 		handles.clear();
 	}
 
-	u32 create( T* data )
+	u32 create( T* s_data )
 	{
 		u32 handle = 1;
 
@@ -38,7 +38,7 @@ struct handle_list_t
 		T& data = handles[ handle ];
 
 		// replace the pointer
-		*data = *data;
+		*s_data = *data;
 
 		return handle;
 	}
@@ -146,6 +146,9 @@ struct slot_array_t
 
 // --------------------------------------------------------------------------------------------
 // Basic Deletion Queue
+
+
+constexpr VkFormat g_draw_format              = VK_FORMAT_R16G16B16A16_SFLOAT;
 
 
 // amount to allocate at a time
@@ -298,9 +301,14 @@ struct vk_shader_create_graphics_t
 	VkDynamicState*           dynamic_state;
 	u8                        dynamic_state_count;
 
+	// attachment formats
+	u8                        color_attach_count;
+	VkFormat*                 color_attach;
+	VkFormat                  depth_attach;
+
 	// push constants
 	fn_vk_push_constants_t    fn_push_constants;
-	VkPushConstantRange	      push_constant_range;
+	VkPushConstantRange       push_constant_range;
 
 
 	// descriptor set bindings
@@ -312,16 +320,18 @@ struct vk_shader_create_graphics_t
 
 struct vk_shader_data_graphics_t
 {
-	VkPipeline          pipeline;
-	VkPipelineBindPoint bind_point;
+	VkShaderModule modules[ 2 ];
 };
+
+
+void vk_shaders_register_graphics( vk_shader_create_graphics_t* shader_create );
 
 
 struct shader_static_register_graphics_t
 {
 	shader_static_register_graphics_t( vk_shader_create_graphics_t& srCreate )
 	{
-		// vk_shaders_register_graphics( &srCreate );
+		vk_shaders_register_graphics( &srCreate );
 	}
 };
 
@@ -454,7 +464,7 @@ extern VkSurfaceCapabilitiesKHR            g_vk_surface_capabilities;
 extern VkSurfaceFormatKHR                  g_vk_surface_format;
 
 extern ResourceList< r_window_data_t >     g_windows;
-extern ch_handle_t                          g_main_window;
+extern ch_handle_t                         g_main_window;
 
 extern handle_list_t< vk_image_t >         g_vk_images;
 
@@ -480,6 +490,13 @@ extern VkDescriptorSetLayout               g_vk_desc_draw_image_layout;
 // temp
 extern VkPipeline                          g_pipeline_gradient;
 extern VkPipelineLayout                    g_pipeline_gradient_layout;
+
+// graphics shader data
+extern vk_shader_data_graphics_t*          g_shader_data_graphics;
+extern VkPipelineLayout*                   g_shader_data_graphics_pipeline_layout;
+extern VkPipeline*                         g_shader_data_graphics_pipelines;
+extern ch_string*                          g_shader_data_graphics_names;
+extern u32                                 g_shader_data_graphics_count;
 
 // extern slot_array_t< r_window_data_t >     g_windows2;
 // extern SDL_Window**                        g_windows_sdl;
@@ -572,7 +589,9 @@ void                                       vk_blit_image_to_image( VkCommandBuff
 bool                                       vk_shaders_init();
 void                                       vk_shaders_shutdown();
 void                                       vk_shaders_update_push_constants();
-void                                       vk_shaders_register_graphics( vk_shader_create_graphics_t* shader_create );
+
+// Returns the index + 1 of the shader, if it's 0, the shader isn't found
+u32                                        vk_shaders_find( const char* shader_name );
 
 VkDescriptorPool                           vk_descriptor_pool_create( const char* name, u32 max_sets, vk_desc_pool_size_ratio_t* pool_sizes, u32 pool_size_count );
 bool                                       vk_descriptor_init();

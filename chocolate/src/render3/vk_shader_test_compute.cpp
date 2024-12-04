@@ -16,7 +16,7 @@ vk_shader_module_create_t g_compute_shader_info{
 };
 
 
-bool vk_load_shader_module( vk_shader_module_create_t* module_creates, VkPipelineShaderStageCreateInfo* stage_create, VkShaderModule** shader_modules_ptr, u32 count );
+bool vk_load_shader_module( vk_shader_module_create_t* module_creates, VkPipelineShaderStageCreateInfo* stage_create, VkShaderModule* shader_modules, u32 count );
 
 
 bool vk_load_test_shader()
@@ -38,9 +38,8 @@ bool vk_load_test_shader()
 
 	// load the shader
 	VkPipelineShaderStageCreateInfo stage_create{ VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO };
-	VkShaderModule*                 shader_modules = nullptr;
 
-	if ( !vk_load_shader_module( &g_compute_shader_info, &stage_create, &shader_modules, 1 ) )
+	if ( !vk_load_shader_module( &g_compute_shader_info, &stage_create, &g_shader_module_gradient, 1 ) )
 	{
 		Log_Error( "Failed to create shader stage" );
 		return false;
@@ -53,9 +52,6 @@ bool vk_load_test_shader()
 	if ( vk_check_e( vkCreateComputePipelines( g_vk_device, VK_NULL_HANDLE, 1, &compute_pipeline, nullptr, &g_pipeline_gradient ), "Failed to create compute pipeline" ) )
 		return false;
 
-	g_shader_module_gradient = shader_modules[ 0 ];
-
-	ch_free( shader_modules );
 	return true;
 }
 

@@ -1,9 +1,6 @@
 #include "render.h"
 
 
-constexpr VkFormat g_draw_format = VK_FORMAT_R16G16B16A16_SFLOAT;
-
-
 static bool vk_backbuffer_create_depth( r_window_data_t* window )
 {
 	return false;
@@ -57,6 +54,10 @@ bool vk_backbuffer_create( r_window_data_t* window )
 
 	if ( vk_check_e( vkCreateImageView( g_vk_device, &view_info, nullptr, &window->draw_image.view ), "Failed to create image view for window!" ) )
 		return false;
+
+	window->draw_image.extent.width  = window->swap_extent.width;
+	window->draw_image.extent.height = window->swap_extent.height;
+	window->draw_image.format        = g_draw_format;
 
 	return true;
 }

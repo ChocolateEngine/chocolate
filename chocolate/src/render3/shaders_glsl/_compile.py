@@ -4,6 +4,7 @@ import argparse
 
 SHADER_LIST = [
     "guide_compute",
+    "standard",
 ]
 
 

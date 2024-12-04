@@ -15,7 +15,7 @@ enum e_shader_create_tags
 // shader material var descriptor
 struct vk_shader_material_var_desc_t
 {
-//	e_mat_var type;
+	//	e_mat_var type;
 	const char* name;
 	const char* desc;
 
@@ -46,7 +46,7 @@ struct vk_shader_create_material_t
 	// material vars
 	vk_shader_material_var_desc_t* var;
 	u32                            var_count;
-	
+
 	// if size is 0, no buffer is created
 	u32                            buffer_size;
 	u32                            buffer_binding;
@@ -66,28 +66,23 @@ static u32                          g_shader_create_graphics_count;
 static vk_shader_create_compute_t*  g_shader_create_compute;
 static u32                          g_shader_create_compute_count;
 
-static vk_shader_data_graphics_t*   g_shader_data_graphics;
-static VkPipelineLayout*            g_shader_data_graphics_pipeline_layout;
-static VkPipeline*                  g_shader_data_graphics_pipelines;
-static ch_string*                   g_shader_data_graphics_names;
-static u32                          g_shader_data_graphics_count = 0;
+vk_shader_data_graphics_t*          g_shader_data_graphics;
+VkPipelineLayout*                   g_shader_data_graphics_pipeline_layout;
+VkPipeline*                         g_shader_data_graphics_pipelines;
+ch_string*                          g_shader_data_graphics_names;
+u32                                 g_shader_data_graphics_count = 0;
 
 
-bool vk_load_shader_module( vk_shader_module_create_t* module_creates, VkPipelineShaderStageCreateInfo* stage_create, VkShaderModule** shader_modules_ptr, u32 count )
+bool                                vk_load_shader_module( vk_shader_module_create_t* module_creates, VkPipelineShaderStageCreateInfo* stage_create, VkShaderModule* shader_modules, u32 count )
 {
-	*shader_modules_ptr            = ch_malloc< VkShaderModule >( count );
-
-	VkShaderModule* shader_modules = *shader_modules_ptr;
-
 	for ( u32 i = 0; i < count; i++ )
 	{
 		vk_shader_module_create_t& stage   = module_creates[ i ];
 
-		ch_string_auto  absPath = FileSys_FindFile( stage.path );
+		ch_string_auto             absPath = FileSys_FindFile( stage.path );
 		if ( !absPath.data )
 		{
 			Log_ErrorF( gLC_Render, "Failed to find shader: \"%s\"\n", stage.path );
-			ch_free( shader_modules );
 			return false;
 		}
 
@@ -96,7 +91,6 @@ bool vk_load_shader_module( vk_shader_module_create_t* module_creates, VkPipelin
 		if ( !fileData.data )
 		{
 			Log_ErrorF( gLC_Render, "Shader file is empty: \"%s\"\n", stage.path );
-			ch_free( shader_modules );
 			return false;
 		}
 
@@ -110,10 +104,7 @@ bool vk_load_shader_module( vk_shader_module_create_t* module_creates, VkPipelin
 		createInfo.pCode    = (u32*)fileData.data;
 
 		if ( vk_check_e( vkCreateShaderModule( g_vk_device, &createInfo, NULL, &stageInfo.module ), "Failed to create shader module!" ) )
-		{
-			ch_free( shader_modules );
 			return false;
-		}
 
 		shader_modules[ i ] = stageInfo.module;
 	}
@@ -122,17 +113,17 @@ bool vk_load_shader_module( vk_shader_module_create_t* module_creates, VkPipelin
 }
 
 
-bool vk_shaders_create_graphics_pipeline( VkPipelineLayout layout, vk_shader_create_graphics_t* graphics_create )
+bool vk_shaders_create_graphics_pipeline( VkPipelineLayout layout, vk_shader_create_graphics_t* graphics_create, u32 index )
 {
-	return false;
-
 #if 0
-	std::vector< VkPipelineShaderStageCreateInfo > shaderStages;
-	shaderStages.resize( srGraphicsCreate.aShaderModules.size() );
-	VkShaderModule* vkShaderModules = nullptr;
-	if ( !VK_GetShaderStageCreateInfo( shaderStages.data(), srGraphicsCreate.aShaderModules.data(), srGraphicsCreate.aShaderModules.size(), vkShaderModules ) )
+	return false;
+#else
+	VkPipelineShaderStageCreateInfo shader_stages[ 2 ]{ VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO };
+	vk_shader_data_graphics_t&      shader_data    = g_shader_data_graphics[ index ];
+
+	if ( !vk_load_shader_module( graphics_create->modules, shader_stages, shader_data.modules, 2 ) )
 	{
-		Log_ErrorF( gLC_Render, "VK_CreateGraphicsPipeline(): Failed to create shader stage info: \"%s\"\n", srGraphicsCreate.apName );
+		Log_ErrorF( gLC_Render, "VK_CreateGraphicsPipeline(): Failed to create shader stage info: \"%s\"\n", graphics_create->name );
 		return false;
 	}
 
@@ -140,8 +131,7 @@ bool vk_shaders_create_graphics_pipeline( VkPipelineLayout layout, vk_shader_cre
 	inputAssembly.primitiveRestartEnable = VK_FALSE;
 	inputAssembly.topology               = graphics_create->topology;
 
-	// TODO: AAAAAAAAAAAAAAAA WHY DO I NEED TO DO THIS
-	// placeholder for like 85 years, all shaders use dynamic viewport and scissor anyway
+	// Need to have default values for viewport and scissor despite them being dynamic state
 	VkViewport viewport{
 		.x        = 0.0f,
 		.y        = 0,
@@ -170,11 +160,12 @@ bool vk_shaders_create_graphics_pipeline( VkPipelineLayout layout, vk_shader_cre
 	rasterizer.rasterizerDiscardEnable = VK_FALSE;
 	rasterizer.lineWidth               = 1.f;
 	rasterizer.polygonMode             = graphics_create->polygon_mode;
-	rasterizer.frontFace               = VK_FRONT_FACE_COUNTER_CLOCKWISE;
-	rasterizer.depthBiasEnable         = srGraphicsCreate.aDepthBiasEnable;
-	rasterizer.depthBiasConstantFactor = 0.0f;  // Optional
-	rasterizer.depthBiasClamp          = 0.0f;  // Optional
-	rasterizer.depthBiasSlopeFactor    = 0.0f;  // Optional
+	// rasterizer.frontFace               = VK_FRONT_FACE_COUNTER_CLOCKWISE;
+	rasterizer.frontFace               = VK_FRONT_FACE_CLOCKWISE;
+	rasterizer.depthBiasEnable         = false;  // true for shadowmapping in render2
+	rasterizer.depthBiasConstantFactor = 0.0f;   // Optional
+	rasterizer.depthBiasClamp          = 0.0f;   // Optional
+	rasterizer.depthBiasSlopeFactor    = 0.0f;   // Optional
 	rasterizer.cullMode                = graphics_create->cull_mode;
 
 	// performs anti-aliasing
@@ -186,35 +177,34 @@ bool vk_shaders_create_graphics_pipeline( VkPipelineLayout layout, vk_shader_cre
 	multisampling.alphaToCoverageEnable = VK_FALSE;  // Optional
 	multisampling.alphaToOneEnable      = VK_FALSE;  // Optional
 
-	std::vector< VkPipelineColorBlendAttachmentState > colorBlendAttachments( srGraphicsCreate.aColorBlendAttachments.size() );
+	VkPipelineColorBlendAttachmentState color_blend_attach{};
 
-	for ( size_t i = 0; i < srGraphicsCreate.aColorBlendAttachments.size(); i++ )
-	{
-		// colorBlendAttachments[ i ].colorWriteMask      = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
-		colorBlendAttachments[ i ].colorWriteMask      = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT;
-		colorBlendAttachments[ i ].blendEnable         = srGraphicsCreate.aColorBlendAttachments[ i ].aBlendEnable;
-		// colorBlendAttachments[ i ].srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
-		colorBlendAttachments[ i ].srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
-		colorBlendAttachments[ i ].dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
-		colorBlendAttachments[ i ].colorBlendOp        = VK_BLEND_OP_ADD;
-		colorBlendAttachments[ i ].srcAlphaBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
-		colorBlendAttachments[ i ].dstAlphaBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
-		colorBlendAttachments[ i ].alphaBlendOp        = VK_BLEND_OP_SUBTRACT;
+	color_blend_attach.colorWriteMask      = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+	// color_blend_attach.colorWriteMask      = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT;
+	color_blend_attach.blendEnable         = VK_FALSE;  // was true in some shaders
+	// color_blend_attach.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
+	color_blend_attach.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
+	color_blend_attach.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+	color_blend_attach.colorBlendOp        = VK_BLEND_OP_ADD;
+	color_blend_attach.srcAlphaBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
+	color_blend_attach.dstAlphaBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+	color_blend_attach.alphaBlendOp        = VK_BLEND_OP_SUBTRACT;
 
-		// colorBlendAttachments[ i ].srcColorBlendFactor = VK_BLEND_FACTOR_ZERO;
-		// colorBlendAttachments[ i ].dstColorBlendFactor = VK_BLEND_FACTOR_SRC_COLOR;
-		// colorBlendAttachments[ i ].colorBlendOp        = VK_BLEND_OP_ADD;
-		//
-		// colorBlendAttachments[ i ].srcAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
-		// colorBlendAttachments[ i ].dstAlphaBlendFactor = VK_BLEND_FACTOR_SRC_COLOR;
-		// colorBlendAttachments[ i ].alphaBlendOp        = VK_BLEND_OP_ADD;
-	}
+	// colorBlendAttachments[ i ].srcColorBlendFactor = VK_BLEND_FACTOR_ZERO;
+	// colorBlendAttachments[ i ].dstColorBlendFactor = VK_BLEND_FACTOR_SRC_COLOR;
+	// colorBlendAttachments[ i ].colorBlendOp        = VK_BLEND_OP_ADD;
+	//
+	// colorBlendAttachments[ i ].srcAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
+	// colorBlendAttachments[ i ].dstAlphaBlendFactor = VK_BLEND_FACTOR_SRC_COLOR;
+	// colorBlendAttachments[ i ].alphaBlendOp        = VK_BLEND_OP_ADD;
 
+	// TODO: expose this for shadow mapping
 	VkPipelineDepthStencilStateCreateInfo depthStencil{ VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO };
-	depthStencil.depthTestEnable       = VK_TRUE;
-	depthStencil.depthWriteEnable      = VK_TRUE;
+	depthStencil.depthTestEnable       = VK_FALSE;
+	depthStencil.depthWriteEnable      = VK_FALSE;
 	// depthStencil.depthCompareOp        = VK_COMPARE_OP_LESS;
-	depthStencil.depthCompareOp        = VK_COMPARE_OP_LESS_OR_EQUAL;
+	// depthStencil.depthCompareOp        = VK_COMPARE_OP_LESS;
+	depthStencil.depthCompareOp        = VK_COMPARE_OP_NEVER;
 	depthStencil.depthBoundsTestEnable = VK_FALSE;
 	depthStencil.minDepthBounds        = 0.0f;  // Optional
 	depthStencil.maxDepthBounds        = 1.0f;  // Optional
@@ -225,8 +215,8 @@ bool vk_shaders_create_graphics_pipeline( VkPipelineLayout layout, vk_shader_cre
 	VkPipelineColorBlendStateCreateInfo colorBlending{ VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO };
 	colorBlending.logicOpEnable       = VK_FALSE;
 	colorBlending.logicOp             = VK_LOGIC_OP_COPY;  // Optional
-	colorBlending.attachmentCount     = static_cast< u32 >( colorBlendAttachments.size() );
-	colorBlending.pAttachments        = colorBlendAttachments.data();
+	colorBlending.attachmentCount     = 1;
+	colorBlending.pAttachments        = &color_blend_attach;
 	colorBlending.blendConstants[ 0 ] = 0.0f;  // Optional
 	colorBlending.blendConstants[ 1 ] = 0.0f;  // Optional
 	colorBlending.blendConstants[ 2 ] = 0.0f;  // Optional
@@ -236,11 +226,20 @@ bool vk_shaders_create_graphics_pipeline( VkPipelineLayout layout, vk_shader_cre
 	dynamicState.dynamicStateCount = graphics_create->dynamic_state_count;
 	dynamicState.pDynamicStates    = graphics_create->dynamic_state;
 
+	VkPipelineVertexInputStateCreateInfo vertex_input{ VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO };
+
+	// Dynamic Rendering
+	VkPipelineRenderingCreateInfo rendering_info{ VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO };
+	rendering_info.colorAttachmentCount    = graphics_create->color_attach_count;
+	rendering_info.pColorAttachmentFormats = graphics_create->color_attach;
+	rendering_info.depthAttachmentFormat   = graphics_create->depth_attach;
+
 	// Combine all the objects above into one parameter for graphics pipeline creation
 	VkGraphicsPipelineCreateInfo pipelineInfo{ VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO };
-	pipelineInfo.stageCount          = (u32)shaderStages.size();
-	pipelineInfo.pStages             = shaderStages.data();
-	pipelineInfo.pVertexInputState   = nullptr;
+	pipelineInfo.pNext               = &rendering_info;
+	pipelineInfo.stageCount          = 2;
+	pipelineInfo.pStages             = shader_stages;
+	pipelineInfo.pVertexInputState   = &vertex_input;
 	pipelineInfo.pInputAssemblyState = &inputAssembly;
 	pipelineInfo.pViewportState      = &viewportInfo;
 	pipelineInfo.pRasterizationState = &rasterizer;
@@ -249,67 +248,24 @@ bool vk_shaders_create_graphics_pipeline( VkPipelineLayout layout, vk_shader_cre
 	pipelineInfo.pColorBlendState    = &colorBlending;
 	pipelineInfo.pDynamicState       = &dynamicState;
 	pipelineInfo.layout              = layout;
-	pipelineInfo.renderPass          = renderPass;
+	pipelineInfo.renderPass          = VK_NULL_HANDLE;
 	pipelineInfo.subpass             = 0;
 	pipelineInfo.basePipelineHandle  = VK_NULL_HANDLE;  // Optional, very important for later when making new pipelines. It is less expensive to reference an existing similar pipeline
 	pipelineInfo.basePipelineIndex   = -1;              // Optional
 
-	// allocate new shader data
-	vk_shader_data_graphics_t* new_data = ch_realloc( g_shader_data_graphics, g_shader_data_graphics_count + 1 );
-
-	if ( !new_data )
-	{
-		Log_ErrorF( gLC_Render, "Failed to create graphics shader data for \"%s\"\n", srGraphicsCreate.apName );
-		return false;
-	}
-
-	g_shader_data_graphics = new_data;
-
-	// create the pipeline
-	vk_shader_data_graphics_t& shader_data = g_shader_data_graphics[ g_shader_data_graphics_count ];
-
-	if ( srHandle != CH_INVALID_HANDLE )
-	{
-		shader = gShaders.Get( srHandle );
-		if ( !shader )
-		{
-			Log_ErrorF( gLC_Render, "VK_CreateGraphicsPipeline(): Shader not found for recreation: \"%s\"\n", srGraphicsCreate.apName );
-			return false;
-		}
-
-		if ( shader->aShaderModuleCount )
-		{
-			// was this already destroyed?
-			// for ( u32 i = 0; i < shader->aShaderModuleCount; i++ )
-			// 	vkDestroyShaderModule( VK_GetDevice(), shader->apShaderModules[ i ], nullptr );
-
-			ch_free( shader->apShaderModules );
-			shader->apShaderModules    = nullptr;
-			shader->aShaderModuleCount = 0;
-		}
-	}
-	else
-	{
-		srHandle = gShaders.Create( &shader );
-	}
-
-	shader->aBindPoint         = VK_PIPELINE_BIND_POINT_GRAPHICS;
-	shader->apShaderModules    = vkShaderModules;
-	shader->aShaderModuleCount = srGraphicsCreate.aShaderModules.size();
-
 	// TODO: look into trying to make multiple pipelines at once
 	vk_check_f(
-	  vkCreateGraphicsPipelines( g_vk_device, VK_NULL_HANDLE, 1, &pipelineInfo, NULL, &shader->aPipeline ),
-	  "Failed to create graphics pipeline for shader: \"%s\"", srGraphicsCreate.apName );
+	  vkCreateGraphicsPipelines( g_vk_device, VK_NULL_HANDLE, 1, &pipelineInfo, NULL, &g_shader_data_graphics_pipelines[ index ] ),
+	  "Failed to create graphics pipeline for shader: \"%s\"", graphics_create->name );
 
-	vk_set_name_ex( VK_OBJECT_TYPE_PIPELINE, (u64)shader->aPipeline, graphics_create->name, "Graphics Pipeline" );
+	vk_set_name_ex( VK_OBJECT_TYPE_PIPELINE, (u64)g_shader_data_graphics_pipelines[ index ], graphics_create->name, "Graphics Pipeline" );
 
 	return true;
 #endif
 }
 
 
-bool vk_shaders_create_graphics( vk_shader_create_graphics_t* graphics_create )
+bool vk_shaders_create_graphics( vk_shader_create_graphics_t* graphics_create, u32 index )
 {
 	// create the pipeline layout for this shader
 	VkPipelineLayoutCreateInfo layout_create{ VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO };
@@ -319,7 +275,7 @@ bool vk_shaders_create_graphics( vk_shader_create_graphics_t* graphics_create )
 	// does this shader use push constants?
 	if ( graphics_create->fn_push_constants )
 	{
-		layout_create.pPushConstantRanges     = &graphics_create->push_constant_range;
+		layout_create.pPushConstantRanges    = &graphics_create->push_constant_range;
 		layout_create.pushConstantRangeCount = 1;
 	}
 
@@ -328,26 +284,14 @@ bool vk_shaders_create_graphics( vk_shader_create_graphics_t* graphics_create )
 		return false;
 
 	// load the shader
-	VkPipelineShaderStageCreateInfo stage_create{ VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO };
-	VkShaderModule*                 shader_modules = nullptr;
-
-	if ( !vk_load_shader_module( graphics_create->modules, &stage_create, &shader_modules, 2 ) )
-	{
-		Log_Error( "Failed to create shader stage" );
-		return false;
-	}
-
-	if ( !vk_shaders_create_graphics_pipeline( layout, graphics_create ) )
+	if ( !vk_shaders_create_graphics_pipeline( layout, graphics_create, index ) )
 	{
 		Log_Error( "Failed to create graphics pipeline" );
 		return false;
 	}
 
-	// g_shader_module_gradient = shader_modules[ 0 ];
-
-	ch_free( shader_modules );
-
-	g_shader_data_graphics_count++;
+	g_shader_data_graphics_pipeline_layout[ index ] = layout;
+	g_shader_data_graphics_names[ index ]           = ch_str_copy( graphics_create->name );
 
 	return true;
 }
@@ -359,14 +303,20 @@ void vk_shader_destroy_test();
 
 // for now, just load one test compute shader
 bool vk_shaders_init()
-{	
+{
 	if ( !vk_load_test_shader() )
 		return false;
+
+	// preallocate these
+	g_shader_data_graphics                 = ch_calloc< vk_shader_data_graphics_t >( g_shader_create_graphics_count );
+	g_shader_data_graphics_pipeline_layout = ch_calloc< VkPipelineLayout >( g_shader_create_graphics_count );
+	g_shader_data_graphics_pipelines       = ch_calloc< VkPipeline >( g_shader_create_graphics_count );
+	g_shader_data_graphics_names           = ch_calloc< ch_string >( g_shader_create_graphics_count );
 
 	// load graphics shaders
 	for ( u32 i = 0; i < g_shader_create_graphics_count; i++ )
 	{
-		if ( !vk_shaders_create_graphics( &g_shader_create_graphics[ i ] ) )
+		if ( !vk_shaders_create_graphics( &g_shader_create_graphics[ i ], i ) )
 			return false;
 	}
 
@@ -380,14 +330,23 @@ void vk_shaders_shutdown()
 
 	for ( u32 i = 0; i < g_shader_create_graphics_count; i++ )
 	{
+		vkDestroyShaderModule( g_vk_device, g_shader_data_graphics[ i ].modules[ 0 ], nullptr );
+		vkDestroyShaderModule( g_vk_device, g_shader_data_graphics[ i ].modules[ 1 ], nullptr );
+
+		vkDestroyPipeline( g_vk_device, g_shader_data_graphics_pipelines[ i ], nullptr );
+		vkDestroyPipelineLayout( g_vk_device, g_shader_data_graphics_pipeline_layout[ i ], nullptr );
 	}
+
+	free( g_shader_data_graphics );
+	free( g_shader_data_graphics_pipeline_layout );
+	free( g_shader_data_graphics_pipelines );
+	free( g_shader_data_graphics_names );
 }
 
 
 void vk_shaders_update_push_constants()
 {
 	// temp for test compute shader
-
 }
 
 
@@ -404,12 +363,27 @@ void vk_shaders_register_graphics( vk_shader_create_graphics_t* shader_create )
 
 	if ( new_data )
 	{
-		g_shader_create_graphics = new_data;
+		g_shader_create_graphics                                     = new_data;
 		g_shader_create_graphics[ g_shader_create_graphics_count++ ] = *shader_create;
 	}
 	else
 	{
 		Log_ErrorF( "Failed to register graphics shader \"%s\"", shader_create->name );
 	}
+}
+
+
+u32 vk_shaders_find( const char* shader_name )
+{
+	if ( !shader_name )
+		return 0;
+
+	for ( u32 i = 0; i < g_shader_create_graphics_count; i++ )
+	{
+		if ( ch_strcasecmp( g_shader_data_graphics_names[ i ].data, shader_name ) == 0 )
+			return i + 1;
+	}
+
+	return 0;
 }
 
