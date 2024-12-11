@@ -956,7 +956,7 @@ void Con_Archive( const char* spFile )
 
 	if ( parentPath )
 	{
-		if ( !FileSys_CreateDirectory( parentPath ) )
+		if ( !FileSys_Exists( parentPath ) && !FileSys_CreateDirectory( parentPath ) )
 		{
 			Log_ErrorF( "Failed to create directory: \"%s\"\n", parentPath );
 			ch_str_free( parentPath );
@@ -1488,7 +1488,7 @@ CONCMD_DROP_VA( cvar_toggle, reset_cvar_dropdown, 0, "toggle a convar between tw
 
 
 // same as in source engine lol
-CONCMD_VA( host_writeconfig, "Write a config (can optionally specify a path) containing all ConVars marked with archive, and extra data provided by callback functions" )
+CONCMD_NAME_VA( app_write_config, "app.write-config", "Write a config (can optionally specify a path) containing all ConVars marked with archive, and extra data provided by callback functions" )
 {
 	if ( args.size() )
 		Con_Archive( args[ 0 ].c_str() );
