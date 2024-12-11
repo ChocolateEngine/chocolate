@@ -18,6 +18,6 @@ layout(location = 0) in vec2 inTexCoord;
 
 void main()
 {
-	if ( push.aAlbedo >= 0 && texture( texSamplers[ push.aAlbedo ], inTexCoord ).a < 0.5)
+	if ( push.aAlbedo >= 0 && texture( texSamplers[ push.aAlbedo ], inTexCoord ).a < 0.5 )
 		discard;
 }

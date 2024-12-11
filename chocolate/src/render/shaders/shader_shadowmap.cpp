@@ -15,6 +15,19 @@ struct ShadowMap_Push
 static int  gShadowViewInfoIndex = 0;
 
 
+struct ShadowMap_Material
+{
+	int diffuse;
+	u32 alphaTest;
+};
+
+
+static ShaderMaterialVarDesc gShadowMap_MaterialVars[] = {
+	CH_SHADER_MATERIAL_VAR( ShadowMap_Material, diffuse, "Diffuse Texture", "" ),
+	CH_SHADER_MATERIAL_VAR( ShadowMap_Material, alphaTest, "Alpha Testing", 0 ),
+};
+
+
 static void Shader_ShadowMap_GetPipelineLayoutCreate( PipelineLayoutCreate_t& srPipeline )
 {
 	srPipeline.aPushConstants.push_back( { ShaderStage_Vertex | ShaderStage_Fragment, 0, sizeof( ShadowMap_Push ) } );
@@ -50,52 +63,38 @@ static void Shader_ShadowMap_PushConstants( ch_handle_t cmd, ch_handle_t sLayout
 	push.aViewport       = gShadowViewInfoIndex;
 	push.aAlbedo         = -1;
 
-	ch_handle_t mat           = sPushData.apRenderable->apMaterials[ sPushData.aSurfaceDraw.aSurface ];
-	if ( mat == CH_INVALID_HANDLE )
-		return;
-
-	ch_handle_t texture = gGraphics.Mat_GetTexture( mat, "diffuse" );
-
-	if ( texture == CH_INVALID_HANDLE )
-		return;
-
-	bool alphaTest = gGraphics.Mat_GetBool( mat, "alphaTest" );
-
-#if 0
-	GraphicsFmt format   = render->GetTextureFormat( texture );
-
-	// Check the texture format to see if it has an alpha channel
-	switch ( format )
+	// this should never be nullptr, but it sometimes is according to another shader, not sure if it's fixed or not
+	if ( sPushData.apMaterialData )
 	{
-		default:
-			break;
-
-		case GraphicsFmt::BC1_RGBA_SRGB_BLOCK:
-		case GraphicsFmt::BC3_SRGB_BLOCK:
-		case GraphicsFmt::BC7_SRGB_BLOCK:
-			alphaTest = true;
+		bool alphaTest = sPushData.apMaterialData->vars[ 1 ].aInt;
+		if ( alphaTest )
+		{
+			ch_handle_t texture = sPushData.apMaterialData->vars[ 0 ].aTexture;
+			push.aAlbedo        = render->GetTextureIndex( texture );
+		}
 	}
-#endif
-
-	if ( alphaTest )
-		push.aAlbedo = render->GetTextureIndex( texture );
 
 	render->CmdPushConstants( cmd, sLayout, ShaderStage_Vertex | ShaderStage_Fragment, 0, sizeof( ShadowMap_Push ), &push );
 }
 
 
 ShaderCreate_t gShaderCreate_ShadowMap = {
-	.apName           = "__shadow_map",
-	.aStages          = ShaderStage_Vertex | ShaderStage_Fragment,
-	.aBindPoint       = EPipelineBindPoint_Graphics,
-	.aDynamicState    = EDynamicState_Viewport | EDynamicState_Scissor,
-	.aVertexFormat    = VertexFormat_Position | VertexFormat_TexCoord,
-	.aRenderPass      = ERenderPass_Shadow,
-	.apInit           = nullptr,
-	.apDestroy        = nullptr,
-	.apLayoutCreate   = Shader_ShadowMap_GetPipelineLayoutCreate,
-	.apGraphicsCreate = Shader_ShadowMap_GetGraphicsPipelineCreate,
-	.apShaderPush     = Shader_ShadowMap_PushConstants,
+	.apName             = "__shadow_map",
+	.aStages            = ShaderStage_Vertex | ShaderStage_Fragment,
+	.aBindPoint         = EPipelineBindPoint_Graphics,
+	.aDynamicState      = EDynamicState_Viewport | EDynamicState_Scissor,
+	.aVertexFormat      = VertexFormat_Position | VertexFormat_TexCoord,
+	.aRenderPass        = ERenderPass_Shadow,
+	.apInit             = nullptr,
+	.apDestroy          = nullptr,
+	.apLayoutCreate     = Shader_ShadowMap_GetPipelineLayoutCreate,
+	.apGraphicsCreate   = Shader_ShadowMap_GetGraphicsPipelineCreate,
+	.apShaderPush       = Shader_ShadowMap_PushConstants,
+
+	.apMaterialVars     = gShadowMap_MaterialVars,
+	.aMaterialVarCount  = CH_ARR_SIZE( gShadowMap_MaterialVars ),
+	.aMaterialSize      = sizeof( ShadowMap_Material ),
+	.aUseMaterialBuffer = false,
 };
 
 
