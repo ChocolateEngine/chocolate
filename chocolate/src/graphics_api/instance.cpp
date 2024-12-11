@@ -11,11 +11,11 @@
 #include <set>
 
 
-static bool gListExts    = args_register( false, "List All Vulkan Extensions, marking what ones are loaded", "--vk-list-exts" );
-static bool gListQueues  = args_register( false, "List All Device Queues", "--vk-list-queues" );
-static int  gDeviceIndex = args_register( -1, "Manually select a GPU by the index in the device list", "--gpu" );
-static bool gListDevices = args_register_names( false, "List Graphics Cards detected", 2, "--gpus", "--list-gpus" );
-static int  gDebugUtils  = args_register( true, "Vulkan Debug Tools", "--vk-no-debug" );
+static bool gListExts     = args_register( false, "List All Vulkan Extensions, marking what ones are loaded", "--vk-list-exts" );
+static bool gListQueues   = args_register( false, "List All Device Queues", "--vk-list-queues" );
+static int  gDeviceIndex  = args_register( -1, "Manually select a GPU by the index in the device list", "--gpu" );
+static bool gListDevices  = args_register_names( false, "List Graphics Cards detected", 2, "--gpus", "--list-gpus" );
+static bool gNoDebugUtils = args_register( false, "Vulkan Debug Tools", "--vk-no-debug" );
 
 
 #if _DEBUG
@@ -227,8 +227,11 @@ bool VK_CheckValidationLayerSupport()
 }
 
 
-bool VK_CheckDebugUtilsSupport()
+bolean VK_CheckDebugUtilsSupport()
 {
+	if ( gNoDebugUtils )
+		return false;
+
 	bool         layerFound = false;
 	unsigned int layerCount;
 	VK_CheckResult( vkEnumerateInstanceLayerProperties( &layerCount, NULL ), "Failed to enumerate instance layer properties" );
