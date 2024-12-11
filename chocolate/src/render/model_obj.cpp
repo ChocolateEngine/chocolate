@@ -43,7 +43,7 @@ static ch_handle_t LoadMaterial( const std::string& path )
 	if ( FileSys_IsFile( matPath.data(), matPath.size() ) )
 		return gGraphics.LoadMaterial( matPath.data(), matPath.size() );
 
-	std::string modelPath = "models/" + path;
+	std::string modelPath = "models/" + matPath;
 	if ( FileSys_IsFile( modelPath.data(), modelPath.size() ) )
 		return gGraphics.LoadMaterial( modelPath.data(), modelPath.size() );
 
