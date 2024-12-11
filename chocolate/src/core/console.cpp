@@ -1488,7 +1488,7 @@ CONCMD_DROP_VA( cvar_toggle, reset_cvar_dropdown, 0, "toggle a convar between tw
 
 
 // same as in source engine lol
-CONCMD_NAME_VA( app_write_config, "app.write-config", "Write a config (can optionally specify a path) containing all ConVars marked with archive, and extra data provided by callback functions" )
+CONCMD_NAME_VA( app_config_write, "app.config.write", "Write a config (can optionally specify a path) containing all ConVars marked with archive, and extra data provided by callback functions" )
 {
 	if ( args.size() )
 		Con_Archive( args[ 0 ].c_str() );
