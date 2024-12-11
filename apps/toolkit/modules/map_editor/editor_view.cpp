@@ -25,13 +25,11 @@ CONVAR_FLOAT_EXT( m_pitch );
 CONVAR_FLOAT( view_move_slow, 0.2f );
 CONVAR_FLOAT( view_move_fast, 3.0f );
 
-CONVAR_FLOAT( view_move_forward, 500.0f );
-CONVAR_FLOAT( view_move_side, 500.0f );
-CONVAR_FLOAT( view_move_up, 500.0f );
+CONVAR_FLOAT( view_move_speed, 30.0f );
 
-CONVAR_FLOAT( view_move_min, 0.125f );
+CONVAR_FLOAT( view_move_min, 0.0625f );
 CONVAR_FLOAT( view_move_max, 15.f );
-CONVAR_FLOAT( view_move_scroll_sens, 0.125f );
+CONVAR_FLOAT( view_move_scroll_sens, 0.0625f );
 
 CONVAR_BOOL( editor_show_pos, 1.f, "Show Position on-screen" );
 CONVAR_BOOL( editor_spew_imgui_window_hover, 0 );
@@ -239,9 +237,9 @@ void EditorView_UpdateInputs( bool mouseInView )
 		moveScale *= view_move_fast;
 	}
 
-	const float forwardSpeed = view_move_forward * moveScale;
-	const float sideSpeed    = view_move_side * moveScale;
-	const float upSpeed      = view_move_up * moveScale;
+	const float forwardSpeed = view_move_speed * moveScale;
+	const float sideSpeed    = view_move_speed * moveScale;
+	const float upSpeed      = view_move_speed * moveScale;
 	// apMove->aMaxSpeed        = max_speed * moveScale;
 
 	if ( Input_KeyPressed( EBinding_Viewport_MoveForward ) )
