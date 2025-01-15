@@ -9,7 +9,7 @@
 #include "render.h"
 
 
-static bool                         g_no_debug_utils           = args_register( false, "List All Vulkan Extensions, marking what ones are loaded", "--vk-no-debug-utils" );
+static bool                         g_no_debug_utils           = args_register( false, "Disable Loading the Debug Utilities", "--vk-no-debug-utils" );
 static bool                         g_list_exts                = args_register( false, "List All Vulkan Extensions, marking what ones are loaded", "--vk-list-exts" );
 static bool                         g_list_queues              = args_register( false, "List All Vulkan Device Queues", "--vk-list-queues" );
 static bool                         g_list_devices             = args_register_names( false, "List Graphics Cards detected", 2, "--gpus", "--list-gpus" );
@@ -170,7 +170,10 @@ VKAPI_ATTR VkBool32 VKAPI_CALL vk_debug_callback( VkDebugUtilsMessageSeverityFla
 	}
 
 	else if ( messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT )
+	{
 		Log_Error( gLC_Vulkan, formatted.c_str() );
+		CH_ASSERT_MSG( 0, formatted.data() );
+	}
 
 	else if ( messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT )
 		Log_Warn( gLC_Vulkan, formatted.c_str() );
@@ -256,7 +259,9 @@ bool vk_instance_create()
 	{
 		create_info.enabledLayerCount   = (unsigned int)ARR_SIZE( g_validation_layers );
 		create_info.ppEnabledLayerNames = g_validation_layers;
-		create_info.pNext               = (VkDebugUtilsMessengerCreateInfoEXT*)&g_debug_messenger_info;
+
+		if ( g_has_debug_utils )
+			create_info.pNext = (VkDebugUtilsMessengerCreateInfoEXT*)&g_debug_messenger_info;
 	}
 	else
 #endif
@@ -510,13 +515,13 @@ static void vk_find_queue_families( VkSurfaceKHR surface, const VkPhysicalDevice
 	if ( g_list_queues && !listed_queues )
 	{
 		listed_queues          = true;
-		std::string queueDump = vstring( "Device \"%s\" has %zd Queues\n", device_props.deviceName, queue_family_count );
+		std::string queueDump = vstring( "Device \"%s\" has %zd Queue Families\n", device_props.deviceName, queue_family_count );
 
 		for ( u32 queue_index = 0; queue_index < queue_family_count; queue_index++ )
 		{
 			const VkQueueFamilyProperties& queueFamily = queue_families[ queue_index ];
 
-			queueDump += vstring( "Queue %zd:\n    Count: %zd\n    Supports Present: ", queue_index, queueFamily.queueCount );
+			queueDump += vstring( "Queue Family %zd:\n    Count: %zd\n    Supports Present: ", queue_index, queueFamily.queueCount );
 
 			VkBool32 present_support = false;
 			if ( vk_check_e( vkGetPhysicalDeviceSurfaceSupportKHR( device, queue_index, surface, &present_support ), "Failed to Get Physical Device Surface Support" ) )

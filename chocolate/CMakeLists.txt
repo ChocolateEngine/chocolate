@@ -35,7 +35,7 @@ add_subdirectory( ${CH_SRC}/audio )
 
 if ( RENDER3 )
 	add_subdirectory( ${CH_SRC}/render3 )
-	# add_subdirectory( ${CH_SRC}/graphics_data )
+	add_subdirectory( ${CH_SRC}/graphics_data )
 endif( RENDER3 )
 
 if ( RENDER2 )

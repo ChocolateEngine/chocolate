@@ -48,9 +48,6 @@ const char* EntComp_NetTypeToStr( EEntComponentNetType sNetType )
 {
 	switch ( sNetType )
 	{
-		case EEntComponentNetType_None:
-			return "None - This component is never networked";
-
 		case EEntComponentNetType_Both:
 			return "Both - This component is on both client and server";
 

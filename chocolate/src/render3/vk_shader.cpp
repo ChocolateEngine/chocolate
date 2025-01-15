@@ -226,7 +226,39 @@ bool vk_shaders_create_graphics_pipeline( VkPipelineLayout layout, vk_shader_cre
 	dynamicState.dynamicStateCount = graphics_create->dynamic_state_count;
 	dynamicState.pDynamicStates    = graphics_create->dynamic_state;
 
+	// TEMP VERTEX BUFFER BINDING
+
+	VkVertexInputBindingDescription binding_description{};
+	binding_description.binding   = 0;
+	binding_description.stride    = sizeof( gpu_vertex_t );
+	binding_description.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+
+	VkVertexInputAttributeDescription attrib_description[ 5 ]{};
+	attrib_description[ 0 ].location = 0;
+	attrib_description[ 0 ].format   = VK_FORMAT_R32G32B32_SFLOAT;
+	attrib_description[ 0 ].offset   = offsetof( gpu_vertex_t, pos );
+
+	attrib_description[ 1 ].location = 1;
+	attrib_description[ 1 ].format   = VK_FORMAT_R32_SFLOAT;
+	attrib_description[ 1 ].offset   = offsetof( gpu_vertex_t, uv_x );
+
+	attrib_description[ 2 ].location = 2;
+	attrib_description[ 2 ].format   = VK_FORMAT_R32G32B32_SFLOAT;
+	attrib_description[ 2 ].offset   = offsetof( gpu_vertex_t, normal );
+
+	attrib_description[ 3 ].location = 3;
+	attrib_description[ 3 ].format   = VK_FORMAT_R32_SFLOAT;
+	attrib_description[ 3 ].offset   = offsetof( gpu_vertex_t, uv_y );
+
+	attrib_description[ 4 ].location = 4;
+	attrib_description[ 4 ].format   = VK_FORMAT_R32G32B32A32_SFLOAT;
+	attrib_description[ 4 ].offset   = offsetof( gpu_vertex_t, color );
+
 	VkPipelineVertexInputStateCreateInfo vertex_input{ VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO };
+	vertex_input.pVertexAttributeDescriptions    = attrib_description;
+	vertex_input.vertexAttributeDescriptionCount = 5;
+	vertex_input.pVertexBindingDescriptions      = &binding_description;
+	vertex_input.vertexBindingDescriptionCount   = 1;
 
 	// Dynamic Rendering
 	VkPipelineRenderingCreateInfo rendering_info{ VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO };

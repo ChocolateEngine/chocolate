@@ -576,13 +576,6 @@ extern "C"
 		// Needs to be done before Renderer is loaded
 		ImGui::CreateContext();
 
-		srand( (unsigned int)time( 0 ) );  // setup rand(  )
-
-		// if ( gArgUseGL )
-		// {
-		// 	gAppModules[ 1 ].apModuleName = "ch_render_gl";
-		// }
-
 		// ---------------------------------------------------------------------------------------------
 		// Load Systems
 

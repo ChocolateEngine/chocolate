@@ -658,7 +658,7 @@ ch_string FileSys_FindFileBase( STR_FILE_LINE_DEF ESearchPathType type, const ch
 
 		const char*      pathParts[]   = { searchPath.data, CH_PATH_SEP_STR, filePath };
 		const size_t     lengthParts[] = { searchPath.size, 1, fileLen };
-		ch_string        concat        = ch_str_join( 3, pathParts, lengthParts );
+		ch_string_auto   concat        = ch_str_join( 3, pathParts, lengthParts );
 
 		if ( !concat.data )
 		{
@@ -666,21 +666,12 @@ ch_string FileSys_FindFileBase( STR_FILE_LINE_DEF ESearchPathType type, const ch
 			return {};
 		}
 
-		ch_string fullPath = FileSys_CleanPath( concat.data, concat.size );
-		ch_str_free( concat.data );
-
 		// does item exist?
-		if ( exists( fullPath.data ) )
+		if ( exists( concat.data ) )
 		{
+			ch_string fullPath = FileSys_CleanPath( concat.data, concat.size );
 			return fullPath;
 		}
-
-		ch_str_free( fullPath.data );
-
-		// ch_string fullPath = FileSys_FindFileBase( searchPath, filePath, pathLen );
-		// 
-		// if ( fullPath.data )
-		// 	return fullPath;
 	}
 
 	// file not found
@@ -1072,7 +1063,7 @@ ch_string FileSys_GetBaseName( const char* path, s32 pathLen )
 
 const char* filesys_get_last_slash( const char* path, s32 pathLen )
 {
-	if ( ch_str_check_empty( path, pathLen ) )
+	if ( !ch_str_check_empty( path, pathLen ) )
 		return nullptr;
 
 #if 1
@@ -1162,9 +1153,12 @@ ch_string FileSys_GetFileNameNoExt( STR_FILE_LINE_DEF const char* path, s32 path
 }
 
 
-ch_string FileSys_CleanPath( STR_FILE_LINE_DEF const char* path, const s32 pathLen, char* data )
+ch_string FileSys_CleanPath( STR_FILE_LINE_DEF const char* path, s32 pathLen, char* data )
 {
     PROF_SCOPE();
+
+	if ( !ch_str_check_empty( path, pathLen ) )
+		return {};
 
 	ChVector< ch_string > pathSegments;
 
@@ -1205,14 +1199,33 @@ ch_string FileSys_CleanPath( STR_FILE_LINE_DEF const char* path, const s32 pathL
 		}
 		
 		// check if this is a ".." segment and remove last path segment
-		if ( endIndex - startIndex == 2 && path[ startIndex ] == '.' && path[ startIndex + 1 ] == '.' )
+		// if ( endIndex - startIndex == 2 && path[ startIndex ] == '.' && path[ startIndex + 1 ] == '.' )
+		if ( !pathSegments.empty() && ( endIndex - startIndex == 2 && path[ startIndex ] == '.' && path[ startIndex + 1 ] == '.' ) )
 		{
-			if ( !pathSegments.empty() )
+			//if ( !pathSegments.empty() )
 			{
 				// pop the last segment
 				ch_str_free( pathSegments.back()->data );
 				pathSegments.erase( *pathSegments.back() );
 			}
+			// there are no segments to remove, so add this anyway
+			// else
+			// {
+			// 	ch_string segment;
+			// 	segment.data = nullptr;
+			// 	segment.size = 0;
+			// 
+			// 	segment      = ch_str_copy( STR_FILE_LINE & path[ startIndex ], endIndex - startIndex );
+			// 
+			// 	if ( !segment.data )
+			// 	{
+			// 		Log_Error( "Failed to allocate memory for path segment when cleaning path\n" );
+			// 		ch_str_free( pathSegments.data(), pathSegments.size() );
+			// 		return {};
+			// 	}
+			// 
+			// 	pathSegments.push_back( segment );
+			// }
 		}
 		else if ( endIndex - startIndex > 1 )  // if it's not an empty segment
 		{

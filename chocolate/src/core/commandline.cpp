@@ -37,6 +37,8 @@ extern "C"
 {
 	int DLL_EXPORT core_init( int argc, char* argv[], const char* desiredWorkingDir )
 	{
+		srand( (unsigned int)time( 0 ) );  // setup rand()
+
 		args_init( argc, argv );
 		Log_Init();
 

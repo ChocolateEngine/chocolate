@@ -707,11 +707,28 @@ KeyState InputSystem::GetKeyState( EButton key )
 void InputSystem::AddWindow( SDL_Window* sWindow, void* sImGuiContext )
 {
 	aWindows[ sWindow ].context = (ImGuiContext*)sImGuiContext;
+
+	// if there are no windows created yet, assume this one is
+	if ( aWindows.size() == 1 )
+	{
+		aActiveWindow  = &aWindows[ sWindow ];
+		aFocusedWindow = &aWindows[ sWindow ];
+	}
+	else
+	{
+		// clear this since the memory can change
+		aActiveWindow  = nullptr;
+		aFocusedWindow = nullptr;
+	}
 }
 
 
 void InputSystem::RemoveWindow( SDL_Window* sWindow )
 {
+	// clear this since the memory can change
+	aActiveWindow  = nullptr;
+	aFocusedWindow = nullptr;
+
 	aWindows.erase( sWindow );
 }
 

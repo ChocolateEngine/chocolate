@@ -707,6 +707,9 @@ class Graphics : public IGraphics
 	virtual void                   DrawFrustum( const Frustum_t& srFrustum ) override;
 	virtual void                   DrawNormals( ch_handle_t sModel, const glm::mat4& srMatrix ) override;
 
+	// Reserve X amount of vertices to draw
+	virtual void                   DebugDrawReserve( u32 count ) override;
+
 	// ---------------------------------------------------------------------------------------
 	// Vertex Format/Attributes
 

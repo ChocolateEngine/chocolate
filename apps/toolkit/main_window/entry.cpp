@@ -139,8 +139,6 @@ extern "C"
 		if ( gWaitForDebugger )
 			sys_wait_for_debugger();
 
-		srand( (unsigned int)time( 0 ) );  // setup rand(  )
-
 		// Load main app info (Note that if you don't do this, you need to call FileSys_DefaultSearchPaths() before loading any files)
 		if ( !Core_LoadAppInfo() )
 		{

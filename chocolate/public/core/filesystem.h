@@ -156,7 +156,7 @@ CORE_API ch_string FileSys_GetFileExt( STR_FILE_LINE_DEF const char* path, s32 p
 CORE_API ch_string FileSys_GetFileNameNoExt( STR_FILE_LINE_DEF const char* path, s32 pathLen = -1 );
 
 // Cleans up the path, removes useless ".." and "."
-CORE_API ch_string FileSys_CleanPath( STR_FILE_LINE_DEF const char* path, const s32 pathLen = -1, char* data = nullptr );  // reuses the data memory
+CORE_API ch_string FileSys_CleanPath( STR_FILE_LINE_DEF const char* path, s32 pathLen = -1, char* data = nullptr );  // reuses the data memory
 
 // Rename a File or Directory
 CORE_API bool      FileSys_Rename( const char* spOld, const char* spNew );

@@ -160,37 +160,56 @@ enum : e_mat_var
 };
 
 
+enum e_vertex_attribute : u8
+{
+	e_vertex_attribute_position,    // vec3
+	e_vertex_attribute_normal,      // vec3
+	e_vertex_attribute_tex_coord,   // vec2
+	e_vertex_attribute_color,       // vec4
+	e_vertex_attribute_tangent,     // vec3
+	e_vertex_attribute_bi_tangent,  // vec3
+
+	// e_vertex_attribute_bone_index,        // uvec4
+	// e_vertex_attribute_bone_weight,       // vec4
+
+	e_vertex_attribute_count
+};
+
+
+using f_vertex_format = u16;
+enum : f_vertex_format
+{
+	f_vertex_format_none       = 0,
+	f_vertex_format_position   = ( 1 << e_vertex_attribute_position ),
+	f_vertex_format_normal     = ( 1 << e_vertex_attribute_normal ),
+	f_vertex_format_tex_coord  = ( 1 << e_vertex_attribute_tex_coord ),
+	f_vertex_format_color      = ( 1 << e_vertex_attribute_color ),
+	f_vertex_format_tangent    = ( 1 << e_vertex_attribute_tangent ),
+	f_vertex_format_bi_tangent = ( 1 << e_vertex_attribute_bi_tangent ),
+
+	f_vertex_format_all        = ( 1 << e_vertex_attribute_count ) - 1,
+};
+
+
 // ------------------------------------------------------------------------------------
+
+
+//struct ch_model_h
+//{
+//	u32 index;
+//	u32 generation;
+//};
 
 
 CH_HANDLE_32( ch_model_h );
 CH_HANDLE_32( ch_material_h );
-CH_HANDLE_32( ch_texture_h );
 
 
 // ------------------------------------------------------------------------------------
 
 
-struct texture_load_info_t
-{
-
-};
-
-
 struct material_create_info_t
 {
-};
-
-
-struct texture_data_t
-{
-	GraphicsFmt format;
-	glm::vec3   size;
-	u32         mip_levels;
-	u32         array_layers;
-	u32         samples;
-	u32         data_size;
-	u8*         data;
 };
 
 
@@ -291,53 +310,227 @@ struct ch_model_materials
 };
 
 
+struct mesh_vertex_t
+{
+	glm::vec3 pos;
+	glm::vec3 normal;
+	glm::vec2 uv;
+	glm::vec4 color;
+};
+
+
+//
+// physics mesh ideas
+// 
+// Data we need to create simple physics meshes
+// - Vertex Positions
+// - Physics Materials
+// - An array of Sub Shapes
+// 
+// Standard mesh loading, like from an obj, usually join all the meshs into a single mesh
+// For physics objects, we need to keep those separate, and have them loaded as a Static Compound
+// 
+// We need physics material data, not shader materials, should make that distinction probably
+// 
+// 
+
+
+// In jolt, physics materials seem to only have a name and a debug color
+// Maybe there's something we can do where if we contact some point on a physics object,
+// we can see the triangle it hit, get the material from it, and map that to a game physics material,
+// and then 
+struct test_physics_material_t
+{
+	glm::vec3 debug_color;
+};
+
+
+struct physics_model_sub_shape_t
+{
+	glm::vec3* pos;
+	u32*       index;
+
+	u32        vertex_count;
+	u32        index_count;
+
+	// supposedly in jolt physics, individual triangles can have their own material
+};
+
+
+struct physics_model_data_t
+{
+	u32                        shape_count;
+	physics_model_sub_shape_t* shape;
+};
+
+
+// Basic Mesh Structure
+// 
+// Maybe don't keep this in memory after uploading the mesh to the gpu and potentially creating a physics object from it?
+// For physics objects, what do we need to keep from this after creation?
+// We may need it for server side work, but we shouldn't need to keep all the vertex data loaded in memory for that
+// 
+// All I think we need for server side model work:
+// - Pre-Computed AABB
+// - AABB offsets for all blend shapes
+// - maybe max AABB offsets if animations applied to it? hmm
+//   instead for testing vis with animation playback, we could have a bounding box for each bone? but then what about adding blend shapes on top of that?
+// 
+// Though in the end, what's to say we can't just have a server mesh struct for storing what the server actually needs?
+// And as for hotloading, we could just store the path somewhere, check if it's modified or something, then reload the mesh in the background,
+// and tell all systems using that model that it's been modified, then once each system signals it's finished with the model, then it's freed
+// 
+// Maybe instead of having a ref count for loading models, we could just have a sort of "mutex" for models
+// like `bool usable = graphics_data->model_mark_use( ch_model_h handle );`,
+// and then when that system is done, it can call `graphics_data->model_mark_finished( ch_model_h handle );`
+// 
+// in the main app code or something where this is loading, it could look something like this
+// also maybe this code itself should happen in a job maybe, like map loading or creating an entity?
+// mainly so it never blocks the main thread, i would like to try and avoid that ideally, not very fun to have that
+// 
+// ch_model_h model_handle = graphics_data->model_load( "my/cool/model.obj" );
+// 
+// // Tell systems to load this model (happens async or in a job)
+// phys_shape = physics->load_shape( model_handle );
+// gpu_mesh   = render->mesh_upload( model_handle );
+// 
+// // do this in a different job once mesh upload is complete
+// renderable = render->renderable_create( gpu_mesh );
+// 
+// // Now allow the graphics data dll to free this data once the systems above are done with it
+// // This marks the model freed internally, and each update, waits for the model to be finished 
+// graphics_data->model_free( model_handle );
+// 
+
+
+//
+// Model Loading idea
+// 
+// 
+// 
+
+
+
+// while not very efficient with pointers, it is a lot easier to use, and it's not like it's used for very long
+// also should have better access times than having to search for which data array is positions or something
+struct mesh_vertex_data_t
+{
+	glm::vec3* pos;
+	glm::vec3* normal;
+	glm::vec2* tex_coord;
+	glm::vec4* color;
+	glm::vec3* tangent;
+	glm::vec3* bi_tangent;
+};
+
+
+struct mesh_surface_t
+{
+	u32           vertex_offset;
+	u32           vertex_count;
+
+	u32           index_offset;
+	u32           index_count;
+
+	ch_material_h material;  // base material to copy from
+};
+
+
+// Basic Mesh Structure
+// Designed to be used temporarily, and then deleted after it's used in the systems it's needed for
+struct mesh_t
+{
+	// NOTE: could store these pointers as one allocation probably
+	// mesh_vertex_t*  vertex;
+
+//	e_vertex_attribute* vertex_attrib;
+
+	// array of data for vertex attributes, each point to an array of vertices
+	// the type depending on the type in vertex_attrib
+	// so like vertex_data[ 0 ] would be what vertex_attrib[ 0 ] is, could be glm::vec3* positions
+//	void**              vertex_data;
+
+	mesh_vertex_data_t  vertex_data;
+	u32*                index;
+	mesh_surface_t*     surface;
+
+	u32                 vertex_count;
+	u32                 index_count;
+	u32                 surface_count;
+	//f_vertex_format     vertex_format;
+	//u8                  vertex_attrib_count;
+};
+
+
+struct mesh_morph_data_t
+{
+
+};
+
+
+struct model_t
+{
+	mesh_t*            mesh;
+	mesh_morph_data_t* morph_data;
+
+	u32                mesh_count;
+	u32                morph_data_count;
+};
+
+
+// ------------------------------------------------------------------------------------
+// Model Builder Data
+
+
+struct model_builder_t
+{
+
+};
+
+
 // ------------------------------------------------------------------------------------
 
 
 class IGraphicsData : public ISystem
 {
-  public:
+   public:
 	// --------------------------------------------------------------------------------------------
 	// General
 	// --------------------------------------------------------------------------------------------
 
 	// Creates a new frustum
-	virtual frustum_t            frustum_create( const glm::mat4& proj_view )                                                                 = 0;
-
-	// --------------------------------------------------------------------------------------------
-	// Textures
-	// --------------------------------------------------------------------------------------------
-
-	// Loads a texture from disk
-	virtual ch_handle_t*         texture_load( const char** paths, const texture_load_info_t* create_infos, size_t count = 1 )                = 0;
-	virtual ch_handle_t*         texture_load( const char** paths, s64* pathLens, const texture_load_info_t* create_infos, size_t count = 1 ) = 0;
-	//virtual ChHandle_t     texture_load( ch_string* paths, const texture_load_info_t* create_infos, size_t count = 1 )   = 0;
-	virtual ch_handle_t          texture_load( const char* path, s64 pathLen, const texture_load_info_t& create_info )                        = 0;
-
-	virtual void                 texture_free( ch_handle_t* texture, size_t count = 1 )                                                       = 0;
-//	virtual texture_data_t       texture_get_data( ch_handle_t texture )                                                                      = 0;
+	virtual frustum_t            frustum_create( const glm::mat4& proj_view )       = 0;
 
 	// --------------------------------------------------------------------------------------------
 	// Materials
 	// --------------------------------------------------------------------------------------------
 
 	// --------------------------------------------------------------------------------------------
-	// Models
+	// Models - TODO: Have models load async, or on a job
 	// --------------------------------------------------------------------------------------------
 
-	virtual ch_model_h           model_load( const char* path )                                                                               = 0;
+	virtual ch_model_h           model_load( const char* path )                     = 0;
+	virtual ch_model_h*          model_load( const char** paths, size_t count = 1 ) = 0;
 
-	//	virtual const ch_model_materials* model_get_material_array( ch_model_h handle )                                                                = 0;
+	virtual void                 model_free( ch_model_h handle )                    = 0;
 
-	virtual const u16            model_get_material_count( ch_model_h handle )                                                                = 0;
-	virtual const ch_material_h* model_get_material_array( ch_model_h handle )                                                                = 0;
-	
+	virtual model_t*             model_get( ch_model_h handle )                     = 0;
+	virtual const char*          model_get_path( ch_model_h handle )                = 0;
+
+	// virtual const ch_model_materials* model_get_material_array( ch_model_h handle ) = 0;
+
+	// virtual const u16            model_get_material_count( ch_model_h handle )      = 0;
+	// virtual const ch_material_h* model_get_material_array( ch_model_h handle )      = 0;
+
 	// --------------------------------------------------------------------------------------------
-	// Model Building - useful for importing custom models, like .obj or .gltf files
+	// Mesh Building
+	//
+	// useful for importing custom models, like .obj or .gltf files
+	// or for making models in code, like a skybox cube
 	// --------------------------------------------------------------------------------------------
 };
 
 
-#define CH_GRAPHICS_DATA         "ChocolateGraphicsData"
-#define CH_GRAPHICS_DATA_VERSION 1
+#define CH_GRAPHICS_DATA     "ch_graphics_data"
+#define CH_GRAPHICS_DATA_VER 1
 

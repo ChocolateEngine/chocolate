@@ -57,6 +57,8 @@ void LoadObj_Fast( const std::string &srBasePath, const std::string &srPath, Mod
 
 	fastObjMesh* obj = fast_obj_read( srPath.c_str() );
 
+	Log_DevF( 1, "LOADING MODEL - %s\n", srBasePath.data() );
+
 	if ( obj == nullptr )
 	{
 		Log_ErrorF( gLC_ClientGraphics, "Failed to parse obj\n", srPath.c_str() );

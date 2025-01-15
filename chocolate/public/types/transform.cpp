@@ -339,6 +339,20 @@ void Util_ToViewMatrixZ( glm::mat4& srViewMatrix, const glm::vec3& srPos, const 
 }
 
 
+void Util_ToViewMatrixZ( glm::mat4& srViewMatrix, const glm::quat& srRot )
+{
+	srViewMatrix = glm::toMat4( srRot );
+}
+
+
+void Util_ToViewMatrixZ( glm::mat4& srViewMatrix, const glm::vec3& srPos, const glm::quat& srRot )
+{
+	srViewMatrix = gViewMatrixZ;
+	Util_ToViewMatrixZ( srViewMatrix, srRot );
+	srViewMatrix = glm::translate( srViewMatrix, -srPos );
+}
+
+
 glm::quat Util_BuildRotateQuaternion( glm::vec3 sAxis, float sAngle )
 {
 	float     angleRad = glm::radians( sAngle );

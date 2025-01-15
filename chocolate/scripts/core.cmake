@@ -238,6 +238,7 @@ if( MSVC )
 	
 	set( COMPILE_OPTIONS_RELEASE
 		"/fp:fast"
+		"/Zi"        # debug information
 	)
 	
 	set( COMPILE_OPTIONS_PROFILE
@@ -258,7 +259,7 @@ if( MSVC )
 	)
 	
 	set( LINK_OPTIONS_RELEASE
-		""
+		"/DEBUG"
 	)
 	
 	set( LINK_OPTIONS_PROFILE

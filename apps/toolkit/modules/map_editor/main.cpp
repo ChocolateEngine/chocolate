@@ -490,8 +490,6 @@ bool MapEditor_Init()
 
 	Game_UpdateProjection();
 
-	srand( ( unsigned int )time( 0 ) );  // setup rand(  )
-
 #if AUDIO_OPENAL
 	// hAudioMusic = audio->RegisterChannel( "Music" );
 #endif

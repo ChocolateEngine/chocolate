@@ -50,11 +50,11 @@ bool Con_RegisterConVar_Base( ConVarData_t** conVarDataIn, const char* spName, c
 		return false;
 	}
 
-	ConVarData_t* conVarData      = new ConVarData_t;
-	conVarData->aFlags            = sFlags;
-	conVarData->aType             = sType;
+	ConVarData_t* conVarData     = new ConVarData_t;
+	conVarData->aFlags           = sFlags;
+	conVarData->aType            = sType;
 
-	Con_GetConVarMap()[ spName ]  = conVarData;
+	Con_GetConVarMap()[ spName ] = conVarData;
 
 	if ( spDesc )
 	{
@@ -68,10 +68,8 @@ bool Con_RegisterConVar_Base( ConVarData_t** conVarDataIn, const char* spName, c
 	Con_GetConVarNames().push_back( spName );
 	Con_GetConVarList().emplace_back( spName, true, conVarData );
 
-	if ( gConVarRegisterFlags )
-	{
-		conVarData->aFlags |= gConVarRegisterFlags;
-	}
+	// Make sure to add any base convar register flags
+	conVarData->aFlags |= gConVarRegisterFlags;
 
 	if ( conVarDataIn )
 		*conVarDataIn = conVarData;

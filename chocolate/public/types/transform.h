@@ -59,6 +59,9 @@ void             Util_ToViewMatrixY( glm::mat4& srViewMatrix, const glm::vec3& s
 void             Util_ToViewMatrixZ( glm::mat4& srViewMatrix, const glm::vec3& srAng );
 void             Util_ToViewMatrixZ( glm::mat4& srViewMatrix, const glm::vec3& srPos, const glm::vec3& srAng );
 
+void             Util_ToViewMatrixZ( glm::mat4& srViewMatrix, const glm::quat& srRot );
+void             Util_ToViewMatrixZ( glm::mat4& srViewMatrix, const glm::vec3& srPos, const glm::quat& srRot );
+
 
 // Helper Function to rotate quaternions even though it's easy, this is easy to remember and use
 glm::quat        Util_BuildRotateQuaternion( glm::vec3 sAxis, float sAngle );

@@ -1214,7 +1214,10 @@ class IGraphics : public ISystem
 	virtual void                   DrawBBox( const glm::vec3& sX, const glm::vec3& sY, const glm::vec3& sColor )                                  = 0;
 	virtual void                   DrawProjView( const glm::mat4& srProjView )                                                                    = 0;
 	virtual void                   DrawFrustum( const Frustum_t& srFrustum )                                                                      = 0;
-	virtual void                   DrawNormals( ch_handle_t sModel, const glm::mat4& srMatrix )                                                    = 0;
+	virtual void                   DrawNormals( ch_handle_t sModel, const glm::mat4& srMatrix )                                                   = 0;
+
+	// Reserve X amount of vertices to draw
+	virtual void                   DebugDrawReserve( u32 count )                                                                                  = 0;
 
 	// ---------------------------------------------------------------------------------------
 	// Vertex Format/Attributes

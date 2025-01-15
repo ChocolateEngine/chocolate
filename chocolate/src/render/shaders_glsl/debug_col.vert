@@ -2,6 +2,8 @@
 #extension GL_ARB_separate_shader_objects : enable
 #extension GL_EXT_nonuniform_qualifier : enable
 
+#define CH_VERT_SHADER 1
+
 #include "core.glsl"
 
 layout(push_constant) uniform Push
@@ -36,6 +38,6 @@ void main()
 	// outPosition = inPos;
 	// outPositionWorld = (inMatrix * vec4(outPosition, 1.0)).rgb;
 
-	gl_Position = gViewports[ push.aViewport ].aProjView * push.aModelMatrix * vec4(inPos, 1.0);
+	gl_Position = gViewports[ push.aViewport ].aProjView * gModelMatrices[ push.aRenderable ] * vec4(inPos, 1.0);
     fragColor   = push.aColor;
 }

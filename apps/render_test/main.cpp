@@ -1,22 +1,18 @@
 #include "core/app_info.h"
 #include "core/build_number.h"
 
-#include "iinput.h"
-#include "igui.h"
-#include "irender3.h"
-
-#include "types/transform.h"
-
 #include "imgui/imgui.h"
 #include "imgui/imgui_internal.h"
 #include "imgui/imgui_impl_sdl2.h"
 
+#include "render_test.h"
 
-CONVAR_RANGE_FLOAT_NAME( host_fps_max, "app.fps.max", 300, 0, 5000, "Maximum FPS the App can run at" );
+
+CONVAR_FLOAT_NAME( host_fps_max, "app.fps.max", 300, "Maximum FPS the App can run at - 0 for no limit, 10 minimum" );
 CONVAR_RANGE_FLOAT_NAME( host_timescale, "app.time.scale", 1, 0, FLT_MAX, "Scaled Frametime of the App" );
 CONVAR_RANGE_FLOAT_NAME( host_max_frametime, "app.max.frametime", 0.1, 0, FLT_MAX, "Max time in seconds a frame can be" );
 
-CONVAR_FLOAT_NAME( g_move_speed, "input.move.speed", 1, "Move Speed" );
+CONVAR_FLOAT_NAME( g_move_speed, "input.move.speed", 5, "Move Speed" );
 
 CONVAR_FLOAT_NAME( g_mouse_pitch, "input.mouse.sensitivity.pitch", 0.022, CVARF_ARCHIVE, "Mouse Pitch" );
 CONVAR_FLOAT_NAME( g_mouse_yaw, "input.mouse.sensitivity.yaw", 0.022, CVARF_ARCHIVE, "Mouse Yaw" );
@@ -27,25 +23,26 @@ CONVAR_FLOAT_NAME( g_view_farz, "view.farz", 1000.f, CVARF_ARCHIVE, "Far Z" );
 CONVAR_FLOAT_NAME( g_view_fov, "view.fov", 106.f, CVARF_ARCHIVE, "Field of View" );
 
 
-IGuiSystem*   gui                 = nullptr;
-IRender3*     render              = nullptr;
-IInputSystem* input               = nullptr;
+IGuiSystem*    gui                 = nullptr;
+IRender3*      render              = nullptr;
+IGraphicsData* graphics_data       = nullptr;
+IInputSystem*  input               = nullptr;
 
-int           g_width             = args_register_names( 1280, "Width of the main window", 2, "--width", "-w" );
-int           g_height            = args_register_names( 720, "Height of the main window", 2, "--height", "-h" );
-static bool   g_maximize          = args_register( "Maximize the main window", "--max" );
-static bool   g_wait_for_debugger = args_register( "Upon Program Startup, Wait for the Debugger to attach", "--debugger" );
-static bool   g_running           = true;
+int            g_width             = args_register_names( 1280, "Width of the main window", 2, "--width", "-w" );
+int            g_height            = args_register_names( 720, "Height of the main window", 2, "--height", "-h" );
+static bool    g_maximize          = args_register( "Maximize the main window", "--max" );
+static bool    g_wait_for_debugger = args_register( "Upon Program Startup, Wait for the Debugger to attach", "--debugger" );
+static bool    g_running           = true;
 
-SDL_Window*   g_window            = nullptr;
-void*         g_window_native     = nullptr;  // Only Used on WIN32
-ch_handle_t   g_graphics_window   = CH_INVALID_HANDLE;
+SDL_Window*    g_window            = nullptr;
+void*          g_window_native     = nullptr;  // Only Used on WIN32
+ch_handle_t    g_graphics_window   = CH_INVALID_HANDLE;
 
-glm::mat4     g_view{};
-glm::mat4     g_projection{};
+glm::mat4      g_view{};
+glm::mat4      g_projection{};
 
-glm::vec3     g_pos{};
-glm::vec3     g_ang{};
+glm::vec3      g_pos{};
+glm::vec3      g_ang{};
 
 
 CONCMD( exit )
@@ -73,9 +70,10 @@ CONCMD( mimalloc_print )
 
 static AppModule_t g_app_modules[] = 
 {
-	{ (ISystem**)&input,  "ch_input",    IINPUTSYSTEM_NAME, IINPUTSYSTEM_VER },
-	{ (ISystem**)&render, "ch_render_3", CH_RENDER3, CH_RENDER3_VER },
-	{ (ISystem**)&gui,    "ch_gui",      IGUI_NAME, IGUI_HASH },
+	{ (ISystem**)&input,         "ch_input",         IINPUTSYSTEM_NAME, IINPUTSYSTEM_VER },
+	{ (ISystem**)&graphics_data, "ch_graphics_data", CH_GRAPHICS_DATA,  CH_GRAPHICS_DATA_VER },
+	{ (ISystem**)&render,        "ch_render_3",      CH_RENDER3,        CH_RENDER3_VER },
+	{ (ISystem**)&gui,           "ch_gui",           IGUI_NAME,         IGUI_HASH },
 };
 
 
@@ -114,7 +112,7 @@ bool create_main_window()
 	// Create Main Window
 	std::string window_name;
 
-	window_name = ( Core_GetAppInfo().apWindowTitle ) ? Core_GetAppInfo().apWindowTitle : "Chocolate Engine";
+	window_name = ( Core_GetAppInfo().apWindowTitle ) ? Core_GetAppInfo().apWindowTitle : "Chocolate Engine Render 3 Test";
 	window_name += vstring( " - Build %zd - Compiled On - %s %s", Core_GetBuildNumber(), Core_GetBuildDate(), Core_GetBuildTime() );
 
 	if ( !sys_create_window( g_window_native, g_window, window_name.c_str(), g_width, g_height, g_maximize ) )
@@ -328,8 +326,8 @@ void handle_mouse()
 			const glm::vec2 mouse = input->GetMouseDelta();
 
 			// transform.aAng[PITCH] = -mouse.y;
-			g_ang[ PITCH ] += mouse.y * g_mouse_pitch;
-			g_ang[ YAW ] += mouse.x * g_mouse_yaw;
+			g_ang[ PITCH ] -= mouse.y * g_mouse_pitch * g_mouse_sensitivity;
+			g_ang[ YAW ] += mouse.x * g_mouse_yaw * g_mouse_sensitivity;
 
 			g_ang[ YAW ]   = DegreeConstrain( g_ang[ YAW ] );
 			g_ang[ PITCH ] = std::clamp( g_ang[ PITCH ], -90.0f, 90.0f );
@@ -373,15 +371,27 @@ void handle_inputs( float frame_time )
 	if ( input->KeyPressed( (EButton)SDL_SCANCODE_D ) )
 		move.y += move_speed;
 
+	if ( input->KeyPressed( (EButton)SDL_SCANCODE_Q ) )
+		move.z = -move_speed;
+
+	if ( input->KeyPressed( (EButton)SDL_SCANCODE_E ) )
+		move.z += move_speed;
+
 	// get forward and right vectors
 	glm::vec3 forward, right, up;
-	Util_GetDirectionVectors( g_ang, &forward, &right, &up );
+	//Util_GetDirectionVectors( g_ang, &forward, &right, &up );
+	//
+	//for ( int i = 0; i < 3; i++ )
+	//	g_pos[ i ] += right[ i ] * move.x + forward[ i ] * move.y + up[ i ] * move.z;
+
+	Util_ToViewMatrixZ( g_view, g_pos, g_ang );
+	Util_GetViewMatrixZDirection( g_view, forward, right, up );
 
 	for ( int i = 0; i < 3; i++ )
 		g_pos[ i ] += forward[ i ] * move.x + right[ i ] * move.y + up[ i ] * move.z;
 
+	// stupid, because Util_GetDirectionVectors is broken or something
 	Util_ToViewMatrixZ( g_view, g_pos, g_ang );
-	Util_GetViewMatrixZDirection( g_view, forward, right, up );
 
 	// Update Projection
 	update_viewport();
@@ -415,15 +425,15 @@ void MainLoop()
 
 			if ( host_fps_max > 0.f )
 			{
-				float maxFps       = glm::clamp( host_fps_max, 10.f, 5000.f );
+				float max_fps        = glm::clamp( host_fps_max, 10.f, 5000.f );
 
 				// check if we still have more than 2ms till next frame and if so, wait for "1ms"
-				float minFrameTime = 1.0f / maxFps;
-				if ( ( minFrameTime - time ) > ( 2.0f / 1000.f ) )
+				float min_frame_time = 1.0f / max_fps;
+				if ( ( min_frame_time - time ) > ( 2.0f / 1000.f ) )
 					sys_sleep( 1 );
 
 				// framerate is above max
-				if ( time < minFrameTime )
+				if ( time < min_frame_time )
 					continue;
 			}
 		}
@@ -460,6 +470,41 @@ void MainLoop()
 }
 
 
+constexpr const char* TEST_SCENE_PATH = "../sidury/maps/riverhouse_v1";
+constexpr const char* TEST_MODEL_PATH = "../sidury/models/riverhouse/riverhouse_v1.obj";
+// constexpr const char* TEST_MODEL_PATH = "models/test/test_cube.obj";
+
+
+static ch_model_h      g_test_model{};
+static r_mesh_h        g_test_model_gpu{};
+static r_mesh_render_h g_test_model_render{};
+
+
+bool load_scene()
+{
+	// hmm, maybe this could be condensed into one call, mesh_render_create(), pass in a model path instead of a handle, and do the model load and upload internally if needed?
+	g_test_model = graphics_data->model_load( TEST_MODEL_PATH );
+	
+	if ( !g_test_model )
+		return false;
+	
+	g_test_model_gpu = render->mesh_upload( g_test_model );
+	
+	if ( !g_test_model_gpu.generation )
+		return false;
+	
+	g_test_model_render = render->mesh_render_create( g_test_model_gpu );
+	
+	if ( !g_test_model_render.generation )
+		return false;
+
+	// now we can free the test model since it's use is over
+	graphics_data->model_free( g_test_model );
+
+	return true;
+}
+
+
 extern "C"
 {
 	int DLL_EXPORT app_init()
@@ -478,8 +523,6 @@ extern "C"
 
 		// Needs to be done before Renderer is loaded
 		ImGui::CreateContext();
-
-		srand( (unsigned int)time( 0 ) );  // setup rand(  )
 
 		// ---------------------------------------------------------------------------------------------
 		// Load Systems
@@ -515,12 +558,14 @@ extern "C"
 
 		update_viewport();
 
-		// IDEA: put autoexec built it again, and just store all convars in a list
-		// Then, when each convar is registered, we check what we read from config.cfg and autoexec.cfg
-		// only issue is queued concommands maybe, but we can just queue those, and then call a function run them here instead
-
 		// Init autoexec.cfg
 		Con_QueueCommandSilent( "exec autoexec.cfg", false );
+
+		// ---------------------------------------------------------------------------------------------
+		// Load Test Scene
+
+		if ( !load_scene() )
+		 	return 1;
 
 		// ---------------------------------------------------------------------------------------------
 		// Main Loop
@@ -530,7 +575,6 @@ extern "C"
 		// ---------------------------------------------------------------------------------------------
 		// Shutdown
 
-		Resource_Shutdown();
 		return 0;
 	}
 }

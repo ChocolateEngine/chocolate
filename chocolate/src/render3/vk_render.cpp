@@ -210,7 +210,7 @@ void vk_draw_compute_test( VkCommandBuffer c, r_window_data_t* window, u32 swap_
 }
 
 
-void vk_draw_tri_test( VkCommandBuffer c, r_window_data_t* window, u32 swap_index )
+void vk_draw_test( VkCommandBuffer c, r_window_data_t* window, u32 swap_index )
 {
 	VkRenderingAttachmentInfo color_attach{ VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO };
 	color_attach.imageView   = window->draw_image.view;
@@ -246,8 +246,98 @@ void vk_draw_tri_test( VkCommandBuffer c, r_window_data_t* window, u32 swap_inde
 
 	vkCmdSetScissor( c, 0, 1, &scissor );
 
+	gpu_push_t push;
+	push.world_matrix   = glm::mat4{ 1.f };
+	push.vertex_address = g_test_render.rectangle.vertex_address;
+
+	vkCmdPushConstants( c, g_shader_data_graphics_pipeline_layout[ 0 ], VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof( gpu_push_t ), &push );
+	vkCmdBindIndexBuffer( c, g_test_render.rectangle.index->buffer, 0, VK_INDEX_TYPE_UINT32 );
+
+	vkCmdDrawIndexed( c, 6, 1, 0, 0, 0 );
+
 	// Launch a draw command to draw 3 verts
-	vkCmdDraw( c, 3, 1, 0, 0 );
+	// vkCmdDraw( c, 3, 1, 0, 0 );
+
+	vkCmdEndRendering( c );
+}
+
+
+void vk_draw_renderables_test( VkCommandBuffer c, r_window_data_t* window, u32 swap_index )
+{
+	VkRenderingAttachmentInfo color_attach{ VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO };
+	color_attach.imageView   = window->draw_image.view;
+	color_attach.imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+	// color_attach.loadOp      = clear ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_LOAD;
+	color_attach.loadOp      = VK_ATTACHMENT_LOAD_OP_CLEAR;
+	// color_attach.loadOp      = VK_ATTACHMENT_LOAD_OP_LOAD;
+	color_attach.storeOp     = VK_ATTACHMENT_STORE_OP_STORE;
+
+	VkRenderingInfo render_info{ VK_STRUCTURE_TYPE_RENDERING_INFO };
+	render_info.colorAttachmentCount = 1;
+	render_info.pColorAttachments    = &color_attach;
+	render_info.renderArea.extent    = window->draw_image.extent;
+	render_info.layerCount           = 1;
+
+	vkCmdBeginRendering( c, &render_info );
+
+	// TODO: this will crash if the shader isn't loaded, and this is still really early testing, so it's fine for now
+	vkCmdBindPipeline( c, VK_PIPELINE_BIND_POINT_GRAPHICS, g_shader_data_graphics_pipelines[ 0 ] );
+
+	// Set Dynamic Viewport and Scissor
+	VkViewport viewport{};
+	viewport.width  = window->draw_image.extent.width;
+	viewport.height = window->draw_image.extent.height;
+	viewport.minDepth = 0.f;
+	viewport.maxDepth = 1.f;
+
+	vkCmdSetViewport( c, 0, 1, &viewport );
+
+	VkRect2D scissor{};
+	scissor.extent.width  = window->draw_image.extent.width;
+	scissor.extent.height = window->draw_image.extent.height;
+
+	vkCmdSetScissor( c, 0, 1, &scissor );
+
+	for ( u32 i = 0; i < g_mesh_render_list.capacity; i++ )
+	{
+		if ( !g_mesh_render_list.use_list[ i ] )
+			continue;
+
+		r_mesh_render_t& mesh_render = g_mesh_render_list.data[ i ];
+		vk_mesh_t*       mesh        = g_mesh_list.get( mesh_render.mesh );
+
+		if ( !mesh )
+			continue;
+
+		gpu_push_t push;
+		push.world_matrix     = mesh_render.matrix;
+		// push.view_proj_matrix = g_test_render.view_proj_mat;
+		push.view_matrix = g_test_render.view_mat;
+		push.proj_matrix = g_test_render.proj_mat;
+		push.vertex_address   = mesh->buffers.vertex_address;
+
+		vkCmdPushConstants( c, g_shader_data_graphics_pipeline_layout[ 0 ], VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof( gpu_push_t ), &push );
+
+		VkDeviceSize vertex_offset[ 1 ] = { 0 };
+		vkCmdBindVertexBuffers( c, 0, 1, &mesh->buffers.vertex->buffer, vertex_offset );
+
+	//	vkCmdBindIndexBuffer( c, mesh->buffers.index->buffer, 0, VK_INDEX_TYPE_UINT32 );
+	// 	vkCmdDrawIndexed( c, mesh->index_count, 1, 0, 0, 0 );
+
+		vkCmdDraw( c, mesh->vertex_count, 1, 0, 0 );
+	}
+
+//	gpu_push_t push;
+//	push.world_matrix   = glm::mat4{ 1.f };
+//	push.vertex_address = g_test_render.rectangle.vertex_address;
+//
+//	vkCmdPushConstants( c, g_shader_data_graphics_pipeline_layout[ 0 ], VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof( gpu_push_t ), &push );
+//	vkCmdBindIndexBuffer( c, g_test_render.rectangle.index->buffer, 0, VK_INDEX_TYPE_UINT32 );
+//
+//	vkCmdDrawIndexed( c, 6, 1, 0, 0, 0 );
+
+	// Launch a draw command to draw 3 verts
+	// vkCmdDraw( c, 3, 1, 0, 0 );
 
 	vkCmdEndRendering( c );
 }
@@ -275,12 +365,13 @@ static void vk_record_commands_window( r_window_data_t* window, u32 swap_index )
 	// ---------------------------------------------------------------
 	// start drawing
 
-	vk_draw_compute_test( c, window, swap_index );
+	// vk_draw_compute_test( c, window, swap_index );
 
 	// switch to color attachment layout for better draw performance
 	vk_transition_image( c, window->draw_image.image, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL );
 
-	vk_draw_tri_test( c, window, swap_index );
+	//vk_draw_test( c, window, swap_index );
+	vk_draw_renderables_test( c, window, swap_index );
 
 	// ---------------------------------------------------------------
 	// end drawing

@@ -3,6 +3,7 @@
 #include "graphics_int.h"
 
 
+constexpr const char*       gpVertNormalShader = "shaders/vertex_normals.vert.spv";
 constexpr const char*       gpVertColShader = "shaders/debug_col.vert.spv";
 constexpr const char*       gpVertShader    = "shaders/debug.vert.spv";
 constexpr const char*       gpFragShader    = "shaders/debug.frag.spv";
@@ -155,6 +156,8 @@ static void Shader_Wireframe_PushConstants( ch_handle_t cmd, ch_handle_t sLayout
 {
 	Debug_Push push{};
 	push.aModelMatrix = sPushData.apRenderable->aModelMatrix;
+	push.aRenderable  = sPushData.aRenderableIndex;
+	push.aViewport    = sPushData.aViewportIndex;
 
 	// this should never happen, but it is, need to fix
 	if ( sPushData.apMaterialData )
@@ -186,4 +189,61 @@ ShaderCreate_t gShaderCreate_Wireframe = {
 
 
 CH_REGISTER_SHADER( gShaderCreate_Wireframe );
+
+
+// -----------------------------------------------------------------------------------------------
+
+
+static void Shader_VertexNormals_GetPipelineLayoutCreate( PipelineLayoutCreate_t& srPipeline )
+{
+	srPipeline.aPushConstants.push_back( { ShaderStage_Vertex | ShaderStage_Fragment, 0, sizeof( Debug_Push ) } );
+}
+
+
+static void Shader_VertexNormals_GetGraphicsPipelineCreate( GraphicsPipelineCreate_t& srGraphics )
+{
+	srGraphics.aShaderModules.push_back( { ShaderStage_Vertex, gpVertNormalShader, "main" } );
+	srGraphics.aShaderModules.push_back( { ShaderStage_Fragment, gpFragShader, "main" } );
+
+	srGraphics.aColorBlendAttachments.emplace_back( true );
+
+	srGraphics.aPrimTopology = EPrimTopology_Line;
+	srGraphics.aLineMode     = false;
+	srGraphics.aDynamicState = EDynamicState_Viewport | EDynamicState_Scissor | EDynamicState_LineWidth;
+	srGraphics.aCullMode     = ECullMode_None;
+}
+
+
+static void Shader_VertexNormals_PushConstants( ch_handle_t cmd, ch_handle_t sLayout, const ShaderPushData_t& sPushData )
+{
+	Debug_Push push{};
+	push.aModelMatrix = sPushData.apRenderable->aModelMatrix;
+	push.aRenderable  = sPushData.aRenderableIndex;
+	push.aViewport    = sPushData.aViewportIndex;
+
+	// this should never happen, but it is, need to fix
+//	if ( sPushData.apMaterialData )
+//		push.color = sPushData.apMaterialData->vars[ COLOR_MAT_INDEX ].aVec4;
+//	else
+//		push.color = gWireframeColor;
+
+	render->CmdPushConstants( cmd, sLayout, ShaderStage_Vertex | ShaderStage_Fragment, 0, sizeof( Debug_Push ), &push );
+}
+
+
+ShaderCreate_t gShaderCreate_VertexNormals = {
+	.apName           = "__vertex_normals",
+	.aStages          = ShaderStage_Vertex | ShaderStage_Fragment,
+	.aBindPoint       = EPipelineBindPoint_Graphics,
+	.aDynamicState    = EDynamicState_Viewport | EDynamicState_Scissor | EDynamicState_LineWidth,
+	.aVertexFormat    = VertexFormat_Position | VertexFormat_Normal,
+	.apInit           = nullptr,
+	.apDestroy        = nullptr,
+	.apLayoutCreate   = Shader_VertexNormals_GetPipelineLayoutCreate,
+	.apGraphicsCreate = Shader_VertexNormals_GetGraphicsPipelineCreate,
+	.apShaderPush     = Shader_VertexNormals_PushConstants,
+};
+
+
+CH_REGISTER_SHADER( gShaderCreate_VertexNormals );
 

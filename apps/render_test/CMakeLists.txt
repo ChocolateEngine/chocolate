@@ -3,6 +3,12 @@ message( "Current Project: Render Test" )
 set(
 	SRC_FILES
 	main.cpp
+	scene_load.cpp
+
+	render_test.h
+
+	../shared/map_system.cpp
+	../shared/map_system.h
 )
 
 set(
@@ -54,7 +60,7 @@ endforeach( OUTPUTCONFIG CMAKE_CONFIGURATION_TYPES )
 target_precompile_headers( ch_render_3_test PRIVATE "${CH_PUBLIC}/core/core.h" )
 
 source_group(
-	TREE ${CMAKE_CURRENT_LIST_DIR}
+	TREE ${CMAKE_CURRENT_LIST_DIR}/../
 	PREFIX "Source Files"
 	FILES ${SRC_FILES}
 )

@@ -6,13 +6,24 @@
 
 // HACK HACK HACK HACK
 // VULKAN NEEDS THE SURFACE BEFORE WE CREATE A DEVICE
-VkSurfaceKHR          g_surface_hack         = VK_NULL_HANDLE;
-SDL_Window*           g_window_hack          = nullptr;
-void*                 g_window_hack_native   = nullptr;
+// only so we can see if the device can actually create a surface with the right format and capabilities
+VkSurfaceKHR                                          g_surface_hack         = VK_NULL_HANDLE;
+SDL_Window*                                           g_window_hack          = nullptr;
+void*                                                 g_window_hack_native   = nullptr;
 
-VmaAllocator          g_vma                  = VK_NULL_HANDLE;
+VmaAllocator                                          g_vma                  = VK_NULL_HANDLE;
 
-constexpr const char* CH_DEFAULT_WINDOW_NAME = "Vulkan Window";
+constexpr const char*                                 CH_DEFAULT_WINDOW_NAME = "Vulkan Window";
+
+IGraphicsData*                                        graphics_data          = nullptr;
+
+
+// each ref count allocated starts at one here when uploaded, then incremeneted when a mesh render is created
+// which would be a ref count of 2 for one mesh render
+ch_handle_ref_list_32< r_mesh_h, vk_mesh_t >          g_mesh_list;
+ch_handle_list_32< r_mesh_render_h, r_mesh_render_t > g_mesh_render_list;
+
+test_render_t                                         g_test_render;
 
 
 // interface for the renderer
@@ -24,6 +35,8 @@ struct Render3 final : public IRender3
 
 	bool Init() override
 	{
+		graphics_data = Mod_GetSystemCast< IGraphicsData >( CH_GRAPHICS_DATA, CH_GRAPHICS_DATA_VER );
+
 		// create the vulkan instance
 		if ( !vk_instance_create() )
 		{
@@ -61,6 +74,8 @@ struct Render3 final : public IRender3
 		vma_create.instance         = g_vk_instance;
 		vma_create.vulkanApiVersion = VK_HEADER_VERSION_COMPLETE;
 
+		vma_create.flags |= VMA_ALLOCATOR_CREATE_BUFFER_DEVICE_ADDRESS_BIT;
+
 		if ( vmaCreateAllocator( &vma_create, &g_vma ) != VK_SUCCESS )
 		{
 			Log_Error( gLC_Render, "Failed to create VMA allocator\n" );
@@ -82,6 +97,8 @@ struct Render3 final : public IRender3
 		// create the missing texture
 
 		// TODO: later add in other parts of the renderer, like the shader system
+
+		test_init();
 
 		return true;
 	}
@@ -337,6 +354,66 @@ struct Render3 final : public IRender3
 
 		vk_draw( window_handle, window );
 	}
+	// --------------------------------------------------------------------------------------------
+	// Textures
+	// --------------------------------------------------------------------------------------------
+
+#if 0
+	// Creates a new texture
+	ch_texture_h texture_load( const char* path, s64 pathLen, const texture_load_info_t& create_info ) override
+	{
+		if ( !ch_str_ends_with( path, pathLen, ".ktx", 4 ) )
+		{
+			Log_ErrorF( "We only support KTX textures\n" );
+			return CH_INVALID_HANDLE;
+		}
+
+		return texture_load_ktx( path, pathLen, create_info );
+	}
+
+
+	ch_handle_t* texture_load( const char** paths, s64* pathLens, const texture_load_info_t* create_infos, size_t count = 1 ) override
+	{
+		// for each path
+		ch_handle_t* textures = ch_calloc< ch_handle_t >( count );
+
+		if ( pathLens )
+		{
+			for ( size_t i = 0; i < count; i++ )
+			{
+				textures[ i ] = texture_load( paths[ i ], pathLens[ i ], create_infos[ i ] );
+			}
+		}
+		else
+		{
+			for ( size_t i = 0; i < count; i++ )
+			{
+				textures[ i ] = texture_load( paths[ i ], strlen( paths[ i ] ), create_infos[ i ] );
+			}
+		}
+
+		return textures;
+	}
+
+
+	ch_handle_t* texture_load( const char** paths, const texture_load_info_t* create_infos, size_t count = 1 ) override
+	{
+		return texture_load( paths, nullptr, create_infos, count );
+	}
+
+
+	// ch_handle_t texture_load( ch_string* paths, texture_load_info_t* create_infos, size_t count = 1 ) override
+	// {
+	// }
+
+	void texture_free( ch_handle_t* texture, size_t count = 1 ) override
+	{
+	}
+
+	//	texture_data_t texture_get_data( ch_handle_t texture ) override
+	//	{
+	//	}
+#endif
 
 	// --------------------------------------------------------------------------------------------
 	// Test Rendering
@@ -344,15 +421,151 @@ struct Render3 final : public IRender3
 
 	bool test_init() override
 	{
+		// create a test rectangle
+		gpu_vertex_t verts[ 4 ];
+		u32          indices[ 6 ];
+
+		verts[ 0 ].pos          = { 0.5, -0.5, 0 };
+		verts[ 1 ].pos          = { 0.5, 0.5, 0 };
+		verts[ 2 ].pos          = { -0.5, -0.5, 0 };
+		verts[ 3 ].pos          = { -0.5, 0.5, 0 };
+
+		verts[ 0 ].color        = { 0, 0, 0, 1 };
+		verts[ 1 ].color        = { 0.5, 0.5, 0.5, 1 };
+		verts[ 2 ].color        = { 1, 0, 0, 1 };
+		verts[ 3 ].color        = { 0, 1, 0, 1 };
+
+		indices[ 0 ]            = 0;
+		indices[ 1 ]            = 1;
+		indices[ 2 ]            = 2;
+
+		indices[ 3 ]            = 2;
+		indices[ 4 ]            = 1;
+		indices[ 5 ]            = 3;
+
+		// g_test_render.rectangle = vk_mesh_upload( indices, 6, verts, 4 );
+
 		return true;
 	}
 
 	void test_shutdown() override
 	{
+		// vk_mesh_free( g_test_render.rectangle );
 	}
 
 	void test_update( float frame_time, ch_handle_t window, glm::mat4 view, glm::mat4 projection ) override
 	{
+		g_test_render.view_mat      = view;
+		g_test_render.proj_mat      = projection;
+		g_test_render.view_proj_mat = view * projection;
+	}
+
+	// TODO: make a separate r_mesh handle the app needs to hold on to, and make a mesh_render_create() function
+	// while we could just use ch_model_h, that is supposed to point to the model in graphics_data, which can cause confusion
+	// and if the mesh isn't uploaded, and the handle isn't valid in graphics_data, nothing gets uploaded
+	r_mesh_h mesh_upload( ch_model_h model_handle ) override
+	{
+		model_t* model = graphics_data->model_get( model_handle );
+
+		if ( !model )
+			return {};
+
+		u32 total_verts = 0;
+		u32 total_ind   = 0;
+
+		for ( u32 mesh_i = 0; mesh_i < model->mesh_count; mesh_i++ )
+		{
+			total_verts += model->mesh[ mesh_i ].vertex_count;
+			total_ind += model->mesh[ mesh_i ].index_count;
+		}
+
+		gpu_vertex_t* verts   = ch_calloc< gpu_vertex_t >( total_verts );
+		u32*          indices = 0;
+
+		if ( total_ind )
+			indices = ch_calloc< u32 >( total_ind );
+
+		u32 vert_offset      = 0;
+		u32 ind_offset       = 0;
+		u32 ind_value_offset = 0;
+
+		for ( u32 mesh_i = 0; mesh_i < model->mesh_count; mesh_i++ )
+		{
+			mesh_t& mesh = model->mesh[ mesh_i ];
+			for ( u32 vert_i = 0; vert_i < mesh.vertex_count; vert_i++ )
+			{
+				verts[ vert_offset ].pos    = mesh.vertex_data.pos[ vert_i ];
+				verts[ vert_offset ].normal = mesh.vertex_data.normal[ vert_i ];
+				verts[ vert_offset ].uv_x   = mesh.vertex_data.tex_coord[ vert_i ].x;
+				verts[ vert_offset ].uv_y   = mesh.vertex_data.tex_coord[ vert_i ].y;
+				// verts[ vert_i ].color = mesh.vertex_data.color[ vert_i ];
+				vert_offset++;
+			}
+
+			//	for ( u32 vert_i = 0; vert_i < mesh.index_count; vert_i++ )
+			//	{
+			//		indices[ ind_offset++ ] = mesh.index[ vert_i ] + ind_value_offset;
+			//	}
+			//
+			//	ind_value_offset += mesh.index_count;
+		}
+
+		gpu_mesh_buffers_t buffers{};
+
+		if ( total_ind > 0 )
+		{
+			buffers = vk_mesh_upload( indices, total_ind, verts, total_verts );
+		}
+		else
+		{
+			buffers = vk_mesh_upload( verts, total_verts );
+		}
+
+		free( verts );
+		free( indices );
+
+		if ( buffers.vertex == nullptr )
+		{
+			Log_ErrorF( "Failed to upload mesh: \"%s\"", graphics_data->model_get_path( model_handle ) );
+			return {};
+		}
+
+		// store an internal handle to the uploaded mesh here
+		r_mesh_h   upload_handle{};
+		vk_mesh_t* vk_mesh = nullptr;
+
+		if ( !g_mesh_list.create( upload_handle, &vk_mesh ) )
+			return {};
+
+		vk_mesh->buffers      = buffers;
+		vk_mesh->vertex_count = total_verts;
+		vk_mesh->index_count  = total_ind;
+
+		return upload_handle;
+	}
+
+	r_mesh_render_h mesh_render_create( r_mesh_h mesh_handle ) override
+	{
+		if ( !g_mesh_list.handle_valid( mesh_handle ) )
+		{
+			Log_ErrorF( "Can't Create Mesh Render, Mesh Handle is Invalid!\n" );
+			return {};
+		}
+
+		r_mesh_render_h  render_handle{};
+		r_mesh_render_t* render_data = nullptr;
+
+		if ( !g_mesh_render_list.create( render_handle, &render_data ) )
+		{
+			return {};
+		}
+
+		render_data->matrix = glm::identity< glm::mat4 >();
+		render_data->mesh   = mesh_handle;
+
+		g_mesh_list.ref_increment( mesh_handle );
+
+		return render_handle;
 	}
 };
 

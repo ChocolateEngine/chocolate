@@ -599,6 +599,8 @@ void VK_ResetAll( ERenderResetFlags sFlags )
 {
 	if ( sFlags & ERenderResetFlags_MSAA )
 	{
+		VK_WaitForGraphicsQueue();
+
 		VK_DestroyMainRenderPass();
 		VK_CreateMainRenderPass();
 

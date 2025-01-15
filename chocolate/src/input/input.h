@@ -47,6 +47,8 @@ protected:
 	std::vector< SDL_Event >                          aEvents;
 
 	std::unordered_map< SDL_Window*, InputSysWindow > aWindows;
+
+	// TODO: these really should not be a pointer to a value in the hash map above
 	InputSysWindow*                                   aActiveWindow  = nullptr;
 	InputSysWindow*                                   aFocusedWindow = nullptr;
 

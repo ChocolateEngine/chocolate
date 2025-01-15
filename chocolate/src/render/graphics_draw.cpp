@@ -36,6 +36,9 @@ CONVAR_BOOL( r_reset_blend_shapes, 0, "" );
 
 CONVAR_BOOL_EXT( r_wireframe );
 
+CONVAR_BOOL_EXT( r_debug_draw );
+CONVAR_BOOL_EXT( r_debug_normals );
+
 
 bool Graphics_ViewFrustumTest( Renderable_t* spModelDraw, ViewportShader_t& srViewport )
 {
@@ -125,13 +128,15 @@ void Graphics_DrawShaderRenderables( ch_handle_t cmd, size_t sIndex, ch_handle_t
 	if ( shaderData->aDynamicState & EDynamicState_LineWidth )
 		render->CmdSetLineWidth( cmd, r_line_thickness );
 
+	static ch_handle_t shader_vertex_normals = gGraphics.GetShader( "__vertex_normals" );
+
 	const std::unordered_map< ch_handle_t, ShaderMaterialData >* matDataMap = Shader_GetMaterialDataMap( shader );
 
 	for ( uint32_t i = 0; i < srRenderList.size(); i++ )
 	{
 		SurfaceDraw_t& surfaceDraw = srRenderList[ i ];
 
-		Renderable_t* renderable = nullptr;
+		Renderable_t*  renderable  = nullptr;
 		if ( !gGraphicsData.aRenderables.Get( surfaceDraw.aRenderable, &renderable ) )
 		{
 			Log_Warn( gLC_ClientGraphics, "Draw Data does not exist for renderable!\n" );
@@ -159,7 +164,7 @@ void Graphics_DrawShaderRenderables( ch_handle_t cmd, size_t sIndex, ch_handle_t
 			Log_Error( gLC_ClientGraphics, "No Vertex/Index Buffers for Model??\n" );
 			continue;
 		}
-		
+
 		ShaderPushData_t pushData{};
 		pushData.apRenderable      = renderable;
 		pushData.aRenderableIndex  = renderable->aIndex;  // dumb
@@ -171,7 +176,7 @@ void Graphics_DrawShaderRenderables( ch_handle_t cmd, size_t sIndex, ch_handle_t
 		if ( matDataMap )
 		{
 			auto findMatData = matDataMap->find( renderable->apMaterials[ surfaceDraw.aSurface ] );
-		
+
 			if ( findMatData != matDataMap->end() )
 			{
 				pushData.apMaterialData = &findMatData->second;
@@ -182,7 +187,45 @@ void Graphics_DrawShaderRenderables( ch_handle_t cmd, size_t sIndex, ch_handle_t
 		if ( !Shader_PreMaterialDraw( cmd, sIndex, shaderData, pushData ) )
 			continue;
 
-		Graphics_CmdDrawSurface( cmd, model, surfaceDraw.aSurface );
+		if ( shader == shader_vertex_normals )
+		{
+			PROF_SCOPE();
+
+			Mesh& mesh = model->aMeshes[ surfaceDraw.aSurface ];
+
+			// TODO: figure out a way to use vertex and index offsets with this vertex format stuff
+			// ideally, it would be less vertex buffer binding, but would be harder to pull off
+			if ( model->apBuffers->aIndex )
+				render->CmdDraw(
+				  cmd,
+				  mesh.aIndexCount * 9,
+				  1,
+				  mesh.aIndexOffset,
+				  0 );
+
+			// render->CmdDrawIndexed(
+			//   cmd,
+			//   mesh.aIndexCount,
+			//   1,                  // instance count
+			//   mesh.aIndexOffset,
+			//   0, // mesh.aVertexOffset,
+			//   0 );
+
+			else
+				render->CmdDraw(
+				  cmd,
+				  mesh.aVertexCount * 9,
+				  1,
+				  mesh.aVertexOffset,
+				  0 );
+
+			gStats.aDrawCalls++;
+			gStats.aVerticesDrawn += mesh.aVertexCount * 9;
+		}
+		else
+		{
+			Graphics_CmdDrawSurface( cmd, model, surfaceDraw.aSurface );
+		}
 	}
 }
 
@@ -203,8 +246,8 @@ void Graphics_RenderView( ch_handle_t cmd, size_t sIndex, u32 sViewportIndex, Vi
 	bool          hasSkybox = false;
 
 	// here we go again
-	static ch_handle_t skybox    = gGraphics.GetShader( "skybox" );
-	static ch_handle_t gizmo     = gGraphics.GetShader( "gizmo" );
+	static ch_handle_t skybox                = gGraphics.GetShader( "skybox" );
+	static ch_handle_t gizmo                 = gGraphics.GetShader( "gizmo" );
 
 	Rect2D_t rect{};
 	rect.aOffset.x = srViewport.aOffset.x;
@@ -443,6 +486,9 @@ void Graphics::SetViewportRenderList( u32 sViewport, ch_handle_t* srRenderables,
 	static ch_handle_t    shaderDebug      = gGraphics.GetShader( "debug" );
 	static ch_handle_t    shaderDebugLine  = gGraphics.GetShader( "debug_line" );
 
+	// shaders to exclude and use for vertex normals
+	static ch_handle_t    shaderVertNormal  = gGraphics.GetShader( "__vertex_normals" );
+
 	if ( r_vis_lock )
 		return;
 
@@ -548,7 +594,7 @@ void Graphics::SetViewportRenderList( u32 sViewport, ch_handle_t* srRenderables,
 					shader = viewport.aShaderOverride;
 
 				// lol this looks great
-				else if ( r_wireframe && shader != shaderSkybox && shader != shaderGizmo && shader != shaderDebug && shader != shaderDebugLine )
+				else if ( r_wireframe && shader != shaderSkybox && shader != shaderGizmo && shader != shaderDebug && shader != shaderDebugLine && shader != shaderVertNormal )
 					shader = debugShader;
 
 				ShaderData_t* shaderData = Shader_GetData( shader );
@@ -559,6 +605,15 @@ void Graphics::SetViewportRenderList( u32 sViewport, ch_handle_t* srRenderables,
 				SurfaceDraw_t& surfDraw = viewRenderList.aRenderLists[ shader ].emplace_back();
 				surfDraw.aRenderable    = srRenderables[ i ];
 				surfDraw.aSurface       = surf;
+
+				// Debug Vertex Normal Drawing
+			//	if ( r_debug_draw && r_debug_normals && shaderVertNormal )
+			//	{
+			//		// add a SurfaceDraw_t to this render list
+			//		SurfaceDraw_t& surfDraw = viewRenderList.aRenderLists[ shaderVertNormal ].emplace_back();
+			//		surfDraw.aRenderable    = srRenderables[ i ];
+			//		surfDraw.aSurface       = surf;
+			//	}
 			}
 		}
 	}

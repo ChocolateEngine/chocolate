@@ -263,6 +263,31 @@ bool util_array_append( T*& data, u32 count )
 }
 
 
+// Allocates X amount more space in the array
+template< typename T >
+bool util_array_extend( T*& data, u32 count, u32 extend_amount )
+{
+#if 1
+	T* new_data = ch_recalloc< T >( data, count, extend_amount );
+
+	if ( !new_data )
+		return true;
+
+	data = new_data;
+#else
+	T* new_data = ch_realloc< T >( data, count + extend_amount );
+
+	if ( !new_data )
+		return true;
+
+	data = new_data;
+	memset( &data[ count ], 0, sizeof( T ) );
+#endif
+
+	return false;
+}
+
+
 template< typename T >
 bool util_array_append_err( T*& data, u32 count, const char* msg )
 {

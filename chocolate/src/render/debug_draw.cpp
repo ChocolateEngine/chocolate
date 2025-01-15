@@ -20,7 +20,7 @@ static size_t                   gDebugLineBufferSize = 0;
 CONVAR_BOOL( r_debug_aabb, 0, "", 0 );
 CONVAR_BOOL( r_debug_frustums, 0, "", 0 );
 CONVAR_BOOL( r_debug_normals, 0, "", 0 );
-CONVAR_FLOAT( r_debug_normals_len, 8, "", 0 );
+CONVAR_FLOAT( r_debug_normals_len, 0.15, "", 0 );
 CONVAR_FLOAT( r_debug_normals_len_face, 8, "", 0 );
 
 
@@ -138,6 +138,35 @@ void Graphics_UpdateDebugDraw()
 
 			for ( auto& [ shader, modelList ] : viewRenderList.aRenderLists )
 			{
+				if ( r_debug_normals )
+				{
+					u32 total_amount_of_indices = 0;
+					for ( SurfaceDraw_t& surfaceDraw : modelList )
+					{
+						// hack to not draw this AABB multiple times, need to change this render list system
+						if ( surfaceDraw.aSurface != 0 )
+							continue;
+
+						Renderable_t* renderable        = gGraphics.GetRenderableData( surfaceDraw.aRenderable );
+
+						if ( !renderable )
+						{
+							Log_Warn( gLC_ClientGraphics, "Draw Data does not exist for renderable!\n" );
+							return;
+						}
+
+						Model*        model             = gGraphics.GetModelData( renderable->aModel );
+
+						for ( size_t s = 0; s < model->aMeshes.size(); s++ )
+						{
+							Mesh& mesh = model->aMeshes[ s ];
+							total_amount_of_indices += mesh.aIndexCount;
+						}
+					}
+
+					// gGraphics.DebugDrawReserve( total_amount_of_indices * 3 );
+				}
+
 				for ( SurfaceDraw_t& surfaceDraw : modelList )
 				{
 					// hack to not draw this AABB multiple times, need to change this render list system
@@ -163,7 +192,7 @@ void Graphics_UpdateDebugDraw()
 							invMatrix  = glm::inverse( renderable->aModelMatrix );
 						}
 
-						gGraphics.DrawNormals( renderable->aModel, invMatrix );
+						gGraphics.DrawNormals( renderable->aModel, renderable->aModelMatrix );
 					}
 
 					// ModelBBox_t& bbox = gModelBBox[ renderable->apDraw->aModel ];
@@ -502,12 +531,25 @@ void Graphics::DrawFrustum( const Frustum_t& srFrustum )
 
 void Graphics::DrawNormals( ch_handle_t sModel, const glm::mat4& srMatrix )
 {
+#if 1
 	PROF_SCOPE();
 
 	if ( !r_debug_draw || !gDebugLineModel || !r_debug_normals )
 		return;
 
+	glm::mat4 inverse           = glm::inverse( srMatrix );
+
 	Model*    model = gGraphics.GetModelData( sModel );
+
+//	size_t    total_index_count = 0;
+//
+//	for ( size_t s = 0; s < model->aMeshes.size(); s++ )
+//	{
+//		Mesh& mesh = model->aMeshes[ s ];
+//		total_index_count += mesh.aIndexCount;
+//	}
+//
+//	gDebugLineVerts.reserve( gDebugLineVerts.size() + ( total_index_count * 3 ) );
 
 	// TODO: use this for physics materials later on
 	for ( size_t s = 0; s < model->aMeshes.size(); s++ )
@@ -540,8 +582,6 @@ void Graphics::DrawNormals( ch_handle_t sModel, const glm::mat4& srMatrix )
 			return;
 		}
 
-		gDebugLineVerts.reserve( gDebugLineVerts.size() + ( mesh.aIndexCount * 3 ) );
-
 		u32 j = 0;
 		for ( u32 i = 0; i < mesh.aIndexCount; )
 		{
@@ -572,24 +612,28 @@ void Graphics::DrawNormals( ch_handle_t sModel, const glm::mat4& srMatrix )
 				continue;
 			}
 
+			glm::vec3 posX[ 3 ];
+			glm::vec3 posY[ 3 ];
+
 			// Draw Vertex Normals
 			for ( int vi = 0; vi < 3; vi++ )
 			{
 				glm::vec4 v4( v[ vi ], 1 );
 				glm::vec4 n4( n[ vi ], 1 );
 
-				glm::vec3   posX    = v4 * srMatrix;
-				glm::vec3   normMat = n4 * srMatrix;
+				posX[ vi ]           = srMatrix * v4;
+				glm::vec3 normal_dir = glm::normalize( n4 * inverse );
 
-				// glm::vec3 forward;
-				// Util_GetDirectionVectors( )
-
-				glm::vec3 posY = posX + ( normMat * r_debug_normals_len );
+				posY[ vi ]           = posX[ vi ] + ( normal_dir * r_debug_normals_len );
 
 				// protoTransform.aPos, protoTransform.aPos + ( forward * r_proto_line_dist2 )
 
-				gGraphics.DrawLine( posX, posY, {0.9, 0.1, 0.1, 1.f} );
+				// gGraphics.DrawLine( posX, posY, {0.9, 0.1, 0.1, 1.f} );
 			}
+
+			gGraphics.DrawLine( posX[ 0 ], posY[ 0 ], { 0.9, 0.1, 0.1, 1.f } );
+			gGraphics.DrawLine( posX[ 1 ], posY[ 1 ], { 0.1, 0.9, 0.1, 1.f } );
+			gGraphics.DrawLine( posX[ 2 ], posY[ 2 ], { 0.1, 0.1, 0.9, 1.f } );
 
 			// Draw Face Normal
 			// glm::vec4 normal4( normal, 1 );
@@ -600,5 +644,12 @@ void Graphics::DrawNormals( ch_handle_t sModel, const glm::mat4& srMatrix )
 			j++;
 		}
 	}
+#endif
+}
+
+
+void Graphics::DebugDrawReserve( u32 count )
+{
+	gDebugLineVerts.reserve( gDebugLineVerts.size() + count );
 }
 

@@ -140,9 +140,6 @@ enum EEntNetField : u8
 
 enum EEntComponentNetType
 {
-	// This component is never networked
-	EEntComponentNetType_None,
-
 	// This component is on both client and server
 	EEntComponentNetType_Both,
 

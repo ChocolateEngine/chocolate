@@ -7,7 +7,12 @@
 
 
 #include "core/core.h"
-// #include "igraphics_data.h"
+#include "igraphics_data.h"
+
+
+CH_HANDLE_GEN_32( r_texture_h );
+CH_HANDLE_GEN_32( r_mesh_h );
+CH_HANDLE_GEN_32( r_mesh_render_h );
 
 
 enum e_render_reset_flags
@@ -38,6 +43,23 @@ struct renderable_t
 struct view_t
 {
 
+};
+
+
+struct texture_load_info_t
+{
+};
+
+
+struct texture_data_t
+{
+	GraphicsFmt format;
+	glm::vec3   size;
+	u32         mip_levels;
+	u32         array_layers;
+	u32         samples;
+	u32         data_size;
+	u8*         data;
 };
 
 
@@ -181,13 +203,19 @@ struct IRender3 : public ISystem
 	// Views
 	// --------------------------------------------------------------------------------------------
 
+
 	// --------------------------------------------------------------------------------------------
 	// Textures
 	// --------------------------------------------------------------------------------------------
 
-	// Uploads a texture to the GPU
-	//	virtual ch_handle_t* texture_upload( ch_handle_t* textures, texture_upload_info_t* upload_infos, u64 count = 1 ) = 0;
-	//	virtual void        texture_free( ch_handle_t* textures, u64 count = 1 )                                        = 0;
+	// Loads a texture from disk and uploads it to the GPU
+//	virtual ch_texture_h* texture_load( const char** paths, const texture_load_info_t* create_infos, size_t count = 1 )                = 0;
+//	virtual ch_texture_h* texture_load( const char** paths, s64* pathLens, const texture_load_info_t* create_infos, size_t count = 1 ) = 0;
+//	//virtual ch_texture_h     texture_load( ch_string* paths, const texture_load_info_t* create_infos, size_t count = 1 )   = 0;
+//	virtual ch_texture_h  texture_load( const char* path, s64 pathLen, const texture_load_info_t& create_info )                        = 0;
+//
+//	virtual void          texture_free( ch_texture_h* texture, size_t count = 1 )                                                      = 0;
+	//	virtual texture_data_t       texture_get_data( ch_texture_h texture )                                                                      = 0;
 
 	// --------------------------------------------------------------------------------------------
 	// Materials
@@ -238,10 +266,14 @@ struct IRender3 : public ISystem
 	// Test Rendering 
 	// --------------------------------------------------------------------------------------------
 
-	virtual bool test_init()                                                                               = 0;
-	virtual void test_shutdown()                                                                           = 0;
+	virtual bool            test_init()                                                                               = 0;
+	virtual void            test_shutdown()                                                                           = 0;
 
-	virtual void test_update( float frame_time, ch_handle_t window, glm::mat4 view, glm::mat4 projection ) = 0;
+	virtual void            test_update( float frame_time, ch_handle_t window, glm::mat4 view, glm::mat4 projection ) = 0;
+
+	virtual r_mesh_h        mesh_upload( ch_model_h handle )                                                          = 0;
+	virtual r_mesh_render_h mesh_render_create( r_mesh_h handle )                                                     = 0;
+	//	virtual void        test_mesh_free( ch_handle_t mesh )                                                        = 0;
 };
 
 

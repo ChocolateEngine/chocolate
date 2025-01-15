@@ -214,7 +214,6 @@ enum e_backbuffer_image
 // used when selecting a physical device
 struct device_info_t
 {
-	// yay bools in a struct
 	bool                       complete;  // no errors when getting all the data here
 	bool                       has_needed_extensions;
 
@@ -246,9 +245,9 @@ struct vk_desc_pool_size_ratio_t
 
 struct vk_buffer_t
 {
-	VkBuffer       buffer;
-	VkDeviceMemory memory;
-	VkDeviceSize   size;
+	VkBuffer          buffer;
+	VmaAllocation     alloc;
+	VmaAllocationInfo info;  // TODO: see how often this is used, might be a good idea to store this elsewhere if it's rarely used
 };
 
 
@@ -342,6 +341,7 @@ struct shader_static_register_graphics_t
 
 // --------------------------------------------------------------------------------------------
 
+
 struct backbuffer_image_t
 {
 	VkImage     image;  // not used for resolve, or color is msaa is off
@@ -430,6 +430,107 @@ struct test_compute_push_t
 // swap_image_count
 // 
 
+
+// --------------------------------------------------------------------------------------------
+// Test Render Stuff
+
+
+// must match shader
+struct gpu_vertex_t
+{
+	glm::vec3 pos;
+	float     uv_x;
+	glm::vec3 normal;
+	float     uv_y;
+	glm::vec4 color;
+};
+
+
+struct gpu_mesh_buffers_t
+{
+	vk_buffer_t*    index;
+	vk_buffer_t*    vertex;
+	VkDeviceAddress vertex_address;
+};
+
+
+struct vk_mesh_t
+{
+	const char*        name;
+	gpu_mesh_buffers_t buffers;
+
+	u32                vertex_count;
+	u32                index_count;
+
+	// TODO: store materials here
+};
+
+
+// struct vk_mesh_h
+// {
+// 	u32 id;
+// 	u32 generation;
+// };
+// 
+// 
+// struct vk_mesh_list
+// {
+// 	u32        count;
+// 	vk_mesh_h* handles;
+// 	vk_mesh_t* mesh;
+// 	u16*       ref_count;
+// };
+
+extern ch_handle_ref_list_32< r_mesh_h, vk_mesh_t > g_mesh_list;
+
+
+struct mesh_render_surface_t
+{
+	u32 start_index;
+	u32 count;
+};
+
+
+// Basic Mesh Rendering, does not point to any model once created
+struct r_mesh_render_t
+{
+	const char*            name;
+	r_mesh_h               mesh;
+
+	glm::mat4              matrix;
+
+	mesh_render_surface_t* surface;
+	u32                    surface_count;
+
+	// gpu_mesh_buffers_t     buffers;
+};
+
+
+struct gpu_push_t
+{
+	glm::mat4       world_matrix;
+	//glm::mat4       view_proj_matrix;
+	glm::mat4       view_matrix;
+	glm::mat4       proj_matrix;
+	VkDeviceAddress vertex_address;
+};
+
+
+struct test_render_t
+{
+	// Contains the framebuffers which are to be drawn to during command buffer recording.
+	// vk_image_t         draw_image;
+	// VkDescriptorSet    desc_draw_image = VK_NULL_HANDLE;
+	glm::mat4          view_mat;
+	glm::mat4          proj_mat;
+	glm::mat4          view_proj_mat;
+
+	gpu_mesh_buffers_t rectangle;
+};
+
+
+extern ch_handle_list_32< r_mesh_render_h, r_mesh_render_t > g_mesh_render_list;
+extern test_render_t g_test_render;
 
 // --------------------------------------------------------------------------------------------
 
@@ -599,10 +700,28 @@ void                                       vk_descriptor_destroy();
 bool                                       vk_descriptor_allocate_window( r_window_data_t* window );
 void                                       vk_descriptor_update_window( r_window_data_t* window );
 
+gpu_mesh_buffers_t                         vk_mesh_upload( u32* indices, u32 index_count, gpu_vertex_t* vertices, u32 vertex_count );
+gpu_mesh_buffers_t                         vk_mesh_upload( gpu_vertex_t* vertices, u32 vertex_count );
+void                                       vk_mesh_free( gpu_mesh_buffers_t& mesh_buffers );
+
 // --------------------------------------------------------------------------------------------
 // Allocator Functions
 
 u32                                        vk_get_memory_type( u32 type_filter, VkMemoryPropertyFlags properties );
+
+vk_buffer_t*                               vk_buffer_create( VkDeviceSize size, VkBufferUsageFlags usage, VmaMemoryUsage mem_usage );
+vk_buffer_t*                               vk_buffer_create( const char* name, VkDeviceSize size, VkBufferUsageFlags usage, VmaMemoryUsage mem_usage );
+
+void                                       vk_buffer_destroy( vk_buffer_t* buffer );
+
+#if 0
+
+struct vk_buffer_t
+{
+	VkBuffer       buffer;
+	VkDeviceMemory memory;
+	VkDeviceSize   size;
+};
 
 vk_buffer_t*                               vk_buffer_create( VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags mem_bits );
 vk_buffer_t*                               vk_buffer_create( const char* name, VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags mem_bits );
@@ -620,6 +739,8 @@ bool                                       vk_buffer_copy( vk_buffer_t* src, vk_
 
 // copies data from one buffer to another in regions
 bool                                       vk_buffer_copy_region( vk_buffer_t* src, vk_buffer_t* dst, VkBufferCopy* regions, u32 region_count );
+
+#endif
 
 // --------------------------------------------------------------------------------------------
 // Render Functions
