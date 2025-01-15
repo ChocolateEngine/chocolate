@@ -30,7 +30,7 @@ static r_mesh_h        g_test_model_gpu{};
 static r_mesh_render_h g_test_model_render{};
 
 
-bool                   load_scene()
+bool load_scene()
 {
 	// hmm, maybe this could be condensed into one call, mesh_render_create(), pass in a model path instead of a handle, and do the model load and upload internally if needed?
 	g_test_model = graphics_data->model_load( TEST_MODEL_PATH );
@@ -236,7 +236,7 @@ void handle_mouse()
 			const glm::vec2 mouse = input->GetMouseDelta();
 
 			// transform.aAng[PITCH] = -mouse.y;
-			g_ang[ PITCH ] -= mouse.y * g_mouse_pitch * g_mouse_sensitivity;
+			g_ang[ PITCH ] += mouse.y * g_mouse_pitch * g_mouse_sensitivity;
 			g_ang[ YAW ] += mouse.x * g_mouse_yaw * g_mouse_sensitivity;
 
 			g_ang[ YAW ]        = DegreeConstrain( g_ang[ YAW ] );

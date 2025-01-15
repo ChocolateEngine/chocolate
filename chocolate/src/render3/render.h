@@ -508,10 +508,10 @@ struct r_mesh_render_t
 
 struct gpu_push_t
 {
-	glm::mat4       world_matrix;
-	//glm::mat4       view_proj_matrix;
-	glm::mat4       view_matrix;
-	glm::mat4       proj_matrix;
+	//glm::mat4       world_matrix;
+	glm::mat4       proj_view_matrix;
+	//glm::mat4       view_matrix;
+	//glm::mat4       proj_matrix;
 	VkDeviceAddress vertex_address;
 };
 
@@ -523,7 +523,7 @@ struct test_render_t
 	// VkDescriptorSet    desc_draw_image = VK_NULL_HANDLE;
 	glm::mat4          view_mat;
 	glm::mat4          proj_mat;
-	glm::mat4          view_proj_mat;
+	glm::mat4          proj_view_mat;
 
 	gpu_mesh_buffers_t rectangle;
 };

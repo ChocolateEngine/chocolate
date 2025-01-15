@@ -227,7 +227,7 @@ bool vk_shaders_create_graphics_pipeline( VkPipelineLayout layout, vk_shader_cre
 	dynamicState.pDynamicStates    = graphics_create->dynamic_state;
 
 	// TEMP VERTEX BUFFER BINDING
-
+#if 0
 	VkVertexInputBindingDescription binding_description{};
 	binding_description.binding   = 0;
 	binding_description.stride    = sizeof( gpu_vertex_t );
@@ -259,6 +259,9 @@ bool vk_shaders_create_graphics_pipeline( VkPipelineLayout layout, vk_shader_cre
 	vertex_input.vertexAttributeDescriptionCount = 5;
 	vertex_input.pVertexBindingDescriptions      = &binding_description;
 	vertex_input.vertexBindingDescriptionCount   = 1;
+#else
+	VkPipelineVertexInputStateCreateInfo vertex_input{ VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO };
+#endif
 
 	// Dynamic Rendering
 	VkPipelineRenderingCreateInfo rendering_info{ VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO };

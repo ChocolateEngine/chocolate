@@ -247,7 +247,7 @@ void vk_draw_test( VkCommandBuffer c, r_window_data_t* window, u32 swap_index )
 	vkCmdSetScissor( c, 0, 1, &scissor );
 
 	gpu_push_t push;
-	push.world_matrix   = glm::mat4{ 1.f };
+	//push.world_matrix   = glm::mat4{ 1.f };
 	push.vertex_address = g_test_render.rectangle.vertex_address;
 
 	vkCmdPushConstants( c, g_shader_data_graphics_pipeline_layout[ 0 ], VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof( gpu_push_t ), &push );
@@ -260,6 +260,9 @@ void vk_draw_test( VkCommandBuffer c, r_window_data_t* window, u32 swap_index )
 
 	vkCmdEndRendering( c );
 }
+
+
+CONVAR_BOOL_NAME( r_draw_indexed, "vk.draw.indexed", 1 );
 
 
 void vk_draw_renderables_test( VkCommandBuffer c, r_window_data_t* window, u32 swap_index )
@@ -284,9 +287,15 @@ void vk_draw_renderables_test( VkCommandBuffer c, r_window_data_t* window, u32 s
 	vkCmdBindPipeline( c, VK_PIPELINE_BIND_POINT_GRAPHICS, g_shader_data_graphics_pipelines[ 0 ] );
 
 	// Set Dynamic Viewport and Scissor
+
+	// Flip Viewport
 	VkViewport viewport{};
-	viewport.width  = window->draw_image.extent.width;
-	viewport.height = window->draw_image.extent.height;
+	viewport.width    = window->draw_image.extent.width;
+	viewport.height   = window->draw_image.extent.height * -1.f;
+
+	viewport.x        = 0;
+	viewport.y        = window->draw_image.extent.height;
+
 	viewport.minDepth = 0.f;
 	viewport.maxDepth = 1.f;
 
@@ -310,21 +319,26 @@ void vk_draw_renderables_test( VkCommandBuffer c, r_window_data_t* window, u32 s
 			continue;
 
 		gpu_push_t push;
-		push.world_matrix     = mesh_render.matrix;
-		// push.view_proj_matrix = g_test_render.view_proj_mat;
-		push.view_matrix = g_test_render.view_mat;
-		push.proj_matrix = g_test_render.proj_mat;
+		//push.world_matrix     = mesh_render.matrix;
+		push.proj_view_matrix = g_test_render.proj_view_mat;
+		//push.view_matrix = g_test_render.view_mat;
+		//push.proj_matrix = g_test_render.proj_mat;
 		push.vertex_address   = mesh->buffers.vertex_address;
 
 		vkCmdPushConstants( c, g_shader_data_graphics_pipeline_layout[ 0 ], VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof( gpu_push_t ), &push );
 
-		VkDeviceSize vertex_offset[ 1 ] = { 0 };
-		vkCmdBindVertexBuffers( c, 0, 1, &mesh->buffers.vertex->buffer, vertex_offset );
+		//VkDeviceSize vertex_offset[ 1 ] = { 0 };
+		//vkCmdBindVertexBuffers( c, 0, 1, &mesh->buffers.vertex->buffer, vertex_offset );
 
-	//	vkCmdBindIndexBuffer( c, mesh->buffers.index->buffer, 0, VK_INDEX_TYPE_UINT32 );
-	// 	vkCmdDrawIndexed( c, mesh->index_count, 1, 0, 0, 0 );
-
-		vkCmdDraw( c, mesh->vertex_count, 1, 0, 0 );
+		if ( r_draw_indexed )
+		{
+			vkCmdBindIndexBuffer( c, mesh->buffers.index->buffer, 0, VK_INDEX_TYPE_UINT32 );
+			vkCmdDrawIndexed( c, mesh->index_count, 1, 0, 0, 0 );
+		}
+		else
+		{
+			vkCmdDraw( c, mesh->vertex_count, 1, 0, 0 );
+		}
 	}
 
 //	gpu_push_t push;

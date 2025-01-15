@@ -1,7 +1,5 @@
 #include "graphics_data.h"
 
-#include <unordered_set>
-
 
 #define FAST_OBJ_IMPLEMENTATION
 #include "fast_obj/fast_obj.h"
@@ -63,24 +61,6 @@ struct mesh_build_vertex_t
 
 		return std::memcmp( &pos, &other.pos, sizeof( mesh_build_vertex_t ) ) == 0;
 	}
-
-	//bool operator<( const mesh_build_vertex_t& other ) const
-	//{
-	//	bool result = false;
-	//
-	//	for ( u8 i = 0; i < 3; i++ )
-	//	{
-	//		result |= ( pos[ i ] < other.pos[ i ] );
-	//	}
-	//
-	//	for ( u8 i = 0; i < 3; i++ )
-	//		result |= ( normal[ i ] < other.normal[ i ] );
-	//
-	//	for ( u8 i = 0; i < 2; i++ )
-	//		result |= ( tex_coord[ i ] < other.tex_coord[ i ] );
-	//
-	//	return result;
-	//}
 };
 
 
@@ -118,9 +98,11 @@ struct hash< mesh_build_vertex_t >
 
 struct mesh_build_surface_t
 {
-	//std::unordered_set< mesh_build_vertex_t > vertices;
-	//ChVector< u32 >                           indices;
-	ChVector< mesh_build_vertex_t > vertices;
+	ChVector< mesh_build_vertex_t >                vertices;
+	ChVector< u32 >                                indices{};
+
+	// stores the vertex again, and the value is the index to the vertex in the vertices variable
+	std::unordered_map< mesh_build_vertex_t, u32 > vertices_map{};
 };
 
 
@@ -261,8 +243,8 @@ bool model_load_obj( const char* s_base_path, const char* s_full_path, model_t& 
 			}
 
 			mesh_build_surface_t& surface = build_surfaces[ face_mat ];
-			// surface.indices.reserve( surface.indices.size() + ( group.face_count * ( faceVertCount == 3 ? 3 : 6 ) ) );
-			surface.vertices.reserve( surface.vertices.size() + ( group.face_count * ( faceVertCount == 3 ? 3 : 6 ) ) );
+			surface.indices.reserve( surface.indices.size() + ( group.face_count * ( faceVertCount == 3 ? 3 : 6 ) ) );
+			//surface.vertices.reserve( surface.vertices.size() + ( group.face_count * ( faceVertCount == 3 ? 3 : 6 ) ) );
 
 			// meshBuilder.AllocateVertices( faceVertCount == 3 ? 3 : 6 );
 
@@ -274,20 +256,11 @@ bool model_load_obj( const char* s_base_path, const char* s_full_path, model_t& 
 
 				if ( faceVertIndex >= 3 )
 				{
-					auto ind0 = surface.vertices[ surface.vertices.size() - 3 ];
-					auto ind1 = surface.vertices[ surface.vertices.size() - 1 ];
+					auto ind0 = surface.indices[ surface.indices.size() - 3 ];
+					auto ind1 = surface.indices[ surface.indices.size() - 1 ];
 
-					surface.vertices.push_back( ind0 );
-					surface.vertices.push_back( ind1 );
-
-				// 	auto ind0                   = meshBuilder.apSurf->aIndices[ meshBuilder.apSurf->aIndices.size() - 3 ];
-				// 	auto ind1                   = meshBuilder.apSurf->aIndices[ meshBuilder.apSurf->aIndices.size() - 1 ];
-				// 
-				// 	meshBuilder.apSurf->aVertex = meshBuilder.apSurf->aVertices[ ind0 ];
-				// 	meshBuilder.NextVertex();
-				// 
-				// 	meshBuilder.apSurf->aVertex = meshBuilder.apSurf->aVertices[ ind1 ];
-				// 	meshBuilder.NextVertex();
+					surface.indices.push_back( ind0 );
+					surface.indices.push_back( ind1 );
 				}
 
 				const u32 position_index = objVertIndex.p * 3;
@@ -312,31 +285,21 @@ bool model_load_obj( const char* s_base_path, const char* s_full_path, model_t& 
 					};
 				}
 
-				// stupid
-				//if ( surface.vertices.empty() )
-				//{
-				//	surface.indices.push_back( surface.vertices.size() );
-				//	surface.vertices.emplace( current_vert );
-				//}
-				//else
-				//{
-				//	auto vert_index = surface.vertices.find( current_vert );
-				//	
-				//	if ( vert_index == surface.vertices.end() )
-				//	{
-				//		surface.indices.push_back( surface.vertices.size() );
-				//		surface.vertices.emplace( current_vert );
-				//	}
-				//	else
-				//	{
-				//		surface.indices.push_back( std::distance( surface.vertices.begin(), vert_index ) );
-				//	}
-				//}
-
-				surface.vertices.push_back( current_vert );
+				// Now add the vertex to the current surface
+				auto vert_index = surface.vertices_map.find( current_vert );
+					
+				if ( vert_index == surface.vertices_map.end() )
+				{
+					surface.indices.push_back( surface.vertices.size() );
+					surface.vertices_map[ current_vert ] = surface.vertices.size();
+					surface.vertices.push_back( current_vert );
+				}
+				else
+				{
+					surface.indices.push_back( vert_index->second );
+				}
 			}
 
-			// indexOffset += faceVertCount;
 			totalIndexOffset += faceVertCount;
 		}
 
@@ -358,7 +321,7 @@ bool model_load_obj( const char* s_base_path, const char* s_full_path, model_t& 
 
 			total_mats++;
 			total_verts += surface.vertices.size();
-		//	total_ind   += surface.indices.size();
+			total_ind   += surface.indices.size();
 		}
 
 		mesh.vertex_data.pos       = ch_calloc< glm::vec3 >( total_verts );
@@ -366,11 +329,12 @@ bool model_load_obj( const char* s_base_path, const char* s_full_path, model_t& 
 		mesh.vertex_data.tex_coord = ch_calloc< glm::vec2 >( total_verts );
 
 		mesh.vertex_count          = total_verts;
-	//	mesh.index_count           = total_ind;
-	//	mesh.index                 = ch_malloc< u32 >( total_ind );
+		mesh.index_count           = total_ind;
+		mesh.index                 = ch_malloc< u32 >( total_ind );
 
 		u32 current_vert_offset    = 0;
 		u32 current_ind_offset     = 0;
+		u32 ind_value_offset       = 0;
 
 		for ( u32 surf_i = 0; surf_i < mat_count; surf_i++ )
 		{
@@ -387,8 +351,13 @@ bool model_load_obj( const char* s_base_path, const char* s_full_path, model_t& 
 				current_vert_offset++;
 			}
 
-		//	memcpy( &mesh.index[ current_ind_offset ], surface.indices.apData, surface.indices.size_bytes() );
-		//	current_ind_offset += surface.indices.size();
+			for ( u32 ind_i = 0; ind_i < surface.indices.size(); ind_i++ )
+			{
+				// Have to offset the index values since were appending these to an existing array
+				mesh.index[ current_ind_offset++ ] = surface.indices.apData[ ind_i ] + ind_value_offset;
+			}
+
+			ind_value_offset = current_vert_offset;
 		}
 
 		delete[] build_surfaces;

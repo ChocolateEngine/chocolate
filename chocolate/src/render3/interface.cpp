@@ -457,12 +457,16 @@ struct Render3 final : public IRender3
 	{
 		g_test_render.view_mat      = view;
 		g_test_render.proj_mat      = projection;
-		g_test_render.view_proj_mat = view * projection;
+		g_test_render.proj_view_mat = projection * view;
 	}
 
 	// TODO: make a separate r_mesh handle the app needs to hold on to, and make a mesh_render_create() function
 	// while we could just use ch_model_h, that is supposed to point to the model in graphics_data, which can cause confusion
 	// and if the mesh isn't uploaded, and the handle isn't valid in graphics_data, nothing gets uploaded
+
+	// This combines all meshes in a model into one, and uploads it to the gpu
+	// It creates a new handle for it for the app code to store
+	// Then the app can use this handle to make new mesh render instances
 	r_mesh_h mesh_upload( ch_model_h model_handle ) override
 	{
 		model_t* model = graphics_data->model_get( model_handle );
@@ -491,6 +495,14 @@ struct Render3 final : public IRender3
 
 		for ( u32 mesh_i = 0; mesh_i < model->mesh_count; mesh_i++ )
 		{
+			glm::vec4 temp_color{};
+			temp_color[ 3 ] = 1.f;
+
+			if ( mesh_i < 4 )
+				temp_color[ mesh_i ] = 1.f;
+			else
+				printf( "a\n" );
+
 			mesh_t& mesh = model->mesh[ mesh_i ];
 			for ( u32 vert_i = 0; vert_i < mesh.vertex_count; vert_i++ )
 			{
@@ -498,16 +510,24 @@ struct Render3 final : public IRender3
 				verts[ vert_offset ].normal = mesh.vertex_data.normal[ vert_i ];
 				verts[ vert_offset ].uv_x   = mesh.vertex_data.tex_coord[ vert_i ].x;
 				verts[ vert_offset ].uv_y   = mesh.vertex_data.tex_coord[ vert_i ].y;
-				// verts[ vert_i ].color = mesh.vertex_data.color[ vert_i ];
+				// verts[ vert_offset ].color = mesh.vertex_data.color[ vert_i ];
+				verts[ vert_offset ].color  = temp_color;
 				vert_offset++;
 			}
+		}
 
-			//	for ( u32 vert_i = 0; vert_i < mesh.index_count; vert_i++ )
-			//	{
-			//		indices[ ind_offset++ ] = mesh.index[ vert_i ] + ind_value_offset;
-			//	}
-			//
-			//	ind_value_offset += mesh.index_count;
+		if ( indices )
+		{
+			for ( u32 mesh_i = 0; mesh_i < model->mesh_count; mesh_i++ )
+			{
+				mesh_t& mesh = model->mesh[ mesh_i ];
+				for ( u32 ind_i = 0; ind_i < mesh.index_count; ind_i++ )
+				{
+					indices[ ind_offset++ ] = mesh.index[ ind_i ] + ind_value_offset;
+				}
+
+				ind_value_offset += mesh.vertex_count;
+			}
 		}
 
 		gpu_mesh_buffers_t buffers{};
