@@ -5,6 +5,7 @@ set(
 	main.cpp
 	scene_load.cpp
 
+	render_test.cpp
 	render_test.h
 
 	../shared/map_system.cpp
