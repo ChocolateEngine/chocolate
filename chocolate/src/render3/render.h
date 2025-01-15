@@ -397,6 +397,7 @@ struct r_window_data_t
 	// here because of mem alignment, 2 unused bytes at the end
 	u8                    frame_index = 0;
 	u8                    swap_image_count;
+	bool                  need_resize = false;
 };
 
 

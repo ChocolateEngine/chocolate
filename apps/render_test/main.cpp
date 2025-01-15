@@ -61,6 +61,20 @@ static AppModule_t g_app_modules[] =
 };
 
 
+void window_resize_callback( void* hwnd )
+{
+	if ( hwnd == g_window_native )
+	{
+		render->reset( g_graphics_window );
+
+		update_viewport();
+
+		render->test_update( 0.f, g_graphics_window, g_view, g_projection );
+		render->present( g_graphics_window );
+	}
+}
+
+
 bool create_main_window()
 {
 	// Create Main Window
@@ -78,6 +92,10 @@ bool create_main_window()
 	render->set_main_surface( g_window, g_window_native );
 
 	input->AddWindow( g_window, ImGui::GetCurrentContext() );
+
+#ifdef _WIN32
+	sys_set_resize_callback( window_resize_callback );
+#endif /* _WIN32  */
 
 	return true;
 }
@@ -171,10 +189,10 @@ void MainLoop()
 		if ( handle_events() )
 			return;
 
+		render->new_frame( g_graphics_window );
+
 		ImGui::NewFrame();
 		ImGui_ImplSDL2_NewFrame();
-
-		render->new_frame();
 
 		gui->Update( time );
 		ImGui::Render();

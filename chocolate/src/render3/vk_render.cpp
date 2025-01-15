@@ -3,6 +3,7 @@
 #include "imgui.h"
 #include "imgui_impl_vulkan.h"
 
+
 bool vk_render_sync_create( r_window_data_t* window )
 {
 	VkFenceCreateInfo fence_info{ VK_STRUCTURE_TYPE_FENCE_CREATE_INFO };
@@ -127,13 +128,11 @@ static u32 vk_get_next_image( ch_handle_t window_handle, r_window_data_t* window
 	u32      swapchain_index = 0;
 	VkResult frame_result      = vkAcquireNextImageKHR( g_vk_device, window->swapchain, 1000000000, window->semaphore_swapchain[ frame ], VK_NULL_HANDLE, &swapchain_index );
 
-	if ( frame_result == VK_ERROR_OUT_OF_DATE_KHR )
+	// AMD GPU's tend to hit this, but this isn't working
+	// so far it works fine if we have the app tell the renderer to resize instead
+	if ( frame_result == VK_ERROR_OUT_OF_DATE_KHR || frame_result == VK_SUBOPTIMAL_KHR )
 	{
-		// Recreate all resources.
-		printf( "Out of date swapchain! Must reset\n" );
-		vk_reset( window_handle, window, e_render_reset_flags_resize );
-		return vk_get_next_image( window_handle, window );
-
+		window->need_resize = true;
 		return UINT32_MAX;
 	}
 	else if ( frame_result != VK_SUCCESS && frame_result != VK_SUBOPTIMAL_KHR )
@@ -142,6 +141,8 @@ static u32 vk_get_next_image( ch_handle_t window_handle, r_window_data_t* window
 		vk_check( frame_result, "Failed ot acquire swapchain image!" );
 		return UINT32_MAX;
 	}
+
+	// vk_check( vkResetFences( g_vk_device, 1, &window->fence_render[ frame ] ), "Failed to reset render fence" );
 
 	return swapchain_index;
 }
@@ -395,7 +396,7 @@ static void vk_record_commands_window( r_window_data_t* window, u32 swap_index )
 	vk_transition_image( c, window->swap_images[ swap_index ], VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL );
 
 	// copy the draw image into the swapchain
-	vk_blit_image_to_image( c, window->draw_image.image, window->swap_images[ swap_index ], window->swap_extent, window->swap_extent );
+	vk_blit_image_to_image( c, window->draw_image.image, window->swap_images[ swap_index ], window->draw_image.extent, window->swap_extent );
 
 	// ---------------------------------------------
 	// Draw ImGui on the Swapchain
@@ -467,7 +468,6 @@ void vk_draw( ch_handle_t window_handle, r_window_data_t* window )
 	if ( swapchain_index == UINT32_MAX )
 	{
 		// Recreate all resources.
-		printf( "Out of date swapchain! Must reset\n" );
 		return;
 	}
 
@@ -487,7 +487,18 @@ void vk_draw( ch_handle_t window_handle, r_window_data_t* window )
 	present_info.waitSemaphoreCount = 1;
 	present_info.pWaitSemaphores    = &window->semaphore_render[ frame ];
 
-	vk_check( vkQueuePresentKHR( g_vk_queue_graphics, &present_info ), "Failed to present window" );
+	// now present the image we just rendered to the screen
+	VkResult res                    = vkQueuePresentKHR( g_vk_queue_graphics, &present_info );
+
+	if ( res == VK_ERROR_OUT_OF_DATE_KHR || res == VK_SUBOPTIMAL_KHR )
+	{
+		window->need_resize = true;
+	}
+	else if ( res != VK_SUCCESS && res != VK_SUBOPTIMAL_KHR )
+	{
+		// Classic typo must remain.
+		vk_check( res, "Failed ot present swapchain image!" );
+	}
 
 	g_frame_number++;
 }

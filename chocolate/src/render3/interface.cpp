@@ -322,8 +322,21 @@ struct Render3 final : public IRender3
 	// Rendering
 	// --------------------------------------------------------------------------------------------
 
-	void new_frame() override
+	void new_frame( ch_handle_t window_handle ) override
 	{
+		r_window_data_t* window = nullptr;
+		if ( !g_windows.Get( window_handle, &window ) )
+		{
+			Log_ErrorF( gLC_Render, "Failed to find window to call new_frame() on!\n" );
+			return;
+		}
+
+		if ( window->need_resize )
+		{
+			vk_reset( window_handle, window, e_render_reset_flags_resize );
+			window->need_resize = false;
+		}
+
 		ImGui_ImplVulkan_NewFrame();
 	}
 

@@ -1,6 +1,25 @@
 #include "render.h"
 
 
+static void render_scale_callback( float prev_value, float& new_value )
+{
+	vkDeviceWaitIdle( g_vk_device );
+
+	// do this on all windows
+	for ( size_t i = 0; i < g_windows.size(); i++ )
+	{
+		r_window_data_t* window = nullptr;
+		g_windows.GetByIndex( i, &window );
+
+		if ( window )
+			window->need_resize = true;
+	}
+}
+
+
+CONVAR_RANGE_FLOAT_NAME( vk_render_scale, "vk.render.scale", 1.0, 0.01, 4.0, 0, "Scale the window backbuffer", &render_scale_callback );
+
+
 static bool vk_backbuffer_create_depth( r_window_data_t* window )
 {
 	return false;
@@ -19,8 +38,12 @@ bool vk_backbuffer_create( r_window_data_t* window )
 
 	// always match window size
 	image_info.extent.depth  = 1;
-	image_info.extent.width  = window->swap_extent.width;
-	image_info.extent.height = window->swap_extent.height;
+
+	// image_info.extent.width  = window->swap_extent.width;
+	// image_info.extent.height = window->swap_extent.height;
+
+	image_info.extent.width  = std::max( 1.f, window->swap_extent.width * vk_render_scale );
+	image_info.extent.height = std::max( 1.f, window->swap_extent.height * vk_render_scale );
 
 	// for MSAA. we will not be using it by default, so default it to 1 sample per pixel.
 	image_info.samples     = VK_SAMPLE_COUNT_1_BIT;
@@ -55,8 +78,8 @@ bool vk_backbuffer_create( r_window_data_t* window )
 	if ( vk_check_e( vkCreateImageView( g_vk_device, &view_info, nullptr, &window->draw_image.view ), "Failed to create image view for window!" ) )
 		return false;
 
-	window->draw_image.extent.width  = window->swap_extent.width;
-	window->draw_image.extent.height = window->swap_extent.height;
+	window->draw_image.extent.width  = image_info.extent.width;
+	window->draw_image.extent.height = image_info.extent.height;
 	window->draw_image.format        = g_draw_format;
 
 	return true;

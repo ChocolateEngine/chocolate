@@ -88,9 +88,7 @@ struct IRender3 : public ISystem
 	// Rendering
 	// --------------------------------------------------------------------------------------------
 
-	// new_frame needs to be called per window despite not needing a window handle
-	// it does stuff with imgui internally
-	virtual void        new_frame()                                                                = 0;
+	virtual void        new_frame( ch_handle_t window_handle )                                     = 0;
 	virtual void        reset( ch_handle_t window )                                                = 0;
 	virtual void        present( ch_handle_t window )                                              = 0;
 
@@ -278,5 +276,5 @@ struct IRender3 : public ISystem
 
 
 #define CH_RENDER3     "chocolate_render3"
-#define CH_RENDER3_VER 4
+#define CH_RENDER3_VER 5
 

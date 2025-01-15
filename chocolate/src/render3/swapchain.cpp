@@ -96,8 +96,6 @@ void vk_swapchain_update_info( VkSurfaceKHR surface )
 
 	vk_check( vkGetPhysicalDeviceSurfaceCapabilitiesKHR( g_vk_physical_device, surface, &g_vk_surface_capabilities ),
 	                "Failed to Get Physical Device Surface Capabilities" );
-
-	vk_swapchain_choose_surface_format();
 }
 
 
