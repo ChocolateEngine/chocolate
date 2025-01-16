@@ -425,6 +425,53 @@ CORE_API const float&        Con_RegisterConVar_RangeFloat( const char* spName, 
 	void         cvarfunc_##name( float prevValue, float& newValue )
 
 
+// Helper Macros for registering ConVars with a callback with custom names
+#define CONVAR_BOOL_NAME_CMD( var, name, defaultVal, flags, desc )                              \
+	void        cvarfunc_##var( bool prevValue, bool& newValue );                               \
+	const bool& var = Con_RegisterConVar_Bool( name, defaultVal, flags, desc, cvarfunc_##var ); \
+	void        cvarfunc_##var( bool prevValue, bool& newValue )
+
+#define CONVAR_INT_NAME_CMD( var, name, defaultVal, flags, desc )                             \
+	void       cvarfunc_##var( int prevValue, int& newValue );                                \
+	const int& var = Con_RegisterConVar_Int( name, defaultVal, flags, desc, cvarfunc_##var ); \
+	void       cvarfunc_##var( int prevValue, int& newValue )
+
+#define CONVAR_FLOAT_NAME_CMD( var, name, defaultVal, flags, desc )                               \
+	void         cvarfunc_##var( float prevValue, float& newValue );                              \
+	const float& var = Con_RegisterConVar_Float( name, defaultVal, flags, desc, cvarfunc_##var ); \
+	void         cvarfunc_##var( float prevValue, float& newValue )
+
+#define CONVAR_STRING_NAME_CMD( var, name, defaultVal, flags, desc )                               \
+	void         cvarfunc_##var( const char* prevValue, char*& newValue );                         \
+	char*& const var = Con_RegisterConVar_String( name, defaultVal, flags, desc, cvarfunc_##var ); \
+	void         cvarfunc_##var( const char* prevValue, char*& newValue )
+
+#define CONVAR_VEC2_NAME_CMD( var, name, defaultX, defaultY, flags, desc )                                   \
+	void             cvarfunc_##var( const glm::vec2& prevValue, glm::vec2& newValue );                      \
+	const glm::vec2& var = Con_RegisterConVar_Vec2( name, defaultX, defaultY, flags, desc, cvarfunc_##var ); \
+	void             cvarfunc_##var( const glm::vec2& prevValue, glm::vec2& newValue )
+
+#define CONVAR_VEC3_NAME_CMD( var, name, defaultX, defaultY, defaultZ, flags, desc )                                   \
+	void             cvarfunc_##var( const glm::vec3& prevValue, glm::vec3& newValue );                                \
+	const glm::vec3& var = Con_RegisterConVar_Vec3( name, defaultX, defaultY, defaultZ, flags, desc, cvarfunc_##var ); \
+	void             cvarfunc_##var( const glm::vec3& prevValue, glm::vec3& newValue )
+
+#define CONVAR_VEC4_NAME_CMD( var, name, defaultX, defaultY, defaultZ, defaultW, flags, desc )                         \
+	void             cvarfunc_##var( const glm::vec4& prevValue, glm::vec4& newValue );                                \
+	const glm::vec4& var = Con_RegisterConVar_Vec4( name, defaultX, defaultY, defaultZ, flags, desc, cvarfunc_##var ); \
+	void             cvarfunc_##var( const glm::vec4& prevValue, glm::vec4& newValue )
+
+#define CONVAR_RANGE_INT_NAME_CMD( var, name, defaultVal, min, max, flags, desc )                            \
+	void       cvarfunc_##var( int prevValue, int& newValue );                                               \
+	const int& var = Con_RegisterConVar_RangeInt( name, defaultVal, min, max, flags, desc, cvarfunc_##var ); \
+	void       cvarfunc_##var( int prevValue, int& newValue )
+
+#define CONVAR_RANGE_FLOAT_NAME_CMD( var, name, defaultVal, min, max, flags, desc )                              \
+	void         cvarfunc_##var( float prevValue, float& newValue );                                             \
+	const float& var = Con_RegisterConVar_RangeFloat( name, defaultVal, min, max, flags, desc, cvarfunc_##var ); \
+	void         cvarfunc_##var( float prevValue, float& newValue )
+
+
 // Get the data pointer reference of a ConVar
 CORE_API bool&         Con_GetConVarData_Bool( const char* spName, bool fallback );
 CORE_API int&          Con_GetConVarData_Int( const char* spName, int fallback );    // also works for RangeInt
