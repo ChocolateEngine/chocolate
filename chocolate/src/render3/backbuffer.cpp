@@ -1,18 +1,33 @@
 #include "render.h"
 
 
+CONVAR_BOOL_NAME_CMD( r_msaa, "vk.msaa.enabled", false, CVARF_ARCHIVE, "Enable/Disable MSAA Globally" )
+{
+	vk_reset_all( e_render_reset_flags_msaa );
+}
+
+
+CONVAR_INT_NAME_CMD( r_msaa_samples, "vk.msaa.samples", 4, CVARF_ARCHIVE, "Set the Default Amount of MSAA Samples Globally" )
+{
+	if ( !r_msaa )
+		return;
+
+	vk_reset_all( e_render_reset_flags_msaa );
+}
+
+
 static void render_scale_callback( float prev_value, float& new_value )
 {
 	vkDeviceWaitIdle( g_vk_device );
 
 	// do this on all windows
-	for ( size_t i = 0; i < g_windows.size(); i++ )
+	for ( u32 i = 0; i < g_windows.capacity; i++ )
 	{
-		r_window_data_t* window = nullptr;
-		g_windows.GetByIndex( i, &window );
+		if ( !g_windows.use_list[ i ] )
+			continue;
 
-		if ( window )
-			window->need_resize = true;
+		r_window_data_t& window_data = g_windows.data[ i ];
+		window_data.need_resize      = true;
 	}
 }
 

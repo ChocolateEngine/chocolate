@@ -26,7 +26,7 @@ static bool    g_running           = true;
 
 SDL_Window*    g_window            = nullptr;
 void*          g_window_native     = nullptr;  // Only Used on WIN32
-ch_handle_t    g_graphics_window   = CH_INVALID_HANDLE;
+r_window_h     g_graphics_window{};
 
 
 CONCMD( exit )
@@ -253,7 +253,7 @@ extern "C"
 		// Create the Graphics API Window
 		g_graphics_window = render->window_create( g_window, g_window_native );
 
-		if ( g_graphics_window == CH_INVALID_HANDLE )
+		if ( !g_graphics_window.generation )
 		{
 			Log_Fatal( "Failed to Create GraphicsAPI Window\n" );
 			return 1;

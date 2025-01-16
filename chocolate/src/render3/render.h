@@ -1,8 +1,8 @@
 #pragma once
 
-#include "irender3.h"
-
 #include <vulkan/vulkan.h>
+
+#include "irender3.h"
 
 // VMA
 #include "vk_mem_alloc.h"
@@ -74,15 +74,13 @@ struct slot_array_t
 	u32* free_slots;  // list of free slots
 	u32  count;       // count of used slots
 
-	slot_array_t()
-		: data( nullptr )
-		, count( 0 )
+	slot_array_t() :
+		data( nullptr ), count( 0 )
 	{
 	}
 
-	slot_array_t( u32 count )
-		: data( nullptr )
-		, count( count )
+	slot_array_t( u32 count ) :
+		data( nullptr ), count( count )
 	{
 		data = ch_malloc< T >( count );
 	}
@@ -128,14 +126,14 @@ struct slot_array_t
 				}
 			}
 
-			u32 slot = free_slots[ count ];
+			u32 slot     = free_slots[ count ];
 			data[ slot ] = value;
 			count++;
 
 			return data[ slot ];
 		}
 
-		data = ch_realloc< T >( data, count + 1 );
+		data          = ch_realloc< T >( data, count + 1 );
 		data[ count ] = value;
 		count++;
 
@@ -152,10 +150,10 @@ constexpr VkFormat g_draw_format              = VK_FORMAT_R16G16B16A16_SFLOAT;
 
 
 // amount to allocate at a time
-constexpr u32 VK_DELETE_QUEUE_BATCH_SIZE = 16;
+constexpr u32      VK_DELETE_QUEUE_BATCH_SIZE = 16;
 
 // deletion function pointer
-typedef void  ( *fn_vk_destroy )();
+typedef void       ( *fn_vk_destroy )();
 
 
 struct delete_queue_t
@@ -263,7 +261,6 @@ struct vk_image_t
 
 struct vk_texture_t
 {
-
 };
 
 
@@ -283,7 +280,7 @@ struct vk_shader_module_create_t
 {
 	VkShaderStageFlagBits stage;
 	const char*           path;
-	const char* 		  entry;
+	const char*           entry;
 };
 
 
@@ -365,39 +362,39 @@ struct backbuffer_t
 // TODO: dont use ResourceList to store this, maybe use a free index queue like that entity system idea
 struct r_window_data_t
 {
-	SDL_Window*           window    = nullptr;
-	VkSurfaceKHR          surface   = VK_NULL_HANDLE;
-	VkSwapchainKHR        swapchain = VK_NULL_HANDLE;
+	SDL_Window*          window    = nullptr;
+	VkSurfaceKHR         surface   = VK_NULL_HANDLE;
+	VkSwapchainKHR       swapchain = VK_NULL_HANDLE;
 
 	// only allocates to swap_image_count for the main window buffers
 	// probably could be moved elsewhere as well
-	VkCommandBuffer       command_buffers[ 2 ];
+	VkCommandBuffer      command_buffers[ 2 ];
 
 	// amount allocated is swap_image_count
-	VkSemaphore           semaphore_swapchain[ 2 ];  // signals that we have finished presenting the last image
-	VkSemaphore           semaphore_render[ 2 ];     // signals that we have finished executing the last command buffer
+	VkSemaphore          semaphore_swapchain[ 2 ];  // signals that we have finished presenting the last image
+	VkSemaphore          semaphore_render[ 2 ];     // signals that we have finished executing the last command buffer
 
 	// amount allocated is swap_image_count
-	VkFence               fence_render[ 2 ];
+	VkFence              fence_render[ 2 ];
 
 	// swapchain info - this could be moved elsewhere, as these are only used during window creation and destruction
 	// also getting the surface size with swap_extent, to avoid having to call SDL_GetWindowSize, but is it worth it?
 	// also backbuffer has a size parameter currently so this is kinda useless
-	VkExtent2D            swap_extent;
-	VkImage               swap_images[ 2 ];
-	VkImageView           swap_image_views[ 2 ];
+	VkExtent2D           swap_extent;
+	VkImage              swap_images[ 2 ];
+	VkImageView          swap_image_views[ 2 ];
 
 	// Contains the framebuffers which are to be drawn to during command buffer recording.
 	// backbuffer_t       backbuffer;
-	vk_image_t            draw_image;
-	VkDescriptorSet       desc_draw_image = VK_NULL_HANDLE;
+	vk_image_t           draw_image;
+	VkDescriptorSet      desc_draw_image = VK_NULL_HANDLE;
 
-	fn_render_on_reset_t  fn_on_reset = nullptr;
+	fn_render_on_reset_t fn_on_reset     = nullptr;
 
 	// here because of mem alignment, 2 unused bytes at the end
-	u8                    frame_index = 0;
-	u8                    swap_image_count;
-	bool                  need_resize = false;
+	u8                   frame_index     = 0;
+	u8                   swap_image_count;
+	bool                 need_resize = false;
 };
 
 
@@ -412,15 +409,15 @@ struct test_compute_push_t
 
 
 // data for getting next image from swapchain (vkAcquireNextImageKHR)
-// 
+//
 // swapchain
 // fences
 // frame_index
 // semaphore_image_available
-// 
+//
 
 // data for presenting a window (vkQueuePresentKHR)
-// 
+//
 // swapchain
 // fences
 // fences_in_flight
@@ -429,7 +426,7 @@ struct test_compute_push_t
 // semaphore_render_finished
 // command_buffers
 // swap_image_count
-// 
+//
 
 
 // --------------------------------------------------------------------------------------------
@@ -472,8 +469,8 @@ struct vk_mesh_t
 // 	u32 id;
 // 	u32 generation;
 // };
-// 
-// 
+//
+//
 // struct vk_mesh_list
 // {
 // 	u32        count;
@@ -531,7 +528,7 @@ struct test_render_t
 
 
 extern ch_handle_list_32< r_mesh_render_h, r_mesh_render_t > g_mesh_render_list;
-extern test_render_t g_test_render;
+extern test_render_t                                         g_test_render;
 
 // --------------------------------------------------------------------------------------------
 
@@ -548,57 +545,57 @@ CONVAR_INT_EXT( r_msaa_samples );
 // --------------------------------------------------------------------------------------------
 
 
-extern VkInstance                          g_vk_instance;
-extern VkDevice                            g_vk_device;
-extern VkPhysicalDevice                    g_vk_physical_device;
+extern VkInstance                                          g_vk_instance;
+extern VkDevice                                            g_vk_device;
+extern VkPhysicalDevice                                    g_vk_physical_device;
 
-extern VmaAllocator                        g_vma;
+extern VmaAllocator                                        g_vma;
 
-extern VkQueue                             g_vk_queue_graphics;
-extern VkQueue                             g_vk_queue_transfer;
+extern VkQueue                                             g_vk_queue_graphics;
+extern VkQueue                                             g_vk_queue_transfer;
 
-extern u32                                 g_vk_queue_family_graphics;
-extern u32                                 g_vk_queue_family_transfer;
+extern u32                                                 g_vk_queue_family_graphics;
+extern u32                                                 g_vk_queue_family_transfer;
 
-extern VkPhysicalDeviceProperties          g_vk_device_properties;
-extern VkPhysicalDeviceMemoryProperties    g_vk_device_memory_properties;
-extern VkSurfaceCapabilitiesKHR            g_vk_surface_capabilities;
-extern VkSurfaceFormatKHR                  g_vk_surface_format;
+extern VkPhysicalDeviceProperties                          g_vk_device_properties;
+extern VkPhysicalDeviceMemoryProperties                    g_vk_device_memory_properties;
+extern VkSurfaceCapabilitiesKHR                            g_vk_surface_capabilities;
+extern VkSurfaceFormatKHR                                  g_vk_surface_format;
 
-extern ResourceList< r_window_data_t >     g_windows;
-extern ch_handle_t                         g_main_window;
+extern ch_handle_list_32< r_window_h, r_window_data_t, 1 > g_windows;
+extern r_window_h                                          g_main_window;
 
-extern handle_list_t< vk_image_t >         g_vk_images;
+extern handle_list_t< vk_image_t >                         g_vk_images;
 
 // global delete queue
-extern delete_queue_t                      g_vk_delete_queue;
+extern delete_queue_t                                      g_vk_delete_queue;
 
 // TODO: when you multi-thread this, you need a graphics pool for each thread
-extern VkCommandPool                       g_vk_command_pool_graphics;
-extern VkCommandPool                       g_vk_command_pool_transfer;
+extern VkCommandPool                                       g_vk_command_pool_graphics;
+extern VkCommandPool                                       g_vk_command_pool_transfer;
 
-extern VkCommandBuffer                     g_vk_command_buffer_transfer;
+extern VkCommandBuffer                                     g_vk_command_buffer_transfer;
 
-extern VkDescriptorPool                    g_vk_imgui_desc_pool;
-extern VkDescriptorSetLayout               g_vk_imgui_desc_layout;
-
-// temp
-extern VkDescriptorPool                    g_vk_desc_pool_graphics;
-extern VkDescriptorSetLayout               g_vk_desc_layout_graphics;
-
-extern VkDescriptorPool                    g_vk_desc_pool;
-extern VkDescriptorSetLayout               g_vk_desc_draw_image_layout;
+extern VkDescriptorPool                                    g_vk_imgui_desc_pool;
+extern VkDescriptorSetLayout                               g_vk_imgui_desc_layout;
 
 // temp
-extern VkPipeline                          g_pipeline_gradient;
-extern VkPipelineLayout                    g_pipeline_gradient_layout;
+extern VkDescriptorPool                                    g_vk_desc_pool_graphics;
+extern VkDescriptorSetLayout                               g_vk_desc_layout_graphics;
+
+extern VkDescriptorPool                                    g_vk_desc_pool;
+extern VkDescriptorSetLayout                               g_vk_desc_draw_image_layout;
+
+// temp
+extern VkPipeline                                          g_pipeline_gradient;
+extern VkPipelineLayout                                    g_pipeline_gradient_layout;
 
 // graphics shader data
-extern vk_shader_data_graphics_t*          g_shader_data_graphics;
-extern VkPipelineLayout*                   g_shader_data_graphics_pipeline_layout;
-extern VkPipeline*                         g_shader_data_graphics_pipelines;
-extern ch_string*                          g_shader_data_graphics_names;
-extern u32                                 g_shader_data_graphics_count;
+extern vk_shader_data_graphics_t*                          g_shader_data_graphics;
+extern VkPipelineLayout*                                   g_shader_data_graphics_pipeline_layout;
+extern VkPipeline*                                         g_shader_data_graphics_pipelines;
+extern ch_string*                                          g_shader_data_graphics_names;
+extern u32                                                 g_shader_data_graphics_count;
 
 // extern slot_array_t< r_window_data_t >     g_windows2;
 // extern SDL_Window**                        g_windows_sdl;
@@ -607,39 +604,39 @@ extern u32                                 g_shader_data_graphics_count;
 
 // function pointers for debug utils
 
-extern PFN_vkSetDebugUtilsObjectNameEXT    pfnSetDebugUtilsObjectName;
-extern PFN_vkSetDebugUtilsObjectTagEXT     pfnSetDebugUtilsObjectTag;
+extern PFN_vkSetDebugUtilsObjectNameEXT                    pfnSetDebugUtilsObjectName;
+extern PFN_vkSetDebugUtilsObjectTagEXT                     pfnSetDebugUtilsObjectTag;
 
-extern PFN_vkQueueBeginDebugUtilsLabelEXT  pfnQueueBeginDebugUtilsLabel;
-extern PFN_vkQueueEndDebugUtilsLabelEXT    pfnQueueEndDebugUtilsLabel;
-extern PFN_vkQueueInsertDebugUtilsLabelEXT pfnQueueInsertDebugUtilsLabel;
+extern PFN_vkQueueBeginDebugUtilsLabelEXT                  pfnQueueBeginDebugUtilsLabel;
+extern PFN_vkQueueEndDebugUtilsLabelEXT                    pfnQueueEndDebugUtilsLabel;
+extern PFN_vkQueueInsertDebugUtilsLabelEXT                 pfnQueueInsertDebugUtilsLabel;
 
-extern PFN_vkCmdBeginDebugUtilsLabelEXT    pfnCmdBeginDebugUtilsLabel;
-extern PFN_vkCmdEndDebugUtilsLabelEXT      pfnCmdEndDebugUtilsLabel;
-extern PFN_vkCmdInsertDebugUtilsLabelEXT   pfnCmdInsertDebugUtilsLabel;
+extern PFN_vkCmdBeginDebugUtilsLabelEXT                    pfnCmdBeginDebugUtilsLabel;
+extern PFN_vkCmdEndDebugUtilsLabelEXT                      pfnCmdEndDebugUtilsLabel;
+extern PFN_vkCmdInsertDebugUtilsLabelEXT                   pfnCmdInsertDebugUtilsLabel;
 
 
 // --------------------------------------------------------------------------------------------
 // Vulkan Helper Functions
 
-const char*                                vk_str( VkResult result );
-const char*                                vk_object_str( VkObjectType type );
-const char*                                vk_samples_str( VkSampleCountFlags counts );
+const char*                                                vk_str( VkResult result );
+const char*                                                vk_object_str( VkObjectType type );
+const char*                                                vk_samples_str( VkSampleCountFlags counts );
 
-void                                       vk_check_f( VkResult sResult, char const* spArgs, ... );
-void                                       vk_check( VkResult sResult, char const* spMsg );
-void                                       vk_check( VkResult sResult );
+void                                                       vk_check_f( VkResult sResult, char const* spArgs, ... );
+void                                                       vk_check( VkResult sResult, char const* spMsg );
+void                                                       vk_check( VkResult sResult );
 
 // Non Fatal Version of it, is just an error, returns true if failed
-bool                                       vk_check_ef( VkResult sResult, char const* spArgs, ... );
-bool                                       vk_check_e( VkResult sResult, char const* spMsg );
-bool                                       vk_check_e( VkResult sResult );
+bool                                                       vk_check_ef( VkResult sResult, char const* spArgs, ... );
+bool                                                       vk_check_e( VkResult sResult, char const* spMsg );
+bool                                                       vk_check_e( VkResult sResult );
 
-void                                       vk_set_name_ex( VkObjectType type, u64 handle, const char* name, const char* type_name );
-void                                       vk_set_name( VkObjectType type, u64 handle, const char* name );
+void                                                       vk_set_name_ex( VkObjectType type, u64 handle, const char* name, const char* type_name );
+void                                                       vk_set_name( VkObjectType type, u64 handle, const char* name );
 
-void                                       vk_queue_wait_graphics();
-void                                       vk_queue_wait_transfer();
+void                                                       vk_queue_wait_graphics();
+void                                                       vk_queue_wait_transfer();
 
 // void                                       vk_add_delete( fn_vk_destroy* destroy_func );
 // void                                       vk_flush_delete_queue();
@@ -654,66 +651,67 @@ void                                       vk_queue_wait_transfer();
 // --------------------------------------------------------------------------------------------
 // Vulkan Functions
 
-bool                                       vk_instance_create();
-void                                       vk_instance_destroy();
+bool                                                       vk_instance_create();
+void                                                       vk_instance_destroy();
 
-VkSurfaceKHR                               vk_surface_create( void* native_window, SDL_Window* sdl_window );
-void                                       vk_surface_destroy( VkSurfaceKHR surface );
+VkSurfaceKHR                                               vk_surface_create( void* native_window, SDL_Window* sdl_window );
+void                                                       vk_surface_destroy( VkSurfaceKHR surface );
 
-bool                                       vk_device_create( VkSurfaceKHR surface );  // we dont destroy this
+bool                                                       vk_device_create( VkSurfaceKHR surface );  // we dont destroy this
 
-bool                                       vk_swapchain_create( r_window_data_t* window, VkSwapchainKHR old_swapchain );
-void                                       vk_swapchain_destroy( r_window_data_t* window );
-void                                       vk_swapchain_recreate( r_window_data_t* window );
+bool                                                       vk_swapchain_create( r_window_data_t* window, VkSwapchainKHR old_swapchain );
+void                                                       vk_swapchain_destroy( r_window_data_t* window );
+void                                                       vk_swapchain_recreate( r_window_data_t* window );
 
-bool                                       vk_backbuffer_create( r_window_data_t* window );
-void                                       vk_backbuffer_destroy( r_window_data_t* window );
+bool                                                       vk_backbuffer_create( r_window_data_t* window );
+void                                                       vk_backbuffer_destroy( r_window_data_t* window );
 
-void                                       vk_command_pool_create();
-void                                       vk_command_pool_destroy();
-void                                       vk_command_pool_reset_graphics();
+void                                                       vk_command_pool_create();
+void                                                       vk_command_pool_destroy();
+void                                                       vk_command_pool_reset_graphics();
 
-bool                                       vk_command_buffers_create( r_window_data_t* window );
-void                                       vk_command_buffers_destroy( r_window_data_t* window );
+bool                                                       vk_command_buffers_create( r_window_data_t* window );
+void                                                       vk_command_buffers_destroy( r_window_data_t* window );
 
-VkCommandBuffer                            vk_cmd_transfer_begin();
-void                                       vk_cmd_transfer_end( VkCommandBuffer command_buffer );
+VkCommandBuffer                                            vk_cmd_transfer_begin();
+void                                                       vk_cmd_transfer_end( VkCommandBuffer command_buffer );
 
-bool                                       vk_render_sync_create( r_window_data_t* window );
-void                                       vk_render_sync_destroy( r_window_data_t* window );
-void                                       vk_render_sync_reset( r_window_data_t* window );
+bool                                                       vk_render_sync_create( r_window_data_t* window );
+void                                                       vk_render_sync_destroy( r_window_data_t* window );
+void                                                       vk_render_sync_reset( r_window_data_t* window );
 
-void                                       vk_draw( ch_handle_t window_handle, r_window_data_t* window );
-void                                       vk_reset( ch_handle_t window_handle, r_window_data_t* window, e_render_reset_flags flags );
+void                                                       vk_draw( r_window_h window_handle, r_window_data_t* window );
+void                                                       vk_reset( r_window_h window_handle, r_window_data_t* window, e_render_reset_flags flags );
+void                                                       vk_reset_all( e_render_reset_flags flags );
 
-void                                       vk_blit_image_to_image( VkCommandBuffer c, VkImage src, VkImage dst, VkExtent2D src_size, VkExtent2D dst_size );
+void                                                       vk_blit_image_to_image( VkCommandBuffer c, VkImage src, VkImage dst, VkExtent2D src_size, VkExtent2D dst_size );
 
-bool                                       vk_shaders_init();
-void                                       vk_shaders_shutdown();
-void                                       vk_shaders_update_push_constants();
+bool                                                       vk_shaders_init();
+void                                                       vk_shaders_shutdown();
+void                                                       vk_shaders_update_push_constants();
 
 // Returns the index + 1 of the shader, if it's 0, the shader isn't found
-u32                                        vk_shaders_find( const char* shader_name );
+u32                                                        vk_shaders_find( const char* shader_name );
 
-VkDescriptorPool                           vk_descriptor_pool_create( const char* name, u32 max_sets, vk_desc_pool_size_ratio_t* pool_sizes, u32 pool_size_count );
-bool                                       vk_descriptor_init();
-void                                       vk_descriptor_destroy();
-bool                                       vk_descriptor_allocate_window( r_window_data_t* window );
-void                                       vk_descriptor_update_window( r_window_data_t* window );
+VkDescriptorPool                                           vk_descriptor_pool_create( const char* name, u32 max_sets, vk_desc_pool_size_ratio_t* pool_sizes, u32 pool_size_count );
+bool                                                       vk_descriptor_init();
+void                                                       vk_descriptor_destroy();
+bool                                                       vk_descriptor_allocate_window( r_window_data_t* window );
+void                                                       vk_descriptor_update_window( r_window_data_t* window );
 
-gpu_mesh_buffers_t                         vk_mesh_upload( u32* indices, u32 index_count, gpu_vertex_t* vertices, u32 vertex_count );
-gpu_mesh_buffers_t                         vk_mesh_upload( gpu_vertex_t* vertices, u32 vertex_count );
-void                                       vk_mesh_free( gpu_mesh_buffers_t& mesh_buffers );
+gpu_mesh_buffers_t                                         vk_mesh_upload( u32* indices, u32 index_count, gpu_vertex_t* vertices, u32 vertex_count );
+gpu_mesh_buffers_t                                         vk_mesh_upload( gpu_vertex_t* vertices, u32 vertex_count );
+void                                                       vk_mesh_free( gpu_mesh_buffers_t& mesh_buffers );
 
 // --------------------------------------------------------------------------------------------
 // Allocator Functions
 
-u32                                        vk_get_memory_type( u32 type_filter, VkMemoryPropertyFlags properties );
+u32                                                        vk_get_memory_type( u32 type_filter, VkMemoryPropertyFlags properties );
 
-vk_buffer_t*                               vk_buffer_create( VkDeviceSize size, VkBufferUsageFlags usage, VmaMemoryUsage mem_usage );
-vk_buffer_t*                               vk_buffer_create( const char* name, VkDeviceSize size, VkBufferUsageFlags usage, VmaMemoryUsage mem_usage );
+vk_buffer_t*                                               vk_buffer_create( VkDeviceSize size, VkBufferUsageFlags usage, VmaMemoryUsage mem_usage );
+vk_buffer_t*                                               vk_buffer_create( const char* name, VkDeviceSize size, VkBufferUsageFlags usage, VmaMemoryUsage mem_usage );
 
-void                                       vk_buffer_destroy( vk_buffer_t* buffer );
+void                                                       vk_buffer_destroy( vk_buffer_t* buffer );
 
 #if 0
 
@@ -745,5 +743,3 @@ bool                                       vk_buffer_copy_region( vk_buffer_t* s
 
 // --------------------------------------------------------------------------------------------
 // Render Functions
-
-

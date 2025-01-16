@@ -661,43 +661,48 @@ struct ch_handle_ref_list_32
 	~ch_handle_ref_list_32()
 	{
 		free( data );
-		//free( generation );
-		//free( ref_count );
+		free( generation );
+		free( ref_count );
 	}
 
 private:
 	bool allocate()
 	{
-		// single allocation
-		size_t total_size = sizeof( TYPE ) + sizeof( u32 ) + sizeof( u16 );
-		char*  new_data   = ch_recalloc< char >( (char*)data, capacity * total_size, STEP_SIZE * total_size );
+	// 	u32*  new_generation = util_array_extend( generation, capacity, STEP_SIZE );
+	// 	TYPE* new_data       = util_array_extend( data, capacity, STEP_SIZE );
+	// 	u16*  new_ref        = util_array_extend( ref_count, capacity, STEP_SIZE );
+	// 
+	// 	if ( !new_generation || !new_data || !new_ref )
+	// 	{
+	// 		free( new_generation );
+	// 		free( new_data );
+	// 		free( new_ref );
+	// 		return false;
+	// 	}
+	// 	
+	// 	data       = new_data;
+	// 	generation = new_generation;
+	// 	ref_count  = new_ref;
 
-		if ( !new_data )
-			return true;
-
-		capacity += STEP_SIZE;
-
-		data       = ( TYPE* )( new_data );
-		generation = ( u32* )( new_data + ( sizeof( TYPE ) * capacity ) );
-		ref_count  = ( u16* )( new_data + ( sizeof( TYPE ) * capacity ) + ( sizeof( u32 ) * capacity ) );
-
-	#if 0 
-		HANDLE* new_handle = util_array_extend( handle, capacity, STEP_SIZE );
-		TYPE*   new_data   = util_array_extend( data, capacity, STEP_SIZE );
-		u16*    new_ref    = util_array_extend( ref_count, capacity, STEP_SIZE );
-
-		if ( !new_handle || !new_data || !new_ref )
+		if ( util_array_extend( generation, capacity, STEP_SIZE ) )
 		{
-			free( new_handle );
-			free( new_data );
-			free( new_ref );
+			::free( generation );
 			return false;
 		}
 
-		handle    = new_handle;
-		data      = new_data;
-		ref_count = new_ref;
-	#endif
+		if ( util_array_extend( data, capacity, STEP_SIZE ) )
+		{
+			::free( data );
+			return false;
+		}
+
+		if ( util_array_extend( ref_count, capacity, STEP_SIZE ) )
+		{
+			::free( ref_count );
+			return false;
+		}
+
+		capacity += STEP_SIZE;
 
 		return true;
 	}
@@ -818,43 +823,171 @@ struct ch_handle_list_32
 	~ch_handle_list_32()
 	{
 		::free( data );
-		//free( generation );
-		//free( use_list );
+		::free( generation );
+		::free( use_list );
 	}
 
 private:
 	bool allocate()
 	{
-		// single allocation
-		size_t total_size = sizeof( TYPE ) + sizeof( u32 ) + sizeof( bool );
-		char*  new_data   = ch_recalloc< char >( (char*)data, capacity * total_size, STEP_SIZE * total_size );
+		// u32*  new_generation = ;
+		// TYPE* new_data       = util_array_extend( data, capacity, STEP_SIZE );
+		// bool* new_use        = util_array_extend( use_list, capacity, STEP_SIZE );
 
-		if ( !new_data )
-			return true;
-
-		capacity += STEP_SIZE;
-
-		data       = ( TYPE* )( new_data );
-		generation = ( u32* )( new_data + ( sizeof( TYPE ) * capacity ) );
-		use_list   = ( bool* )( new_data + ( sizeof( TYPE ) * capacity ) + ( sizeof( u32 ) * capacity ) );
-
-	#if 0 
-		HANDLE* new_handle = util_array_extend( handle, capacity, STEP_SIZE );
-		TYPE*   new_data   = util_array_extend( data, capacity, STEP_SIZE );
-		u16*    new_ref    = util_array_extend( ref_count, capacity, STEP_SIZE );
-
-		if ( !new_handle || !new_data || !new_ref )
+		if ( util_array_extend( generation, capacity, STEP_SIZE ) )
 		{
-			free( new_handle );
-			free( new_data );
-			free( new_ref );
+			::free( generation );
 			return false;
 		}
 
-		handle    = new_handle;
-		data      = new_data;
-		ref_count = new_ref;
-	#endif
+		if ( util_array_extend( data, capacity, STEP_SIZE ) )
+		{
+			::free( data );
+			return false;
+		}
+
+		if ( util_array_extend( use_list, capacity, STEP_SIZE ) )
+		{
+			::free( use_list );
+			return false;
+		}
+
+		capacity += STEP_SIZE;
+
+	//	if ( !new_generation || !new_data || !new_use )
+	//	{
+	//		free( new_generation );
+	//		free( new_data );
+	//		free( new_use );
+	//		return false;
+	//	}
+	//
+	//	data       = new_data;
+	//	generation = new_generation;
+	//	use_list   = new_use;
+
+		return true;
+	}
+
+public:
+	bool handle_valid( HANDLE s_handle )
+	{
+		if ( s_handle.index >= capacity )
+			return false;
+
+		if ( s_handle.generation == 0 )
+			return false;
+
+		if ( s_handle.generation != generation[ s_handle.index ] )
+			return false;
+
+		return true;
+	}
+
+	bool create( HANDLE& s_handle, TYPE** s_type )
+	{
+		// Find a free handle
+		u32 index = 0;
+		for ( ; index < capacity; index++ )
+		{
+			// is this handle in use?
+			if ( !use_list[ index ] )
+				break;
+		}
+
+		if ( index == capacity )
+		{
+			if ( !allocate() )
+			{
+				return false;
+			}
+		}
+
+		use_list[ index ] = true;
+
+		s_handle.index      = index;
+		s_handle.generation = ++generation[ index ];
+		*s_type             = &data[ index ];
+
+		return true;
+	}
+
+	void free( u32 index )
+	{
+		memset( &data[ index ], 0, sizeof( TYPE ) );
+		use_list[ index ] = false;
+	}
+
+	void free( HANDLE& s_handle )
+	{
+		if ( !handle_valid( s_handle ) )
+			return;
+
+		memset( &data[ s_handle.index ], 0, sizeof( TYPE ) );
+		use_list[ s_handle.index ] = false;
+	}
+
+	// use an existing handle, potentially useful for loading saves
+	// though the generation index would be annoying
+	// create_with_handle
+
+	TYPE* get( HANDLE s_handle )
+	{
+		if ( !handle_valid( s_handle ) )
+			return nullptr;
+
+		return &data[ s_handle.index ];
+	}
+};
+
+
+// TODO: FINISH THIS
+#if 0
+// 32 bit handle list with index list for indirection
+template< typename HANDLE, typename TYPE, u32 STEP_SIZE = 32 >
+struct ch_handle_list_idx_32
+{
+	struct index_generation_t
+	{
+		u32 index;
+		u32 generation;
+	};
+
+	u32   count;  // count in the data array
+	u32                 capacity;
+	TYPE*               data;
+	index_generation_t* indices;  // stores index into the data array
+	bool*               use_list;  // list of entries that are in use
+
+	ch_handle_list_32()
+	{
+	}
+
+	~ch_handle_list_32()
+	{
+		::free( data );
+		::free( generation );
+		::free( use_list );
+	}
+
+private:
+	bool allocate()
+	{
+		u32*  new_generation = util_array_extend( generation, capacity, STEP_SIZE );
+		TYPE* new_data       = util_array_extend( data, capacity, STEP_SIZE );
+		bool* new_use        = util_array_extend( use_list, capacity, STEP_SIZE );
+
+		if ( !new_generation || !new_data || !new_use )
+		{
+			free( new_generation );
+			free( new_data );
+			free( new_use );
+			return false;
+		}
+
+		data       = new_data;
+		generation = new_generation;
+		use_list   = new_use;
 
 		return true;
 	}
@@ -920,6 +1053,7 @@ public:
 		return data[ s_handle.index ];
 	}
 };
+#endif
 
 
 // 32-bit handle list with generation support
@@ -939,41 +1073,24 @@ struct ch_handle_list_simple_32
 	~ch_handle_list_simple_32()
 	{
 		free( generation );
-		//free( use_list );
+		free( use_list );
 	}
 
 private:
 	bool allocate()
 	{
-		// single allocation
-		size_t total_size = sizeof( u32 ) + sizeof( bool );
-		char*  new_data   = ch_recalloc< char >( (char*)generation, capacity * total_size, STEP_SIZE * total_size );
+		u32*  new_generation = util_array_extend( generation, capacity, STEP_SIZE );
+		bool* new_use        = util_array_extend( use_list, capacity, STEP_SIZE );
 
-		if ( !new_data )
-			return true;
-
-		generation = ( u32* )( new_data );
-		use_list   = ( bool* )( new_data + ( sizeof( u32 ) * capacity ) );
-
-		capacity += STEP_SIZE;
-
-	#if 0 
-		HANDLE* new_handle = util_array_extend( handle, capacity, STEP_SIZE );
-		TYPE*   new_data   = util_array_extend( data, capacity, STEP_SIZE );
-		u16*    new_ref    = util_array_extend( ref_count, capacity, STEP_SIZE );
-
-		if ( !new_handle || !new_data || !new_ref )
+		if ( !new_generation || !new_use )
 		{
-			free( new_handle );
-			free( new_data );
-			free( new_ref );
+			free( new_generation );
+			free( new_use );
 			return false;
 		}
 
-		handle    = new_handle;
-		data      = new_data;
-		ref_count = new_ref;
-	#endif
+		generation = new_generation;
+		use_list   = new_use;
 
 		return true;
 	}

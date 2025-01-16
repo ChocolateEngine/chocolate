@@ -114,7 +114,7 @@ void vk_transition_image( VkCommandBuffer c, VkImage image, VkImageLayout curren
 }
 
 
-static u32 vk_get_next_image( ch_handle_t window_handle, r_window_data_t* window )
+static u32 vk_get_next_image( r_window_h window_handle, r_window_data_t* window )
 {
 	u32 frame = window->frame_index;
 
@@ -458,7 +458,7 @@ static void vk_submit_command_buffer( r_window_data_t* window )
 }
 
 
-void vk_draw( ch_handle_t window_handle, r_window_data_t* window )
+void vk_draw( r_window_h window_handle, r_window_data_t* window )
 {
 	u32 frame = window->frame_index;
 
@@ -504,7 +504,7 @@ void vk_draw( ch_handle_t window_handle, r_window_data_t* window )
 }
 
 
-void vk_reset( ch_handle_t window_handle, r_window_data_t* window, e_render_reset_flags flags )
+void vk_reset( r_window_h window_handle, r_window_data_t* window, e_render_reset_flags flags )
 {
 	// recreate swapchain
 	vk_swapchain_recreate( window );
@@ -525,6 +525,21 @@ void vk_reset( ch_handle_t window_handle, r_window_data_t* window, e_render_rese
 	if ( window->fn_on_reset )
 	{
 		window->fn_on_reset( window_handle, flags );
+	}
+}
+
+
+void vk_reset_all( e_render_reset_flags flags )
+{
+	for ( u32 i = 0; i < g_windows.capacity; i++ )
+	{
+		if ( !g_windows.use_list[ i ] )
+			continue;
+
+		r_window_data_t& window_data = g_windows.data[ i ];
+		r_window_h       handle{ i, g_windows.generation[ i ] };
+
+		vk_reset( handle, &window_data, flags );
 	}
 }
 

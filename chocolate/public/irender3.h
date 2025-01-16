@@ -10,6 +10,7 @@
 #include "igraphics_data.h"
 
 
+CH_HANDLE_GEN_32( r_window_h );
 CH_HANDLE_GEN_32( r_texture_h );
 CH_HANDLE_GEN_32( r_mesh_h );
 CH_HANDLE_GEN_32( r_mesh_render_h );
@@ -24,7 +25,7 @@ enum e_render_reset_flags
 
 
 // Function callback for app code for when renderer gets reset
-typedef void ( *fn_render_on_reset_t )( ch_handle_t window, e_render_reset_flags flags );
+typedef void ( *fn_render_on_reset_t )( r_window_h window, e_render_reset_flags flags );
 
 
 struct SDL_Window;
@@ -79,18 +80,18 @@ struct IRender3 : public ISystem
 	// --------------------------------------------------------------------------------------------
 
 	// the native window would be the HWND on windows, also required on windows
-	virtual ch_handle_t window_create( SDL_Window* window, void* native_window = nullptr )         = 0;
-	virtual void        window_free( ch_handle_t window )                                          = 0;
-	virtual void        window_set_reset_callback( ch_handle_t window, fn_render_on_reset_t func ) = 0;
-	virtual glm::uvec2  window_surface_size( ch_handle_t window )                                  = 0;
+	virtual r_window_h  window_create( SDL_Window* window, void* native_window = nullptr )         = 0;
+	virtual void        window_free( r_window_h window )                                           = 0;
+	virtual void        window_set_reset_callback( r_window_h window, fn_render_on_reset_t func )  = 0;
+	virtual glm::uvec2  window_surface_size( r_window_h window )                                   = 0;
 
 	// --------------------------------------------------------------------------------------------
 	// Rendering
 	// --------------------------------------------------------------------------------------------
 
-	virtual void        new_frame( ch_handle_t window_handle )                                     = 0;
-	virtual void        reset( ch_handle_t window )                                                = 0;
-	virtual void        present( ch_handle_t window )                                              = 0;
+	virtual void        new_frame( r_window_h window_handle )                                      = 0;
+	virtual void        reset( r_window_h window )                                                 = 0;
+	virtual void        present( r_window_h window )                                               = 0;
 
 	// notes for rendering ideas
 	//
@@ -267,7 +268,7 @@ struct IRender3 : public ISystem
 	virtual bool            test_init()                                                                               = 0;
 	virtual void            test_shutdown()                                                                           = 0;
 
-	virtual void            test_update( float frame_time, ch_handle_t window, glm::mat4 view, glm::mat4 projection ) = 0;
+	virtual void            test_update( float frame_time, r_window_h window, glm::mat4 view, glm::mat4 projection )  = 0;
 
 	virtual r_mesh_h        mesh_upload( ch_model_h handle )                                                          = 0;
 	virtual r_mesh_render_h mesh_render_create( r_mesh_h handle )                                                     = 0;

@@ -15,7 +15,7 @@ extern IInputSystem*  input;
 
 extern SDL_Window*    g_window;
 extern void*          g_window_native;
-extern ch_handle_t    g_graphics_window;
+extern r_window_h     g_graphics_window;
 
 extern glm::mat4      g_view;
 extern glm::mat4      g_projection;

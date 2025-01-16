@@ -106,14 +106,10 @@ struct Render3 final : public IRender3
 	void Shutdown()
 	{
 		// free windows
-		// TODO: if the window fails to free, we will be stuff here forever, maybe free in reverse order?
-		// while ( g_windows.GetHandleCount() > 0 )
-		if ( g_windows.GetHandleCount() )
+		for ( u32 i = g_windows.capacity - 1; i > 0; i-- )
 		{
-			for ( u32 i = g_windows.GetHandleCount() - 1; i > 0; i-- )
-			{
-				window_free( g_windows.aHandles[ i ] );
-			}
+			if ( g_windows.use_list[ i ] )
+				window_free( { i, g_windows.generation[ i ] } );
 		}
 
 		g_vk_delete_queue.flush();
@@ -154,17 +150,17 @@ struct Render3 final : public IRender3
 	// EACH ONE SHOULD HAVE THEIR OWN IMGUI CONTEXT !!!!
 	// --------------------------------------------------------------------------------------------
 
-	ch_handle_t window_create( SDL_Window* sdl_window, void* native_window = nullptr ) override
+	r_window_h window_create( SDL_Window* sdl_window, void* native_window = nullptr ) override
 	{
-		r_window_data_t* window        = nullptr;
-		ch_handle_t       window_handle = g_windows.Create( &window );
+		r_window_h       window_handle{};
+		r_window_data_t* window = nullptr;
 
-		const char*      title         = SDL_GetWindowTitle( sdl_window ) == nullptr ? SDL_GetWindowTitle( sdl_window ) : CH_DEFAULT_WINDOW_NAME;
+		const char*      title  = SDL_GetWindowTitle( sdl_window ) == nullptr ? SDL_GetWindowTitle( sdl_window ) : CH_DEFAULT_WINDOW_NAME;
 
-		if ( !window_handle )
+		if ( !g_windows.create( window_handle, &window ) )
 		{
-			Log_ErrorF( gLC_Render, "Failed to allocate data for window: \"%s\"\n", title );
-			return CH_INVALID_HANDLE;
+			Log_ErrorF( gLC_Render, "Failed to allocate render window data for: \"%s\"\n", title );
+			return {};
 		}
 
 		window->window = sdl_window;
@@ -182,8 +178,8 @@ struct Render3 final : public IRender3
 			if ( window->surface == VK_NULL_HANDLE )
 			{
 				Log_ErrorF( gLC_Render, "Failed to create surface for window: \"%s\"\n", title );
-				g_windows.Remove( window_handle );
-				return CH_INVALID_HANDLE;
+				g_windows.free( window_handle );
+				return {};
 			}
 		}
 
@@ -191,34 +187,34 @@ struct Render3 final : public IRender3
 		{
 			Log_ErrorF( gLC_Render, "Failed to create swapchain for window: \"%s\"\n", title );
 			window_free( window_handle );
-			return CH_INVALID_HANDLE;
+			return {};
 		}
 
 		if ( !vk_backbuffer_create( window ) )
 		{
 			Log_ErrorF( gLC_Render, "Failed to create backbuffer for window: \"%s\"\n", title );
 			window_free( window_handle );
-			return CH_INVALID_HANDLE;
+			return {};
 		}
 
 		if ( !vk_command_buffers_create( window ) )
 		{
 			Log_ErrorF( gLC_Render, "Failed to create command buffers for window: \"%s\"\n", title );
 			window_free( window_handle );
-			return CH_INVALID_HANDLE;
+			return {};
 		}
 
 		if ( !vk_render_sync_create( window ) )
 		{
 			Log_ErrorF( gLC_Render, "Failed to create fences and semaphores for window: \"%s\"\n", title );
 			window_free( window_handle );
-			return CH_INVALID_HANDLE;
+			return {};
 		}
 
 		if ( !vk_descriptor_allocate_window( window ) )
 		{
 			Log_Error( gLC_Render, "Failed to allocate descriptor sets for window\n" );
-			return false;
+			return {};
 		}
 		
 		// init imgui
@@ -246,7 +242,7 @@ struct Render3 final : public IRender3
 		{
 			Log_ErrorF( gLC_Render, "Failed to init ImGui Vulkan for Window: \"%s\"\n", title );
 			window_free( window_handle );
-			return CH_INVALID_HANDLE;
+			return {};
 		}
 
 		// upload fonts
@@ -254,23 +250,23 @@ struct Render3 final : public IRender3
 		{
 			Log_ErrorF( gLC_Render, "Failed to create ImGui fonts for Window: \"%s\"\n", title );
 			window_free( window_handle );
-			return CH_INVALID_HANDLE;
+			return {};
 		}
 
 		if ( !ImGui_ImplSDL2_InitForVulkan( sdl_window ) )
  		{
  			Log_ErrorF( gLC_Render, "Failed to init ImGui SDL2 for Vulkan Window: \"%s\"\n", title );
  			window_free( window_handle );
- 			return false;
+			return {};
  		}
 
 		return window_handle;
 	}
 
-	void window_free( ch_handle_t window ) override
+	void window_free( r_window_h window ) override
 	{
-		r_window_data_t* window_data = nullptr;
-		if ( !g_windows.Get( window, &window_data ) )
+		r_window_data_t* window_data = g_windows.get( window );
+		if ( !window_data )
 		{
 			Log_ErrorF( gLC_Render, "Failed to find window to free!\n" );
 			return;
@@ -289,13 +285,13 @@ struct Render3 final : public IRender3
 		ImGui_ImplVulkan_Shutdown();
 
 		// free window data
-		g_windows.Remove( window );
+		g_windows.free( window );
 	}
 
-	void window_set_reset_callback( ch_handle_t window, fn_render_on_reset_t func )
+	void window_set_reset_callback( r_window_h window, fn_render_on_reset_t func )
 	{
-		r_window_data_t* window_data = nullptr;
-		if ( !g_windows.Get( window, &window_data ) )
+		r_window_data_t* window_data = g_windows.get( window );
+		if ( !window_data )
 		{
 			Log_ErrorF( gLC_Render, "Failed to find window to set reset callback!\n" );
 			return;
@@ -304,10 +300,10 @@ struct Render3 final : public IRender3
 		window_data->fn_on_reset = func;
 	}
 	
-	glm::uvec2 window_surface_size( ch_handle_t window ) override
+	glm::uvec2 window_surface_size( r_window_h window ) override
 	{
-		r_window_data_t* window_data = nullptr;
-		if ( !g_windows.Get( window, &window_data ) )
+		r_window_data_t* window_data = g_windows.get( window );
+		if ( !window_data )
 		{
 			Log_ErrorF( gLC_Render, "Failed to find window to get surface size!\n" );
 			return {};
@@ -322,10 +318,10 @@ struct Render3 final : public IRender3
 	// Rendering
 	// --------------------------------------------------------------------------------------------
 
-	void new_frame( ch_handle_t window_handle ) override
+	void new_frame( r_window_h window_handle ) override
 	{
-		r_window_data_t* window = nullptr;
-		if ( !g_windows.Get( window_handle, &window ) )
+		r_window_data_t* window = g_windows.get( window_handle );
+		if ( !window )
 		{
 			Log_ErrorF( gLC_Render, "Failed to find window to call new_frame() on!\n" );
 			return;
@@ -340,10 +336,10 @@ struct Render3 final : public IRender3
 		ImGui_ImplVulkan_NewFrame();
 	}
 
-	void reset( ch_handle_t window_handle ) override
+	void reset( r_window_h window_handle ) override
 	{
-		r_window_data_t* window = nullptr;
-		if ( !g_windows.Get( window_handle, &window ) )
+		r_window_data_t* window = g_windows.get( window_handle );
+		if ( !window )
 		{
 			Log_ErrorF( gLC_Render, "Failed to find window to reset!\n" );
 			return;
@@ -352,10 +348,10 @@ struct Render3 final : public IRender3
 		vk_reset( window_handle, window, e_render_reset_flags_resize );
 	}
 
-	void present( ch_handle_t window_handle ) override
+	void present( r_window_h window_handle ) override
 	{
-		r_window_data_t* window = nullptr;
-		if ( !g_windows.Get( window_handle, &window ) )
+		r_window_data_t* window = g_windows.get( window_handle );
+		if ( !window )
 		{
 			Log_ErrorF( gLC_Render, "Failed to find window to present to!\n" );
 			return;
@@ -466,7 +462,7 @@ struct Render3 final : public IRender3
 		// vk_mesh_free( g_test_render.rectangle );
 	}
 
-	void test_update( float frame_time, ch_handle_t window, glm::mat4 view, glm::mat4 projection ) override
+	void test_update( float frame_time, r_window_h window, glm::mat4 view, glm::mat4 projection ) override
 	{
 		g_test_render.view_mat      = view;
 		g_test_render.proj_mat      = projection;
