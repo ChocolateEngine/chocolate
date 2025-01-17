@@ -75,7 +75,7 @@ void vk_blit_image_to_image( VkCommandBuffer c, VkImage src, VkImage dst, VkExte
 	blit_info.dstImageLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
 	blit_info.srcImage       = src;
 	blit_info.srcImageLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
-	blit_info.filter         = VK_FILTER_LINEAR;
+	blit_info.filter         = vk_render_scale_nearest ? VK_FILTER_NEAREST : VK_FILTER_LINEAR;
 	blit_info.regionCount    = 1;
 	blit_info.pRegions       = &blit_region;
 

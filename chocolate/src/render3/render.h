@@ -518,6 +518,7 @@ CONVAR_BOOL_EXT( r_msaa_enabled );
 CONVAR_INT_EXT( r_msaa_samples );
 CONVAR_INT_EXT( r_msaa_textures );
 CONVAR_FLOAT_EXT( r_msaa_textures_min );
+CONVAR_BOOL_EXT( vk_render_scale_nearest );
 
 
 // --------------------------------------------------------------------------------------------

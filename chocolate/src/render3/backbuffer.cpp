@@ -34,7 +34,8 @@ CONVAR_FLOAT_NAME_CMD( r_msaa_textures_min, "vk.msaa.textures.min", 1.f, CVARF_A
 }
 
 
-static void render_scale_callback( float prev_value, float& new_value )
+template< typename T >
+static void render_scale_callback( T prev_value, T& new_value )
 {
 	vkDeviceWaitIdle( g_vk_device );
 
@@ -51,6 +52,7 @@ static void render_scale_callback( float prev_value, float& new_value )
 
 
 CONVAR_RANGE_FLOAT_NAME( vk_render_scale, "vk.render.scale", 1.0, 0.01, 4.0, 0, "Scale the window backbuffer", &render_scale_callback );
+CONVAR_BOOL_NAME( vk_render_scale_nearest, "vk.render.scale.nearest", false, 0, "Use nearest filtering for scaling the window backbuffer", &render_scale_callback );
 
 
 VkSampleCountFlags vk_msaa_get_max_samples()
@@ -135,7 +137,12 @@ VkSampleCountFlagBits vk_msaa_get_samples( bool use_msaa )
 }
 
 
-bool vk_backbuffer_create_depth( r_window_data_t* window )
+//bool vk_backbuffer_create_base( r_window_data_t* window, vk_image_t& image, VkFormat format )
+//{
+//}
+
+
+VkImageCreateInfo vk_backbuffer_create_info_base( r_window_data_t* window, VkFormat format, bool msaa )
 {
 	VkImageCreateInfo image_info{ VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO };
 	image_info.imageType     = VK_IMAGE_TYPE_2D;
@@ -143,7 +150,7 @@ bool vk_backbuffer_create_depth( r_window_data_t* window )
 	image_info.arrayLayers   = 1;
 
 	// hardcoding the depth format here
-	image_info.format        = g_depth_format;
+	image_info.format        = format;
 
 	// always match window size
 	image_info.extent.depth  = 1;
@@ -154,42 +161,56 @@ bool vk_backbuffer_create_depth( r_window_data_t* window )
 	image_info.extent.width  = std::max( 1.f, window->swap_extent.width * vk_render_scale );
 	image_info.extent.height = std::max( 1.f, window->swap_extent.height * vk_render_scale );
 
-	// This is the depth buffer, so no MSAA here
-	image_info.samples       = vk_msaa_get_samples();
+	image_info.samples       = vk_msaa_get_samples( msaa );
 
 	// optimal tiling, which means the image is stored on the best gpu format
 	image_info.tiling        = VK_IMAGE_TILING_OPTIMAL;
 
-	// has both transfers so we can copy from and into the image, storage to be used in compute shaders, and color attachment for rendering
-	image_info.usage         = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+	return image_info;
+}
 
+
+bool vk_backbuffer_create_base( const char* name, VkImageCreateInfo& image_info, vk_image_t& image, VkImageAspectFlags aspect )
+{
 	// allocate from gpu memory
 	VmaAllocationCreateInfo alloc_info{};
 	alloc_info.usage         = VMA_MEMORY_USAGE_GPU_ONLY;
 	alloc_info.requiredFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
 
 	// create the image
-	if ( vk_check_e( vmaCreateImage( g_vma, &image_info, &alloc_info, &window->draw_image_depth.image, &window->draw_image_depth.memory, nullptr ), "Failed to create depth image for window!" ) )
+	if ( vk_check_ef( vmaCreateImage( g_vma, &image_info, &alloc_info, &image.image, &image.memory, nullptr ), "Failed to create %s image for window!", name ) )
 		return false;
 
 	// build a image-view for the draw image to use for rendering
 	VkImageViewCreateInfo view_info{ VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO };
 
 	view_info.viewType                        = VK_IMAGE_VIEW_TYPE_2D;
-	view_info.image                           = window->draw_image_depth.image;
+	view_info.image                           = image.image;
 	view_info.format                          = image_info.format;
 	view_info.subresourceRange.baseMipLevel   = 0;
 	view_info.subresourceRange.levelCount     = 1;
 	view_info.subresourceRange.baseArrayLayer = 0;
 	view_info.subresourceRange.layerCount     = 1;
-	view_info.subresourceRange.aspectMask     = VK_IMAGE_ASPECT_DEPTH_BIT;
+	view_info.subresourceRange.aspectMask     = aspect;
 
-	if ( vk_check_e( vkCreateImageView( g_vk_device, &view_info, nullptr, &window->draw_image_depth.view ), "Failed to create depth image view for window!" ) )
+	if ( vk_check_ef( vkCreateImageView( g_vk_device, &view_info, nullptr, &image.view ), "Failed to create %s image view for window!", name ) )
 		return false;
 
-	window->draw_image_depth.extent.width  = image_info.extent.width;
-	window->draw_image_depth.extent.height = image_info.extent.height;
-	window->draw_image_depth.format        = image_info.format;
+	image.extent.width  = image_info.extent.width;
+	image.extent.height = image_info.extent.height;
+	image.format        = image_info.format;
+
+	return true;
+}
+
+
+bool vk_backbuffer_create_depth( r_window_data_t* window )
+{
+	VkImageCreateInfo image_info = vk_backbuffer_create_info_base( window, g_depth_format, true );
+	image_info.usage         = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+
+	if ( !vk_backbuffer_create_base( "depth", image_info, window->draw_image_depth, VK_IMAGE_ASPECT_DEPTH_BIT ) )
+		return false;
 
 	vk_set_name( VK_OBJECT_TYPE_IMAGE, (u64)window->draw_image_depth.image, "Backbuffer - Depth" );
 	vk_set_name( VK_OBJECT_TYPE_IMAGE_VIEW, (u64)window->draw_image_depth.view, "Backbuffer - Depth" );
@@ -200,60 +221,15 @@ bool vk_backbuffer_create_depth( r_window_data_t* window )
 
 bool vk_backbuffer_create_color( r_window_data_t* window )
 {
-	VkImageCreateInfo image_info{ VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO };
-	image_info.imageType     = VK_IMAGE_TYPE_2D;
-	image_info.mipLevels     = 1;
-	image_info.arrayLayers   = 1;
-
-	// hardcoding the draw format to 32 bit float
-	image_info.format        = g_draw_format;
-
-	// always match window size
-	image_info.extent.depth  = 1;
-
-	// image_info.extent.width  = window->swap_extent.width;
-	// image_info.extent.height = window->swap_extent.height;
-
-	image_info.extent.width  = std::max( 1.f, window->swap_extent.width * vk_render_scale );
-	image_info.extent.height = std::max( 1.f, window->swap_extent.height * vk_render_scale );
-
-	image_info.samples       = vk_msaa_get_samples();
-
-	// optimal tiling, which means the image is stored on the best gpu format
-	image_info.tiling        = VK_IMAGE_TILING_OPTIMAL;
+	VkImageCreateInfo image_info = vk_backbuffer_create_info_base( window, g_draw_format, true );
 
 	// has both transfers so we can copy from and into the image, storage to be used in compute shaders, and color attachment for rendering
 	// NOTE: you can only use VK_IMAGE_USAGE_STORAGE_BIT with MSAA if the shaderStorageImageMultisample feature is enabled
 	// image_info.usage         = VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
-	image_info.usage         = VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+	image_info.usage             = VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 
-	// allocate from gpu memory
-	VmaAllocationCreateInfo alloc_info{};
-	alloc_info.usage         = VMA_MEMORY_USAGE_GPU_ONLY;
-	alloc_info.requiredFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
-
-	// create the image
-	if ( vk_check_e( vmaCreateImage( g_vma, &image_info, &alloc_info, &window->draw_image.image, &window->draw_image.memory, nullptr ), "Failed to create color image for window!" ) )
+	if ( !vk_backbuffer_create_base( "color", image_info, window->draw_image, VK_IMAGE_ASPECT_COLOR_BIT ) )
 		return false;
-
-	// build a image-view for the draw image to use for rendering
-	VkImageViewCreateInfo view_info{ VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO };
-
-	view_info.viewType                        = VK_IMAGE_VIEW_TYPE_2D;
-	view_info.image                           = window->draw_image.image;
-	view_info.format                          = image_info.format;
-	view_info.subresourceRange.baseMipLevel   = 0;
-	view_info.subresourceRange.levelCount     = 1;
-	view_info.subresourceRange.baseArrayLayer = 0;
-	view_info.subresourceRange.layerCount     = 1;
-	view_info.subresourceRange.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT;
-
-	if ( vk_check_e( vkCreateImageView( g_vk_device, &view_info, nullptr, &window->draw_image.view ), "Failed to create color image view for window!" ) )
-		return false;
-
-	window->draw_image.extent.width  = image_info.extent.width;
-	window->draw_image.extent.height = image_info.extent.height;
-	window->draw_image.format        = image_info.format;
 
 	vk_set_name( VK_OBJECT_TYPE_IMAGE, (u64)window->draw_image.image, "Backbuffer - Color" );
 	vk_set_name( VK_OBJECT_TYPE_IMAGE_VIEW, (u64)window->draw_image.view, "Backbuffer - Color" );
@@ -264,59 +240,15 @@ bool vk_backbuffer_create_color( r_window_data_t* window )
 
 bool vk_backbuffer_create_resolve( r_window_data_t* window )
 {
-	VkImageCreateInfo image_info{ VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO };
-	image_info.imageType     = VK_IMAGE_TYPE_2D;
-	image_info.mipLevels     = 1;
-	image_info.arrayLayers   = 1;
-
-	// hardcoding the draw format to 32 bit float
-	image_info.format        = g_draw_format;
-
-	// always match window size
-	image_info.extent.depth  = 1;
-
-	// image_info.extent.width  = window->swap_extent.width;
-	// image_info.extent.height = window->swap_extent.height;
-
-	image_info.extent.width  = std::max( 1.f, window->swap_extent.width * vk_render_scale );
-	image_info.extent.height = std::max( 1.f, window->swap_extent.height * vk_render_scale );
-
-	// for MSAA. we will not be using it by default, so default it to 1 sample per pixel.
-	image_info.samples       = VK_SAMPLE_COUNT_1_BIT;
-
-	// optimal tiling, which means the image is stored on the best gpu format
-	image_info.tiling        = VK_IMAGE_TILING_OPTIMAL;
+	VkImageCreateInfo image_info = vk_backbuffer_create_info_base( window, g_draw_format, false );
 
 	// has both transfers so we can copy from and into the image, storage to be used in compute shaders, and color attachment for rendering
-	image_info.usage         = VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+	// NOTE: you can only use VK_IMAGE_USAGE_STORAGE_BIT with MSAA if the shaderStorageImageMultisample feature is enabled
+	// image_info.usage         = VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+	image_info.usage             = VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 
-	// allocate from gpu memory
-	VmaAllocationCreateInfo alloc_info{};
-	alloc_info.usage         = VMA_MEMORY_USAGE_GPU_ONLY;
-	alloc_info.requiredFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
-
-	// create the image
-	if ( vk_check_e( vmaCreateImage( g_vma, &image_info, &alloc_info, &window->draw_image_resolve.image, &window->draw_image_resolve.memory, nullptr ), "Failed to create resolve image for window!" ) )
+	if ( !vk_backbuffer_create_base( "resolve", image_info, window->draw_image_resolve, VK_IMAGE_ASPECT_COLOR_BIT ) )
 		return false;
-
-	// build a image-view for the draw image to use for rendering
-	VkImageViewCreateInfo view_info{ VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO };
-
-	view_info.viewType                        = VK_IMAGE_VIEW_TYPE_2D;
-	view_info.image                           = window->draw_image_resolve.image;
-	view_info.format                          = image_info.format;
-	view_info.subresourceRange.baseMipLevel   = 0;
-	view_info.subresourceRange.levelCount     = 1;
-	view_info.subresourceRange.baseArrayLayer = 0;
-	view_info.subresourceRange.layerCount     = 1;
-	view_info.subresourceRange.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT;
-
-	if ( vk_check_e( vkCreateImageView( g_vk_device, &view_info, nullptr, &window->draw_image_resolve.view ), "Failed to create resolve image view for window!" ) )
-		return false;
-
-	window->draw_image_resolve.extent.width  = image_info.extent.width;
-	window->draw_image_resolve.extent.height = image_info.extent.height;
-	window->draw_image_resolve.format        = image_info.format;
 
 	vk_set_name( VK_OBJECT_TYPE_IMAGE, (u64)window->draw_image_resolve.image, "Backbuffer - Resolve" );
 	vk_set_name( VK_OBJECT_TYPE_IMAGE_VIEW, (u64)window->draw_image_resolve.view, "Backbuffer - Resolve" );
