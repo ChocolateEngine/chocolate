@@ -52,8 +52,7 @@ void main()
 	outPositionWorld = (inMatrix * vec4(outPosition, 1.0)).rgb;
 	// outMatrix = inMatrix;
 
-	//gl_Position = gViewports[ push.aViewport ].aProjView * inMatrix * vec4(inPos, 1.0);
-	gl_Position = gViewports[ push.aViewport ].aView * vec4(inPos, 1.0);
+	gl_Position = gViewports[ push.aViewport ].aProjView * inMatrix * vec4(inPos, 1.0);
 	// gl_Position = projView[push.projView].projView * vec4(inPosition, 1.0);
 
 	vec3 normalWorldSpace = normalize(mat3(inMatrix) * inNorm);
