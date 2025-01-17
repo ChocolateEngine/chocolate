@@ -170,9 +170,9 @@ bool vk_shaders_create_graphics_pipeline( VkPipelineLayout layout, vk_shader_cre
 
 	// performs anti-aliasing
 	VkPipelineMultisampleStateCreateInfo multisampling{ VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO };
-	multisampling.sampleShadingEnable   = VK_FALSE;
-	multisampling.rasterizationSamples  = VK_SAMPLE_COUNT_1_BIT;
-	multisampling.minSampleShading      = 1.0f;      // Optional
+	multisampling.sampleShadingEnable   = r_msaa_enabled && r_msaa_textures ? VK_TRUE : VK_FALSE;
+	multisampling.rasterizationSamples  = vk_msaa_get_samples( r_msaa_enabled );
+	multisampling.minSampleShading      = r_msaa_textures_min;  // Optional
 	multisampling.pSampleMask           = NULL;      // Optional
 	multisampling.alphaToCoverageEnable = VK_FALSE;  // Optional
 	multisampling.alphaToOneEnable      = VK_FALSE;  // Optional
@@ -376,6 +376,31 @@ void vk_shaders_shutdown()
 	free( g_shader_data_graphics_pipeline_layout );
 	free( g_shader_data_graphics_pipelines );
 	free( g_shader_data_graphics_names );
+}
+
+
+bool vk_shaders_rebuild()
+{
+	vk_queue_wait_graphics();
+	vkDeviceWaitIdle( g_vk_device );
+
+	for ( u32 i = 0; i < g_shader_create_graphics_count; i++ )
+	{
+		vkDestroyShaderModule( g_vk_device, g_shader_data_graphics[ i ].modules[ 0 ], nullptr );
+		vkDestroyShaderModule( g_vk_device, g_shader_data_graphics[ i ].modules[ 1 ], nullptr );
+
+		vkDestroyPipeline( g_vk_device, g_shader_data_graphics_pipelines[ i ], nullptr );
+		vkDestroyPipelineLayout( g_vk_device, g_shader_data_graphics_pipeline_layout[ i ], nullptr );
+	}
+
+	// load graphics shaders
+	for ( u32 i = 0; i < g_shader_create_graphics_count; i++ )
+	{
+		if ( !vk_shaders_create_graphics( &g_shader_create_graphics[ i ], i ) )
+			return false;
+	}
+
+	return true;
 }
 
 

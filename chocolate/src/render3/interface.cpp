@@ -4,6 +4,20 @@
 #include "imgui_impl_sdl2.h"
 #include "imgui_impl_vulkan.h"
 
+LOG_CHANNEL_REGISTER( Render, ELogColor_Cyan );
+LOG_CHANNEL_REGISTER( Vulkan );
+LOG_CHANNEL_REGISTER( Validation );
+
+ch_handle_list_32< r_window_h, r_window_data_t, 1 >   g_windows;
+r_window_h                                            g_main_window;
+
+SDL_Window**                                          g_windows_sdl;
+ImGuiContext**                                        g_windows_imgui_contexts;
+
+delete_queue_t                                        g_vk_delete_queue;
+
+ch_handle_list_32< vk_image_h, vk_image_t >           g_vk_images;
+
 // HACK HACK HACK HACK
 // VULKAN NEEDS THE SURFACE BEFORE WE CREATE A DEVICE
 // only so we can see if the device can actually create a surface with the right format and capabilities
@@ -16,7 +30,6 @@ VmaAllocator                                          g_vma                  = V
 constexpr const char*                                 CH_DEFAULT_WINDOW_NAME = "Vulkan Window";
 
 IGraphicsData*                                        graphics_data          = nullptr;
-
 
 // each ref count allocated starts at one here when uploaded, then incremeneted when a mesh render is created
 // which would be a ref count of 2 for one mesh render
@@ -211,11 +224,11 @@ struct Render3 final : public IRender3
 			return {};
 		}
 
-		if ( !vk_descriptor_allocate_window( window ) )
-		{
-			Log_Error( gLC_Render, "Failed to allocate descriptor sets for window\n" );
-			return {};
-		}
+	//	if ( !vk_descriptor_allocate_window( window ) )
+	//	{
+	//		Log_Error( gLC_Render, "Failed to allocate descriptor sets for window\n" );
+	//		return {};
+	//	}
 		
 		// init imgui
 		ImGui_ImplVulkan_InitInfo imgui_init{};

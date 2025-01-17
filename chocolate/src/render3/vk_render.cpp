@@ -86,7 +86,7 @@ void vk_blit_image_to_image( VkCommandBuffer c, VkImage src, VkImage dst, VkExte
 // TODO: move this elsewhere later
 // https://vkguide.dev/docs/new_chapter_1/vulkan_mainloop_code/
 // TODO: read these - https://github.com/KhronosGroup/Vulkan-Docs/wiki/Synchronization-Examples - https://gpuopen.com/learn/vulkan-barriers-explained/
-void vk_transition_image( VkCommandBuffer c, VkImage image, VkImageLayout current_layout, VkImageLayout new_layout )
+void vk_transition_image( VkCommandBuffer c, VkImage image, VkImageAspectFlags aspect, VkImageLayout current_layout, VkImageLayout new_layout )
 {
 	VkImageMemoryBarrier2 barrier{ VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2 };
 
@@ -100,7 +100,8 @@ void vk_transition_image( VkCommandBuffer c, VkImage image, VkImageLayout curren
 	barrier.oldLayout                       = current_layout;
 	barrier.newLayout                       = new_layout;
 
-	barrier.subresourceRange.aspectMask     = ( new_layout == VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL ) ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
+	// barrier.subresourceRange.aspectMask     = ( new_layout == VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL ) ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
+	barrier.subresourceRange.aspectMask     = aspect;
 	barrier.subresourceRange.baseMipLevel   = 0;
 	barrier.subresourceRange.levelCount     = VK_REMAINING_MIP_LEVELS;  // transition all mips
 	barrier.subresourceRange.baseArrayLayer = 0;
@@ -268,6 +269,14 @@ CONVAR_BOOL_NAME( r_draw_indexed, "vk.draw.indexed", 1 );
 
 void vk_draw_renderables_test( VkCommandBuffer c, r_window_data_t* window, u32 swap_index )
 {
+	VkRenderingAttachmentInfo depth_attach{ VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO };
+	depth_attach.imageView   = window->draw_image_depth.view;
+	depth_attach.imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+	// depth_attach.loadOp      = clear ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_LOAD;
+	depth_attach.loadOp      = VK_ATTACHMENT_LOAD_OP_CLEAR;
+	// depth_attach.loadOp      = VK_ATTACHMENT_LOAD_OP_LOAD;
+	depth_attach.storeOp     = VK_ATTACHMENT_STORE_OP_STORE;
+
 	VkRenderingAttachmentInfo color_attach{ VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO };
 	color_attach.imageView   = window->draw_image.view;
 	color_attach.imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
@@ -276,11 +285,24 @@ void vk_draw_renderables_test( VkCommandBuffer c, r_window_data_t* window, u32 s
 	// color_attach.loadOp      = VK_ATTACHMENT_LOAD_OP_LOAD;
 	color_attach.storeOp     = VK_ATTACHMENT_STORE_OP_STORE;
 
+	// is msaa used on this window?
+	if ( window->draw_image_resolve.image )
+	{
+		color_attach.resolveImageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+		color_attach.resolveImageView   = window->draw_image_resolve.view;
+
+		// ?
+		color_attach.resolveMode        = VK_RESOLVE_MODE_AVERAGE_BIT;
+	}
+
 	VkRenderingInfo render_info{ VK_STRUCTURE_TYPE_RENDERING_INFO };
+	render_info.pDepthAttachment     = &depth_attach;
 	render_info.colorAttachmentCount = 1;
 	render_info.pColorAttachments    = &color_attach;
 	render_info.renderArea.extent    = window->draw_image.extent;
 	render_info.layerCount           = 1;
+
+	// --------------------------------------------------------
 
 	vkCmdBeginRendering( c, &render_info );
 
@@ -375,7 +397,12 @@ static void vk_record_commands_window( r_window_data_t* window, u32 swap_index )
 
 	// we have to transition the draw image first
 	// https://registry.khronos.org/vulkan/specs/1.3-extensions/html/chap12.html#resources-image-layouts
-	vk_transition_image( c, window->draw_image.image, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL );
+	// vk_transition_image( c, window->draw_image.image, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL );
+	vk_transition_image( c, window->draw_image_depth.image, VK_IMAGE_ASPECT_DEPTH_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL );
+	vk_transition_image( c, window->draw_image.image, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL );
+
+	if ( window->draw_image_resolve.image )
+		vk_transition_image( c, window->draw_image_resolve.image, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL );
 
 	// ---------------------------------------------------------------
 	// start drawing
@@ -383,7 +410,7 @@ static void vk_record_commands_window( r_window_data_t* window, u32 swap_index )
 	// vk_draw_compute_test( c, window, swap_index );
 
 	// switch to color attachment layout for better draw performance
-	vk_transition_image( c, window->draw_image.image, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL );
+	//vk_transition_image( c, window->draw_image.image, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL );
 
 	//vk_draw_test( c, window, swap_index );
 	vk_draw_renderables_test( c, window, swap_index );
@@ -392,29 +419,37 @@ static void vk_record_commands_window( r_window_data_t* window, u32 swap_index )
 	// end drawing
 
 	// transition the draw image and swap image to be ready for copying
-	vk_transition_image( c, window->draw_image.image, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL );
-	vk_transition_image( c, window->swap_images[ swap_index ], VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL );
+	// then copy the draw image into the swapchain
+	vk_transition_image( c, window->swap_images[ swap_index ], VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL );
 
-	// copy the draw image into the swapchain
-	vk_blit_image_to_image( c, window->draw_image.image, window->swap_images[ swap_index ], window->draw_image.extent, window->swap_extent );
+	if ( window->draw_image_resolve.image )
+	{
+		vk_transition_image( c, window->draw_image_resolve.image, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL );
+		vk_blit_image_to_image( c, window->draw_image_resolve.image, window->swap_images[ swap_index ], window->draw_image_resolve.extent, window->swap_extent );
+	}
+	else
+	{
+		vk_transition_image( c, window->draw_image.image, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL );
+		vk_blit_image_to_image( c, window->draw_image.image, window->swap_images[ swap_index ], window->draw_image.extent, window->swap_extent );
+	}
 
 	// ---------------------------------------------
 	// Draw ImGui on the Swapchain
 
-	// imgui test
+	// do we have imgui draw data?
 	if ( ImGui::GetDrawData() )
 	{
-		vk_transition_image( c, window->swap_images[ swap_index ], VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL );
+		vk_transition_image( c, window->swap_images[ swap_index ], VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL );
 
 		vk_draw_imgui( c, window, swap_index );
 
 		// make the swapchain presentable
-		vk_transition_image( c, window->swap_images[ swap_index ], VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR );
+		vk_transition_image( c, window->swap_images[ swap_index ], VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR );
 	}
 	else
 	{
 		// make the swapchain presentable
-		vk_transition_image( c, window->swap_images[ swap_index ], VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR );
+		vk_transition_image( c, window->swap_images[ swap_index ], VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR );
 	}
 
 	// end the command buffer
@@ -519,7 +554,7 @@ void vk_reset( r_window_h window_handle, r_window_data_t* window, e_render_reset
 	}
 
 	// update window descriptors
-	vk_descriptor_update_window( window );
+//	vk_descriptor_update_window( window );
 
 	// call the window reset callback
 	if ( window->fn_on_reset )
@@ -531,6 +566,15 @@ void vk_reset( r_window_h window_handle, r_window_data_t* window, e_render_reset
 
 void vk_reset_all( e_render_reset_flags flags )
 {
+	// could be called before this is created in vk.msaa cvars
+	if ( !g_vk_instance )
+		return;
+
+	if ( flags & e_render_reset_flags_msaa )
+	{
+		vk_shaders_rebuild();
+	}
+
 	for ( u32 i = 0; i < g_windows.capacity; i++ )
 	{
 		if ( !g_windows.use_list[ i ] )

@@ -11,58 +11,7 @@
 struct ImGuiContext;
 
 
-// TEST - need to not use unordered_map
-template< typename T >
-struct handle_list_t
-{
-	std::unordered_map< u32, T > handles;
-
-	handle_list_t()
-	{
-	}
-
-	~handle_list_t()
-	{
-		handles.clear();
-	}
-
-	u32 create( T* s_data )
-	{
-		u32 handle = 1;
-
-		while ( handles.find( handle ) != handles.end() )
-		{
-			handle++;
-		}
-
-		T& data = handles[ handle ];
-
-		// replace the pointer
-		*s_data = *data;
-
-		return handle;
-	}
-
-	T* get( u32 handle )
-	{
-		auto it = handles.find( handle );
-		if ( it == handles.end() )
-		{
-			return nullptr;
-		}
-
-		return &it->second;
-	}
-
-	void remove( u32 handle )
-	{
-		auto it = handles.find( handle );
-		if ( it != handles.end() )
-		{
-			handles.erase( it );
-		}
-	}
-};
+CH_HANDLE_GEN_32( vk_image_h );
 
 
 // TEST - array that keeps track of used slots
@@ -147,6 +96,7 @@ struct slot_array_t
 
 
 constexpr VkFormat g_draw_format              = VK_FORMAT_R16G16B16A16_SFLOAT;
+constexpr VkFormat g_depth_format             = VK_FORMAT_D32_SFLOAT;
 
 
 // amount to allocate at a time
@@ -358,8 +308,8 @@ struct backbuffer_t
 
 
 // data for each window
-// TODO: this SUCKS, make it data oriented !!!
-// TODO: dont use ResourceList to store this, maybe use a free index queue like that entity system idea
+// TODO: remove the draw image stuff in this, that should probably be dependent on the game code
+// TODO: maybe use a free index queue like that entity system idea
 struct r_window_data_t
 {
 	SDL_Window*          window    = nullptr;
@@ -387,12 +337,14 @@ struct r_window_data_t
 	// Contains the framebuffers which are to be drawn to during command buffer recording.
 	// backbuffer_t       backbuffer;
 	vk_image_t           draw_image;
-	VkDescriptorSet      desc_draw_image = VK_NULL_HANDLE;
+	vk_image_t           draw_image_resolve;
+	vk_image_t           draw_image_depth;
+	VkDescriptorSet      desc_draw_image         = VK_NULL_HANDLE;  // only used for the compute shader test
 
-	fn_render_on_reset_t fn_on_reset     = nullptr;
+	fn_render_on_reset_t fn_on_reset             = nullptr;
 
 	// here because of mem alignment, 2 unused bytes at the end
-	u8                   frame_index     = 0;
+	u8                   frame_index             = 0;
 	u8                   swap_image_count;
 	bool                 need_resize = false;
 };
@@ -530,6 +482,30 @@ struct test_render_t
 extern ch_handle_list_32< r_mesh_render_h, r_mesh_render_t > g_mesh_render_list;
 extern test_render_t                                         g_test_render;
 
+
+// --------------------------------------------------------------------------------------------
+// Experimenting with how the renderer will actually store all data to render
+
+
+// Maybe have a basic scene struct you can render to individual render targets?
+
+struct r_scene_t
+{
+	u32              mesh_render_count;
+	r_mesh_render_h* mesh_render;
+
+	// u32        light_count;
+	// r_light_h* light;
+
+	// particles?
+	// post processing somehow?
+	// debug drawing?
+
+	VkViewport       viewport;
+	VkRect2D         scissor;
+};
+
+
 // --------------------------------------------------------------------------------------------
 
 
@@ -540,10 +516,11 @@ LOG_CHANNEL( Validation );
 
 CONVAR_BOOL_EXT( r_msaa_enabled );
 CONVAR_INT_EXT( r_msaa_samples );
+CONVAR_INT_EXT( r_msaa_textures );
+CONVAR_FLOAT_EXT( r_msaa_textures_min );
 
 
 // --------------------------------------------------------------------------------------------
-
 
 extern VkInstance                                          g_vk_instance;
 extern VkDevice                                            g_vk_device;
@@ -565,7 +542,7 @@ extern VkSurfaceFormatKHR                                  g_vk_surface_format;
 extern ch_handle_list_32< r_window_h, r_window_data_t, 1 > g_windows;
 extern r_window_h                                          g_main_window;
 
-extern handle_list_t< vk_image_t >                         g_vk_images;
+extern ch_handle_list_32< vk_image_h, vk_image_t >         g_vk_images;
 
 // global delete queue
 extern delete_queue_t                                      g_vk_delete_queue;
@@ -663,6 +640,11 @@ bool                                                       vk_swapchain_create( 
 void                                                       vk_swapchain_destroy( r_window_data_t* window );
 void                                                       vk_swapchain_recreate( r_window_data_t* window );
 
+// VkSampleCountFlagBits                                      vk_msaa_find_max_samples();
+VkSampleCountFlags                                         vk_msaa_get_max_samples();
+VkSampleCountFlagBits                                      vk_msaa_get_samples();
+VkSampleCountFlagBits                                      vk_msaa_get_samples( bool use_msaa );
+
 bool                                                       vk_backbuffer_create( r_window_data_t* window );
 void                                                       vk_backbuffer_destroy( r_window_data_t* window );
 
@@ -688,6 +670,7 @@ void                                                       vk_blit_image_to_imag
 
 bool                                                       vk_shaders_init();
 void                                                       vk_shaders_shutdown();
+bool                                                       vk_shaders_rebuild();
 void                                                       vk_shaders_update_push_constants();
 
 // Returns the index + 1 of the shader, if it's 0, the shader isn't found

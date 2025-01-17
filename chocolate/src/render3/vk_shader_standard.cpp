@@ -44,7 +44,8 @@ static vk_shader_create_graphics_t g_shader_standard_create
 
 	.color_attach_count  = 1,
 	.color_attach        = g_standard_color_formats,
-	.depth_attach        = VK_FORMAT_UNDEFINED, //VK_FORMAT_D32_SFLOAT,
+	// .depth_attach        = VK_FORMAT_UNDEFINED, //VK_FORMAT_D32_SFLOAT,
+	.depth_attach        = VK_FORMAT_D32_SFLOAT,
 
 	.fn_push_constants   = r_standard_push_constants,
 	.push_constant_range = {
