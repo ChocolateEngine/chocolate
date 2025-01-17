@@ -63,7 +63,7 @@ extern "C"
 		// handled by apps now, not required
 		// Core_LoadAppInfo();
 
-		args_register_ex( "Execute Scripts on Engine Start", "-exec" );
+		args_register_ex( "Execute Scripts on Engine Start", "--exec" );
 		return 0;
 	}
 
@@ -107,7 +107,7 @@ void DLL_EXPORT core_post_load()
 		const u64      lengths[] = { 5, gConArchiveFile.size };
 		ch_string_auto command   = ch_str_join( 2, strings, lengths );
 
-		Con_QueueCommandSilent( command.data, command.size, false );
+		Con_RunCommand( command.data, command.size );
 	}
 	else if ( FileSys_Exists( CH_STR_UNROLL( gConArchiveDefault ) ) )
 	{
@@ -116,21 +116,22 @@ void DLL_EXPORT core_post_load()
 		ch_string_auto command   = ch_str_join( 2, strings, lengths );
 		//ch_string_auto command = ch_str_join( 2, { "exec ", gConArchiveDefault.data }, { 5, gConArchiveFile.size } );
 
-		Con_QueueCommandSilent( command.data, command.size, false );
+		Con_RunCommand( command.data, command.size );
 	}
 
 	// if ( FileSys_Exists( "cfg/autoexec.cfg" ) )
-	// 	Con_QueueCommandSilent( "exec autoexec", false );
+	// 	Con_RunCommand( "exec autoexec" );
 
 	ch_string      execCfg;
 	int            arg = 0;
 
-	while ( args_get_value_next( arg, "-exec", execCfg ) )
+	// Check the command line to see if the user wants to execute any config files at startup
+	while ( args_get_value_next( arg, "--exec", execCfg ) )
 	{
 		const char*    strings[] = { "exec ", execCfg.data };
 		const u64      lengths[] = { 5, execCfg.size };
 		ch_string_auto command   = ch_str_join( 2, strings, lengths );
-		Con_QueueCommandSilent( command.data, command.size, false );
+		Con_RunCommand( command.data, command.size );
 	}
 }
 

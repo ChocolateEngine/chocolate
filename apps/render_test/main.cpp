@@ -81,7 +81,7 @@ bool create_main_window()
 	std::string window_name;
 
 	window_name = ( Core_GetAppInfo().apWindowTitle ) ? Core_GetAppInfo().apWindowTitle : "Chocolate Engine Render 3 Test";
-	window_name += vstring( " - Build %zd - Compiled On - %s %s", Core_GetBuildNumber(), Core_GetBuildDate(), Core_GetBuildTime() );
+	window_name += vstring( " - Compiled On - %s %s", Core_GetBuildDate(), Core_GetBuildTime() );
 
 	if ( !sys_create_window( g_window_native, g_window, window_name.c_str(), g_width, g_height, g_maximize ) )
 	{
@@ -270,7 +270,7 @@ extern "C"
 		update_viewport();
 
 		// Init autoexec.cfg
-		Con_QueueCommandSilent( "exec autoexec.cfg", false );
+		Con_RunCommand( "exec autoexec" );
 
 		// ---------------------------------------------------------------------------------------------
 		// Load Test Scene

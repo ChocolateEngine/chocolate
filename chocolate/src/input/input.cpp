@@ -35,10 +35,12 @@ extern "C"
 	}
 }
 
-InputSystem::InputSystem(  ) : IInputSystem(  )
+InputSystem::InputSystem() : IInputSystem()
 {
-	MakeAliases(  );
-	ParseBindings(  );
+	MakeAliases();
+	ParseBindings();
+
+	aKeyboardState = SDL_GetKeyboardState( NULL );
 
 	// Register Mouse Buttons
 	RegisterKey( EButton_MouseLeft );

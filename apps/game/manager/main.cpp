@@ -305,12 +305,8 @@ bool LoadGameSystems()
 			return false;
 		}
 
-		// This needs to be done before we can start up the client
-		client->SetWindowInfo( gpWindow, gGraphicsWindow );
-
-		if ( !Mod_InitSystem( clientModule ) )
+		if ( !client->LoadSystems() )
 		{
-			Mod_Shutdown();
 			return false;
 		}
 	}
@@ -319,11 +315,16 @@ bool LoadGameSystems()
 
 	// Mark all convars from server dll with CVARF_SERVER
 	Con_SetConVarRegisterFlags( CVARF( SERVER ) );
-	EModLoadError modLoadRet = Mod_LoadAndInitSystem( serverModule );
+	EModLoadError modLoadRet = Mod_LoadSystem( serverModule );
 
 	if ( modLoadRet != EModLoadError_Success )
 	{
 		Mod_Shutdown();
+		return false;
+	}
+
+	if ( !server->LoadSystems() )
+	{
 		return false;
 	}
 
@@ -608,6 +609,11 @@ extern "C"
 			return 1;
 		}
 
+		if ( !LoadGameSystems() )
+		{
+			return 1;
+		}
+
 		if ( !Mod_InitSystems() )
 		{
 			return 1;
@@ -621,13 +627,16 @@ extern "C"
 			Log_Fatal( "Failed to Create GraphicsAPI Window\n" );
 			return 1;
 		}
+		
+		if ( !gDedicatedServer )
+			client->SetWindowInfo( gpWindow, gGraphicsWindow );
 
 		gui->StyleImGui();
 
-		if ( !LoadGameSystems() )
-		{
-			return 1;
-		}
+	//	if ( !LoadGameSystems() )
+	//	{
+	//		return 1;
+	//	}
 
 		// Reset ConVar Flags
 		Con_SetConVarRegisterFlags( 0 );
@@ -654,7 +663,7 @@ extern "C"
 		// only issue is queued concommands maybe, but we can just queue those, and then call a function run them here instead
 
 		// Init autoexec.cfg
-		Con_QueueCommandSilent( "exec autoexec.cfg", false );
+		Con_RunCommand( "exec autoexec" );
 
 		// ---------------------------------------------------------------------------------------------
 		// Main Loop

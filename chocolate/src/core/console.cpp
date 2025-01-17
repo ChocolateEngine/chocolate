@@ -325,6 +325,33 @@ void Con_QueueCommandSilent( const char* cmd, int len, bool sAddToHistory )
 }
 
 
+void Con_RunCommand( const char* cmd, int len )
+{
+	PROF_SCOPE();
+
+	if ( len == -1 )
+		len = strlen( cmd );
+
+	if ( len == 0 )
+		return;
+
+	std::string                commandName;
+	std::string                fullCommand;
+	std::vector< std::string > args;
+
+	for ( size_t i = 0; i < len; i++ )
+	{
+		commandName.clear();
+		args.clear();
+
+		Con_ParseCommandLineEx( cmd, commandName, args, fullCommand, i );
+		str_lower( commandName );
+
+		Con_RunCommandArgs( commandName, args, fullCommand );
+	}
+}
+
+
 const std::vector< std::string >& Con_GetCommandHistory()
 {
 	return gCommandHistory;
@@ -534,33 +561,6 @@ void Con_Update()
 	// {
 	// 	vec_remove_index( gQueue, 0 );
 	// }
-}
-
-
-void Con_RunCommand( const char* cmd, int len )
-{
-	PROF_SCOPE();
-
-	if ( len == -1 )
-		len = strlen( cmd );
-
-	if ( len == 0 )
-		return;
-
-	std::string commandName;
-	std::string fullCommand;
-	std::vector< std::string > args;
-
-	for ( size_t i = 0; i < len; i++ )
-	{
-		commandName.clear();
-		args.clear();
-
-		Con_ParseCommandLineEx( cmd, commandName, args, fullCommand, i );
-		str_lower( commandName );
-
-		Con_RunCommandArgs( commandName, args, fullCommand );
-	}
 }
 
 

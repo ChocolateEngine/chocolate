@@ -4,6 +4,9 @@
 class IServerSystem : public ISystem
 {
    public:
+	// Call this before calling Init()
+	virtual bool LoadSystems()                           = 0;
+
 	virtual bool IsHosting()                             = 0;
 
 	// Start Server on this map
@@ -16,4 +19,4 @@ class IServerSystem : public ISystem
 
 
 #define ISERVER_NAME "Server"
-#define ISERVER_VER  1
+#define ISERVER_VER  2

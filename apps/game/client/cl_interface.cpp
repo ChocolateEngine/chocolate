@@ -132,13 +132,13 @@ void Game_UpdateProjection()
 }
 
 
-class ClientSystem : public IClientSystem
+class ClientSystem final : public IClientSystem
 {
 public:
 
-	bool Init() override
+	// Call this before calling Init()
+	bool LoadSystems() override
 	{
-		// Get Interfaces
 		CH_GET_SYSTEM( input, IInputSystem, IINPUTSYSTEM_NAME, IINPUTSYSTEM_VER );
 		CH_GET_SYSTEM( render, IRender, IRENDER_NAME, IRENDER_VER );
 		CH_GET_SYSTEM( audio, IAudioSystem, IADUIO_NAME, IADUIO_VER );
@@ -147,7 +147,11 @@ public:
 		CH_GET_SYSTEM( renderOld, IRenderSystemOld, IRENDERSYSTEMOLD_NAME, IRENDERSYSTEMOLD_VER );
 		CH_GET_SYSTEM( gui, IGuiSystem, IGUI_NAME, IGUI_HASH );
 
-		// Now Init
+		return true;
+	}
+
+	bool Init() override
+	{
 		Input_Init();
 		Phys_Init();
 
@@ -171,7 +175,7 @@ public:
 		// Create the Main Viewport - TODO: use this more across the game code
 		gMainViewportIndex = graphics->CreateViewport();
 
-		Game_UpdateProjection();
+	//	Game_UpdateProjection();
 
 		return true;
 	}
@@ -271,6 +275,8 @@ public:
 	{
 		gpWindow        = window;
 		gGraphicsWindow = graphicsWindow;
+
+		Game_UpdateProjection();
 	}
 
 	bool Connected() override

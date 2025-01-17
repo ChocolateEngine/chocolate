@@ -233,7 +233,7 @@ extern "C"
 			return 1;
 		}
 
-		Con_QueueCommandSilent( "exec autoexec", false );
+		Con_RunCommand( "exec autoexec" );
 
 		// ftl::TaskSchedulerInitOptions schedOptions;
 		// schedOptions.Behavior = ftl::EmptyQueueBehavior::Sleep;

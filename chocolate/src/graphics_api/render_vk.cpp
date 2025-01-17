@@ -29,7 +29,9 @@ LOG_CHANNEL_REGISTER( GraphicsAPI, ELogColor_Cyan );
 LOG_CHANNEL_REGISTER( Vulkan, ELogColor_DarkYellow );
 LOG_CHANNEL_REGISTER( Validation, ELogColor_DarkYellow );
 
-log_channel_h_t                                               gLC_Render = gLC_GraphicsAPI;
+log_channel_h_t                                          gLC_Render = gLC_GraphicsAPI;
+
+bool                                                     g_renderer_started = false;
 
 static VkCommandPool                                     gSingleTime;
 static VkCommandPool                                     gPrimary;
@@ -551,6 +553,7 @@ bool Render_Init()
 	}
 
 	Log_Msg( gLC_Render, "Loaded Vulkan Renderer\n" );
+	g_renderer_started = true;
 
 	return true;
 }
@@ -597,26 +600,35 @@ void VK_Reset( ch_handle_t windowHandle, WindowVK* window, ERenderResetFlags sFl
 
 void VK_ResetAll( ERenderResetFlags sFlags )
 {
+	if ( !g_renderer_started )
+		return;
+
 	if ( sFlags & ERenderResetFlags_MSAA )
 	{
 		VK_WaitForGraphicsQueue();
 
 		VK_DestroyMainRenderPass();
 		VK_CreateMainRenderPass();
+	}
+
+	ImGuiContext* current_ctx = ImGui::GetCurrentContext();
+
+	for ( u32 i = 0; i < gGraphicsAPIData.windows.GetHandleCount(); i++ )
+	{
+		ch_handle_t handle = gGraphicsAPIData.windows.GetHandleByIndex( i );
+		WindowVK*   window = gGraphicsAPIData.windows.Get( handle );
+
+		ImGui::SetCurrentContext( window->context );
 
 		// Recreate ImGui's Vulkan Backend for this context
 		ImGui_ImplVulkan_Shutdown();
 		VK_InitImGui( VK_GetRenderPass() );
 		VK_CreateImGuiFonts();
-	}
-
-	for ( u32 i = 0; i < gGraphicsAPIData.windows.GetHandleCount(); i++ )
-	{
-		ch_handle_t handle = gGraphicsAPIData.windows.GetHandleByIndex( i );
-		WindowVK*  window = gGraphicsAPIData.windows.Get( handle );
 
 		VK_Reset( handle, window, sFlags );
 	}
+
+	ImGui::SetCurrentContext( current_ctx );
 }
 
 

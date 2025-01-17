@@ -6,10 +6,11 @@
 #include "main.h"
 
 
-class ServerSystem : public IServerSystem
+class ServerSystem final : public IServerSystem
 {
    public:
-	bool Init() override
+	// Call this before calling Init()
+	bool LoadSystems() override
 	{
 		// Get Modules
 		CH_GET_SYSTEM( input, IInputSystem, IINPUTSYSTEM_NAME, IINPUTSYSTEM_VER );
@@ -19,6 +20,11 @@ class ServerSystem : public IServerSystem
 		CH_GET_SYSTEM( graphics, IGraphics, IGRAPHICS_NAME, IGRAPHICS_VER );
 		//CH_GET_SYSTEM( gui, IGuiSystem, IGUI_NAME, IGUI_HASH );
 
+		return true;
+	}
+
+	bool Init() override
+	{
 		Phys_Init();
 
 		// Init Entity Component Registry
@@ -114,7 +120,7 @@ static ServerSystem      server;
 
 
 static ModuleInterface_t gInterfaces[] = {
-	{ &server, "Server", 1 }
+	{ &server, ISERVER_NAME, ISERVER_VER }
 };
 
 extern "C"
