@@ -150,7 +150,7 @@ void vk_check_f( VkResult sResult, char const* spArgs, ... )
 bool vk_check_ef( VkResult sResult, char const* spArgs, ... )
 {
 	if ( sResult == VK_SUCCESS )
-		return true;
+		return false;
 
 	va_list args;
 	va_start( args, spArgs );
@@ -164,7 +164,7 @@ bool vk_check_ef( VkResult sResult, char const* spArgs, ... )
 	{
 		Log_Error( "\n *** Sys_ExecuteV: vsnprintf failed?\n\n" );
 		Log_ErrorF( gLC_Render, "Vulkan Error: %s", vk_str( sResult ) );
-		return false;
+		return true;
 	}
 
 	char* str_data = ch_malloc< char >( len + 1 );
@@ -172,7 +172,7 @@ bool vk_check_ef( VkResult sResult, char const* spArgs, ... )
 	if ( !str_data )
 	{
 		print( "Failed to allocate memory for error string\n" );
-		return false;
+		return true;
 	}
 
 	std::vsnprintf( str_data, len + 1, spArgs, args );
