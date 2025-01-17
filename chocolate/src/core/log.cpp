@@ -337,6 +337,13 @@ void Log_Init()
 {
 	gLC_General = Log_RegisterChannel( "General", ELogColor_Default );
 	gLC_Logging = Log_RegisterChannel( "Logging", ELogColor_Default );
+
+	// TODO: maybe add a launch option to change the verbosity of a log channel?
+	// However that would be tricky since only the default channels exist right now, nothing else
+
+	int verbose_level = std::clamp( args_register( 1, "Set logging system verbosity, Ranges from 0 to 4", "--verbosity" ), 0, 4 );
+
+	Con_SetConVarValue( "ch.log.verbosity.base", verbose_level );
 }
 
 

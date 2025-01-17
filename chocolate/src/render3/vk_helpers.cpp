@@ -34,7 +34,7 @@ void vk_set_name_ex( VkObjectType type, u64 handle, const char* name, const char
 
 	if ( result == VK_SUCCESS )
 	{
-		Log_DevF( 2, "Set Name for Object \"%s\" - \"%s\"\n", vk_object_str( type ), name );
+		Log_DevF( gLC_Render, 2, "Set Name for Object \"%s\" - \"%s\"\n", vk_object_str( type ), name );
 		return;
 	}
 
@@ -123,7 +123,7 @@ void vk_check_f( VkResult sResult, char const* spArgs, ... )
 
 	if ( len < 0 )
 	{
-		Log_Error( "\n *** Sys_ExecuteV: vsnprintf failed?\n\n" );
+		Log_Error( gLC_Render, "\n *** Sys_ExecuteV: vsnprintf failed?\n\n" );
 		Log_FatalF( gLC_Render, "Vulkan Error: %s", vk_str( sResult ) );
 		return;
 	}
@@ -162,7 +162,7 @@ bool vk_check_ef( VkResult sResult, char const* spArgs, ... )
 
 	if ( len < 0 )
 	{
-		Log_Error( "\n *** Sys_ExecuteV: vsnprintf failed?\n\n" );
+		Log_Error( gLC_Render, "\n *** Sys_ExecuteV: vsnprintf failed?\n\n" );
 		Log_ErrorF( gLC_Render, "Vulkan Error: %s", vk_str( sResult ) );
 		return true;
 	}

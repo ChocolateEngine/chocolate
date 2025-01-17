@@ -255,10 +255,13 @@ bool vk_instance_create()
 	create_info.pApplicationInfo = &app_info;
 
 #if _DEBUG
+	#pragma message( "TODO: ONLY USE VALIDATION LAYERS IF --vk-valid IS ON THE COMMAND LINE!" )
 	if ( g_has_validation )
 	{
 		create_info.enabledLayerCount   = (unsigned int)ARR_SIZE( g_validation_layers );
 		create_info.ppEnabledLayerNames = g_validation_layers;
+
+		Log_Dev( gLC_Render, 1, "Adding Validation Layers\n" );
 
 		if ( g_has_debug_utils )
 			create_info.pNext = (VkDebugUtilsMessengerCreateInfoEXT*)&g_debug_messenger_info;
@@ -361,6 +364,8 @@ bool vk_instance_create()
 			Log_ErrorF( gLC_Render, "Failed to Create Debug Utils Messenger: %s\n", vk_str( result ) );
 		}
 	}
+
+	Log_Msg( gLC_Render, "Created Vulkan Instance\n" );
 
 	return true;
 }
