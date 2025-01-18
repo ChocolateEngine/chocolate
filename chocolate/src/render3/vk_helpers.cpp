@@ -256,7 +256,8 @@ const char* vk_str( VkResult result )
 		case VK_ERROR_INITIALIZATION_FAILED:
 			return "VK_ERROR_INITIALIZATION_FAILED";
 		case VK_ERROR_DEVICE_LOST:
-			return "VK_ERROR_DEVICE_LOST";
+			// return "VK_ERROR_DEVICE_LOST";
+			return "Device got up and walked away";
 		case VK_ERROR_MEMORY_MAP_FAILED:
 			return "VK_ERROR_MEMORY_MAP_FAILED";
 		case VK_ERROR_LAYER_NOT_PRESENT:
