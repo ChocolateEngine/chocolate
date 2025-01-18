@@ -181,7 +181,7 @@ bool vk_shaders_create_graphics_pipeline( VkPipelineLayout layout, vk_shader_cre
 
 	color_blend_attach.colorWriteMask      = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
 	// color_blend_attach.colorWriteMask      = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT;
-	color_blend_attach.blendEnable         = VK_FALSE;  // was true in some shaders
+	color_blend_attach.blendEnable         = VK_TRUE;  // was true in some shaders
 	// color_blend_attach.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
 	color_blend_attach.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
 	color_blend_attach.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
@@ -200,17 +200,30 @@ bool vk_shaders_create_graphics_pipeline( VkPipelineLayout layout, vk_shader_cre
 
 	// TODO: expose this for shadow mapping
 	VkPipelineDepthStencilStateCreateInfo depthStencil{ VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO };
-	depthStencil.depthTestEnable       = VK_FALSE;
-	depthStencil.depthWriteEnable      = VK_FALSE;
+	depthStencil.depthTestEnable       = VK_TRUE;
+	depthStencil.depthWriteEnable      = VK_TRUE;
 	// depthStencil.depthCompareOp        = VK_COMPARE_OP_LESS;
-	// depthStencil.depthCompareOp        = VK_COMPARE_OP_LESS;
-	depthStencil.depthCompareOp        = VK_COMPARE_OP_NEVER;
+	// depthStencil.depthCompareOp        = VK_COMPARE_OP_NEVER;
+	// depthStencil.depthCompareOp        = VK_COMPARE_OP_GREATER_OR_EQUAL;
+	depthStencil.depthCompareOp        = VK_COMPARE_OP_LESS_OR_EQUAL;
 	depthStencil.depthBoundsTestEnable = VK_FALSE;
 	depthStencil.minDepthBounds        = 0.0f;  // Optional
 	depthStencil.maxDepthBounds        = 1.0f;  // Optional
 	depthStencil.stencilTestEnable     = VK_FALSE;
 	depthStencil.front                 = {};  // Optional
 	depthStencil.back                  = {};  // Optional
+
+//	depthStencil.depthTestEnable       = VK_FALSE;
+//	depthStencil.depthWriteEnable      = VK_FALSE;
+//	// depthStencil.depthCompareOp        = VK_COMPARE_OP_LESS;
+//	// depthStencil.depthCompareOp        = VK_COMPARE_OP_LESS;
+//	depthStencil.depthCompareOp        = VK_COMPARE_OP_NEVER;
+//	depthStencil.depthBoundsTestEnable = VK_FALSE;
+//	depthStencil.minDepthBounds        = 0.0f;  // Optional
+//	depthStencil.maxDepthBounds        = 1.0f;  // Optional
+//	depthStencil.stencilTestEnable     = VK_FALSE;
+//	depthStencil.front                 = {};  // Optional
+//	depthStencil.back                  = {};  // Optional
 
 	VkPipelineColorBlendStateCreateInfo colorBlending{ VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO };
 	colorBlending.logicOpEnable       = VK_FALSE;

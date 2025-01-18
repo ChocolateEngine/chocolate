@@ -37,7 +37,7 @@ static vk_shader_create_graphics_t g_shader_standard_create
 
 	.topology            = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
 	.cull_mode           = VK_CULL_MODE_NONE,
-	.polygon_mode        = VK_POLYGON_MODE_LINE,
+	.polygon_mode        = VK_POLYGON_MODE_FILL,
 
 	.dynamic_state       = g_standard_dynamic_states,
 	.dynamic_state_count = ARR_SIZE( g_standard_dynamic_states ),

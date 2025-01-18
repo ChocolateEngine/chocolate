@@ -10,6 +10,7 @@ CONVAR_RANGE_INT_NAME( r_vk_present_mode, "r.vk.present.mode", 0, 0, 3, "Image P
 
 // desired surface format
 static VkFormat            g_color_format = VK_FORMAT_B8G8R8A8_UNORM;
+// static VkFormat            g_color_format = VK_FORMAT_A2B10G10R10_UNORM_PACK32;
 static VkColorSpaceKHR     g_color_space  = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR;
 
 VkSurfaceCapabilitiesKHR   g_vk_surface_capabilities{};
@@ -77,9 +78,14 @@ VkExtent2D vk_swapchain_extent( r_window_data_t* window )
 	int width = 0, height = 0;
 	SDL_GetWindowSize( window->window, &width, &height );
 
+	// VkExtent2D size{
+	// 	std::max( g_vk_surface_capabilities.minImageExtent.width, std::min( g_vk_surface_capabilities.maxImageExtent.width, (u32)width ) ),
+	// 	std::max( g_vk_surface_capabilities.minImageExtent.height, std::min( g_vk_surface_capabilities.maxImageExtent.height, (u32)height ) ),
+	// };
+
 	VkExtent2D size{
-		std::max( g_vk_surface_capabilities.minImageExtent.width, std::min( g_vk_surface_capabilities.maxImageExtent.width, (u32)width ) ),
-		std::max( g_vk_surface_capabilities.minImageExtent.height, std::min( g_vk_surface_capabilities.maxImageExtent.height, (u32)height ) ),
+		std::clamp( (u32)width, g_vk_surface_capabilities.minImageExtent.width, g_vk_surface_capabilities.maxImageExtent.width ),
+		std::clamp( (u32)height, g_vk_surface_capabilities.minImageExtent.height, g_vk_surface_capabilities.maxImageExtent.height ),
 	};
 
 	return size;

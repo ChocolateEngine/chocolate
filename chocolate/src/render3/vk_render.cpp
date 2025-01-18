@@ -270,12 +270,13 @@ CONVAR_BOOL_NAME( r_draw_indexed, "vk.draw.indexed", 1 );
 void vk_draw_renderables_test( VkCommandBuffer c, r_window_data_t* window, u32 swap_index )
 {
 	VkRenderingAttachmentInfo depth_attach{ VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO };
-	depth_attach.imageView   = window->draw_image_depth.view;
-	depth_attach.imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+	depth_attach.imageView                     = window->draw_image_depth.view;
+	depth_attach.imageLayout                   = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL;
 	// depth_attach.loadOp      = clear ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_LOAD;
-	depth_attach.loadOp      = VK_ATTACHMENT_LOAD_OP_CLEAR;
+	depth_attach.loadOp                        = VK_ATTACHMENT_LOAD_OP_CLEAR;
 	// depth_attach.loadOp      = VK_ATTACHMENT_LOAD_OP_LOAD;
-	depth_attach.storeOp     = VK_ATTACHMENT_STORE_OP_STORE;
+	depth_attach.storeOp                       = VK_ATTACHMENT_STORE_OP_STORE;
+	depth_attach.clearValue.depthStencil.depth = 1.f;
 
 	VkRenderingAttachmentInfo color_attach{ VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO };
 	color_attach.imageView   = window->draw_image.view;
@@ -290,9 +291,11 @@ void vk_draw_renderables_test( VkCommandBuffer c, r_window_data_t* window, u32 s
 	{
 		color_attach.resolveImageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 		color_attach.resolveImageView   = window->draw_image_resolve.view;
-
-		// ?
 		color_attach.resolveMode        = VK_RESOLVE_MODE_AVERAGE_BIT;
+
+		// depth_attach.resolveImageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+		// depth_attach.resolveImageView   = window->draw_image_resolve.view;
+		// depth_attach.resolveMode        = VK_RESOLVE_MODE_AVERAGE_BIT;
 	}
 
 	VkRenderingInfo render_info{ VK_STRUCTURE_TYPE_RENDERING_INFO };
@@ -398,7 +401,7 @@ static void vk_record_commands_window( r_window_data_t* window, u32 swap_index )
 	// we have to transition the draw image first
 	// https://registry.khronos.org/vulkan/specs/1.3-extensions/html/chap12.html#resources-image-layouts
 	// vk_transition_image( c, window->draw_image.image, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL );
-	vk_transition_image( c, window->draw_image_depth.image, VK_IMAGE_ASPECT_DEPTH_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL );
+	vk_transition_image( c, window->draw_image_depth.image, VK_IMAGE_ASPECT_DEPTH_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL );
 	vk_transition_image( c, window->draw_image.image, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL );
 
 	if ( window->draw_image_resolve.image )
