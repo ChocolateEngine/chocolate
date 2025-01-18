@@ -379,6 +379,14 @@ LRESULT __stdcall Win32_WindowProc( HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM 
 	// resize events
 	switch ( uMsg )
 	{
+		case WM_GETMINMAXINFO:
+		{
+			LPMINMAXINFO lpMMI      = (LPMINMAXINFO)lParam;
+			lpMMI->ptMinTrackSize.x = 48;
+			lpMMI->ptMinTrackSize.y = 48;
+			break;
+		}
+
 		case WM_DPICHANGED:
 		case WM_SIZE:
 		{
