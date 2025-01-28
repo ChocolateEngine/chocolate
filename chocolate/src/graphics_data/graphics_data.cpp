@@ -1,10 +1,5 @@
 #include "graphics_data.h"
 
-
-// Ref Counters
-std::unordered_map< ch_model_h, u32 >          g_model_ref;
-// std::unordered_map< ch_material_h, u32 >       g_materials_ref;
-
 // Path to Handle
 std::unordered_map< ch_string, ch_model_h >    g_model_paths;
 std::unordered_map< ch_string, ch_material_h > g_materials_paths;
@@ -13,8 +8,7 @@ std::unordered_map< ch_string, ch_material_h > g_materials_paths;
 // ch_handle_array_32_t< ch_model_h, model_t >    g_model_handles;
 
 // Maps handle to index of array for models (not size_t, as ch_model_h is a 32 bit handle
-std::unordered_map< ch_model_h, model_t >      g_model_handles;
-// ChVector< model_t >                            g_models;
+ch_handle_ref_list_32< ch_model_h, model_t >   g_models;
 
 
 class GraphicsData : public IGraphicsData
@@ -67,35 +61,28 @@ class GraphicsData : public IGraphicsData
 		if ( path == nullptr )
 		{
 			Log_Error( "Path is null\n" );
-			return CH_INVALID_HANDLE;
+			return {};
 		}
 
 		if ( !ch_str_ends_with( path, ".obj", 4 ) )
 		{
 			Log_ErrorF( "We only support OBJ models\n" );
-			return CH_INVALID_HANDLE;
+			return {};
 		}
 
 		// Normalize Path Separators
 		ch_string clean_path = FileSys_CleanPath( path );
-
 		auto      path_it    = g_model_paths.find( clean_path );
+
 		if ( path_it != g_model_paths.end() )
 		{
 			// This Model is already loaded, increase the ref count of it, and return the existing handle
-			auto ref_it = g_model_ref.find( path_it->second );
-			if ( ref_it == g_model_ref.end() )
+			if ( g_models.handle_valid( path_it->second ) )
 			{
-				Log_ErrorF( "Failed to find stored ref count for model \"%s\"\n", clean_path.data );
-				g_model_ref[ path_it->second ] = 1;
+				g_models.ref_increment( path_it->second );
+				ch_str_free( clean_path );
+				return path_it->second;
 			}
-			else
-			{
-				ref_it->second++;
-			}
-
-			ch_str_free( clean_path );
-			return path_it->second;
 		}
 
 		ch_string_auto full_path = FileSys_FindFile( clean_path.data, clean_path.size );
@@ -104,26 +91,31 @@ class GraphicsData : public IGraphicsData
 		{
 			Log_ErrorF( "Failed to find model \"%s\"\n", clean_path.data );
 			ch_str_free( clean_path );
-			return CH_INVALID_HANDLE;
+			return {};
 		}
 
 		// Now try to load the model
 
 		// create a new handle
-		ch_model_h handle = util_create_handle_u32();
-		model_t&   model  = g_model_handles[ handle ];
+		ch_model_h handle{};
+		model_t*   model  = nullptr;
 
-		if ( !model_load_obj( clean_path.data, full_path.data, model ) )
+		if ( !g_models.create( handle, &model ) )
+		{
+			Log_ErrorF( "Failed to create model handle for \"%s\"\n", clean_path.data );
+			return {};
+		}
+
+		if ( !model_load_obj( clean_path.data, full_path.data, *model ) )
 		{
 			Log_ErrorF( "Failed to load model \"%s\"\n", full_path.data );
 			ch_str_free( clean_path );
 			//g_model_handles.erase( handle );
-			return CH_INVALID_HANDLE;
+			return {};
 		}
 
 		// Store the model path and set the ref count to 1
 		g_model_paths[ clean_path ] = handle;
-		g_model_ref[ handle ]       = 1;
 
 		return handle;
 	}
@@ -143,16 +135,12 @@ class GraphicsData : public IGraphicsData
 
 	void model_free( ch_model_h handle )
 	{
+		g_models.ref_decrement( handle );
 	}
 
 	model_t* model_get( ch_model_h handle ) override
 	{
-		auto search = g_model_handles.find( handle );
-
-		if ( search == g_model_handles.end() )
-			return nullptr;
-
-		return &search->second;
+		return g_models.get( handle );
 	}
 
 	const char* model_get_path( ch_model_h handle ) override

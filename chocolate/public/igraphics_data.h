@@ -201,8 +201,8 @@ enum : f_vertex_format
 //};
 
 
-CH_HANDLE_32( ch_model_h );
-CH_HANDLE_32( ch_material_h );
+CH_HANDLE_GEN_32( ch_model_h );
+CH_HANDLE_GEN_32( ch_material_h );
 
 
 // ------------------------------------------------------------------------------------

@@ -35,7 +35,7 @@ bool load_scene()
 	// hmm, maybe this could be condensed into one call, mesh_render_create(), pass in a model path instead of a handle, and do the model load and upload internally if needed?
 	g_test_model = graphics_data->model_load( TEST_MODEL_PATH );
 
-	if ( !g_test_model )
+	if ( !g_test_model.generation )
 		return false;
 
 	g_test_model_gpu = render->mesh_upload( g_test_model );
@@ -74,6 +74,14 @@ void update_viewport()
 	auto&     io     = ImGui::GetIO();
 	io.DisplaySize.x = size.x;
 	io.DisplaySize.y = size.y;
+
+	#if 0
+	glm::mat4 projection = glm::perspective(glm::radians(70.f), (float)_drawExtent.width / (float)_drawExtent.height, 10000.f, 0.1f);
+
+	// invert the Y direction on projection matrix so that we are more similar
+	// to opengl and gltf axis
+	projection[1][1] *= -1;
+	#endif
 
 	g_projection     = Util_ComputeProjection( size.x, size.y, g_view_nearz, g_view_farz, g_view_fov );
 }

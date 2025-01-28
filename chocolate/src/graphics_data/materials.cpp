@@ -27,13 +27,13 @@ struct mat_var_ptr2_t
 
 ch_material_h material_load( const char* path )
 {
-	return 5; // CH_INVALID_HANDLE;
+	return {};
 }
 
 
 ch_material_h material_create()
 {
-	return 5; // CH_INVALID_HANDLE;
+	return {};
 }
 
 
