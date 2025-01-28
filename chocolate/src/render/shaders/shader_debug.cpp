@@ -193,6 +193,7 @@ CH_REGISTER_SHADER( gShaderCreate_Wireframe );
 
 // -----------------------------------------------------------------------------------------------
 
+#if 0
 
 static void Shader_VertexNormals_GetPipelineLayoutCreate( PipelineLayoutCreate_t& srPipeline )
 {
@@ -247,3 +248,4 @@ ShaderCreate_t gShaderCreate_VertexNormals = {
 
 CH_REGISTER_SHADER( gShaderCreate_VertexNormals );
 
+#endif

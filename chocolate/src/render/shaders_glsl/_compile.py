@@ -10,7 +10,7 @@ SHADER_LIST = [
     "skinning",
     "debug",
     "debug_col.vert",
-    "vertex_normals.vert",
+    # "vertex_normals.vert",
     "skybox",
     "shadow",
     "water",

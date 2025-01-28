@@ -128,7 +128,7 @@ void Graphics_DrawShaderRenderables( ch_handle_t cmd, size_t sIndex, ch_handle_t
 	if ( shaderData->aDynamicState & EDynamicState_LineWidth )
 		render->CmdSetLineWidth( cmd, r_line_thickness );
 
-	static ch_handle_t shader_vertex_normals = gGraphics.GetShader( "__vertex_normals" );
+	//static ch_handle_t shader_vertex_normals = gGraphics.GetShader( "__vertex_normals" );
 
 	const std::unordered_map< ch_handle_t, ShaderMaterialData >* matDataMap = Shader_GetMaterialDataMap( shader );
 
@@ -187,6 +187,7 @@ void Graphics_DrawShaderRenderables( ch_handle_t cmd, size_t sIndex, ch_handle_t
 		if ( !Shader_PreMaterialDraw( cmd, sIndex, shaderData, pushData ) )
 			continue;
 
+		#if 0
 		if ( shader == shader_vertex_normals )
 		{
 			PROF_SCOPE();
@@ -223,6 +224,7 @@ void Graphics_DrawShaderRenderables( ch_handle_t cmd, size_t sIndex, ch_handle_t
 			gStats.aVerticesDrawn += mesh.aVertexCount * 9;
 		}
 		else
+		#endif
 		{
 			Graphics_CmdDrawSurface( cmd, model, surfaceDraw.aSurface );
 		}
@@ -487,7 +489,7 @@ void Graphics::SetViewportRenderList( u32 sViewport, ch_handle_t* srRenderables,
 	static ch_handle_t    shaderDebugLine  = gGraphics.GetShader( "debug_line" );
 
 	// shaders to exclude and use for vertex normals
-	static ch_handle_t    shaderVertNormal  = gGraphics.GetShader( "__vertex_normals" );
+	//static ch_handle_t    shaderVertNormal  = gGraphics.GetShader( "__vertex_normals" );
 
 	if ( r_vis_lock )
 		return;
@@ -594,7 +596,7 @@ void Graphics::SetViewportRenderList( u32 sViewport, ch_handle_t* srRenderables,
 					shader = viewport.aShaderOverride;
 
 				// lol this looks great
-				else if ( r_wireframe && shader != shaderSkybox && shader != shaderGizmo && shader != shaderDebug && shader != shaderDebugLine && shader != shaderVertNormal )
+				else if ( r_wireframe && shader != shaderSkybox && shader != shaderGizmo && shader != shaderDebug && shader != shaderDebugLine )
 					shader = debugShader;
 
 				ShaderData_t* shaderData = Shader_GetData( shader );
