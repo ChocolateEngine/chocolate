@@ -94,7 +94,7 @@ void Main_DrawMenuBar()
 }
 
 
-bool MaterialEditor::Init()
+bool MaterialEditor::LoadSystems()
 {
 	// Get Modules
 	CH_GET_SYSTEM( input, IInputSystem, IINPUTSYSTEM_NAME, IINPUTSYSTEM_VER );
@@ -102,6 +102,12 @@ bool MaterialEditor::Init()
 	CH_GET_SYSTEM( graphics, IGraphics, IGRAPHICS_NAME, IGRAPHICS_VER );
 	CH_GET_SYSTEM( renderOld, IRenderSystemOld, IRENDERSYSTEMOLD_NAME, IRENDERSYSTEMOLD_VER );
 
+	return true;
+}
+
+
+bool MaterialEditor::Init()
+{
 	return true;
 }
 

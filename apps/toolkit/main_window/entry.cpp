@@ -213,6 +213,8 @@ extern "C"
 			LoadedTool& tool = gTools.emplace_back();
 			tool.interface   = gToolModules[ i ].interface;
 			tool.tool        = (ITool*)toolSystem;
+
+			tool.tool->LoadSystems();
 		}
 
 		if ( !App_CreateMainWindow() )

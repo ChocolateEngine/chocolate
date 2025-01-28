@@ -888,7 +888,7 @@ void Editor_SetContext( ch_handle_t sContext )
 
 
 
-bool MapEditor::Init()
+bool MapEditor::LoadSystems()
 {
 	// Get Modules
 	CH_GET_SYSTEM( input, IInputSystem, IINPUTSYSTEM_NAME, IINPUTSYSTEM_VER );
@@ -898,6 +898,12 @@ bool MapEditor::Init()
 	CH_GET_SYSTEM( ch_physics, Ch_IPhysics, IPHYSICS_NAME, IPHYSICS_VER );
 	CH_GET_SYSTEM( gui, IGuiSystem, IGUI_NAME, IGUI_HASH );
 
+	return true;
+}
+
+
+bool MapEditor::Init()
+{
 	return true;
 }
 

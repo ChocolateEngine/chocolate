@@ -36,7 +36,7 @@ static InterfacesFromModule_t*                   gInterfacesFromModule;
 static LoadedSystem_t*                           gLoadedSystems         = nullptr;
 static u32                                       gLoadedSystemsCount    = 0;
 
-const u64 CH_PLAT_FOLDER_SEP_LEN = strlen( CH_PLAT_FOLDER_SEP );
+const size_t                                     CH_PLAT_FOLDER_SEP_LEN = strlen( CH_PLAT_FOLDER_SEP );
 
 
 bool Mod_InitLoadedSystem( LoadedSystem_t& appModule )
@@ -143,7 +143,7 @@ Module Mod_Load( const char* spPath )
 
 	// TODO: improve this, what if it has a path before it
 	const char*    strings[] = { CH_PLAT_FOLDER_SEP, spPath, EXT_DLL };
-	const u64      lengths[] = { CH_PLAT_FOLDER_SEP_LEN, strlen( spPath ), EXT_DLL_LEN };
+	const size_t   lengths[] = { CH_PLAT_FOLDER_SEP_LEN, strlen( spPath ), EXT_DLL_LEN };
 	ch_string_auto pathExt   = ch_str_join( 3, strings, lengths );
 
 	ch_string_auto path      = FileSys_FindFileEx( CH_STR_UNROLL( pathExt ), ESearchPathType_Binary );
@@ -162,6 +162,9 @@ Module Mod_Load( const char* spPath )
 	}
 
 	gModuleHandles[ spPath ] = handle;
+
+	// ------------------------------------------
+	// Find all interfaces in this module
 
 	ModuleInterface_t* ( *getInterfacesF )( u8 & srCount ) = nullptr;
 	if ( !( *(void**)( &getInterfacesF ) = sys_load_func( handle, "ch_get_interfaces" ) ) )

@@ -1,6 +1,13 @@
 #include "core/commandline.h"
 
 
+// TODO:
+// There is a minor bug due to using the Mod_Load() function
+// It stores the interfaces found in the module,
+// so the same interface, physics av2/min, is stored in two modules internally lol
+// 
+
+
 constexpr const char* g_module_min            = "ch_physics_min";
 constexpr const char* g_module_avx2           = "ch_physics_avx2";
 
@@ -10,8 +17,6 @@ bool                  g_force_load_module_max = args_register( "Load the physics
 
 ModuleInterface_t* load_physics_module( const char* moduleName, u8& count )
 {
-	Log_MsgF( "Loading Physics Module: %s\n", moduleName );
-
 	Module phys_module = Mod_Load( moduleName );
 	count              = 0;
 
@@ -35,11 +40,13 @@ extern "C"
 	{
 		if ( g_force_load_module_min )
 		{
+			//Log_DevF( 1, "Selecting MIN Physics\n" );
 			return load_physics_module( g_module_min, srCount );
 		}
 
 		if ( g_force_load_module_max )
 		{
+			//Log_DevF( 1, "Selecting AVX2 Physics\n" );
 			return load_physics_module( g_module_avx2, srCount );
 		}
 
@@ -52,8 +59,12 @@ extern "C"
 		cpu_info_t cpu_info = sys_get_cpu_info();
 
 		if ( cpu_info.features & ( ECPU_Feature_AVX2 | ECPU_Feature_F16C ) )
+		{
+			//Log_DevF( 1, "Selecting AVX2 Physics\n" );
 			return load_physics_module( g_module_avx2, srCount );
-		
+		}
+
+		//Log_DevF( 1, "Selecting MIN Physics\n" );
 		return load_physics_module( g_module_min, srCount );
 	}
 }

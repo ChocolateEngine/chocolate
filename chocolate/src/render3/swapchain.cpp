@@ -9,6 +9,7 @@ CONVAR_RANGE_INT_NAME( r_vk_present_mode, "r.vk.present.mode", 0, 0, 3, "Image P
 
 
 // desired surface format
+// TODO: make this a priority list, so if you have a higher precison color format and space available, use that instead
 static VkFormat            g_color_format = VK_FORMAT_B8G8R8A8_UNORM;
 // static VkFormat            g_color_format = VK_FORMAT_A2B10G10R10_UNORM_PACK32;
 static VkColorSpaceKHR     g_color_space  = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR;

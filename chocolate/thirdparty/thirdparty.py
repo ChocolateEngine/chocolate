@@ -1,4 +1,5 @@
 import os
+import platform
 import sys
 import argparse
 import shutil
@@ -6,7 +7,7 @@ import subprocess
 from enum import Enum, auto
 from urllib.request import Request, urlopen
 from zipfile import ZipFile
-from typing import List, Dict
+from typing import List, Dict, BinaryIO
 
 # -------------------------------------------------------------------------
 # Script made to download thirdparty stuff quickly
@@ -24,6 +25,106 @@ except ImportError:
     quit(2)
 
 
+# Win32 Console Color Printing
+
+_win32_legacy_con = False
+_win32_handle = None
+
+if os.name == "nt":
+    if platform.release().startswith("10"):
+        # hack to enter virtual terminal mode,
+        # could do it properly, but that's a lot of lines and this works just fine
+        import subprocess
+
+        subprocess.call('', shell=True)
+    else:
+        import ctypes
+
+        _win32_handle = ctypes.windll.kernel32.GetStdHandle(-11)
+        _win32_legacy_con = True
+
+
+class Color(Enum):
+    if _win32_legacy_con:
+        RED = "4"
+        DGREEN = "2"
+        GREEN = "10"
+        YELLOW = "6"
+        BLUE = "1"
+        MAGENTA = "13"
+        CYAN = "3"  # or 9
+
+        DEFAULT = "7"
+    else:  # ansi escape chars
+        RED = "\033[0;31m"
+        DGREEN = "\033[0;32m"
+        GREEN = "\033[1;32m"
+        YELLOW = "\033[0;33m"
+        BLUE = "\033[0;34m"
+        MAGENTA = "\033[1;35m"
+        CYAN = "\033[0;36m"
+
+        DEFAULT = "\033[0m"
+
+
+class Severity(Enum):
+    WARNING = Color.YELLOW
+    ERROR = Color.RED
+
+
+WARNING_COUNT = 0
+
+
+def warning(*text):
+    _print_severity(Severity.WARNING, "\n          ", *text)
+    global WARNING_COUNT
+    WARNING_COUNT += 1
+
+
+def error(*text):
+    _print_severity(Severity.ERROR, "\n        ", *text, "\n")
+    quit(1)
+
+
+def verbose(*text):
+    print("".join(text))
+
+
+def verbose_color(color: Color, *text):
+    print_color(color, "".join(text))
+
+
+def _print_severity(level: Severity, spacing: str, *text):
+    print_color(level.value, f"[{level.name}] {spacing.join(text)}")
+
+
+def win32_set_fore_color(color: int):
+    if not ctypes.windll.kernel32.SetConsoleTextAttribute(_win32_handle, color):
+        print(f"[ERROR] WIN32 Changing Colors Failed, Error Code: {str(ctypes.GetLastError())},"
+              f" color: {color}, handle: {str(_win32_handle)}")
+
+
+def stdout_color(color: Color, *text):
+    if _win32_legacy_con:
+        win32_set_fore_color(int(color.value))
+        sys.stdout.write("".join(text))
+        win32_set_fore_color(int(Color.DEFAULT.value))
+    else:
+        sys.stdout.write(color.value + "".join(text) + Color.DEFAULT.value)
+
+
+def print_color(color: Color, *text):
+    stdout_color(color, *text, "\n")
+
+
+def set_con_color(color: Color):
+    if _win32_legacy_con:
+        win32_set_fore_color(int(color.value))
+    else:
+        sys.stdout.write(color.value)
+
+
+# TODO: make enum flags or something later on if you add another platform here
 class OS(Enum):
     Any = auto(),
     Windows = auto(),
@@ -150,8 +251,11 @@ def setup_vs_env():
 
 def parse_args() -> argparse.Namespace:
     args = argparse.ArgumentParser()
-    args.add_argument("-b", "--no-build", action="store_true", help="Don't build the projects")
+    args.add_argument("-nb", "--no-build", action="store_true", help="Don't build the libraries")
+    # args.add_argument("-d", "--no-download", action="store_true", help="Don't download the libraries")
+    args.add_argument("-t", "--target", nargs="+", help="Only download and build specific libraries")
     args.add_argument("-f", "--force", help="Force Run Everything")
+    args.add_argument("-c", "--clean", help="Clean Everything in the thirdparty folder")
     return args.parse_args()
 
 
@@ -524,119 +628,123 @@ def post_vma_extract():
 
 
 '''
-new idea?
-
-[
-    "mozjpeg"               # dependency name
-    "https://github.com/mozilla/mozjpeg/archive/refs/tags/v4.1.1.zip",
-    "mozjpeg-4.1.1.zip",    # downloaded file
-    "mozjpeg",              # folder to check for if it exists already
-    ".",                    # extract into this folder (optional)
-    post_mozjpeg_extract,
-]
+Basic Structure for a file here:
+{
+    # URL for downloading the file
+    "url":  "ENTRY",
+    
+    # Filename that gets downloaded, most stuff from github is different from the url filename
+    "file": "FILENAME.zip/7z",
+    
+    # Doubles as the folder name and the "package" name in this script, so you can skip it or only use it, etc.
+    "name": "ENTRY",
+    
+    # OPTIONAL: A compile function to run after extracting it
+    "func": function_pointer,
+    
+    # OPTIONAL: Name of the folder the file is extracted to, and will be renamed to what "name" is, usually not needed
+    "extracted_folder": "",
+},
 '''
 
 
 FILE_LIST = {
-    # NOTE: this kinda sucks because you can only put an item on one platform,
-    # and would have to duplicate it for other platforms
-    # also the ordering is iffy too
-
-    # IDEA: somehow add something to install packages for linux? idk
-
     # All Platforms
     OS.Any: [
-        [
-            "https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator/archive/refs/tags/v3.1.0.zip",
-            "zip",                          # file extension it's stored as
-            "VulkanMemoryAllocator",        # folder to check for if it exists already
-            "VulkanMemoryAllocator-3.1.0",  # folder it extracts as to rename to the folder above (optional)
-            ".",                            # extract into this folder (optional)
-            post_vma_extract,
-        ],
-        [
-            "https://github.com/mozilla/mozjpeg/archive/refs/tags/v4.1.1.zip",
-            "zip",                   # file extension it's stored as
-            "mozjpeg",              # folder to check for if it exists already
-            "mozjpeg-4.1.1",         # folder it extracts as to rename to the folder above (optional)
-            ".",                    # extract into this folder (optional)
-            post_mozjpeg_extract,
-        ],
-        [
-            "https://github.com/google/flatbuffers/archive/refs/tags/v23.5.26.zip",
-            "zip",                   # file extension it's stored as
-            "flatbuffers",           # folder to check for if it exists already
-            "flatbuffers-23.5.26",   # folder it extracts as to rename to the folder above (optional)
-            ".",                     # extract into this folder (optional)
-            post_flatbuffers_extract,
-        ],
-        [
-            "https://github.com/ValveSoftware/steam-audio/releases/download/v4.0.3/steamaudio_4.0.3.zip",
-            "zip",                  # file extension it's stored as
-            "steamaudio",           # folder to check for if it exists already
-            "",                     # folder it extracts as to rename to another folder (optional)
-            ".",                    # extract into this folder (optional)
-            None,                   # function to run post extraction (optional)
-        ],
-        [
-            "https://github.com/jrouwe/JoltPhysics/archive/refs/tags/v4.0.2.zip",
-            "zip",                  # file extension it's stored as
-            "JoltPhysics",          # folder to check for if it exists already
-            "JoltPhysics-4.0.2",    # folder it extracts as to rename to the folder above (optional)
-            ".",                    # extract into this folder (optional)
-            post_jolt_extract,
-        ],
-        [
-            # https://github.com/wolfpld/tracy/archive/refs/tags/v0.7.8.zip
-            "https://github.com/wolfpld/tracy/archive/f1fea0331aa7222df5b0a8b0ffdf6610547fb336.zip",
-            "zip",                   # file extension it's stored as
-            "Tracy",              # folder to check for if it exists already
-            "tracy-f1fea0331aa7222df5b0a8b0ffdf6610547fb336",         # folder it extracts as to rename to the folder above (optional)
-            ".",                    # extract into this folder (optional)
-            None,
-        ],
+        {
+            "url":  "https://github.com/ozxybox/SpeedyKeyV/archive/refs/heads/master.zip",
+            "file": "SpeedyKeyV-master.zip",
+            "name": "SpeedyKeyV",
+        },
+        {
+            "url":  "https://github.com/jkuhlmann/cgltf/archive/refs/tags/v1.14.zip",
+            "file": "cgltf-1.14.zip",
+            "name": "cgltf",
+        },
+        {
+            "url":  "https://github.com/thisistherk/fast_obj/archive/refs/tags/v1.3.zip",
+            "file": "fast_obj-1.3.zip",
+            "name": "fast_obj",
+        },
+        {
+            "url":  "https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator/archive/refs/tags/v3.1.0.zip",
+            "file": "VulkanMemoryAllocator-3.1.0.zip",
+            "name": "VulkanMemoryAllocator",
+            "func": post_vma_extract,
+        },
+        {
+            "url":  "https://github.com/mozilla/mozjpeg/archive/refs/tags/v4.1.1.zip",
+            "file": "mozjpeg-4.1.1.zip",
+            "name": "mozjpeg",
+            "func": post_mozjpeg_extract,
+        },
+        {
+            "url":  "https://github.com/google/flatbuffers/archive/refs/tags/v23.5.26.zip",
+            "file": "flatbuffers-23.5.26.zip",
+            "name": "flatbuffers",
+            "func": post_flatbuffers_extract,
+        },
+        {
+            "url":  "https://github.com/jrouwe/JoltPhysics/archive/refs/tags/v5.2.0.zip",
+            "file": "JoltPhysics-5.2.0.zip",
+            "name": "JoltPhysics",
+            "func": post_jolt_extract,
+        },
+        {
+            "url":  "https://github.com/wolfpld/tracy/archive/f1fea0331aa7222df5b0a8b0ffdf6610547fb336.zip",
+            "file": "tracy-f1fea0331aa7222df5b0a8b0ffdf6610547fb336.zip",
+            "name": "Tracy",
+        },
+
+        # NOTE: KTX has plenty of downloads for pre-built binaries now, maybe use one of those instead depending on the platform?
+        {
+            "url":  "https://github.com/KhronosGroup/KTX-Software/archive/refs/tags/v4.3.2.zip",
+            "name": "KTX-Software",
+            "file": "KTX-Software-4.3.2.zip",
+            "func": build_ktx,
+        },
+        # TODO: Update this to the open source one and compile it yourself for debug symbols
+        {
+            "url":  "https://github.com/ValveSoftware/steam-audio/releases/download/v4.0.3/steamaudio_4.0.3.zip",
+            "name": "steamaudio",
+            "file": "steamaudio_4.0.3.zip",
+            "extracted_folder": "steamaudio",
+        },
     ],
 
     # Windows Only
     OS.Windows: [
-        [
-            # MUST BE FIRST FOR VSWHERE !!!!!
-            "https://github.com/microsoft/vswhere/releases/download/2.8.4/vswhere.exe",
-            "vswhere.exe",          # file extension it's stored as
-            ".",                    # folder to check for if it exists already
-            "",                     # folder it extracts as to rename to another folder (optional)
-            ".",                    # extract into this folder (optional)
-            setup_vs_env,           # function to run post extraction (optional)
-        ],
-        [
-            "https://github.com/libsdl-org/SDL/releases/download/release-2.26.5/SDL2-devel-2.26.5-VC.zip",
-            "zip",                  # file extension it's stored as
-            "SDL2",                 # folder to check for if it exists already
-            "SDL2-2.26.5",          # folder it extracts as to rename to another folder (optional)
-            ".",                    # extract into this folder (optional)
-            post_sdl_extract,       # function to run post extraction (optional)
-        ],
-        [
-            "https://downloads.xiph.org/releases/ogg/libogg-1.3.5.zip",
-            "zip",
-            "libogg",
-            "libogg-1.3.5",
-            ".",                    # extract into this folder (optional)
-            post_libogg_extract,    # function to run post extraction (optional)
-        ],
-        [
-            "https://github.com/xiph/vorbis/releases/download/v1.3.7/libvorbis-1.3.7.zip",
-            "zip",
-            "libvorbis",
-            "libvorbis-1.3.7",
-            ".",                    # extract into this folder (optional)
-            post_libvorbis_extract,           # function to run post extraction (optional)
-        ],
-        [
-            "https://github.com/g-truc/glm/releases/download/0.9.9.8/glm-0.9.9.8.7z",
-            "7z",
-            "glm",
-        ],
+
+        # MUST BE FIRST FOR VSWHERE !!!!!
+        {
+            "url":  "https://github.com/microsoft/vswhere/releases/download/2.8.4/vswhere.exe",
+            "name": "vswhere",
+            "file": "vswhere.exe",
+            "func": setup_vs_env,
+        },
+        {
+            "url":  "https://github.com/libsdl-org/SDL/releases/download/release-2.26.5/SDL2-devel-2.26.5-VC.zip",
+            "name": "SDL2",
+            "file": "SDL2-2.26.5.zip",
+            "func": post_sdl_extract,
+        },
+        {
+            "url":  "https://downloads.xiph.org/releases/ogg/libogg-1.3.5.zip",
+            "name": "libogg",
+            "file": "libogg-1.3.5.zip",
+            "func": post_libogg_extract,
+        },
+        {
+            "url":  "https://github.com/xiph/vorbis/releases/download/v1.3.7/libvorbis-1.3.7.zip",
+            "name": "libvorbis",
+            "file": "libvorbis-1.3.7.zip",
+            "func": post_libvorbis_extract,
+        },
+        {
+            "url":  "https://github.com/g-truc/glm/archive/refs/tags/1.0.1.zip",
+            "name": "glm",
+            "file": "glm-1.0.1.zip",
+        },
     ],
 
     # Linux Only
@@ -648,33 +756,25 @@ FILE_LIST = {
 # =================================================================================================
 
 
-# just a list of functions to run, simple
-SUBMODULE_LIST = [
-    build_ktx,
-]
-
-
-# =================================================================================================
-
-
 def download_file(url: str) -> bytes:
     req = Request(url, headers={'User-Agent': 'Mozilla/5.0'})
     try:
         # time_print("sending request")
         # time_print("Attempting Download: " + url)
-        response = urlopen(req, timeout=4)
+        response = urlopen(req, timeout=120)
         file_data: bytes = response.read()
         # time_print("received request")
     except Exception as F:
-        print("Error opening url: ", url, "\n", str(F), "\n")
+        error("Error opening url: ", url, "\n", str(F), "\n")
         return b""
 
     return file_data
 
 
-def extract_file(file_data: bytes, file_ext: str, folder: str) -> bool:
+def extract_file(file_data: bytes, file: str, file_ext: str, folder: str) -> bool:
     # i hate this, why is there no library that can load it from bytes directly
-    tmp_file = "tmp." + file_ext
+    tmp_file = "tmp." + file
+    tmp_file_io: BinaryIO
     with open(tmp_file, mode="wb") as tmp_file_io:
         tmp_file_io.write(file_data)
 
@@ -690,7 +790,7 @@ def extract_file(file_data: bytes, file_ext: str, folder: str) -> bool:
     elif file_ext == "exe":
         pass
     else:
-        print(f"No support for file extension - extract it manually: {file_ext}")
+        error(f"No support for file extension - extract it manually: {file_ext}")
         return False
 
     os.remove(tmp_file)
@@ -698,13 +798,28 @@ def extract_file(file_data: bytes, file_ext: str, folder: str) -> bool:
     return True
 
 
-def handle_item(url: str, file_ext: str, folder: str, extract_folder: str = "", working_dir: str = ".", func=None):
-    is_zip = file_ext == "zip" or file_ext == "7z"
-    print_name = folder if is_zip else file_ext
+def handle_item(item: dict):
+    url = item["url"] if "url" in item else ""
+    file = item["file"] if "file" in item else ""
+    name = item["name"] if "name" in item else ""
+    func = item["func"] if "func" in item else None
+    extracted_folder = item["extracted_folder"] if "extracted_folder" in item else None
 
-    if (folder != "." and not os.path.isdir(folder)) or ARGS.force or not is_zip:
+    # Check if we want this item
+    if ARGS.target:
+        if name not in ARGS.target:
+            return
 
-        print(f"Downloading \"{print_name}\"")
+    # folder, file_ext = os.path.splitext(file)
+    folder, file_ext = file.rsplit(".", 1)
+    is_zip = file_ext in ("zip", "7z")
+
+    if extracted_folder:
+        folder = extracted_folder
+
+    if not os.path.isdir(name) or ARGS.force or not is_zip:
+
+        print_color(Color.CYAN, f"Downloading \"{name}\"")
 
         file_data: bytes = download_file(url)
         if file_data == b"":
@@ -712,42 +827,40 @@ def handle_item(url: str, file_ext: str, folder: str, extract_folder: str = "", 
 
         # is this just a full filename
         if not is_zip:
-            with open(file_ext, mode="wb") as file_io:
+            with open(file, mode="wb") as file_io:
                 file_io.write(file_data)
         else:
-            if not extract_file(file_data, file_ext, working_dir):
+            if not extract_file(file_data, file, file_ext, "."):
                 return
+                
+            # rename it
+            if folder != name:
+                os.rename(folder, name)
 
-        # rename it
-        if extract_folder and extract_folder != folder:
-            os.rename(extract_folder, folder)
     else:
-        print(f"Already Downloaded: {print_name}")
+        print_color(Color.CYAN, f"Already Downloaded: {name}")
 
     if func:
-        print(f"Running Post Build Func: \"{print_name}\"")
+        print_color(Color.CYAN, f"Running Post Build Func: \"{name}\"")
         func()
 
     reset_dir()
 
 
 def main():
+    if ARGS.clean:
+        print("NOT IMPLEMENTED YET!!!")
+        return
+
     # Do your platform first (need to be first on windows for vswhere.exe)
     for item in FILE_LIST[SYS_OS]:
-        handle_item(*item)
-
-    print("\n---------------------------------------------------------\n")
-
-    # compile git submodules next
-    for func in SUBMODULE_LIST:
-        func()
-        reset_dir()
+        handle_item(item)
 
     print("\n---------------------------------------------------------\n")
 
     # Do all platforms last
     for item in FILE_LIST[OS.Any]:
-        handle_item(*item)
+        handle_item(item)
 
     # check for any errors and print them
     errors_str = "Error" if len(ERROR_LIST) == 1 else "Errors"

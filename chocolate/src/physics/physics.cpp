@@ -200,6 +200,7 @@ public:
 	{
 		if ( !JPH::VerifyJoltVersionID() )
 		{
+			Log_ErrorF( gLC_Physics, "Failed to Verify Jolt Version, Check Features Jolt is compiled with!\n" );
 			return false;
 		}
 

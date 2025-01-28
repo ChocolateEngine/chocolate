@@ -78,6 +78,8 @@ class ITool : public ISystem
 	// Buttons
 	// virtual ch_handle_t  GetIcon() = 0;
 
+	virtual bool            LoadSystems()                                             = 0;
+
 	virtual const char*     GetName()                                                 = 0;
 
 	virtual bool            Launch( const ToolLaunchData& launchData )                = 0;

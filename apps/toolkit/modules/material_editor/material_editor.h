@@ -65,6 +65,8 @@ class MaterialEditor : public ITool
 	void Shutdown() override;
 
 	// ITool
+	bool LoadSystems() override;
+
 	bool Launch( const ToolLaunchData& launchData ) override;
 	void Close() override;
 

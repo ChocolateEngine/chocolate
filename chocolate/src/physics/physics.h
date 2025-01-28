@@ -8,13 +8,17 @@
   #define JPH_DEBUG_RENDERER 1
 #endif
 
-// other Jolt Features
+// other Jolt Features, if you fail to verify the jolt version, check to see if there is a jolt feature enable mismatch in the jolt project and here
 #ifndef JPH_PROFILE_ENABLED
 	#define JPH_PROFILE_ENABLED 1
 #endif
 
 #ifndef JPH_FLOATING_POINT_EXCEPTIONS_ENABLED
 	#define JPH_FLOATING_POINT_EXCEPTIONS_ENABLED 1
+#endif
+
+#ifndef JPH_OBJECT_STREAM
+	#define JPH_OBJECT_STREAM 1
 #endif
 
 
@@ -26,15 +30,16 @@
 #endif
 
 // workaround to not include chocolate's core/core.h, which should be renamed to ch_core/core.h
-#include <Jolt/Core/Core.h>
-#include <Jolt/Core/Memory.h>
-#include <Jolt/Core/STLAllocator.h>
-#include <Jolt/Core/UnorderedMap.h>
-#include <Jolt/Core/IssueReporting.h>
-#include <Jolt/Core/HashCombine.h>
-#include <Jolt/Core/NonCopyable.h>
-#include <Jolt/Core/Factory.h>
-#include <Jolt/Core/Profiler.h>
+// #include <Jolt/Core/Core.h>
+// #include <Jolt/Core/IssueReporting.h>
+// #include <Jolt/Core/Memory.h>
+// #include <Jolt/Core/Array.h>
+// #include <Jolt/Core/STLAllocator.h>
+// #include <Jolt/Core/UnorderedMap.h>
+// #include <Jolt/Core/HashCombine.h>
+// #include <Jolt/Core/NonCopyable.h>
+// #include <Jolt/Core/Factory.h>
+// #include <Jolt/Core/Profiler.h>
 
 // The Jolt headers don't include Jolt.h. Always include Jolt.h before including any other Jolt header.
 // You can use Jolt.h in your precompiled header to speed up compilation.
