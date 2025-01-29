@@ -58,6 +58,7 @@ cmake_install.cmake
 CMakeFiles/
 chocolate/public/SDL2/*
 build/*
+cmake-build-*/
 Makefile
 .idea
 

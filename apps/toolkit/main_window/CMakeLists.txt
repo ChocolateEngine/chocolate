@@ -6,6 +6,9 @@ file(
 	*.h
 	../shared/*.cpp
 	../shared/*.h
+
+	# This is to include the material editor stuff in here
+	../modules/material_editor/*.cpp
 )
 
 set(
@@ -22,6 +25,7 @@ file(
 
 include_directories(
 	"../shared"
+	"../modules"
 )
 
 add_library( Toolkit SHARED ${SRC_FILES} ${PUBLIC_FILES} ${THIRDPARTY_FILES} )

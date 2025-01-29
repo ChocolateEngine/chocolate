@@ -179,42 +179,11 @@ extern "C"
 		// Needs to be done before Renderer is loaded
 		ImGui::CreateContext();
 
-		// if ( gArgUseGL )
-		// {
-		// 	gAppModules[ 1 ].apModuleName = "ch_render_gl";
-		// }
-
 		// Load Modules and Initialize them in this order
 		if ( !Mod_AddSystems( gAppModules, ARR_SIZE( gAppModules ) ) )
 		{
 			Log_Error( "Failed to Load Systems\n" );
 			return 1;
-		}
-
-		// Add Tools
-		gTools.reserve( ARR_SIZE( gToolModules ) );
-		for ( u32 i = 0; i < ARR_SIZE( gToolModules ); i++ )
-		{
-			ISystem*    toolSystem = nullptr;
-
-			AppModule_t toolAppModule;
-			toolAppModule.apInterfaceName = gToolModules[ i ].interface;
-			toolAppModule.apInterfaceVer  = gToolModules[ i ].version;
-			toolAppModule.apModuleName    = gToolModules[ i ].name;
-			toolAppModule.apSystem        = (ISystem**)&toolSystem;
-			toolAppModule.aRequired       = false;
-
-			if ( !Mod_AddSystems( &toolAppModule, 1 ) )
-			{
-				Log_ErrorF( "Failed to Load Tool: %s\n", gToolModules[ i ].name );
-				continue;
-			}
-
-			LoadedTool& tool = gTools.emplace_back();
-			tool.interface   = gToolModules[ i ].interface;
-			tool.tool        = (ITool*)toolSystem;
-
-			tool.tool->LoadSystems();
 		}
 
 		if ( !App_CreateMainWindow() )

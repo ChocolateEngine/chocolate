@@ -1,24 +1,23 @@
 #include "main.h"
-#include "core/system_loader.h"
-#include "core/asserts.h"
-#include "core/app_info.h"
-#include "core/build_number.h"
 
-#include "iinput.h"
-#include "igui.h"
-#include "render/irender.h"
-#include "igraphics.h"
-#include "physics/iphysics.h"
-
-#include "imgui/imgui.h"
-#include "imgui/imgui_impl_sdl2.h"
-
-#include "core/util.h"
-
-#include <SDL_system.h>
 #include <SDL_hints.h>
+#include <SDL_system.h>
 
 #include <algorithm>
+
+#include "core/app_info.h"
+#include "core/asserts.h"
+#include "core/build_number.h"
+#include "core/system_loader.h"
+#include "core/util.h"
+#include "igraphics.h"
+#include "igui.h"
+#include "iinput.h"
+#include "imgui/imgui.h"
+#include "imgui/imgui_impl_sdl2.h"
+#include "material_editor/material_editor.h"
+#include "physics/iphysics.h"
+#include "render/irender.h"
 
 
 int                       gWidth          = args_register_names( 1280, "Width of the main window", 2, "--width", "-w" );
@@ -29,7 +28,7 @@ static bool               gSingleWindow   = args_register( "Single Window Mode, 
 
 SDL_Window*               gpWindow        = nullptr;
 void*                     gpSysWindow     = nullptr;  // Only Used on WIN32
-ch_handle_t                gGraphicsWindow = CH_INVALID_HANDLE;
+ch_handle_t               gGraphicsWindow = CH_INVALID_HANDLE;
 
 Toolkit                   toolkit;
 
@@ -37,13 +36,13 @@ Toolkit                   toolkit;
 std::vector< LoadedTool > gTools;
 
 
-IGuiSystem*               gui               = nullptr;
-IRender*                  render            = nullptr;
-IInputSystem*             input             = nullptr;
-IAudioSystem*             audio             = nullptr;
-IGraphics*                graphics          = nullptr;
-IRenderSystemOld*         renderOld         = nullptr;
-Ch_IPhysics*              ch_physics        = nullptr;
+IGuiSystem*               gui        = nullptr;
+IRender*                  render     = nullptr;
+IInputSystem*             input      = nullptr;
+IAudioSystem*             audio      = nullptr;
+IGraphics*                graphics   = nullptr;
+IRenderSystemOld*         renderOld  = nullptr;
+Ch_IPhysics*              ch_physics = nullptr;
 
 //ITool*                    toolMapEditor     = nullptr;
 //ITool*                    toolMatEditor     = nullptr;
@@ -52,12 +51,12 @@ Ch_IPhysics*              ch_physics        = nullptr;
 //bool                      toolMapEditorOpen = false;
 //bool                      toolMatEditorOpen = false;
 
-static bool               gPaused           = false;
-float                     gFrameTime        = 0.f;
+static bool               gPaused    = false;
+float                     gFrameTime = 0.f;
 
 // TODO: make gRealTime and gGameTime
 // real time is unmodified time since engine launched, and game time is time affected by host_timescale and pausing
-double                    gCurTime          = 0.0;  // i could make this a size_t, and then just have it be every 1000 is 1 second
+double                    gCurTime   = 0.0;  // i could make this a size_t, and then just have it be every 1000 is 1 second
 
 extern bool               gRunning;
 
@@ -78,7 +77,7 @@ void Util_DrawTextureInfo( TextureInfo_t& info )
 	ImGui::Text( "Name: %s", info.name.size ? info.name.data : "UNNAMED" );
 
 	if ( info.aPath.size )
-		ImGui::Text( info.aPath.data );
+		ImGui::TextUnformatted( info.aPath.data );
 
 	ImGui::Text( "%d x %d - %.6f MB", info.aSize.x, info.aSize.y, ch_bytes_to_mb( info.aMemoryUsage ) );
 	ImGui::Text( "Format: TODO" );
@@ -356,7 +355,7 @@ void Main_DrawMenuBar()
 }
 
 
-// disabled cause for some reason, it could jump to the WindowProc function mid frame and call this 
+// disabled cause for some reason, it could jump to the WindowProc function mid frame and call this
 #define CH_LIVE_WINDOW_RESIZE 1
 
 
@@ -453,13 +452,15 @@ void RenderMainWindow( float frameTime, bool sResize )
 	//	ImGui::SetNextWindowSizeConstraints( { (float)width, 64 }, { (float)width, 64 } );
 	//else
 
-	static bool inToolTab = false;
+	static bool inToolTab      = false;
 
 	// value... fresh from my ass
 	// float       titleBarHeight = 16.f;
 	// float       titleBarHeight = 10.f;
 	// float       titleBarHeight = 28.f;
 	float       titleBarHeight = 31.f;
+
+	ImGui::SetNextWindowPos( { 0, static_cast< float >( gMainMenuBarHeight ) } );
 
 	if ( inToolTab )
 	{
@@ -480,6 +481,12 @@ void RenderMainWindow( float frameTime, bool sResize )
 			if ( ImGui::BeginTabItem( "Asset List" ) )
 			{
 				AssetBrowser_Draw();
+				ImGui::EndTabItem();
+			}
+
+			if ( ImGui::BeginTabItem( "Material Editor" ) )
+			{
+				MaterialEditor_Draw( { 0, 32 } );
 				ImGui::EndTabItem();
 			}
 
@@ -580,7 +587,7 @@ void UpdateLoop( float frameTime, bool sResize )
 	if ( !sResize )
 	{
 		// Draw other windows
-		for ( auto& tool: gTools )
+		for ( auto& tool : gTools )
 		{
 			if ( !tool.running )
 				continue;
@@ -613,7 +620,7 @@ void WindowResizeCallback( void* hwnd )
 		return;
 	}
 
-	for ( LoadedTool& tool: gTools )
+	for ( LoadedTool& tool : gTools )
 	{
 		if ( !tool.window )
 			continue;
@@ -684,16 +691,16 @@ static void DrawQuitConfirmation()
 	int width = 0, height = 0;
 	render->GetSurfaceSize( gGraphicsWindow, width, height );
 
-	ImGui::SetNextWindowSize({ (float)width, (float)height });
-	ImGui::SetNextWindowPos({0.f, 0.f});
+	ImGui::SetNextWindowSize( { (float)width, (float)height } );
+	ImGui::SetNextWindowPos( { 0.f, 0.f } );
 
-	if (ImGui::Begin("FullScreen Overlay", nullptr, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoNav))
+	if ( ImGui::Begin( "FullScreen Overlay", nullptr, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoNav ) )
 	{
 		ImGui::SetNextWindowFocus();
 
-		ImGui::SetNextWindowSize({ 250, 60 });
+		ImGui::SetNextWindowSize( { 250, 60 } );
 
-		ImGui::SetNextWindowPos( { (width / 2.f) - 125.f, (height / 2.f) - 30.f } );
+		ImGui::SetNextWindowPos( { ( width / 2.f ) - 125.f, ( height / 2.f ) - 30.f } );
 
 		if ( !ImGui::Begin( "Quit Editor", nullptr, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove ) )
 		{
@@ -705,14 +712,14 @@ static void DrawQuitConfirmation()
 
 		ImGui::Separator();
 
-		if ( ImGui::Button( "Yes", {50, 0} ) )
+		if ( ImGui::Button( "Yes", { 50, 0 } ) )
 		{
 			Con_QueueCommand( "quit" );
 		}
 
 		ImGui::SameLine( 190 );
 
-		if ( ImGui::Button( "No", {50, 0} ) )
+		if ( ImGui::Button( "No", { 50, 0 } ) )
 		{
 			gShowQuitConfirmation = false;
 		}
@@ -731,11 +738,11 @@ void UpdateProjection()
 	int width = 0, height = 0;
 	render->GetSurfaceSize( gGraphicsWindow, width, height );
 
-	auto& io          = ImGui::GetIO();
-	io.DisplaySize.x  = width;
-	io.DisplaySize.y  = height;
+	auto& io                   = ImGui::GetIO();
+	io.DisplaySize.x           = width;
+	io.DisplaySize.y           = height;
 
-	ViewportShader_t* viewport  = graphics->GetViewportData( gMainViewportHandle );
+	ViewportShader_t* viewport = graphics->GetViewportData( gMainViewportHandle );
 
 	if ( !viewport )
 		return;
@@ -784,4 +791,3 @@ void Toolkit::OpenAsset( const char* spToolInterface, const char* spPath )
 	if ( tool->window )
 		Window_Focus( tool->window );
 }
-

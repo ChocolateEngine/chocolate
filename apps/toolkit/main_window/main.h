@@ -1,15 +1,13 @@
 #pragma once
 
 #include "core/core.h"
-#include "itool.h"
-
-#include "iinput.h"
-#include "render/irender.h"
-#include "igui.h"
 #include "igraphics.h"
-#include "physics/iphysics.h"
-
+#include "igui.h"
+#include "iinput.h"
 #include "imgui/imgui.h"
+#include "itool.h"
+#include "physics/iphysics.h"
+#include "render/irender.h"
 
 class IGuiSystem;
 class IRender;
@@ -24,7 +22,7 @@ struct AppWindow
 {
 	SDL_Window*   window         = nullptr;
 	void*         sysWindow      = nullptr;
-	ch_handle_t    graphicsWindow = CH_INVALID_HANDLE;
+	ch_handle_t   graphicsWindow = CH_INVALID_HANDLE;
 	ImGuiContext* context        = nullptr;
 };
 
@@ -60,31 +58,35 @@ extern Toolkit                   toolkit;
 
 extern u32                       gMainViewportHandle;
 extern SDL_Window*               gpWindow;
-extern ch_handle_t                gGraphicsWindow;
+extern ch_handle_t               gGraphicsWindow;
 extern std::vector< LoadedTool > gTools;
+
+extern int                       gWidth;
+extern int                       gHeight;
+extern int                       gMainMenuBarHeight;
 
 CONVAR_FLOAT_EXT( r_nearz );
 CONVAR_FLOAT_EXT( r_farz );
 CONVAR_FLOAT_EXT( r_fov );
 
-void                             Util_DrawTextureInfo( TextureInfo_t& info );
+void        Util_DrawTextureInfo( TextureInfo_t& info );
 
-LoadedTool*                      App_GetTool( const char* tool );
-bool                             App_CreateMainWindow();
-bool                             App_Init();
+LoadedTool* App_GetTool( const char* tool );
+bool        App_CreateMainWindow();
+bool        App_Init();
 
-void                             UpdateLoop( float frameTime, bool sResize = false );
-void                             UpdateProjection();
+void        UpdateLoop( float frameTime, bool sResize = false );
+void        UpdateProjection();
 
-AppWindow*                       Window_Create( const char* windowName );
-void                             Window_OnClose( AppWindow& window );
-void                             Window_Focus( AppWindow* window );
-void                             Window_Render( LoadedTool& tool, float frameTime, bool sResize );
-void                             Window_Present( LoadedTool& window );
-void                             Window_PresentAll();
+AppWindow*  Window_Create( const char* windowName );
+void        Window_OnClose( AppWindow& window );
+void        Window_Focus( AppWindow* window );
+void        Window_Render( LoadedTool& tool, float frameTime, bool sResize );
+void        Window_Present( LoadedTool& window );
+void        Window_PresentAll();
 
-bool                             AssetBrowser_Init();
-void                             AssetBrowser_Close();
-void                             AssetBrowser_Draw();
+bool        AssetBrowser_Init();
+void        AssetBrowser_Close();
+void        AssetBrowser_Draw();
 
-void                             ResourceUsage_Draw();
+void        ResourceUsage_Draw();

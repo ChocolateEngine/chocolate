@@ -7,8 +7,8 @@ struct ViewportCamera_t;
 
 // world xyz
 constexpr int W_FORWARD = 0;
-constexpr int W_RIGHT = 1;
-constexpr int W_UP = 2;
+constexpr int W_RIGHT   = 1;
+constexpr int W_UP      = 2;
 
 #include "igraphics.h"
 
@@ -17,35 +17,28 @@ class IInputSystem;
 class IGraphics;
 class IRenderSystemOld;
 
-extern IRender*          render;
-extern IInputSystem*     input;
-extern IGraphics*        graphics;
-extern IRenderSystemOld* renderOld;
+extern float  gFrameTime;
+extern double gCurTime;
 
-extern float             gFrameTime;
-extern double            gCurTime;
-
-extern bool              gShowQuitConfirmation;
-
-extern ToolLaunchData    gToolData;
+extern bool   gShowQuitConfirmation;
 
 struct View_t
 {
-	glm::mat4        aViewMat;
-	glm::mat4        aProjMat;
+	glm::mat4  aViewMat;
+	glm::mat4  aProjMat;
 
 	// projection matrix * view matrix
-	glm::mat4        aProjViewMat;
+	glm::mat4  aProjViewMat;
 
 	// TODO: use this in the future
 	// u32              aViewportIndex;
 
 	// TODO: remove this from here, right now this is the same between ALL contexts
-	glm::uvec2       aResolution;
-	glm::uvec2       aOffset;
+	glm::uvec2 aResolution;
+	glm::uvec2 aOffset;
 
-	glm::vec3        aPos{};
-	glm::vec3        aAng{};
+	glm::vec3  aPos{};
+	glm::vec3  aAng{};
 };
 
 
@@ -90,9 +83,7 @@ void                  MaterialEditor_CloseActiveMaterial();
 void                  MaterialEditor_FreeImGuiTextures();
 
 void                  MaterialEditor_SetActiveMaterial( ch_handle_t sMat );
-ch_handle_t            MaterialEditor_GetActiveMaterial();
+ch_handle_t           MaterialEditor_GetActiveMaterial();
 
 void                  MaterialEditor_Init();
 void                  MaterialEditor_Close();
-
-

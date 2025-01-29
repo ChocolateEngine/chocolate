@@ -1,53 +1,50 @@
-#include "material_editor.h"
-#include "file_picker.h"
-
-#include "imgui/imgui.h"
-
 #include <unordered_set>
+
+#include "../main_window/main.h"
+#include "file_picker.h"
+#include "imgui/imgui.h"
+#include "material_editor.h"
 
 
 CONVAR_INT( matedit_texture_size, 64, CVARF_ARCHIVE, "Size of textures drawn in the image preview" );
 
 
-int gMainMenuBarHeight = 0;
-int gWidth             = 0;
-int gHeight            = 0;
-int gOffsetX           = 0;
-int gOffsetY           = 0;
+int gOffsetX = 0;
+int gOffsetY = 0;
 
 
 struct MaterialEntry
 {
-	std::string                                     name;
-	std::string                                     path;
-	ch_handle_t                                      mat = CH_INVALID_HANDLE;
+	std::string name;
+	std::string path;
+	ch_handle_t mat = CH_INVALID_HANDLE;
 	// std::unordered_map< u32, TextureParameterData > textureData;
 };
 
 
 struct MaterialEditorData
 {
-	std::vector< MaterialEntry >                    materialList; 
+	std::vector< MaterialEntry >                   materialList;
 
-	ch_handle_t                                      mat           = CH_INVALID_HANDLE;
+	ch_handle_t                                    mat           = CH_INVALID_HANDLE;
 
-	bool                                            drawNewDialog = false;
-	std::string                                     newMatName    = "";
+	bool                                           drawNewDialog = false;
+	std::string                                    newMatName    = "";
 
-	std::string                                     newVarName    = "";
+	std::string                                    newVarName    = "";
 
-	std::unordered_map< ch_handle_t, ImTextureID >   imguiTextures;
+	std::unordered_map< ch_handle_t, ImTextureID > imguiTextures;
 
-	FilePickerData_t                                textureBrowser;
-	u32                                             textureBrowserVar  = UINT32_MAX;
-	const char*                                     textureBrowserName = nullptr;
+	FilePickerData_t                               textureBrowser;
+	u32                                            textureBrowserVar  = UINT32_MAX;
+	const char*                                    textureBrowserName = nullptr;
 };
 
 
 static MaterialEditorData gMatEditor;
 
 
-static int StringTextInput( ImGuiInputTextCallbackData* data )
+static int                StringTextInput( ImGuiInputTextCallbackData* data )
 {
 	std::string* string = (std::string*)data->UserData;
 	string->resize( data->BufTextLen );
@@ -74,15 +71,15 @@ void Editor_DrawTextureInfo( TextureInfo_t& info )
 void MaterialEditor_DrawNewDialog()
 {
 	gMatEditor.newMatName.reserve( 128 );
-	
+
 	if ( ImGui::InputText( "Name", gMatEditor.newMatName.data(), 128, ImGuiInputTextFlags_CallbackAlways | ImGuiInputTextFlags_EnterReturnsTrue, StringTextInput, &gMatEditor.newMatName ) )
 	{
-		ch_handle_t shader        = graphics->GetShader( "basic_3d" );
-		ch_handle_t mat           = graphics->CreateMaterial( gMatEditor.newMatName, shader );
+		ch_handle_t    shader    = graphics->GetShader( "basic_3d" );
+		ch_handle_t    mat       = graphics->CreateMaterial( gMatEditor.newMatName, shader );
 
-		MaterialEntry& matEntry      = gMatEditor.materialList.emplace_back();
-		matEntry.mat                 = mat;
-		matEntry.name                = gMatEditor.newMatName;
+		MaterialEntry& matEntry  = gMatEditor.materialList.emplace_back();
+		matEntry.mat             = mat;
+		matEntry.name            = gMatEditor.newMatName;
 
 		gMatEditor.drawNewDialog = false;
 		gMatEditor.newMatName.clear();
@@ -155,19 +152,18 @@ float gMaterialPreviewWidth = 0;
 float gMaterialDataWidth    = 0;
 
 
-void MaterialEditor_DrawOpenMaterials()
+void  MaterialEditor_DrawOpenMaterials()
 {
-	float borderSize = ImGui::GetStyle().ChildBorderSize * 2;
-	float spacingX   = ImGui::GetStyle().ItemSpacing.y * 6;
-	float spacingY   = ImGui::GetStyle().ItemSpacing.y * 4;
-	float padding    = ImGui::GetStyle().FramePadding.y;
+	float  borderSize = ImGui::GetStyle().ChildBorderSize * 2;
+	float  spacingX   = ImGui::GetStyle().ItemSpacing.y * 6;
+	float  spacingY   = ImGui::GetStyle().ItemSpacing.y * 4;
+	float  padding    = ImGui::GetStyle().FramePadding.y;
 
-	ImVec2 textSize = ImGui::CalcTextSize( "Material List" );
+	ImVec2 textSize   = ImGui::CalcTextSize( "Material List" );
 
 	ImGui::SetNextWindowSizeConstraints(
-		{ textSize.x + spacingY, (float)( gHeight - spacingY ) },
-		{ ( (float)gWidth / 2.f ) - spacingX, (float)( gHeight - spacingY ) }
-	);
+	  { textSize.x + spacingY, (float)( gHeight - spacingY ) },
+	  { ( (float)gWidth / 2.f ) - spacingX, (float)( gHeight - spacingY ) } );
 
 	if ( !ImGui::BeginChild( "Material List", {}, ImGuiChildFlags_Border | ImGuiChildFlags_ResizeX ) )
 	{
@@ -195,12 +191,12 @@ void MaterialEditor_DrawOpenMaterials()
 
 void MaterialEditor_DrawMaterialPreview()
 {
-	float borderSize = ImGui::GetStyle().ChildBorderSize * 2;
-	float spacingX   = ImGui::GetStyle().ItemSpacing.y * 6;
-	float spacingY   = ImGui::GetStyle().ItemSpacing.y * 4;
-	float padding    = ImGui::GetStyle().FramePadding.y;
+	float  borderSize = ImGui::GetStyle().ChildBorderSize * 2;
+	float  spacingX   = ImGui::GetStyle().ItemSpacing.y * 6;
+	float  spacingY   = ImGui::GetStyle().ItemSpacing.y * 4;
+	float  padding    = ImGui::GetStyle().FramePadding.y;
 
-	ImVec2 textSize = ImGui::CalcTextSize( "Material Preview" );
+	ImVec2 textSize   = ImGui::CalcTextSize( "Material Preview" );
 
 	// ImGui::SetNextWindowSizeConstraints(
 	// 	{ textSize.x + spacingY, (float)( (gHeight)-gMainMenuBarHeight - spacingY ) },
@@ -208,8 +204,8 @@ void MaterialEditor_DrawMaterialPreview()
 	// );
 
 	ImGui::SetNextWindowSizeConstraints(
-	  { 64, (float)( (gHeight) - spacingY ) },
-	  { ( (float)gWidth ) - ( gMaterialDataWidth + gMaterialListWidth ), (float)( (gHeight)- spacingY ) } );
+	  { 64, (float)( (gHeight)-spacingY ) },
+	  { ( (float)gWidth ) - ( gMaterialDataWidth + gMaterialListWidth ), (float)( (gHeight)-spacingY ) } );
 
 	static ImVec2 lastSize = ImGui::GetWindowSize();
 
@@ -231,7 +227,7 @@ void MaterialEditor_DrawMaterialPreview()
 	lastSize                      = size;
 	gMaterialPreviewWidth         = size.x;
 
-	float              imageSize  = 96.f;
+	float imageSize               = 96.f;
 
 	ImGui::Image( missingTex, { size.x, size.x } );
 
@@ -259,7 +255,7 @@ void MaterialEditor_DrawMaterialData()
 	gMaterialDataWidth        = ImGui::GetWindowSize().x;
 
 	const char* matPath       = graphics->Mat_GetName( gMatEditor.mat );
-	ch_handle_t  oldShader     = graphics->Mat_GetShader( gMatEditor.mat );
+	ch_handle_t oldShader     = graphics->Mat_GetShader( gMatEditor.mat );
 	const char* oldShaderName = graphics->GetShaderName( oldShader );
 
 	ImGui::Text( matPath );
@@ -271,7 +267,7 @@ void MaterialEditor_DrawMaterialData()
 
 		for ( u32 i = 0; i < shaderCount; i++ )
 		{
-			ch_handle_t  shader     = graphics->GetGraphicsShaderByIndex( i );
+			ch_handle_t shader     = graphics->GetGraphicsShaderByIndex( i );
 			const char* shaderName = graphics->GetShaderName( shader );
 
 			if ( ImGui::Selectable( shaderName ) )
@@ -283,7 +279,7 @@ void MaterialEditor_DrawMaterialData()
 		ImGui::EndCombo();
 	}
 
-	ch_handle_t  shader     = graphics->Mat_GetShader( gMatEditor.mat );
+	ch_handle_t shader     = graphics->Mat_GetShader( gMatEditor.mat );
 	const char* shaderName = graphics->GetShaderName( shader );
 
 	ImGui::Separator();
@@ -352,14 +348,14 @@ void MaterialEditor_DrawMaterialData()
 
 		if ( ImGui::BeginChild( shaderVar.name, {}, ImGuiChildFlags_Border | ImGuiChildFlags_AutoResizeY ) )
 		{
-			ch_handle_t        texHandle   = graphics->Mat_GetTexture( gMatEditor.mat, shaderVar.name );
+			ch_handle_t texHandle = graphics->Mat_GetTexture( gMatEditor.mat, shaderVar.name );
 
-			float             size        = std::clamp( matedit_texture_size, 2, 8192 );
+			float       size      = std::clamp( matedit_texture_size, 2, 8192 );
 
-			ImVec2            texSize     = { size, size };
+			ImVec2      texSize   = { size, size };
 
-			auto              texIt       = gMatEditor.imguiTextures.find( texHandle );
-			ImTextureID       imTex       = 0;
+			auto        texIt     = gMatEditor.imguiTextures.find( texHandle );
+			ImTextureID imTex     = 0;
 
 			if ( texIt == gMatEditor.imguiTextures.end() )
 			{
@@ -432,7 +428,7 @@ void MaterialEditor_DrawMaterialData()
 						}
 
 						TextureCreateData_t createInfo{};
-						createInfo.aUsage     = EImageUsage_Sampled;
+						createInfo.aUsage      = EImageUsage_Sampled;
 
 						ch_handle_t newTexture = CH_INVALID_HANDLE;
 						render->LoadTexture( newTexture, gMatEditor.textureBrowser.selectedItems[ 0 ], createInfo );
@@ -556,7 +552,7 @@ void MaterialEditor_DrawMaterialData()
 
 void MaterialEditor_Draw( glm::uvec2 sOffset )
 {
-	render->GetSurfaceSize( gToolData.graphicsWindow, gWidth, gHeight );
+	render->GetSurfaceSize( gGraphicsWindow, gWidth, gHeight );
 
 	MaterialEditor_DrawMenuBar();
 	gMainMenuBarHeight = ImGui::GetItemRectSize().y;
@@ -566,22 +562,9 @@ void MaterialEditor_Draw( glm::uvec2 sOffset )
 	gWidth -= sOffset.x;
 	gHeight -= gOffsetY;
 
-	ImGui::SetNextWindowSizeConstraints(
-	  { (float)gWidth, (float)( ( gHeight ) ) },
-	  { (float)gWidth, (float)( ( gHeight ) ) } );
-
-	ImGui::SetNextWindowPos( { (float)sOffset.x, (float)( gOffsetY ) } );
-
-	if ( !ImGui::Begin( "Material Editor", nullptr, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize ) )
-	{
-		ImGui::End();
-		return;
-	}
-
 	if ( gMatEditor.textureBrowser.open )
 	{
 		FilePicker_Draw( gMatEditor.textureBrowser, gMatEditor.textureBrowserName );
-		ImGui::End();
 		return;
 	}
 
@@ -597,15 +580,12 @@ void MaterialEditor_Draw( glm::uvec2 sOffset )
 	if ( gMatEditor.mat == CH_INVALID_HANDLE )
 	{
 		ImGui::Text( "No Material Selected" );
-		ImGui::End();
 		return;
 	}
 
 	MaterialEditor_DrawMaterialData();
 	ImGui::SameLine();
 	MaterialEditor_DrawMaterialPreview();
-
-	ImGui::End();
 }
 
 
@@ -701,9 +681,8 @@ void MaterialEditor_Close()
 	{
 		graphics->FreeMaterial( matEntry.mat );
 	}
-	
+
 	gMatEditor.materialList.clear();
 
 	MaterialEditor_FreeImGuiTextures();
 }
-

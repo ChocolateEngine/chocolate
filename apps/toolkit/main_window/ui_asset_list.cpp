@@ -1,8 +1,8 @@
-#include "main.h"
+#include <unordered_set>
 
 #include "imgui/imgui.h"
-
-#include <unordered_set>
+#include "main.h"
+#include "material_editor/material_editor.h"
 
 
 enum ESortMode
@@ -73,7 +73,7 @@ constexpr ch_string ext_models[] = {
 };
 
 
-constexpr ch_string ext_image[]  = {
+constexpr ch_string ext_image[] = {
 	{ "png", 3 },
 	{ "jpg", 3 },
 	{ "gif", 3 },
@@ -84,7 +84,7 @@ constexpr ch_string ext_image[]  = {
 };
 
 
-constexpr ch_string ext_sound[]  = {
+constexpr ch_string ext_sound[] = {
 	{ "ogg", 3 },
 	{ "wav", 3 },
 };
@@ -109,7 +109,7 @@ EAssetType gAssetTypeView = EAssetType_Count;  // EAssetType_Count will be all a
 
 struct AssetBrowserData_t
 {
-	ch_handle_t             icons[ EAssetType_Count ];
+	ch_handle_t            icons[ EAssetType_Count ];
 	ImTextureID            iconsImGui[ EAssetType_Count ];
 
 	ESearchPathType        searchType;
@@ -124,15 +124,15 @@ struct AssetBrowserData_t
 };
 
 
-glm::ivec2 gAssetBrowserSize;
-extern int gMainMenuBarHeight;
+glm::ivec2         gAssetBrowserSize;
+extern int         gMainMenuBarHeight;
 
 AssetBrowserData_t gAssetBrowserData{};
 
 
 // this will check the file extension only
 // TODO: acutally read the header of the file somehow
-bool AssetBrowser_CanDragAssetToView( Asset_t& srAsset )
+bool               AssetBrowser_CanDragAssetToView( Asset_t& srAsset )
 {
 	return false;
 }
@@ -157,8 +157,8 @@ static void AssetBrowser_ScanFolder( AssetBrowserData_t& srData )
 
 	if ( !gAssetBrowserData.currentPath.data )
 	{
-		u32 searchPathCount  = 0;
-		ch_string* searchPaths = nullptr;
+		u32        searchPathCount = 0;
+		ch_string* searchPaths     = nullptr;
 
 		if ( gAssetBrowserData.searchType == ESearchPathType_SourceAssets )
 		{
@@ -173,7 +173,7 @@ static void AssetBrowser_ScanFolder( AssetBrowserData_t& srData )
 		for ( u32 i = 0; i < searchPathCount; i++ )
 		{
 			ch_string& searchPath = searchPaths[ i ];
-			auto fileList2 = FileSys_ScanDir( searchPath.data, searchPath.size, ReadDir_AbsPaths | ReadDir_Recursive | ReadDir_NoDirs );
+			auto       fileList2  = FileSys_ScanDir( searchPath.data, searchPath.size, ReadDir_AbsPaths | ReadDir_Recursive | ReadDir_NoDirs );
 			fileList.insert( fileList.end(), fileList2.begin(), fileList2.end() );
 		}
 	}
@@ -221,7 +221,7 @@ static void AssetBrowser_ScanFolder( AssetBrowserData_t& srData )
 			// skip this file
 			if ( fileExt.data )
 				ch_str_free( fileExt.data );
-			
+
 			continue;
 		}
 
@@ -239,21 +239,21 @@ static void AssetBrowser_ScanFolder( AssetBrowserData_t& srData )
 
 bool AssetBrowser_Init()
 {
-//	TextureCreateData_t createInfo{};
-//	createInfo.aUsage = EImageUsage_Sampled;
-//
-//	for ( u32 i = 0; i < EAssetType_Count; i++ )
-//	{
-//		render->LoadTexture( gAssetBrowserData.icons[ i ], gAssetTypeIconPaths[ i ], createInfo );
-//
-//		if ( gAssetBrowserData.icons[ i ] == CH_INVALID_HANDLE )
-//		{
-//			Log_ErrorF( "Failed to Load Icon: \"%s\"\n", gAssetTypeIconPaths[ i ] );
-//			return false;
-//		}
-//
-//		gAssetBrowserData.iconsImGui[ i ] = render->AddTextureToImGui( gAssetBrowserData.icons[ i ] );
-//	}
+	TextureCreateData_t createInfo{};
+	createInfo.aUsage = EImageUsage_Sampled;
+
+	for ( u32 i = 0; i < EAssetType_Count; i++ )
+	{
+		render->LoadTexture( gAssetBrowserData.icons[ i ], gAssetTypeIconPaths[ i ], createInfo );
+
+		if ( gAssetBrowserData.icons[ i ] == CH_INVALID_HANDLE )
+		{
+			Log_ErrorF( "Failed to Load Icon: \"%s\"\n", gAssetTypeIconPaths[ i ] );
+			return false;
+		}
+
+		gAssetBrowserData.iconsImGui[ i ] = render->AddTextureToImGui( gAssetBrowserData.icons[ i ] );
+	}
 
 	return true;
 }
@@ -261,32 +261,31 @@ bool AssetBrowser_Init()
 
 void AssetBrowser_Close()
 {
-//	for ( u32 i = 0; i < EAssetType_Count; i++ )
-//	{
-//		if ( gAssetBrowserData.icons[ i ] == CH_INVALID_HANDLE )
-//			continue;
-//
-//		render->FreeTextureFromImGui( gAssetBrowserData.icons[ i ] );
-//		render->FreeTexture( gAssetBrowserData.icons[ i ] );
-//	}
-//
-//	// Free Strings
-//	for ( Asset_t& asset : gAssetBrowserData.fileList )
-//	{
-//		AssetBrowser_FreeAsset( asset );
-//	}
+	for ( u32 i = 0; i < EAssetType_Count; i++ )
+	{
+		if ( gAssetBrowserData.icons[ i ] == CH_INVALID_HANDLE )
+			continue;
+
+		render->FreeTextureFromImGui( gAssetBrowserData.icons[ i ] );
+		render->FreeTexture( gAssetBrowserData.icons[ i ] );
+	}
+
+	// Free Strings
+	for ( Asset_t& asset : gAssetBrowserData.fileList )
+	{
+		AssetBrowser_FreeAsset( asset );
+	}
 }
 
 
 void AssetBrowser_Draw()
 {
-#if 0
 	// set position
 	int width, height;
 	render->GetSurfaceSize( gGraphicsWindow, width, height );
 
 	// ImGui::SetNextWindowSizeConstraints( { (float)width, (float)( (height) - gMainMenuBarHeight ) }, { (float)width, (float)( (height) - gMainMenuBarHeight ) } );
-	ImGui::SetNextWindowSizeConstraints( { (float)width, (float)( (height) - gMainMenuBarHeight - 64 ) }, { (float)width, (float)( (height) - gMainMenuBarHeight - 64 ) } );
+	ImGui::SetNextWindowSizeConstraints( { (float)width, (float)( (height)-gMainMenuBarHeight - 64 ) }, { (float)width, (float)( (height)-gMainMenuBarHeight - 64 ) } );
 
 	if ( !ImGui::Begin( "##Asset Browser", nullptr, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize ) )
 	{
@@ -415,7 +414,7 @@ void AssetBrowser_Draw()
 
 		size_t searchTextLen = strlen( gAssetBrowserData.searchText );
 
-		u32 assetIndex = 0;
+		u32    assetIndex    = 0;
 		for ( const auto& file : gAssetBrowserData.fileList )
 		{
 			if ( gAssetTypeView != EAssetType_Count && gAssetTypeView != file.type )
@@ -503,7 +502,8 @@ void AssetBrowser_Draw()
 				// TODO: improve this
 				if ( asset.type == EAssetType_Material )
 				{
-					toolkit.OpenAsset( CH_TOOL_MAT_EDITOR_NAME, asset.path.data );
+					//	toolkit.OpenAsset( CH_TOOL_MAT_EDITOR_NAME, asset.path.data );
+					MaterialEditor_LoadMaterial( asset.path.data );
 				}
 			}
 
@@ -525,6 +525,4 @@ void AssetBrowser_Draw()
 	gAssetBrowserSize.y = ImGui::GetWindowHeight();
 
 	ImGui::End();
-#endif
 }
-
