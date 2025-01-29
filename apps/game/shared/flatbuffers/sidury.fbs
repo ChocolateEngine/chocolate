@@ -1,0 +1,290 @@
+// https://flatbuffers.dev/flatbuffers_guide_writing_schema.html
+
+// namespace net;
+
+// Kind of a hack lol
+enum ESiduryProtocolVer : ushort
+{
+    Value = 3,
+}
+
+enum ESiduryComponentProtocolVer : ushort
+{
+    Value = 2,
+}
+
+// Base Types
+struct Vec2
+{
+    x : float;
+    y : float;
+}
+
+struct Vec3
+{
+    x : float;
+    y : float;
+    z : float;
+}
+
+struct Vec4
+{
+    x : float;
+    y : float;
+    z : float;
+    w : float;
+}
+
+struct Quat
+{
+    x : float;
+    y : float;
+    z : float;
+    w : float;
+}
+
+
+enum Net_EPlayerMoveType : byte
+{
+    Walk = 0,
+    NoClip,
+    Fly
+    // Water
+}
+
+
+// --------------------------------------------------------
+// Sidury Client Connection:
+//
+// - Client sends NetMsg_ClientConnect only (Not wrapped in MsgSrc_Client) to start
+// - Server sends NetMsg_ServerConnectResponse containing an entity id, will be invalid if the connect failed
+// - Client sends NetMsg_ClientInfo if it's a valid entity id
+// - Server sends NetMsg_ServerInfo, and a full update, and then waits for the client to load everything
+// - Once the Client finishes loading the map if one is on the server, and parsing the full update, we send the Server EMsgSrc_Client_ConnectFinish (no data needed)
+// - The Server Receives this and we are set to fully connected on the Server
+//
+
+// --------------------------------------------------------
+// Basic Net Messages
+
+
+table NetMsg_UserCmd
+{
+    angles       :Vec3;
+    buttons      :int;
+    move_type    :Net_EPlayerMoveType;
+    flashlight   :bool;  // temp
+}
+
+// General Messages
+table NetMsg_ServerInfo
+{
+    name         :string;  // Server Name
+    client_count :ubyte;
+    max_clients  :ubyte;  // TODO: make this obsolete with convar syncing?
+    map_name     :string;
+    // map_hash     :string;
+}
+
+// This message is sent only from client to server
+table NetMsg_ClientInfo
+{
+    name     :string;
+    steam_id :ulong;
+}
+
+// This message is sent from server to client
+// All clients will have this information stored locally to them
+table NetMsg_ServerClientInfo
+{
+    name      :string;
+    steam_id  :ulong;
+    entity_id :ulong;
+}
+
+// The Server Sends this when it recieves NetMsg_ClientConnect
+table NetMsg_ServerConnectResponse
+{
+    client_entity_id :ulong;
+}
+
+table NetMsg_ClientConnect
+{
+    protocol :ushort;
+}
+
+table NetMsg_Disconnect
+{
+    reason :string;
+}
+
+table NetMsg_ConVar
+{
+    command :string;
+}
+
+table NetMsg_Paused
+{
+    paused :bool;
+}
+
+table NetMsg_GameRule
+{
+}
+
+table NetMsg_GameRuleList
+{
+    rules :[NetMsg_GameRule];
+}
+
+// --------------------------------------------------------
+// Client Messages, Sent to the Server
+
+enum EMsgSrc_Client : ubyte
+{
+    // Common Message Types
+	Invalid,
+	Disconnect,
+	ConVar,
+	ClientInfo,
+
+    // Unique to Client
+	ConnectFinish,
+	UserCmd,
+	FullUpdate,
+}
+
+table MsgSrc_Client
+{
+    type :EMsgSrc_Client;
+    data :[ubyte];
+    // data :[ubyte] (nested_flatbuffer: "NetMsg_UserCmd");
+}
+
+// --------------------------------------------------------
+// Server Messages, Sent to the Client
+
+enum EMsgSrc_Server : ubyte
+{
+    // Common Message Types
+	Invalid,
+	Disconnect,
+	ConVar,
+	ClientInfo,
+
+    // Unique to Server
+	ConnectResponse,
+	ServerInfo,
+	ComponentRegistryInfo,
+	ComponentList,
+	EntityList,
+	Paused,
+	GameRules,
+}
+
+
+table MsgSrc_Server
+{
+    type :EMsgSrc_Server;
+    data :[ubyte];
+}
+
+// --------------------------------------------------------
+// Entities and Components
+
+// This contains component data
+table NetMsg_ComponentUpdateData
+{
+    // Entity to update
+    id :ulong;
+
+    // ComponentData
+    values :[ubyte];
+
+    // Is Component Destroyed (Optional)
+    destroyed :bool;
+}
+
+
+table NetMsg_ComponentUpdate
+{
+    // Registered Component Name
+    name :string;
+
+    // Hash of the component registry data
+    hash :ulong;
+
+    // List of all component data
+    components :[NetMsg_ComponentUpdateData];
+}
+
+
+// This only contains updates for entity id's
+// And stores whether they are created, destroyed, or unchanged
+// We do not network any information about components
+table NetMsg_EntityUpdate
+{
+    // Entity to update
+    id :ulong;
+
+    // Is Entity Destroyed
+    destroyed :bool;
+
+    // Parent Entity
+    parent: ulong;
+}
+
+
+table NetMsg_EntityUpdates
+{
+    // All Entities to update
+    update_list :[NetMsg_EntityUpdate];
+}
+
+
+table NetMsg_ComponentUpdates
+{
+    // All Components to update
+    update_list :[NetMsg_ComponentUpdate];
+}
+
+
+// --------------------------------------------------------
+// Sidury Map Format
+
+
+enum ESMF_Command : uint
+{
+	Invalid,
+	Skybox,
+	EntityList,
+	ComponentList,
+}
+
+
+table SMF_Command
+{
+    command  :ESMF_Command;
+    version  :ushort;
+    data     :[ubyte];
+}
+
+
+// the Sidury Map Format data is simply a list of commands
+table SMF_Data
+{
+    // All Map Commands
+    commands :[SMF_Command];
+}
+
+
+// --------------------------------------------------------
+// Sidury Map Format Command Tables
+
+
+table SMF_Skybox
+{
+    material :string;
+}
+
+

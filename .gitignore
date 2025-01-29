@@ -30,13 +30,21 @@ out/
 *.tlog
 
 # downloaded from thirdparty.py
-thirdparty/glm
-thirdparty/libvorbis
-thirdparty/libogg
-thirdparty/JoltPhysics
-thirdparty/SDL2
-thirdparty/steamaudio
-thirdparty/tracy
+chocolate/thirdparty/glm
+chocolate/thirdparty/libvorbis
+chocolate/thirdparty/libogg
+chocolate/thirdparty/JoltPhysics
+chocolate/thirdparty/SDL2
+chocolate/thirdparty/steamaudio
+chocolate/thirdparty/tracy
+chocolate/thirdparty/KTX-Software
+chocolate/thirdparty/VulkanMemoryAllocator
+chocolate/thirdparty/flatbuffers
+chocolate/thirdparty/mozjpeg
+chocolate/thirdparty/*
+
+# don't add the steam sdk
+apps/steam/steamworks_sdk_157
 
 #qpc generated files
 scripts/*.mak
@@ -48,7 +56,8 @@ scripts/*.mak
 *.bak
 cmake_install.cmake
 CMakeFiles/
-public/SDL2/
+chocolate/public/SDL2/*
+build/*
 Makefile
 .idea
 
