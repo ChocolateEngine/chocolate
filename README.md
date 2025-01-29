@@ -17,7 +17,6 @@
 ## Build Instructions
 - Make a folder to place this repo in
 - Clone the "chocolate_output" repo first in that folder: https://github.com/ChocolateEngine/chocolate_output
-- Clone this repo with `--recursive`
 - Enter `chocolate/thirdparty` and run the `thirdparty.py` script to download and compile thirdparty stuff
 - Compile shaders with `chocolate/src/render/shaders_glsl/_compile.bat` (or _compile.sh on linux)
 - OPTIONAL - If you want to run render3, compile render3 shaders here as well: `chocolate/src/render3/shaders_glsl/_compile.bat`
