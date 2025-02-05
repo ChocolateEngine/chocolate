@@ -103,6 +103,8 @@ struct mesh_build_surface_t
 
 	// stores the vertex again, and the value is the index to the vertex in the vertices variable
 	std::unordered_map< mesh_build_vertex_t, u32 > vertices_map{};
+
+	ch_material_h                                  material;
 };
 
 
@@ -127,6 +129,10 @@ bool model_load_obj( const char* s_base_path, const char* s_full_path, model_t& 
 	u32         mat_count = glm::max( 1U, obj->material_count );
 
 	// static ch_handle_t defaultShader = gGraphics.GetShader( gDefaultShader.data() );
+
+	// one material for now
+	ch_material_h  my_cool_material = graphics_data.material_create( "test", "standard" );
+	// ch_material_h  my_cool_material{};
 
 #if 0
 	for ( unsigned int i = 0; i < obj->material_count; i++ )
@@ -243,6 +249,8 @@ bool model_load_obj( const char* s_base_path, const char* s_full_path, model_t& 
 			}
 
 			mesh_build_surface_t& surface = build_surfaces[ face_mat ];
+			surface.material              = my_cool_material;
+
 			surface.indices.reserve( surface.indices.size() + ( group.face_count * ( faceVertCount == 3 ? 3 : 6 ) ) );
 			//surface.vertices.reserve( surface.vertices.size() + ( group.face_count * ( faceVertCount == 3 ? 3 : 6 ) ) );
 
@@ -312,12 +320,24 @@ bool model_load_obj( const char* s_base_path, const char* s_full_path, model_t& 
 
 		u32     total_mats  = 0;
 
-		for ( u32 surf_i = 0; surf_i < mat_count; surf_i++ )
+		mesh.surface        = ch_calloc< mesh_surface_t >( mat_count );
+
+		for ( u32 surf_i = 0, real_surf_i = 0; surf_i < mat_count; surf_i++ )
 		{
 			mesh_build_surface_t& surface = build_surfaces[ surf_i ];
 
 			if ( surface.vertices.size() == 0 )
 				continue;
+
+			mesh.surface[ mesh.surface_count ].material      = surface.material;
+
+			mesh.surface[ mesh.surface_count ].vertex_count  = surface.vertices.size();
+			mesh.surface[ mesh.surface_count ].index_count   = surface.indices.size();
+
+			mesh.surface[ mesh.surface_count ].vertex_offset = total_verts;
+			mesh.surface[ mesh.surface_count ].index_offset  = total_ind;
+
+			mesh.surface_count++;
 
 			total_mats++;
 			total_verts += surface.vertices.size();

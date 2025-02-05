@@ -148,11 +148,9 @@ using e_mat_var = u8;
 enum : e_mat_var
 {
 	e_mat_var_invalid,
-	e_mat_var_texture,
+	e_mat_var_string,
 	e_mat_var_float,
 	e_mat_var_int,
-	e_mat_var_true,
-	e_mat_var_false,
 	e_mat_var_vec2,
 	e_mat_var_vec3,
 	e_mat_var_vec4,
@@ -479,6 +477,35 @@ struct model_t
 
 
 // ------------------------------------------------------------------------------------
+// Material Data
+
+
+// this wastes memory, but easier to manage
+struct material_var_t
+{
+	union
+	{
+		ch_string val_string;
+		int       val_int;
+		float     val_float;
+		glm::vec2 val_vec2;
+		glm::vec3 val_vec3;
+		glm::vec4 val_vec4;
+	};
+};
+
+
+struct material_t
+{
+	ch_string*      name;
+	// u16*            name;
+	material_var_t* var;
+	e_mat_var*      type;
+	size_t          count;
+};
+
+
+// ------------------------------------------------------------------------------------
 // Model Builder Data
 
 
@@ -499,28 +526,64 @@ class IGraphicsData : public ISystem
 	// --------------------------------------------------------------------------------------------
 
 	// Creates a new frustum
-	virtual frustum_t            frustum_create( const glm::mat4& proj_view )       = 0;
+	virtual frustum_t     frustum_create( const glm::mat4& proj_view )                                                      = 0;
 
 	// --------------------------------------------------------------------------------------------
 	// Materials
 	// --------------------------------------------------------------------------------------------
 
+	// cleans up the material name/path
+	virtual ch_string     material_parse_name( const char* name, size_t len )                                               = 0;
+
+	virtual ch_material_h material_create( const char* name, const char* shader_name )                                      = 0;
+	virtual ch_material_h material_load( const char* path )                                                                 = 0;
+	virtual void          material_free( ch_material_h handle )                                                             = 0;
+
+	virtual material_t*   material_get_data( ch_material_h handle )                                                         = 0;
+
+	virtual size_t        material_get_dirty_count()                                                                        = 0;
+	virtual ch_material_h material_get_dirty( size_t index )                                                                = 0;
+
+	// Material variable names are stored as an index into an array to reduce memory usage,
+	// no need to allocate pointers to strings, even if we don't duplicate the strings
+//	virtual ch_string*    material_get_var_names( u16 var_name_index )                                                      = 0;
+//	virtual u16           material_get_var_names_count()                                                                    = 0;
+//	virtual ch_string     material_get_var_name( u16 var_name_index )                                                       = 0;
+//	virtual u16           material_get_var_name_index( const char* name, size_t len )                                       = 0;
+
+	virtual bool          material_set_string( ch_material_h handle, const char* var_name, const char* value )              = 0;
+	virtual bool          material_set_float( ch_material_h handle, const char* var_name, float value )                     = 0;
+
+	virtual ch_string     material_get_string( ch_material_h handle, const char* var_name, const char* fallback = nullptr ) = 0;
+	virtual float         material_get_float( ch_material_h handle, const char* var_name, float fallback = 0.f )            = 0;
+
 	// --------------------------------------------------------------------------------------------
 	// Models - TODO: Have models load async, or on a job
 	// --------------------------------------------------------------------------------------------
 
-	virtual ch_model_h           model_load( const char* path )                     = 0;
-	virtual ch_model_h*          model_load( const char** paths, size_t count = 1 ) = 0;
+	virtual ch_model_h    model_load( const char* path )                                                                    = 0;
+	virtual ch_model_h*   model_load( const char** paths, size_t count = 1 )                                                = 0;
 
-	virtual void                 model_free( ch_model_h handle )                    = 0;
+	virtual void          model_free( ch_model_h handle )                                                                   = 0;
 
-	virtual model_t*             model_get( ch_model_h handle )                     = 0;
-	virtual const char*          model_get_path( ch_model_h handle )                = 0;
+	virtual model_t*      model_get( ch_model_h handle )                                                                    = 0;
+	virtual const char*   model_get_path( ch_model_h handle )                                                               = 0;
 
 	// virtual const ch_model_materials* model_get_material_array( ch_model_h handle ) = 0;
 
 	// virtual const u16            model_get_material_count( ch_model_h handle )      = 0;
 	// virtual const ch_material_h* model_get_material_array( ch_model_h handle )      = 0;
+
+	// --------------------------------------------------------------------------------------------
+	// Memory Calculating - Returns memory usage information
+	// --------------------------------------------------------------------------------------------
+
+	#if 0
+
+	virtual ch_mem_info_material_t memory_get_material() = 0;
+	virtual ch_mem_info_model_t    memory_get_model()    = 0;
+
+	#endif
 
 	// --------------------------------------------------------------------------------------------
 	// Mesh Building
@@ -532,5 +595,5 @@ class IGraphicsData : public ISystem
 
 
 #define CH_GRAPHICS_DATA     "ch_graphics_data"
-#define CH_GRAPHICS_DATA_VER 1
+#define CH_GRAPHICS_DATA_VER 2
 
