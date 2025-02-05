@@ -157,7 +157,28 @@ public:
 		return ++ref_count[ s_handle.index ];
 	}
 
-	// use this to free the handle
+	// same as ref_decrement, but doesn't memset 0 the memory yet
+	// use ref_decrement_finish after you free data in it
+	u16 ref_decrement_delay( HANDLE s_handle )
+	{
+		if ( !handle_valid( s_handle ) )
+			return UINT16_MAX;
+
+		CH_ASSERT( ref_count[ s_handle.index ] != 0 );
+
+		return --ref_count[ s_handle.index ];
+	}
+
+	// free it if the ref count is 0, useful if you need to free other stuff in it
+	void ref_decrement_finish( HANDLE s_handle )
+	{
+		if ( !handle_valid( s_handle ) )
+			return;
+
+		if ( ref_count[ s_handle.index ] == 0 )
+			free_slot( s_handle.index );
+	}
+
 	u16 ref_decrement( HANDLE s_handle )
 	{
 		if ( !handle_valid( s_handle ) )
@@ -522,6 +543,121 @@ public:
 	void free( u32 index )
 	{
 		use_list[ index ] = false;
+	}
+};
+
+
+template< typename HANDLE, u32 STEP_SIZE = 32 >
+struct ch_handle_list_ref_simple_32
+{
+	//u32   count;
+	u32   capacity;
+	u32*  generation;
+	u16*  ref_count;
+
+	ch_handle_list_ref_simple_32()
+	{
+	}
+
+	~ch_handle_list_ref_simple_32()
+	{
+		free( generation );
+		free( ref_count );
+	}
+
+   private:
+	bool allocate()
+	{
+		if ( util_array_extend( generation, capacity, STEP_SIZE ) )
+		{
+			::free( generation );
+			return false;
+		}
+
+		if ( util_array_extend( ref_count, capacity, STEP_SIZE ) )
+		{
+			::free( ref_count );
+			return false;
+		}
+
+		capacity += STEP_SIZE;
+
+		return true;
+	}
+
+   public:
+	bool handle_valid( HANDLE s_handle )
+	{
+		if ( s_handle.index >= capacity )
+			return false;
+
+		if ( s_handle.generation == 0 )
+			return false;
+
+		if ( s_handle.generation != generation[ s_handle.index ] )
+			return false;
+
+		return true;
+	}
+
+	HANDLE create()
+	{
+		// Find a free handle
+		u32 index = 0;
+		for ( ; index < capacity; index++ )
+		{
+			// ref count must be 0 to be available
+			if ( ref_count[ index ] == 0 )
+				break;
+		}
+
+		if ( index == capacity )
+		{
+			if ( !allocate() )
+			{
+				return false;
+			}
+		}
+
+		ref_count[ index ]++;
+
+		HANDLE handle;
+		handle.index      = index;
+		handle.generation = ++generation[ index ];
+
+		return handle;
+	}
+
+	u16 ref_increment( HANDLE s_handle )
+	{
+		if ( !handle_valid( s_handle ) )
+			return UINT16_MAX;
+
+		return ++ref_count[ s_handle.index ];
+	}
+
+	// use this to free the handle
+	u16 ref_decrement( HANDLE s_handle )
+	{
+		if ( !handle_valid( s_handle ) )
+			return UINT16_MAX;
+
+		CH_ASSERT( ref_count[ s_handle.index ] != 0 );
+
+		ref_count[ s_handle.index ]--;
+
+		if ( ref_count[ s_handle.index ] == 0 )
+			return 0;
+
+		return ref_count[ s_handle.index ];
+	}
+
+	u16 ref_get( HANDLE s_handle )
+	{
+		if ( !handle_valid( s_handle ) )
+			return UINT16_MAX;
+
+		return ref_count[ s_handle.index ];
 	}
 };
 
