@@ -16,14 +16,6 @@
 
 LOG_CHANNEL_REGISTER_EX( gLC_ClientGraphics, "ClientGraphics", ELogColor_Green );
 
-bool _Graphics_LoadModel( ch_handle_t& item, const fs::path& srPath );
-bool _Graphics_CreateModel( ch_handle_t& item, const fs::path& srInternalPath, void* spData );
-void _Graphics_FreeModel( ch_handle_t item );
-
-bool _Graphics_LoadMaterial( ch_handle_t& item, const fs::path& srPath );
-bool _Graphics_CreateMaterial( ch_handle_t& item, const fs::path& srInternalPath, void* spData );
-void _Graphics_FreeMaterial( ch_handle_t item );
-
 
 // static ResourceType_t gResourceType_Model = {
 // 	.apName       = "Model",
@@ -401,26 +393,6 @@ void Graphics::FreeModel( ch_handle_t shModel )
 	gGraphicsData.aModelsToFree.emplace( shModel );
 }
 
-
-// ---------------------------------------------------
-// Resource System Funcs
-
-
-bool _Graphics_LoadModel( ch_handle_t& item, const fs::path& srPath )
-{
-	return false;
-}
-
-
-bool _Graphics_CreateModel( ch_handle_t& item, const fs::path& srInternalPath, void* spData )
-{
-	return false;
-}
-
-
-void _Graphics_FreeModel( ch_handle_t item )
-{
-}
 
 // ---------------------------------------------------
 

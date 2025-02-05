@@ -1041,25 +1041,3 @@ CONCMD( r_dump_materials )
 	}
 }
 
-
-
-// ---------------------------------------------------------------------------------------------------------
-// Resource System Functions
-
-
-bool _Graphics_LoadMaterial( ch_handle_t& item, const fs::path& srPath )
-{
-	return false;
-}
-
-
-bool _Graphics_CreateMaterial( ch_handle_t& item, const fs::path& srInternalPath, void* spData )
-{
-	return false;
-}
-
-
-void _Graphics_FreeMaterial( ch_handle_t item )
-{
-}
-

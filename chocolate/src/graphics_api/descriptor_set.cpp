@@ -176,7 +176,6 @@ void VK_CalcTextureIndices()
 void VK_UpdateImageSets()
 {
 	// hmm, this doesn't crash on Nvidia, though idk how AMD would react
-	// also would this be >= or just >, lol
 	if ( gGraphicsAPIData.aSampledTextures.size() >= EDescriptorPoolSize_CombinedImageSamplers )
 	{
 		Log_FatalF( gLC_Render, "Over Max Sampled Textures allocated (at %zu, max is %d)", gGraphicsAPIData.aSampledTextures.size(), EDescriptorPoolSize_CombinedImageSamplers );

@@ -4,6 +4,7 @@
 #include <stdlib.h>
 //#include <string>
 
+#include <locale.h>
 #include <direct.h>
 #include <libloaderapi.h>
 #include <wtypes.h>  // HWND

@@ -92,20 +92,6 @@ using bolean = bool;  // funny
 // ==============================================================================
 
 
-// dynamic_cast with a check for if it returns a nullptr
-template< typename To, typename From >
-inline To* assert_cast( From* in )
-{
-#ifdef _DEBUG
-	To* to = dynamic_cast< To >( in );
-	CH_ASSERT( to != nullptr );
-	return to;
-#else
-	return static_cast< To >( in );
-#endif
-}
-
-
 // Checks for a nullptr and casts it
 template< typename To, typename From >
 inline To* ch_pointer_cast( From* in )
@@ -503,48 +489,20 @@ struct hash< ch_string_auto >
 // ==============================================================================
 // Helper Functions for std::vector
 
-#define NEW_VEC_INDEX 1
-
-template <class T>
-constexpr size_t vec_index( std::vector< T >& vec, T item, size_t fallback = SIZE_MAX )
-{
-#if NEW_VEC_INDEX
-	auto it = std::find( vec.begin(), vec.end(), item );
-	if ( it != vec.end() )
-		return it - vec.begin();
-#else
-	for ( size_t i = 0; i < vec.size(); i++ )
-	{
-		if (vec[i] == item)
-			return i;
-	}
-#endif
-
-	return fallback;
-}
-
 
 template <class T>
 constexpr size_t vec_index( const std::vector< T >& vec, T item, size_t fallback = SIZE_MAX )
 {
-#if NEW_VEC_INDEX
 	auto it = std::find( vec.begin(), vec.end(), item );
 	if ( it != vec.end() )
 		return it - vec.begin();
-#else
-	for ( size_t i = 0; i < vec.size(); i++ )
-	{
-		if (vec[i] == item)
-			return i;
-	}
-#endif
 
 	return fallback;
 }
 
 
 template <class T>
-constexpr void vec_remove( std::vector<T> &vec, T item )
+constexpr void vec_remove( std::vector< T >& vec, T item )
 {
 	vec.erase( vec.begin() + vec_index( vec, item ) );
 }
@@ -568,14 +526,7 @@ constexpr void vec_remove_index( std::vector< T >& vec, size_t index )
 
 
 template <class T>
-constexpr bool vec_contains(std::vector<T> &vec, T item)
-{
-	return (std::find(vec.begin(), vec.end(), item) != vec.end());
-}
-
-
-template <class T>
-constexpr bool vec_contains(const std::vector<T> &vec, T item)
+constexpr bool vec_contains( const std::vector< T >& vec, T item )
 {
 	return (std::find(vec.begin(), vec.end(), item) != vec.end());
 }

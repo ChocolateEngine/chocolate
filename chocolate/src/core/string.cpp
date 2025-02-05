@@ -1662,41 +1662,15 @@ bool ch_str_equals_any( const ch_string& str1, size_t count, const ch_string* st
 // ----------------------------------------------------------------------------------------
 
 
-bool ch_str_compare_base( const char* s1, const char* s2, size_t len )
-{
-	const char*       cur1 = s1;
-	const char*       cur2 = s2;
-	const char* const end  = len + s1;
-
-	for ( ; cur1 < end; ++cur1, ++cur2 )
-	{
-		if ( *cur1 != *cur2 )
-			return false;
-	}
-
-	return true;
-}
-
-
 bool ch_str_compare( const ch_string& s1, const ch_string& s2 )
 {
 	if ( s1.size != s2.size )
 		return 1;
 
-	return ch_str_compare_base( s1.data, s2.data, s1.size );
-//	return strncmp( s1.data, s2.data, s1.size );
+	return ch_str_equals_base( s1.data, s2.data, s1.size );
+	//	return strncmp( s1.data, s2.data, s1.size );
 }
 
-/*
-bool ch_str_compare( const ch_ustring& s1, const ch_ustring& s2 )
-{
-	if ( s1.size != s2.size )
-		return 1;
-	
-	return ch_str_compare_base< uchar >( s1.data, s2.data, s1.size );
-//	return ch_ustrncmp( s1.data, s2.data, s1.size );
-}
-*/
 
 bool ch_str_compare( const ch_string& s1, const char* s2 )
 {
@@ -1708,25 +1682,10 @@ bool ch_str_compare( const ch_string& s1, const char* s2 )
 	if ( s1.size != s2_len )
 		return 1;
 
-	return ch_str_compare_base( s1.data, s2, s1.size );
-//	return strncmp( s1.data, s2, s1.size );
+	return ch_str_equals_base( s1.data, s2, s1.size );
+	//	return strncmp( s1.data, s2, s1.size );
 }
 
-/*
-bool ch_str_compare( const ch_ustring& s1, const uchar* s2 )
-{
-	if ( !s2 )
-		return 1;
-
-	size_t s2_len = ch_ustrlen( s2 );
-
-	if ( s1.size != s2_len )
-		return 1;
-
-	return ch_str_compare_base< uchar >( s1.data, s2, s1.size );
-//	return ch_ustrncmp( s1.data, s2, s1.size );
-}
-*/
 
 bool ch_str_compare( const ch_string& s1, const char* s2, size_t len )
 {
@@ -1736,22 +1695,9 @@ bool ch_str_compare( const ch_string& s1, const char* s2, size_t len )
 	if ( s1.size != len )
 		return 1;
 
-	return ch_str_compare_base( s1.data, s2, len );
-//	return strncmp( s1.data, s2, len );
+	return ch_str_equals_base( s1.data, s2, len );
+	//	return strncmp( s1.data, s2, len );
 }
-
-/*
-bool ch_str_compare( const ch_ustring& s1, const uchar* s2, u32 len )
-{
-	if ( !s2 )
-		return 1;
-
-	if ( s1.size != len )
-		return 1;
-
-	return ch_str_compare_base< uchar >( s1.data, s2, len );
-//	return ch_ustrncmp( s1.data, s2, len );
-}*/
 
 
 // ----------------------------------------------------------------------------------------
@@ -2018,7 +1964,7 @@ bool ch_str_starts_with( const char* s, size_t len, const char* start )
 	if ( len < startLen )
 		return false;
 
-	return ch_str_compare_base( s, start, startLen );
+	return ch_str_equals_base( s, start, startLen );
 }
 
 
@@ -2036,7 +1982,7 @@ bool ch_str_starts_with( const char* s, size_t len, const char* start, size_t st
 	if ( len < startLen )
 		return false;
 
-	return ch_str_compare_base( s, start, startLen );
+	return ch_str_equals_base( s, start, startLen );
 }
 
 bool ch_str_starts_with( const char* s, const char* start )
@@ -2049,7 +1995,7 @@ bool ch_str_starts_with( const char* s, const char* start )
 	if ( startLen == 0 )
 		return false;
 
-	return ch_str_compare_base( s, start, startLen );
+	return ch_str_equals_base( s, start, startLen );
 }
 
 
@@ -2061,7 +2007,7 @@ bool ch_str_starts_with( const char* s, const char* start, size_t startLen )
 	if ( startLen == 0 )
 		return false;
 
-	return ch_str_compare_base( s, start, startLen );
+	return ch_str_equals_base( s, start, startLen );
 }
 
 
@@ -2099,7 +2045,7 @@ bool ch_str_ends_with( const char* s, size_t len, const char* end )
 	if ( len < endLen )
 		return false;
 
-	return ch_str_compare_base( s + len - endLen, end, endLen );
+	return ch_str_equals_base( s + len - endLen, end, endLen );
 }
 
 
@@ -2123,7 +2069,7 @@ bool ch_str_ends_with( const char* s, size_t len, const char* end, size_t endLen
 	if ( len < endLen )
 		return false;
 
-	return ch_str_compare_base( s + len - endLen, end, endLen );
+	return ch_str_equals_base( s + len - endLen, end, endLen );
 }
 
 
@@ -2138,7 +2084,7 @@ bool ch_str_ends_with( const char* s, const char* end )
 	if ( len < endLen )
 		return false;
 
-	return ch_str_compare_base( s + len - endLen, end, endLen );
+	return ch_str_equals_base( s + len - endLen, end, endLen );
 }
 
 
@@ -2152,7 +2098,7 @@ bool ch_str_ends_with( const char* s, const char* end, size_t endLen )
 	if ( len < endLen )
 		return false;
 
-	return ch_str_compare_base( s + len - endLen, end, endLen );
+	return ch_str_equals_base( s + len - endLen, end, endLen );
 }
 
 
@@ -2186,7 +2132,7 @@ size_t ch_str_contains_base( const char* s, size_t len, const char* find, size_t
 
 	for ( size_t i = 0; i < len - findLen; i++ )
 	{
-		if ( ch_str_compare_base( s + i, find, findLen ) )
+		if ( ch_str_equals_base( s + i, find, findLen ) )
 			return i;
 	}
 

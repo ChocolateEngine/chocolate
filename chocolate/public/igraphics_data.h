@@ -544,13 +544,6 @@ class IGraphicsData : public ISystem
 	virtual size_t        material_get_dirty_count()                                                                        = 0;
 	virtual ch_material_h material_get_dirty( size_t index )                                                                = 0;
 
-	// Material variable names are stored as an index into an array to reduce memory usage,
-	// no need to allocate pointers to strings, even if we don't duplicate the strings
-//	virtual ch_string*    material_get_var_names( u16 var_name_index )                                                      = 0;
-//	virtual u16           material_get_var_names_count()                                                                    = 0;
-//	virtual ch_string     material_get_var_name( u16 var_name_index )                                                       = 0;
-//	virtual u16           material_get_var_name_index( const char* name, size_t len )                                       = 0;
-
 	virtual bool          material_set_string( ch_material_h handle, const char* var_name, const char* value )              = 0;
 	virtual bool          material_set_float( ch_material_h handle, const char* var_name, float value )                     = 0;
 

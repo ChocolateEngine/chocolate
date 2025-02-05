@@ -1,9 +1,5 @@
 #pragma once
 
-#include <cstring>
-#include <filesystem>
-#include <functional>
-
 #include "asserts.h"
 #include "core/filesystem.h"
 #include "log.h"
@@ -12,16 +8,6 @@
 #include "core/util.h"
 #include "vector.hpp"
 
-namespace fs = std::filesystem;
-
-// -----------------------------------------------------------------------
-// Resource Manager (maybe change to Asset Manager?)
-//
-// The purpose of this is for hotloading support
-// The Update function will check all added resources to see if any on disk have changed in anyway
-// If any have, and the type is supplied with a callback function,
-// then the callback is run to tell whatever type it is to reload this file
-// -----------------------------------------------------------------------
 
 static LOG_CHANNEL_REGISTER( Resource, ELogColor_DarkYellow );
 
@@ -32,96 +18,8 @@ static LOG_CHANNEL_REGISTER( Resource, ELogColor_DarkYellow );
 using ch_handle_t                       = u64;
 constexpr ch_handle_t CH_INVALID_HANDLE = 0;
 
-using ResourceFunc_Load                = bool( ch_handle_t& item, const fs::path& srPath, void* spUserData );
-using ResourceFunc_Reload              = bool( ch_handle_t& item, const fs::path& srPath );
-using ResourceFunc_Create              = bool( ch_handle_t& item, const fs::path& srInternalPath, void* spData, void* spUserData );
-using ResourceFunc_Free                = void( ch_handle_t item );
-using ResourceFunc_OnLoadFinish        = void( ch_handle_t item );
 
-
-struct ResourceType_t
-{
-	const char*                apName = nullptr;
-	ResourceFunc_Load*         apFuncLoad;
-	ResourceFunc_Reload*       apFuncReload;
-	ResourceFunc_Create*       apFuncCreate;
-	ResourceFunc_Free*         apFuncFree;
-	ResourceFunc_OnLoadFinish* apFuncFinish;  // Called when this asset is finished loading in the background
-
-	bool                       aPaused = false;
-};
-
-
-CORE_API void       Resource_Update();
-
-// Free all still loaded resources
-CORE_API void       Resource_Shutdown();
-
-CORE_API ch_handle_t Resource_RegisterType( const ResourceType_t& srType );
-
-// CORE_API ch_handle_t Resource_RegisterType( const char* spName, ResourceFunc_Load* apFuncLoad, ResourceFunc_Create* apFuncCreate, ResourceFunc_Free* apFuncFree );
-
-// old idea's
-// CORE_API bool       Resource_Add( ch_handle_t shType, ch_handle_t shResource, const std::string& srPath );
-// CORE_API void       Resource_Remove( ch_handle_t shResource );
-
-// Load's this resource from disk
-CORE_API bool       Resource_Load( ch_handle_t shType, ch_handle_t& shResource, const fs::path& srPath );
-
-// Create's a resource from memory
-CORE_API bool       Resource_Create( ch_handle_t shType, ch_handle_t& shResource, const fs::path& srInternalPath, void* spData );
-
-// Add's an already created resource externally
-CORE_API bool       Resource_Add( ch_handle_t shType, ch_handle_t& shResource, const fs::path& srPath );
-
-// Queue's a Resource for Deletion
-CORE_API void       Resource_Free( ch_handle_t shType, ch_handle_t shResource );
-
-// Pause or Resume Updating of this Resource Type
-CORE_API void       Resource_SetTypePaused( ch_handle_t sType, bool sPaused );
-
-
-// locks a resource currently in use, so we don't try to update it in the background if it changed on disk
-// instead, we can queue that resource reload, and wait for the resource to be unlocked, and then do that reload
-// you can also lock a resource multiple times
-// returns a handle to a lock, this will be
-CORE_API ch_handle_t Resource_Lock( ch_handle_t sType, ch_handle_t sResource );
-CORE_API void       Resource_Unlock( ch_handle_t sLock );
-
-CORE_API void       Resource_IncrementRef( ch_handle_t sType, ch_handle_t sResource );
-CORE_API void       Resource_DecrementRef( ch_handle_t sType, ch_handle_t sResource );
-
-
-struct ResourceAutoLock_t
-{
-	ch_handle_t aLock;
-
-	ResourceAutoLock_t( ch_handle_t sType, ch_handle_t sResource )
-	{
-		aLock = Resource_Lock( sType, sResource );
-	}
-
-	~ResourceAutoLock_t()
-	{
-		Resource_Unlock( aLock );
-	}
-};
-
-
-// -----------------------------------------------------------------------
-// Original Resource List System
-// -----------------------------------------------------------------------
-
-
-// TODO: IDEA TO ALLOW FOR CONSOLIDATING MEMORY
-// what if the index stored in the handle is actually an index into a different memory pool
-// this different memory pool will store the real index for where our data is in the main memory pool
-// this can allow us to consolidate the main memory pool and free a good chunk of memory
-// the memory used in the alternate memory pool should be very small, so it won't matter that we can't consolidate that
-//
-// however, lookups of data would be slower, since we have to load the index memory pool to get the index
-// and then load the main memory pool and return our data from that
-//
+// TODO: nuke this
 
 
 template< typename T >

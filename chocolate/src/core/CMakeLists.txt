@@ -22,8 +22,6 @@ set(
 	"platform_shared.cpp"
 	"platform.cpp"
 	"platform_linux.cpp"
-	"profiler.cpp"
-	"resource.cpp"
 	"system_loader.cpp"
 	"string.cpp"
 	"util.cpp"

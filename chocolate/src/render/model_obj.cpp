@@ -351,7 +351,7 @@ void Graphics_LoadSceneObj( const std::string& srBasePath, const std::string& sr
 		// meshBuilder.SetSurfaceCount( obj->material_count );
 
 		// uh
-		std::vector< u32 > mats;
+		ChVector< u32 > mats;
 
 		for ( u32 faceIndex = 0; faceIndex < group.face_count; faceIndex++ )
 		// for ( u32 faceIndex = 0; faceIndex < obj->face_count; faceIndex++ )
@@ -359,7 +359,7 @@ void Graphics_LoadSceneObj( const std::string& srBasePath, const std::string& sr
 			u32& faceVertCount = obj->face_vertices[ group.face_offset + faceIndex ];
 			u32& faceMat       = obj->face_materials[ group.face_offset + faceIndex ];
 
-			size_t index = vec_index( mats, faceMat );
+			size_t index = mats.index( faceMat );
 			if ( index == SIZE_MAX )
 			{
 				index = mats.size();

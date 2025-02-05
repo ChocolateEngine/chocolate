@@ -296,6 +296,16 @@ struct ConVarDescriptor_t
 };
 
 
+// TODO: use this instead of the above maybe
+struct ConVarDescriptorList_t
+{
+	ConVarData_t** cvar         = nullptr;
+	ConCommand**   concmd       = nullptr;
+	u32            cvar_count   = 0;
+	u32            concmd_count = 0;
+};
+
+
 // ----------------------------------------------------------------
 // ConVar Functions
 
@@ -591,8 +601,8 @@ CORE_API void                              Con_SetDefaultArchive( const char* sp
 #define NEW_CVAR_FLAG( name ) ConVarFlag_t name = Con_CreateCvarFlag( #name )
 #define EXT_CVAR_FLAG( name ) extern ConVarFlag_t name
 
+constexpr ConVarFlag_t CVARF_NONE = 0;
 
-CORE_API EXT_CVAR_FLAG( CVARF_NONE );
 CORE_API EXT_CVAR_FLAG( CVARF_ARCHIVE );  // save this convar value in a config.cfg file
 
 

@@ -36,8 +36,6 @@ CONVAR_INT( con_search_behavior, 1, "0 - must start with this string, 1 - must c
 // std::unordered_map< ConVarBase*, std::string > gConVarLowercaseNames;
 
 
-DLL_EXPORT ConVarFlag_t CVARF_NONE = 0;
-
 DLL_EXPORT NEW_CVAR_FLAG( CVARF_ARCHIVE );
 
 
@@ -1596,39 +1594,4 @@ CONCMD_VA( cat, "Print a File" )
 {
 	Log_Msg( "\"cat\" command not implemented\n" );
 }
-
-
-#ifdef _WIN32
-CONCMD( heapcheck )
-{
-	int result = _heapchk();
-
-	switch ( result )
-	{
-		case _HEAPEMPTY:
-			Log_Msg( "Heap Empty\n" );
-			break;
-
-		case _HEAPOK:
-			Log_Msg( "Heap OK\n" );
-			break;
-
-		case _HEAPBADBEGIN:
-			Log_Msg( "Heap Bad Begin\n" );
-			break;
-
-		case _HEAPBADNODE:
-			Log_Msg( "Heap Bad Node\n" );
-			break;
-
-		case _HEAPEND:
-			Log_Msg( "Heap End\n" );
-			break;
-
-		case _HEAPBADPTR:
-			Log_Msg( "Heap Bad Pointer\n" );
-			break;
-	}
-}
-#endif
 
