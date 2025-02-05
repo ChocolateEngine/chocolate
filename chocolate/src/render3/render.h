@@ -14,140 +14,11 @@ struct ImGuiContext;
 CH_HANDLE_GEN_32( vk_image_h );
 
 
-// TEST - array that keeps track of used slots
-template< typename T >
-//struct handle_list2_t
-struct slot_array_t
-{
-	T*   data;
-	u32* free_slots;  // list of free slots
-	u32  count;       // count of used slots
-
-	slot_array_t() :
-		data( nullptr ), count( 0 )
-	{
-	}
-
-	slot_array_t( u32 count ) :
-		data( nullptr ), count( count )
-	{
-		data = ch_malloc< T >( count );
-	}
-
-	~slot_array_t()
-	{
-		ch_free( data );
-	}
-
-	T& operator[]( u32 index )
-	{
-		return data[ index ];
-	}
-
-	const T& operator[]( u32 index ) const
-	{
-		return data[ index ];
-	}
-
-	T* begin()
-	{
-		return data;
-	}
-
-	T* end()
-	{
-		return data + count;
-	}
-
-	T& append( const T& value )
-	{
-		// look for a free slot
-		if ( free_slots )
-		{
-			for ( u32 i = 0; i < count; i++ )
-			{
-				if ( free_slots[ i ] > 0 )
-				{
-					data[ i ]       = value;
-					free_slots[ i ] = 1;
-
-					return data[ i ];
-				}
-			}
-
-			u32 slot     = free_slots[ count ];
-			data[ slot ] = value;
-			count++;
-
-			return data[ slot ];
-		}
-
-		data          = ch_realloc< T >( data, count + 1 );
-		data[ count ] = value;
-		count++;
-
-		return data[ count - 1 ];
-	}
-};
-
-
 // --------------------------------------------------------------------------------------------
-// Basic Deletion Queue
 
 
 constexpr VkFormat g_draw_format              = VK_FORMAT_R16G16B16A16_SFLOAT;
 constexpr VkFormat g_depth_format             = VK_FORMAT_D32_SFLOAT;
-
-
-// amount to allocate at a time
-constexpr u32      VK_DELETE_QUEUE_BATCH_SIZE = 16;
-
-// deletion function pointer
-typedef void       ( *fn_vk_destroy )();
-
-
-struct delete_queue_t
-{
-	fn_vk_destroy* funcs;
-	u32            count;
-	u32            capacity;
-
-	delete_queue_t() :
-		funcs( nullptr ), count( 0 ), capacity( 0 )
-	{
-	}
-
-	~delete_queue_t()
-	{
-		ch_free( funcs );
-	}
-
-	inline void add( fn_vk_destroy func )
-	{
-		// are we at the capacity limit?
-		if ( count >= capacity )
-		{
-			// allocate some more slots for function pointers
-			capacity += VK_DELETE_QUEUE_BATCH_SIZE;
-			funcs = ch_realloc< fn_vk_destroy >( funcs, capacity );
-		}
-
-		funcs[ count ] = func;
-		count++;
-	}
-
-	inline void flush()
-	{
-		// call all the functions in the delete queue in reverse order
-		for ( u32 i = count; i > 0; i-- )
-		{
-			funcs[ i ]();
-		}
-
-		// reset the count
-		count = 0;
-	}
-};
 
 
 enum e_backbuffer_image
@@ -209,13 +80,30 @@ struct vk_image_t
 };
 
 
+// Usually loaded with KTX Upload
 struct vk_texture_t
 {
+	VkImage              image;
+	VkImageView          view;
+	VkDeviceMemory       memory;
+	VkExtent3D           extent;
+	VkFormat             format;
+	VkImageViewType      view_type;
+	VkImageUsageFlags    usage;
+
+	VkFilter             filter;
+	VkSamplerAddressMode sampler_address;
+	VkBool32             depth_compare;
+
+	u32                  mip_count;
+	u32                  frame_count;
+
+	size_t               data_size;
 };
 
 
 // --------------------------------------------------------------------------------------------
-// shaders
+// Shaders
 
 
 struct vk_shader_push_data_t
@@ -287,6 +175,36 @@ struct shader_static_register_graphics_t
 
 
 // --------------------------------------------------------------------------------------------
+// Materials
+
+
+struct vk_material_vars_t
+{
+	union
+	{
+		r_texture_h val_texture;
+		int         val_int;
+		float       val_float;
+		glm::vec2   val_vec2;
+		glm::vec3   val_vec3;
+		glm::vec4   val_vec4;
+	};
+};
+
+
+struct vk_material_t
+{
+	u32                 shader;
+	u32                 var_count;
+	vk_material_vars_t* var;
+	e_mat_var*          type;
+};
+
+
+CH_HANDLE_GEN_32( vk_material_h );
+
+
+// --------------------------------------------------------------------------------------------
 
 
 struct backbuffer_image_t
@@ -339,12 +257,12 @@ struct r_window_data_t
 	vk_image_t           draw_image;
 	vk_image_t           draw_image_resolve;
 	vk_image_t           draw_image_depth;
-	VkDescriptorSet      desc_draw_image         = VK_NULL_HANDLE;  // only used for the compute shader test
+	VkDescriptorSet      desc_draw_image = VK_NULL_HANDLE;  // only used for the compute shader test
 
-	fn_render_on_reset_t fn_on_reset             = nullptr;
+	fn_render_on_reset_t fn_on_reset     = nullptr;
 
 	// here because of mem alignment, 2 unused bytes at the end
-	u8                   frame_index             = 0;
+	u8                   frame_index     = 0;
 	u8                   swap_image_count;
 	bool                 need_resize = false;
 };
@@ -404,55 +322,60 @@ struct gpu_mesh_buffers_t
 };
 
 
-struct vk_mesh_t
+struct vk_mesh_material_t
 {
-	const char*        name;
-	gpu_mesh_buffers_t buffers;
+	u32           vertex_offset;
+	u32           vertex_count;
 
-	u32                vertex_count;
-	u32                index_count;
+	u32           index_offset;
+	u32           index_count;
 
-	// TODO: store materials here
+	// TODO: we should have some internal mapping to a shader material eventually, kind of like in render2, but stored here
+	vk_material_h material;  // base material to copy from
 };
 
 
-// struct vk_mesh_h
-// {
-// 	u32 id;
-// 	u32 generation;
-// };
-//
-//
-// struct vk_mesh_list
-// {
-// 	u32        count;
-// 	vk_mesh_h* handles;
-// 	vk_mesh_t* mesh;
-// 	u16*       ref_count;
-// };
+struct vk_mesh_t
+{
+	const char*         name;
+	gpu_mesh_buffers_t  buffers;
+
+	u32                 vertex_count;
+	u32                 index_count;
+
+	vk_mesh_material_t* material;
+	size_t              material_count;
+};
+
 
 extern ch_handle_ref_list_32< r_mesh_h, vk_mesh_t > g_mesh_list;
 
 
-struct mesh_render_surface_t
+// --------------------------------------------------------------------------------------------
+// Mesh Render
+
+
+struct r_mesh_render_surface_t
 {
-	u32 start_index;
-	u32 count;
+	u32 vertex_offset;
+	u32 vertex_count;
+
+	u32 index_offset;
+	u32 index_count;
 };
 
 
-// Basic Mesh Rendering, does not point to any model once created
+// Basic Mesh Rendering
 struct r_mesh_render_t
 {
-	const char*            name;
-	r_mesh_h               mesh;
+	const char*              name;
+	r_mesh_h                 mesh;
 
-	glm::mat4              matrix;
+	glm::mat4                matrix;
 
-	mesh_render_surface_t* surface;
-	u32                    surface_count;
-
-	// gpu_mesh_buffers_t     buffers;
+	vk_material_h*           material;
+	r_mesh_render_surface_t* surface;
+	u32                      surface_count;
 };
 
 
@@ -523,57 +446,56 @@ CONVAR_BOOL_EXT( vk_render_scale_nearest );
 
 // --------------------------------------------------------------------------------------------
 
-extern VkInstance                                          g_vk_instance;
-extern VkDevice                                            g_vk_device;
-extern VkPhysicalDevice                                    g_vk_physical_device;
+extern VkInstance                                            g_vk_instance;
+extern VkDevice                                              g_vk_device;
+extern VkPhysicalDevice                                      g_vk_physical_device;
 
-extern VmaAllocator                                        g_vma;
+extern VmaAllocator                                          g_vma;
 
-extern VkQueue                                             g_vk_queue_graphics;
-extern VkQueue                                             g_vk_queue_transfer;
+extern VkQueue                                               g_vk_queue_graphics;
+extern VkQueue                                               g_vk_queue_transfer;
 
-extern u32                                                 g_vk_queue_family_graphics;
-extern u32                                                 g_vk_queue_family_transfer;
+extern u32                                                   g_vk_queue_family_graphics;
+extern u32                                                   g_vk_queue_family_transfer;
 
-extern VkPhysicalDeviceProperties                          g_vk_device_properties;
-extern VkPhysicalDeviceMemoryProperties                    g_vk_device_memory_properties;
-extern VkSurfaceCapabilitiesKHR                            g_vk_surface_capabilities;
-extern VkSurfaceFormatKHR                                  g_vk_surface_format;
+extern VkPhysicalDeviceProperties                            g_vk_device_properties;
+extern VkPhysicalDeviceMemoryProperties                      g_vk_device_memory_properties;
+extern VkSurfaceCapabilitiesKHR                              g_vk_surface_capabilities;
+extern VkSurfaceFormatKHR                                    g_vk_surface_format;
 
-extern ch_handle_list_32< r_window_h, r_window_data_t, 1 > g_windows;
-extern r_window_h                                          g_main_window;
+extern ch_handle_list_32< r_window_h, r_window_data_t, 1 >   g_windows;
+extern r_window_h                                            g_main_window;
 
-extern ch_handle_list_32< vk_image_h, vk_image_t >         g_vk_images;
-
-// global delete queue
-extern delete_queue_t                                      g_vk_delete_queue;
+extern ch_handle_list_32< vk_image_h, vk_image_t >           g_vk_images;
+extern ch_handle_ref_list_32< r_texture_h, vk_texture_t >    g_textures;
+extern ch_handle_ref_list_32< vk_material_h, vk_material_t > g_materials;
 
 // TODO: when you multi-thread this, you need a graphics pool for each thread
-extern VkCommandPool                                       g_vk_command_pool_graphics;
-extern VkCommandPool                                       g_vk_command_pool_transfer;
+extern VkCommandPool                                         g_vk_command_pool_graphics;
+extern VkCommandPool                                         g_vk_command_pool_transfer;
 
-extern VkCommandBuffer                                     g_vk_command_buffer_transfer;
+extern VkCommandBuffer                                       g_vk_command_buffer_transfer;
 
-extern VkDescriptorPool                                    g_vk_imgui_desc_pool;
-extern VkDescriptorSetLayout                               g_vk_imgui_desc_layout;
-
-// temp
-extern VkDescriptorPool                                    g_vk_desc_pool_graphics;
-extern VkDescriptorSetLayout                               g_vk_desc_layout_graphics;
-
-extern VkDescriptorPool                                    g_vk_desc_pool;
-extern VkDescriptorSetLayout                               g_vk_desc_draw_image_layout;
+extern VkDescriptorPool                                      g_vk_imgui_desc_pool;
+extern VkDescriptorSetLayout                                 g_vk_imgui_desc_layout;
 
 // temp
-extern VkPipeline                                          g_pipeline_gradient;
-extern VkPipelineLayout                                    g_pipeline_gradient_layout;
+extern VkDescriptorPool                                      g_vk_desc_pool_graphics;
+extern VkDescriptorSetLayout                                 g_vk_desc_layout_graphics;
+
+extern VkDescriptorPool                                      g_vk_desc_pool;
+extern VkDescriptorSetLayout                                 g_vk_desc_draw_image_layout;
+
+// temp
+extern VkPipeline                                            g_pipeline_gradient;
+extern VkPipelineLayout                                      g_pipeline_gradient_layout;
 
 // graphics shader data
-extern vk_shader_data_graphics_t*                          g_shader_data_graphics;
-extern VkPipelineLayout*                                   g_shader_data_graphics_pipeline_layout;
-extern VkPipeline*                                         g_shader_data_graphics_pipelines;
-extern ch_string*                                          g_shader_data_graphics_names;
-extern u32                                                 g_shader_data_graphics_count;
+extern vk_shader_data_graphics_t*                            g_shader_data_graphics;
+extern VkPipelineLayout*                                     g_shader_data_graphics_pipeline_layout;
+extern VkPipeline*                                           g_shader_data_graphics_pipelines;
+extern ch_string*                                            g_shader_data_graphics_names;
+extern u32                                                   g_shader_data_graphics_count;
 
 // extern slot_array_t< r_window_data_t >     g_windows2;
 // extern SDL_Window**                        g_windows_sdl;
@@ -582,39 +504,39 @@ extern u32                                                 g_shader_data_graphic
 
 // function pointers for debug utils
 
-extern PFN_vkSetDebugUtilsObjectNameEXT                    pfnSetDebugUtilsObjectName;
-extern PFN_vkSetDebugUtilsObjectTagEXT                     pfnSetDebugUtilsObjectTag;
+extern PFN_vkSetDebugUtilsObjectNameEXT                      pfnSetDebugUtilsObjectName;
+extern PFN_vkSetDebugUtilsObjectTagEXT                       pfnSetDebugUtilsObjectTag;
 
-extern PFN_vkQueueBeginDebugUtilsLabelEXT                  pfnQueueBeginDebugUtilsLabel;
-extern PFN_vkQueueEndDebugUtilsLabelEXT                    pfnQueueEndDebugUtilsLabel;
-extern PFN_vkQueueInsertDebugUtilsLabelEXT                 pfnQueueInsertDebugUtilsLabel;
+extern PFN_vkQueueBeginDebugUtilsLabelEXT                    pfnQueueBeginDebugUtilsLabel;
+extern PFN_vkQueueEndDebugUtilsLabelEXT                      pfnQueueEndDebugUtilsLabel;
+extern PFN_vkQueueInsertDebugUtilsLabelEXT                   pfnQueueInsertDebugUtilsLabel;
 
-extern PFN_vkCmdBeginDebugUtilsLabelEXT                    pfnCmdBeginDebugUtilsLabel;
-extern PFN_vkCmdEndDebugUtilsLabelEXT                      pfnCmdEndDebugUtilsLabel;
-extern PFN_vkCmdInsertDebugUtilsLabelEXT                   pfnCmdInsertDebugUtilsLabel;
+extern PFN_vkCmdBeginDebugUtilsLabelEXT                      pfnCmdBeginDebugUtilsLabel;
+extern PFN_vkCmdEndDebugUtilsLabelEXT                        pfnCmdEndDebugUtilsLabel;
+extern PFN_vkCmdInsertDebugUtilsLabelEXT                     pfnCmdInsertDebugUtilsLabel;
 
 
 // --------------------------------------------------------------------------------------------
 // Vulkan Helper Functions
 
-const char*                                                vk_str( VkResult result );
-const char*                                                vk_object_str( VkObjectType type );
-const char*                                                vk_samples_str( VkSampleCountFlags counts );
+const char*                                                  vk_str( VkResult result );
+const char*                                                  vk_object_str( VkObjectType type );
+const char*                                                  vk_samples_str( VkSampleCountFlags counts );
 
-void                                                       vk_check_f( VkResult sResult, char const* spArgs, ... );
-void                                                       vk_check( VkResult sResult, char const* spMsg );
-void                                                       vk_check( VkResult sResult );
+void                                                         vk_check_f( VkResult sResult, char const* spArgs, ... );
+void                                                         vk_check( VkResult sResult, char const* spMsg );
+void                                                         vk_check( VkResult sResult );
 
 // Non Fatal Version of it, is just an error, returns true if failed
-bool                                                       vk_check_ef( VkResult sResult, char const* spArgs, ... );
-bool                                                       vk_check_e( VkResult sResult, char const* spMsg );
-bool                                                       vk_check_e( VkResult sResult );
+bool                                                         vk_check_ef( VkResult sResult, char const* spArgs, ... );
+bool                                                         vk_check_e( VkResult sResult, char const* spMsg );
+bool                                                         vk_check_e( VkResult sResult );
 
-void                                                       vk_set_name_ex( VkObjectType type, u64 handle, const char* name, const char* type_name );
-void                                                       vk_set_name( VkObjectType type, u64 handle, const char* name );
+void                                                         vk_set_name_ex( VkObjectType type, u64 handle, const char* name, const char* type_name );
+void                                                         vk_set_name( VkObjectType type, u64 handle, const char* name );
 
-void                                                       vk_queue_wait_graphics();
-void                                                       vk_queue_wait_transfer();
+void                                                         vk_queue_wait_graphics();
+void                                                         vk_queue_wait_transfer();
 
 // void                                       vk_add_delete( fn_vk_destroy* destroy_func );
 // void                                       vk_flush_delete_queue();
@@ -629,73 +551,81 @@ void                                                       vk_queue_wait_transfe
 // --------------------------------------------------------------------------------------------
 // Vulkan Functions
 
-bool                                                       vk_instance_create();
-void                                                       vk_instance_destroy();
+bool                                                         vk_instance_create();
+void                                                         vk_instance_destroy();
 
-VkSurfaceKHR                                               vk_surface_create( void* native_window, SDL_Window* sdl_window );
-void                                                       vk_surface_destroy( VkSurfaceKHR surface );
+VkSurfaceKHR                                                 vk_surface_create( void* native_window, SDL_Window* sdl_window );
+void                                                         vk_surface_destroy( VkSurfaceKHR surface );
 
-bool                                                       vk_device_create( VkSurfaceKHR surface );  // we dont destroy this
+bool                                                         vk_device_create( VkSurfaceKHR surface );  // we dont destroy this
 
-bool                                                       vk_swapchain_create( r_window_data_t* window, VkSwapchainKHR old_swapchain );
-void                                                       vk_swapchain_destroy( r_window_data_t* window );
-void                                                       vk_swapchain_recreate( r_window_data_t* window );
+bool                                                         vk_swapchain_create( r_window_data_t* window, VkSwapchainKHR old_swapchain );
+void                                                         vk_swapchain_destroy( r_window_data_t* window );
+void                                                         vk_swapchain_recreate( r_window_data_t* window );
 
 // VkSampleCountFlagBits                                      vk_msaa_find_max_samples();
-VkSampleCountFlags                                         vk_msaa_get_max_samples();
-VkSampleCountFlagBits                                      vk_msaa_get_samples();
-VkSampleCountFlagBits                                      vk_msaa_get_samples( bool use_msaa );
+VkSampleCountFlags                                           vk_msaa_get_max_samples();
+VkSampleCountFlagBits                                        vk_msaa_get_samples();
+VkSampleCountFlagBits                                        vk_msaa_get_samples( bool use_msaa );
 
-bool                                                       vk_backbuffer_create( r_window_data_t* window );
-void                                                       vk_backbuffer_destroy( r_window_data_t* window );
+bool                                                         vk_backbuffer_create( r_window_data_t* window );
+void                                                         vk_backbuffer_destroy( r_window_data_t* window );
 
-void                                                       vk_command_pool_create();
-void                                                       vk_command_pool_destroy();
-void                                                       vk_command_pool_reset_graphics();
+void                                                         vk_command_pool_create();
+void                                                         vk_command_pool_destroy();
+void                                                         vk_command_pool_reset_graphics();
 
-bool                                                       vk_command_buffers_create( r_window_data_t* window );
-void                                                       vk_command_buffers_destroy( r_window_data_t* window );
+bool                                                         vk_command_buffers_create( r_window_data_t* window );
+void                                                         vk_command_buffers_destroy( r_window_data_t* window );
 
-VkCommandBuffer                                            vk_cmd_transfer_begin();
-void                                                       vk_cmd_transfer_end( VkCommandBuffer command_buffer );
+VkCommandBuffer                                              vk_cmd_transfer_begin();
+void                                                         vk_cmd_transfer_end( VkCommandBuffer command_buffer );
 
-bool                                                       vk_render_sync_create( r_window_data_t* window );
-void                                                       vk_render_sync_destroy( r_window_data_t* window );
-void                                                       vk_render_sync_reset( r_window_data_t* window );
+bool                                                         vk_render_sync_create( r_window_data_t* window );
+void                                                         vk_render_sync_destroy( r_window_data_t* window );
+void                                                         vk_render_sync_reset( r_window_data_t* window );
 
-void                                                       vk_draw( r_window_h window_handle, r_window_data_t* window );
-void                                                       vk_reset( r_window_h window_handle, r_window_data_t* window, e_render_reset_flags flags );
-void                                                       vk_reset_all( e_render_reset_flags flags );
+void                                                         vk_draw( r_window_h window_handle, r_window_data_t* window );
+void                                                         vk_reset( r_window_h window_handle, r_window_data_t* window, e_render_reset_flags flags );
+void                                                         vk_reset_all( e_render_reset_flags flags );
 
-void                                                       vk_blit_image_to_image( VkCommandBuffer c, VkImage src, VkImage dst, VkExtent2D src_size, VkExtent2D dst_size );
+void                                                         vk_blit_image_to_image( VkCommandBuffer c, VkImage src, VkImage dst, VkExtent2D src_size, VkExtent2D dst_size );
 
-bool                                                       vk_shaders_init();
-void                                                       vk_shaders_shutdown();
-bool                                                       vk_shaders_rebuild();
-void                                                       vk_shaders_update_push_constants();
+bool                                                         vk_shaders_init();
+void                                                         vk_shaders_shutdown();
+bool                                                         vk_shaders_rebuild();
+void                                                         vk_shaders_update_push_constants();
 
 // Returns the index + 1 of the shader, if it's 0, the shader isn't found
-u32                                                        vk_shaders_find( const char* shader_name );
+u32                                                          vk_shaders_find( const char* shader_name );
 
-VkDescriptorPool                                           vk_descriptor_pool_create( const char* name, u32 max_sets, vk_desc_pool_size_ratio_t* pool_sizes, u32 pool_size_count );
-bool                                                       vk_descriptor_init();
-void                                                       vk_descriptor_destroy();
-bool                                                       vk_descriptor_allocate_window( r_window_data_t* window );
-void                                                       vk_descriptor_update_window( r_window_data_t* window );
+VkDescriptorPool                                             vk_descriptor_pool_create( const char* name, u32 max_sets, vk_desc_pool_size_ratio_t* pool_sizes, u32 pool_size_count );
+bool                                                         vk_descriptor_init();
+void                                                         vk_descriptor_destroy();
+bool                                                         vk_descriptor_allocate_window( r_window_data_t* window );
+void                                                         vk_descriptor_update_window( r_window_data_t* window );
 
-gpu_mesh_buffers_t                                         vk_mesh_upload( u32* indices, u32 index_count, gpu_vertex_t* vertices, u32 vertex_count );
-gpu_mesh_buffers_t                                         vk_mesh_upload( gpu_vertex_t* vertices, u32 vertex_count );
-void                                                       vk_mesh_free( gpu_mesh_buffers_t& mesh_buffers );
+gpu_mesh_buffers_t                                           vk_mesh_upload( u32* indices, u32 index_count, gpu_vertex_t* vertices, u32 vertex_count );
+gpu_mesh_buffers_t                                           vk_mesh_upload( gpu_vertex_t* vertices, u32 vertex_count );
+void                                                         vk_mesh_free( gpu_mesh_buffers_t& mesh_buffers );
 
 // --------------------------------------------------------------------------------------------
 // Allocator Functions
 
-u32                                                        vk_get_memory_type( u32 type_filter, VkMemoryPropertyFlags properties );
+u32                                                          vk_get_memory_type( u32 type_filter, VkMemoryPropertyFlags properties );
 
-vk_buffer_t*                                               vk_buffer_create( VkDeviceSize size, VkBufferUsageFlags usage, VmaMemoryUsage mem_usage );
-vk_buffer_t*                                               vk_buffer_create( const char* name, VkDeviceSize size, VkBufferUsageFlags usage, VmaMemoryUsage mem_usage );
+vk_buffer_t*                                                 vk_buffer_create( VkDeviceSize size, VkBufferUsageFlags usage, VmaMemoryUsage mem_usage );
+vk_buffer_t*                                                 vk_buffer_create( const char* name, VkDeviceSize size, VkBufferUsageFlags usage, VmaMemoryUsage mem_usage );
 
-void                                                       vk_buffer_destroy( vk_buffer_t* buffer );
+void                                                         vk_buffer_destroy( vk_buffer_t* buffer );
+
+// --------------------------------------------------------------------------------------------
+// KTX Texture Functions
+
+bool                                                         ktx_init();
+void                                                         ktx_shutdown();
+bool                                                         ktx_load();
+
 
 #if 0
 

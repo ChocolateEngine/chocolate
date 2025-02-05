@@ -4,11 +4,25 @@
 
 
 // we don't use a general u64, since this can be aligned by 4 bytes, and doesn't result in handle mismatches
-#define CH_HANDLE_GEN_32( name ) \
-	struct name                  \
-	{                            \
-		u32 index;               \
-		u32 generation;          \
+#define CH_HANDLE_GEN_32( name )                              \
+	struct name                                               \
+	{                                                         \
+		u32 index;                                            \
+		u32 generation;                                       \
+	};                                                        \
+                                                              \
+	namespace std                                             \
+	{                                                         \
+	template<>                                                \
+	struct hash< name >                                       \
+	{                                                         \
+		size_t operator()( name const& handle ) const         \
+		{                                                     \
+			size_t value = ( hash< u32 >()( handle.index ) ); \
+			value ^= ( hash< u32 >()( handle.generation ) );  \
+			return value;                                     \
+		}                                                     \
+	};                                                        \
 	}
 
 
@@ -232,10 +246,6 @@ struct ch_handle_list_32
 private:
 	bool allocate()
 	{
-		// u32*  new_generation = ;
-		// TYPE* new_data       = util_array_extend( data, capacity, STEP_SIZE );
-		// bool* new_use        = util_array_extend( use_list, capacity, STEP_SIZE );
-
 		if ( util_array_extend( generation, capacity, STEP_SIZE ) )
 		{
 			::free( generation );
@@ -255,18 +265,6 @@ private:
 		}
 
 		capacity += STEP_SIZE;
-
-	//	if ( !new_generation || !new_data || !new_use )
-	//	{
-	//		free( new_generation );
-	//		free( new_data );
-	//		free( new_use );
-	//		return false;
-	//	}
-	//
-	//	data       = new_data;
-	//	generation = new_generation;
-	//	use_list   = new_use;
 
 		return true;
 	}

@@ -14,8 +14,6 @@ r_window_h                                            g_main_window;
 SDL_Window**                                          g_windows_sdl;
 ImGuiContext**                                        g_windows_imgui_contexts;
 
-delete_queue_t                                        g_vk_delete_queue;
-
 ch_handle_list_32< vk_image_h, vk_image_t >           g_vk_images;
 
 // HACK HACK HACK HACK
@@ -36,7 +34,23 @@ IGraphicsData*                                        graphics_data          = n
 ch_handle_ref_list_32< r_mesh_h, vk_mesh_t >          g_mesh_list;
 ch_handle_list_32< r_mesh_render_h, r_mesh_render_t > g_mesh_render_list;
 
+ch_handle_ref_list_32< r_texture_h, vk_texture_t >    g_textures;
+ch_handle_ref_list_32< vk_material_h, vk_material_t > g_materials;
+
+std::unordered_map< ch_material_h, vk_material_h >    g_material_map;
+
 test_render_t                                         g_test_render;
+
+
+static vk_material_h material_get_vk( ch_material_h base_handle )
+{
+	// Search for this material
+	// if not found, copy it to a vk_material_t
+	// Then upload any textures found in it based on the shader
+
+	// kind of a lot to do while actively loading a model,
+	// surely we can technically do all at the same time with job systems or something?
+}
 
 
 // interface for the renderer
@@ -107,6 +121,12 @@ struct Render3 final : public IRender3
 			return false;
 		}
 
+		if ( !ktx_init() )
+		{
+			Log_Error( gLC_Render, "Failed to init KTX texture loader\n" );
+			return false;
+		}
+
 		// create the missing texture
 
 		// TODO: later add in other parts of the renderer, like the shader system
@@ -125,7 +145,7 @@ struct Render3 final : public IRender3
 				window_free( { i, g_windows.generation[ i ] } );
 		}
 
-		g_vk_delete_queue.flush();
+		ktx_shutdown();
 
 		vk_shaders_shutdown();
 		vk_descriptor_destroy();
@@ -138,6 +158,7 @@ struct Render3 final : public IRender3
 
 	void Update( float sDT ) override
 	{
+		// check for dirty materials and update them
 	}
 
 	// --------------------------------------------------------------------------------------------
@@ -496,9 +517,13 @@ struct Render3 final : public IRender3
 		if ( !model )
 			return {};
 
-		u32 total_verts = 0;
-		u32 total_ind   = 0;
+		ch_material_h* mats        = 0;
+		u32            total_mats  = 0;
 
+		u32            total_verts = 0;
+		u32            total_ind   = 0;
+
+		// Get the total amount of vertices and indices in all meshes
 		for ( u32 mesh_i = 0; mesh_i < model->mesh_count; mesh_i++ )
 		{
 			total_verts += model->mesh[ mesh_i ].vertex_count;
@@ -515,6 +540,7 @@ struct Render3 final : public IRender3
 		u32 ind_offset       = 0;
 		u32 ind_value_offset = 0;
 
+		// For each mesh, copy all mesh vertex data to one big array of verts and indices
 		for ( u32 mesh_i = 0; mesh_i < model->mesh_count; mesh_i++ )
 		{
 			glm::vec4 temp_color{};
@@ -526,6 +552,11 @@ struct Render3 final : public IRender3
 				printf( "a\n" );
 
 			mesh_t& mesh = model->mesh[ mesh_i ];
+
+			// find a material
+
+			mesh.surface->material;
+
 			for ( u32 vert_i = 0; vert_i < mesh.vertex_count; vert_i++ )
 			{
 				verts[ vert_offset ].pos    = mesh.vertex_data.pos[ vert_i ];
@@ -538,6 +569,7 @@ struct Render3 final : public IRender3
 			}
 		}
 
+		// If we have indices, copy those as well like the above loop
 		if ( indices )
 		{
 			for ( u32 mesh_i = 0; mesh_i < model->mesh_count; mesh_i++ )
@@ -552,6 +584,7 @@ struct Render3 final : public IRender3
 			}
 		}
 
+		// Now upload these new vertex and index arrays to the gpu
 		gpu_mesh_buffers_t buffers{};
 
 		if ( total_ind > 0 )
@@ -563,6 +596,7 @@ struct Render3 final : public IRender3
 			buffers = vk_mesh_upload( verts, total_verts );
 		}
 
+		// Now we can free these temporary arrays
 		free( verts );
 		free( indices );
 
@@ -579,9 +613,15 @@ struct Render3 final : public IRender3
 		if ( !g_mesh_list.create( upload_handle, &vk_mesh ) )
 			return {};
 
-		vk_mesh->buffers      = buffers;
-		vk_mesh->vertex_count = total_verts;
-		vk_mesh->index_count  = total_ind;
+		vk_mesh->buffers        = buffers;
+		vk_mesh->vertex_count   = total_verts;
+		vk_mesh->index_count    = total_ind;
+
+		// for now, just one material
+		vk_mesh->material       = ch_calloc< vk_mesh_material_t >( 1 );
+		vk_mesh->material_count = 1;
+
+		// for ( size_t surf_i = 0; surf_i < model->)
 
 		return upload_handle;
 	}

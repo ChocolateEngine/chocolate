@@ -108,6 +108,9 @@ struct mesh_build_surface_t
 };
 
 
+constexpr const char* TEST_TEXTURE = "..\\sidury\\models\\riverhouse\\dirtfloor001a";
+
+
 bool model_load_obj( const char* s_base_path, const char* s_full_path, model_t& model )
 {
 	PROF_SCOPE();
@@ -131,7 +134,9 @@ bool model_load_obj( const char* s_base_path, const char* s_full_path, model_t& 
 	// static ch_handle_t defaultShader = gGraphics.GetShader( gDefaultShader.data() );
 
 	// one material for now
-	ch_material_h  my_cool_material = graphics_data.material_create( "test", "standard" );
+	ch_material_h my_cool_material = graphics_data.material_create( "test", "standard" );
+	graphics_data.material_set_string( my_cool_material, "diffuse", TEST_TEXTURE );
+
 	// ch_material_h  my_cool_material{};
 
 #if 0
