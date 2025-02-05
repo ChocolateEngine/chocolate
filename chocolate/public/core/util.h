@@ -240,7 +240,7 @@ void util_array_remove_element( T* data, COUNT_TYPE& count, COUNT_TYPE index )
 
 
 template< typename T >
-bool util_array_append( T*& data, u32 count )
+bool util_array_append( T*& data, size_t count )
 {
 #if 1
 	T* new_data = ch_recalloc< T >( data, count, 1 );
@@ -265,7 +265,7 @@ bool util_array_append( T*& data, u32 count )
 
 // Allocates X amount more space in the array
 template< typename T >
-bool util_array_extend( T*& data, u32 count, u32 extend_amount )
+bool util_array_extend( T*& data, size_t count, size_t extend_amount )
 {
 #if 1
 	T* new_data = ch_recalloc< T >( data, count, extend_amount );
@@ -289,7 +289,7 @@ bool util_array_extend( T*& data, u32 count, u32 extend_amount )
 
 
 template< typename T >
-bool util_array_append_err( T*& data, u32 count, const char* msg )
+bool util_array_append_err( T*& data, size_t count, const char* msg )
 {
 #if 1
 	T* new_data = ch_recalloc< T >( data, count, 1 );
