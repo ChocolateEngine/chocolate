@@ -139,7 +139,7 @@ char* ch_str_copy_base( const char* string, size_t len )
 
 	if ( out == nullptr )
 	{
-		printf( "Failed to allocate %d bytes for string!\n", ( len + 1 ) * sizeof( char ) );
+		printf( "Failed to allocate %zu bytes for string!\n", ( len + 1 ) * sizeof( char ) );
 		return nullptr;
 	}
 
@@ -315,7 +315,7 @@ CORE_API ch_string ch_str_realloc_f( STR_FILE_LINE_DEF char* data, const char* f
 
 		if ( result == nullptr )
 		{
-			printf( "Failed to allocate %d bytes for string!\n", ( len + 1 ) * sizeof( char ) );
+			printf( "Failed to allocate %zu bytes for string!\n", ( len + 1 ) * sizeof( char ) );
 			va_end( args_copy );
 			va_end( args );
 			return out_string;
@@ -353,7 +353,7 @@ CORE_API ch_string ch_str_realloc_v( STR_FILE_LINE_DEF char* data, const char* f
 
 		if ( result == nullptr )
 		{
-			printf( "Failed to allocate %d bytes for string!\n", ( len + 1 ) * sizeof( char ) );
+			printf( "Failed to allocate %zu bytes for string!\n", ( len + 1 ) * sizeof( char ) );
 			return out_string;
 		}
 
@@ -467,7 +467,7 @@ ch_string ch_str_concat( STR_FILE_LINE_DEF char* dest, const char* string )
 
 	if ( out == nullptr )
 	{
-		printf( "Failed to allocate %d bytes for string!\n", ( destLen + strLen + 1 ) * sizeof( char ) );
+		printf( "Failed to allocate %zu bytes for string!\n", ( destLen + strLen + 1 ) * sizeof( char ) );
 		return outString;
 	}
 
@@ -512,7 +512,7 @@ ch_string ch_str_concat( STR_FILE_LINE_DEF char* dest, size_t destLen, const cha
 
 	if ( out == nullptr )
 	{
-		printf( "Failed to allocate %d bytes for string!\n", ( destLen + stringLen + 1 ) * sizeof( char ) );
+		printf( "Failed to allocate %zu bytes for string!\n", ( destLen + stringLen + 1 ) * sizeof( char ) );
 		return outString;
 	}
 
@@ -540,7 +540,7 @@ ch_string ch_str_concat( STR_FILE_LINE_DEF char* dest, size_t destLen, size_t co
 
 	if ( lengths == nullptr )
 	{
-		printf( "Failed to allocate %d bytes for string length array!\n", count * sizeof( size_t ) );
+		printf( "Failed to allocate %zu bytes for string length array!\n", count * sizeof( size_t ) );
 		return outString;
 	}
 
@@ -574,7 +574,7 @@ ch_string ch_str_concat( STR_FILE_LINE_DEF char* dest, size_t destLen, size_t co
 
 	if ( out == nullptr )
 	{
-		printf( "Failed to allocate %d bytes for string!\n", ( totalLen + 1 ) * sizeof( char ) );
+		printf( "Failed to allocate %zu bytes for string!\n", ( totalLen + 1 ) * sizeof( char ) );
 		ch_free( lengths );
 		return outString;
 	}
@@ -616,7 +616,7 @@ ch_string ch_str_concat( STR_FILE_LINE_DEF char* dest, size_t destLen, size_t co
 
 	if ( out == nullptr )
 	{
-		printf( "Failed to allocate %d bytes for string!\n", ( totalLen + 1 ) * sizeof( char ) );
+		printf( "Failed to allocate %zu bytes for string!\n", ( totalLen + 1 ) * sizeof( char ) );
 		return outString;
 	}
 
@@ -653,7 +653,7 @@ ch_string ch_str_concat( STR_FILE_LINE_DEF char* dest, size_t destLen, size_t co
 
 	if ( out == nullptr )
 	{
-		printf( "Failed to allocate %d bytes for string!\n", ( totalLen + 1 ) * sizeof( char ) );
+		printf( "Failed to allocate %zu bytes for string!\n", ( totalLen + 1 ) * sizeof( char ) );
 		return outString;
 	}
 
@@ -699,7 +699,7 @@ ch_string ch_str_join( STR_FILE_LINE_DEF const char* strLeft, const char* strRig
 
 	if ( out == nullptr )
 	{
-		printf( "Failed to allocate %d bytes for string!\n", ( leftLen + rightLen + 1 ) * sizeof( char ) );
+		printf( "Failed to allocate %zu bytes for string!\n", ( leftLen + rightLen + 1 ) * sizeof( char ) );
 		return outString;
 	}
 
@@ -737,7 +737,7 @@ ch_string ch_str_join( STR_FILE_LINE_DEF const char* strLeft, size_t leftLen, co
 
 	if ( out == nullptr )
 	{
-		printf( "Failed to allocate %d bytes for string!\n", ( leftLen + rightLen + 1 ) * sizeof( char ) );
+		printf( "Failed to allocate %zu bytes for string!\n", ( leftLen + rightLen + 1 ) * sizeof( char ) );
 		return outString;
 	}
 	
@@ -765,7 +765,7 @@ ch_string ch_str_join( STR_FILE_LINE_DEF size_t count, const char** strings, cha
 
 	if ( lengths == nullptr )
 	{
-		printf( "Failed to allocate %d bytes for string length array!\n", count * sizeof( size_t ) );
+		printf( "Failed to allocate %zu bytes for string length array!\n", count * sizeof( size_t ) );
 		return outString;
 	}
 
@@ -799,7 +799,7 @@ ch_string ch_str_join( STR_FILE_LINE_DEF size_t count, const char** strings, cha
 
 	if ( out == nullptr )
 	{
-		printf( "Failed to allocate %d bytes for string!\n", ( totalLen + 1 ) * sizeof( char ) );
+		printf( "Failed to allocate %zu bytes for string!\n", ( totalLen + 1 ) * sizeof( char ) );
 		ch_free( lengths );
 		return outString;
 	}
@@ -841,7 +841,7 @@ ch_string ch_str_join( STR_FILE_LINE_DEF size_t count, const char** strings, con
 
 	if ( out == nullptr )
 	{
-		printf( "Failed to allocate %d bytes for string!\n", ( totalLen + 1 ) * sizeof( char ) );
+		printf( "Failed to allocate %zu bytes for string!\n", ( totalLen + 1 ) * sizeof( char ) );
 		return outString;
 	}
 
@@ -918,7 +918,7 @@ ch_string ch_str_join( STR_FILE_LINE_DEF size_t count, const ch_string* strings,
 
 	if ( out == nullptr )
 	{
-		printf( "Failed to allocate %d bytes for string!\n", ( totalLen + 1 ) * sizeof( char ) );
+		printf( "Failed to allocate %zu bytes for string!\n", ( totalLen + 1 ) * sizeof( char ) );
 		return outString;
 	}
 
@@ -958,7 +958,7 @@ ch_string ch_str_join_space( STR_FILE_LINE_DEF size_t count, const char** string
 
 	if ( lengths == nullptr )
 	{
-		printf( "Failed to allocate %d bytes for string length array!\n", count * sizeof( size_t ) );
+		printf( "Failed to allocate %zu bytes for string length array!\n", count * sizeof( size_t ) );
 		return outString;
 	}
 
@@ -975,7 +975,7 @@ ch_string ch_str_join_space( STR_FILE_LINE_DEF size_t count, const char** string
 
 	if ( out == nullptr )
 	{
-		printf( "Failed to allocate %d bytes for string!\n", ( totalLen + 1 ) * sizeof( char ) );
+		printf( "Failed to allocate %zu bytes for string!\n", ( totalLen + 1 ) * sizeof( char ) );
 		return outString;
 	}
 
@@ -1022,7 +1022,7 @@ ch_string ch_str_join_space( STR_FILE_LINE_DEF size_t count, const char** string
 
 	if ( out == nullptr )
 	{
-		printf( "Failed to allocate %d bytes for string!\n", ( totalLen + 1 ) * sizeof( char ) );
+		printf( "Failed to allocate %zu bytes for string!\n", ( totalLen + 1 ) * sizeof( char ) );
 		return outString;
 	}
 
@@ -1069,7 +1069,7 @@ ch_string ch_str_join_space( STR_FILE_LINE_DEF size_t count, const ch_string* st
 
 	if ( out == nullptr )
 	{
-		printf( "Failed to allocate %d bytes for string!\n", ( totalLen + 1 ) * sizeof( char ) );
+		printf( "Failed to allocate %zu bytes for string!\n", ( totalLen + 1 ) * sizeof( char ) );
 		return outString;
 	}
 
@@ -1113,7 +1113,7 @@ ch_string ch_str_join_arr( STR_FILE_LINE_DEF char* data, size_t count, const cha
 
 	if ( lengths == nullptr )
 	{
-		printf( "Failed to allocate %d bytes for string length array!\n", count * sizeof( size_t ) );
+		printf( "Failed to allocate %zu bytes for string length array!\n", count * sizeof( size_t ) );
 		return outString;
 	}
 
@@ -1147,7 +1147,7 @@ ch_string ch_str_join_arr( STR_FILE_LINE_DEF char* data, size_t count, const cha
 
 	if ( out == nullptr )
 	{
-		printf( "Failed to allocate %d bytes for string!\n", ( totalLen + 1 ) * sizeof( char ) );
+		printf( "Failed to allocate %zu bytes for string!\n", ( totalLen + 1 ) * sizeof( char ) );
 		ch_free( lengths );
 		//va_end( args_copy );
 		return outString;
@@ -1191,7 +1191,7 @@ ch_string ch_str_join_list( STR_FILE_LINE_DEF char* data, std::initializer_list<
 
 	if ( lengths == nullptr )
 	{
-		printf( "Failed to allocate %d bytes for string length array!\n", strings.size() * sizeof( size_t ) );
+		printf( "Failed to allocate %zu bytes for string length array!\n", strings.size() * sizeof( size_t ) );
 		return outString;
 	}
 
@@ -1214,7 +1214,7 @@ ch_string ch_str_join_list( STR_FILE_LINE_DEF char* data, std::initializer_list<
 
 	if ( out == nullptr )
 	{
-		printf( "Failed to allocate %d bytes for string!\n", ( totalLen + 1 ) * sizeof( char ) );
+		printf( "Failed to allocate %zu bytes for string!\n", ( totalLen + 1 ) * sizeof( char ) );
 		ch_free( lengths );
 		return outString;
 	}
@@ -1267,7 +1267,7 @@ ch_string ch_str_join_list( STR_FILE_LINE_DEF char* data, std::initializer_list<
 
 	if ( out == nullptr )
 	{
-		printf( "Failed to allocate %d bytes for string!\n", ( totalLen + 1 ) * sizeof( char ) );
+		printf( "Failed to allocate %zu bytes for string!\n", ( totalLen + 1 ) * sizeof( char ) );
 		return outString;
 	}
 
@@ -2254,7 +2254,7 @@ CONCMD( ch_dump_string_allocations_extended )
 		totalSize += track_data.size;
 
 		Log_MsgF(
-			ANSI_CLR_CYAN "%s" ANSI_CLR_DEFAULT ":" ANSI_CLR_DARK_YELLOW "%d " ANSI_CLR_DARK_GREEN "%s - %d bytes\n" ANSI_CLR_DEFAULT "\"%s\"\n",
+			ANSI_CLR_CYAN "%s" ANSI_CLR_DEFAULT ":" ANSI_CLR_DARK_YELLOW "%d " ANSI_CLR_DARK_GREEN "%s - %zu bytes\n" ANSI_CLR_DEFAULT "\"%s\"\n",
 			track_data.file, track_data.line, track_data.func, track_data.size, ptr
 		);
 	}

@@ -375,7 +375,7 @@ log_channel_h_t Log_RegisterChannel( const char *sName, ELogColor sColor )
 		return INVALID_LOG_CHANNEL;
 	}
 
-	for ( size_t i = 0; i < GetLogChannels().size(); i++ )
+	for ( u32 i = 0; i < GetLogChannels().size(); i++ )
     {
 		log_channel_t* channel = &GetLogChannels()[ i ];
         if ( !ch_str_equals( channel->name, name ) )
@@ -395,7 +395,7 @@ log_channel_h_t Log_RegisterChannel( const char *sName, ELogColor sColor )
 
 log_channel_h_t Log_GetChannel( const char* sChannel )
 {
-	for ( int i = 0; i < GetLogChannels().size(); i++ )
+	for ( u32 i = 0; i < GetLogChannels().size(); i++ )
 	{
 		log_channel_t* channel = &GetLogChannels()[ i ];
 		if ( !ch_str_equals( channel->name, sChannel ) )
@@ -419,7 +419,7 @@ log_channel_t* Log_GetChannelData( log_channel_h_t sChannel )
 
 log_channel_t* Log_GetChannelByName( const char* sChannel )
 {
-	for ( int i = 0; i < GetLogChannels().size(); i++ )
+	for ( u32 i = 0; i < GetLogChannels().size(); i++ )
     {
 		log_channel_t* channel = &GetLogChannels()[ i ];
 		if ( !ch_str_equals( channel->name, sChannel ) )
@@ -1730,7 +1730,6 @@ CONCMD_NAME_VA( log_dump, "ch.log.dump", "Dump Logging History to file" )
 	std::string outputPath;
 
 	char        time[ 80 ];
-	size_t      len = Util_CurrentDateTime( time, 80 );
 
 	// If no manual output path specified/allowed, use the default filename
 	if ( args.size() )

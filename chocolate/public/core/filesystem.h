@@ -56,19 +56,13 @@ CORE_API ch_string FileSys_GetAppPathMacro();
 // ================================================================================
 // Modify Search Paths
 
-// CORE_API const std::vector< ch_string >& FileSys_GetSearchPaths();
-// CORE_API const std::vector< ch_string >& FileSys_GetBinPaths();
-// CORE_API const std::vector< ch_string >& FileSys_GetSourcePaths();
-
 // Returns the number of search paths, and the paths themselves
 CORE_API u32       FileSys_GetSearchPaths( ch_string** paths );
 CORE_API u32       FileSys_GetBinPaths( ch_string** paths );
 CORE_API u32       FileSys_GetSourcePaths( ch_string** paths );
 
-CORE_API void      FileSys_ClearSearchPaths();
-CORE_API void      FileSys_ClearBinPaths();
-CORE_API void      FileSys_ClearSourcePaths();
-CORE_API void      FileSys_ClearAllPaths();
+CORE_API void      FileSys_ClearPaths( ESearchPathType type );
+CORE_API void      FileSys_ClearAllPathTypes();
 
 CORE_API void      FileSys_DefaultSearchPaths();
 CORE_API void      FileSys_PrintSearchPaths();
@@ -107,10 +101,7 @@ CORE_API ch_string FileSys_FindDir( const char* dir, ESearchPathType sType = ESe
 CORE_API ch_string FileSys_FindDir( const char* dir, s32 dirLen, ESearchPathType sType = ESearchPathType_Path );
 
 // Reads a file - Returns a nullptr for the data if it doesn't exist.
-CORE_API ch_string FileSys_ReadFile( const char* path, s32 pathLen = -1 );
-
-// Reads a file - Returns a nullptr for the data if it doesn't exist.
-CORE_API ch_string FileSys_ReadFileEx( const char* path, s32 pathLen = -1, ESearchPathType sType = ESearchPathType_Path );
+CORE_API ch_string FileSys_ReadFile( const char* path, s32 pathLen = -1, ESearchPathType sType = ESearchPathType_Path );
 
 // Saves a file - Returns true if it succeeded.
 CORE_API bool      FileSys_SaveFile( const char* path, std::vector< char >& srData, s32 pathLen = -1 );

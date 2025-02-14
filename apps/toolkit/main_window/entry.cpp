@@ -20,9 +20,8 @@
   #include "mimalloc-new-delete.h"
 #endif
 
-static bool        gWaitForDebugger = args_register( "Upon Program Startup, Wait for the Debugger to attach", "--debugger" );
-static const char* gArgGamePath     = args_register_names( nullptr, "Path to the game to create assets for", 2, "--game", "-g" );
-static bool        gRunning         = true;
+static const char* gArgGamePath = args_register_names( nullptr, "Path to the game to create assets for", 2, "--game", "-g" );
+static bool        gRunning     = true;
 
 
 CONVAR_RANGE_FLOAT( host_fps_max, 300, 0, 5000, "Maximum FPS the App can run at" );
@@ -136,16 +135,6 @@ extern "C"
 {
 	int DLL_EXPORT app_init()
 	{
-		if ( gWaitForDebugger )
-			sys_wait_for_debugger();
-
-		// Load main app info (Note that if you don't do this, you need to call FileSys_DefaultSearchPaths() before loading any files)
-		if ( !Core_LoadAppInfo() )
-		{
-			ShowInvalidGameOptionWindow( "Failed to Load App Info" );
-			return 1;
-		}
-
 		if ( gArgGamePath == nullptr || gArgGamePath[ 0 ] == '\0' )
 		{
 			ShowInvalidGameOptionWindow( "No Game Specified" );
@@ -161,7 +150,7 @@ extern "C"
 			appInfoPath           = ch_str_join( ARR_SIZE( strings ), strings, lengths );
 		}
 
-		if ( !Core_AddAppInfo( CH_STR_UR( appInfoPath ) ) )
+		if ( !core_search_paths_add_app( CH_STR_UR( appInfoPath ) ) )
 		{
 			ch_str_free( appInfoPath.data );
 			ShowInvalidGameOptionWindow( "Failed to Load Game App Info" );

@@ -7,6 +7,8 @@
 
 #include "render_test.h"
 
+#include <chrono>
+
 
 CONVAR_FLOAT_NAME( host_fps_max, "app.fps.max", 300, "Maximum FPS the App can run at - 0 for no limit, 10 minimum" );
 CONVAR_RANGE_FLOAT_NAME( host_timescale, "app.time.scale", 1, 0, FLT_MAX, "Scaled Frametime of the App" );
@@ -21,7 +23,6 @@ IInputSystem*  input               = nullptr;
 int            g_width             = args_register_names( 1280, "Width of the main window", 2, "--width", "-w" );
 int            g_height            = args_register_names( 720, "Height of the main window", 2, "--height", "-h" );
 static bool    g_maximize          = args_register( "Maximize the main window", "--max" );
-static bool    g_wait_for_debugger = args_register( "Upon Program Startup, Wait for the Debugger to attach", "--debugger" );
 static bool    g_running           = true;
 
 SDL_Window*    g_window            = nullptr;
@@ -80,7 +81,7 @@ bool create_main_window()
 	// Create Main Window
 	std::string window_name;
 
-	window_name = ( Core_GetAppInfo().apWindowTitle ) ? Core_GetAppInfo().apWindowTitle : "Chocolate Engine Render 3 Test";
+	window_name = ( core_app_info_get().apWindowTitle ) ? core_app_info_get().apWindowTitle : "Chocolate Engine Render 3 Test";
 	window_name += vstring( " - Compiled On - %s %s", Core_GetBuildDate(), Core_GetBuildTime() );
 
 	if ( !sys_create_window( g_window_native, g_window, window_name.c_str(), g_width, g_height, g_maximize ) )
@@ -205,7 +206,6 @@ void MainLoop()
 		render->present( g_graphics_window );
 
 		Con_Update();
-		Resource_Update();
 
 		startTime = currentTime;
 
@@ -220,16 +220,6 @@ extern "C"
 {
 	int DLL_EXPORT app_init()
 	{
-		if ( g_wait_for_debugger )
-			sys_wait_for_debugger();
-
-		// Load main app info (Note that if you don't do this, you need to call FileSys_DefaultSearchPaths() before loading any files)
-		if ( !Core_LoadAppInfo() )
-		{
-			Log_FatalF( "Failed to Load App Info" );
-			return 1;
-		}
-
 		IMGUI_CHECKVERSION();
 
 		// Needs to be done before Renderer is loaded

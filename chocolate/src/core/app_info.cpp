@@ -88,27 +88,27 @@ bool Core_ParseSearchPaths( JsonObject_t& root )
 }
 
 
-bool Core_GetAppInfoJson( JsonObject_t& srRoot, const char* appPath, s64 appPathLen )
+bool core_app_info_json( JsonObject_t& srRoot, const char* appPath, size_t appPathLen )
 {
 	ch_string fullPath;
 
-	if ( appPath && appPathLen < 0 )
+	if ( appPath && appPathLen == 0 )
 	{
 		appPathLen = strlen( appPath );
 	}
 
 	if ( !appPath || appPathLen == 0 )
 	{
-		const char* strings[] = { FileSys_GetExePath().data, PATH_SEP_STR, FileSys_GetWorkingDir().data, gAppInfoFileName };
-		const u64   lengths[] = { FileSys_GetExePath().size, 1, FileSys_GetWorkingDir().size, gAppInfoFileNameLen };
-		fullPath              = ch_str_join( 4, strings, lengths );
+		const char*  strings[] = { FileSys_GetExePath().data, PATH_SEP_STR, FileSys_GetWorkingDir().data, gAppInfoFileName };
+		const size_t lengths[] = { FileSys_GetExePath().size, 1, FileSys_GetWorkingDir().size, gAppInfoFileNameLen };
+		fullPath               = ch_str_join( 4, strings, lengths );
 	}
 	else
 	{
 
-		const char* strings[] = { appPath, PATH_SEP_STR, gAppInfoFileName };
-		const u64   lengths[] = { appPathLen, 1, gAppInfoFileNameLen };
-		fullPath              = ch_str_join( 3, strings, lengths );
+		const char*  strings[] = { appPath, PATH_SEP_STR, gAppInfoFileName };
+		const size_t lengths[] = { appPathLen, 1, gAppInfoFileNameLen };
+		fullPath               = ch_str_join( 3, strings, lengths );
 	}
 
 	if ( !FileSys_IsFile( fullPath.data, fullPath.size, true ) )
@@ -140,10 +140,10 @@ bool Core_GetAppInfoJson( JsonObject_t& srRoot, const char* appPath, s64 appPath
 }
 
 
-bool Core_LoadAppInfo()
+bool core_app_info_load()
 {
 	JsonObject_t root;
-	if ( !Core_GetAppInfoJson( root, "" ) )
+	if ( !core_app_info_json( root, "" ) )
 	{
 		return false;
 	}
@@ -241,7 +241,7 @@ bool Core_LoadAppInfo()
 }
 
 
-void Core_DestroyAppInfo()
+void core_app_info_free()
 {
 	if ( gAppInfo.apName )
 		ch_str_free( gAppInfo.apName );
@@ -254,7 +254,7 @@ void Core_DestroyAppInfo()
 }
 
 
-bool Core_AddAppInfo( const char* appPath, s64 appPathLen )
+bool core_search_paths_add_app( const char* appPath, size_t appPathLen )
 {
 	if ( appPath == nullptr )
 	{
@@ -262,10 +262,8 @@ bool Core_AddAppInfo( const char* appPath, s64 appPathLen )
 		return false;
 	}
 
-	if ( appPathLen < 0 )
-	{
+	if ( appPathLen == 0 )
 		appPathLen = strlen( appPath );
-	}
 
 	if ( appPathLen == 0 )
 	{
@@ -274,7 +272,7 @@ bool Core_AddAppInfo( const char* appPath, s64 appPathLen )
 	}
 
 	JsonObject_t root;
-	if ( !Core_GetAppInfoJson( root, appPath ) )
+	if ( !core_app_info_json( root, appPath ) )
 	{
 		return false;
 	}
@@ -311,17 +309,15 @@ bool Core_AddAppInfo( const char* appPath, s64 appPathLen )
 }
 
 
-void Core_ReloadSearchPaths()
+void core_search_paths_reload()
 {
-	FileSys_ClearSearchPaths();
-	FileSys_ClearBinPaths();
-	FileSys_ClearSourcePaths();
+	FileSys_ClearAllPathTypes();
 
 	// TODO: gAppInfoPaths is unused??? huh???
 	for ( const std::string& appPath : gAppInfoPaths )
 	{
 		JsonObject_t root;
-		if ( !Core_GetAppInfoJson( root, appPath.data(), appPath.size() ) )
+		if ( !core_app_info_json( root, appPath.data(), appPath.size() ) )
 			return;
 
 		for ( size_t i = 0; i < root.aObjects.aCount; i++ )
@@ -350,8 +346,9 @@ void Core_ReloadSearchPaths()
 }
 
 
-const AppInfo_t& Core_GetAppInfo()
+const AppInfo_t& core_app_info_get()
 {
 	return gAppInfo;
 }
+
 

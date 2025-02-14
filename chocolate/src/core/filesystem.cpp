@@ -78,9 +78,15 @@ CONCMD( fs_reload_paths )
 }
 
 
-void FileSys_WhereIsCmd( const std::string& path, ESearchPathType type )
+void FileSys_WhereIsCmd( const std::vector< std::string >& args, ESearchPathType type )
 {
-	ch_string fullPath = FileSys_FindFileEx( STR_FILE_LINE path.data(), path.size(), type );
+	if ( args.empty() )
+	{
+		Log_Error( "No path Specified\n" );
+		return;
+	}
+
+	ch_string fullPath = FileSys_FindFileEx( STR_FILE_LINE args[ 0 ].data(), args[ 0 ].size(), type );
 
     if ( !fullPath.data )
 	{
@@ -94,37 +100,25 @@ void FileSys_WhereIsCmd( const std::string& path, ESearchPathType type )
 
 CONCMD( fs_where )
 {
-	if ( args.empty() )
-	{
-		Log_Error( "No path Specified\n" );
-		return;
-	}
-
-	FileSys_WhereIsCmd( args[ 0 ], ESearchPathType_Path );
+	FileSys_WhereIsCmd( args, ESearchPathType_Path );
 }
 
 
 CONCMD( fs_where_binary )
 {
-	if ( args.empty() )
-	{
-		Log_Error( "No path Specified\n" );
-		return;
-	}
+	FileSys_WhereIsCmd( args, ESearchPathType_Binary );
+}
 
-	FileSys_WhereIsCmd( args[ 0 ], ESearchPathType_Binary );
+
+CONCMD( fs_where_source )
+{
+	FileSys_WhereIsCmd( args, ESearchPathType_SourceAssets );
 }
 
 
 CONCMD( where )
 {
-	if ( args.empty() )
-	{
-		Log_Error( "No path Specified\n" );
-		return;
-	}
-
-	FileSys_WhereIsCmd( args[ 0 ], ESearchPathType_Path );
+	FileSys_WhereIsCmd( args, ESearchPathType_Path );
 }
 
 
@@ -158,9 +152,7 @@ bool FileSys_Init( const char* desiredWorkingDir )
 
 void FileSys_Shutdown()
 {
-	FileSys_ClearSearchPaths();
-	FileSys_ClearBinPaths();
-	FileSys_ClearSourcePaths();
+	FileSys_ClearAllPathTypes();
 
 	ch_str_free( g_working_dir.data );
 	ch_str_free( g_exe_path.data );
@@ -287,8 +279,11 @@ u32 FileSys_GetSourcePaths( ch_string** paths )
 }
 
 
-void FileSys_ClearSearchPathsBase( ESearchPathType type )
+void FileSys_ClearPaths( ESearchPathType type )
 {
+	if ( type >= ESearchPathType_Count )
+		return;
+
 	for ( u32 i = 0; i < g_paths_count[ type ]; i++ )
 		ch_str_free( g_paths[ type ][ i ].data );
 
@@ -298,35 +293,17 @@ void FileSys_ClearSearchPathsBase( ESearchPathType type )
 }
 
 
-void FileSys_ClearSearchPaths()
+void FileSys_ClearAllPathTypes()
 {
-	FileSys_ClearSearchPathsBase( ESearchPathType_Path );
-}
-
-
-void FileSys_ClearBinPaths()
-{
-	FileSys_ClearSearchPathsBase( ESearchPathType_Binary );
-}
-
-
-void FileSys_ClearSourcePaths()
-{
-	FileSys_ClearSearchPathsBase( ESearchPathType_SourceAssets );
-}
-
-
-void FileSys_ClearAllPaths()
-{
-	FileSys_ClearSearchPathsBase( ESearchPathType_Path );
-	FileSys_ClearSearchPathsBase( ESearchPathType_Binary );
-	FileSys_ClearSearchPathsBase( ESearchPathType_SourceAssets );
+	FileSys_ClearPaths( ESearchPathType_Path );
+	FileSys_ClearPaths( ESearchPathType_Binary );
+	FileSys_ClearPaths( ESearchPathType_SourceAssets );
 }
 
 
 void FileSys_DefaultSearchPaths()
 {
-	FileSys_ClearAllPaths();
+	FileSys_ClearAllPathTypes();
 
 	ch_string path1    = ch_str_join_arr( nullptr, 3, g_exe_path.data, CH_PATH_SEP_STR, "bin" );
 	ch_string path2    = ch_str_join_arr( nullptr, 3, g_exe_path.data, CH_PATH_SEP_STR, g_working_dir.data );
@@ -461,7 +438,7 @@ ch_string FileSys_BuildSearchPath( const char* path, s32 pathLen )
 
 static bool filesys_is_invalid_path_type( ESearchPathType type )
 {
-	if ( type > ESearchPathType_Count )
+	if ( type >= ESearchPathType_Count )
 	{
 		Log_Error( "Invalid Search Path Type\n" );
 		return true;
@@ -573,7 +550,7 @@ void FileSys_InsertSearchPath( u32 index, const char* path, s32 pathLen, ESearch
 
 void FileSys_ReloadSearchPaths()
 {
-	Core_ReloadSearchPaths();
+	core_search_paths_reload();
 }
 
 
@@ -607,36 +584,6 @@ inline ch_string FileSys_FindFileAbs( STR_FILE_LINE_DEF const char* file, s32 fi
 
 	return out;
 }
-
-
-#if 0
-ch_string FileSys_FindFileBaseSearchPath( const ch_string& searchPath, const char* file, s32 fileLen )
-{
-	const char* paths[]   = { searchPath.data, CH_PATH_SEP_STR, file };
-	const size_t lengths[] = { searchPath.size, 1, fileLen };
-	ch_string   concat    = ch_str_join( 3, paths, lengths );
-
-	if ( !concat.data )
-	{
-		Log_Error( "Failed to allocate memory for search path\n" );
-		return {};
-	}
-
-	ch_string fullPath = FileSys_CleanPath( concat.data, concat.size );
-	ch_str_free( concat.data );
-
-	// does item exist?
-	if ( exists( fullPath.data ) )
-	{
-		return fullPath;
-	}
-
-	ch_str_free( fullPath.data );
-	fullPath.size = 0;
-
-	return fullPath;
-}
-#endif
 
 
 ch_string FileSys_FindFileBase( STR_FILE_LINE_DEF ESearchPathType type, const char* filePath, s32 fileLen )
@@ -699,7 +646,7 @@ ch_string FileSys_FindFile( STR_FILE_LINE_DEF const char* filePath, s32 pathLen 
 
 ch_string FileSys_FindFileEx( STR_FILE_LINE_DEF const char* filePath, s32 pathLen, ESearchPathType sType )
 {
-	if ( sType > ESearchPathType_Count )
+	if ( sType >= ESearchPathType_Count )
 	{
 		Log_Error( "Invalid search path type\n" );
 		return {};
@@ -723,7 +670,7 @@ ch_string FileSys_FindDir( const char* path, s32 pathLen, ESearchPathType sType 
 {
     PROF_SCOPE();
 
-	if ( sType > ESearchPathType_Count )
+	if ( sType >= ESearchPathType_Count )
 	{
 		Log_Error( "Invalid search path type\n" );
 		return {};
@@ -762,12 +709,12 @@ ch_string FileSys_FindDir( const char* path, s32 pathLen, ESearchPathType sType 
 
 
 /* Reads a file into a byte array.  */
-ch_string FileSys_ReadFile( const char* path, s32 pathLen )
+ch_string FileSys_ReadFile( const char* path, s32 pathLen, ESearchPathType sType )
 {
     PROF_SCOPE();
 
     // Find path first
-	ch_string fullPath = FileSys_FindFile( path, pathLen );
+	ch_string fullPath = FileSys_FindFileEx( path, pathLen, sType );
 	if ( !fullPath.data )
 	{
 		Log_ErrorF( gLC_FileSystem, "Failed to find file: %s\n", path );
@@ -785,50 +732,6 @@ ch_string FileSys_ReadFile( const char* path, s32 pathLen )
 
     int fileSize = ( int )file.tellg(  );
 
-	ch_string buffer;
-	buffer.data = ch_malloc< char >( fileSize + 1 );
-	buffer.size = fileSize;
-
-    file.seekg( 0 );
-
-    /* Read contents.  */
-    file.read( buffer.data, fileSize );
-    file.close(  );
-
-    buffer.data[ fileSize ] = '\0';  // adding null terminator character
-
-	// track this memory
-	ch_str_add( buffer );
-
-	// free the full path
-	ch_str_free( fullPath.data );
-
-    return buffer;
-}
-
-
-// Reads a file - Returns an empty array if it doesn't exist.
-ch_string FileSys_ReadFileEx( const char* path, s32 pathLen, ESearchPathType sType )
-{
-    PROF_SCOPE();
-
-    // Find path first
-	ch_string_auto fullPath = FileSys_FindFileEx( path, pathLen, sType );
-    if ( !fullPath.data )
-    {
-        Log_ErrorF( gLC_FileSystem, "Failed to find file: %s\n", path );
-        return {};
-    }
-
-    /* Open file.  */
-	std::ifstream file( fullPath.data, std::ios::ate | std::ios::binary );
-    if ( !file.is_open() )
-	{
-        Log_ErrorF( gLC_FileSystem, "Failed to open file: %s\n", path );
-        return {};
-    }
-
-    int fileSize = ( int )file.tellg(  );
 	ch_string buffer;
 	buffer.data = ch_malloc< char >( fileSize + 1 );
 	buffer.size = fileSize;

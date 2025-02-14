@@ -693,7 +693,7 @@ struct EntitySystemData
 
 	// Event Listeners
 	// std::vector< EntityEventListener_t >                         aEventListeners;
-	ResourceList< EntityEventListener_t >                        aEventListeners;
+	// ResourceList< EntityEventListener_t >                        aEventListeners;
 };
 
 

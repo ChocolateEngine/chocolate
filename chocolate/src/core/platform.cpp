@@ -415,7 +415,10 @@ void sys_init()
 	setlocale( LC_ALL, "en_US.UTF-8" );
 
 	// detect windows version
-	BOOL ret          = win32_get_version( &g_win_version );
+	BOOL ret = win32_get_version( &g_win_version );
+
+	if ( !ret )
+		printf( "Failed to detect windows version!\n" );
 
 	g_win_10_or_later = g_win_version.dwMajorVersion >= 10;
 

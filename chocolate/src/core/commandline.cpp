@@ -42,6 +42,11 @@ extern "C"
 		args_init( argc, argv );
 		Log_Init();
 
+		bool wait_for_debugger = args_register( "Upon Program Startup, Wait for the Debugger to attach", "--debugger" );
+
+		if ( wait_for_debugger )
+			sys_wait_for_debugger();
+
 		if ( SDL_Init( SDL_INIT_VIDEO | SDL_INIT_EVENTS | SDL_INIT_AUDIO ) != 0 )
 		{
 			Log_Fatal( "Unable to initialize SDL2!" );
@@ -60,12 +65,23 @@ extern "C"
 		Assert_Init();
 		//Thread_Init();
 
-		// handled by apps now, not required
-		// Core_LoadAppInfo();
+		// Load main app info (Note that if you don't do this, you need to call FileSys_DefaultSearchPaths() before loading any files)
+		if ( !core_app_info_load() )
+		{
+			Log_Fatal( "Failed to Load App Info" );
+			return 3;
+		}
 
 		args_register_ex( "Execute Scripts on Engine Start", "--exec" );
+
 		return 0;
 	}
+
+	// Use this when creating a command line app
+//	int DLL_EXPORT core_console_init()
+//	{
+//		return -1;
+//	}
 
 	void DLL_EXPORT core_exit( bool write_archive )
 	{
@@ -77,7 +93,7 @@ extern "C"
 		Mod_Shutdown();
 		Con_Shutdown();
 
-		Core_DestroyAppInfo();
+		core_app_info_free();
 		//Thread_Shutdown();
 
 		FileSys_Shutdown();
@@ -89,13 +105,11 @@ extern "C"
 
 		Log_Shutdown();
 
-		// Check if all memory is freed
-		u32 stringAllocCount = ch_str_get_alloc_count();
 		ch_str_free_all();
 
 		sys_shutdown();
 	}
-}
+}   
 
 // call this after the other dlls are loaded, but not initialized yet
 // it runs all startup config files, like config.cfg to store saved cvar values

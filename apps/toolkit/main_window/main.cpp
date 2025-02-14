@@ -642,7 +642,7 @@ bool App_CreateMainWindow()
 	// Create Main Window
 	std::string window_name;
 
-	window_name = ( Core_GetAppInfo().apWindowTitle ) ? Core_GetAppInfo().apWindowTitle : "Chocolate Engine";
+	window_name = ( core_app_info_get().apWindowTitle ) ? core_app_info_get().apWindowTitle : "Chocolate Engine";
 	window_name += vstring( " - Build %zd - Compiled On - %s %s", Core_GetBuildNumber(), Core_GetBuildDate(), Core_GetBuildTime() );
 
 	if ( !sys_create_window( gpSysWindow, gpWindow, window_name.c_str(), gWidth, gHeight, gMaxWindow ) )

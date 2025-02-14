@@ -7,8 +7,13 @@
 #define CH_HANDLE_GEN_32( name )                              \
 	struct name                                               \
 	{                                                         \
-		u32 index;                                            \
-		u32 generation;                                       \
+		u32  index;                                           \
+		u32  generation;                                      \
+                                                              \
+		bool operator!()                                      \
+		{                                                     \
+			return generation == 0;                           \
+		}                                                     \
 	};                                                        \
                                                               \
 	namespace std                                             \

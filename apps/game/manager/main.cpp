@@ -15,6 +15,7 @@
 #include "imgui/imgui.h"
 #include "imgui/imgui_impl_sdl2.h"
 
+#include <chrono>
 
 #if CH_USE_MIMALLOC
 	#include "mimalloc-new-delete.h"
@@ -32,7 +33,6 @@ int                        gWidth             = args_register_names( 1280, "Widt
 int                        gHeight            = args_register_names( 720, "Height of the main window", 2, "--height", "-h" );
 static bool                gMaxWindow         = args_register( "Maximize the main window", "--max" );
 static bool                gArgNoSteam        = args_register( "Don't try to load the steam abstraction", "--no-steam" );
-static bool                gWaitForDebugger   = args_register( "Upon Program Startup, Wait for the Debugger to attach", "--debugger" );
 static bool                gDedicatedServer   = args_register( "Host a Dedicated Server", "--server" );
 // static bool    gDedicatedServer = false;
 static bool                gRunning           = true;
@@ -337,7 +337,7 @@ bool CreateMainWindow()
 	// Create Main Window
 	std::string windowName;
 
-	windowName = ( Core_GetAppInfo().apWindowTitle ) ? Core_GetAppInfo().apWindowTitle : "Chocolate Engine";
+	windowName = ( core_app_info_get().apWindowTitle ) ? core_app_info_get().apWindowTitle : "Chocolate Engine";
 	windowName += vstring( " - Build %zd - Compiled On - %s %s", Core_GetBuildNumber(), Core_GetBuildDate(), Core_GetBuildTime() );
 
 	if ( !sys_create_window( gpSysWindow, gpWindow, windowName.c_str(), gWidth, gHeight, gMaxWindow ) )
@@ -468,7 +468,6 @@ void MainLoop()
 		gCurrentModule = ECurrentModule_None;
 
 		Con_Update();
-		Resource_Update();
 
 		// Wait and help to execute unfinished tasks
 		// gTaskScheduler.WaitForCounter( &taskCounter );
@@ -537,7 +536,6 @@ void MainLoopDedicated()
 		}
 
 		Con_Update();
-		Resource_Update();
 
 		// Wait and help to execute unfinished tasks
 		// gTaskScheduler.WaitForCounter( &taskCounter );
@@ -555,16 +553,6 @@ extern "C"
 {
 	int DLL_EXPORT app_init()
 	{
-		if ( gWaitForDebugger )
-			sys_wait_for_debugger();
-
-		// Load main app info (Note that if you don't do this, you need to call FileSys_DefaultSearchPaths() before loading any files)
-		if ( !Core_LoadAppInfo() )
-		{
-			Log_FatalF( "Failed to Load App Info" );
-			return 1;
-		}
-
 		IMGUI_CHECKVERSION();
 
 		if ( gDedicatedServer )
@@ -682,7 +670,6 @@ extern "C"
 		if ( client )
 			client->Shutdown();
 
-		Resource_Shutdown();
 		return 0;
 	}
 }

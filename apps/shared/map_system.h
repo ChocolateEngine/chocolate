@@ -10,6 +10,11 @@
 
 #include "core/core.h"
 
+// fucking hell
+#include <filesystem>
+namespace fs = std::filesystem;
+
+
 namespace chmap
 {
 
