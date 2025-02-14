@@ -459,7 +459,10 @@ void Input_BindKey( EButton key, const std::string& cmd )
 	if ( !cvar )
 		return;
 
-	if ( cvar->aType != EConVarType_RangeInt )
+	if ( cvar->aType == EConVarType_Command )
+		return;
+
+	if ( cvar->aType != EConVarType_RangeInt  )
 	{
 		Log_WarnF( gLC_GameInput, "Input ConVar \"%s\" is not a ranged integer type\n", name.data() );
 		return;

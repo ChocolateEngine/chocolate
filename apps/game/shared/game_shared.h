@@ -32,54 +32,54 @@ EXT_CVAR_FLAG( CVARF_REPLICATED );
 #if CH_CLIENT
 	#define CH_MODULE_NAME "Client"
 
-	#define GAME_CONCMD( name )                                                                           \
-		void       name##_func( const std::vector< std::string >& args, const std::string& fullCommand ); \
-		ConCommand name##_cmd( "cl_" #name, name##_func );                                                \
-		void       name##_func( const std::vector< std::string >& args, const std::string& fullCommand )
+	#define GAME_CONCMD( name )                                                                                   \
+		void               name##_func( const std::vector< std::string >& args, const std::string& fullCommand ); \
+		ConCommandRegister name##_cmd( "cl." #name, name##_func );                                                \
+		void               name##_func( const std::vector< std::string >& args, const std::string& fullCommand )
 
-	#define GAME_CONCMD_VA( name, ... )                                                            \
-		void       name( const std::vector< std::string >& args, const std::string& fullCommand ); \
-		ConCommand name##_cmd( "cl_" #name, name, __VA_ARGS__ );                                   \
-		void       name( const std::vector< std::string >& args, const std::string& fullCommand )
+	#define GAME_CONCMD_VA( name, ... )                                                                    \
+		void               name( const std::vector< std::string >& args, const std::string& fullCommand ); \
+		ConCommandRegister name##_cmd( "cl." #name, name, __VA_ARGS__ );                                   \
+		void               name( const std::vector< std::string >& args, const std::string& fullCommand )
 
-	#define GAME_CONCMD_DROP( name, func )                                                         \
-		void       name( const std::vector< std::string >& args, const std::string& fullCommand ); \
-		ConCommand name##_cmd( "cl_" #name, name, func );                                          \
-		void       name( const std::vector< std::string >& args, const std::string& fullCommand )
+	#define GAME_CONCMD_DROP( name, func )                                                                 \
+		void               name( const std::vector< std::string >& args, const std::string& fullCommand ); \
+		ConCommandRegister name##_cmd( "cl." #name, name, func );                                          \
+		void               name( const std::vector< std::string >& args, const std::string& fullCommand )
 
-	#define GAME_CONCMD_DROP_VA( name, func, ... )                                                 \
-		void       name( const std::vector< std::string >& args, const std::string& fullCommand ); \
-		ConCommand name##_cmd( "cl_" #name, name, __VA_ARGS__, func );                             \
-		void       name( const std::vector< std::string >& args, const std::string& fullCommand )
+	#define GAME_CONCMD_DROP_VA( name, func, ... )                                                         \
+		void               name( const std::vector< std::string >& args, const std::string& fullCommand ); \
+		ConCommandRegister name##_cmd( "cl." #name, name, __VA_ARGS__, func );                             \
+		void               name( const std::vector< std::string >& args, const std::string& fullCommand )
 #else
 	#define CH_MODULE_NAME "Server"
 
-	#define GAME_CONCMD( name )                                                                           \
-		void       name##_func( const std::vector< std::string >& args, const std::string& fullCommand ); \
-		ConCommand name##_cmd( "sv_" #name, name##_func );                                                \
-		void       name##_func( const std::vector< std::string >& args, const std::string& fullCommand )
+	#define GAME_CONCMD( name )                                                                                   \
+		void               name##_func( const std::vector< std::string >& args, const std::string& fullCommand ); \
+		ConCommandRegister name##_cmd( "sv." #name, name##_func );                                                \
+		void               name##_func( const std::vector< std::string >& args, const std::string& fullCommand )
 
-	#define GAME_CONCMD_VA( name, ... )                                                            \
-		void       name( const std::vector< std::string >& args, const std::string& fullCommand ); \
-		ConCommand name##_cmd( "sv_" #name, name, __VA_ARGS__ );                                   \
-		void       name( const std::vector< std::string >& args, const std::string& fullCommand )
+	#define GAME_CONCMD_VA( name, ... )                                                                    \
+		void               name( const std::vector< std::string >& args, const std::string& fullCommand ); \
+		ConCommandRegister name##_cmd( "sv." #name, name, __VA_ARGS__ );                                   \
+		void               name( const std::vector< std::string >& args, const std::string& fullCommand )
 
-	#define GAME_CONCMD_DROP( name, func )                                                         \
-		void       name( const std::vector< std::string >& args, const std::string& fullCommand ); \
-		ConCommand name##_cmd( "sv_" #name, name, func );                                          \
-		void       name( const std::vector< std::string >& args, const std::string& fullCommand )
+	#define GAME_CONCMD_DROP( name, func )                                                                 \
+		void               name( const std::vector< std::string >& args, const std::string& fullCommand ); \
+		ConCommandRegister name##_cmd( "sv." #name, name, func );                                          \
+		void               name( const std::vector< std::string >& args, const std::string& fullCommand )
 
-	#define GAME_CONCMD_DROP_VA( name, func, ... )                                                 \
-		void       name( const std::vector< std::string >& args, const std::string& fullCommand ); \
-		ConCommand name##_cmd( "sv_" #name, name, __VA_ARGS__, func );                             \
-		void       name( const std::vector< std::string >& args, const std::string& fullCommand )
+	#define GAME_CONCMD_DROP_VA( name, func, ... )                                                         \
+		void               name( const std::vector< std::string >& args, const std::string& fullCommand ); \
+		ConCommandRegister name##_cmd( "sv." #name, name, __VA_ARGS__, func );                             \
+		void               name( const std::vector< std::string >& args, const std::string& fullCommand )
 #endif
 
 
 enum ECommandSource
 {
-	// Console Command came from the Console
-	ECommandSource_Console,
+	// Console Command came from the Console/User Input
+	ECommandSource_User,
 
 	// Console Command was sent to us from the Client
 	ECommandSource_Client,

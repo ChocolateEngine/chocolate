@@ -57,8 +57,6 @@ void Game_ExecCommandsSafe( ECommandSource sSource, std::string_view sCommand )
 	std::string                              fullCommand;
 	std::vector< std::string >               args;
 
-	const std::vector< ConVarDescriptor_t >& cvarList = Con_GetConVarList();
-
 	for ( size_t i = 0; i < sCommand.size(); i++ )
 	{
 		commandName.clear();
@@ -67,26 +65,13 @@ void Game_ExecCommandsSafe( ECommandSource sSource, std::string_view sCommand )
 		Con_ParseCommandLineEx( sCommand, commandName, args, fullCommand, i );
 		str_lower( commandName );
 
-		ConVarDescriptor_t cvarDescriptor = Con_SearchConVarCmd( commandName.data(), commandName.size() );
+		ConVarData_t* cvarData = Con_GetConVarData( commandName.data(), commandName.size() );
 
-		if ( !cvarDescriptor.apData )
+		if ( !cvarData )
 		{
 			// how did this happen?
 			Log_ErrorF( "Game_ExecCommandsSafe(): Failed to find command \"%s\"\n", commandName.c_str() );
 			continue;
-		}
-
-		ConVarFlag_t flags = CVARF_NONE;
-
-		if ( cvarDescriptor.aIsConVar )
-		{
-			ConVarData_t* cvarData = static_cast< ConVarData_t* >( cvarDescriptor.apData );
-			flags = cvarData->aFlags;
-		}
-		else
-		{
-			ConCommand* cmd = static_cast< ConCommand* >( cvarDescriptor.apData );
-			flags           = cmd->aFlags;
 		}
 
 		// if the command is from the server and we are the client, make sure they can execute it
@@ -94,7 +79,7 @@ void Game_ExecCommandsSafe( ECommandSource sSource, std::string_view sCommand )
 		if ( sSource == ECommandSource_Server )
 		{
 			// The Convar must have one of these flags
-			if ( !(flags & CVARF_SV_EXEC) && !(flags & CVARF_SERVER) && !(flags & CVARF_REPLICATED) )
+			if ( !( cvarData->aFlags & CVARF_SV_EXEC ) && !( cvarData->aFlags & CVARF_SERVER ) && !( cvarData->aFlags & CVARF_REPLICATED ) )
 			{
 				Log_WarnF( "Server Tried Executing Command without flag to allow it: \"%s\"\n", commandName.c_str() );
 				continue;
@@ -105,7 +90,7 @@ void Game_ExecCommandsSafe( ECommandSource sSource, std::string_view sCommand )
 		if ( sSource == ECommandSource_Client )
 		{
 			// The Convar must have this flag
-			if ( !(flags & CVARF_CL_EXEC) )
+			if ( !( cvarData->aFlags & CVARF_CL_EXEC ) )
 			{
 				Log_WarnF( "Client Tried Executing Command without flag to allow it: \"%s\"\n", commandName.c_str() );
 				continue;

@@ -59,7 +59,7 @@ bool CvarFReplicatedCallback( const std::string& sName, const std::vector< std::
 	}
 
 	// If were hosting a server, the message has to be from the console
-	if ( SV_IsHosting() && Game_GetCommandSource() == ECommandSource_Console )
+	if ( SV_IsHosting() && Game_GetCommandSource() == ECommandSource_User )
 	{
 		// Add this to a vector of convars to send values to the client
 		gReplicatedCmds.emplace( sName );
@@ -131,7 +131,7 @@ bool SV_Init()
 {
 	Con_SetCvarFlagCallback( CVARF_REPLICATED, CvarFReplicatedCallback );
 
-	Game_SetCommandSource( ECommandSource_Console );
+	Game_SetCommandSource( ECommandSource_User );
 
 	return true;
 }
@@ -228,7 +228,7 @@ void SV_Update( float frameTime )
 
 	gReplicatedCmds.clear();
 
-	Game_SetCommandSource( ECommandSource_Console );
+	Game_SetCommandSource( ECommandSource_User );
 }
 
 
@@ -1034,13 +1034,15 @@ bool SV_BuildConVarMsg( flatbuffers::FlatBufferBuilder& srMessage, bool sFullUpd
 	// We have to send EVERY ConVar with CVARF_REPLICATED in a Full Update
 	if ( sFullUpdate )
 	{
-		for ( const auto& [ cvarName, cvarData ] : Con_GetConVarMap() )
+		for ( const auto& [ cvarName, cvarIndex ] : Con_GetConVarIndexMap() )
 		{
+			ConVarData_t* cvarData = Con_GetConVarData( cvarIndex );
+
 			// Only ConVars here, no ConCommands, that will be in another tab
 			if ( cvarData->aFlags & CVARF_REPLICATED )
 				continue;
 
-			gReplicatedCmds.emplace( cvarName );
+			gReplicatedCmds.emplace( cvarName.data );
 		}
 	}
 	

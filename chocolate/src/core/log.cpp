@@ -1798,7 +1798,7 @@ CONCMD_NAME_DROP_VA( ch_log_verbose, "ch.log.verbosity", log_verbose_dropdown, 0
 {
 	if ( !args.size() )
 	{
-		Log_Msg( ch_log_verbose_cmd.GetPrintMessage().c_str() );
+		Log_MsgF( "%s\n", Con_GetConVarHelp( "ch.log.verbosity" ).data() );
 		return;
 	}
 

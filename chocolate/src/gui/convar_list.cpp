@@ -134,14 +134,15 @@ void GuiSystem::DrawConVarList( bool wasOpen )
 	{
 		// Only ConVars here, no ConCommands, that will be in another tab
 		u32 i = 0, row = 0;
-		for ( const auto& [ cvarName, cvarData ] : Con_GetConVarMap() )
+		for ( const auto& [ cvarName, cvarIndex ] : Con_GetConVarIndexMap() )
 		{
-			ch_string cvarDesc = Con_GetConVarDesc( cvarName.data() );
+			ConVarData_t*    cvarData = Con_GetConVarData( cvarIndex );
+			const ch_string& cvarDesc = Con_GetConVarDesc( cvarIndex );
 
 			ImGui::TableNextRow();
 
 			ImGui::TableSetColumnIndex( 0 );
-			ImGui::TextUnformatted( cvarName.data() );
+			ImGui::TextUnformatted( cvarName.data );
 
 			// ImGui::TableSetColumnIndex( 1 );
 			// if ( cvar->aDesc )
@@ -152,7 +153,7 @@ void GuiSystem::DrawConVarList( bool wasOpen )
 			}
 
 			ImGui::TableSetColumnIndex( 1 );
-			ImGui::TextUnformatted( cvarName.data() );
+			ImGui::TextUnformatted( cvarName.data );
 
 			ImGui::TableSetColumnIndex( 2 );
 
@@ -196,7 +197,7 @@ void GuiSystem::DrawConVarList( bool wasOpen )
 
 			std::string cvarFlags = "";
 
-			for ( size_t fi = 0; fi < Con_GetCvarFlagCount(); fi++ )
+			for ( u8 fi = 0; fi < Con_GetCvarFlagCount(); fi++ )
 			{
 				ConVarFlag_t flag = ( 1 << fi );
 				if ( cvarData->aFlags & flag )

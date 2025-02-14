@@ -296,7 +296,7 @@ void CL_Update( float frameTime )
 		CL_DrawMainMenu();
 	}
 
-	Game_SetCommandSource( ECommandSource_Console );
+	Game_SetCommandSource( ECommandSource_User );
 }
 
 

@@ -24,7 +24,7 @@ CONVAR_FLOAT( r_debug_normals_len, 0.15, "", 0 );
 CONVAR_FLOAT( r_debug_normals_len_face, 8, "", 0 );
 
 
-const bool& r_debug_draw   = Con_RegisterConVar_Bool( "r_debug_draw", "Enable or Disable All Debug Drawing", true );
+const bool& r_debug_draw   = Con_Register_Bool( "r_debug_draw", "Enable or Disable All Debug Drawing", true );
 
 
 // --------------------------------------------------------------------------------------
