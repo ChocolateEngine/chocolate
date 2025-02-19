@@ -46,6 +46,7 @@ class GraphicsData final : public IGraphicsData
 
 	size_t        material_get_dirty_count() override;
 	ch_material_h material_get_dirty( size_t index ) override;
+	void          material_mark_dirty( ch_material_h handle ) override;
 
 //	ch_string*    material_get_var_names( u16 var_name_index ) override;
 //	u16           material_get_var_names_count() override;

@@ -26,12 +26,10 @@ layout( buffer_reference, std430 ) readonly buffer buffer_vertex
 
 //push constants block
 layout( push_constant ) uniform constants
-{	
-//	mat4          world_matrix;
-//	mat4          view_matrix;
-//	mat4          proj_matrix;
+{
 	mat4          proj_view_matrix;
 	buffer_vertex vertex_address;  // u64 handle
+	int           diffuse;
 } push;
 
 
@@ -55,7 +53,7 @@ void main()
 
 	// out_color = vec3( 1, 1, 1 );
 	out_color   = v.color.xyz;
-	// out_uv.x    = v.uv_x;
-	// out_uv.y    = v.uv_y;
+	out_uv.x    = v.uv_x;
+	out_uv.y    = v.uv_y;
 }
 

@@ -4,30 +4,39 @@
 
 
 // we don't use a general u64, since this can be aligned by 4 bytes, and doesn't result in handle mismatches
-#define CH_HANDLE_GEN_32( name )                              \
-	struct name                                               \
-	{                                                         \
-		u32  index;                                           \
-		u32  generation;                                      \
-                                                              \
-		bool operator!()                                      \
-		{                                                     \
-			return generation == 0;                           \
-		}                                                     \
-	};                                                        \
-                                                              \
-	namespace std                                             \
-	{                                                         \
-	template<>                                                \
-	struct hash< name >                                       \
-	{                                                         \
-		size_t operator()( name const& handle ) const         \
-		{                                                     \
-			size_t value = ( hash< u32 >()( handle.index ) ); \
-			value ^= ( hash< u32 >()( handle.generation ) );  \
-			return value;                                     \
-		}                                                     \
-	};                                                        \
+#define CH_HANDLE_GEN_32( name )                                   \
+	struct name                                                    \
+	{                                                              \
+		u32  index;                                                \
+		u32  generation;                                           \
+                                                                   \
+		bool operator!()                                           \
+		{                                                          \
+			return generation == 0;                                \
+		}                                                          \
+		operator bool() const                                      \
+		{                                                          \
+			return generation > 0;                                 \
+		}                                                          \
+	};                                                             \
+                                                                   \
+	namespace std                                                  \
+	{                                                              \
+	template<>                                                     \
+	struct hash< name >                                            \
+	{                                                              \
+		size_t operator()( name const& handle ) const              \
+		{                                                          \
+			size_t value = ( hash< u32 >()( handle.index ) );      \
+			value ^= ( hash< u32 >()( handle.generation ) );       \
+			return value;                                          \
+		}                                                          \
+	};                                                             \
+	}                                                              \
+                                                                   \
+	inline bool operator==( const name& a, const name& b )         \
+	{                                                              \
+		return a.index == b.index && a.generation == b.generation; \
 	}
 
 
@@ -41,6 +50,17 @@
 //	bool* use_list;    // true if handle is in use
 //	TYPE* data;
 //};
+
+
+// validate a handle
+template< typename HANDLE >
+bool handle_list_valid( u32 capacity, u32* generation, HANDLE handle )
+{
+	if ( handle.index >= capacity )
+		return false;
+
+	return handle.generation == generation[ handle.index ];
+}
 
 
 // 32-bit handle list with generation support and ref counts
@@ -116,16 +136,7 @@ private:
 public:
 	bool handle_valid( HANDLE s_handle )
 	{
-		if ( s_handle.index >= capacity )
-			return false;
-
-		if ( s_handle.generation == 0 )
-			return false;
-
-		if ( s_handle.generation != generation[ s_handle.index ] )
-			return false;
-
-		return true;
+		return handle_list_valid( capacity, generation, s_handle );
 	}
 
 	bool create( HANDLE& s_handle, TYPE** s_type )
@@ -139,13 +150,8 @@ public:
 				break;
 		}
 
-		if ( index == capacity )
-		{
-			if ( !allocate() )
-			{
-				return false;
-			}
-		}
+		if ( index == capacity && !allocate() )
+			return false;
 
 		ref_count[ index ]++;
 
@@ -154,6 +160,19 @@ public:
 		*s_type             = &data[ index ];
 
 		return true;
+	}
+
+	// checks to see if the handle is valid, and re-uses if it possible
+	bool recycle( HANDLE& s_handle, TYPE** s_type )
+	{
+		if ( handle_valid( s_handle ) )
+		{
+			memset( &data[ s_handle.index ], 0, sizeof( TYPE ) );
+			*s_type = &data[ s_handle.index ];
+			return true;
+		}
+
+		return create( s_handle, s_type );
 	}
 
 	// use an existing handle, potentially useful for loading saves
@@ -277,16 +296,7 @@ private:
 public:
 	bool handle_valid( HANDLE s_handle )
 	{
-		if ( s_handle.index >= capacity )
-			return false;
-
-		if ( s_handle.generation == 0 )
-			return false;
-
-		if ( s_handle.generation != generation[ s_handle.index ] )
-			return false;
-
-		return true;
+		return handle_list_valid( capacity, generation, s_handle );
 	}
 
 	bool create( HANDLE& s_handle, TYPE** s_type )
@@ -300,13 +310,8 @@ public:
 				break;
 		}
 
-		if ( index == capacity )
-		{
-			if ( !allocate() )
-			{
-				return false;
-			}
-		}
+		if ( index == capacity && !allocate() )
+			return false;
 
 		use_list[ index ] = true;
 
@@ -503,16 +508,7 @@ private:
 public:
 	bool handle_valid( HANDLE s_handle )
 	{
-		if ( s_handle.index >= capacity )
-			return false;
-
-		if ( s_handle.generation == 0 )
-			return false;
-
-		if ( s_handle.generation != generation[ s_handle.index ] )
-			return false;
-
-		return true;
+		return handle_list_valid( capacity, generation, s_handle );
 	}
 
 	HANDLE create()
@@ -526,13 +522,8 @@ public:
 				break;
 		}
 
-		if ( index == capacity )
-		{
-			if ( !allocate() )
-			{
-				return {};
-			}
-		}
+		if ( index == capacity && !allocate() )
+			return {};
 
 		use_list[ index ] = true;
 
@@ -591,16 +582,7 @@ struct ch_handle_list_ref_simple_32
    public:
 	bool handle_valid( HANDLE s_handle )
 	{
-		if ( s_handle.index >= capacity )
-			return false;
-
-		if ( s_handle.generation == 0 )
-			return false;
-
-		if ( s_handle.generation != generation[ s_handle.index ] )
-			return false;
-
-		return true;
+		return handle_list_valid( capacity, generation, s_handle );
 	}
 
 	HANDLE create()
@@ -614,13 +596,8 @@ struct ch_handle_list_ref_simple_32
 				break;
 		}
 
-		if ( index == capacity )
-		{
-			if ( !allocate() )
-			{
-				return false;
-			}
-		}
+		if ( index == capacity && !allocate() )
+			return false;
 
 		ref_count[ index ]++;
 
@@ -666,23 +643,6 @@ struct ch_handle_list_ref_simple_32
 
 
 // TEST - having the above be utility functions, since in some areas, we want a separate array for names/paths
-
-
-// validate a handle
-template< typename HANDLE >
-bool handle_list_valid( u32 capacity, u32* generation, HANDLE handle )
-{
-	if ( handle.index >= capacity )
-		return false;
-
-	if ( handle.generation == 0 )
-		return false;
-
-	if ( handle.generation != generation[ handle.index ] )
-		return false;
-
-	return true;
-}
 
 // validate a handle with ref count checking
 //template< typename HANDLE >

@@ -34,23 +34,7 @@ IGraphicsData*                                        graphics_data          = n
 ch_handle_ref_list_32< r_mesh_h, vk_mesh_t >          g_mesh_list;
 ch_handle_list_32< r_mesh_render_h, r_mesh_render_t > g_mesh_render_list;
 
-ch_handle_ref_list_32< r_texture_h, vk_texture_t >    g_textures;
-ch_handle_ref_list_32< vk_material_h, vk_material_t > g_materials;
-
-std::unordered_map< ch_material_h, vk_material_h >    g_material_map;
-
 test_render_t                                         g_test_render;
-
-
-static vk_material_h material_get_vk( ch_material_h base_handle )
-{
-	// Search for this material
-	// if not found, copy it to a vk_material_t
-	// Then upload any textures found in it based on the shader
-
-	// kind of a lot to do while actively loading a model,
-	// surely we can technically do all at the same time with job systems or something?
-}
 
 
 // interface for the renderer
@@ -115,15 +99,15 @@ struct Render3 final : public IRender3
 			return false;
 		}
 
-		if ( !vk_shaders_init() )
-		{
-			Log_Error( gLC_Render, "Failed to create shaders\n" );
-			return false;
-		}
-
 		if ( !ktx_init() )
 		{
 			Log_Error( gLC_Render, "Failed to init KTX texture loader\n" );
+			return false;
+		}
+
+		if ( !vk_shaders_init() )
+		{
+			Log_Error( gLC_Render, "Failed to create shaders\n" );
 			return false;
 		}
 
@@ -368,6 +352,9 @@ struct Render3 final : public IRender3
 		}
 
 		ImGui_ImplVulkan_NewFrame();
+
+		if ( g_texture_gpu_index_dirty )
+			vk_descriptor_textures_update();
 	}
 
 	void reset( r_window_h window_handle ) override

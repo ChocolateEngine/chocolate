@@ -5,7 +5,7 @@ LOG_CHANNEL_REGISTER( GraphicsData, ELogColor_Purple );
 // Path to Handle
 std::unordered_map< ch_string, ch_model_h >        g_model_paths;
 std::unordered_map< ch_string, ch_material_h >     g_material_paths;
-std::unordered_map< ch_string, ch_material_h >     g_material_names;
+//std::unordered_map< ch_string, ch_material_h >     g_material_names;
 
 // Handle Arrays
 // ch_handle_array_32_t< ch_model_h, model_t >    g_model_handles;

@@ -192,6 +192,8 @@ CORE_API size_t    ch_str_contains( const char* s, size_t len, const char* find,
 CORE_API size_t    ch_str_contains( const char* s, const char* find );
 CORE_API size_t    ch_str_contains( const char* s, const char* find, size_t findLen );
 
+CORE_API u64       ch_str_hash( const char* str, size_t len );
+
 
 // check if a string has characters in it
 inline bool   ch_str_check_empty( const char* s, size_t& length )

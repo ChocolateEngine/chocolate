@@ -341,6 +341,21 @@ bool vk_shaders_create_graphics( vk_shader_create_graphics_t* graphics_create, u
 	g_shader_data_graphics_pipeline_layout[ index ] = layout;
 	g_shader_data_graphics_names[ index ]           = ch_str_copy( graphics_create->name );
 
+	// load default textures in material var descriptors
+	for ( size_t i = 0; i < graphics_create->material_var_count; i++ )
+	{
+		shader_mat_var_desc_t& desc = graphics_create->material_var[ i ];
+
+		// represents a texture path
+		if ( desc.type == e_mat_var_string )
+		{
+			vk_texture_load_info_t load_info{};
+			load_info.usage |= VK_IMAGE_USAGE_SAMPLED_BIT;
+
+			texture_load( desc.default_texture_handle, desc.default_texture, load_info );
+		}
+	}
+
 	return true;
 }
 
@@ -383,6 +398,16 @@ void vk_shaders_shutdown()
 
 		vkDestroyPipeline( g_vk_device, g_shader_data_graphics_pipelines[ i ], nullptr );
 		vkDestroyPipelineLayout( g_vk_device, g_shader_data_graphics_pipeline_layout[ i ], nullptr );
+
+		// load default textures in material var descriptors
+		for ( size_t i = 0; i < g_shader_create_graphics[ i ].material_var_count; i++ )
+		{
+			shader_mat_var_desc_t& desc = g_shader_create_graphics[ i ].material_var[ i ];
+
+			// represents a texture path
+			if ( desc.type == e_mat_var_string )
+				texture_free( desc.default_texture_handle );
+		}
 	}
 
 	free( g_shader_data_graphics );
@@ -414,12 +439,6 @@ bool vk_shaders_rebuild()
 	}
 
 	return true;
-}
-
-
-void vk_shaders_update_push_constants()
-{
-	// temp for test compute shader
 }
 
 
@@ -458,5 +477,17 @@ u32 vk_shaders_find( const char* shader_name )
 	}
 
 	return 0;
+}
+
+
+void vk_shaders_material_update( vk_material_h handle )
+{
+	vk_material_t* material = g_materials.get( handle );
+
+	if ( !material )
+		return;
+
+	// vk_material_t;
+
 }
 

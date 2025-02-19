@@ -18,7 +18,8 @@ CH_HANDLE_GEN_32( vk_image_h );
 
 
 constexpr VkFormat g_draw_format              = VK_FORMAT_R16G16B16A16_SFLOAT;
-constexpr VkFormat g_depth_format             = VK_FORMAT_D32_SFLOAT;
+// constexpr VkFormat g_draw_format  = VK_FORMAT_B8G8R8A8_SRGB;
+constexpr VkFormat g_depth_format = VK_FORMAT_D32_SFLOAT;
 
 
 enum e_backbuffer_image
@@ -27,6 +28,20 @@ enum e_backbuffer_image
 	e_backbuffer_image_depth,
 	e_backbuffer_image_resolve,
 	e_backbuffer_image_count
+};
+
+
+// idea for when to draw shaders
+// maybe call it e_material_sort, kind of like in DOOM 3?
+enum e_render_stage
+{
+	e_render_stage_mesh,         // standard mesh rendering
+	e_render_stage_skybox,       // drawn after meshes, before postprocess
+	e_render_stage_viewmodel,    // drawn first
+	e_render_stage_postprocess,
+	e_render_stage_gui,          // drawn last
+
+	e_render_stage_count,
 };
 
 
@@ -80,6 +95,16 @@ struct vk_image_t
 };
 
 
+struct vk_texture_load_info_t
+{
+	bool                 no_missing_texture;  // set to true if you don't want the missing texture returned
+	bool                 depth_compare;
+	VkSamplerAddressMode sampler_address;
+	VkImageUsageFlags    usage;
+	VkFilter             filter;
+};
+
+
 // Usually loaded with KTX Upload
 struct vk_texture_t
 {
@@ -104,6 +129,99 @@ struct vk_texture_t
 
 // --------------------------------------------------------------------------------------------
 // Shaders
+
+
+// Shader Descriptor Set Bindings
+#define CH_BINDING_TEXTURES 0
+
+
+struct shader_mat_var_desc_t
+{
+	e_mat_var   type;
+	const char* name;
+	const char* desc;
+	u32         data_offset;
+
+	// internal use
+	r_texture_h default_texture_handle;
+
+	union
+	{
+		const char* default_texture;  // Path To Default Texture
+		float       default_float;
+		int         default_int;
+		glm::vec2   default_vec2;
+		glm::vec3   default_vec3;
+		glm::vec4   default_vec4;
+	};
+
+   private:
+	shader_mat_var_desc_t( e_mat_var sType, const char* spName, const char* spDesc, u32 sDataOffset )
+	{
+		type        = sType;
+		name        = spName;
+		desc        = spDesc;
+		data_offset = sDataOffset;
+	}
+
+   public:
+	shader_mat_var_desc_t( const char* spName, const char* spDesc, const char* spDefault, u32 sDataOffset ) :
+		shader_mat_var_desc_t( e_mat_var_string, spName, spDesc, sDataOffset )
+	{
+		default_texture = spDefault;
+	}
+
+	shader_mat_var_desc_t( const char* spName, const char* spDesc, float sDefault, u32 sDataOffset ) :
+		shader_mat_var_desc_t( e_mat_var_float, spName, spDesc, sDataOffset )
+	{
+		default_float = sDefault;
+	}
+
+	shader_mat_var_desc_t( const char* spName, const char* spDesc, int sDefault, u32 sDataOffset ) :
+		shader_mat_var_desc_t( e_mat_var_int, spName, spDesc, sDataOffset )
+	{
+		default_int = sDefault;
+	}
+
+	shader_mat_var_desc_t( const char* spName, const char* spDesc, glm::vec2 sDefault, u32 sDataOffset ) :
+		shader_mat_var_desc_t( e_mat_var_vec2, spName, spDesc, sDataOffset )
+	{
+		default_vec2 = sDefault;
+	}
+
+	shader_mat_var_desc_t( const char* spName, const char* spDesc, glm::vec3 sDefault, u32 sDataOffset ) :
+		shader_mat_var_desc_t( e_mat_var_vec3, spName, spDesc, sDataOffset )
+	{
+		default_vec3 = sDefault;
+	}
+
+	shader_mat_var_desc_t( const char* spName, const char* spDesc, glm::vec4 sDefault, u32 sDataOffset ) :
+		shader_mat_var_desc_t( e_mat_var_vec4, spName, spDesc, sDataOffset )
+	{
+		default_vec4 = sDefault;
+	}
+};
+
+
+#define CH_SHADER_MATERIAL_VAR( type, name, desc, default ) \
+	{ #name, desc, default, offsetof( type, name ) },
+
+#define CH_SHADER_MAT_VAR_OFFSET_BEGIN( struct_name, array_name ) \
+	using __shader_material_struct_t          = struct_name;      \
+	static shader_mat_var_desc_t array_name[] = {
+
+#define CH_SHADER_MAT_VAR_OFFSET_END() \
+	}                                  \
+	;
+
+#define CH_SHADER_MAT_VAR_OFFSET_VAR( name, desc, default ) \
+	{ #name, desc, default, offsetof( __shader_material_struct_t, name ) },
+
+// maybe?
+#define CH_SHADER_MAT_VAR_OFFSET_TEXTURE( name, desc, default )                           \
+	{ #name, desc, default, offsetof( __shader_material_struct_t, name ) },               \
+	  { #name##_fps, desc, default, offsetof( __shader_material_struct_t, name##_fps ) }, \
+	  { #name##_frame, desc, default, offsetof( __shader_material_struct_t, name##_frame ) }, \
 
 
 struct vk_shader_push_data_t
@@ -135,7 +253,7 @@ struct vk_shader_create_graphics_t
 	VkDynamicState*           dynamic_state;
 	u8                        dynamic_state_count;
 
-	// attachment formats
+	// attachment formats (why is this here?)
 	u8                        color_attach_count;
 	VkFormat*                 color_attach;
 	VkFormat                  depth_attach;
@@ -144,6 +262,8 @@ struct vk_shader_create_graphics_t
 	fn_vk_push_constants_t    fn_push_constants;
 	VkPushConstantRange       push_constant_range;
 
+	size_t                    material_var_count;
+	shader_mat_var_desc_t*    material_var;
 
 	// descriptor set bindings
 
@@ -178,7 +298,25 @@ struct shader_static_register_graphics_t
 // Materials
 
 
-struct vk_material_vars_t
+// idea for texture rendering options,
+// so you don't have to manually have so many copied parameters in the shader
+// like "diffuse_frame", "diffuse_fps", "normal_frame", "normal_repeat" "clamp"
+// unless you made a macro to do it
+struct vk_texture_draw_t
+{
+	r_texture_h texture;
+
+	// animated texture controls
+	float       fps;
+	int         frame_current;
+	int         frame_count;
+
+	// repeat value
+	// filter method override from compiled ktx, cvar overrides this still
+};
+
+
+struct vk_material_var_t
 {
 	union
 	{
@@ -194,10 +332,11 @@ struct vk_material_vars_t
 
 struct vk_material_t
 {
-	u32                 shader;
-	u32                 var_count;
-	vk_material_vars_t* var;
-	e_mat_var*          type;
+	u32                shader;
+	u32                gpu_index;
+	u32                var_count;
+	vk_material_var_t* var;
+	e_mat_var*         type;
 };
 
 
@@ -386,6 +525,7 @@ struct gpu_push_t
 	//glm::mat4       view_matrix;
 	//glm::mat4       proj_matrix;
 	VkDeviceAddress vertex_address;
+	int             diffuse;
 };
 
 
@@ -470,6 +610,11 @@ extern ch_handle_list_32< vk_image_h, vk_image_t >           g_vk_images;
 extern ch_handle_ref_list_32< r_texture_h, vk_texture_t >    g_textures;
 extern ch_handle_ref_list_32< vk_material_h, vk_material_t > g_materials;
 
+extern u32                                                   g_texture_count;
+extern u32*                                                  g_texture_gpu_index;
+extern u32                                                   g_texture_gpu_index_count;
+extern bool                                                  g_texture_gpu_index_dirty;
+
 // TODO: when you multi-thread this, you need a graphics pool for each thread
 extern VkCommandPool                                         g_vk_command_pool_graphics;
 extern VkCommandPool                                         g_vk_command_pool_transfer;
@@ -485,6 +630,9 @@ extern VkDescriptorSetLayout                                 g_vk_desc_layout_gr
 
 extern VkDescriptorPool                                      g_vk_desc_pool;
 extern VkDescriptorSetLayout                                 g_vk_desc_draw_image_layout;
+
+extern VkDescriptorSet                                       g_texture_desc_set;
+// extern VkDescriptorSetLayout                                 g_texture_desc_set_layout;
 
 // temp
 extern VkPipeline                                            g_pipeline_gradient;
@@ -594,7 +742,7 @@ void                                                         vk_blit_image_to_im
 bool                                                         vk_shaders_init();
 void                                                         vk_shaders_shutdown();
 bool                                                         vk_shaders_rebuild();
-void                                                         vk_shaders_update_push_constants();
+void                                                         vk_shaders_material_update( vk_material_h handle );
 
 // Returns the index + 1 of the shader, if it's 0, the shader isn't found
 u32                                                          vk_shaders_find( const char* shader_name );
@@ -605,9 +753,23 @@ void                                                         vk_descriptor_destr
 bool                                                         vk_descriptor_allocate_window( r_window_data_t* window );
 void                                                         vk_descriptor_update_window( r_window_data_t* window );
 
+void                                                         vk_descriptor_textures_create();
+void                                                         vk_descriptor_textures_update();
+u32                                                          vk_descriptor_texture_get_index( r_texture_h handle );
+
+VkSampler                                                    vk_sampler_get( VkFilter filter, VkSamplerAddressMode address_mode, VkBool32 depth_compare );
+void                                                         vk_sampler_destroy_all();
+void                                                         vk_sampler_recreate();
+
 gpu_mesh_buffers_t                                           vk_mesh_upload( u32* indices, u32 index_count, gpu_vertex_t* vertices, u32 vertex_count );
 gpu_mesh_buffers_t                                           vk_mesh_upload( gpu_vertex_t* vertices, u32 vertex_count );
 void                                                         vk_mesh_free( gpu_mesh_buffers_t& mesh_buffers );
+
+vk_material_h                                                vk_material_create( ch_material_h base_handle );
+void                                                         vk_material_free();
+void                                                         vk_material_update();
+
+vk_material_h                                                vk_material_find( ch_material_h base_handle );
 
 // --------------------------------------------------------------------------------------------
 // Allocator Functions
@@ -620,11 +782,14 @@ vk_buffer_t*                                                 vk_buffer_create( c
 void                                                         vk_buffer_destroy( vk_buffer_t* buffer );
 
 // --------------------------------------------------------------------------------------------
-// KTX Texture Functions
+// Texture Functions
 
 bool                                                         ktx_init();
 void                                                         ktx_shutdown();
-bool                                                         ktx_load();
+bool                                                         ktx_load( const char* path, vk_texture_t* texture );
+
+r_texture_h                                                  texture_load( r_texture_h& handle, const char* path, vk_texture_load_info_t& load_info );
+void                                                         texture_free( r_texture_h& handle );
 
 
 #if 0

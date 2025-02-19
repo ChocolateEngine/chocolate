@@ -171,32 +171,49 @@ bool vk_descriptor_init()
 		// now descriptor set layout for graphics draw
 
 		VkDescriptorSetLayoutBinding bindings[] = {
+			// {
+			//   .binding         = 0,
+			//   .descriptorType  = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+			//   .descriptorCount = 1,
+			//   .stageFlags      = VK_SHADER_STAGE_FRAGMENT_BIT,
+			// },
 			{
-			  .binding         = 0,
+			  .binding         = CH_BINDING_TEXTURES,
 			  .descriptorType  = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-			  .descriptorCount = 1,
+			  .descriptorCount = 1000,
 			  .stageFlags      = VK_SHADER_STAGE_FRAGMENT_BIT,
 			},
 		};
 
+		VkDescriptorBindingFlagsEXT                    flag = VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT;
+
+		VkDescriptorSetLayoutBindingFlagsCreateInfoEXT extend{ VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO };
+		extend.pNext         = nullptr;
+		extend.bindingCount  = 1;
+		extend.pBindingFlags = &flag;
+
 		VkDescriptorSetLayoutCreateInfo layout_info{ VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO };
 		layout_info.bindingCount = 1;
 		layout_info.pBindings    = bindings;
+		layout_info.pNext        = &extend;
 
 		if ( vk_check_e( vkCreateDescriptorSetLayout( g_vk_device, &layout_info, nullptr, &g_vk_desc_layout_graphics ), "Failed to create descriptor set layout" ) )
 			return false;
 
 		vk_set_name( VK_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT, (u64)g_vk_desc_layout_graphics, "Graphics" );
 
+		VkDescriptorSet desc_sets[ 1 ];
+
 		// allocate descriptor sets
 		VkDescriptorSetAllocateInfo alloc_info{ VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO };
-		alloc_info.descriptorPool = g_vk_desc_pool_graphics;
+		alloc_info.descriptorPool     = g_vk_desc_pool_graphics;
 		alloc_info.descriptorSetCount = 1;
-		alloc_info.pSetLayouts = &g_vk_desc_layout_graphics;
+		alloc_info.pSetLayouts        = &g_vk_desc_layout_graphics;
 
-		VkDescriptorSet desc_set;
-		if ( vk_check_e( vkAllocateDescriptorSets( g_vk_device, &alloc_info, &desc_set ), "Failed to allocate descriptor set" ) )
+		if ( vk_check_e( vkAllocateDescriptorSets( g_vk_device, &alloc_info, desc_sets ), "Failed to allocate descriptor set" ) )
 			return false;
+
+		g_texture_desc_set = desc_sets[ 1 ];
 	}
 
 	// create imgui pool
@@ -224,6 +241,10 @@ bool vk_descriptor_init()
 
 		vk_set_name( VK_OBJECT_TYPE_DESCRIPTOR_POOL, (u64)g_vk_imgui_desc_pool, "Dear ImGui" );
 	}
+
+	// -------------------------------------------------------------------------
+	// create texture descriptor set
+	vk_descriptor_textures_create();
 
 	return true;
 }
@@ -253,6 +274,8 @@ void vk_descriptor_destroy()
 
 void vk_descriptor_update_window( r_window_data_t* window )
 {
+	vk_queue_wait_graphics();
+
 	VkDescriptorImageInfo image_info{};
 	image_info.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
 	image_info.imageView   = window->draw_image.view;
@@ -282,5 +305,136 @@ bool vk_descriptor_allocate_window( r_window_data_t* window )
 	vk_descriptor_update_window( window );
 
 	return true;
+}
+
+
+VkDescriptorSet       g_texture_desc_set;
+//VkDescriptorSetLayout g_texture_desc_set_layout;
+
+u32*                  g_texture_gpu_index;  // handle index points to an index in this list, to get the index of it in the array on the gpu
+u32                   g_texture_gpu_index_count;
+bool                  g_texture_gpu_index_dirty;
+
+
+void vk_descriptor_textures_create()
+{
+	g_texture_gpu_index_dirty = true;
+	
+#if 0
+	// Create Layout
+	VkDescriptorSetLayoutBinding binding{};
+	binding.binding         = CH_BINDING_TEXTURES;
+	binding.descriptorCount = 1;
+	binding.descriptorType  = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+	binding.stageFlags      = VK_SHADER_STAGE_FRAGMENT_BIT;
+
+	VkDescriptorBindingFlagsEXT                    flag = VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT;
+
+	VkDescriptorSetLayoutBindingFlagsCreateInfoEXT extend{ VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO };
+	extend.pNext         = nullptr;
+	extend.bindingCount  = 1;
+	extend.pBindingFlags = &flag;
+
+	VkDescriptorSetLayoutCreateInfo layout_create{ VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO };
+	layout_create.bindingCount = 1;
+	layout_create.pBindings    = &binding;
+	layout_create.pNext        = &extend;
+
+	vk_check( vkCreateDescriptorSetLayout( g_vk_device, &layout_create, NULL, &g_texture_desc_set_layout ), "Failed to create descriptor set layout!" );
+	vk_set_name( VK_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT, (u64)g_texture_desc_set_layout, "Sampled Textures Layout" );
+#endif
+
+	// Create Descriptor Set
+	VkDescriptorSetAllocateInfo allocate{ VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO };
+	allocate.descriptorPool     = g_vk_desc_pool_graphics;
+	allocate.descriptorSetCount = 1;
+	allocate.pSetLayouts        = &g_vk_desc_layout_graphics;
+
+	vk_check( vkAllocateDescriptorSets( g_vk_device, &allocate, &g_texture_desc_set ) );
+
+	vk_set_name( VK_OBJECT_TYPE_DESCRIPTOR_SET, (u64)g_texture_desc_set, "Sampled Textures" );
+}
+
+
+void vk_descriptor_textures_update()
+{
+	g_texture_gpu_index_dirty = false;
+
+	if ( !g_textures.capacity )
+		return;
+
+	VkWriteDescriptorSet write{ VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET };
+	write.dstSet          = g_texture_desc_set;
+	write.dstBinding      = CH_BINDING_TEXTURES;
+	write.dstArrayElement = 0;
+	write.descriptorType  = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+
+	u32* new_index_list   = ch_realloc( g_texture_gpu_index, g_textures.capacity );
+
+	if ( !new_index_list )
+	{
+		Log_Fatal( "Failed to reallocate gpu texture index list\n" );
+		return;
+	}
+
+	g_texture_gpu_index          = new_index_list;
+	g_texture_gpu_index_count    = 0;
+
+	VkDescriptorImageInfo* array = ch_calloc< VkDescriptorImageInfo >( g_textures.capacity );
+
+	if ( !array )
+	{
+		Log_Fatal( "Failed to allocate temp gpu texture index list\n" );
+		return;
+	}
+
+	// check for sampled textures
+	u32 count = 0;
+	for ( u32 i = 0; i < g_textures.capacity; i++ )
+	{
+		// IDEA: what if we made point to the missing texture in the gpu index array?
+		if ( g_textures.ref_count[ i ] == 0 )
+			continue;
+
+		// must be a sampled image
+		if ( !( g_textures.data[ i ].usage & VK_IMAGE_USAGE_SAMPLED_BIT ) )
+			continue;
+
+		array[ count ].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+		array[ count ].imageView   = g_textures.data[ i ].view;
+		array[ count ].sampler     = vk_sampler_get( g_textures.data[ i ].filter, g_textures.data[ i ].sampler_address, g_textures.data[ i ].depth_compare );
+		g_texture_gpu_index[ i ]   = count;
+		count++;
+	}
+
+	write.pImageInfo      = array;
+	write.descriptorCount = count;
+
+	// no sampled textures found
+	if ( !count )
+	{
+		free( array );
+		return;
+	}
+
+	vk_queue_wait_graphics();
+	vkUpdateDescriptorSets( g_vk_device, 1, &write, 0, nullptr );
+
+	free( array );
+}
+
+
+u32 vk_descriptor_texture_get_index( r_texture_h handle )
+{
+	if ( !g_textures.handle_valid( handle ) )
+		return 0;
+
+	if ( handle.index >= g_texture_gpu_index_count )
+	{
+		CH_ASSERT_MSG( 0, "Texture Handle Index is larger than gpu index count!" );
+		return 0;
+	}
+
+	return g_texture_gpu_index[ handle.index ];
 }
 

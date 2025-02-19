@@ -29,7 +29,7 @@ LOG_CHANNEL_REGISTER( GraphicsAPI, ELogColor_Cyan );
 LOG_CHANNEL_REGISTER( Vulkan, ELogColor_DarkYellow );
 LOG_CHANNEL_REGISTER( Validation, ELogColor_DarkYellow );
 
-log_channel_h_t                                          gLC_Render = gLC_GraphicsAPI;
+log_channel_h                                          gLC_Render = gLC_GraphicsAPI;
 
 bool                                                     g_renderer_started = false;
 

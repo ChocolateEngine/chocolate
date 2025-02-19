@@ -4,11 +4,11 @@
 
 
 // Materials updated this frame
-ChVector< ch_material_h >       g_materials_dirty;
+ChVector< ch_material_h >            g_materials_dirty;
 
 
 // stored pointers to material var names
-std::unordered_set< ch_string > g_material_var_names;
+std::unordered_map< u64, ch_string > g_material_var_names;
 
 
 #if 0
@@ -113,7 +113,7 @@ ch_material_h GraphicsData::material_create( const char* name, const char* shade
 	}
 
 	ch_string final_name           = material_parse_name( name, strlen( name ) );
-	g_material_names[ final_name ] = handle;
+	//g_material_names[ final_name ] = handle;
 
 	return handle;
 }
@@ -168,6 +168,14 @@ ch_material_h GraphicsData::material_get_dirty( size_t index )
 		return {};
 
 	return g_materials_dirty[ index ];
+}
+
+
+void GraphicsData::material_mark_dirty( ch_material_h handle )
+{
+	if ( g_materials_dirty.index( handle ) == UINT32_MAX )
+	//	g_materials_dirty.push_back( handle );
+		return;
 }
 
 
@@ -248,38 +256,38 @@ u16 material_handle_var_name_index( const char* var_name )
 
 static ch_string material_get_var_name_ptr( const char* var_name )
 {
-	size_t var_name_len   = strlen( var_name );
-	ch_string temp( (char*)var_name, var_name_len );
-
-	auto find = g_material_var_names.find( temp );
+	size_t var_name_len = strlen( var_name );
+	u64    hash         = ch_str_hash( var_name, var_name_len );
+	auto   find         = g_material_var_names.find( hash );
 
 	if ( find == g_material_var_names.end() )
 	{
 		ch_string new_string = ch_str_copy( var_name, var_name_len );
-		g_material_var_names.emplace( new_string );
+		g_material_var_names[ hash ] = new_string;
 		return new_string;
 	}
 
-	return *find;
+	return find->second;
 }
 
 
+#if 0
 ch_string material_handle_var_name( const char* var_name )
 {
-	size_t var_name_len   = strlen( var_name );
-	ch_string temp( (char*)var_name, var_name_len );
-
-	auto find = g_material_var_names.find( temp );
+	size_t var_name_len = strlen( var_name );
+	u64    hash         = ch_str_hash( var_name, var_name_len );
+	auto   find         = g_material_var_names.find( hash );
 
 	if ( find == g_material_var_names.end() )
 	{
-		ch_string new_string = ch_str_copy( var_name, var_name_len );
-		g_material_var_names.emplace( new_string );
+		ch_string new_string         = ch_str_copy( var_name, var_name_len );
+		g_material_var_names[ hash ] = new_string;
 		return new_string;
 	}
 
 	return *find;
 }
+#endif
 
 
 bool GraphicsData::material_set_string( ch_material_h handle, const char* var_name, const char* value )
@@ -294,6 +302,8 @@ bool GraphicsData::material_set_string( ch_material_h handle, const char* var_na
 
 	ch_string var_name_ptr = material_get_var_name_ptr( var_name );
 
+//	#error get existing material var index
+
 	if ( !material_data_extend( material, 1 ) )
 	{
 		Log_Error( gLC_GraphicsData, "material_set_string: Failed to allocate data for string var on material\n" );
@@ -305,6 +315,7 @@ bool GraphicsData::material_set_string( ch_material_h handle, const char* var_na
 	material->type[ material->count ]           = e_mat_var_string;
 
 	material->count++;
+	material_mark_dirty( handle );
 	return true;
 }
 
@@ -332,6 +343,7 @@ bool GraphicsData::material_set_float( ch_material_h handle, const char* var_nam
 	material->type[ material->count ]          = e_mat_var_float;
 
 	material->count++;
+	material_mark_dirty( handle );
 	return true;
 }
 

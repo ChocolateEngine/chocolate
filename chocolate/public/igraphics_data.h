@@ -543,6 +543,7 @@ class IGraphicsData : public ISystem
 
 	virtual size_t        material_get_dirty_count()                                                                        = 0;
 	virtual ch_material_h material_get_dirty( size_t index )                                                                = 0;
+	virtual void          material_mark_dirty( ch_material_h handle )                                                       = 0;
 
 	virtual bool          material_set_string( ch_material_h handle, const char* var_name, const char* value )              = 0;
 	virtual bool          material_set_float( ch_material_h handle, const char* var_name, float value )                     = 0;

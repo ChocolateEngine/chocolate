@@ -312,6 +312,9 @@ void vk_draw_renderables_test( VkCommandBuffer c, r_window_data_t* window, u32 s
 	// TODO: this will crash if the shader isn't loaded, and this is still really early testing, so it's fine for now
 	vkCmdBindPipeline( c, VK_PIPELINE_BIND_POINT_GRAPHICS, g_shader_data_graphics_pipelines[ 0 ] );
 
+	// Bind Descriptor Set
+	vkCmdBindDescriptorSets( c, VK_PIPELINE_BIND_POINT_GRAPHICS, g_shader_data_graphics_pipeline_layout[ 0 ], 0, 1, &g_texture_desc_set, 0, 0 );
+
 	// Set Dynamic Viewport and Scissor
 
 	// Flip Viewport
@@ -350,6 +353,7 @@ void vk_draw_renderables_test( VkCommandBuffer c, r_window_data_t* window, u32 s
 		//push.view_matrix = g_test_render.view_mat;
 		//push.proj_matrix = g_test_render.proj_mat;
 		push.vertex_address   = mesh->buffers.vertex_address;
+		push.diffuse          = 0;
 
 		vkCmdPushConstants( c, g_shader_data_graphics_pipeline_layout[ 0 ], VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof( gpu_push_t ), &push );
 
