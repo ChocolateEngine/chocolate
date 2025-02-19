@@ -55,15 +55,11 @@ bool load_scene()
 }
 
 
-// why is this not in transform.h?
+// Proper Horizontal Projection
 inline glm::mat4 Util_ComputeProjection( float sWidth, float sHeight, float sNearZ, float sFarZ, float sFov )
 {
-	float hAspect = (float)sWidth / (float)sHeight;
-	float vAspect = (float)sHeight / (float)sWidth;
-
-	float V       = 2.0f * atanf( tanf( glm::radians( sFov ) / 2.0f ) * vAspect );
-
-	return glm::perspective( V, hAspect, sNearZ, sFarZ );
+	float aspect = (float)sWidth / (float)sHeight;
+	return glm::perspective( glm::radians( sFov ), aspect, sNearZ, sFarZ );
 }
 
 

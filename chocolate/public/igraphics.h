@@ -145,12 +145,19 @@ enum EShaderSlot
 
 inline glm::mat4 Util_ComputeProjection( float sWidth, float sHeight, float sNearZ, float sFarZ, float sFov )
 {
+	// old vertical fov projection
+#if 0
 	float hAspect = (float)sWidth / (float)sHeight;
 	float vAspect = (float)sHeight / (float)sWidth;
 
 	float V       = 2.0f * atanf( tanf( glm::radians( sFov ) / 2.0f ) * vAspect );
 
 	return glm::perspective( V, hAspect, sNearZ, sFarZ );
+#else
+	// proper horizontal fov projection
+	float aspect = (float)sWidth / (float)sHeight;
+	return glm::perspective( glm::radians( sFov ), aspect, sNearZ, sFarZ );
+#endif
 }
 
 
