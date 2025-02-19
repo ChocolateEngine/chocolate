@@ -12,8 +12,8 @@
 CONVAR_INT_NAME( log_verbose_global, "ch.log.verbosity.base", 1, "Base Developer Logging Level for all Log Channels", 0 );
 
 ELogColor                  gCurrentColor = ELogColor_Default;
-log_channel_h_t            gLC_General   = INVALID_LOG_CHANNEL;
-log_channel_h_t            gLC_Logging   = INVALID_LOG_CHANNEL;
+log_channel_h            gLC_General   = INVALID_LOG_CHANNEL;
+log_channel_h            gLC_Logging   = INVALID_LOG_CHANNEL;
 static ch_string           gDefaultChannelName( "General", 7 );
 static std::mutex          gLogMutex;
 
@@ -363,7 +363,7 @@ void Log_Shutdown()
 }
 
 
-log_channel_h_t Log_RegisterChannel( const char *sName, ELogColor sColor )
+log_channel_h Log_RegisterChannel( const char *sName, ELogColor sColor )
 {
 	ch_string name;
 	name.data = (char*)sName;
@@ -389,11 +389,11 @@ log_channel_h_t Log_RegisterChannel( const char *sName, ELogColor sColor )
 	channel.shown           = true;
 	channel.color           = sColor;
 
-	return (log_channel_h_t)GetLogChannels().size() - 1U;
+	return (log_channel_h)GetLogChannels().size() - 1U;
 }
 
 
-log_channel_h_t Log_GetChannel( const char* sChannel )
+log_channel_h Log_GetChannel( const char* sChannel )
 {
 	for ( u32 i = 0; i < GetLogChannels().size(); i++ )
 	{
@@ -401,14 +401,14 @@ log_channel_h_t Log_GetChannel( const char* sChannel )
 		if ( !ch_str_equals( channel->name, sChannel ) )
 			continue;
 
-		return (log_channel_h_t)i;
+		return (log_channel_h)i;
 	}
 
 	return INVALID_LOG_CHANNEL;
 }
 
 
-log_channel_t* Log_GetChannelData( log_channel_h_t sChannel )
+log_channel_t* Log_GetChannelData( log_channel_h sChannel )
 {
 	if ( sChannel >= GetLogChannels().size() )
         return nullptr;
@@ -1154,7 +1154,7 @@ ELogColor Log_GetColor()
 }
 
 
-log_channel_h_t LogGetChannel( const char* name )
+log_channel_h LogGetChannel( const char* name )
 {
 	if ( !name )
 		return INVALID_LOG_CHANNEL;
@@ -1165,7 +1165,7 @@ log_channel_h_t LogGetChannel( const char* name )
     {
         // if ( GetLogSystem().aChannels[i].name == name )
         if ( ch_str_equals( channel.name, name, nameLen ) )
-            return (log_channel_h_t)i;
+            return (log_channel_h)i;
 
         i++;
     }
@@ -1174,7 +1174,7 @@ log_channel_h_t LogGetChannel( const char* name )
 }
 
 
-ELogColor Log_GetChannelColor( log_channel_h_t handle )
+ELogColor Log_GetChannelColor( log_channel_h handle )
 {
 	log_channel_t* channel = Log_GetChannelData( handle );
     if ( !channel )
@@ -1184,7 +1184,7 @@ ELogColor Log_GetChannelColor( log_channel_h_t handle )
 }
 
 
-ch_string Log_GetChannelName( log_channel_h_t handle )
+ch_string Log_GetChannelName( log_channel_h handle )
 {
 	log_channel_t* channel = Log_GetChannelData( handle );
     if ( !channel )
@@ -1206,14 +1206,14 @@ const std::vector< log_t >& Log_GetLogHistory()
 }
 
 
-bool Log_ChannelIsShown( log_channel_h_t handle )
+bool Log_ChannelIsShown( log_channel_h handle )
 {
 	log_channel_t* channel = Log_GetChannelData( handle );
 	return channel && channel->shown;
 }
 
 
-int Log_GetChannelDevLevel( log_channel_h_t handle )
+int Log_GetChannelDevLevel( log_channel_h handle )
 {
 	log_channel_t* channel = Log_GetChannelData( handle );
 	if ( !channel )
@@ -1251,7 +1251,7 @@ bool Log_IsVisible( const log_t& log )
 // log_t Group Functions
 
 
-log_t Log_GroupBeginEx( log_channel_h_t channel, ELogType type )
+log_t Log_GroupBeginEx( log_channel_h channel, ELogType type )
 {
 	return {
 		.channel = channel,
@@ -1260,7 +1260,7 @@ log_t Log_GroupBeginEx( log_channel_h_t channel, ELogType type )
 }
 
 
-log_t Log_GroupBegin( log_channel_h_t channel )
+log_t Log_GroupBegin( log_channel_h channel )
 {
 	return {
 		.channel = channel,
@@ -1342,7 +1342,7 @@ void Log_GroupV( log_t& sGroup, const char* spFmt, va_list args )
     va_end( args )
 
 
-bool Log_ShouldAddLog( log_channel_h_t sChannel, ELogType sLevel )
+bool Log_ShouldAddLog( log_channel_h sChannel, ELogType sLevel )
 {
 	// Is this a developer level?
 	if ( !Log_IsDevType( sLevel ) )
@@ -1374,7 +1374,7 @@ bool Log_ShouldAddLog( log_channel_h_t sChannel, ELogType sLevel )
 }
 
 
-void Log_Ex( log_channel_h_t sChannel, ELogType sLevel, const char* spBuf )
+void Log_Ex( log_channel_h sChannel, ELogType sLevel, const char* spBuf )
 {
 	PROF_SCOPE();
 
@@ -1398,13 +1398,13 @@ void Log_Ex( log_channel_h_t sChannel, ELogType sLevel, const char* spBuf )
 }
 
 
-void Log_ExF( log_channel_h_t sChannel, ELogType sLevel, const char* spFmt, ... )
+void Log_ExF( log_channel_h sChannel, ELogType sLevel, const char* spFmt, ... )
 {
 	LOG_SYS_MSG_VA( spFmt, sChannel, sLevel );
 }
 
 
-void Log_ExV( log_channel_h_t sChannel, ELogType sLevel, const char* spFmt, va_list args )
+void Log_ExV( log_channel_h sChannel, ELogType sLevel, const char* spFmt, va_list args )
 {
 	PROF_SCOPE();
 
@@ -1451,51 +1451,51 @@ void Log_ExV( log_channel_h_t sChannel, ELogType sLevel, const char* spFmt, va_l
 // Standard Logging Functions
 
 // Lowest severity.
-void CORE_API Log_Msg( log_channel_h_t channel, const char* spBuf )
+void CORE_API Log_Msg( log_channel_h channel, const char* spBuf )
 {
 	Log_Ex( channel, ELogType_Normal, spBuf );
 }
 
-void CORE_API Log_MsgF( log_channel_h_t channel, const char* spFmt, ... )
+void CORE_API Log_MsgF( log_channel_h channel, const char* spFmt, ... )
 {
 	LOG_SYS_MSG_VA( spFmt, channel, ELogType_Normal );
 }
 
 // Medium severity.
-void CORE_API Log_Warn( log_channel_h_t channel, const char* spBuf )
+void CORE_API Log_Warn( log_channel_h channel, const char* spBuf )
 {
 	Log_Ex( channel, ELogType_Warning, spBuf );
 }
 
-void CORE_API Log_WarnF( log_channel_h_t channel, const char* spFmt, ... )
+void CORE_API Log_WarnF( log_channel_h channel, const char* spFmt, ... )
 {
 	LOG_SYS_MSG_VA( spFmt, channel, ELogType_Warning );
 }
 
 // High severity.
-void CORE_API Log_Error( log_channel_h_t channel, const char* spBuf )
+void CORE_API Log_Error( log_channel_h channel, const char* spBuf )
 {
 	Log_Ex( channel, ELogType_Error, spBuf );
 }
 
-void CORE_API Log_ErrorF( log_channel_h_t channel, const char* spFmt, ... )
+void CORE_API Log_ErrorF( log_channel_h channel, const char* spFmt, ... )
 {
 	LOG_SYS_MSG_VA( spFmt, channel, ELogType_Error );
 }
 
 // Extreme severity.
-void CORE_API Log_Fatal( log_channel_h_t channel, const char* spBuf )
+void CORE_API Log_Fatal( log_channel_h channel, const char* spBuf )
 {
 	Log_Ex( channel, ELogType_Fatal, spBuf );
 }
 
-void CORE_API Log_FatalF( log_channel_h_t channel, const char* spFmt, ... )
+void CORE_API Log_FatalF( log_channel_h channel, const char* spFmt, ... )
 {
 	LOG_SYS_MSG_VA( spFmt, channel, ELogType_Fatal );
 }
 
 // Dev only.
-void CORE_API Log_Dev( log_channel_h_t channel, u8 sLvl, const char* spBuf )
+void CORE_API Log_Dev( log_channel_h channel, u8 sLvl, const char* spBuf )
 {
 	if ( sLvl < 1 || sLvl > 4 )
 		sLvl = 4;
@@ -1503,7 +1503,7 @@ void CORE_API Log_Dev( log_channel_h_t channel, u8 sLvl, const char* spBuf )
 	Log_Ex( channel, (ELogType)sLvl, spBuf );
 }
 
-void CORE_API Log_DevF( log_channel_h_t channel, u8 sLvl, const char* spFmt, ... )
+void CORE_API Log_DevF( log_channel_h channel, u8 sLvl, const char* spFmt, ... )
 {
 	if ( sLvl < 1 || sLvl > 4 )
 		sLvl = 4;
