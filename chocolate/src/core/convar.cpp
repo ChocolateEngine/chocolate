@@ -8,6 +8,7 @@ extern ConVarFlagData_t*               gConVarFlags;
 extern u8                              gConVarFlagCount;
 
 static std::string                     gStrEmpty;
+static ch_string                       gChStrEmpty;
 
 constexpr size_t                       one = 1;
 
@@ -60,7 +61,7 @@ ConVarData_t* Con_GetConVarData( u32 index )
 const ch_string& Con_GetConVarDesc( u32 index )
 {
 	if ( index == UINT32_MAX || index >= g_cvar_count )
-		return {};
+		return gChStrEmpty;
 
 	return g_cvar_desc[ index ];
 }
