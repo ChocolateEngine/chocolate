@@ -4,6 +4,9 @@
 // TODO: upload textures with vma
 
 
+constexpr const char* MISSING_TEXTURE_PATH = "materials/base/missing.ktx";
+
+
 struct vk_sampler_settings_t
 {
 	VkFilter             filter;
@@ -54,6 +57,10 @@ std::unordered_map< vk_sampler_settings_t, VkSampler > g_samplers;
 void                                                   vk_sampler_recreate();
 
 
+// ------------------------------------------------------------------------------------------------------------
+// Texture ConVars
+
+
  // a few gpu's out there have a max of 255 mipmap levels
 // https://vulkan.gpuinfo.org/displaydevicelimit.php?name=maxSamplerLodBias
 #define MAX_LOD_BIAS 255 
@@ -90,6 +97,10 @@ CONVAR_RANGE_INT_NAME_CMD( vk_texture_filtering, "vk.texture.filtering", 1, 0, 2
 }
 
 
+// ------------------------------------------------------------------------------------------------------------
+// Texture Loading and Freeing
+
+
 static void texture_free_data( vk_texture_t* texture )
 {
 	vk_queue_wait_graphics();
@@ -105,7 +116,15 @@ static void texture_free_data( vk_texture_t* texture )
 }
 
 
-r_texture_h texture_load( r_texture_h& handle, const char* path, vk_texture_load_info_t& load_info )
+r_texture_h texture_load( const char* path, vk_texture_load_info_t& load_info )
+{
+	r_texture_h handle;
+	texture_load( handle, path, load_info );
+	return handle;
+}
+
+
+bool texture_load( r_texture_h& handle, const char* path, vk_texture_load_info_t& load_info )
 {
 	if ( !path )
 		return {};
@@ -191,10 +210,30 @@ void texture_free( r_texture_h& handle )
 }
 
 
+// ------------------------------------------------------------------------------------------------------------
+// Missing Texture
+
+
 bool texture_create_missing()
 {
+	vk_texture_load_info_t load_info{};
+	load_info.usage    = VK_IMAGE_USAGE_SAMPLED_BIT;
+	load_info.filter   = VK_FILTER_LINEAR;
+
+	r_texture_h handle = texture_load( MISSING_TEXTURE_PATH, load_info );
+
+	if ( !handle )
+	{
+		Log_FatalF( gLC_Render, "Failed to load missing texture: \"%s\"\n", MISSING_TEXTURE_PATH );
+		return false;
+	}
+
 	return true;
 }
+
+
+// ------------------------------------------------------------------------------------------------------------
+// Texture Samplers
 
 
 int vk_device_get_anisotropic_filter_level()
@@ -203,30 +242,29 @@ int vk_device_get_anisotropic_filter_level()
 }
 
 
-// TODO: use a hash map for caches
 VkSampler vk_sampler_get( VkFilter filter, VkSamplerAddressMode address_mode, VkBool32 depth_compare )
 {
-	VkSamplerCreateInfo samplerInfo{ VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO };
+	VkSamplerCreateInfo sampler_info{ VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO };
 
 	if ( vk_texture_filtering == 2 )
 	{
 		// Force Linear Filtering
-		samplerInfo.magFilter = VK_FILTER_LINEAR;
-		samplerInfo.minFilter = VK_FILTER_LINEAR;
+		sampler_info.magFilter = VK_FILTER_LINEAR;
+		sampler_info.minFilter = VK_FILTER_LINEAR;
 	}
-	else if ( vk_texture_filtering )
+	else if ( vk_texture_filtering == 1 )
 	{
-		samplerInfo.magFilter = filter;
-		samplerInfo.minFilter = filter;
+		sampler_info.magFilter = filter;
+		sampler_info.minFilter = filter;
 	}
 	else
 	{
-		samplerInfo.magFilter = VK_FILTER_NEAREST;
-		samplerInfo.minFilter = VK_FILTER_NEAREST;
+		sampler_info.magFilter = VK_FILTER_NEAREST;
+		sampler_info.minFilter = VK_FILTER_NEAREST;
 	}
 
 	// generate a hash for these
-	vk_sampler_settings_t settings{ samplerInfo.minFilter, address_mode, depth_compare };
+	vk_sampler_settings_t settings{ sampler_info.minFilter, address_mode, depth_compare };
 
 	auto it = g_samplers.find( settings );
 	if ( it != g_samplers.end() )
@@ -245,34 +283,34 @@ VkSampler vk_sampler_get( VkFilter filter, VkSamplerAddressMode address_mode, Vk
 		return VK_NULL_HANDLE;
 	}
 
-	samplerInfo.addressModeU = address_mode;
-	samplerInfo.addressModeV = address_mode;
-	samplerInfo.addressModeW = address_mode;
+	sampler_info.addressModeU = address_mode;
+	sampler_info.addressModeV = address_mode;
+	sampler_info.addressModeW = address_mode;
 
 	// make sure this device has anisotropic filtering and the user requests it
 	if ( vk_anisotropy > 1 && g_vk_device_properties.limits.maxSamplerAnisotropy > 1 )
 	{
-		samplerInfo.anisotropyEnable = VK_TRUE;
-		samplerInfo.maxAnisotropy    = vk_device_get_anisotropic_filter_level();
+		sampler_info.anisotropyEnable = VK_TRUE;
+		sampler_info.maxAnisotropy    = vk_device_get_anisotropic_filter_level();
 	}
 	else
 	{
-		samplerInfo.anisotropyEnable = VK_FALSE;
-		samplerInfo.maxAnisotropy    = 0;
+		sampler_info.anisotropyEnable = VK_FALSE;
+		sampler_info.maxAnisotropy    = 0;
 	}
 
-	samplerInfo.mipmapMode              = vk_linear_mipmaps ? VK_SAMPLER_MIPMAP_MODE_LINEAR : VK_SAMPLER_MIPMAP_MODE_NEAREST;
-	samplerInfo.borderColor             = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
-	samplerInfo.unnormalizedCoordinates = VK_FALSE;
-	samplerInfo.compareEnable           = depth_compare;
-	samplerInfo.compareOp               = VK_COMPARE_OP_LESS;
-	samplerInfo.mipLodBias              = 0.f;
-	samplerInfo.maxLod                  = std::max( 0, vk_miplod_max );
-	samplerInfo.minLod                  = std::min( (float)std::max( 0, vk_miplod_min ), samplerInfo.maxLod );
+	sampler_info.mipmapMode              = vk_linear_mipmaps ? VK_SAMPLER_MIPMAP_MODE_LINEAR : VK_SAMPLER_MIPMAP_MODE_NEAREST;
+	sampler_info.borderColor             = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
+	sampler_info.unnormalizedCoordinates = VK_FALSE;
+	sampler_info.compareEnable           = depth_compare;
+	sampler_info.compareOp               = VK_COMPARE_OP_LESS;
+	sampler_info.mipLodBias              = 0.f;
+	sampler_info.maxLod                  = std::max( 0, vk_miplod_max );
+	sampler_info.minLod                  = std::min( (float)std::max( 0, vk_miplod_min ), sampler_info.maxLod );
 
 	VkSampler& sampler                  = g_samplers[ settings ];
 
-	vk_check( vkCreateSampler( g_vk_device, &samplerInfo, NULL, &sampler ), "Failed to create sampler!" );
+	vk_check( vkCreateSampler( g_vk_device, &sampler_info, NULL, &sampler ), "Failed to create sampler!" );
 
 	Log_DevF( gLC_Render, 1, "Created New Texture Sampler (%d / %d Max Samplers)\n", g_samplers.size(), g_vk_device_properties.limits.maxSamplerAllocationCount );
 

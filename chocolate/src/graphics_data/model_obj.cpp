@@ -5,10 +5,7 @@
 #include "fast_obj/fast_obj.h"
 
 
-static const char* gDefaultShader  = "basic_3d";
-
-static const char* MatVar_Diffuse  = "diffuse";
-static const char* MatVar_Emissive = "emissive";
+static const char* gDefaultShader  = "standard";
 
 
 
@@ -124,51 +121,40 @@ bool model_load_obj( const char* s_base_path, const char* s_full_path, model_t& 
 	}
 
 	// ch_string_auto base_dir_full = FileSys_GetDirName( s_full_path );
-	ch_string_auto base_dir      = FileSys_GetDirName( s_base_path );
+	ch_string_auto base_dir  = FileSys_GetDirName( s_base_path );
 
 	// std::string baseDir   = GetBaseDir( s_full_path );
 	// std::string baseDir2  = GetBaseDir( s_base_path );
 
-	u32         mat_count = glm::max( 1U, obj->material_count );
+	u32            mat_count = glm::max( 1U, obj->material_count );
+	ch_material_h* materials = ch_calloc< ch_material_h >( mat_count );
 
-	// static ch_handle_t defaultShader = gGraphics.GetShader( gDefaultShader.data() );
-
-	// one material for now
-	ch_material_h my_cool_material = graphics_data.material_create( "test", "standard" );
-	graphics_data.material_set_string( my_cool_material, "diffuse", TEST_TEXTURE );
-
-	// ch_material_h  my_cool_material{};
-
-#if 0
+#if 1
 	for ( unsigned int i = 0; i < obj->material_count; i++ )
 	{
-		fastObjMaterial& objMat   = obj->materials[ i ];
-		std::string      matName  = base_dir + "/" + objMat.name;
-		ch_handle_t      material = gGraphics.FindMaterial( matName.c_str() );
+		fastObjMaterial& objMat = obj->materials[ i ];
 
-		if ( material == CH_INVALID_HANDLE )
-		{
-			// kinda strange this setup
+		char             mat_name[ 512 ]{};
+		strcat( mat_name, base_dir.data );
+		strcat( mat_name, SEP );
+		strcat( mat_name, objMat.name );
 
-			// Search without "base_dir"
-			material = LoadMaterial( objMat.name );
+	#if 1
+		// material loading not implemented yet
+		ch_material_h mat_handle{};
+	#else
+		ch_material_h mat_handle = graphics_data.material_load( mat_name );
 
-			if ( material == CH_INVALID_HANDLE )
-			{
-				material = LoadMaterial( matName );
-			}
-		}
+		if ( mat_handle == CH_INVALID_HANDLE )
+			mat_handle = graphics_data.material_load( objMat.name );  // Search without "base_dir"
+	#endif
 
 		// fallback if there is no cmt file
-		if ( material == CH_INVALID_HANDLE )
+		if ( !mat_handle )
 		{
-			material = gGraphics.CreateMaterial( objMat.name, defaultShader );
+			mat_handle      = graphics_data.material_create( objMat.name, "standard" );
 
-			TextureCreateData_t createData{};
-			createData.aUsage  = EImageUsage_Sampled;
-			createData.aFilter = EImageFilter_Linear;
-
-			auto SetTexture    = [ & ]( const std::string& param, u32 tex_index )
+			auto SetTexture = [ & ]( const char* param, u32 tex_index )
 			{
 				if ( tex_index > obj->texture_count )
 					return;
@@ -178,42 +164,30 @@ bool model_load_obj( const char* s_base_path, const char* s_full_path, model_t& 
 				if ( obj_texture.path == nullptr )
 					return;
 
-				ch_handle_t texture = CH_INVALID_HANDLE;
+				if ( FileSys_IsRelative( obj_texture.path ) )
+				{
+					char tex_path[ 512 ]{};
+					strcat( tex_path, base_dir.data );
+					strcat( tex_path, SEP );
+					strcat( tex_path, obj_texture.path );
 
-				// check if the name is an absolute path
-				const char* texName = nullptr;
-
-				//if ( FileSys_IsAbsolute( fastTexture.name ) )
-				//{
-				//	texName = obj_texture.name;
-				//}
-				//else
-				//{
-				texName             = obj_texture.path;
-				//}
-
-				if ( FileSys_IsRelative( texName ) )
-					gGraphics.LoadTexture( texture, base_dir + "/" + texName, createData );
+					graphics_data.material_set_string( mat_handle, param, tex_path );
+				}
 				else
-					gGraphics.LoadTexture( texture, texName, createData );
-
-				gGraphics.Mat_SetVar( material, param, texture );
+				{
+					graphics_data.material_set_string( mat_handle, param, obj_texture.path );
+				}
 			};
 
-			SetTexture( MatVar_Diffuse, objMat.map_Kd );
-			SetTexture( MatVar_Emissive, objMat.map_Ke );
+			SetTexture( "diffuse", objMat.map_Kd );
+			SetTexture( "emissive", objMat.map_Ke );
 		}
 
-		meshBuilder.SetCurrentSurface( i );
-		meshBuilder.SetMaterial( material );
+		materials[ i ] = mat_handle;
 	}
 
 	if ( obj->material_count == 0 )
-	{
-		ch_handle_t material = gGraphics.CreateMaterial( s_full_path, gGraphics.GetShader( gDefaultShader.data() ) );
-		meshBuilder.SetCurrentSurface( 0 );
-		meshBuilder.SetMaterial( material );
-	}
+		materials[ 0 ] = graphics_data.material_create( s_full_path, "standard" );
 #endif
 
 	// u64 vertexOffset = 0;
@@ -254,7 +228,7 @@ bool model_load_obj( const char* s_base_path, const char* s_full_path, model_t& 
 			}
 
 			mesh_build_surface_t& surface = build_surfaces[ face_mat ];
-			surface.material              = my_cool_material;
+			surface.material              = materials[ face_mat ];
 
 			surface.indices.reserve( surface.indices.size() + ( group.face_count * ( faceVertCount == 3 ? 3 : 6 ) ) );
 			//surface.vertices.reserve( surface.vertices.size() + ( group.face_count * ( faceVertCount == 3 ? 3 : 6 ) ) );
@@ -389,6 +363,7 @@ bool model_load_obj( const char* s_base_path, const char* s_full_path, model_t& 
 	}
 
 	fast_obj_destroy( obj );
+	free( materials );
 
 	return true;
 }

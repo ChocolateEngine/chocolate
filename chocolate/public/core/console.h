@@ -281,10 +281,10 @@ CORE_API u32                                   Con_GetConVarIndex( const char* n
 CORE_API u32                                   Con_GetConVarCount();  // Get the number of ConVars registered
 
 CORE_API ConVarData_t*                         Con_GetConVarData( u32 index );
-CORE_API const ch_string&                      Con_GetConVarDesc( u32 index );  // ConVar Descriptions
+CORE_API const ch_string                       Con_GetConVarDesc( u32 index );  // ConVar Descriptions
 
 CORE_API ConVarData_t*                         Con_GetConVarData( const char* name, size_t len = 0 );
-CORE_API const ch_string&                      Con_GetConVarDesc( const char* name, size_t len = 0 );
+CORE_API const ch_string                       Con_GetConVarDesc( const char* name, size_t len = 0 );
 
 // ----------------------------------------------------------------------------------------------------------
 // ConVar Registering

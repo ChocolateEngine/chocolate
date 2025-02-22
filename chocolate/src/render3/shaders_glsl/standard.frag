@@ -41,12 +41,16 @@ layout( push_constant ) uniform constants
 	mat4          proj_view_matrix;
 	buffer_vertex vertex_address;  // u64 handle
 	int           diffuse;
+	int           emissive;
 } push;
 
 
 void main() 
 {
 	out_frag_color = texture( g_tex[ push.diffuse ], in_uv );
+
+	// out_frag_color.rgb += mix( vec3(0, 0, 0), texture( g_tex[ push.emissive ], in_uv).rgb, mat.emissivePower );
+	out_frag_color.rgb += texture( g_tex[ push.emissive ], in_uv).rgb;
 	// out_frag_color = vec4( in_color, 1.0f );
 }
 

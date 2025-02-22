@@ -407,8 +407,9 @@ void vk_descriptor_textures_update()
 		count++;
 	}
 
-	write.pImageInfo      = array;
-	write.descriptorCount = count;
+	write.pImageInfo          = array;
+	write.descriptorCount     = count;
+	g_texture_gpu_index_count = g_textures.capacity;
 
 	// no sampled textures found
 	if ( !count )

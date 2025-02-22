@@ -5,7 +5,7 @@
 
 // Materials updated this frame
 ChVector< ch_material_h >            g_materials_dirty;
-
+u32                                  g_material_count;
 
 // stored pointers to material var names
 std::unordered_map< u64, ch_string > g_material_var_names;
@@ -113,8 +113,9 @@ ch_material_h GraphicsData::material_create( const char* name, const char* shade
 	}
 
 	ch_string final_name           = material_parse_name( name, strlen( name ) );
-	//g_material_names[ final_name ] = handle;
+	g_material_names[ final_name ] = handle;
 
+	g_material_count++;
 	return handle;
 }
 
@@ -143,12 +144,115 @@ void GraphicsData::material_free( ch_material_h handle )
 	free( material->type );
 
 	g_materials.ref_decrement_finish( handle );
+	g_material_count--;
+
+	for ( const auto& [ name, saved_handle ] : g_material_names )
+	{
+		if ( saved_handle == handle )
+		{
+			g_material_names.erase( name );
+			break;
+		}
+	}
+
+	for ( const auto& [ path, saved_handle ] : g_material_paths )
+	{
+		if ( saved_handle == handle )
+		{
+			g_material_paths.erase( path );
+			break;
+		}
+	}
 }
 
 
 material_t* GraphicsData::material_get_data( ch_material_h handle )
 {
 	return g_materials.get( handle );
+}
+
+
+u32 GraphicsData::material_get_capacity()
+{
+	return g_materials.capacity;
+}
+
+
+u32 GraphicsData::material_get_count()
+{
+	return g_material_count;
+}
+
+
+ch_material_h GraphicsData::material_find( const char* name, size_t len, bool hide_warning )
+{
+	if ( !name )
+		return {};
+
+	if ( len == 0 )
+		len = strlen( name );
+
+	ch_string temp( (char*)name, len );
+	auto      it = g_material_names.find( temp );
+
+	if ( it != g_material_names.end() )
+		return it->second;
+
+	if ( !hide_warning )
+		Log_ErrorF( "Failed to find material \"%s\"\n", name );
+
+	return {};
+}
+
+
+ch_material_h GraphicsData::material_find_from_path( const char* path, size_t len, bool hide_warning )
+{
+	if ( !path )
+		return {};
+
+	if ( len == 0 )
+		len = strlen( path );
+
+	ch_string temp( (char*)path, len );
+	auto      it = g_material_paths.find( temp );
+
+	if ( it != g_material_paths.end() )
+		return it->second;
+
+	if ( !hide_warning )
+		Log_ErrorF( "Failed to find material from path \"%s\"\n", path );
+
+	return {};
+}
+
+
+ch_string GraphicsData::material_get_name( ch_material_h handle )
+{
+	for ( const auto& [ name, saved_handle ] : g_material_names )
+	{
+		if ( saved_handle == handle )
+			return name;
+	}
+
+	return {};
+}
+
+
+ch_string GraphicsData::material_get_path( ch_material_h handle )
+{
+	for ( const auto& [ path, saved_handle ] : g_material_paths )
+	{
+		if ( saved_handle == handle )
+			return path;
+	}
+
+	return {};
+}
+
+
+void GraphicsData::material_ref_increment( ch_material_h handle )
+{
+	g_materials.ref_increment( handle );
 }
 
 

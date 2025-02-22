@@ -158,6 +158,20 @@ enum : e_mat_var
 };
 
 
+inline const char* g_mat_var_str[] = {
+	"Invalid",
+	"String",
+	"Float",
+	"Int",
+	"Vec2",
+	"Vec3",
+	"Vec4",
+};
+
+
+static_assert( ARR_SIZE( g_mat_var_str ) == e_mat_var_count );
+
+
 enum e_vertex_attribute : u8
 {
 	e_vertex_attribute_position,    // vec3
@@ -518,6 +532,18 @@ struct model_builder_t
 // ------------------------------------------------------------------------------------
 
 
+inline const char* get_mat_var_str( e_mat_var mat_var )
+{
+	if ( mat_var >= e_mat_var_count )
+		return g_mat_var_str[ e_mat_var_invalid ];
+
+	return g_mat_var_str[ mat_var ];
+}
+
+
+// ------------------------------------------------------------------------------------
+
+
 class IGraphicsData : public ISystem
 {
    public:
@@ -539,7 +565,20 @@ class IGraphicsData : public ISystem
 	virtual ch_material_h material_load( const char* path )                                                                 = 0;
 	virtual void          material_free( ch_material_h handle )                                                             = 0;
 
+	virtual ch_material_h material_find( const char* name, size_t len = 0, bool hide_warning = false )                      = 0;
+	virtual ch_material_h material_find_from_path( const char* path, size_t len = 0, bool hide_warning = false )            = 0;
+
+	// get allocated capacity of material handle list
+	virtual u32           material_get_capacity()                                                                           = 0;
+
 	virtual material_t*   material_get_data( ch_material_h handle )                                                         = 0;
+	virtual u32           material_get_count()                                                                              = 0;
+	virtual ch_string     material_get_name( ch_material_h handle )                                                         = 0;
+	virtual ch_string     material_get_path( ch_material_h handle )                                                         = 0;
+	// virtual ch_material_h material_get_at_index( u32 index )                                                                = 0;
+
+	// to decrement the material ref counter, call material_free
+	virtual void          material_ref_increment( ch_material_h handle )                                                    = 0;
 
 	virtual size_t        material_get_dirty_count()                                                                        = 0;
 	virtual ch_material_h material_get_dirty( size_t index )                                                                = 0;
@@ -568,6 +607,17 @@ class IGraphicsData : public ISystem
 	// virtual const u16            model_get_material_count( ch_model_h handle )      = 0;
 	// virtual const ch_material_h* model_get_material_array( ch_model_h handle )      = 0;
 
+#if 0
+	// odd idea for model loading to have it potentially non-blocking?
+
+	queue_handle = graphics_data->model_load_queued( "path" );
+
+	// once the graphics data model loading task is done, then these systems read that loaded data
+	audio->model_create( queue_handle );
+	render->model_create( queue_handle );
+
+#endif
+
 	// --------------------------------------------------------------------------------------------
 	// Memory Calculating - Returns memory usage information
 	// --------------------------------------------------------------------------------------------
@@ -589,5 +639,5 @@ class IGraphicsData : public ISystem
 
 
 #define CH_GRAPHICS_DATA     "ch_graphics_data"
-#define CH_GRAPHICS_DATA_VER 2
+#define CH_GRAPHICS_DATA_VER 3
 

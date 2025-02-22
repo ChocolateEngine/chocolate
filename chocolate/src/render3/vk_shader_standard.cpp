@@ -4,6 +4,9 @@
 constexpr const char* STANDARD_SHADER_PATH_V = "shaders/render3/standard.vert.spv";
 constexpr const char* STANDARD_SHADER_PATH_F = "shaders/render3/standard.frag.spv";
 
+constexpr const char* EMISSIVE_TEX           = "materials/base/black";
+constexpr const char* AMBIENT_OCCLUSION_TEX  = "materials/base/white";
+
 
 // struct r_standard_push_data_t
 // {
@@ -14,6 +17,8 @@ constexpr const char* STANDARD_SHADER_PATH_F = "shaders/render3/standard.frag.sp
 struct shader_mat_standard_t
 {
 	int diffuse;
+	int emissive;
+	int ambient_occlusion;
 };
 
 
@@ -33,21 +38,11 @@ static VkFormat g_standard_color_formats[] = {
 };
 
 
-// MATERIAL IDEA
-
-// #define CH_SHADER_OFFSET_BEGIN( struct_name, array_name ) \ 
-// using __shader_material_struct_t = struct_name;
-// static shader_material_var_desc array_name[] = {
-
 CH_SHADER_MAT_VAR_OFFSET_BEGIN( shader_mat_standard_t, g_shader_standard_vars )
-CH_SHADER_MAT_VAR_OFFSET_VAR( diffuse, "Diffuse Texture", "models/riverhouse/dirtfloor001a" )
+CH_SHADER_MAT_VAR_OFFSET_VAR( diffuse, "Diffuse Texture", "" )
+CH_SHADER_MAT_VAR_OFFSET_VAR( emissive, "Emissive Texture", EMISSIVE_TEX )
+CH_SHADER_MAT_VAR_OFFSET_VAR( ambient_occlusion, "Ambient Occlusion Texture", AMBIENT_OCCLUSION_TEX )
 CH_SHADER_MAT_VAR_OFFSET_END()
-
-// 
-// or like in render2
-// CH_SHADER_OFFSET_VAR( var_name, description, default )
-// 
-// CH_SHADER_OFFSET_END() -> };
 
 
 static vk_shader_create_graphics_t g_shader_standard_create

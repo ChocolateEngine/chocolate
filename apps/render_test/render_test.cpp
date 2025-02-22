@@ -23,11 +23,16 @@ glm::vec3              g_ang{};
 
 constexpr const char*  TEST_SCENE_PATH = "../sidury/maps/riverhouse_v1";
 constexpr const char*  TEST_MODEL_PATH = "../sidury/models/riverhouse/riverhouse_v1.obj";
+constexpr const char*  TEST_MODEL2_PATH = "../sidury/models/protogen_wip_25d/protogen_wip_25d.obj";
 // constexpr const char* TEST_MODEL_PATH = "models/test/test_cube.obj";
 
 static ch_model_h      g_test_model{};
 static r_mesh_h        g_test_model_gpu{};
 static r_mesh_render_h g_test_model_render{};
+
+static ch_model_h      g_test_model2{};
+static r_mesh_h        g_test_model2_gpu{};
+static r_mesh_render_h g_test_model2_render{};
 
 
 bool load_scene()
@@ -50,6 +55,27 @@ bool load_scene()
 
 	// now we can free the test model since it's use is over
 	graphics_data->model_free( g_test_model );
+
+
+
+	// hmm, maybe this could be condensed into one call, mesh_render_create(), pass in a model path instead of a handle, and do the model load and upload internally if needed?
+	g_test_model2 = graphics_data->model_load( TEST_MODEL2_PATH );
+
+	if ( !g_test_model2 )
+		return false;
+
+	g_test_model2_gpu = render->mesh_upload( g_test_model2 );
+
+	if ( !g_test_model2_gpu )
+		return false;
+
+	g_test_model2_render = render->mesh_render_create( g_test_model2_gpu );
+
+	if ( !g_test_model2_render )
+		return false;
+
+	// now we can free the test model since it's use is over
+	graphics_data->model_free( g_test_model2 );
 
 	return true;
 }

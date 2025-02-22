@@ -154,23 +154,16 @@ bool ktx_load( const char* path, vk_texture_t* texture )
 	texture->format        = kVkTexture.imageFormat;
 	texture->data_size     = kTexture->dataSize;
 	texture->usage         = VK_IMAGE_USAGE_SAMPLED_BIT;
+	texture->view_type     = kVkTexture.viewType;
 
 	// hack
-	if ( kVkTexture.viewType == VK_IMAGE_VIEW_TYPE_2D_ARRAY )
+	if ( kVkTexture.viewType == VK_IMAGE_VIEW_TYPE_2D_ARRAY && kVkTexture.layerCount == 1 )
 	{
-		// only use 2D array if we have more than 1 layer
-		if ( kVkTexture.layerCount > 1 )
-			texture->view_type = VK_IMAGE_VIEW_TYPE_2D;
+		texture->view_type = VK_IMAGE_VIEW_TYPE_2D;
 	}
-	else if ( kVkTexture.viewType == VK_IMAGE_VIEW_TYPE_1D_ARRAY )
+	else if ( kVkTexture.viewType == VK_IMAGE_VIEW_TYPE_1D_ARRAY && kVkTexture.layerCount == 1 )
 	{
-		// only use 1D array if we have more than 1 layer
-		if ( kVkTexture.layerCount > 1 )
-			texture->view_type = VK_IMAGE_VIEW_TYPE_1D;
-	}
-	else
-	{
-		texture->view_type = kVkTexture.viewType;
+		texture->view_type = VK_IMAGE_VIEW_TYPE_1D;
 	}
 
 	// Create Image View

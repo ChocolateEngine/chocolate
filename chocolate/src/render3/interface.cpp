@@ -105,13 +105,15 @@ struct Render3 final : public IRender3
 			return false;
 		}
 
+		// create the missing texture
+		if ( !texture_create_missing() )
+			return false;
+
 		if ( !vk_shaders_init() )
 		{
 			Log_Error( gLC_Render, "Failed to create shaders\n" );
 			return false;
 		}
-
-		// create the missing texture
 
 		// TODO: later add in other parts of the renderer, like the shader system
 
@@ -504,18 +506,82 @@ struct Render3 final : public IRender3
 		if ( !model )
 			return {};
 
-		ch_material_h* mats        = 0;
-		u32            total_mats  = 0;
+		ChVector< ch_material_h > mats;
+		ChVector< u32 >           mats_index;
+		ChVector< vk_material_h > mats_vk;
 
-		u32            total_verts = 0;
-		u32            total_ind   = 0;
+		u32                       total_verts = 0;
+		u32                       total_ind   = 0;
 
+		// ---------------------------------------------------------------------------------
 		// Get the total amount of vertices and indices in all meshes
 		for ( u32 mesh_i = 0; mesh_i < model->mesh_count; mesh_i++ )
 		{
-			total_verts += model->mesh[ mesh_i ].vertex_count;
-			total_ind += model->mesh[ mesh_i ].index_count;
+			mesh_t& mesh = model->mesh[ mesh_i ];
+
+			total_verts += mesh.vertex_count;
+			total_ind += mesh.index_count;
+
+			for ( u32 surface_i = 0; surface_i < mesh.surface_count; surface_i++ )
+			{
+				u32 index = mats.index( mesh.surface[ surface_i ].material );
+				if ( index == UINT32_MAX )
+				{
+					mats_index.push_back( mats.size() );
+					mats.push_back( mesh.surface[ surface_i ].material );
+				}
+				else
+				{
+					mats_index.push_back( index );
+				}
+			}
 		}
+
+		// ---------------------------------------------------------------------------------
+		// Load materials
+
+		mats_vk.resize( mats.size() );
+		for ( u32 i = 0; i < mats.size(); i++ )
+		{
+			mats_vk[ i ] = vk_material_create( mats[ i ] );
+		}
+
+		vk_mesh_material_t* surfaces = ch_calloc< vk_mesh_material_t >( mats_vk.size() );
+
+		u32                 base_ind_offset  = 0;
+		u32                 base_vert_offset = 0;
+		u32                 vk_surface_i     = 0;
+
+		for ( u32 mesh_i = 0; mesh_i < model->mesh_count; mesh_i++ )
+		{
+			mesh_t& mesh             = model->mesh[ mesh_i ];
+
+			u32     temp_ind_offset  = 0;
+			u32     temp_vert_offset = 0;
+
+			for ( u32 surface_i = 0; surface_i < mesh.surface_count; surface_i++ )
+			{
+				mesh_surface_t&     surf    = mesh.surface[ surface_i ];
+				vk_mesh_material_t& vk_surf = surfaces[ vk_surface_i ];
+				vk_surf.material            = mats_vk[ mats_index[ vk_surface_i ] ];
+				vk_surface_i++;
+
+				vk_surf.index_offset        = base_ind_offset + surf.index_offset;
+				vk_surf.vertex_offset       = base_vert_offset + surf.vertex_offset;
+
+				vk_surf.index_count         = surf.index_count;
+				vk_surf.vertex_count        = surf.vertex_count;
+
+				temp_ind_offset += surf.index_count;
+				temp_vert_offset += surf.vertex_count;
+			}
+
+			base_ind_offset += temp_ind_offset;
+			base_vert_offset += temp_vert_offset;
+		}
+		
+		// ---------------------------------------------------------------------------------
+		// Load Vertices 
 
 		gpu_vertex_t* verts   = ch_calloc< gpu_vertex_t >( total_verts );
 		u32*          indices = 0;
@@ -540,10 +606,6 @@ struct Render3 final : public IRender3
 
 			mesh_t& mesh = model->mesh[ mesh_i ];
 
-			// find a material
-
-			mesh.surface->material;
-
 			for ( u32 vert_i = 0; vert_i < mesh.vertex_count; vert_i++ )
 			{
 				verts[ vert_offset ].pos    = mesh.vertex_data.pos[ vert_i ];
@@ -556,6 +618,7 @@ struct Render3 final : public IRender3
 			}
 		}
 
+		// ---------------------------------------------------------------------------------
 		// If we have indices, copy those as well like the above loop
 		if ( indices )
 		{
@@ -571,6 +634,7 @@ struct Render3 final : public IRender3
 			}
 		}
 
+		// ---------------------------------------------------------------------------------
 		// Now upload these new vertex and index arrays to the gpu
 		gpu_mesh_buffers_t buffers{};
 
@@ -593,6 +657,7 @@ struct Render3 final : public IRender3
 			return {};
 		}
 
+		// ---------------------------------------------------------------------------------
 		// store an internal handle to the uploaded mesh here
 		r_mesh_h   upload_handle{};
 		vk_mesh_t* vk_mesh = nullptr;
@@ -604,11 +669,9 @@ struct Render3 final : public IRender3
 		vk_mesh->vertex_count   = total_verts;
 		vk_mesh->index_count    = total_ind;
 
-		// for now, just one material
-		vk_mesh->material       = ch_calloc< vk_mesh_material_t >( 1 );
-		vk_mesh->material_count = 1;
-
-		// for ( size_t surf_i = 0; surf_i < model->)
+		// Copy material surface info
+		vk_mesh->material       = surfaces;
+		vk_mesh->material_count = mats_vk.size();
 
 		return upload_handle;
 	}

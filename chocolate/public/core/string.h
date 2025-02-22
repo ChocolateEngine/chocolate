@@ -147,6 +147,10 @@ CORE_API bool      ch_str_equals( const ch_string_auto& str1, const ch_string_au
 CORE_API bool      ch_str_equals( const ch_string& str1, const ch_string_auto& str2 );
 
 
+// Case insensitive comparison
+CORE_API bool      ch_str_case_equals( const char* str1, size_t str1Len, const char* str2, size_t str2Len );
+
+
 #define CH_STR_EQUALS_STATIC( str1, str2 ) ch_str_equals( str1, str2, sizeof( str2 ) - 1 )
 
 

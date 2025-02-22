@@ -100,8 +100,8 @@ struct vk_texture_load_info_t
 	bool                 no_missing_texture;  // set to true if you don't want the missing texture returned
 	bool                 depth_compare;
 	VkSamplerAddressMode sampler_address;
-	VkImageUsageFlags    usage;
-	VkFilter             filter;
+	VkImageUsageFlags    usage  = VK_IMAGE_USAGE_SAMPLED_BIT;
+	VkFilter             filter = VK_FILTER_LINEAR;
 };
 
 
@@ -526,6 +526,8 @@ struct gpu_push_t
 	//glm::mat4       proj_matrix;
 	VkDeviceAddress vertex_address;
 	int             diffuse;
+	int             emissive;
+	//int             ambient_occlusion;
 };
 
 
@@ -586,18 +588,22 @@ CONVAR_BOOL_EXT( vk_render_scale_nearest );
 
 // --------------------------------------------------------------------------------------------
 
+extern IGraphicsData*                                        graphics_data;
+
 extern VkInstance                                            g_vk_instance;
 extern VkDevice                                              g_vk_device;
 extern VkPhysicalDevice                                      g_vk_physical_device;
 
 extern VmaAllocator                                          g_vma;
 
+// Queues
 extern VkQueue                                               g_vk_queue_graphics;
 extern VkQueue                                               g_vk_queue_transfer;
 
 extern u32                                                   g_vk_queue_family_graphics;
 extern u32                                                   g_vk_queue_family_transfer;
 
+// Device Info
 extern VkPhysicalDeviceProperties                            g_vk_device_properties;
 extern VkPhysicalDeviceMemoryProperties                      g_vk_device_memory_properties;
 extern VkSurfaceCapabilitiesKHR                              g_vk_surface_capabilities;
@@ -606,6 +612,7 @@ extern VkSurfaceFormatKHR                                    g_vk_surface_format
 extern ch_handle_list_32< r_window_h, r_window_data_t, 1 >   g_windows;
 extern r_window_h                                            g_main_window;
 
+// Loaded Assets
 extern ch_handle_list_32< vk_image_h, vk_image_t >           g_vk_images;
 extern ch_handle_ref_list_32< r_texture_h, vk_texture_t >    g_textures;
 extern ch_handle_ref_list_32< vk_material_h, vk_material_t > g_materials;
@@ -621,6 +628,7 @@ extern VkCommandPool                                         g_vk_command_pool_t
 
 extern VkCommandBuffer                                       g_vk_command_buffer_transfer;
 
+// Descriptors
 extern VkDescriptorPool                                      g_vk_imgui_desc_pool;
 extern VkDescriptorSetLayout                                 g_vk_imgui_desc_layout;
 
@@ -650,6 +658,7 @@ extern u32                                                   g_shader_data_graph
 // extern ImGuiContext**                      g_windows_imgui_contexts;
 
 
+// --------------------------------------------------------------------------------------------
 // function pointers for debug utils
 
 extern PFN_vkSetDebugUtilsObjectNameEXT                      pfnSetDebugUtilsObjectName;
@@ -739,14 +748,6 @@ void                                                         vk_reset_all( e_ren
 
 void                                                         vk_blit_image_to_image( VkCommandBuffer c, VkImage src, VkImage dst, VkExtent2D src_size, VkExtent2D dst_size );
 
-bool                                                         vk_shaders_init();
-void                                                         vk_shaders_shutdown();
-bool                                                         vk_shaders_rebuild();
-void                                                         vk_shaders_material_update( vk_material_h handle );
-
-// Returns the index + 1 of the shader, if it's 0, the shader isn't found
-u32                                                          vk_shaders_find( const char* shader_name );
-
 VkDescriptorPool                                             vk_descriptor_pool_create( const char* name, u32 max_sets, vk_desc_pool_size_ratio_t* pool_sizes, u32 pool_size_count );
 bool                                                         vk_descriptor_init();
 void                                                         vk_descriptor_destroy();
@@ -766,10 +767,25 @@ gpu_mesh_buffers_t                                           vk_mesh_upload( gpu
 void                                                         vk_mesh_free( gpu_mesh_buffers_t& mesh_buffers );
 
 vk_material_h                                                vk_material_create( ch_material_h base_handle );
-void                                                         vk_material_free();
+void                                                         vk_material_free( vk_material_h handle );
 void                                                         vk_material_update();
 
 vk_material_h                                                vk_material_find( ch_material_h base_handle );
+vk_material_t*                                               vk_material_get( ch_material_h base_handle );
+vk_material_t*                                               vk_material_get( vk_material_h handle );
+
+// --------------------------------------------------------------------------------------------
+// Shader System
+
+
+bool                                                         vk_shaders_init();
+void                                                         vk_shaders_shutdown();
+bool                                                         vk_shaders_rebuild();
+void                                                         vk_shaders_material_update( ch_material_h base_handle, vk_material_h handle );
+
+// Returns the index of the shader, if it's UINT32_MAX, the shader isn't found
+u32                                                          vk_shaders_find( const char* shader_name );
+
 
 // --------------------------------------------------------------------------------------------
 // Allocator Functions
@@ -788,8 +804,11 @@ bool                                                         ktx_init();
 void                                                         ktx_shutdown();
 bool                                                         ktx_load( const char* path, vk_texture_t* texture );
 
-r_texture_h                                                  texture_load( r_texture_h& handle, const char* path, vk_texture_load_info_t& load_info );
+bool                                                         texture_load( r_texture_h& handle, const char* path, vk_texture_load_info_t& load_info );
+r_texture_h                                                  texture_load( const char* path, vk_texture_load_info_t& load_info );
 void                                                         texture_free( r_texture_h& handle );
+
+bool                                                         texture_create_missing();
 
 
 #if 0

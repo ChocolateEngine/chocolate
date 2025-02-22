@@ -42,7 +42,17 @@ class GraphicsData final : public IGraphicsData
 	ch_material_h material_load( const char* path ) override;
 	void          material_free( ch_material_h handle ) override;
 
+	ch_material_h material_find( const char* name, size_t len = 0, bool hide_warning = false ) override;
+	ch_material_h material_find_from_path( const char* path, size_t len = 0, bool hide_warning = false ) override;
+
 	material_t*   material_get_data( ch_material_h handle ) override;
+	u32           material_get_count() override;
+	u32           material_get_capacity() override;
+	ch_string     material_get_name( ch_material_h handle ) override;
+	ch_string     material_get_path( ch_material_h handle ) override;
+
+	// to decrement the material ref counter, call material_free
+	void          material_ref_increment( ch_material_h handle ) override;
 
 	size_t        material_get_dirty_count() override;
 	ch_material_h material_get_dirty( size_t index ) override;

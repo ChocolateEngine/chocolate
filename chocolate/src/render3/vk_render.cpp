@@ -347,27 +347,45 @@ void vk_draw_renderables_test( VkCommandBuffer c, r_window_data_t* window, u32 s
 		if ( !mesh )
 			continue;
 
-		gpu_push_t push;
-		//push.world_matrix     = mesh_render.matrix;
-		push.proj_view_matrix = g_test_render.proj_view_mat;
-		//push.view_matrix = g_test_render.view_mat;
-		//push.proj_matrix = g_test_render.proj_mat;
-		push.vertex_address   = mesh->buffers.vertex_address;
-		push.diffuse          = 0;
-
-		vkCmdPushConstants( c, g_shader_data_graphics_pipeline_layout[ 0 ], VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof( gpu_push_t ), &push );
-
-		//VkDeviceSize vertex_offset[ 1 ] = { 0 };
-		//vkCmdBindVertexBuffers( c, 0, 1, &mesh->buffers.vertex->buffer, vertex_offset );
-
 		if ( r_draw_indexed )
-		{
 			vkCmdBindIndexBuffer( c, mesh->buffers.index->buffer, 0, VK_INDEX_TYPE_UINT32 );
-			vkCmdDrawIndexed( c, mesh->index_count, 1, 0, 0, 0 );
-		}
-		else
+
+		for ( u32 surf_i = 0; surf_i < mesh->material_count; surf_i++ )
+		//for ( u32 surf_i = 0; surf_i < 1; surf_i++ )
+		//for ( u32 surf_i = 1; surf_i < 2 ; surf_i++ )
 		{
-			vkCmdDraw( c, mesh->vertex_count, 1, 0, 0 );
+			vk_mesh_material_t& surf     = mesh->material[ surf_i ];
+			vk_material_t*      material = vk_material_get( mesh->material[ surf_i ].material );
+
+			if ( !material )
+				continue;
+
+			gpu_push_t push{};
+			//push.world_matrix     = mesh_render.matrix;
+			push.proj_view_matrix = g_test_render.proj_view_mat;
+			//push.view_matrix = g_test_render.view_mat;
+			//push.proj_matrix = g_test_render.proj_mat;
+			push.vertex_address    = mesh->buffers.vertex_address;
+			push.diffuse           = vk_descriptor_texture_get_index( material->var[ 0 ].val_texture );
+			push.emissive          = vk_descriptor_texture_get_index( material->var[ 1 ].val_texture );
+			//push.ambient_occlusion = vk_descriptor_texture_get_index( material->var[ 2 ].val_texture );
+			//push.diffuse          = 0;
+
+			vkCmdPushConstants( c, g_shader_data_graphics_pipeline_layout[ 0 ], VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof( gpu_push_t ), &push );
+
+			//VkDeviceSize vertex_offset[ 1 ] = { 0 };
+			//vkCmdBindVertexBuffers( c, 0, 1, &mesh->buffers.vertex->buffer, vertex_offset );
+
+			if ( r_draw_indexed )
+			{
+				//vkCmdDrawIndexed( c, mesh->index_count, 1, 0, 0, 0 );
+				vkCmdDrawIndexed( c, surf.index_count, 1, surf.index_offset, 0, 0 );
+			}
+			else
+			{
+				// vkCmdDraw( c, mesh->vertex_count, 1, 0, 0 );
+				vkCmdDraw( c, surf.vertex_count, 1, surf.vertex_offset, 0 );
+			}
 		}
 	}
 

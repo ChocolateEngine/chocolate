@@ -12,27 +12,6 @@ enum e_shader_create_tags
 
 // for later
 
-// shader material var descriptor
-struct vk_shader_material_var_desc_t
-{
-	//	e_mat_var type;
-	const char* name;
-	const char* desc;
-
-	union
-	{
-		const char* default_texture;  // Path To Default Texture
-		float       default_float;
-		int         default_int;
-		glm::vec2   default_vec2;
-		glm::vec3   default_vec3;
-		glm::vec4   default_vec4;
-	};
-
-	u32 offset;
-	u32 size;
-};
-
 
 struct vk_shader_create_material_buffer_t
 {
@@ -41,16 +20,16 @@ struct vk_shader_create_material_buffer_t
 };
 
 
-struct vk_shader_create_material_t
-{
-	// material vars
-	vk_shader_material_var_desc_t* var;
-	u32                            var_count;
-
-	// if size is 0, no buffer is created
-	u32                            buffer_size;
-	u32                            buffer_binding;
-};
+//struct vk_shader_create_material_t
+//{
+//	// material vars
+//	vk_shader_material_var_desc_t* var;
+//	u32                            var_count;
+//
+//	// if size is 0, no buffer is created
+//	u32                            buffer_size;
+//	u32                            buffer_binding;
+//};
 
 
 struct vk_shader_create_compute_t
@@ -468,26 +447,190 @@ void vk_shaders_register_graphics( vk_shader_create_graphics_t* shader_create )
 u32 vk_shaders_find( const char* shader_name )
 {
 	if ( !shader_name )
-		return 0;
+		return UINT32_MAX;
 
 	for ( u32 i = 0; i < g_shader_create_graphics_count; i++ )
 	{
 		if ( ch_strcasecmp( g_shader_data_graphics_names[ i ].data, shader_name ) == 0 )
-			return i + 1;
+			return i;
 	}
 
-	return 0;
+	return UINT32_MAX;
 }
 
 
-void vk_shaders_material_update( vk_material_h handle )
+void vk_shaders_material_update( ch_material_h base_handle, vk_material_h handle )
 {
+	material_t* base_material = graphics_data->material_get_data( base_handle );
+
+	if ( !base_material )
+		return;
+
 	vk_material_t* material = g_materials.get( handle );
 
 	if ( !material )
 		return;
 
-	// vk_material_t;
+	// look for shader first
+	bool shader_changed = false;
+	for ( size_t mat_i = 0; mat_i < base_material->count; mat_i++ )
+	{
+		if ( !ch_str_case_equals( CH_STR_UR( base_material->name[ mat_i ] ), "shader", 6 ) )
+			continue;
 
+		if ( base_material->type[ mat_i ] != e_mat_var_string )
+		{
+			Log_WarnF( gLC_Render, "Shader defined in material is not a string: \"%s\"\n",
+			           graphics_data->material_get_path( base_handle ).data );
+			continue;
+		}
+
+		u32 shader = vk_shaders_find( base_material->var[ mat_i ].val_string.data );
+
+		if ( shader == UINT32_MAX )
+		{
+			Log_WarnF( gLC_Render, "Failed to find shader \"%s\" from material \"%s\"\n",
+			           base_material->var[ mat_i ].val_string.data, graphics_data->material_get_path( base_handle ).data );
+			continue;
+		}
+		
+		if ( shader != material->shader )
+		{
+			shader_changed   = true;
+			material->shader = shader;
+		}
+
+		break;
+	}
+
+	ChVector< r_texture_h > saved_textures;
+	saved_textures.reserve( material->var_count );
+
+	// keep all textures in another local array here and increment the ref on them
+	// then after reading all the new vars from the material, decrement the ref on them
+	// that way we don't free a texture and instantly load it again
+	for ( u32 vk_mat_i = 0; vk_mat_i < material->var_count; vk_mat_i++ )
+	{
+		// string is a texture path here
+		if ( material->type[ vk_mat_i ] == e_mat_var_string )
+		{
+			g_textures.ref_increment( material->var[ vk_mat_i ].val_texture );
+			saved_textures.push_back( material->var[ vk_mat_i ].val_texture );
+		}
+	}
+	
+	if ( shader_changed )
+	{
+		// clear all material vars
+
+		vk_shader_create_graphics_t& create_data = g_shader_create_graphics[ material->shader ];
+
+		vk_material_var_t*           new_vars    = ch_realloc( material->var, create_data.material_var_count );
+		e_mat_var*                   new_type    = ch_realloc( material->type, create_data.material_var_count );
+
+		if ( !new_vars || !new_type )
+		{
+			Log_Fatal( gLC_Render, "Failed to allocate memory for vk material vars\n" );
+			return;
+		}
+
+		material->var       = new_vars;
+		material->type      = new_type;
+
+		material->var_count = create_data.material_var_count;
+
+		memset( material->var, 0, sizeof( vk_material_var_t ) * material->var_count );
+		memset( material->type, 0, sizeof( e_mat_var ) * material->var_count );
+
+		// assign default values to everything
+		for ( u32 vk_mat_i = 0; vk_mat_i < material->var_count; vk_mat_i++ )
+		{
+			shader_mat_var_desc_t& desc = create_data.material_var[ vk_mat_i ];
+
+			switch ( desc.type )
+			{
+				case e_mat_var_string:
+					material->var[ vk_mat_i ].val_texture = create_data.material_var[ vk_mat_i ].default_texture_handle;
+					g_textures.ref_increment( material->var[ vk_mat_i ].val_texture );
+					break;
+
+				case e_mat_var_float:
+					material->var[ vk_mat_i ].val_float = create_data.material_var[ vk_mat_i ].default_float;
+					break;
+				case e_mat_var_int:
+					material->var[ vk_mat_i ].val_int = create_data.material_var[ vk_mat_i ].default_int;
+					break;
+				case e_mat_var_vec2:
+					material->var[ vk_mat_i ].val_vec2 = create_data.material_var[ vk_mat_i ].default_vec2;
+					break;
+				case e_mat_var_vec3:
+					material->var[ vk_mat_i ].val_vec3 = create_data.material_var[ vk_mat_i ].default_vec3;
+					break;
+				case e_mat_var_vec4:
+					material->var[ vk_mat_i ].val_vec4 = create_data.material_var[ vk_mat_i ].default_vec4;
+					break;
+			}
+		}
+	}
+
+	// now we can update material vars
+	vk_shader_create_graphics_t& create_data = g_shader_create_graphics[ material->shader ];
+	for ( u32 vk_mat_i = 0; vk_mat_i < material->var_count; vk_mat_i++ )
+	{
+		shader_mat_var_desc_t& desc = create_data.material_var[ vk_mat_i ];
+		size_t                 name_len = strlen( desc.name );
+
+		for ( u32 mat_i = 0; mat_i < base_material->count; mat_i++ )
+		{
+			if ( !ch_str_case_equals( desc.name, name_len, CH_STR_UR( base_material->name[ mat_i ] ) ) )
+				continue;
+
+			if ( desc.type != base_material->type[ mat_i ] )
+			{
+				Log_WarnF( gLC_Render, "Type mismatch on material var \"%s\", expected type %s, got %s: \"%s\"\n",
+					desc.name, get_mat_var_str( desc.type ), get_mat_var_str( base_material->type[ mat_i ] ), graphics_data->material_get_path( base_handle ).data );
+
+				// keep going just in case if there's a valid material var later
+				continue;
+			}
+
+			switch ( desc.type )
+			{
+				case e_mat_var_string:
+				{
+					// free past texture
+					texture_free( material->var[ vk_mat_i ].val_texture );
+
+					vk_texture_load_info_t load_info{};
+					load_info.usage                       = VK_IMAGE_USAGE_SAMPLED_BIT;
+					load_info.filter                      = VK_FILTER_LINEAR;
+					material->var[ vk_mat_i ].val_texture = texture_load( base_material->var[ mat_i ].val_string.data, load_info );
+					break;
+				}
+
+				case e_mat_var_float:
+					material->var[ vk_mat_i ].val_float = base_material->var[ mat_i ].val_float;
+					break;
+				case e_mat_var_int:
+					material->var[ vk_mat_i ].val_int = base_material->var[ mat_i ].val_int;
+					break;
+				case e_mat_var_vec2:
+					material->var[ vk_mat_i ].val_vec2 = base_material->var[ mat_i ].val_vec2;
+					break;
+				case e_mat_var_vec3:
+					material->var[ vk_mat_i ].val_vec3 = base_material->var[ mat_i ].val_vec3;
+					break;
+				case e_mat_var_vec4:
+					material->var[ vk_mat_i ].val_vec4 = base_material->var[ mat_i ].val_vec4;
+					break;
+			}
+
+			break;
+		}
+	}
+
+	// now we can actually free textures that are now unused
+	for ( u32 i = 0; i < saved_textures.size(); i++ )
+		texture_free( saved_textures[ i ] );
 }
 

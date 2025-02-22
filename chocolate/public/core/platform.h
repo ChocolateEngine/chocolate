@@ -13,6 +13,10 @@ typedef struct SDL_Window SDL_Window;
 	#define PATH_SEP_STR "\\"
 	#define CH_PATH_SEP_STR "\\"
 
+	// less stupidly long macro
+	#define SEP             "\\"
+	#define SEP_CH          '\\'
+
 	#define stat            _stat
 
 constexpr char PATH_SEP    = '\\';
@@ -26,6 +30,10 @@ constexpr char CH_PATH_SEP = '\\';
 
 	#define PATH_SEP_STR    "/"
 	#define CH_PATH_SEP_STR "/"
+
+	// less stupidly long macro
+	#define SEP             "/"
+	#define SEP_CH          '/'
 
 constexpr char PATH_SEP    = '/';
 constexpr char CH_PATH_SEP = '/';
