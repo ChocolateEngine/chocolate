@@ -1574,6 +1574,19 @@ bool ch_str_equals( const ch_string& str1, const ch_string_auto& str2 )
 
 
 // --------------------------------------------------------------------------
+// Case insensitive comparison
+
+
+CORE_API bool ch_str_case_equals( const char* str1, size_t str1Len, const char* str2, size_t str2Len )
+{
+	if ( str1Len != str2Len )
+		return false;
+
+	return ch_strncasecmp( str1, str2, str1Len ) == 0;
+}
+
+
+// --------------------------------------------------------------------------
 
 
 bool ch_str_equals_any( const ch_string& str1, size_t count, const char** strings )

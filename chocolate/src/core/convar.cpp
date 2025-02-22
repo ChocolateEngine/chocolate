@@ -58,10 +58,10 @@ ConVarData_t* Con_GetConVarData( u32 index )
 }
 
 
-const ch_string& Con_GetConVarDesc( u32 index )
+const ch_string Con_GetConVarDesc( u32 index )
 {
 	if ( index == UINT32_MAX || index >= g_cvar_count )
-		return gChStrEmpty;
+		return {};
 
 	return g_cvar_desc[ index ];
 }
@@ -73,7 +73,7 @@ ConVarData_t* Con_GetConVarData( const char* name, size_t len )
 }
 
 
-const ch_string& Con_GetConVarDesc( const char* name, size_t len )
+const ch_string Con_GetConVarDesc( const char* name, size_t len )
 {
 	return Con_GetConVarDesc( Con_GetConVarIndex( name, len ) );
 }
