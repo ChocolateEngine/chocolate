@@ -1,7 +1,6 @@
 #include "gui.h"
 #include "core/util.h"
 #include "render/irender.h"
-// #include "rmlui.h"
 
 #include "imgui/imgui_impl_sdl2.h"
 
@@ -17,8 +16,11 @@ ImFont*                  gBuiltInFont  = nullptr;
 double                   gRealTime     = 0.0;
 // Rml::Context*            gRmlContext   = nullptr;
 
-CONVAR_BOOL( ui_show_fps, 1, CVARF_ARCHIVE, "Show a Framerate Counter Window" );
-CONVAR_BOOL( ui_show_messages, 1, CVARF_ARCHIVE, "Show Debug Messages in a Window" );
+CONVAR_BOOL_NAME( ui_show_fps, "ui.fps.show", true, CVARF_ARCHIVE, "Show a Framerate Counter Window" );
+// CONVAR_BOOL_NAME( ui_fps_graph_show, "ui.fps.graph.show", true, CVARF_ARCHIVE, "Show a Framerate Counter Graph" );
+CONVAR_FLOAT_NAME( ui_fps_avg_time, "ui.fps.avg.time", 0.25, CVARF_ARCHIVE, "Average Framerate over X seconds" );
+
+CONVAR_BOOL_NAME( ui_show_messages, "ui.messages.show", true, CVARF_ARCHIVE, "Show Debug Messages in a Window" );
 
 static ModuleInterface_t gInterfaces[] = {
 	{ gui, IGUI_NAME, IGUI_HASH }
@@ -35,17 +37,9 @@ extern "C"
 
 void GuiSystem::Update( float sDT )
 {
-	gRealTime += sDT;
-
-	// if ( gRmlContext )
-	// 	gRmlContext->Update();
-
-	DrawGui();
-}
-
-void GuiSystem::DrawGui()
-{
 	PROF_SCOPE();
+
+	gRealTime += sDT;
 
 	static bool wasConsoleOpen = false;
 	static Uint32 prevtick = 0;
@@ -79,9 +73,71 @@ void GuiSystem::DrawGui()
 
 	if ( ui_show_fps )
 	{
+		static float time_since_last_update = 0;
+		static ChVector< float > frame_time_history;
+		static float             frame_time_average = 0.f;
+		static float             frame_time_total   = 0.f;
+		static u32               frame_count        = 0;
+
+		if ( time_since_last_update > ui_fps_avg_time )
+		{
+			frame_time_total       = time_since_last_update;
+			time_since_last_update = 0.f;
+			frame_time_average     = 0.f;
+
+			for ( u32 i = 0; i < frame_time_history.size(); i++ )
+				frame_time_average += frame_time_history[ i ];
+
+			frame_time_average /= frame_time_history.size();
+			frame_count = frame_time_history.size();
+			frame_time_history.clear();
+		}
+		else
+		{
+			frame_time_history.push_back( sDT );
+			time_since_last_update += sDT;
+		}
+
 		float frameRate = ImGui::GetIO().Framerate;
-		ImGui::Text("%.1f FPS (%.3f ms/frame)", frameRate, 1000.0f / frameRate);
-		//ImGui::Text("%.1f FPS (%.3f ms/frame)", 1000.f / delta, (float)delta);  // ms/frame is inaccurate
+		ImGui::Text("Real %.1f FPS (%.3f ms/frame)", frameRate, 1000.0f / frameRate);
+		ImGui::Text( "Avg  %.1f FPS (%.3f ms/frame)", frame_count / frame_time_total, 1000.f * frame_time_average );
+
+#if 0
+		if ( ui_fps_graph_show )
+		{
+		}
+
+		// taken from imgui demo
+		
+		// Fill an array of contiguous float values to plot
+		// Tip: If your float aren't contiguous but part of a structure, you can pass a pointer to your first float
+		// and the sizeof() of your structure in the "stride" parameter.
+		static float  values[ 90 ]  = {};
+		static int    values_offset = 0;
+		static double refresh_time  = 0.0;
+		if ( refresh_time == 0.0 )
+			refresh_time = ImGui::GetTime();
+		while ( refresh_time < ImGui::GetTime() )  // Create data at fixed 60 Hz rate for the demo
+		{
+			static float phase      = 0.0f;
+			values[ values_offset ] = cosf( phase );
+			values_offset           = ( values_offset + 1 ) % IM_ARRAYSIZE( values );
+			phase += 0.10f * values_offset;
+			refresh_time += 1.0f / 60.0f;
+		}
+
+		// Plots can display overlay texts
+		// (in this example, we will display an average value)
+		{
+			float average = 0.0f;
+			for ( int n = 0; n < IM_ARRAYSIZE( values ); n++ )
+				average += values[ n ];
+			average /= (float)IM_ARRAYSIZE( values );
+			char overlay[ 32 ];
+			sprintf( overlay, "avg %f", average );
+			ImGui::PlotLines( "Lines", values, IM_ARRAYSIZE( values ), values_offset, overlay, -1.0f, 1.0f, ImVec2( 0, 80.0f ) );
+		}
+#endif
 	}
 
 	if ( ui_show_messages )

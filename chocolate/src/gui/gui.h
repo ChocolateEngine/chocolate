@@ -17,8 +17,6 @@ class GuiSystem : public IGuiSystem
 
 	std::vector< std::string > aDebugMessages;
 
-	/* Draw the gui.  */
-	void                       DrawGui();
 	/* Draw the console */
 	void                       DrawConsole( bool wasConsoleOpen, bool isChild = false ) override;
 
