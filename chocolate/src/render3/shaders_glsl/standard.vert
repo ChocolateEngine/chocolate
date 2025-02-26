@@ -27,6 +27,7 @@ layout( buffer_reference, std430 ) readonly buffer buffer_vertex
 //push constants block
 layout( push_constant ) uniform constants
 {
+	mat4          world_matrix;
 	mat4          proj_view_matrix;
 	buffer_vertex vertex_address;  // u64 handle
 	int           diffuse;
@@ -50,7 +51,7 @@ void main()
 	// gl_Position = push.view_proj_matrix * push.world_matrix * vec4( v.pos, 1.0f );
 	//gl_Position = push.view_matrix * push.proj_matrix * vec4( pos.xyz, 1.0f );
 	//gl_Position = push.proj_matrix * push.view_matrix * vec4( v.pos.xyz, 1.0f );
-	gl_Position = push.proj_view_matrix * vec4( v.pos.xyz, 1.0f );
+	gl_Position = push.proj_view_matrix * push.world_matrix * vec4( v.pos.xyz, 1.0f );
 
 	// out_color = vec3( 1, 1, 1 );
 	out_color   = v.color.xyz;

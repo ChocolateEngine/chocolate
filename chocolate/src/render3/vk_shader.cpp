@@ -550,6 +550,7 @@ void vk_shaders_material_update( ch_material_h base_handle, vk_material_h handle
 			switch ( desc.type )
 			{
 				case e_mat_var_string:
+					texture_free( material->var[ vk_mat_i ].val_texture );
 					material->var[ vk_mat_i ].val_texture = create_data.material_var[ vk_mat_i ].default_texture_handle;
 					g_textures.ref_increment( material->var[ vk_mat_i ].val_texture );
 					break;
@@ -573,6 +574,7 @@ void vk_shaders_material_update( ch_material_h base_handle, vk_material_h handle
 		}
 	}
 
+	// IDEA: if this is slow, scan for the indexes of the material vars we need first with name searching maybe?
 	// now we can update material vars
 	vk_shader_create_graphics_t& create_data = g_shader_create_graphics[ material->shader ];
 	for ( u32 vk_mat_i = 0; vk_mat_i < material->var_count; vk_mat_i++ )

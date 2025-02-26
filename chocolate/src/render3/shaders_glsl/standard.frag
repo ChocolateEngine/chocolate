@@ -38,6 +38,7 @@ layout( buffer_reference, std430 ) readonly buffer buffer_vertex
 
 layout( push_constant ) uniform constants
 {
+	mat4          world_matrix;
 	mat4          proj_view_matrix;
 	buffer_vertex vertex_address;  // u64 handle
 	int           diffuse;

@@ -508,6 +508,9 @@ struct r_mesh_render_surface_t
 struct r_mesh_render_t
 {
 	const char*              name;
+
+	// maybe move this outside of this into another array,
+	// and just replace this entry with gpu_mesh_buffers_t or something
 	r_mesh_h                 mesh;
 
 	glm::mat4                matrix;
@@ -520,7 +523,7 @@ struct r_mesh_render_t
 
 struct gpu_push_t
 {
-	//glm::mat4       world_matrix;
+	glm::mat4       world_matrix;
 	glm::mat4       proj_view_matrix;
 	//glm::mat4       view_matrix;
 	//glm::mat4       proj_matrix;
@@ -565,6 +568,7 @@ struct r_scene_t
 	// particles?
 	// post processing somehow?
 	// debug drawing?
+	// render stage for this scene?
 
 	VkViewport       viewport;
 	VkRect2D         scissor;
@@ -802,7 +806,7 @@ void                                                         vk_buffer_destroy( 
 
 bool                                                         ktx_init();
 void                                                         ktx_shutdown();
-bool                                                         ktx_load( const char* path, vk_texture_t* texture );
+bool                                                         ktx_load( const char* path, vk_texture_t* texture, vk_texture_load_info_t& load_info );
 
 bool                                                         texture_load( r_texture_h& handle, const char* path, vk_texture_load_info_t& load_info );
 r_texture_h                                                  texture_load( const char* path, vk_texture_load_info_t& load_info );

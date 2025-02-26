@@ -1,11 +1,12 @@
 #include "render_test.h"
+#include "shared/map_system.h"
 
 #include "imgui/imgui.h"
 #include "imgui/imgui_internal.h"
 #include "imgui/imgui_impl_sdl2.h"
 
 
-CONVAR_FLOAT_NAME( g_move_speed, "input.move.speed", 5, "Move Speed" );
+CONVAR_FLOAT_NAME( g_move_speed, "input.move.speed", 15, "Move Speed" );
 
 CONVAR_FLOAT_NAME( g_mouse_pitch, "input.mouse.sensitivity.pitch", 0.022, CVARF_ARCHIVE, "Mouse Pitch" );
 CONVAR_FLOAT_NAME( g_mouse_yaw, "input.mouse.sensitivity.yaw", 0.022, CVARF_ARCHIVE, "Mouse Yaw" );
@@ -13,44 +14,136 @@ CONVAR_FLOAT_NAME( g_mouse_sensitivity, "input.mouse.sensitivity", 1.0, CVARF_AR
 
 CONVAR_FLOAT_NAME( g_view_nearz, "view.nearz", 0.05f, CVARF_ARCHIVE, "Near Z" );
 CONVAR_FLOAT_NAME( g_view_farz, "view.farz", 1000.f, CVARF_ARCHIVE, "Far Z" );
-CONVAR_FLOAT_NAME( g_view_fov, "view.fov", 106.f, CVARF_ARCHIVE, "Field of View" );
+CONVAR_FLOAT_NAME( g_view_fov, "view.fov", 90.f, CVARF_ARCHIVE, "Field of View" );
 
-glm::mat4              g_view{};
-glm::mat4              g_projection{};
+glm::mat4                   g_view{};
+glm::mat4                   g_projection{};
 
-glm::vec3              g_pos{};
-glm::vec3              g_ang{};
+glm::vec3                   g_pos{};
+glm::vec3                   g_ang{};
 
-constexpr const char*  TEST_SCENE_PATH = "../sidury/maps/riverhouse_v1";
-constexpr const char*  TEST_MODEL_PATH = "../sidury/models/riverhouse/riverhouse_v1.obj";
-constexpr const char*  TEST_MODEL2_PATH = "../sidury/models/protogen_wip_25d/protogen_wip_25d.obj";
+//constexpr const char*       TEST_SCENE_PATH  = "../sidury/maps/riverhouse_v1";
+constexpr const char*       TEST_SCENE_PATH  = "D:\\projects\\chocolate\\dev\\output\\projects\\l4d_maps\\c2m1_highway";
+
+constexpr const char*       TEST_MODEL_PATH  = "../sidury/models/riverhouse/riverhouse_v1.obj";
+//constexpr const char*       TEST_MODEL2_PATH = "../sidury/models/protogen_wip_25d/protogen_wip_25d.obj";
+//constexpr const char*       TEST_MODEL_PATH  = "D:\\projects\\chocolate\\dev\\output\\projects\\l4d_maps\\c2m1_highway\\models\\props_urban\\fence002_128.obj";
 // constexpr const char* TEST_MODEL_PATH = "models/test/test_cube.obj";
 
-static ch_model_h      g_test_model{};
-static r_mesh_h        g_test_model_gpu{};
-static r_mesh_render_h g_test_model_render{};
+static ch_model_h           g_test_model{};
+static r_mesh_h             g_test_model_gpu{}; 
+static r_mesh_render_h      g_test_model_render{};
 
-static ch_model_h      g_test_model2{};
-static r_mesh_h        g_test_model2_gpu{};
-static r_mesh_render_h g_test_model2_render{};
+static ch_model_h           g_test_model2{};
+static r_mesh_h             g_test_model2_gpu{};
+static r_mesh_render_h      g_test_model2_render{};
+
+
+chmap::Map*                 g_test_map = nullptr;
+
+
+struct mesh_render_entry_t
+{
+	r_mesh_h        model;
+	r_mesh_render_h render;
+};
+
+std::unordered_map< ch_string, r_mesh_h > g_gpu_mesh_map;
+ChVector< mesh_render_entry_t >           g_gpu_mesh_renders;
+
+
+bool load_map()
+{
+	g_test_map = chmap::Load( TEST_SCENE_PATH, strlen( TEST_SCENE_PATH ) );
+
+	if ( !g_test_map )
+	{
+		Log_ErrorF( "Failed to find map \"%s\"\n", TEST_SCENE_PATH );
+		return false;
+	}
+
+	FileSys_AddSearchPath( TEST_SCENE_PATH );
+
+	for ( chmap::Entity& entity : g_test_map->scenes[ 0 ].entites )
+	{
+		// check for a renderable component
+		for ( chmap::Component& comp : entity.components )
+		{
+			if ( !ch_str_equals( comp.name, "renderable" ) )
+				continue;
+
+			r_mesh_h  gpu_mesh{};
+			ch_string path = comp.values[ "path" ].aString;
+
+			auto      it   = g_gpu_mesh_map.find( path );
+			if ( it == g_gpu_mesh_map.end() )
+			{
+				ch_model_h model = graphics_data->model_load( path.data );
+
+				if ( !model )
+				{
+					Log_ErrorF( "Failed to find map model \"%s\"\n", path.data );
+					continue;
+				}
+
+				gpu_mesh = render->mesh_upload( model );
+				graphics_data->model_free( model );
+
+				if ( !gpu_mesh )
+				{
+					Log_ErrorF( "Failed to upload map model \"%s\"\n", path.data );
+					continue;
+				}
+
+				g_gpu_mesh_map[ path ] = gpu_mesh;
+			}
+			else
+			{
+				gpu_mesh = it->second;
+			}
+
+			r_mesh_render_h mesh_render = render->mesh_render_create( gpu_mesh );
+
+			if ( !mesh_render )
+			{
+				Log_ErrorF( "Failed to create map model render \"%s\"\n", path.data );
+				continue;
+			}
+
+			mesh_render_entry_t& entry = g_gpu_mesh_renders.emplace_back();
+			entry.model                = gpu_mesh;
+			entry.render               = mesh_render;
+
+			glm::mat4 matrix           = Util_ToMatrix( &entity.pos, &entity.ang, &entity.scale );
+
+			render->mesh_render_set_matrix( mesh_render, matrix );
+
+			break;
+		}
+	}
+
+	return true;
+}
 
 
 bool load_scene()
 {
+	return load_map();
+
 	// hmm, maybe this could be condensed into one call, mesh_render_create(), pass in a model path instead of a handle, and do the model load and upload internally if needed?
 	g_test_model = graphics_data->model_load( TEST_MODEL_PATH );
 
-	if ( !g_test_model.generation )
+	if ( !g_test_model )
 		return false;
 
 	g_test_model_gpu = render->mesh_upload( g_test_model );
 
-	if ( !g_test_model_gpu.generation )
+	if ( !g_test_model_gpu )
 		return false;
 
 	g_test_model_render = render->mesh_render_create( g_test_model_gpu );
 
-	if ( !g_test_model_render.generation )
+	if ( !g_test_model_render )
 		return false;
 
 	// now we can free the test model since it's use is over
@@ -59,26 +152,30 @@ bool load_scene()
 
 
 	// hmm, maybe this could be condensed into one call, mesh_render_create(), pass in a model path instead of a handle, and do the model load and upload internally if needed?
-	g_test_model2 = graphics_data->model_load( TEST_MODEL2_PATH );
+//	g_test_model2 = graphics_data->model_load( TEST_MODEL2_PATH );
+//
+//	if ( !g_test_model2 )
+//		return false;
+//
+//	g_test_model2_gpu = render->mesh_upload( g_test_model2 );
+//
+//	if ( !g_test_model2_gpu )
+//		return false;
+//
+//	g_test_model2_render = render->mesh_render_create( g_test_model2_gpu );
+//
+//	if ( !g_test_model2_render )
+//		return false;
+//
+//	// now we can free the test model since it's use is over
+//	graphics_data->model_free( g_test_model2 );
 
-	if ( !g_test_model2 )
-		return false;
-
-	g_test_model2_gpu = render->mesh_upload( g_test_model2 );
-
-	if ( !g_test_model2_gpu )
-		return false;
-
-	g_test_model2_render = render->mesh_render_create( g_test_model2_gpu );
-
-	if ( !g_test_model2_render )
-		return false;
-
-	// now we can free the test model since it's use is over
-	graphics_data->model_free( g_test_model2 );
 
 	return true;
 }
+
+
+// =================================================================================================
 
 
 // Proper Horizontal Projection
@@ -339,4 +436,10 @@ void handle_inputs( float frame_time )
 	gui->DebugMessage( "Pos: %s", ch_vec3_to_str( g_pos ).c_str() );
 	gui->DebugMessage( "Ang: %s", ch_vec3_to_str( g_ang ).c_str() );
 }
+
+
+// =================================================================================================
+// protogen render test
+
+
 

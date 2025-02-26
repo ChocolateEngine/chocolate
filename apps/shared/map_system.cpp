@@ -440,17 +440,18 @@ Map* chmap::Load( const char* path, u64 pathLen )
 	const size_t             scenesSizes[] = { pathLen, 7 };
 	ch_string                scenesDir     = ch_str_join( 2, scenesStr, scenesSizes );
 
-	std::vector< ch_string > scenePaths = FileSys_ScanDir( scenesDir.data, scenesDir.size, ReadDir_NoDirs | ReadDir_Recursive );
+	std::vector< ch_string > scenePaths    = FileSys_ScanDir( scenesDir.data, scenesDir.size, ReadDir_NoDirs | ReadDir_Recursive | ReadDir_AbsPaths );
 
 	for ( const ch_string& scenePath : scenePaths )
 	{
 		if ( !ch_str_ends_with( scenePath, ".json5", 6 ) )
 			continue;
 
-		const ch_string strings[]     = { scenesDir, scenePath };
-		ch_string_auto  scenePathFull = ch_str_join( 2, strings );
+		// const ch_string strings[]     = { scenesDir, scenePath };
+		// ch_string_auto  scenePathFull = ch_str_join( 2, strings );
 
-		if ( !LoadScene( map, scenePathFull.data ) )	
+		// if ( !LoadScene( map, scenePathFull.data ) )	
+		if ( !LoadScene( map, scenePath.data ) )	
 		{
 			Log_ErrorF( "Failed to load map scene: Map \"%s\" - Scene \"%s\"\n", path, scenePath.data );
 		}

@@ -600,7 +600,7 @@ class IGraphicsData : public ISystem
 	virtual void          model_free( ch_model_h handle )                                                                   = 0;
 
 	virtual model_t*      model_get( ch_model_h handle )                                                                    = 0;
-	virtual const char*   model_get_path( ch_model_h handle )                                                               = 0;
+	virtual ch_string     model_get_path( ch_model_h handle )                                                               = 0;
 
 	// virtual const ch_model_materials* model_get_material_array( ch_model_h handle ) = 0;
 

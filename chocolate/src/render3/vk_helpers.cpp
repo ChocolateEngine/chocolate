@@ -34,7 +34,7 @@ void vk_set_name_ex( VkObjectType type, u64 handle, const char* name, const char
 
 	if ( result == VK_SUCCESS )
 	{
-		Log_DevF( gLC_Render, 2, "Set Name for Object \"%s\" - \"%s\"\n", vk_object_str( type ), name );
+		Log_DevF( gLC_Render, 3, "Set Name for Object \"%s\" - \"%s\"\n", vk_object_str( type ), name );
 		return;
 	}
 
@@ -58,49 +58,6 @@ void vk_queue_wait_transfer()
 {
 	vk_check( vkQueueWaitIdle( g_vk_queue_transfer ), "Failed to wait for transfer queue" );
 }
-
-
-#if 0
-// ------------------------------------------------------------------
-// Basic Deletion Queue
-// ------------------------------------------------------------------
-
-
-static fn_vk_destroy* g_vk_delete_queue          = nullptr;
-static u32            g_vk_delete_queue_count    = 0;
-static u32            g_vk_delete_queue_capacity = 0;
-
-
-void vk_add_delete( fn_vk_destroy destroy_func )
-{
-	if ( !destroy_func )
-		return;
-
-	// are we at the capacity limit?
-	if ( g_vk_delete_queue_count == g_vk_delete_queue_capacity )
-	{
-		// allocate some more slots for function pointers
-		g_vk_delete_queue_capacity += VK_DELETE_QUEUE_BATCH_SIZE;
-		g_vk_delete_queue          = ch_realloc( g_vk_delete_queue, g_vk_delete_queue_capacity );
-	}
-
-	g_vk_delete_queue[ g_vk_delete_queue_count ] = destroy_func;
-	g_vk_delete_queue_count++;
-}
-
-
-void vk_flush_delete_queue()
-{
-	// call all the functions in the delete queue in reverse order
-	for ( u32 i = g_vk_delete_queue_count - 1; i > 0; i-- )
-	{
-		g_vk_delete_queue[ i ]();
-	}
-
-	// reset the count
-	g_vk_delete_queue_count = 0;	
-}
-#endif
 
 
 // ------------------------------------------------------------------

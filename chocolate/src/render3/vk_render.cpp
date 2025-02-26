@@ -361,7 +361,7 @@ void vk_draw_renderables_test( VkCommandBuffer c, r_window_data_t* window, u32 s
 				continue;
 
 			gpu_push_t push{};
-			//push.world_matrix     = mesh_render.matrix;
+			push.world_matrix     = mesh_render.matrix;
 			push.proj_view_matrix = g_test_render.proj_view_mat;
 			//push.view_matrix = g_test_render.view_mat;
 			//push.proj_matrix = g_test_render.proj_mat;

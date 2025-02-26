@@ -561,8 +561,11 @@ struct Render3 final : public IRender3
 
 			for ( u32 surface_i = 0; surface_i < mesh.surface_count; surface_i++ )
 			{
+				CH_ASSERT( vk_surface_i < mats_index.size() );
+
 				mesh_surface_t&     surf    = mesh.surface[ surface_i ];
-				vk_mesh_material_t& vk_surf = surfaces[ vk_surface_i ];
+				// vk_mesh_material_t& vk_surf = surfaces[ vk_surface_i ];
+				vk_mesh_material_t& vk_surf = surfaces[ mats_index[ vk_surface_i ] ];
 				vk_surf.material            = mats_vk[ mats_index[ vk_surface_i ] ];
 				vk_surface_i++;
 
@@ -596,13 +599,13 @@ struct Render3 final : public IRender3
 		// For each mesh, copy all mesh vertex data to one big array of verts and indices
 		for ( u32 mesh_i = 0; mesh_i < model->mesh_count; mesh_i++ )
 		{
-			glm::vec4 temp_color{};
-			temp_color[ 3 ] = 1.f;
-
-			if ( mesh_i < 4 )
-				temp_color[ mesh_i ] = 1.f;
-			else
-				printf( "a\n" );
+			//glm::vec4 temp_color{};
+			//temp_color[ 3 ] = 1.f;
+			//
+			//if ( mesh_i < 4 )
+			//	temp_color[ mesh_i ] = 1.f;
+			//else
+			//	printf( "a\n" );
 
 			mesh_t& mesh = model->mesh[ mesh_i ];
 
@@ -613,7 +616,7 @@ struct Render3 final : public IRender3
 				verts[ vert_offset ].uv_x   = mesh.vertex_data.tex_coord[ vert_i ].x;
 				verts[ vert_offset ].uv_y   = mesh.vertex_data.tex_coord[ vert_i ].y;
 				// verts[ vert_offset ].color = mesh.vertex_data.color[ vert_i ];
-				verts[ vert_offset ].color  = temp_color;
+				// verts[ vert_offset ].color  = temp_color;
 				vert_offset++;
 			}
 		}
@@ -653,7 +656,7 @@ struct Render3 final : public IRender3
 
 		if ( buffers.vertex == nullptr )
 		{
-			Log_ErrorF( "Failed to upload mesh: \"%s\"", graphics_data->model_get_path( model_handle ) );
+			Log_ErrorF( "Failed to upload mesh: \"%s\"", graphics_data->model_get_path( model_handle ).data );
 			return {};
 		}
 
@@ -672,6 +675,8 @@ struct Render3 final : public IRender3
 		// Copy material surface info
 		vk_mesh->material       = surfaces;
 		vk_mesh->material_count = mats_vk.size();
+
+		Log_DevF( gLC_Render, 1, "Uploaded Mesh \"%s\"\n", graphics_data->model_get_path( model_handle ).data );
 
 		return upload_handle;
 	}
@@ -698,6 +703,16 @@ struct Render3 final : public IRender3
 		g_mesh_list.ref_increment( mesh_handle );
 
 		return render_handle;
+	}
+
+	void mesh_render_set_matrix( r_mesh_render_h handle, const glm::mat4& matrix ) override
+	{
+		r_mesh_render_t* mesh_render = g_mesh_render_list.get( handle );
+
+		if ( !mesh_render )
+			return;
+
+		mesh_render->matrix = matrix;
 	}
 };
 

@@ -126,8 +126,16 @@ r_texture_h texture_load( const char* path, vk_texture_load_info_t& load_info )
 
 bool texture_load( r_texture_h& handle, const char* path, vk_texture_load_info_t& load_info )
 {
+	r_texture_h fail_handle{};
+
+	if ( !load_info.no_missing_texture && g_textures.capacity )
+		fail_handle = { 0, g_textures.generation[ 0 ] };
+
 	if ( !path )
-		return {};
+	{
+		handle = fail_handle;
+		return false;
+	}
 
 	ch_string full_path;
 
@@ -146,7 +154,8 @@ bool texture_load( r_texture_h& handle, const char* path, vk_texture_load_info_t
 	if ( !full_path.data )
 	{
 		Log_ErrorF( gLC_Render, "Failed to find texture: \"%s\"\n", path );
-		return {};
+		handle = fail_handle;
+		return false;
 	}
 
 	// Check if we've loaded this already
@@ -156,7 +165,7 @@ bool texture_load( r_texture_h& handle, const char* path, vk_texture_load_info_t
 		handle = it->second;
 		g_textures.ref_increment( handle );
 		ch_str_free( full_path );
-		return handle;
+		return true;
 	}
 
 	// allocate a new handle
@@ -173,24 +182,29 @@ bool texture_load( r_texture_h& handle, const char* path, vk_texture_load_info_t
 	else if ( !g_textures.create( handle, &texture ) )
 	{
 		Log_Error( gLC_Render, "texture_load: Failed to allocate texture handle!\n" );
-		handle = {};
-		return {};
+		handle = fail_handle;
+		return false;
 	}
 
 	// load the texture
-	if ( !ktx_load( full_path.data, texture ) )
+	if ( !ktx_load( full_path.data, texture, load_info ) )
 	{
 		g_textures.ref_decrement( handle );
 		Log_ErrorF( gLC_Render, "texture_load: Failed to load texture: \"%s\"\n", full_path.data );
 
-		handle                     = {};
+		handle                     = fail_handle;
 		g_texture_map[ full_path ] = handle;
-		return {};
+		return false;
 	}
+
+	texture->depth_compare     = load_info.depth_compare;
+	texture->sampler_address   = load_info.sampler_address;
+	texture->filter            = load_info.filter;
+	texture->usage             = load_info.usage;
 
 	g_texture_map[ full_path ] = handle;
 	g_texture_count++;
-	return handle;
+	return true;
 }
 
 
@@ -218,7 +232,7 @@ bool texture_create_missing()
 {
 	vk_texture_load_info_t load_info{};
 	load_info.usage    = VK_IMAGE_USAGE_SAMPLED_BIT;
-	load_info.filter   = VK_FILTER_LINEAR;
+	load_info.filter   = VK_FILTER_NEAREST;
 
 	r_texture_h handle = texture_load( MISSING_TEXTURE_PATH, load_info );
 
@@ -308,7 +322,7 @@ VkSampler vk_sampler_get( VkFilter filter, VkSamplerAddressMode address_mode, Vk
 	sampler_info.maxLod                  = std::max( 0, vk_miplod_max );
 	sampler_info.minLod                  = std::min( (float)std::max( 0, vk_miplod_min ), sampler_info.maxLod );
 
-	VkSampler& sampler                  = g_samplers[ settings ];
+	VkSampler& sampler                   = g_samplers[ settings ];
 
 	vk_check( vkCreateSampler( g_vk_device, &sampler_info, NULL, &sampler ), "Failed to create sampler!" );
 
@@ -336,5 +350,8 @@ void vk_sampler_recreate()
 
 	vk_queue_wait_graphics();
 	vk_sampler_destroy_all();
+
+	// need to do this to reset the samplers
+	g_texture_gpu_index_dirty = true;
 }
 

@@ -47,6 +47,7 @@ VkDescriptorPool             g_vk_desc_pool              = VK_NULL_HANDLE;
 VkDescriptorSetLayout        g_vk_desc_draw_image_layout = VK_NULL_HANDLE;
 
 
+#if 0
 void                         vk_descriptor_pool_create()
 {
 	VkDescriptorPoolSize aPoolSizes[] = {
@@ -74,6 +75,7 @@ void                         vk_descriptor_pool_create()
 
 	vk_set_name( VK_OBJECT_TYPE_DESCRIPTOR_POOL, (u64)gVkDescriptorPool, "Global Descriptor Pool" );
 }
+#endif
 
 
 VkDescriptorPool vk_descriptor_pool_create( const char* name, u32 max_sets, vk_desc_pool_size_ratio_t* pool_sizes, u32 pool_size_count )

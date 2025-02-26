@@ -272,10 +272,11 @@ struct IRender3 : public ISystem
 
 	virtual r_mesh_h        mesh_upload( ch_model_h handle )                                                          = 0;
 	virtual r_mesh_render_h mesh_render_create( r_mesh_h handle )                                                     = 0;
+	virtual void            mesh_render_set_matrix( r_mesh_render_h handle, const glm::mat4& matrix )                 = 0;
 	//	virtual void        test_mesh_free( ch_handle_t mesh )                                                        = 0;
 };
 
 
 #define CH_RENDER3     "chocolate_render3"
-#define CH_RENDER3_VER 5
+#define CH_RENDER3_VER 6
 

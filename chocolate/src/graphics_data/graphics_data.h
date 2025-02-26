@@ -79,7 +79,7 @@ class GraphicsData final : public IGraphicsData
 	void          model_free( ch_model_h handle ) override;
 
 	model_t*      model_get( ch_model_h handle ) override;
-	const char*   model_get_path( ch_model_h handle ) override;
+	ch_string     model_get_path( ch_model_h handle ) override;
 
 	// const ch_model_materials* model_get_material_array( ch_model_h handle ) override;
 

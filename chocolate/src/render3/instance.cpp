@@ -255,8 +255,7 @@ bool vk_instance_create()
 	create_info.pApplicationInfo = &app_info;
 
 #if _DEBUG
-	#pragma message( "TODO: ONLY USE VALIDATION LAYERS IF --vk-valid IS ON THE COMMAND LINE!" )
-	if ( g_has_validation )
+	if ( g_has_validation && g_use_validation_layers )
 	{
 		create_info.enabledLayerCount   = (unsigned int)ARR_SIZE( g_validation_layers );
 		create_info.ppEnabledLayerNames = g_validation_layers;
@@ -317,7 +316,7 @@ bool vk_instance_create()
 		}
 
 		// if we don't want debug utils, don't bother loading it
-		if ( !g_no_debug_utils )
+		if ( !g_no_debug_utils && g_use_validation_layers )
 		{
 			if ( !g_has_debug_utils && ch_str_equals( VK_EXT_DEBUG_UTILS_EXTENSION_NAME, ext_props[ i ].extensionName ) )
 			{

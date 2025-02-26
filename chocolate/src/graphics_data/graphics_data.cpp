@@ -87,6 +87,20 @@ ch_model_h GraphicsData::model_load( const char* path )
 
 	if ( !full_path.data )
 	{
+		// try appending models to it, a hack that won't work if it starts with ".." or points elsewhere usually
+		if ( FileSys_IsRelative( clean_path.data ) )
+		{
+			char new_path[ 512 ]{};
+			strcat( new_path, "models" );
+			strcat( new_path, SEP );
+			strcat( new_path, clean_path.data );
+
+			full_path = FileSys_FindFile( new_path );
+		}
+	}
+
+	if ( !full_path.data )
+	{
 		Log_ErrorF( "Failed to find model \"%s\"\n", clean_path.data );
 		ch_str_free( clean_path );
 		return {};
@@ -145,10 +159,18 @@ model_t* GraphicsData::model_get( ch_model_h handle )
 }
 
 
-const char* GraphicsData::model_get_path( ch_model_h handle ) 
+ch_string GraphicsData::model_get_path( ch_model_h handle ) 
 {
+	for ( const auto& [ path, saved_handle ] : g_model_paths )
+	{
+		if ( saved_handle == handle )
+			return path;
+	}
+
+	return {};
+
 	// TODO: replace this hash map system with the generation handle system
-	return nullptr;
+	//  return nullptr;
 
 	//auto search = g_model_paths.find( handle );
 	//

@@ -102,10 +102,9 @@ static bool load_ktx2( ktxTexture2* spKTexture2 )
 }
 
 
-bool ktx_load( const char* path, vk_texture_t* texture )
+bool ktx_load( const char* path, vk_texture_t* texture, vk_texture_load_info_t& load_info )
 {
-	ktxTexture* kTexture = nullptr;
-
+	ktxTexture*    kTexture = nullptr;
 	KTX_error_code result   = ktxTexture_CreateFromNamedFile( path, KTX_TEXTURE_CREATE_NO_FLAGS, &kTexture );
 
 	if ( result != KTX_SUCCESS )
@@ -114,16 +113,18 @@ bool ktx_load( const char* path, vk_texture_t* texture )
 		return false;
 	}
 
+	// This is a KTX 2 Format file, so we need to have special handling for that, like transcoding
+	if ( kTexture->classId == class_id::ktxTexture2_c && !load_ktx2( (ktxTexture2*)kTexture ) )
+		return false;
+
 	VkFormat vkFormat = ktxTexture_GetVkFormat( kTexture );
 
-	// WHY does this happen so often, wtf
 	if ( vkFormat == VK_FORMAT_UNDEFINED )
-		Log_DevF( gLC_Render, 2, "KTX Warning: - No Vulkan Format Found in KTX File: %s\n", path );
-
-	// This is a KTX 2 Format file, so we need to have special handling for that, like transcoding
-	if ( kTexture->classId == class_id::ktxTexture2_c )
-		if ( !load_ktx2( (ktxTexture2*)kTexture ) )
-			return false;
+	{
+		// This should have been transcoded in load_ktx2(), hmm
+		Log_ErrorF( gLC_Render, "No Vulkan Format for KTX Texture File: %s\n", path );
+		return false;
+	}
 
 	ktxVulkanTexture kVkTexture;
 
@@ -132,7 +133,7 @@ bool ktx_load( const char* path, vk_texture_t* texture )
 	  &g_ktx_vdi,
 	  &kVkTexture,
 	  VK_IMAGE_TILING_OPTIMAL,
-	  VK_IMAGE_USAGE_SAMPLED_BIT,
+	  load_info.usage,
 	  VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
 
 	if ( result != KTX_SUCCESS )
@@ -158,13 +159,10 @@ bool ktx_load( const char* path, vk_texture_t* texture )
 
 	// hack
 	if ( kVkTexture.viewType == VK_IMAGE_VIEW_TYPE_2D_ARRAY && kVkTexture.layerCount == 1 )
-	{
 		texture->view_type = VK_IMAGE_VIEW_TYPE_2D;
-	}
+
 	else if ( kVkTexture.viewType == VK_IMAGE_VIEW_TYPE_1D_ARRAY && kVkTexture.layerCount == 1 )
-	{
 		texture->view_type = VK_IMAGE_VIEW_TYPE_1D;
-	}
 
 	// Create Image View
 	// IDEA: what if we had different image views depending on what it's used for, like a 2D array view and a normal 2D view?
