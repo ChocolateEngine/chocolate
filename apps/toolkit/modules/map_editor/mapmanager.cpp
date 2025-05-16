@@ -1,22 +1,22 @@
 // Loads Sidury Map Files (smf)
 
-#include "core/filesystem.h"
-#include "core/console.h"
-#include "core/util.h"
-#include "main.h"
-#include "skybox.h"
-#include "igraphics.h"
-
 #include "mapmanager.h"
-#include "map_system.h"
 
 #include <filesystem>
+
+#include "core/console.h"
+#include "core/filesystem.h"
+#include "core/util.h"
+#include "igraphics.h"
+#include "main.h"
+#include "map_system.h"
+#include "skybox.h"
 
 
 LOG_CHANNEL_REGISTER( Map, ELogColor_DarkGreen );
 
 std::vector< std::string > gMapList;
-static bool                gRebuildMapList = true;
+static bool                gRebuildMapList  = true;
 static float               gRebuildMapTimer = 0.f;
 
 
@@ -32,7 +32,7 @@ CONCMD_VA( map_list_rebuild, "Rebuild the map list now" )
 void map_dropdown(
   const std::vector< std::string >& args,         // arguments currently typed in by the user
   const std::string&                fullCommand,  // the full command line the user has typed in
-  std::vector< std::string >&       results )     // results to populate the dropdown list with
+  std::vector< std::string >&       results )           // results to populate the dropdown list with
 {
 	const std::vector< std::string >& mapList = MapManager_GetMapList();
 
@@ -53,9 +53,6 @@ CONCMD_DROP( map, map_dropdown )
 		Log_Warn( gLC_Map, "No Map Path/Name specified!\n" );
 		return;
 	}
-
-	if ( !gMapEditorTool.running )
-		return;
 
 	if ( !MapManager_FindMap( args[ 0 ] ) )
 	{
@@ -163,7 +160,7 @@ bool MapManager_FindMap( const std::string& path )
 
 	ch_string absPath = FileSys_FindDir( mapPath.data, mapPath.size );
 
-	bool found = absPath.data != nullptr;
+	bool      found   = absPath.data != nullptr;
 
 	ch_str_free( mapPath.data );
 	ch_str_free( absPath.data );
@@ -175,7 +172,7 @@ bool MapManager_FindMap( const std::string& path )
 static bool MapManager_LoadScene( chmap::Scene& scene )
 {
 	EditorContext_t* context = nullptr;
-	ch_handle_t       handle  = Editor_CreateContext( &context );
+	ch_handle_t      handle  = Editor_CreateContext( &context );
 
 	if ( handle == CH_INVALID_HANDLE )
 		return false;
@@ -243,7 +240,7 @@ static bool MapManager_LoadScene( chmap::Scene& scene )
 				if ( it->second.type != chmap::EComponentType_String )
 					continue;
 
-				if ( ch_str_equals( it->second.aString , "world", 5 ) )
+				if ( ch_str_equals( it->second.aString, "world", 5 ) )
 				{
 					ent->apLight = graphics->CreateLight( ELightType_World );
 				}
@@ -253,7 +250,7 @@ static bool MapManager_LoadScene( chmap::Scene& scene )
 				}
 				else if ( ch_str_equals( it->second.aString, "spot", 4 ) )
 				{
-					ent->apLight = graphics->CreateLight( ELightType_Spot );
+					ent->apLight            = graphics->CreateLight( ELightType_Spot );
 
 					// ???
 					ent->apLight->aInnerFov = 0.f;
@@ -365,7 +362,7 @@ static bool MapManager_LoadScene( chmap::Scene& scene )
 }
 
 
-bool MapManager_LoadMap( const std::string &path )
+bool MapManager_LoadMap( const std::string& path )
 {
 	ch_string_auto mapPath;
 
@@ -459,7 +456,7 @@ void MapManager_WriteMap( SiduryMap& map, const std::string& srPath )
 		Log_ErrorF( gLC_Map, "Failed to open file handle for mapData.smf: \"%s\"\n", mapDataPath.c_str() );
 		return;
 	}
-	
+
 	// Write Map Header
 	SiduryMapHeader_t mapHeader;
 	mapHeader.aVersion   = CH_MAP_VERSION;
@@ -475,4 +472,3 @@ void MapManager_WriteMap( SiduryMap& map, const std::string& srPath )
 	{
 	}
 }
-

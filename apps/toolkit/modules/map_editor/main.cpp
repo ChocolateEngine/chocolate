@@ -1,69 +1,48 @@
 #include "main.h"
-#include "core/system_loader.h"
+
+#include "../../main_window/main.h"
 #include "core/asserts.h"
-
-#include "iinput.h"
-#include "igui.h"
-#include "render/irender.h"
-#include "imgui/imgui.h"
-#include "imgui/imgui_impl_sdl2.h"
-
+#include "core/system_loader.h"
 #include "core/util.h"
-#include "game_physics.h"
-#include "igraphics.h"
-#include "mapmanager.h"
-#include "inputsystem.h"
-#include "skybox.h"
 #include "editor_view.h"
 #include "entity_editor.h"
+#include "game_physics.h"
+#include "igraphics.h"
+#include "igui.h"
+#include "iinput.h"
+#include "imgui/imgui.h"
+#include "imgui/imgui_impl_sdl2.h"
+#include "inputsystem.h"
+#include "mapmanager.h"
+#include "render/irender.h"
+#include "skybox.h"
 // #include "importer.h"
 
-#include <SDL_system.h>
 #include <SDL_hints.h>
+#include <SDL_system.h>
 
 #include <algorithm>
 
 
-IGuiSystem*       gui          = nullptr;
-IRender*          render       = nullptr;
-IInputSystem*     input        = nullptr;
-IAudioSystem*     audio        = nullptr;
-IGraphics*        graphics     = nullptr;
-IRenderSystemOld* renderOld    = nullptr;
-
-float            gFrameTime   = 0.f;
-
 // TODO: make gRealTime and gGameTime
 // real time is unmodified time since engine launched, and game time is time affected by host_timescale and pausing
-double           gCurTime     = 0.0;  // i could make this a size_t, and then just have it be every 1000 is 1 second
 
-extern bool      gRunning;
-
-CONVAR_FLOAT_EXT( r_nearz );
-CONVAR_FLOAT_EXT( r_farz );
-CONVAR_FLOAT_EXT( r_fov );
+extern bool gRunning;
 
 CONVAR_FLOAT( phys_friction, 10, "Friction" );
 CONVAR_BOOL( ui_show_imgui_demo, 0, "Show the ImGui Demo" );
 CONVAR_BOOL( ui_show_render_stats, true, "Show Renderer Stats" );
 
-CONVAR_BOOL_EXT( editor_gizmo_scale_enabled );
-CONVAR_FLOAT_EXT( editor_gizmo_scale );
 
-
-int                             gMainMenuBarHeight    = 0.f;
 static bool                     gShowQuitConfirmation = false;
-static bool                     gShowSettingsMenu     = false;
-u32                             gMainViewport         = 0;
 
 
 EditorData_t                    gEditorData{};
 
-ch_handle_t                      gEditorContextIdx = CH_INVALID_EDITOR_CONTEXT;
+ch_handle_t                     gEditorContextIdx = CH_INVALID_EDITOR_CONTEXT;
 ResourceList< EditorContext_t > gEditorContexts;
 
 
-ToolLaunchData                  gToolData;
 MapEditor                       gMapEditorTool;
 
 
@@ -87,101 +66,13 @@ extern "C"
 // }
 
 
-IPhysicsObject*                 reallyCoolObject = nullptr;
+IPhysicsObject* reallyCoolObject = nullptr;
 
 
-void DrawQuitConfirmation();
+void            DrawQuitConfirmation();
 
 
-void Main_DrawGraphicsSettings()
-{
-#if 0
-	auto windowSize = ImGui::GetWindowSize();
-	windowSize.x -= 60;
-	windowSize.y -= 60;
-
-	//ImGui::SetNextWindowContentSize( windowSize );
-
-	if ( !ImGui::BeginChild( "Graphics Settings", {}, ImGuiChildFlags_AutoResizeY | ImGuiChildFlags_Border ) )
-	{
-		ImGui::EndChild();
-		return;
-	}
-
-	static ConVarRef r_msaa( "r_msaa" );
-	static ConVarRef r_msaa_samples( "r_msaa_samples" );
-	static ConVarRef r_msaa_textures( "r_msaa_textures" );
-	static ConVarRef r_fov( "r_fov" );
-
-	bool             msaa_textures = r_msaa_textures.GetBool();
-	float            fov           = r_fov.GetFloat();
-
-	if ( ImGui::SliderFloat( "FOV", &fov, 0.1f, 179.9f ) )
-	{
-		std::string fovStr = ToString( fov );
-		Con_QueueCommandSilent( "r_fov " + fovStr );
-	}
-
-	std::string msaaPreview = r_msaa.GetBool() ? ToString( r_msaa_samples ) + "X" : "Off";
-	if ( ImGui::BeginCombo( "MSAA", msaaPreview.c_str() ) )
-	{
-		if ( ImGui::Selectable( "Off", !r_msaa.GetBool() ) )
-		{
-			Con_QueueCommandSilent( "r_msaa 0" );
-		}
-
-		int maxSamples = render->GetMaxMSAASamples();
-
-		// TODO: check what your graphics card actually supports
-		if ( maxSamples >= 2 && ImGui::Selectable( "2X", r_msaa.GetBool() && r_msaa_samples.GetFloat() == 2 ) )
-		{
-			Con_QueueCommandSilent( "r_msaa 1; r_msaa_samples 2" );
-		}
-
-		if ( maxSamples >= 4 && ImGui::Selectable( "4X", r_msaa.GetBool() && r_msaa_samples.GetFloat() == 4 ) )
-		{
-			Con_QueueCommandSilent( "r_msaa 1; r_msaa_samples 4" );
-		}
-
-		if ( maxSamples >= 8 && ImGui::Selectable( "8X", r_msaa.GetBool() && r_msaa_samples.GetFloat() == 8 ) )
-		{
-			Con_QueueCommandSilent( "r_msaa 1; r_msaa_samples 8" );
-		}
-
-		if ( maxSamples >= 16 && ImGui::Selectable( "16X", r_msaa.GetBool() && r_msaa_samples.GetFloat() == 16 ) )
-		{
-			Con_QueueCommandSilent( "r_msaa 1; r_msaa_samples 16" );
-		}
-
-		if ( maxSamples >= 32 && ImGui::Selectable( "32X", r_msaa.GetBool() && r_msaa_samples.GetFloat() == 32 ) )
-		{
-			Con_QueueCommandSilent( "r_msaa 1; r_msaa_samples 32" );
-		}
-
-		if ( maxSamples >= 64 && ImGui::Selectable( "64X", r_msaa.GetBool() && r_msaa_samples.GetFloat() == 64 ) )
-		{
-			Con_QueueCommandSilent( "r_msaa 1; r_msaa_samples 64" );
-		}
-
-		ImGui::EndCombo();
-	}
-
-	if ( ImGui::Checkbox( "MSAA Textures/Sample Shading - Very Expensive", &msaa_textures ) )
-	{
-		if ( msaa_textures )
-			Con_QueueCommandSilent( "r_msaa_textures 1" );
-		else
-			Con_QueueCommandSilent( "r_msaa_textures 0" );
-	}
-
-	//ImGui::SetWindowSize( windowSize );
-
-	ImGui::EndChild();
-#endif
-}
-
-
-void Main_DrawInputSettings()
+void            Main_DrawInputSettings()
 {
 	if ( !ImGui::BeginChild( "Input", {}, ImGuiChildFlags_AutoResizeY | ImGuiChildFlags_Border ) )
 	{
@@ -223,191 +114,16 @@ void Main_DrawInputSettings()
 }
 
 
-void Main_DrawSettingsMenu()
-{
-	if ( !gShowSettingsMenu )
-		return;
-
-	ImGui::SetNextWindowSizeConstraints( { 200, 200 }, {4000, 4000} );
-
-	if ( !ImGui::Begin( "Settings Menu" ) )
-	{
-		ImGui::End();
-		return;
-	}
-
-	if ( ImGui::BeginTabBar( "settings tabs" ) )
-	{
-		if ( ImGui::BeginTabItem( "Input" ) )
-		{
-			Main_DrawInputSettings();
-			ImGui::EndTabItem();
-		}
-
-		if ( ImGui::BeginTabItem( "Graphics" ) )
-		{
-			Main_DrawGraphicsSettings();
-			ImGui::EndTabItem();
-		}
-
-		if ( ImGui::BeginTabItem( "Other" ) )
-		{
-			bool scaleEnabled = editor_gizmo_scale_enabled;
-			if ( ImGui::Checkbox( "Gizmo Scaling", &scaleEnabled ) )
-			{
-				if ( scaleEnabled )
-					Con_QueueCommandSilent( "editor_gizmo_scale_enabled 1" );
-				else
-					Con_QueueCommandSilent( "editor_gizmo_scale_enabled 0" );
-			}
-
-			float scale = editor_gizmo_scale;
-			if ( ImGui::DragFloat( "Gizmo Scale", &scale, 0.0005, 0.f, 0.1f, "%.6f" ) )
-			{
-				Con_SetConVarValue( "editor_gizmo_scale", scale );
-			}
-
-			ImGui::EndTabItem();
-		}
-
-		ImGui::EndTabBar();
-	}
-
-	ImVec2 windowSize = ImGui::GetWindowSize();
-
-	ImGui::SetCursorPosY( windowSize.y - 28 );
-
-	if ( ImGui::Button( "Save" ) )
-	{
-		Con_Archive();
-	}
-
-	ImGui::SameLine();
-
-	if ( ImGui::Button( "Close" ) )
-	{
-		gShowSettingsMenu = false;
-	}
-
-	ImGui::End();
-}
-
-
-void Main_DrawMenuBar()
-{
-	if ( gShowQuitConfirmation )
-	{
-		DrawQuitConfirmation();
-	}
-
-	Main_DrawSettingsMenu();
-
-	if ( ImGui::BeginMainMenuBar() )
-	{
-		if ( ImGui::BeginMenu( "File" ) )
-		{
-			if ( ImGui::MenuItem( "New" ) )
-			{
-				Editor_CreateContext( nullptr );
-			}
-
-			if ( ImGui::MenuItem( "Load" ) )
-			{
-			}
-
-			if ( ImGui::MenuItem( "Save" ) )
-			{
-			}
-
-			if ( ImGui::MenuItem( "Close" ) )
-			{
-			}
-
-			ImGui::Separator();
-
-			if ( ImGui::BeginMenu( "Open Recent" ) )
-			{
-				ImGui::EndMenu();
-			}
-
-			ImGui::Separator();
-
-			if ( ImGui::MenuItem( "Quit" ) )
-			{
-				gShowQuitConfirmation = true;
-			}
-
-			ImGui::Separator();
-
-			if ( ImGui::MenuItem( "Open Test Map" ) )
-			{
-				Con_QueueCommand( "map D:\\projects\\chocolate\\dev\\output\\projects\\riverhouse_v1" );
-			}
-			if ( ImGui::MenuItem( "Open Test Map 2" ) )
-			{
-				Con_QueueCommand( "map D:\\projects\\chocolate\\dev\\output\\projects\\l4d_maps\\c2m1_highway" );
-			}
-
-			ImGui::EndMenu();
-		}
-
-		if ( ImGui::BeginMenu( "Edit" ) )
-		{
-			if ( ImGui::MenuItem( "Settings" ) )
-			{
-				gShowSettingsMenu = true;
-			}
-
-			ImGui::EndMenu();
-		}
-
-		if ( ImGui::BeginMenu( "View" ) )
-		{
-			if ( ImGui::MenuItem( "Entity Editor", nullptr, true ) )
-			{
-			}
-
-			ImGui::EndMenu();
-		}
-
-		// I would like tabs eventually
-		if ( ImGui::BeginMenu( "Map List" ) )
-		{
-			for ( u32 i = 0; i < gEditorContexts.aHandles.size(); i++ )
-			{
-				EditorContext_t* context = nullptr;
-				if ( !gEditorContexts.Get( gEditorContexts.aHandles[ i ], &context ) )
-					continue;
-
-				ImGui::PushID( i );
-				bool selected = gEditorContexts.aHandles[ i ] == gEditorContextIdx;
-				if ( ImGui::MenuItem( context->aMap.aMapPath.empty() ? "Unsaved Map" : context->aMap.aMapPath.c_str(), nullptr, &selected ) )
-				{
-					Editor_SetContext( gEditorContexts.aHandles[ i ] );
-				}
-				ImGui::PopID();
-			}
-
-			ImGui::EndMenu();
-		}
-
-		ImGui::EndMainMenuBar();
-	}
-
-	auto yeah          = ImGui::GetItemRectSize();
-	gMainMenuBarHeight = yeah.y;
-}
-
-
-// disabled cause for some reason, it could jump to the WindowProc function mid frame and call this 
+// disabled cause for some reason, it could jump to the WindowProc function mid frame and call this
 #define CH_LIVE_WINDOW_RESIZE 1
 
 
 RenderStats_t gRenderStats{};
 
 
-void UpdateLoop( float frameTime, bool sResize, glm::uvec2 sOffset )
+void          UpdateLoop( float frameTime, bool sResize, glm::uvec2 sOffset )
 {
+#if 0
 	PROF_SCOPE();
 
 	if ( ui_show_imgui_demo )
@@ -416,7 +132,7 @@ void UpdateLoop( float frameTime, bool sResize, glm::uvec2 sOffset )
 	if ( !sResize )
 		MapEditor_UpdateEditor( frameTime );
 
-//	Phys_Simulate( GetPhysEnv(), frameTime );
+	//	Phys_Simulate( GetPhysEnv(), frameTime );
 
 	if ( ui_show_render_stats )
 	{
@@ -453,7 +169,7 @@ void UpdateLoop( float frameTime, bool sResize, glm::uvec2 sOffset )
 
 	if ( !( SDL_GetWindowFlags( gToolData.window ) & SDL_WINDOW_MINIMIZED ) )
 	{
-		Main_DrawMenuBar();
+		//		Main_DrawMenuBar();
 		EntEditor_DrawUI();
 
 		if ( sResize )
@@ -464,6 +180,7 @@ void UpdateLoop( float frameTime, bool sResize, glm::uvec2 sOffset )
 		return;
 
 	// Resource_Update();
+#endif
 }
 
 
@@ -511,15 +228,15 @@ static std::string gSkyboxSelectPath = "";
 
 
 // return true if model selected
-std::string DrawSkyboxSelectionWindow()
+std::string        DrawSkyboxSelectionWindow()
 {
-	if (!ImGui::Begin("Model Selection Window"))
+	if ( !ImGui::Begin( "Model Selection Window" ) )
 	{
 		ImGui::End();
 		return "";
 	}
 
-	if (ImGui::Button("Close"))
+	if ( ImGui::Button( "Close" ) )
 	{
 		gInSkyboxSelect = false;
 		gSkyboxSelectPath.clear();
@@ -529,7 +246,7 @@ std::string DrawSkyboxSelectionWindow()
 
 	for ( ch_string file : fileList )
 	{
-		bool isDir = FileSys_IsDir(file.data, file.size, true);
+		bool isDir = FileSys_IsDir( file.data, file.size, true );
 
 		if ( !isDir )
 		{
@@ -544,7 +261,7 @@ std::string DrawSkyboxSelectionWindow()
 			if ( isDir )
 			{
 				ch_string_auto cleanedPath = FileSys_CleanPath( file.data, file.size );
-				gSkyboxSelectPath = std::string( cleanedPath.data, cleanedPath.size );
+				gSkyboxSelectPath          = std::string( cleanedPath.data, cleanedPath.size );
 			}
 			else
 			{
@@ -563,18 +280,18 @@ std::string DrawSkyboxSelectionWindow()
 static void DrawQuitConfirmation()
 {
 	int width = 0, height = 0;
-	render->GetSurfaceSize( gToolData.graphicsWindow, width, height );
+	render->GetSurfaceSize( gGraphicsWindow, width, height );
 
-	ImGui::SetNextWindowSize({ (float)width, (float)height });
-	ImGui::SetNextWindowPos({0.f, 0.f});
+	ImGui::SetNextWindowSize( { (float)width, (float)height } );
+	ImGui::SetNextWindowPos( { 0.f, 0.f } );
 
-	if (ImGui::Begin("FullScreen Overlay", nullptr, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoNav))
+	if ( ImGui::Begin( "FullScreen Overlay", nullptr, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoNav ) )
 	{
 		ImGui::SetNextWindowFocus();
 
-		ImGui::SetNextWindowSize({ 250, 60 });
+		ImGui::SetNextWindowSize( { 250, 60 } );
 
-		ImGui::SetNextWindowPos( { (width / 2.f) - 125.f, (height / 2.f) - 30.f } );
+		ImGui::SetNextWindowPos( { ( width / 2.f ) - 125.f, ( height / 2.f ) - 30.f } );
 
 		if ( !ImGui::Begin( "Quit Editor", nullptr, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove ) )
 		{
@@ -586,14 +303,14 @@ static void DrawQuitConfirmation()
 
 		ImGui::Separator();
 
-		if ( ImGui::Button( "Yes", {50, 0} ) )
+		if ( ImGui::Button( "Yes", { 50, 0 } ) )
 		{
 			Con_QueueCommand( "quit" );
 		}
 
 		ImGui::SameLine( 190 );
 
-		if ( ImGui::Button( "No", {50, 0} ) )
+		if ( ImGui::Button( "No", { 50, 0 } ) )
 		{
 			gShowQuitConfirmation = false;
 		}
@@ -699,11 +416,11 @@ void Game_UpdateProjection()
 	PROF_SCOPE();
 
 	int width = 0, height = 0;
-	render->GetSurfaceSize( gToolData.graphicsWindow, width, height );
+	render->GetSurfaceSize( gGraphicsWindow, width, height );
 
-	auto& io          = ImGui::GetIO();
-	io.DisplaySize.x  = width;
-	io.DisplaySize.y  = height;
+	auto& io         = ImGui::GetIO();
+	io.DisplaySize.x = width;
+	io.DisplaySize.y = height;
 
 	// HACK
 	extern glm::vec2  gEntityListSize;
@@ -744,7 +461,7 @@ void Game_UpdateProjection()
 		viewport->aSize       = { width, height };
 	}
 #else
-	ViewportShader_t* viewport = graphics->GetViewportData( gMainViewport );
+	ViewportShader_t* viewport = graphics->GetViewportData( gMainViewportHandle );
 
 	if ( !viewport )
 		return;
@@ -752,11 +469,11 @@ void Game_UpdateProjection()
 	// only 1 viewport can be seen right now
 	EditorContext_t* context = Editor_GetContext();
 
-	viewport->aNearZ      = r_nearz;
-	viewport->aFarZ       = r_farz;
-	viewport->aSize       = { newWidth, newHeight };
-	viewport->aOffset     = { offsetX, offsetY };
-	viewport->aProjection = projMat;
+	viewport->aNearZ         = r_nearz;
+	viewport->aFarZ          = r_farz;
+	viewport->aSize          = { newWidth, newHeight };
+	viewport->aOffset        = { offsetX, offsetY };
+	viewport->aProjection    = projMat;
 
 	if ( context )
 	{
@@ -798,7 +515,7 @@ ch_handle_t Editor_CreateContext( EditorContext_t** spContext )
 	}
 
 	EditorContext_t* context = nullptr;
-	ch_handle_t       handle  = gEditorContexts.Create( &context );
+	ch_handle_t      handle  = gEditorContexts.Create( &context );
 
 	if ( handle == CH_INVALID_HANDLE )
 		return CH_INVALID_HANDLE;
@@ -857,7 +574,7 @@ void Editor_SetContext( ch_handle_t sContext )
 		return;
 	}
 
-	ch_handle_t       lastContextIdx = gEditorContextIdx;
+	ch_handle_t      lastContextIdx = gEditorContextIdx;
 	EditorContext_t* lastContext    = nullptr;
 	gEditorContextIdx               = sContext;
 
@@ -887,17 +604,8 @@ void Editor_SetContext( ch_handle_t sContext )
 // Map Editor Interface
 
 
-
 bool MapEditor::LoadSystems()
 {
-	// Get Modules
-	CH_GET_SYSTEM( input, IInputSystem, IINPUTSYSTEM_NAME, IINPUTSYSTEM_VER );
-	CH_GET_SYSTEM( render, IRender, IRENDER_NAME, IRENDER_VER );
-	CH_GET_SYSTEM( graphics, IGraphics, IGRAPHICS_NAME, IGRAPHICS_VER );
-	CH_GET_SYSTEM( renderOld, IRenderSystemOld, IRENDERSYSTEMOLD_NAME, IRENDERSYSTEMOLD_VER );
-	CH_GET_SYSTEM( ch_physics, Ch_IPhysics, IPHYSICS_NAME, IPHYSICS_VER );
-	CH_GET_SYSTEM( gui, IGuiSystem, IGUI_NAME, IGUI_HASH );
-
 	return true;
 }
 
@@ -915,14 +623,13 @@ void MapEditor::Shutdown()
 
 bool MapEditor::Launch( const ToolLaunchData& launchData )
 {
-	running       = true;
-	gToolData     = launchData;
+	running             = true;
 
-	gMainViewport = graphics->CreateViewport();
+	gMainViewportHandle = graphics->CreateViewport();
 
 	Game_UpdateProjection();
 
-	// renderOld->EnableSelection( true, gMainViewport );
+	// renderOld->EnableSelection( true, gMainViewportHandle );
 
 	return MapEditor_Init();
 }
@@ -944,13 +651,10 @@ void MapEditor::Close()
 	Skybox_Destroy();
 	Phys_Shutdown();
 
-	// renderOld->EnableSelection( false, gMainViewport );
-	graphics->FreeViewport( gMainViewport );
+	// renderOld->EnableSelection( false, gMainViewportHandle );
+	graphics->FreeViewport( gMainViewportHandle );
 
-	gToolData.graphicsWindow = 0;
-	gToolData.toolkit        = nullptr;
-	gToolData.window         = nullptr;
-	running                  = false;
+	running = false;
 }
 
 
@@ -980,7 +684,7 @@ void MapEditor::Render( float frameTime, bool resize, glm::uvec2 offset )
 
 void MapEditor::Present()
 {
-	renderOld->Present( gToolData.graphicsWindow, &gMainViewport, 1 );
+	renderOld->Present( gGraphicsWindow, &gMainViewportHandle, 1 );
 
 	gRenderStats = graphics->GetStats();
 }
@@ -1010,10 +714,9 @@ Ray Util_GetRayFromScreenSpace( glm::ivec2 mousePos, glm::vec3 origin, u32 viewp
 	mousePos.x -= viewport->aOffset.x;
 	mousePos.y -= viewport->aOffset.y;
 
-	Ray ray
-	{
+	Ray ray{
 		.origin = origin,
-		.dir = Util_GetRayFromScreenSpace( mousePos, viewport->aProjView, viewport->aSize ),
+		.dir    = Util_GetRayFromScreenSpace( mousePos, viewport->aProjView, viewport->aSize ),
 	};
 
 	return ray;
@@ -1027,7 +730,7 @@ Ray Util_GetRayFromScreenSpace( glm::ivec2 mousePos, glm::vec3 origin, u32 viewp
 void CreatePhysObjectTest( const std::string& path )
 {
 	EditorContext_t* ctx = Editor_GetContext();
-	
+
 	if ( !ctx )
 		return;
 

@@ -1,23 +1,19 @@
 #include "editor_view.h"
-#include "main.h"
-#include "game_shared.h"
-#include "skybox.h"
-#include "inputsystem.h"
-#include "entity_editor.h"
-#include "gizmos.h"
 
+#include "../../main_window/main.h"
+#include "entity_editor.h"
+#include "game_shared.h"
+#include "gizmos.h"
+#include "igraphics.h"
 #include "igui.h"
 #include "iinput.h"
-#include "render/irender.h"
-#include "igraphics.h"
-
 #include "imgui/imgui.h"
 #include "imgui/imgui_internal.h"
+#include "inputsystem.h"
+#include "main.h"
+#include "render/irender.h"
+#include "skybox.h"
 
-
-CONVAR_FLOAT( r_fov, 106.f, CVARF_ARCHIVE, "FOV" );
-CONVAR_FLOAT( r_nearz, 0.01f, "Near Z Plane" );
-CONVAR_FLOAT( r_farz, 1000.f, "Far Z Plane" );
 
 CONVAR_FLOAT_EXT( m_yaw );
 CONVAR_FLOAT_EXT( m_pitch );
@@ -39,7 +35,7 @@ static bool gClearSelection = false;
 
 
 // Check the function FindHoveredWindow() in imgui.cpp to see if you need to update this when updating imgui
-bool MouseHoveringImGuiWindow( glm::ivec2 mousePos )
+bool        MouseHoveringImGuiWindow( glm::ivec2 mousePos )
 {
 	ImGuiContext& g = *ImGui::GetCurrentContext();
 
@@ -115,18 +111,18 @@ void EditorView_Shutdown()
 }
 
 
-static float gMoveScale = 1.f;
-static bool gCheckSelectionResult = false;
+static float gMoveScale            = 1.f;
+static bool  gCheckSelectionResult = false;
 
 
-bool EditorView_IsMouseInView()
+bool         EditorView_IsMouseInView()
 {
-	if ( !input->WindowHasFocus( gToolData.window ) )
+	if ( !input->WindowHasFocus( gpWindow ) )
 		return false;
 
-	ViewportShader_t* viewport = graphics->GetViewportData( gMainViewport );
+	ViewportShader_t* viewport = graphics->GetViewportData( gMainViewportHandle );
 
-	glm::ivec2 mousePos = input->GetMousePos();
+	glm::ivec2        mousePos = input->GetMousePos();
 
 	if ( viewport->aOffset.x > mousePos.x )
 		return false;
@@ -226,7 +222,7 @@ void EditorView_UpdateInputs( bool mouseInView )
 	gui->DebugMessage( "Movement Speed Scale: %.4f", gMoveScale );
 
 	float moveScale = gFrameTime * gMoveScale;
-	
+
 	if ( Input_KeyPressed( EBinding_Viewport_Slow ) )
 	{
 		moveScale *= view_move_slow;
@@ -310,26 +306,26 @@ void EditorView_UpdateView( EditorContext_t* spContext )
 	// 	Transform thirdPerson = {
 	// 		.aPos = { cl_cam_x, cl_cam_y, cl_cam_z }
 	// 	};
-	// 
+	//
 	// 	// thirdPerson.aPos = {cl_cam_x, cl_cam_y, cl_cam_z};
-	// 
+	//
 	// 	glm::mat4 viewMatrixZ;
 	// 	Util_ToViewMatrixZ( viewMatrixZ, transformView.aPos, transformView.aAng );
-	// 
+	//
 	// 	glm::mat4 viewMat = thirdPerson.ToMatrix( false ) * viewMatrixZ;
-	// 
+	//
 	// 	if ( info->aIsLocalPlayer )
 	// 	{
 	// 		ViewportShader_t* viewport = graphics->GetViewportData( 0 );
-	// 
+	//
 	// 		if ( viewport )
 	// 			viewport->aViewPos = thirdPerson.aPos;
-	// 
+	//
 	// 		// TODO: PERF: this also queues the viewport data
 	// 		Game_SetView( viewMat );
 	// 		// audio->SetListenerTransform( thirdPerson.aPos, transformView.aAng );
 	// 	}
-	// 
+	//
 	// 	Util_GetViewMatrixZDirection( viewMat, camDir->aForward.Edit(), camDir->aRight.Edit(), camDir->aUp.Edit() );
 	// }
 	// else
@@ -341,7 +337,7 @@ void EditorView_UpdateView( EditorContext_t* spContext )
 		// audio->SetListenerTransform( transformView.aPos, transformView.aAng );
 
 		// ViewportShader_t* viewport = graphics->GetViewportData( spContext->aView.aViewportIndex );
-		ViewportShader_t* viewport = graphics->GetViewportData( gMainViewport );
+		ViewportShader_t* viewport = graphics->GetViewportData( gMainViewportHandle );
 
 		if ( viewport )
 			viewport->aViewPos = spContext->aView.aPos;
@@ -404,7 +400,7 @@ static void CenterMouseOnScreen( EditorContext_t* context )
 	// int x = context->aView.aOffset.x;
 	// int y = context->aView.aOffset.y;
 
-	SDL_WarpMouseInWindow( gToolData.window, x, y );
+	SDL_WarpMouseInWindow( gpWindow, x, y );
 }
 
 
@@ -471,7 +467,7 @@ void EditorView_Update()
 
 	ImGuiContext* imContext = ImGui::GetCurrentContext();
 
-	ImGuiID       activeID = imContext->ActiveId;
+	ImGuiID       activeID  = imContext->ActiveId;
 
 	if ( !activeID )
 		EditorView_UpdateInputs( gEditorData.aMouseInView );
@@ -564,9 +560,8 @@ void EditorView_Update()
 #endif
 
 	// TODO: should only update this when the viewport is actually changed
-	graphics->SetViewportRenderList( gMainViewport, renderList.data(), renderList.size() );
+	graphics->SetViewportRenderList( gMainViewportHandle, renderList.data(), renderList.size() );
 
 	if ( centerMouse )
 		CenterMouseOnScreen( context );
 }
-

@@ -1,17 +1,19 @@
-#include "main.h"
-#include "entity_editor.h"
-#include "mesh_builder.h"
-#include "inputsystem.h"
 #include "gizmos.h"
+
+#include "../../main_window/main.h"
+#include "entity_editor.h"
+#include "inputsystem.h"
+#include "main.h"
+#include "mesh_builder.h"
 
 
 static ch_handle_t gGizmoTranslationModel = CH_INVALID_HANDLE;
 
-constexpr float   CH_GIZMO_SCALE         = 0.33f;
-constexpr float   CH_GIZMO_LINE_LEN      = 45.f;
-constexpr float   CH_GIZMO_ARROW_SIZE    = 6.f;
-constexpr float   CH_GIZMO_ARROW_LEN     = 15.f;
-constexpr float   CH_GIZMO_ARROW_END_POS = CH_GIZMO_LINE_LEN + CH_GIZMO_ARROW_LEN;
+constexpr float    CH_GIZMO_SCALE         = 0.33f;
+constexpr float    CH_GIZMO_LINE_LEN      = 45.f;
+constexpr float    CH_GIZMO_ARROW_SIZE    = 6.f;
+constexpr float    CH_GIZMO_ARROW_LEN     = 15.f;
+constexpr float    CH_GIZMO_ARROW_END_POS = CH_GIZMO_LINE_LEN + CH_GIZMO_ARROW_LEN;
 
 CONVAR_BOOL_EXT( editor_gizmo_scale_enabled );
 CONVAR_FLOAT_EXT( editor_gizmo_scale );
@@ -42,9 +44,9 @@ bool Gizmo_BuildTranslationMesh()
 	Model* model           = nullptr;
 	gGizmoTranslationModel = graphics->CreateModel( &model );
 
-	ch_handle_t  matX       = CreateAxisMaterial( "gizmo_translate_x", shader, {1, 0, 0} );
-	ch_handle_t  matY       = CreateAxisMaterial( "gizmo_translate_y", shader, {0, 1, 0} );
-	ch_handle_t  matZ       = CreateAxisMaterial( "gizmo_translate_z", shader, {0, 0, 1} );
+	ch_handle_t matX       = CreateAxisMaterial( "gizmo_translate_x", shader, { 1, 0, 0 } );
+	ch_handle_t matY       = CreateAxisMaterial( "gizmo_translate_y", shader, { 0, 1, 0 } );
+	ch_handle_t matZ       = CreateAxisMaterial( "gizmo_translate_z", shader, { 0, 0, 1 } );
 
 	if ( !matX || !matY || !matZ )
 	{
@@ -68,10 +70,10 @@ bool Gizmo_BuildTranslationMesh()
 		CreateVert( pos1 );
 		CreateVert( pos2 );
 	};
-	
+
 	// -------------------------------------------------------------------------------------
 	// X - AXIS
-	
+
 	meshBuilder.SetCurrentSurface( 0 );
 	meshBuilder.SetMaterial( matX );
 
@@ -87,15 +89,15 @@ bool Gizmo_BuildTranslationMesh()
 	// Create Left Face (-X)
 	// CreateTri( { -1, CH_GIZMO_LINE_LEN, -1 }, { -1, -1, -1 }, { -1, -1, 1 } );
 	// CreateTri( { -1, CH_GIZMO_LINE_LEN, 1 }, { -1, 1, -1 }, { -1, -1, 1 } );
-	
+
 	// Create Right Face (+X)
 	// CreateTri( { CH_GIZMO_LINE_LEN, -1, -1 }, { CH_GIZMO_LINE_LEN, 1, -1 }, { CH_GIZMO_LINE_LEN, 1, 1 } );
 	// CreateTri( { CH_GIZMO_LINE_LEN, -1, 1 }, { CH_GIZMO_LINE_LEN, -1, -1 }, { CH_GIZMO_LINE_LEN, 1, 1 } );
-	
+
 	// Create Back Face (+Y)
 	CreateTri( { 1, 1, 1 }, { CH_GIZMO_LINE_LEN, 1, 1 }, { CH_GIZMO_LINE_LEN, 1, -1 } );
 	CreateTri( { 1, 1, -1 }, { 1, 1, 1 }, { CH_GIZMO_LINE_LEN, 1, -1 } );
-	
+
 	// Create Front Face (-Y)
 	CreateTri( { -1, -1, 1 }, { -1, -1, -1 }, { CH_GIZMO_LINE_LEN, -1, -1 } );
 	CreateTri( { CH_GIZMO_LINE_LEN, -1, 1 }, { -1, -1, 1 }, { CH_GIZMO_LINE_LEN, -1, -1 } );
@@ -104,96 +106,96 @@ bool Gizmo_BuildTranslationMesh()
 	// Create Bottom Face
 	CreateTri( { CH_GIZMO_LINE_LEN, 6, -6 }, { CH_GIZMO_LINE_LEN, -6, -6 }, { CH_GIZMO_LINE_LEN, -6, 6 } );
 	CreateTri( { CH_GIZMO_LINE_LEN, 6, 6 }, { CH_GIZMO_LINE_LEN, 6, -6 }, { CH_GIZMO_LINE_LEN, -6, 6 } );
-	
-	CreateTri( { CH_GIZMO_LINE_LEN, 6, 6 },   { CH_GIZMO_LINE_LEN, -6, 6 },  { CH_GIZMO_ARROW_END_POS, 0, 0 } );      // Front Triangle
-	CreateTri( { CH_GIZMO_LINE_LEN, -6, -6 }, { CH_GIZMO_LINE_LEN,  6, -6 }, { CH_GIZMO_ARROW_END_POS, 0, 0 } );  // Back Triangle
-	CreateTri( { CH_GIZMO_LINE_LEN, -6, 6 },  { CH_GIZMO_LINE_LEN, -6, -6 }, { CH_GIZMO_ARROW_END_POS, 0, 0 } );    // Left Triangle
-	CreateTri( { CH_GIZMO_LINE_LEN, 6, -6 },  { CH_GIZMO_LINE_LEN,  6, 6 },  { CH_GIZMO_ARROW_END_POS, 0, 0 } );    // Right Triangle
-	
+
+	CreateTri( { CH_GIZMO_LINE_LEN, 6, 6 }, { CH_GIZMO_LINE_LEN, -6, 6 }, { CH_GIZMO_ARROW_END_POS, 0, 0 } );    // Front Triangle
+	CreateTri( { CH_GIZMO_LINE_LEN, -6, -6 }, { CH_GIZMO_LINE_LEN, 6, -6 }, { CH_GIZMO_ARROW_END_POS, 0, 0 } );  // Back Triangle
+	CreateTri( { CH_GIZMO_LINE_LEN, -6, 6 }, { CH_GIZMO_LINE_LEN, -6, -6 }, { CH_GIZMO_ARROW_END_POS, 0, 0 } );  // Left Triangle
+	CreateTri( { CH_GIZMO_LINE_LEN, 6, -6 }, { CH_GIZMO_LINE_LEN, 6, 6 }, { CH_GIZMO_ARROW_END_POS, 0, 0 } );    // Right Triangle
+
 	// -------------------------------------------------------------------------------------
 	// Y - AXIS
-	
+
 	meshBuilder.SetCurrentSurface( 1 );
 	meshBuilder.SetMaterial( matY );
-	
+
 	// create the main rectangle mesh now
 	// Create Bottom Face (-Z)
 	CreateTri( { 1, CH_GIZMO_LINE_LEN, -1 }, { 1, -1, -1 }, { -1, -1, -1 } );
 	CreateTri( { -1, CH_GIZMO_LINE_LEN, -1 }, { 1, CH_GIZMO_LINE_LEN, -1 }, { -1, -1, -1 } );
-	
+
 	// Create Top Face (+Z)
 	CreateTri( { 1, CH_GIZMO_LINE_LEN, 1 }, { -1, CH_GIZMO_LINE_LEN, 1 }, { -1, -1, 1 } );
 	CreateTri( { 1, -1, 1 }, { 1, CH_GIZMO_LINE_LEN, 1 }, { -1, -1, 1 } );
-	
+
 	// Create Left Face (-X)
 	CreateTri( { -1, CH_GIZMO_LINE_LEN, -1 }, { -1, -1, -1 }, { -1, -1, 1 } );
 	CreateTri( { -1, CH_GIZMO_LINE_LEN, 1 }, { -1, CH_GIZMO_LINE_LEN, -1 }, { -1, -1, 1 } );
-	
+
 	// Create Right Face (+X)
 	CreateTri( { 1, -1, -1 }, { 1, CH_GIZMO_LINE_LEN, -1 }, { 1, CH_GIZMO_LINE_LEN, 1 } );
 	CreateTri( { 1, -1, 1 }, { 1, -1, -1 }, { 1, CH_GIZMO_LINE_LEN, 1 } );
-	
+
 	// Create Back Face (+Y)
 	// CreateTri( { -1, CH_GIZMO_LINE_LEN, 1 }, { 1, CH_GIZMO_LINE_LEN, 1 }, { 1, CH_GIZMO_LINE_LEN, -1 } );
 	// CreateTri( { -1, CH_GIZMO_LINE_LEN, -1 }, { -1, CH_GIZMO_LINE_LEN, 1 }, { 1, CH_GIZMO_LINE_LEN, -1 } );
-	
+
 	// Create Front Face (-Y)
 	CreateTri( { -1, -1, 1 }, { -1, -1, -1 }, { 1, -1, -1 } );
 	CreateTri( { 1, -1, 1 }, { -1, -1, 1 }, { 1, -1, -1 } );
-	
+
 	// create the triangle
 	// Create Bottom Face
 	CreateTri( { 6, CH_GIZMO_LINE_LEN, 6 }, { -6, CH_GIZMO_LINE_LEN, 6 }, { -6, CH_GIZMO_LINE_LEN, -6 } );
 	CreateTri( { 6, CH_GIZMO_LINE_LEN, -6 }, { 6, CH_GIZMO_LINE_LEN, 6 }, { -6, CH_GIZMO_LINE_LEN, -6 } );
-	
+
 	CreateTri( { 6, CH_GIZMO_LINE_LEN, -6 }, { -6, CH_GIZMO_LINE_LEN, -6 }, { 0, CH_GIZMO_ARROW_END_POS, 0 } );  // Front Triangle
-	CreateTri( { -6, CH_GIZMO_LINE_LEN, 6 }, { 6, CH_GIZMO_LINE_LEN, 6 }, { 0, CH_GIZMO_ARROW_END_POS, 0 } );  // Back Triangle
+	CreateTri( { -6, CH_GIZMO_LINE_LEN, 6 }, { 6, CH_GIZMO_LINE_LEN, 6 }, { 0, CH_GIZMO_ARROW_END_POS, 0 } );    // Back Triangle
 	CreateTri( { -6, CH_GIZMO_LINE_LEN, -6 }, { -6, CH_GIZMO_LINE_LEN, 6 }, { 0, CH_GIZMO_ARROW_END_POS, 0 } );  // Left Triangle
-	CreateTri( { 6, CH_GIZMO_LINE_LEN, 6 }, { 6, CH_GIZMO_LINE_LEN, -6 }, { 0, CH_GIZMO_ARROW_END_POS, 0 } );  // Right Triangle
+	CreateTri( { 6, CH_GIZMO_LINE_LEN, 6 }, { 6, CH_GIZMO_LINE_LEN, -6 }, { 0, CH_GIZMO_ARROW_END_POS, 0 } );    // Right Triangle
 
 	// -------------------------------------------------------------------------------------
 	// Z - AXIS
 
 	meshBuilder.SetCurrentSurface( 2 );
 	meshBuilder.SetMaterial( matZ );
-	
+
 	// create the main rectangle mesh now
 	// Create Bottom Face (-Z)
 	// CreateTri( { 1, 1, -1 }, { 1, -1, -1 }, { -1, -1, -1 } );
 	// CreateTri( { -1, 1, -1 }, { 1, 1, -1 }, { -1, -1, -1 } );
-	
+
 	// Create Top Face (+Z)
 	// // CreateTri( { 1, 1, CH_GIZMO_LINE_LEN }, { -1, 1, CH_GIZMO_LINE_LEN }, { -1, -1, CH_GIZMO_LINE_LEN } );
 	// // CreateTri( { 1, -1, CH_GIZMO_LINE_LEN }, { 1, 1, CH_GIZMO_LINE_LEN }, { -1, -1, CH_GIZMO_LINE_LEN } );
-	
+
 	// Create Left Face (-X)
 	CreateTri( { -1, 1, 1 }, { -1, -1, -1 }, { -1, -1, CH_GIZMO_LINE_LEN } );
 	CreateTri( { -1, 1, CH_GIZMO_LINE_LEN }, { -1, 1, 1 }, { -1, -1, CH_GIZMO_LINE_LEN } );
-	
+
 	// Create Right Face (+X)
 	CreateTri( { 1, -1, -1 }, { 1, 1, -1 }, { 1, 1, CH_GIZMO_LINE_LEN } );
 	CreateTri( { 1, -1, CH_GIZMO_LINE_LEN }, { 1, -1, -1 }, { 1, 1, CH_GIZMO_LINE_LEN } );
-	
+
 	// Create Back Face (+Y)
 	CreateTri( { -1, 1, CH_GIZMO_LINE_LEN }, { 1, 1, CH_GIZMO_LINE_LEN }, { 1, 1, -1 } );
 	CreateTri( { -1, 1, -1 }, { -1, 1, CH_GIZMO_LINE_LEN }, { 1, 1, -1 } );
-	
+
 	// Create Front Face (-Y)
 	CreateTri( { -1, -1, CH_GIZMO_LINE_LEN }, { -1, -1, -1 }, { 1, -1, -1 } );
 	CreateTri( { 1, -1, CH_GIZMO_LINE_LEN }, { -1, -1, CH_GIZMO_LINE_LEN }, { 1, -1, -1 } );
-	
+
 	// create the triangle
 	// Create Bottom Face
 	CreateTri( { 6, -6, CH_GIZMO_LINE_LEN }, { -6, -6, CH_GIZMO_LINE_LEN }, { -6, 6, CH_GIZMO_LINE_LEN } );
 	CreateTri( { 6, 6, CH_GIZMO_LINE_LEN }, { 6, -6, CH_GIZMO_LINE_LEN }, { -6, 6, CH_GIZMO_LINE_LEN } );
-	
+
 	CreateTri( { 6, 6, CH_GIZMO_LINE_LEN }, { -6, 6, CH_GIZMO_LINE_LEN }, { 0, 0, CH_GIZMO_ARROW_END_POS } );    // Front Triangle
 	CreateTri( { -6, -6, CH_GIZMO_LINE_LEN }, { 6, -6, CH_GIZMO_LINE_LEN }, { 0, 0, CH_GIZMO_ARROW_END_POS } );  // Back Triangle
-	CreateTri( { -6, 6, CH_GIZMO_LINE_LEN }, { -6, -6, CH_GIZMO_LINE_LEN }, { 0, 0, CH_GIZMO_ARROW_END_POS } );   // Left Triangle
-	CreateTri( { 6, -6, CH_GIZMO_LINE_LEN }, { 6, 6, CH_GIZMO_LINE_LEN }, { 0, 0, CH_GIZMO_ARROW_END_POS } );   // Right Triangle
+	CreateTri( { -6, 6, CH_GIZMO_LINE_LEN }, { -6, -6, CH_GIZMO_LINE_LEN }, { 0, 0, CH_GIZMO_ARROW_END_POS } );  // Left Triangle
+	CreateTri( { 6, -6, CH_GIZMO_LINE_LEN }, { 6, 6, CH_GIZMO_LINE_LEN }, { 0, 0, CH_GIZMO_ARROW_END_POS } );    // Right Triangle
 
 	// -------------------------------------------------------------------------------------
-	
+
 	// TODO: plane axis and center box for screen transform
 
 	meshBuilder.End();
@@ -279,7 +281,7 @@ void Gizmo_UpdateTranslationInputs( EditorContext_t* context, Ray& ray, glm::mat
 		graphics->Mat_SetVar( renderable->apMaterials[ i ], "hovered", false );
 	}
 
-	glm::vec3 entityPos = Util_GetMatrixPosition( entityWorldMatrix );
+	glm::vec3 entityPos     = Util_GetMatrixPosition( entityWorldMatrix );
 
 	AABB      aabbList[ 3 ] = {};
 
@@ -295,9 +297,9 @@ void Gizmo_UpdateTranslationInputs( EditorContext_t* context, Ray& ray, glm::mat
 		glm::vec3 camPos = context->aView.aPos;
 
 		// Scale it based on distance so it always appears the same size, no matter how far or close you are
-		float     dist  = glm::sqrt( powf( camPos.x - entityPos.x, 2 ) + powf( camPos.y - entityPos.y, 2 ) + powf( camPos.z - entityPos.z, 2 ) );
+		float     dist   = glm::sqrt( powf( camPos.x - entityPos.x, 2 ) + powf( camPos.y - entityPos.y, 2 ) + powf( camPos.z - entityPos.z, 2 ) );
 
-		glm::vec3 scale = { dist, dist, dist };
+		glm::vec3 scale  = { dist, dist, dist };
 		scale *= editor_gizmo_scale;
 
 		for ( int i = 0; i < 3; i++ )
@@ -409,7 +411,7 @@ void Gizmo_UpdateTranslationInputs( EditorContext_t* context, Ray& ray, glm::mat
 			break;
 		}
 	}
-	
+
 	gEditorData.gizmo.translationPlane       = Util_BuildPlane( entityPos, movePlaneNormal );
 	float len                                = Util_RayPlaneIntersection( ray, gEditorData.gizmo.translationPlane );
 	gEditorData.gizmo.translationPlaneOrigin = ray.origin + ray.dir * len;
@@ -431,7 +433,7 @@ void Gizmo_UpdateInputs( EditorContext_t* context, bool mouseInView )
 	}
 
 	// Ray ray = Util_GetRayFromScreenSpace( input->GetMousePos(), context->aView.aPos, context->aView.aViewportIndex );
-	Ray ray = Util_GetRayFromScreenSpace( input->GetMousePos(), context->aView.aPos, gMainViewport );
+	Ray ray = Util_GetRayFromScreenSpace( input->GetMousePos(), context->aView.aPos, gMainViewportHandle );
 
 	if ( gEditorData.gizmo.selectedAxis != EGizmoAxis_None )
 	{
@@ -488,4 +490,3 @@ void Gizmo_SetMode( EGizmoMode mode )
 void Gizmo_SetMatrix( glm::mat4& mat )
 {
 }
-

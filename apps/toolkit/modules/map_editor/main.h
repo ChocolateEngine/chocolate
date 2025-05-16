@@ -5,13 +5,8 @@
 
 struct ViewportCamera_t;
 
-// world xyz
-constexpr int W_FORWARD = 0;
-constexpr int W_RIGHT = 1;
-constexpr int W_UP = 2;
-
-#include "game_physics.h"
 #include "entity.h"
+#include "game_physics.h"
 #include "igraphics.h"
 #include "mapmanager.h"
 
@@ -31,9 +26,8 @@ extern IRenderSystemOld* renderOld;
 
 extern float             gFrameTime;
 extern double            gCurTime;
-extern u32               gMainViewport;
 
-extern ToolLaunchData    gToolData;
+extern RenderStats_t     gRenderStats;
 
 
 enum EGizmoMode
@@ -86,25 +80,25 @@ struct GizmoData
 
 struct EditorView_t
 {
-	glm::mat4        aViewMat;
-	glm::mat4        aProjMat;
+	glm::mat4  aViewMat;
+	glm::mat4  aProjMat;
 
 	// projection matrix * view matrix
-	glm::mat4        aProjViewMat;
+	glm::mat4  aProjViewMat;
 
 	// TODO: use this in the future
 	// u32              aViewportIndex;
 
 	// TODO: remove this from here, right now this is the same between ALL contexts
-	glm::uvec2       aResolution;
-	glm::uvec2       aOffset;
+	glm::uvec2 aResolution;
+	glm::uvec2 aOffset;
 
-	glm::vec3        aPos{};
-	glm::vec3        aAng{};
+	glm::vec3  aPos{};
+	glm::vec3  aAng{};
 
-	glm::vec3        aForward{};
-	glm::vec3        aRight{};
-	glm::vec3        aUp{};
+	glm::vec3  aForward{};
+	glm::vec3  aRight{};
+	glm::vec3  aUp{};
 };
 
 
@@ -112,10 +106,10 @@ struct EditorView_t
 struct EditorContext_t
 {
 	// Viewport Data
-	EditorView_t           aView;
+	EditorView_t            aView;
 
 	// Map Data
-	SiduryMap              aMap;
+	SiduryMap               aMap;
 
 	// Entities Selected - NOT IMPLEMENTED YET
 	ChVector< ch_handle_t > aEntitiesSelected;
@@ -194,20 +188,22 @@ extern MapEditor                       gMapEditorTool;
 
 extern EditorData_t                    gEditorData;
 
-extern ch_handle_t                      gEditorContextIdx;
+extern ch_handle_t                     gEditorContextIdx;
 // extern std::vector< EditorContext_t > gEditorContexts;
 extern ResourceList< EditorContext_t > gEditorContexts;
 
 constexpr u32                          CH_MAX_EDITOR_CONTEXTS    = 32;
-constexpr ch_handle_t                   CH_INVALID_EDITOR_CONTEXT = CH_INVALID_HANDLE;
+constexpr ch_handle_t                  CH_INVALID_EDITOR_CONTEXT = CH_INVALID_HANDLE;
 
 // return the context index, input a pointer address to the context if one was made
-ch_handle_t                             Editor_CreateContext( EditorContext_t** spContext );
+ch_handle_t                            Editor_CreateContext( EditorContext_t** spContext );
 void                                   Editor_FreeContext( ch_handle_t sContext );
 
 EditorContext_t*                       Editor_GetContext();
 void                                   Editor_SetContext( ch_handle_t sContext );
 
+
+void                                   Main_DrawInputSettings();
 // maybe do this?
 //
 // void                                  Editor_SetCurrentContext( u32 sContextId );

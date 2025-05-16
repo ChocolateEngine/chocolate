@@ -2,6 +2,8 @@
 
 #include <SDL_hints.h>
 #include <SDL_system.h>
+#include <map_editor/entity_editor.h>
+#include <map_editor/main.h>
 
 #include <algorithm>
 
@@ -43,6 +45,7 @@ IAudioSystem*             audio      = nullptr;
 IGraphics*                graphics   = nullptr;
 IRenderSystemOld*         renderOld  = nullptr;
 Ch_IPhysics*              ch_physics = nullptr;
+IPhysicsEnvironment*      physenv    = nullptr;
 
 //ITool*                    toolMapEditor     = nullptr;
 //ITool*                    toolMatEditor     = nullptr;
@@ -70,6 +73,9 @@ CONVAR_FLOAT_EXT( host_timescale );
 CONVAR_FLOAT( r_nearz, 0.01, "Camera Near Z Plane" );
 CONVAR_FLOAT( r_farz, 10000, "Camera Far Z Plane" );
 CONVAR_FLOAT( r_fov, 106, "FOV" );
+
+CONVAR_BOOL_EXT( editor_gizmo_scale_enabled );
+CONVAR_FLOAT_EXT( editor_gizmo_scale );
 
 
 void Util_DrawTextureInfo( TextureInfo_t& info )
@@ -190,6 +196,12 @@ void Main_DrawSettingsMenu()
 
 	if ( ImGui::BeginTabBar( "settings tabs" ) )
 	{
+		if ( ImGui::BeginTabItem( "Input" ) )
+		{
+			Main_DrawInputSettings();
+			ImGui::EndTabItem();
+		}
+
 		if ( ImGui::BeginTabItem( "Graphics" ) )
 		{
 			Main_DrawGraphicsSettings();
@@ -198,6 +210,20 @@ void Main_DrawSettingsMenu()
 
 		if ( ImGui::BeginTabItem( "Other" ) )
 		{
+			bool scaleEnabled = editor_gizmo_scale_enabled;
+			if ( ImGui::Checkbox( "Gizmo Scaling", &scaleEnabled ) )
+			{
+				if ( scaleEnabled )
+					Con_QueueCommandSilent( "editor_gizmo_scale_enabled 1" );
+				else
+					Con_QueueCommandSilent( "editor_gizmo_scale_enabled 0" );
+			}
+
+			float scale = editor_gizmo_scale;
+			if ( ImGui::DragFloat( "Gizmo Scale", &scale, 0.0005, 0.f, 0.1f, "%.6f" ) )
+			{
+				Con_SetConVarValue( "editor_gizmo_scale", scale );
+			}
 			ImGui::EndTabItem();
 		}
 
@@ -316,18 +342,30 @@ void Main_DrawMenuBar()
 
 	if ( ImGui::BeginMainMenuBar() )
 	{
-		if ( ImGui::BeginMenu( "Load Tool" ) )
+		if ( ImGui::BeginMenu( "File" ) )
 		{
-			if ( ImGui::MenuItem( "Game" ) )
+			if ( ImGui::MenuItem( "New" ) )
+			{
+				Editor_CreateContext( nullptr );
+			}
+
+			if ( ImGui::MenuItem( "Load" ) )
+			{
+			}
+
+			if ( ImGui::MenuItem( "Save" ) )
+			{
+			}
+
+			if ( ImGui::MenuItem( "Close" ) )
 			{
 			}
 
 			ImGui::Separator();
 
-			for ( auto& tool : gTools )
+			if ( ImGui::BeginMenu( "Open Recent" ) )
 			{
-				if ( ImGui::MenuItem( tool.tool->GetName(), nullptr, tool.running ) )
-					App_LaunchTool( tool.interface );
+				ImGui::EndMenu();
 			}
 
 			ImGui::Separator();
@@ -337,11 +375,56 @@ void Main_DrawMenuBar()
 				gShowQuitConfirmation = true;
 			}
 
+			ImGui::Separator();
+
+			if ( ImGui::MenuItem( "Open Test Map" ) )
+			{
+				Con_QueueCommand( "map D:\\projects\\chocolate\\dev\\output\\projects\\riverhouse_v1" );
+			}
+			if ( ImGui::MenuItem( "Open Test Map 2" ) )
+			{
+				Con_QueueCommand( "map D:\\projects\\chocolate\\dev\\output\\projects\\l4d_maps\\c2m1_highway" );
+			}
+
 			ImGui::EndMenu();
 		}
 
 		if ( ImGui::BeginMenu( "Edit" ) )
 		{
+			if ( ImGui::MenuItem( "Settings" ) )
+			{
+			}
+
+			ImGui::EndMenu();
+		}
+
+		if ( ImGui::BeginMenu( "View" ) )
+		{
+			if ( ImGui::MenuItem( "Entity Editor", nullptr, true ) )
+			{
+			}
+
+			ImGui::EndMenu();
+		}
+
+		// I would like tabs eventually
+		if ( ImGui::BeginMenu( "Map List" ) )
+		{
+			for ( u32 i = 0; i < gEditorContexts.aHandles.size(); i++ )
+			{
+				EditorContext_t* context = nullptr;
+				if ( !gEditorContexts.Get( gEditorContexts.aHandles[ i ], &context ) )
+					continue;
+
+				ImGui::PushID( i );
+				bool selected = gEditorContexts.aHandles[ i ] == gEditorContextIdx;
+				if ( ImGui::MenuItem( context->aMap.aMapPath.empty() ? "Unsaved Map" : context->aMap.aMapPath.c_str(), nullptr, &selected ) )
+				{
+					Editor_SetContext( gEditorContexts.aHandles[ i ] );
+				}
+				ImGui::PopID();
+			}
+
 			ImGui::EndMenu();
 		}
 
@@ -487,6 +570,40 @@ void RenderMainWindow( float frameTime, bool sResize )
 			if ( ImGui::BeginTabItem( "Material Editor" ) )
 			{
 				MaterialEditor_Draw( { 0, 32 } );
+				ImGui::EndTabItem();
+			}
+
+			if ( ImGui::BeginTabItem( "Map Editor" ) )
+			{
+				if ( !sResize )
+					MapEditor_UpdateEditor( frameTime );
+
+				// ui_show_render_stats
+				if ( true )
+				{
+					SDL_bool relativeMouse = SDL_GetRelativeMouseMode();
+					gui->DebugMessage( "Relative Mouse Mode: %s", relativeMouse ? "ON" : "OFF" );
+
+					static const bool& r_vis          = Con_GetConVarData_Bool( "r_vis", true );
+					static const bool& r_msaa         = Con_GetConVarData_Bool( "r_msaa", false );
+					static const int&  r_msaa_samples = Con_GetConVarData_Int( "r_msaa_samples", 1 );
+
+					gui->DebugMessage( "%d Draw Calls", gRenderStats.aDrawCalls );
+					gui->DebugMessage( "%d Vertices", gRenderStats.aVerticesDrawn );
+					gui->DebugMessage( "%d Triangles", gRenderStats.aVerticesDrawn / 3 );
+					gui->DebugMessage( "VIS %s", r_vis ? "ON" : "OFF" );
+
+					if ( r_msaa )
+						gui->DebugMessage( "MSAA %dX", r_msaa_samples );
+				}
+
+				gui->Update( frameTime );
+
+				EntEditor_DrawUI();
+
+				if ( sResize )
+					Game_UpdateProjection();
+
 				ImGui::EndTabItem();
 			}
 
@@ -673,6 +790,8 @@ bool App_Init()
 
 	// Create the Main Viewport - TODO: use this more across the game code
 	gMainViewportHandle = graphics->CreateViewport();
+
+	MapEditor_Init();
 
 	UpdateProjection();
 #ifdef _WIN32

@@ -1,17 +1,15 @@
-#include "main.h"
 #include "game_physics.h"
-#include "game_shared.h"
+
+#include "../../main_window/main.h"
 #include "entity.h"
-#include "render/irender.h"
+#include "game_shared.h"
 #include "igraphics.h"
+#include "main.h"
 #include "mesh_builder.h"
+#include "render/irender.h"
 
 
 extern IRender*          render;
-
-IPhysicsEnvironment*     physenv    = nullptr;
-
-Ch_IPhysics*             ch_physics = nullptr;
 
 static Phys_DebugFuncs_t gPhysDebugFuncs;
 
@@ -35,25 +33,25 @@ CONVAR_FLOAT_CMD( phys_gravity, -1, 0, "Physics Engine Gravity" )
 // constexpr glm::vec3 vec3_default( 255, 255, 255 );
 // constexpr glm::vec4 vec4_default( 255, 255, 255, 255 );
 
-constexpr glm::vec3                         vec3_default( 1, 1, 1 );
-constexpr glm::vec4                         vec4_default( 1, 1, 1, 1 );
+constexpr glm::vec3                                   vec3_default( 1, 1, 1 );
+constexpr glm::vec4                                   vec4_default( 1, 1, 1, 1 );
 
-static ch_handle_t                               gShader_Debug     = CH_INVALID_HANDLE;
-static ch_handle_t                               gShader_DebugLine = CH_INVALID_HANDLE;
+static ch_handle_t                                    gShader_Debug     = CH_INVALID_HANDLE;
+static ch_handle_t                                    gShader_DebugLine = CH_INVALID_HANDLE;
 
-static ch_handle_t                               gMatSolid         = CH_INVALID_HANDLE;
-static ch_handle_t                               gMatWire          = CH_INVALID_HANDLE;
+static ch_handle_t                                    gMatSolid         = CH_INVALID_HANDLE;
+static ch_handle_t                                    gMatWire          = CH_INVALID_HANDLE;
 
 static std::unordered_map< ch_handle_t, ch_handle_t > gPhysRenderables;
 
 
-bool&                                       r_debug_draw = Con_GetConVarData_Bool( "r_debug_draw", false );
+bool&                                                 r_debug_draw = Con_GetConVarData_Bool( "r_debug_draw", false );
 
 
 // ==============================================================
 
 
-void Phys_DebugInit()
+void                                                  Phys_DebugInit()
 {
 	gShader_Debug     = graphics->GetShader( "debug" );
 	gShader_DebugLine = graphics->GetShader( "debug_line" );
@@ -96,7 +94,7 @@ ch_handle_t Phys_CreateTriangleBatch( const std::vector< PhysTriangle_t >& srTri
 		return CH_INVALID_HANDLE;  // mEmptyBatch;
 
 	Model*      model  = nullptr;
-	ch_handle_t      handle = graphics->CreateModel( &model );
+	ch_handle_t handle = graphics->CreateModel( &model );
 
 	MeshBuilder meshBuilder( graphics );
 	meshBuilder.Start( model, "_phys_triangle_batch" );
@@ -148,7 +146,7 @@ ch_handle_t Phys_CreateTriangleBatchInd(
 		return CH_INVALID_HANDLE;
 
 	Model*      model  = nullptr;
-	ch_handle_t      handle = graphics->CreateModel( &model );
+	ch_handle_t handle = graphics->CreateModel( &model );
 
 	MeshBuilder meshBuilder( graphics );
 	meshBuilder.Start( model, "__phys_model" );
@@ -181,7 +179,7 @@ void Phys_DrawGeometry(
   // const JPH::AABox& inWorldSpaceBounds,
   float            sLODScaleSq,
   const glm::vec4& srColor,
-  ch_handle_t           sGeometry,
+  ch_handle_t      sGeometry,
   EPhysCullMode    sCullMode,
   bool             sCastShadow,
   bool             sWireframe )
@@ -192,7 +190,7 @@ void Phys_DrawGeometry(
 	ch_handle_t mat = graphics->Model_GetMaterial( sGeometry, 0 );
 
 	// graphics->Mat_SetVar( mat, "color", srColor );
-	graphics->Mat_SetVar( mat, "color", {1, 0.25, 0, 1} );
+	graphics->Mat_SetVar( mat, "color", { 1, 0.25, 0, 1 } );
 
 	ch_handle_t renderHandle = gPhysRenderables[ sGeometry ];
 
@@ -321,11 +319,11 @@ void Phys_GetModelTris( ch_handle_t sModel, std::vector< PhysTriangle_t >& srTri
 		{
 			for ( size_t i = 0; i < vertData->aIndices.size(); i += 3 )
 			{
-				size_t    i0   = vertData->aIndices[ i + 0 ] * 3;
-				size_t    i1   = vertData->aIndices[ i + 1 ] * 3;
-				size_t    i2   = vertData->aIndices[ i + 2 ] * 3;
+				size_t i0     = vertData->aIndices[ i + 0 ] * 3;
+				size_t i1     = vertData->aIndices[ i + 1 ] * 3;
+				size_t i2     = vertData->aIndices[ i + 2 ] * 3;
 
-				auto& tri = srTris.emplace_back();
+				auto&  tri    = srTris.emplace_back();
 
 				tri.aPos[ 0 ] = { data[ i0 ], data[ i0 + 1 ], data[ i0 + 2 ] };
 				tri.aPos[ 1 ] = { data[ i1 ], data[ i1 + 1 ], data[ i1 + 2 ] };
@@ -338,7 +336,7 @@ void Phys_GetModelTris( ch_handle_t sModel, std::vector< PhysTriangle_t >& srTri
 		{
 			for ( size_t i = 0; i < vertData->aCount * 3; )
 			{
-				auto&     tri  = srTris.emplace_back();
+				auto& tri     = srTris.emplace_back();
 
 				tri.aPos[ 0 ] = { data[ i++ ], data[ i++ ], data[ i++ ] };
 				tri.aPos[ 1 ] = { data[ i++ ], data[ i++ ], data[ i++ ] };
@@ -359,9 +357,9 @@ void Phys_GetModelInd( ch_handle_t sModel, PhysDataConcave_t& srData )
 	// TODO: use this for physics materials later on
 	for ( size_t s = 0; s < model->aMeshes.size(); s++ )
 	{
-		Mesh&  mesh     = model->aMeshes[ s ];
+		Mesh&      mesh     = model->aMeshes[ s ];
 
-		auto&  vertData = model->apVertexData;
+		auto&      vertData = model->apVertexData;
 
 		glm::vec3* data     = nullptr;
 		for ( auto& attrib : vertData->aData )
@@ -406,7 +404,7 @@ void Phys_GetModelInd( ch_handle_t sModel, PhysDataConcave_t& srData )
 			if ( !trisTmp )
 			{
 				Log_ErrorF( "Failed to allocate memory for physics indexed triangles: (%zd bytes)\n",
-							( indSize + ( mesh.aIndexCount / 3 ) ) * sizeof( PhysIndexedTriangle_t ) );
+				            ( indSize + ( mesh.aIndexCount / 3 ) ) * sizeof( PhysIndexedTriangle_t ) );
 
 				free( srData.aTris );
 				return;
@@ -474,7 +472,7 @@ void Phys_Init()
 	Phys_CreateEnv();
 
 	Phys_DebugInit();
-	
+
 	gPhysDebugFuncs.apDrawLine          = Phys_DrawLine;
 	gPhysDebugFuncs.apDrawTriangle      = Phys_DrawTriangle;
 	gPhysDebugFuncs.apCreateTriBatch    = Phys_CreateTriangleBatch;
@@ -497,7 +495,7 @@ void Phys_Shutdown()
 	}
 
 	gPhysRenderables.clear();
-	Phys_DestroyEnv( );
+	Phys_DestroyEnv();
 }
 
 
@@ -552,4 +550,3 @@ void Phys_SetMaxVelocities( IPhysicsObject* spPhysObj )
 	spPhysObj->SetMaxLinearVelocity( 50000.f );
 	spPhysObj->SetMaxAngularVelocity( 50000.f );
 }
-

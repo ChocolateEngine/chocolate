@@ -1,15 +1,17 @@
 #include "entity_editor.h"
+
 #include "entity.h"
-#include "main.h"
 #include "file_picker.h"
+#include "main.h"
 #include "skybox.h"
 // #include "importer.h"
-#include "inputsystem.h"
-#include "gizmos.h"
-
-#include "imgui/imgui.h"
+#include <toolkit/main_window/main.h>
 
 #include <unordered_set>
+
+#include "gizmos.h"
+#include "imgui/imgui.h"
+#include "inputsystem.h"
 
 
 FilePickerData_t      gModelBrowserData{};
@@ -17,7 +19,6 @@ FilePickerData_t      gImporterFilePicker{};
 FilePickerData_t      gSkyboxFilePicker{};
 
 // keeping in case i want to have the asset browser here as well
-glm::ivec2            gAssetBrowserSize{};
 float                 gAssetBrowserOffset         = 0.f;
 
 
@@ -39,7 +40,7 @@ CONVAR_BOOL( editor_gizmo_scale_enabled, 1, "Enable Editor Gizmo Scaling" );
 void EntEditor_AddToSelection( EditorContext_t* context, ch_handle_t entity )
 {
 	u32 index = context->aEntitiesSelected.index( entity );
-	if ( index == UINT32_MAX )	
+	if ( index == UINT32_MAX )
 		context->aEntitiesSelected.push_back( entity );
 }
 
@@ -73,7 +74,9 @@ bool EntEditor_Init()
 {
 	// Setup Filters for File Pickers
 	gModelBrowserData.filterExt = { ".obj", ".glb", ".gltf" };
-	gSkyboxFilePicker.filterExt = { ".cmt", };
+	gSkyboxFilePicker.filterExt = {
+		".cmt",
+	};
 
 	// Load Editor Models
 	ChVector< const char* > failed;
@@ -98,7 +101,7 @@ bool EntEditor_Init()
 
 	// setup materials for the gizmo
 	// ch_handle_t shader = graphics->GetShader( "debug" );
-	// 
+	//
 	// ch_handle_t matGizmoX = graphics->CreateMaterial( "gizmo_x", shader );
 	// ch_handle_t matGizmoY = graphics->CreateMaterial( "gizmo_y", shader );
 	// ch_handle_t matGizmoZ = graphics->CreateMaterial( "gizmo_z", shader );
@@ -145,31 +148,17 @@ void EntEditor_DrawImporter()
 
 static std::unordered_map< ch_handle_t, ImTextureID >   gImGuiTextures;
 static std::unordered_map< ch_handle_t, TextureInfo_t > gTextureInfo;
-int                                                    gTextureListViewMode = 0;
 
 
-void Editor_DrawTextureInfo( TextureInfo_t& info )
+void                                                    Editor_DrawTextureList()
 {
-	ImGui::Text( "Name: %s", info.name.size ? info.name.data : "UNNAMED" );
-
-	if ( info.aPath.size )
-		ImGui::TextUnformatted( info.aPath.data );
-
-	ImGui::Text( "%d x %d - %.6f MB", info.aSize.x, info.aSize.y, ch_bytes_to_mb( info.aMemoryUsage ) );
-	ImGui::TextUnformatted( "Format: TODO" );
-	ImGui::TextUnformatted( "Mip Levels: TODO" );
-	ImGui::Text( "GPU Index: %d", info.aGpuIndex );
-	ImGui::Text( "Ref Count: %d", info.aRefCount );
-}
-
-
-void Editor_DrawTextureList()
-{
+	// FIXME: demez look at this!!!
+#if 0
 	// Draws all currently loaded textures
-	std::vector< ch_handle_t > textures   = render->GetTextureList();
-	ImVec2                 windowSize = ImGui::GetWindowSize();
+	std::vector< ch_handle_t > textures         = render->GetTextureList();
+	ImVec2                     windowSize       = ImGui::GetWindowSize();
 
-	glm::vec2              imageDisplaySize = { 96, 96 };
+	glm::vec2                  imageDisplaySize = { 96, 96 };
 
 	if ( ImGui::BeginCombo( "View Type", gTextureListViewMode == 0 ? "List" : "Icons" ) )
 	{
@@ -217,7 +206,7 @@ void Editor_DrawTextureList()
 	{
 		ImTextureID imTexture = 0;
 
-		auto it = gImGuiTextures.find( texture );
+		auto        it        = gImGuiTextures.find( texture );
 		if ( it == gImGuiTextures.end() )
 		{
 			imTexture                 = render->AddTextureToImGui( texture );
@@ -300,8 +289,9 @@ void Editor_DrawTextureList()
 			imagesInRow++;
 		}
 	}
-	
+
 	ImGui::EndChild();
+#endif
 }
 
 
@@ -371,7 +361,7 @@ void EntEditor_DrawLightUI( Entity_t* spEntity )
 	//}
 
 	// if ( updateLight )
-		graphics->UpdateLight( spEntity->apLight );
+	graphics->UpdateLight( spEntity->apLight );
 
 	ImGui::EndChild();
 }
@@ -385,7 +375,7 @@ void EntEditor_DrawBasicMaterialData( Renderable_t* renderable, u32 matI )
 	// if ( !ImGui::BeginChild( matI + 1, {}, ImGuiChildFlags_Border ) )
 	// if ( !ImGui::BeginChild( matI + 1, {} ) )
 
-	ch_handle_t  mat     = renderable->apMaterials[ matI ];
+	ch_handle_t mat     = renderable->apMaterials[ matI ];
 	const char* matPath = graphics->Mat_GetName( mat );
 
 	//ImGui::PushID( matI + 1 );
@@ -396,7 +386,7 @@ void EntEditor_DrawBasicMaterialData( Renderable_t* renderable, u32 matI )
 	//	return;
 	//}
 
-	ImVec2 size = ImGui::GetWindowSize();
+	ImVec2      size    = ImGui::GetWindowSize();
 
 	//if ( !ImGui::BeginChild( "##", { 0, 40 }, ImGuiChildFlags_Border | ImGuiChildFlags_ResizeY, ImGuiWindowFlags_NoSavedSettings ) )
 	{
@@ -409,13 +399,13 @@ void EntEditor_DrawBasicMaterialData( Renderable_t* renderable, u32 matI )
 	ImGui::TextUnformatted( matPath );
 
 	// ImGui::SameLine();
-	// 
+	//
 	// if ( ImGui::Button( "Edit" ) )
 	// {
 	// 	// Focus Material Editor and Show this material
 	// 	MaterialEditor_SetMaterial( mat );
 	// }
-	// 
+	//
 	// ImGui::Separator();
 
 	// TODO: use imgui tables
@@ -631,7 +621,6 @@ void EntEditor_DrawRenderableUI( Entity_t* spEntity )
 
 	if ( ImGui::Button( "Clear Model" ) )
 	{
-
 	}
 
 	if ( spEntity->aRenderable )
@@ -724,7 +713,7 @@ void EntEditor_DrawEntityData()
 	}
 
 	ch_handle_t selectedEntity = context->aEntitiesSelected[ 0 ];
-	Entity_t*  entity         = Entity_GetData( selectedEntity );
+	Entity_t*   entity         = Entity_GetData( selectedEntity );
 
 	if ( entity == nullptr )
 	{
@@ -741,15 +730,15 @@ void EntEditor_DrawEntityData()
 	// -------------------------------------------------------------------------------------
 	// Entity Parenting
 
-	ch_handle_t  parent     = Entity_GetParent( selectedEntity );
+	ch_handle_t parent     = Entity_GetParent( selectedEntity );
 	std::string parentName = "None";
 
 	if ( parent )
 	{
 		Entity_t* parentData = Entity_GetData( parent );
-		parentName = parentData->name.data ? parentData->name.data : vstring( "Entity %zd", parent );
+		parentName           = parentData->name.data ? parentData->name.data : vstring( "Entity %zd", parent );
 	}
-	
+
 	if ( ImGui::BeginCombo( "Set Parent", parentName.c_str() ) )
 	{
 		if ( ImGui::Selectable( "Clear Parent" ) )
@@ -776,21 +765,21 @@ void EntEditor_DrawEntityData()
 				continue;
 
 			Entity_t* entityToParent = Entity_GetData( entityHandle );
-			if (entityToParent == nullptr )
+			if ( entityToParent == nullptr )
 			{
 				Log_ErrorF( "Entity is nullptr????\n" );
 				continue;
 			}
-	
+
 			std::string entName = vstring( "Entity %zd", entityHandle );
 
 			ImGui::PushID( entityHandle );
-	
+
 			if ( ImGui::Selectable( entityToParent->name.data ? entityToParent->name.data : entName.data() ) )
 			{
 				Entity_SetParent( selectedEntity, entityHandle );
 			}
-	
+
 			ImGui::PopID();
 		}
 
@@ -832,7 +821,7 @@ void EntEditor_DrawEntityData()
 		{
 			gModelBrowserData.open = false;
 
-			ch_handle_t model       = graphics->LoadModel( gModelBrowserData.selectedItems[ 0 ] );
+			ch_handle_t model      = graphics->LoadModel( gModelBrowserData.selectedItems[ 0 ] );
 
 			if ( model == CH_INVALID_HANDLE )
 			{
@@ -906,22 +895,22 @@ void EntEditor_DrawEntityData()
 				if ( ImGui::Selectable( "Point Light" ) )
 				{
 					entity->apLight          = graphics->CreateLight( ELightType_Point );
-					entity->apLight->color  = { 1, 1, 1, 10 };
+					entity->apLight->color   = { 1, 1, 1, 10 };
 					entity->apLight->aRadius = 500;
 
 					Entity_SetEntitiesDirty( &context->aEntitiesSelected[ 0 ], 1 );
 				}
 				else if ( ImGui::Selectable( "Cone Light" ) )
 				{
-					entity->apLight         = graphics->CreateLight( ELightType_Cone );
-					entity->apLight->color = { 1, 1, 1, 10 };
+					entity->apLight            = graphics->CreateLight( ELightType_Cone );
+					entity->apLight->color     = { 1, 1, 1, 10 };
 
 					// weird stuff to get the angle of the light correct from the player's view matrix stuff
 					// light->aAng.x = playerWorldTransform.aAng.z;
 					// light->aAng.y = -playerWorldTransform.aAng.y;
 					// light->aAng.z = -playerWorldTransform.aAng.x + 90.f;
 
-					entity->apLight->aInnerFov = 0.f;  // FOV
+					entity->apLight->aInnerFov = 0.f;   // FOV
 					entity->apLight->aOuterFov = 45.f;  // FOV
 
 					Entity_SetEntitiesDirty( &context->aEntitiesSelected[ 0 ], 1 );
@@ -942,7 +931,7 @@ void EntEditor_DrawEntityData()
 	}
 
 	// Entity Components?
-	
+
 	// ImGui::End();
 
 #if 0
@@ -1070,7 +1059,6 @@ void EntEditor_DrawMapDataUI()
 	}
 
 	// Skybox_SetMaterial( args[ 0 ] );
-
 }
 
 
@@ -1132,10 +1120,10 @@ extern int gMainMenuBarHeight;
 glm::vec2  gEntityListSize{};
 
 
-void EntEditor_DrawEntityList( EditorContext_t* context, glm::uvec2 sOffset )
+void       EntEditor_DrawEntityList( EditorContext_t* context, glm::uvec2 sOffset )
 {
 	int width, height;
-	render->GetSurfaceSize( gToolData.graphicsWindow, width, height );
+	render->GetSurfaceSize( gGraphicsWindow, width, height );
 
 	ImGui::SetNextWindowPos( { (float)sOffset.x, (float)( sOffset.y + gMainMenuBarHeight ) } );
 	// ImGui::SetNextWindowSizeConstraints(
@@ -1145,8 +1133,7 @@ void EntEditor_DrawEntityList( EditorContext_t* context, glm::uvec2 sOffset )
 
 	ImGui::SetNextWindowSizeConstraints(
 	  { (float)sOffset.x, (float)( height - ( gMainMenuBarHeight + sOffset.y ) ) },
-	  { (float)width, (float)( height - ( gMainMenuBarHeight + sOffset.y ) ) }
-	);
+	  { (float)width, (float)( height - ( gMainMenuBarHeight + sOffset.y ) ) } );
 
 	if ( !ImGui::Begin( "Entity List", nullptr, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoMove ) )
 	{
@@ -1156,7 +1143,7 @@ void EntEditor_DrawEntityList( EditorContext_t* context, glm::uvec2 sOffset )
 		gEntityListSize.y = windowSize.y;
 		return;
 	}
-	
+
 	ImGui::BeginChild( "tabs" );
 	if ( ImGui::BeginTabBar( "##editor tabs" ) )
 	{
@@ -1209,7 +1196,7 @@ void EntEditor_DrawEntityList( EditorContext_t* context, glm::uvec2 sOffset )
 			if ( ImGui::BeginChild( "Entity List", {}, true ) )
 			{
 				const ChVector< ch_handle_t >& entityHandles = context->aMap.aMapEntities;
-				auto&                         entityParents = Entity_GetParentMap();
+				auto&                          entityParents = Entity_GetParentMap();
 
 				for ( ch_handle_t entityHandle : entityHandles )
 				{
@@ -1259,11 +1246,11 @@ void EntEditor_DrawEntityList( EditorContext_t* context, glm::uvec2 sOffset )
 }
 
 
-static const glm::vec3 gSelectScale = { 10.f, 10.f, 10.f };
+static const glm::vec3 gSelectScale    = { 10.f, 10.f, 10.f };
 static const glm::vec3 gSelectBoxColor = { 1.f, 1.f, 1.f };
 
 
-void EntEditor_DrawUI()
+void                   EntEditor_DrawUI()
 {
 	EditorContext_t* context = Editor_GetContext();
 
@@ -1277,7 +1264,7 @@ void EntEditor_DrawUI()
 
 	// Renderable_t* gizmoRotation    = graphics->GetRenderableData( gEditorRenderables.gizmoRotation );
 	// gizmoRotation->aVisible        = false;
-	// 
+	//
 	// Renderable_t* gizmoScale       = graphics->GetRenderableData( gEditorRenderables.gizmoScale );
 	// gizmoScale->aVisible           = false;
 
@@ -1316,10 +1303,10 @@ void EntEditor_DrawUI()
 	}
 
 	// For Now, just draw a gizmo at the first selected entity
-	ch_handle_t selectedEnt  = context->aEntitiesSelected[ 0 ];
-	Entity_t*  entity       = Entity_GetData( selectedEnt );
+	ch_handle_t selectedEnt = context->aEntitiesSelected[ 0 ];
+	Entity_t*   entity      = Entity_GetData( selectedEnt );
 
-	glm::mat4  mat( 1.f );
+	glm::mat4   mat( 1.f );
 	Entity_GetWorldMatrix( mat, selectedEnt );
 
 	if ( gEditorData.gizmo.mode == EGizmoMode_Translation )
@@ -1331,9 +1318,9 @@ void EntEditor_DrawUI()
 		if ( editor_gizmo_scale_enabled )
 		{
 			// Scale it based on distance so it always appears the same size, no matter how far or close you are
-			float     dist   = glm::sqrt( powf( camPos.x - pos.x, 2 ) + powf( camPos.y - pos.y, 2 ) + powf( camPos.z - pos.z, 2 ) );
+			float     dist  = glm::sqrt( powf( camPos.x - pos.x, 2 ) + powf( camPos.y - pos.y, 2 ) + powf( camPos.z - pos.z, 2 ) );
 
-			glm::vec3 scale  = { dist, dist, dist };
+			glm::vec3 scale = { dist, dist, dist };
 			scale *= editor_gizmo_scale;
 
 			gizmoPosMat = Util_ToMatrix( &pos, nullptr, &scale );
@@ -1348,4 +1335,3 @@ void EntEditor_DrawUI()
 		gizmoTranslation->aModelMatrix = gizmoPosMat;
 	}
 }
-

@@ -17,8 +17,6 @@ bool           gShowQuitConfirmation = false;
 // TODO: make gRealTime and gGameTime
 // real time is unmodified time since engine launched, and game time is time affected by host_timescale and pausing
 
-u32            gMainViewport         = UINT32_MAX;
-
 MaterialEditor gMatEditorTool;
 
 
@@ -93,7 +91,7 @@ void MaterialEditor::Shutdown()
 bool MaterialEditor::Launch( const ToolLaunchData& launchData )
 {
 	/*gToolData     = launchData;
-	gMainViewport = graphics->CreateViewport();
+	gMainViewportHandle = graphics->CreateViewport();
 
 	MaterialEditor_Init();*/
 	return true;
@@ -105,7 +103,7 @@ void MaterialEditor::Close()
 	// Save and Close all open Materials
 	/*MaterialEditor_Close();
 
-	graphics->FreeViewport( gMainViewport );
+	graphics->FreeViewport( gMainViewportHandle );
 
 	gToolData.graphicsWindow = 0;
 	gToolData.toolkit        = nullptr;
@@ -125,7 +123,7 @@ void MaterialEditor::Render( float frameTime, bool resize, glm::uvec2 sOffset )
 		int width = 0, height = 0;
 		render->GetSurfaceSize( gGraphicsWindow, width, height );
 
-		ViewportShader_t* viewport = graphics->GetViewportData( gMainViewport );
+		ViewportShader_t* viewport = graphics->GetViewportData( gMainViewportHandle );
 
 		if ( !viewport )
 			return;
@@ -152,7 +150,7 @@ void MaterialEditor::Render( float frameTime, bool resize, glm::uvec2 sOffset )
 
 void MaterialEditor::Present()
 {
-	//	renderOld->Present( gToolData.graphicsWindow, &gMainViewport, 1 );
+	//	renderOld->Present( gToolData.graphicsWindow, &gMainViewportHandle, 1 );
 }
 
 

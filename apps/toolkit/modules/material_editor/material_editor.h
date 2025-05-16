@@ -5,11 +5,6 @@
 
 struct ViewportCamera_t;
 
-// world xyz
-constexpr int W_FORWARD = 0;
-constexpr int W_RIGHT   = 1;
-constexpr int W_UP      = 2;
-
 #include "igraphics.h"
 
 class IRender;

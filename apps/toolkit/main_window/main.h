@@ -9,6 +9,11 @@
 #include "physics/iphysics.h"
 #include "render/irender.h"
 
+// world xyz
+constexpr int W_FORWARD = 0;
+constexpr int W_RIGHT   = 1;
+constexpr int W_UP      = 2;
+
 class IGuiSystem;
 class IRender;
 class IInputSystem;
@@ -53,6 +58,7 @@ extern IInputSystem*             input;
 extern IAudioSystem*             audio;
 extern IGraphics*                graphics;
 extern IRenderSystemOld*         renderOld;
+extern IPhysicsEnvironment*      physenv;
 
 extern Toolkit                   toolkit;
 
